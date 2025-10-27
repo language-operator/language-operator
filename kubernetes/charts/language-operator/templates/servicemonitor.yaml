@@ -1,0 +1,29 @@
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "language-operator.fullname" . }}
+  namespace: {{ include "language-operator.serviceMonitor.namespace" . }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "language-operator.selectorLabels" . | nindent 6 }}
+  {{- if ne (include "language-operator.serviceMonitor.namespace" .) .Release.Namespace }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  {{- end }}
+  endpoints:
+  - port: https
+    path: /metrics
+    scheme: https
+    interval: {{ .Values.monitoring.serviceMonitor.interval }}
+    scrapeTimeout: {{ .Values.monitoring.serviceMonitor.scrapeTimeout }}
+    tlsConfig:
+      insecureSkipVerify: true
+{{- end }}

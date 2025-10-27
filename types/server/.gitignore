@@ -1,0 +1,10 @@
+# YARD documentation
+/doc/
+/.yardoc/
+
+# Bundler
+/vendor/bundle/
+/.bundle/
+
+# RuboCop cache
+/.rubocop-*

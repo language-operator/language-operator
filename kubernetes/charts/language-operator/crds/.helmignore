@@ -1,0 +1,6 @@
+# Note: CRDs should be generated from the operator codebase using:
+# cd ../../language-operator
+# make manifests
+# cp config/crd/bases/*.yaml ../charts/language-operator/crds/
+#
+# CRD files will be placed here and automatically installed by Helm

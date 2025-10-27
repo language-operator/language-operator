@@ -1,0 +1,33 @@
+# Image configuration
+IMAGE_NAME := based/base-type
+IMAGE_TAG := latest
+IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
+
+# Default target
+.PHONY: help
+help:
+	@echo "Available targets:"
+	@echo "  build - Build the Docker image"
+	@echo "  scan  - Scan the Docker image with Trivy"
+	@echo "  shell - Run the image and exec into it with an interactive shell"
+	@echo "  env   - Display sorted list of environment variables in the image"
+
+# Build the Docker image
+.PHONY: build
+build:
+	docker build -t $(IMAGE_FULL) .
+
+# Scan the Docker image with Trivy
+.PHONY: scan
+scan:
+	trivy image $(IMAGE_FULL)
+
+# Run the image and exec into it with an interactive shell
+.PHONY: shell
+shell:
+	docker run --rm -it $(IMAGE_FULL) /bin/sh
+
+# Display sorted list of environment variables in the image
+.PHONY: env
+env:
+	docker run --rm $(IMAGE_FULL) /bin/sh -c 'env | sort'

@@ -1,0 +1,23 @@
+# Goals configuration for headless agent
+
+objectives:
+  - "Search for and summarize the latest Ruby news"
+  - "Check documentation for man pages on grep"
+  - "Get the current status of all MCP servers"
+
+success_criteria:
+  - "All objectives have been addressed"
+  - "No errors occurred during execution"
+
+# Maximum iterations before stopping
+max_iterations: 50
+
+# Timeout in minutes
+timeout_minutes: 10
+
+# Optional: Custom prompting
+prompt_template: |
+  You are an autonomous agent working towards the following objective:
+  {objective}
+
+  Please complete this task using the available tools.

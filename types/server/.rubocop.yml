@@ -1,0 +1,34 @@
+require:
+  - rubocop-performance
+
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  Exclude:
+    - 'vendor/**/*'
+
+# Style preferences
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+# Metrics
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/BlockLength:
+  Exclude:
+    - '*.rb'
+    - 'examples/**/*.rb'
+
+Metrics/AbcSize:
+  Max: 20
+
+# Layout
+Layout/LineLength:
+  Max: 120

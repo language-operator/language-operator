@@ -1,0 +1,6 @@
+--markup markdown
+--readme README.md
+--output-dir doc
+--protected
+--private
+tools/**/*.rb

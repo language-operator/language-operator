@@ -1,0 +1,355 @@
+# Default values for language-operator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/based/language-operator
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ServiceAccount configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 8443
+  annotations: {}
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity and anti-affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - language-operator
+        topologyKey: kubernetes.io/hostname
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Operator configuration
+config:
+  # Leader election configuration
+  leaderElection:
+    enabled: true
+    leaseDuration: 15s
+    renewDeadline: 10s
+    retryPeriod: 2s
+
+  # Metrics configuration
+  metrics:
+    bindAddress: ":8443"
+    secure: true
+
+  # Health probe configuration
+  health:
+    bindAddress: ":8081"
+
+  # Webhook configuration (for future use)
+  webhook:
+    enabled: false
+    port: 9443
+    certDir: /tmp/k8s-webhook-server/serving-certs
+
+  # Logging configuration
+  logging:
+    level: info
+    format: json
+    development: false
+
+  # Controller configuration
+  controller:
+    # Number of concurrent reconcilers per controller
+    concurrency: 5
+    # Sync period for controller
+    syncPeriod: 10m
+
+  # Watch configuration
+  watch:
+    # Namespaces to watch (empty means all namespaces)
+    namespaces: []
+
+# RBAC configuration
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+  # Rules for the operator's ClusterRole
+  rules:
+    # Core Kubernetes resources
+    - apiGroups:
+      - ""
+      resources:
+      - configmaps
+      - secrets
+      - services
+      - serviceaccounts
+      - pods
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - create
+      - patch
+    # Apps resources
+    - apiGroups:
+      - apps
+      resources:
+      - deployments
+      - replicasets
+      - statefulsets
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Networking resources
+    - apiGroups:
+      - networking.k8s.io
+      resources:
+      - ingresses
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Policy resources
+    - apiGroups:
+      - policy
+      resources:
+      - poddisruptionbudgets
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Autoscaling resources
+    - apiGroups:
+      - autoscaling
+      resources:
+      - horizontalpodautoscalers
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Batch resources (for scheduled agents)
+    - apiGroups:
+      - batch
+      resources:
+      - jobs
+      - cronjobs
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Language Operator CRDs
+    - apiGroups:
+      - langop.io
+      resources:
+      - languagetools
+      - languagemodels
+      - languageagents
+      - languagepersonas
+      - languageclients
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - langop.io
+      resources:
+      - languagetools/status
+      - languagemodels/status
+      - languageagents/status
+      - languagepersonas/status
+      - languageclients/status
+      verbs:
+      - get
+      - update
+      - patch
+    - apiGroups:
+      - langop.io
+      resources:
+      - languagetools/finalizers
+      - languagemodels/finalizers
+      - languageagents/finalizers
+      - languagepersonas/finalizers
+      - languageclients/finalizers
+      verbs:
+      - update
+
+# Monitoring configuration
+monitoring:
+  # Prometheus ServiceMonitor
+  serviceMonitor:
+    enabled: false
+    # Namespace where ServiceMonitor will be created (defaults to release namespace)
+    namespace: ""
+    # Additional labels for ServiceMonitor
+    labels: {}
+    # Interval at which metrics should be scraped
+    interval: 30s
+    # Timeout for scraping
+    scrapeTimeout: 10s
+
+# CRD installation
+crds:
+  # Install CRDs as part of the Helm chart
+  install: true
+  # Keep CRDs on chart uninstall
+  keep: true
+  # Annotations to add to CRDs
+  annotations: {}
+
+# Additional volumes
+volumes: []
+# - name: tmp
+#   emptyDir: {}
+
+# Additional volume mounts
+volumeMounts: []
+# - name: tmp
+#   mountPath: /tmp
+
+# Extra environment variables
+env: []
+# - name: LOG_LEVEL
+#   value: debug
+
+# Extra environment variables from ConfigMap or Secret
+envFrom: []
+# - configMapRef:
+#     name: my-config
+# - secretRef:
+#     name: my-secret
+
+# Priority class name
+priorityClassName: ""
+
+# Topology spread constraints
+topologySpreadConstraints: []
+# - maxSkew: 1
+#   topologyKey: topology.kubernetes.io/zone
+#   whenUnsatisfiable: ScheduleAnyway
+#   labelSelector:
+#     matchLabels:
+#       app.kubernetes.io/name: language-operator
+
+# Pod labels
+podLabels: {}
+
+# Service labels
+serviceLabels: {}

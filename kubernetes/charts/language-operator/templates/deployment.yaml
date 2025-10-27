@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "language-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "language-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "language-operator.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "language-operator.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      containers:
+      - name: manager
+        image: {{ include "language-operator.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /manager
+        args:
+        {{- if .Values.config.leaderElection.enabled }}
+        - --leader-elect
+        - --leader-elect-lease-duration={{ .Values.config.leaderElection.leaseDuration }}
+        - --leader-elect-renew-deadline={{ .Values.config.leaderElection.renewDeadline }}
+        - --leader-elect-retry-period={{ .Values.config.leaderElection.retryPeriod }}
+        {{- end }}
+        - --metrics-bind-address={{ include "language-operator.metricsBindAddress" . }}
+        - --health-probe-bind-address={{ .Values.config.health.bindAddress }}
+        - --zap-log-level={{ .Values.config.logging.level }}
+        - --zap-encoder={{ .Values.config.logging.format }}
+        {{- if .Values.config.logging.development }}
+        - --zap-devel
+        {{- end }}
+        {{- if .Values.config.controller.concurrency }}
+        - --concurrency={{ .Values.config.controller.concurrency }}
+        {{- end }}
+        {{- if .Values.config.controller.syncPeriod }}
+        - --sync-period={{ .Values.config.controller.syncPeriod }}
+        {{- end }}
+        {{- if .Values.config.watch.namespaces }}
+        - --watch-namespaces={{ join "," .Values.config.watch.namespaces }}
+        {{- end }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.service.metricsPort }}
+          protocol: TCP
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+        {{- if .Values.config.webhook.enabled }}
+        - name: webhook
+          containerPort: {{ .Values.config.webhook.port }}
+          protocol: TCP
+        {{- end }}
+        {{- with .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        {{- with .Values.env }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.envFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.config.webhook.enabled }}
+        - name: cert
+          mountPath: {{ .Values.config.webhook.certDir }}
+          readOnly: true
+        {{- end }}
+        {{- with .Values.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+      {{- if .Values.config.webhook.enabled }}
+      - name: cert
+        secret:
+          secretName: {{ include "language-operator.fullname" . }}-webhook-cert
+          defaultMode: 420
+      {{- end }}
+      {{- with .Values.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,619 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: languagemodels.languageoperator.io
+spec:
+  group: languageoperator.io
+  names:
+    kind: LanguageModel
+    listKind: LanguageModelList
+    plural: languagemodels
+    shortNames:
+    - lmodel
+    singular: languagemodel
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.provider
+      name: Provider
+      type: string
+    - jsonPath: .spec.modelName
+      name: Model
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.healthy
+      name: Healthy
+      type: boolean
+    - jsonPath: .status.metrics.totalRequests
+      name: Requests
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: LanguageModel is the Schema for the languagemodels API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LanguageModelSpec defines the desired state of LanguageModel
+            properties:
+              apiKeySecretRef:
+                description: APIKeySecretRef references a secret containing the API
+                  key
+                properties:
+                  key:
+                    default: api-key
+                    description: Key is the key within the secret containing the value
+                    type: string
+                  name:
+                    description: Name is the name of the secret
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the secret (defaults
+                      to same namespace as LanguageModel)
+                    type: string
+                required:
+                - name
+                type: object
+              caching:
+                description: Caching defines response caching configuration
+                properties:
+                  backend:
+                    default: memory
+                    description: Backend specifies the caching backend (memory, redis,
+                      etc.)
+                    enum:
+                    - memory
+                    - redis
+                    - memcached
+                    type: string
+                  enabled:
+                    default: false
+                    description: Enabled enables response caching
+                    type: boolean
+                  maxSize:
+                    description: MaxSize is the maximum cache size in MB
+                    format: int32
+                    type: integer
+                  ttl:
+                    description: TTL is the cache time-to-live (e.g., "5m")
+                    pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                    type: string
+                type: object
+              configuration:
+                description: Configuration contains provider-specific configuration
+                properties:
+                  additionalParameters:
+                    additionalProperties:
+                      type: string
+                    description: AdditionalParameters for provider-specific options
+                    type: object
+                  frequencyPenalty:
+                    description: FrequencyPenalty penalizes frequent tokens (-2.0
+                      to 2.0)
+                    type: number
+                  maxTokens:
+                    description: MaxTokens is the maximum tokens for responses
+                    format: int32
+                    type: integer
+                  presencePenalty:
+                    description: PresencePenalty penalizes tokens based on presence
+                      (-2.0 to 2.0)
+                    type: number
+                  stopSequences:
+                    description: StopSequences are sequences that stop generation
+                    items:
+                      type: string
+                    type: array
+                  temperature:
+                    description: Temperature controls randomness (0.0 to 2.0)
+                    type: number
+                  topP:
+                    description: TopP controls nucleus sampling
+                    type: number
+                type: object
+              costTracking:
+                description: CostTracking enables cost tracking for this model
+                properties:
+                  currency:
+                    default: USD
+                    description: Currency is the currency for cost tracking (e.g.,
+                      "USD")
+                    type: string
+                  enabled:
+                    default: false
+                    description: Enabled enables cost tracking
+                    type: boolean
+                  inputTokenCost:
+                    description: InputTokenCost is the cost per 1000 input tokens
+                    type: number
+                  outputTokenCost:
+                    description: OutputTokenCost is the cost per 1000 output tokens
+                    type: number
+                type: object
+              endpoint:
+                description: Endpoint is the API endpoint URL (required for openai-compatible,
+                  azure, custom)
+                type: string
+              fallbacks:
+                description: Fallbacks is an ordered list of fallback models to use
+                  if this model fails
+                items:
+                  description: ModelFallbackSpec defines a fallback model
+                  properties:
+                    conditions:
+                      description: Conditions specifies when to use this fallback
+                      items:
+                        type: string
+                      type: array
+                    modelRef:
+                      description: ModelRef is a reference to another LanguageModel
+                      type: string
+                  required:
+                  - modelRef
+                  type: object
+                type: array
+              loadBalancing:
+                description: LoadBalancing defines load balancing strategy across
+                  multiple endpoints
+                properties:
+                  endpoints:
+                    description: Endpoints is a list of endpoint configurations for
+                      load balancing
+                    items:
+                      description: EndpointSpec defines an endpoint for load balancing
+                      properties:
+                        priority:
+                          description: Priority for priority-based routing (lower
+                            is higher priority)
+                          format: int32
+                          type: integer
+                        region:
+                          description: Region specifies the region for this endpoint
+                          type: string
+                        url:
+                          description: URL is the endpoint URL
+                          type: string
+                        weight:
+                          default: 100
+                          description: Weight for weighted load balancing
+                          format: int32
+                          minimum: 0
+                          type: integer
+                      required:
+                      - url
+                      type: object
+                    type: array
+                  healthCheck:
+                    description: HealthCheck defines health checking for endpoints
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled enables health checking
+                        type: boolean
+                      healthyThreshold:
+                        default: 2
+                        description: HealthyThreshold is the number of successes before
+                          marking healthy
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      interval:
+                        default: 30s
+                        description: Interval is the health check interval (e.g.,
+                          "30s")
+                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                        type: string
+                      timeout:
+                        default: 5s
+                        description: Timeout is the health check timeout (e.g., "5s")
+                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                        type: string
+                      unhealthyThreshold:
+                        default: 3
+                        description: UnhealthyThreshold is the number of failures
+                          before marking unhealthy
+                        format: int32
+                        minimum: 1
+                        type: integer
+                    type: object
+                  strategy:
+                    default: round-robin
+                    description: Strategy specifies the load balancing strategy
+                    enum:
+                    - round-robin
+                    - least-connections
+                    - random
+                    - weighted
+                    - latency-based
+                    type: string
+                type: object
+              modelName:
+                description: ModelName is the specific model identifier (e.g., "gpt-4",
+                  "claude-3-opus")
+                minLength: 1
+                type: string
+              observability:
+                description: Observability defines monitoring and tracing configuration
+                properties:
+                  logging:
+                    description: Logging defines logging configuration
+                    properties:
+                      level:
+                        default: info
+                        description: Level is the log level (debug, info, warn, error)
+                        enum:
+                        - debug
+                        - info
+                        - warn
+                        - error
+                        type: string
+                      logRequests:
+                        default: true
+                        description: LogRequests enables request logging
+                        type: boolean
+                      logResponses:
+                        default: false
+                        description: LogResponses enables response logging
+                        type: boolean
+                    type: object
+                  metrics:
+                    default: true
+                    description: Metrics enables metrics collection
+                    type: boolean
+                  tracing:
+                    default: false
+                    description: Tracing enables distributed tracing
+                    type: boolean
+                type: object
+              provider:
+                description: Provider specifies the LLM provider type
+                enum:
+                - openai
+                - anthropic
+                - openai-compatible
+                - azure
+                - bedrock
+                - vertex
+                - custom
+                type: string
+              rateLimits:
+                description: RateLimits defines rate limiting configuration
+                properties:
+                  concurrentRequests:
+                    description: ConcurrentRequests limits concurrent requests
+                    format: int32
+                    type: integer
+                  requestsPerMinute:
+                    description: RequestsPerMinute limits requests per minute
+                    format: int32
+                    type: integer
+                  tokensPerMinute:
+                    description: TokensPerMinute limits tokens per minute
+                    format: int32
+                    type: integer
+                type: object
+              regions:
+                description: Regions specifies which regions this model is deployed
+                  in (for multi-region)
+                items:
+                  description: RegionSpec defines a region configuration
+                  properties:
+                    enabled:
+                      default: true
+                      description: Enabled indicates if this region is enabled
+                      type: boolean
+                    endpoint:
+                      description: Endpoint is the region-specific endpoint URL
+                      type: string
+                    name:
+                      description: Name is the region name (e.g., "us-east-1", "eu-west-1")
+                      type: string
+                    priority:
+                      description: Priority for region routing (lower is higher priority)
+                      format: int32
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+              retryPolicy:
+                description: RetryPolicy defines retry behavior for failed requests
+                properties:
+                  backoffMultiplier:
+                    default: 2
+                    description: BackoffMultiplier is the multiplier for exponential
+                      backoff
+                    type: number
+                  initialBackoff:
+                    default: 1s
+                    description: InitialBackoff is the initial backoff duration (e.g.,
+                      "1s")
+                    pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                    type: string
+                  maxAttempts:
+                    default: 3
+                    description: MaxAttempts is the maximum number of retry attempts
+                    format: int32
+                    maximum: 10
+                    minimum: 0
+                    type: integer
+                  maxBackoff:
+                    default: 30s
+                    description: MaxBackoff is the maximum backoff duration (e.g.,
+                      "30s")
+                    pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                    type: string
+                  retryableStatusCodes:
+                    description: RetryableStatusCodes are HTTP status codes that trigger
+                      retry
+                    items:
+                      format: int32
+                      type: integer
+                    type: array
+                type: object
+              timeout:
+                default: 5m
+                description: Timeout specifies request timeout duration (e.g., "5m",
+                  "30s")
+                pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                type: string
+            required:
+            - modelName
+            - provider
+            type: object
+          status:
+            description: LanguageModelStatus defines the observed state of LanguageModel
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the model's state
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              costMetrics:
+                description: CostMetrics contains cost tracking data
+                properties:
+                  currency:
+                    description: Currency is the currency for cost metrics
+                    type: string
+                  inputTokenCost:
+                    description: InputTokenCost is the cost for input tokens
+                    type: number
+                  lastReset:
+                    description: LastReset is when cost metrics were last reset
+                    format: date-time
+                    type: string
+                  outputTokenCost:
+                    description: OutputTokenCost is the cost for output tokens
+                    type: number
+                  totalCost:
+                    description: TotalCost is the total cost incurred
+                    type: number
+                type: object
+              endpointStatus:
+                description: EndpointStatus shows status of each load-balanced endpoint
+                items:
+                  description: EndpointStatusSpec shows the status of a load-balanced
+                    endpoint
+                  properties:
+                    failureCount:
+                      description: FailureCount is the number of consecutive failures
+                      format: int32
+                      type: integer
+                    healthy:
+                      description: Healthy indicates if the endpoint is healthy
+                      type: boolean
+                    lastCheck:
+                      description: LastCheck is the timestamp of the last health check
+                      format: date-time
+                      type: string
+                    latency:
+                      description: Latency is the average latency in milliseconds
+                      format: int32
+                      type: integer
+                    url:
+                      description: URL is the endpoint URL
+                      type: string
+                  required:
+                  - healthy
+                  - url
+                  type: object
+                type: array
+              healthy:
+                description: Healthy indicates if the model is healthy and available
+                type: boolean
+              lastHealthCheck:
+                description: LastHealthCheck is the timestamp of the last health check
+                format: date-time
+                type: string
+              lastUpdateTime:
+                description: LastUpdateTime is the last time the status was updated
+                format: date-time
+                type: string
+              message:
+                description: Message provides human-readable details about the current
+                  state
+                type: string
+              metrics:
+                description: Metrics contains usage metrics
+                properties:
+                  averageLatency:
+                    description: AverageLatency is the average request latency in
+                      milliseconds
+                    format: int32
+                    type: integer
+                  failedRequests:
+                    description: FailedRequests is the number of failed requests
+                    format: int64
+                    type: integer
+                  inputTokens:
+                    description: InputTokens is the total number of input tokens
+                    format: int64
+                    type: integer
+                  outputTokens:
+                    description: OutputTokens is the total number of output tokens
+                    format: int64
+                    type: integer
+                  p95Latency:
+                    description: P95Latency is the 95th percentile latency in milliseconds
+                    format: int32
+                    type: integer
+                  p99Latency:
+                    description: P99Latency is the 99th percentile latency in milliseconds
+                    format: int32
+                    type: integer
+                  successfulRequests:
+                    description: SuccessfulRequests is the number of successful requests
+                    format: int64
+                    type: integer
+                  totalRequests:
+                    description: TotalRequests is the total number of requests
+                    format: int64
+                    type: integer
+                  totalTokens:
+                    description: TotalTokens is the total number of tokens processed
+                    format: int64
+                    type: integer
+                type: object
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed LanguageModel
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase (Ready, NotReady,
+                  Error, Configuring)
+                enum:
+                - Ready
+                - NotReady
+                - Error
+                - Configuring
+                - Degraded
+                type: string
+              reason:
+                description: Reason provides a machine-readable reason for the current
+                  state
+                type: string
+              regionStatus:
+                description: RegionStatus shows status of each region
+                items:
+                  description: RegionStatusSpec shows the status of a region
+                  properties:
+                    available:
+                      description: Available indicates if the region is available
+                      type: boolean
+                    lastCheck:
+                      description: LastCheck is the timestamp of the last check
+                      format: date-time
+                      type: string
+                    latency:
+                      description: Latency is the average latency to this region in
+                        milliseconds
+                      format: int32
+                      type: integer
+                    name:
+                      description: Name is the region name
+                      type: string
+                  required:
+                  - available
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

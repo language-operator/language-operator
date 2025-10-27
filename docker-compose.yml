@@ -1,0 +1,153 @@
+services:
+  # MCP Tools Server (base server with no tools)
+  server:
+    image: based/server:latest
+    container_name: based-server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./types/server/doc:/app/doc
+    environment:
+      - RACK_ENV=development
+      - PORT=80
+    restart: unless-stopped
+
+  # Documentation Tool
+  doc:
+    image: based/tools/doc:latest
+    container_name: based-tool-doc
+    ports:
+      - "8081:80"
+    volumes:
+      - ./tools/doc/tools:/mcp:ro
+      - ./tools/doc/doc:/app/doc
+    environment:
+      - RACK_ENV=development
+      - PORT=80
+    restart: unless-stopped
+
+  # Email Tool
+  email:
+    image: based/tools/email:latest
+    container_name: based-tool-email
+    ports:
+      - "8082:80"
+    volumes:
+      - ./tools/email/tools:/mcp:ro
+      - ./tools/email/doc:/app/doc
+    environment:
+      - RACK_ENV=development
+      - PORT=80
+      - SMTP_HOST=${SMTP_HOST:-smtp.example.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-user@example.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-password}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_TLS=${SMTP_TLS:-true}
+    restart: unless-stopped
+
+  # SMS Tool
+  sms:
+    image: based/tools/sms:latest
+    container_name: based-tool-sms
+    ports:
+      - "8083:80"
+    volumes:
+      - ./tools/sms/tools:/mcp:ro
+      - ./tools/sms/doc:/app/doc
+    environment:
+      - RACK_ENV=development
+      - PORT=80
+      - SMS_PROVIDER=${SMS_PROVIDER:-twilio}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-your_auth_token}
+      - TWILIO_FROM=${TWILIO_FROM:-+1234567890}
+      - VONAGE_API_KEY=${VONAGE_API_KEY:-}
+      - VONAGE_API_SECRET=${VONAGE_API_SECRET:-}
+      - VONAGE_FROM=${VONAGE_FROM:-}
+    restart: unless-stopped
+
+  # Web Tool
+  web:
+    image: based/tools/web:latest
+    container_name: based-tool-web
+    ports:
+      - "8084:80"
+    volumes:
+      - ./tools/web/tools:/mcp:ro
+      - ./tools/web/doc:/app/doc
+    environment:
+      - RACK_ENV=development
+      - PORT=80
+    restart: unless-stopped
+
+  # Redis for ActionCable (web agent)
+  redis:
+    image: redis:7-alpine
+    container_name: based-redis
+    restart: unless-stopped
+
+  # CLI Agent (interactive terminal)
+  agent-cli:
+    image: based/agent-cli:latest
+    container_name: based-agent-cli
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./agents/cli/config:/app/agent/config
+    environment:
+      - CONFIG_PATH=/app/agent/config/config.yaml
+      - DEBUG=${DEBUG:-}
+    depends_on:
+      - doc
+      - email
+      - sms
+      - web
+    profiles:
+      - cli
+
+  # Web Agent (Rails API + React frontend)
+  agent-web:
+    image: based/agent-web:latest
+    container_name: based-agent-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./agents/web/config:/app/web/config
+    environment:
+      - RAILS_ENV=development
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_ENDPOINT=${OPENAI_ENDPOINT:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - DEBUG=${DEBUG:-}
+    depends_on:
+      - redis
+      - doc
+      - email
+      - sms
+      - web
+    restart: unless-stopped
+
+  # Headless Agent (autonomous goal execution)
+  agent-headless:
+    image: based/agent-headless:latest
+    container_name: based-agent-headless
+    volumes:
+      - ./agents/headless/config:/app/agent/config
+    environment:
+      - CONFIG_PATH=/app/agent/config/config.yaml
+      - GOALS_PATH=/app/agent/config/goals.yaml
+      - DEBUG=${DEBUG:-}
+    depends_on:
+      - doc
+      - email
+      - sms
+      - web
+    profiles:
+      - headless
+
+networks:
+  default:
+    name: based-network

@@ -1,0 +1,13 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+# Backend client library (shared)
+gem 'ruby_llm', '~> 1.8'
+gem 'ruby_llm-mcp', '~> 0.1'
+
+group :development do
+  gem 'rubocop', '~> 1.60'
+  gem 'rubocop-performance', '~> 1.20'
+  gem 'yard', '~> 0.9.37'
+end

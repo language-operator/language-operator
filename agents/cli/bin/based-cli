@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Add lib directories to load path
+$LOAD_PATH.unshift('/app/lib')           # Backend library
+$LOAD_PATH.unshift(File.expand_path('../lib', __dir__))  # CLI lib
+
+require 'based_client'
+require 'cli_interface'
+
+# Load configuration
+config_path = ENV.fetch('CONFIG_PATH', '/app/config/config.yaml')
+config = Based::Client::Config.load_with_fallback(config_path)
+
+# Create client and interface
+client = Based::Client::Base.new(config)
+interface = CLIInterface.new(client)
+
+# Run interactive chat
+interface.run

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: language-operator
+description: A Kubernetes operator for managing language models, tools, agents, personas, and clients
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - llm
+  - language-models
+  - agents
+  - mcp
+home: https://github.com/based/language-operator
+sources:
+  - https://github.com/based/language-operator
+maintainers:
+  - name: Based Team
+    email: team@based.dev
