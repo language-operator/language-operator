@@ -1805,9 +1805,16 @@ spec:
               logging:
                 description: Logging defines logging configuration
                 properties:
+                  format:
+                    default: json
+                    description: Format sets the log format
+                    enum:
+                    - json
+                    - text
+                    type: string
                   level:
                     default: info
-                    description: Level is the log level (debug, info, warn, error)
+                    description: Level sets the log level
                     enum:
                     - debug
                     - info
@@ -1821,6 +1828,10 @@ spec:
                   logResponses:
                     default: false
                     description: LogResponses enables response logging
+                    type: boolean
+                  sanitizeSecrets:
+                    default: true
+                    description: SanitizeSecrets removes secrets from logs
                     type: boolean
                 type: object
               modelRefs:

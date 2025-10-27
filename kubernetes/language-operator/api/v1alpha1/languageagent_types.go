@@ -305,15 +305,15 @@ type SafetyConfigSpec struct {
 
 	// ContentFilters defines content filtering rules
 	// +optional
-	ContentFilters []ContentFilterSpec `json:"contentFilters,omitempty"`
+	ContentFilters []AgentContentFilterSpec `json:"contentFilters,omitempty"`
 
 	// MaxCostPerExecution limits cost per execution
 	// +optional
 	MaxCostPerExecution *float64 `json:"maxCostPerExecution,omitempty"`
 }
 
-// ContentFilterSpec defines a content filter
-type ContentFilterSpec struct {
+// AgentContentFilterSpec defines a content filter
+type AgentContentFilterSpec struct {
 	// Type is the filter type (profanity, pii, toxic, custom)
 	// +kubebuilder:validation:Enum=profanity;pii;toxic;custom
 	Type string `json:"type"`

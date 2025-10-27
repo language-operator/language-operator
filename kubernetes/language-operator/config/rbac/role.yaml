@@ -1,0 +1,204 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagents/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclients
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclients/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclients/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagemodels
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languagemodels/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagemodels/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagepersonas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languagepersonas/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagepersonas/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagetools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languagetools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languagetools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

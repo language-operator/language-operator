@@ -1,31 +1,11 @@
-# based
+# language-operator
 
-A set of useful things.
+Custom resource definitions for language-based automations.
+
 
 ## Quick Start
 
-Build all images:
 
-```bash
-make build
-```
-
-Start all services:
-
-```bash
-make up
-```
-
-View service logs:
-
-```bash
-make logs
-```
-
-Stop all services:
-
-```bash
-make down
 ```
 
 ## Services

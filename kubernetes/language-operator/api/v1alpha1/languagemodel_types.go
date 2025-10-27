@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -274,11 +273,11 @@ type ObservabilitySpec struct {
 
 	// Logging defines logging configuration
 	// +optional
-	Logging *LoggingSpec `json:"logging,omitempty"`
+	Logging *ModelLoggingSpec `json:"logging,omitempty"`
 }
 
-// LoggingSpec defines logging configuration
-type LoggingSpec struct {
+// ModelLoggingSpec defines logging configuration
+type ModelLoggingSpec struct {
 	// Level is the log level (debug, info, warn, error)
 	// +kubebuilder:validation:Enum=debug;info;warn;error
 	// +kubebuilder:default=info

@@ -1417,28 +1417,31 @@ spec:
                   contentFilters:
                     description: ContentFilters defines content filtering rules
                     items:
-                      description: ContentFilterSpec defines a custom content filter
+                      description: AgentContentFilterSpec defines a content filter
                       properties:
                         action:
-                          description: Action overrides the default action for this
-                            filter
+                          default: block
+                          description: Action defines what to do when filter matches
+                            (block, warn, log)
                           enum:
                           - block
                           - warn
                           - log
                           type: string
-                        message:
-                          description: Message is shown when content matches
-                          type: string
-                        name:
-                          description: Name is the filter identifier
-                          type: string
                         pattern:
-                          description: Pattern is a regex pattern to match
+                          description: Pattern is a regex pattern for custom filters
+                          type: string
+                        type:
+                          description: Type is the filter type (profanity, pii, toxic,
+                            custom)
+                          enum:
+                          - profanity
+                          - pii
+                          - toxic
+                          - custom
                           type: string
                       required:
-                      - name
-                      - pattern
+                      - type
                       type: object
                     type: array
                   maxCostPerExecution:
