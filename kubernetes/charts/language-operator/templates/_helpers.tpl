@@ -73,11 +73,7 @@ Create the image name
 Create the metrics bind address
 */}}
 {{- define "language-operator.metricsBindAddress" -}}
-{{- if .Values.config.metrics.secure }}
-{{- printf "https://:%s" (toString .Values.service.metricsPort) }}
-{{- else }}
 {{- printf ":%s" (toString .Values.service.metricsPort) }}
-{{- end }}
 {{- end }}
 
 {{/*

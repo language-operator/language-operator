@@ -1,0 +1,64 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: code-assistant
+spec:
+  # Reference the cluster for network isolation
+  clusterRef: demo-cluster
+
+  # Assign to the "agents" security group
+  group: agents
+
+  # Agent mode (continuous or scheduled)
+  mode: continuous
+
+  # Docker image for the agent
+  image: ghcr.io/based/agent-code:latest
+
+  # Number of replicas for continuous mode
+  replicas: 1
+
+  # Agent configuration
+  modelRef:
+    name: gpt-4
+    role: primary
+
+  # Tools this agent can use
+  toolRefs:
+    - name: github-tool
+
+  # Agent persona/system prompt
+  personaRef:
+    name: helpful-coder
+
+  # Environment variables
+  env:
+    - name: AGENT_NAME
+      value: "CodeAssistant"
+    - name: MAX_ITERATIONS
+      value: "10"
+    - name: ENABLE_LOGGING
+      value: "true"
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+
+  # Goals this agent works towards
+  goals:
+    - Review open GitHub pull requests
+    - Provide code suggestions and improvements
+    - Answer questions about the codebase
+    - Create issues for discovered bugs
+
+  # Constraints for the agent
+  constraints:
+    - Do not modify production branches directly
+    - Always explain reasoning for suggestions
+    - Cite specific code locations when providing feedback
+    - Respect repository contribution guidelines

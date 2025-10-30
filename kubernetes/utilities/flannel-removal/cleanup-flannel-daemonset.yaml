@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flannel-cleanup-script
+  namespace: kube-system
+data:
+  cleanup.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "========================================"
+    echo "   Flannel Complete Cleanup Script"
+    echo "========================================"
+    echo "Node: $(hostname)"
+    echo "Time: $(date)"
+    echo ""
+
+    # Step 1: Cleanup iptables rules
+    echo "STEP 1: Cleaning up iptables rules"
+    echo "-----------------------------------"
+
+    # Use nsenter to run iptables commands in host network namespace
+    nsenter --net=/host/proc/1/ns/net -- iptables -D FORWARD -m comment --comment "flanneld forward" -j FLANNEL-FWD 2>/dev/null && echo "✓ Removed FLANNEL-FWD jump rule" || echo "  (rule not found)"
+    nsenter --net=/host/proc/1/ns/net -- iptables -F FLANNEL-FWD 2>/dev/null && echo "✓ Flushed FLANNEL-FWD chain" || echo "  (chain not found)"
+    nsenter --net=/host/proc/1/ns/net -- iptables -X FLANNEL-FWD 2>/dev/null && echo "✓ Deleted FLANNEL-FWD chain" || echo "  (chain not found)"
+
+    nsenter --net=/host/proc/1/ns/net -- iptables -t nat -D POSTROUTING -m comment --comment "flanneld masq" -j FLANNEL-POSTRTG 2>/dev/null && echo "✓ Removed FLANNEL-POSTRTG jump rule" || echo "  (rule not found)"
+    nsenter --net=/host/proc/1/ns/net -- iptables -t nat -F FLANNEL-POSTRTG 2>/dev/null && echo "✓ Flushed FLANNEL-POSTRTG chain" || echo "  (chain not found)"
+    nsenter --net=/host/proc/1/ns/net -- iptables -t nat -X FLANNEL-POSTRTG 2>/dev/null && echo "✓ Deleted FLANNEL-POSTRTG chain" || echo "  (chain not found)"
+
+    echo ""
+
+    # Step 2: Cleanup network interfaces
+    echo "STEP 2: Cleaning up network interfaces"
+    echo "---------------------------------------"
+
+    if nsenter --net=/host/proc/1/ns/net -- ip link show flannel.1 &>/dev/null; then
+        nsenter --net=/host/proc/1/ns/net -- ip link set flannel.1 down 2>/dev/null || true
+        nsenter --net=/host/proc/1/ns/net -- ip link delete flannel.1 2>/dev/null && echo "✓ Removed flannel.1 interface" || echo "⚠ Failed to remove flannel.1"
+    else
+        echo "✓ flannel.1 not found (already removed)"
+    fi
+
+    if nsenter --net=/host/proc/1/ns/net -- ip link show cni0 &>/dev/null; then
+        echo "⚠ cni0 interface still exists (may be in use by pods)"
+    else
+        echo "✓ cni0 not found"
+    fi
+
+    echo ""
+
+    # Step 3: Cleanup routes
+    echo "STEP 3: Cleaning up routing table"
+    echo "-----------------------------------"
+
+    DELETED_ROUTES=0
+    while read -r route; do
+        if [ -n "$route" ]; then
+            nsenter --net=/host/proc/1/ns/net -- ip route del $route 2>/dev/null && {
+                echo "✓ Removed route: $route"
+                ((DELETED_ROUTES++))
+            } || echo "  Failed to remove: $route"
+        fi
+    done < <(nsenter --net=/host/proc/1/ns/net -- ip route show | grep "^10.42" | grep -v "cilium_host" | grep -v "flannel.1" | grep "via.*proto kernel")
+
+    if [ "$DELETED_ROUTES" -eq 0 ]; then
+        echo "✓ No Flannel routes found to remove"
+    else
+        echo "✓ Removed $DELETED_ROUTES Flannel routes"
+    fi
+
+    echo ""
+    echo "========================================"
+    echo "   Cleanup Complete on $(hostname)"
+    echo "========================================"
+
+    # Keep the pod running so you can check logs
+    echo ""
+    echo "Sleeping to allow log inspection..."
+    sleep 3600
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: flannel-cleanup
+  namespace: kube-system
+  labels:
+    app: flannel-cleanup
+spec:
+  selector:
+    matchLabels:
+      app: flannel-cleanup
+  template:
+    metadata:
+      labels:
+        app: flannel-cleanup
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: cleanup
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk add --no-cache bash iptables iproute2 util-linux
+          chmod +x /scripts/cleanup.sh
+          /scripts/cleanup.sh
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: host-proc
+          mountPath: /host/proc
+          readOnly: true
+      volumes:
+      - name: scripts
+        configMap:
+          name: flannel-cleanup-script
+          defaultMode: 0755
+      - name: host-proc
+        hostPath:
+          path: /proc
+          type: Directory
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+      - operator: Exists
+        effect: NoExecute

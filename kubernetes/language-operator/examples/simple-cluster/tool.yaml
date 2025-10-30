@@ -1,0 +1,75 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: github-tool
+spec:
+  # Reference the cluster for network isolation
+  clusterRef: demo-cluster
+
+  # Assign to the "tools" security group
+  group: tools
+
+  # Tool type (http or stdio)
+  type: http
+
+  # Docker image for the tool
+  image: ghcr.io/based/mcp-github:latest
+
+  # Port the tool listens on
+  port: 8080
+
+  # Number of replicas
+  replicas: 1
+
+  # Environment variables
+  env:
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: github-credentials
+          key: token
+    - name: LOG_LEVEL
+      value: "info"
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+
+  # Tool capabilities (for discovery)
+  capabilities:
+    - name: github.list_repos
+      description: List GitHub repositories for a user or organization
+      parameters:
+        - name: owner
+          type: string
+          required: true
+          description: GitHub username or organization name
+
+    - name: github.create_issue
+      description: Create a new issue in a repository
+      parameters:
+        - name: owner
+          type: string
+          required: true
+        - name: repo
+          type: string
+          required: true
+        - name: title
+          type: string
+          required: true
+        - name: body
+          type: string
+          required: false
+
+    - name: github.search_code
+      description: Search for code across GitHub
+      parameters:
+        - name: query
+          type: string
+          required: true
+          description: Search query string

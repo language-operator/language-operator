@@ -12,14 +12,41 @@ Autonomous agent that runs in a continuous loop to achieve specified goals.
 
 ## Usage
 
-### With Docker Compose
+### With Kubernetes (Recommended)
+
+Deploy as a LanguageAgent resource with autonomous goals:
 
 ```bash
-# From repository root
-docker compose up agent-headless
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: headless-agent
+spec:
+  type: headless
+  image: based/agent-headless:latest
+  llmConfig:
+    provider: openai_compatible
+    model: llama3.2
+    endpoint: http://llm-service:8080/v1
+  tools:
+    - doc-tools
+    - web-tools
+  goals:
+    objectives:
+      - "Search for and summarize the latest Ruby news"
+      - "Check documentation for man pages on grep"
+    maxIterations: 50
+    timeoutMinutes: 10
+EOF
+```
 
-# Or with profile
-docker compose --profile headless up
+### With Docker Locally
+
+```bash
+# Build and run
+make build
+docker run -v $(pwd)/config:/app/agent/config based/agent-headless:latest
 ```
 
 ### Configuration
@@ -66,7 +93,8 @@ The agent uses simple keyword matching to determine if an objective has been add
 ### Requirements
 
 - Ruby 3.4+
-- Docker & Docker Compose
+- Docker (for local development)
+- Kubernetes cluster (for production deployment)
 
 ### Run Locally
 

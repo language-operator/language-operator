@@ -1,0 +1,55 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: ollama-llama3
+  namespace: langop-system
+spec:
+  # Provider type for local LLMs with OpenAI-compatible API
+  provider: openai-compatible
+
+  # Model identifier (as known by Ollama)
+  modelName: llama3.2
+
+  # Ollama endpoint (or any OpenAI-compatible endpoint)
+  endpoint: http://ollama.default.svc.cluster.local:11434/v1
+
+  # No API key needed for local Ollama
+  # apiKeySecretRef: null
+
+  # Request timeout (longer for local models)
+  timeout: "15m"
+
+  # Rate limiting (more generous for local)
+  rateLimits:
+    requestsPerMinute: 200
+    concurrentRequests: 20
+
+  # Retry policy
+  retryPolicy:
+    maxAttempts: 2
+    initialBackoff: "1s"
+    maxBackoff: "10s"
+
+  # Model configuration
+  configuration:
+    temperature: 0.8
+    maxTokens: 2048
+    topP: 0.9
+
+  # Response caching (useful for local models)
+  caching:
+    enabled: true
+    ttl: "10m"
+    backend: memory
+    maxSize: 512  # MB
+
+  # Observability
+  observability:
+    metrics: true
+    logging:
+      level: info
+      logRequests: true
+
+  # Cost tracking (free for local!)
+  costTracking:
+    enabled: false

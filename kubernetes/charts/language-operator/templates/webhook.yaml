@@ -1,0 +1,76 @@
+{{- if .Values.config.webhook.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "language-operator.fullname" . }}-webhook
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 443
+    targetPort: {{ .Values.config.webhook.port }}
+    protocol: TCP
+    name: webhook
+  selector:
+    {{- include "language-operator.selectorLabels" . | nindent 4 }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: {{ include "language-operator.fullname" . }}-validating-webhook
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "language-operator.fullname" . }}-webhook-cert
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /validate-langop-io-v1alpha1-languagecluster
+  failurePolicy: Fail
+  name: vlanguagecluster.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - languageclusters
+  sideEffects: None
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "language-operator.fullname" . }}-webhook-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+  - {{ include "language-operator.fullname" . }}-webhook.{{ .Release.Namespace }}.svc
+  - {{ include "language-operator.fullname" . }}-webhook.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "language-operator.fullname" . }}-selfsigned-issuer
+  secretName: {{ include "language-operator.fullname" . }}-webhook-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "language-operator.fullname" . }}-selfsigned-issuer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}

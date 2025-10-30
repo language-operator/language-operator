@@ -1104,6 +1104,10 @@ spec:
                     description: RequireAuthentication blocks unauthenticated access
                     type: boolean
                 type: object
+              clusterRef:
+                description: ClusterRef references a LanguageCluster to deploy this
+                  client into
+                type: string
               containerSecurityContext:
                 description: ContainerSecurityContext holds container-level security
                   attributes
@@ -1507,6 +1511,11 @@ spec:
                       x-kubernetes-map-type: atomic
                   type: object
                 type: array
+              group:
+                description: |-
+                  Group specifies the security group within the cluster
+                  Defaults to "default" if ClusterRef is set
+                type: string
               horizontalPodAutoscaler:
                 description: HorizontalPodAutoscaler defines HPA configuration
                 properties:

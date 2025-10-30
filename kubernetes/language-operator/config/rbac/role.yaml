@@ -19,6 +19,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   - get
@@ -39,6 +50,14 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
   - deployments
   verbs:
   - create
@@ -52,6 +71,18 @@ rules:
   - batch
   resources:
   - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cilium.io
+  resources:
+  - ciliumnetworkpolicies
   verbs:
   - create
   - delete
@@ -108,6 +139,32 @@ rules:
   - langop.io
   resources:
   - languageclients/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageclusters/status
   verbs:
   - get
   - patch
@@ -194,6 +251,18 @@ rules:
   - networking.k8s.io
   resources:
   - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
   verbs:
   - create
   - delete

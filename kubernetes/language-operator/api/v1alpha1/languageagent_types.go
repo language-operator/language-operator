@@ -7,6 +7,15 @@ import (
 
 // LanguageAgentSpec defines the desired state of LanguageAgent
 type LanguageAgentSpec struct {
+	// ClusterRef references a LanguageCluster to deploy this agent into
+	// +optional
+	ClusterRef string `json:"clusterRef,omitempty"`
+
+	// Group specifies the security group within the cluster
+	// Defaults to "default" if ClusterRef is set
+	// +optional
+	Group string `json:"group,omitempty"`
+
 	// Image is the container image to run for this agent
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1

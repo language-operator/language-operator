@@ -1,0 +1,55 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: azure-gpt4
+  namespace: langop-system
+spec:
+  # Provider type
+  provider: azure
+
+  # Azure deployment name
+  modelName: gpt-4-deployment
+
+  # Azure endpoint
+  endpoint: https://your-resource.openai.azure.com/
+
+  # API key from Kubernetes secret
+  apiKeySecretRef:
+    name: azure-openai-credentials
+    key: api-key
+
+  # Request timeout
+  timeout: "5m"
+
+  # Rate limiting (based on Azure deployment limits)
+  rateLimits:
+    requestsPerMinute: 120
+    tokensPerMinute: 150000
+    concurrentRequests: 15
+
+  # Retry policy
+  retryPolicy:
+    maxAttempts: 3
+    initialBackoff: "1s"
+    maxBackoff: "30s"
+
+  # Model configuration
+  configuration:
+    temperature: 0.7
+    maxTokens: 4096
+    additionalParameters:
+      api_version: "2025-01-01-preview"
+
+  # Observability
+  observability:
+    metrics: true
+    logging:
+      level: info
+      logRequests: true
+
+  # Cost tracking
+  costTracking:
+    enabled: true
+    currency: "USD"
+    inputTokenCost: 0.01
+    outputTokenCost: 0.03

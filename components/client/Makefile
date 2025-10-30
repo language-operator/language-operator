@@ -22,8 +22,10 @@ build:
 
 .PHONY: run
 run:
-	@echo "Running chat client..."
-	docker compose -f ../../docker-compose.yml run --rm client
+	@echo "Running chat client locally with Docker..."
+	docker run -it --rm \
+		-v $(PWD)/config:/app/config \
+		based/client:latest
 
 .PHONY: test
 test:

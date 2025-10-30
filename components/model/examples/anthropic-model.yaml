@@ -1,0 +1,60 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+  namespace: langop-system
+spec:
+  # Provider type
+  provider: anthropic
+
+  # Model identifier
+  modelName: claude-3-5-sonnet-20241022
+
+  # API key from Kubernetes secret
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key
+
+  # Request timeout
+  timeout: "10m"
+
+  # Rate limiting
+  rateLimits:
+    requestsPerMinute: 50
+    tokensPerMinute: 80000
+    concurrentRequests: 5
+
+  # Retry policy
+  retryPolicy:
+    maxAttempts: 3
+    initialBackoff: "2s"
+    maxBackoff: "60s"
+    backoffMultiplier: 2.0
+    retryableStatusCodes:
+      - 429
+      - 500
+      - 502
+      - 503
+      - 529  # Anthropic overloaded
+
+  # Model configuration
+  configuration:
+    temperature: 1.0
+    maxTokens: 8192
+    topP: 0.95
+
+  # Observability
+  observability:
+    metrics: true
+    tracing: true
+    logging:
+      level: info
+      logRequests: true
+      logResponses: false
+
+  # Cost tracking
+  costTracking:
+    enabled: true
+    currency: "USD"
+    inputTokenCost: 0.003   # per 1000 tokens
+    outputTokenCost: 0.015  # per 1000 tokens

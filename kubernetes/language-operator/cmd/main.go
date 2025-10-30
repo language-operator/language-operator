@@ -173,6 +173,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageClient")
 		os.Exit(1)
 	}
+
+	// Setup LanguageCluster controller
+	if err = (&controllers.LanguageClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
+	}).SetupWithManager(mgr, concurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
+		os.Exit(1)
+	}
+
+	// Setup LanguageCluster webhook
+	if err = (&langopv1alpha1.LanguageCluster{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	// Add health and readiness checks

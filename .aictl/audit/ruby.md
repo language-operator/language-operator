@@ -253,19 +253,19 @@ When auditing Ruby code, verify:
 
 ## Reference Implementation
 
-LOCATION: types/server/
+LOCATION: components/server/
 
 FILES TO REFERENCE:
-- types/server/Gemfile - Dependency management
-- types/server/.yardopts - YARD configuration
-- types/server/Makefile - Standard targets
-- types/server/lib/config.rb - YARD documentation example
-- types/server/lib/helpers.rb - Module documentation
-- types/server/lib/shell.rb - Method documentation
+- components/server/Gemfile - Dependency management
+- components/server/.yardopts - YARD configuration
+- components/server/Makefile - Standard targets
+- components/server/lib/config.rb - YARD documentation example
+- components/server/lib/helpers.rb - Module documentation
+- components/server/lib/shell.rb - Method documentation
 
 VERIFY IMPLEMENTATION:
 ```bash
-cd types/server
+cd components/server
 make doc        # Should generate without errors
 make lint       # Should pass with zero offenses
 ```
@@ -273,7 +273,7 @@ make lint       # Should pass with zero offenses
 ## Agent Actions
 
 When creating new Ruby project:
-1. Copy structure from types/server/
+1. Copy structure from components/server/
 2. Create all required files from templates
 3. Run make lint and fix all issues
 4. Run make doc and verify generation

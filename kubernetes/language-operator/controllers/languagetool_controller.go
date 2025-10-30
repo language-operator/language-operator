@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,11 +130,40 @@ func (r *LanguageToolReconciler) reconcileConfigMap(ctx context.Context, tool *l
 }
 
 func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	// Determine target namespace and labels
+	targetNamespace := tool.Namespace
+	labels := GetCommonLabels(tool.Name, "LanguageTool")
+
+	// If cluster ref is set, fetch cluster and use its namespace
+	if tool.Spec.ClusterRef != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef}, cluster); err != nil {
+			return err
+		}
+
+		// Wait for cluster to be ready
+		if cluster.Status.Phase != "Ready" {
+			// Return error to trigger requeue
+			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
+		}
+
+		// Use cluster's namespace
+		targetNamespace = cluster.Status.Namespace
+
+		// Add security group labels
+		group := tool.Spec.Group
+		if group == "" {
+			group = "default"
+		}
+		labels["langop.io/cluster"] = tool.Spec.ClusterRef
+		labels["langop.io/group"] = group
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tool.Name,
-			Namespace: tool.Namespace,
-			Labels:    GetCommonLabels(tool.Name, "LanguageTool"),
+			Namespace: targetNamespace,
+			Labels:    labels,
 		},
 	}
 
@@ -151,11 +182,11 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: GetCommonLabels(tool.Name, "LanguageTool"),
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: GetCommonLabels(tool.Name, "LanguageTool"),
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -191,11 +222,39 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 }
 
 func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	// Determine target namespace and labels (same logic as deployment)
+	targetNamespace := tool.Namespace
+	labels := GetCommonLabels(tool.Name, "LanguageTool")
+
+	// If cluster ref is set, fetch cluster and use its namespace
+	if tool.Spec.ClusterRef != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef}, cluster); err != nil {
+			return err
+		}
+
+		// Wait for cluster to be ready
+		if cluster.Status.Phase != "Ready" {
+			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
+		}
+
+		// Use cluster's namespace
+		targetNamespace = cluster.Status.Namespace
+
+		// Add security group labels
+		group := tool.Spec.Group
+		if group == "" {
+			group = "default"
+		}
+		labels["langop.io/cluster"] = tool.Spec.ClusterRef
+		labels["langop.io/group"] = group
+	}
+
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tool.Name,
-			Namespace: tool.Namespace,
-			Labels:    GetCommonLabels(tool.Name, "LanguageTool"),
+			Namespace: targetNamespace,
+			Labels:    labels,
 		},
 	}
 
@@ -207,7 +266,7 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 
 		// Set service spec
 		service.Spec = corev1.ServiceSpec{
-			Selector: GetCommonLabels(tool.Name, "LanguageTool"),
+			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",

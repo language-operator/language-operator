@@ -953,6 +953,10 @@ spec:
                 format: int32
                 minimum: 0
                 type: integer
+              clusterRef:
+                description: ClusterRef references a LanguageCluster to deploy this
+                  agent into
+                type: string
               env:
                 description: Env contains environment variables for the agent container
                 items:
@@ -1142,6 +1146,11 @@ spec:
                 type: string
               goal:
                 description: Goal defines the agent's objective (for autonomous agents)
+                type: string
+              group:
+                description: |-
+                  Group specifies the security group within the cluster
+                  Defaults to "default" if ClusterRef is set
                 type: string
               image:
                 description: Image is the container image to run for this agent

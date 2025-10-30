@@ -13,8 +13,11 @@ build:
 	docker build -t based/agent-cli:latest .
 
 run:
-	@echo "Running CLI agent..."
-	docker compose -f ../../docker-compose.yml run --rm agent-cli
+	@echo "Running CLI agent locally with Docker..."
+	docker run -it --rm \
+		-v $(PWD)/config:/app/agent/config \
+		-e CONFIG_PATH=/app/agent/config/config.yaml \
+		based/agent-cli:latest
 
 lint:
 	@echo "Running RuboCop..."

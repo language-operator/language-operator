@@ -1,0 +1,94 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: gpt4-ha
+  namespace: langop-system
+spec:
+  # Provider type
+  provider: openai
+
+  # Model identifier
+  modelName: gpt-4
+
+  # API key from Kubernetes secret
+  apiKeySecretRef:
+    name: openai-credentials
+    key: api-key
+
+  # Request timeout
+  timeout: "5m"
+
+  # Rate limiting (aggregate across all endpoints)
+  rateLimits:
+    requestsPerMinute: 300  # Total across all endpoints
+    tokensPerMinute: 300000
+    concurrentRequests: 30
+
+  # Retry policy
+  retryPolicy:
+    maxAttempts: 3
+    initialBackoff: "1s"
+    maxBackoff: "30s"
+
+  # Load balancing across multiple endpoints
+  loadBalancing:
+    # Strategy: round-robin, least-connections, random, weighted, latency-based
+    strategy: latency-based
+
+    # Multiple endpoints (for high availability)
+    endpoints:
+      - url: https://api.openai.com/v1
+        weight: 100
+        region: us-east-1
+        priority: 1
+
+      - url: https://api.openai.com/v1
+        weight: 100
+        region: us-west-2
+        priority: 1
+
+      - url: https://api.openai.com/v1
+        weight: 50
+        region: eu-west-1
+        priority: 2  # Lower priority (backup)
+
+    # Health checking
+    healthCheck:
+      enabled: true
+      interval: "30s"
+      timeout: "5s"
+      unhealthyThreshold: 3
+      healthyThreshold: 2
+
+  # Fallback models (if all endpoints fail)
+  fallbacks:
+    - modelRef: gpt-3.5-turbo
+      conditions:
+        - "error"
+        - "rate_limit"
+
+  # Model configuration
+  configuration:
+    temperature: 0.7
+    maxTokens: 4096
+
+  # Response caching
+  caching:
+    enabled: true
+    ttl: "5m"
+    backend: redis  # Shared cache across instances
+
+  # Observability
+  observability:
+    metrics: true
+    tracing: true
+    logging:
+      level: info
+      logRequests: true
+
+  # Cost tracking
+  costTracking:
+    enabled: true
+    currency: "USD"
+    inputTokenCost: 0.01
+    outputTokenCost: 0.03

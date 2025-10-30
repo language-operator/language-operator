@@ -106,37 +106,29 @@ DEBUG=true
 
 ## Usage
 
-### Using Docker Compose (Recommended)
+### Using Kubernetes (Recommended)
 
-The client is configured using the mounted `config/config.yaml` file:
-
-```bash
-# First, create your config file
-cd types/client
-cp config/config.example.yaml config/config.yaml
-# Edit config/config.yaml with your settings
-
-# Then run the client
-docker compose run --rm client
-```
-
-**Environment variable fallback** (if you don't have config.yaml):
+Deploy the client as a LanguageClient resource:
 
 ```bash
-# With local LLM (e.g., Ollama)
-docker compose run --rm \
-  -e OPENAI_ENDPOINT=http://host.docker.internal:11434/v1 \
-  -e LLM_MODEL=llama3.2 \
-  client
-
-# With OpenAI
-docker compose run --rm -e OPENAI_API_KEY=sk-... client
-
-# With Anthropic
-docker compose run --rm -e ANTHROPIC_API_KEY=sk-ant-... client
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageClient
+metadata:
+  name: chat-client
+spec:
+  image: based/client:latest
+  llmConfig:
+    provider: openai_compatible
+    model: llama3.2
+    endpoint: http://llm-service:8080/v1
+  mcpServers:
+    - name: tools-server
+      url: http://tools-server:80/mcp
+EOF
 ```
 
-### Using Docker
+### Using Docker Locally
 
 ```bash
 # Build the image

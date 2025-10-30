@@ -13,13 +13,36 @@ Interactive terminal interface for chatting with LLMs and using MCP tools.
 
 ## Usage
 
-### With Docker Compose
+### With Kubernetes (Recommended)
+
+Deploy as a LanguageAgent resource:
 
 ```bash
-# From repository root
-docker compose run --rm agent-cli
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: cli-agent
+spec:
+  type: cli
+  image: based/agent-cli:latest
+  llmConfig:
+    provider: openai_compatible
+    model: llama3.2
+    endpoint: http://llm-service:8080/v1
+  tools:
+    - doc-tools
+    - web-tools
+EOF
+```
 
-# Or from this directory
+### With Docker Locally
+
+```bash
+# Build the image
+make build
+
+# Run interactively
 make run
 ```
 
@@ -49,14 +72,14 @@ debug: false
 
 ### Environment Variables
 
-Alternatively, configure via environment variables:
+Alternatively, configure via environment variables when running locally with Docker:
 
 ```bash
-export OPENAI_ENDPOINT=http://localhost:11434/v1
-export LLM_MODEL=llama3.2
-export MCP_URL=http://server:80/mcp
-
-docker compose run --rm agent-cli
+docker run -it --rm \
+  -e OPENAI_ENDPOINT=http://host.docker.internal:11434/v1 \
+  -e LLM_MODEL=llama3.2 \
+  -e MCP_URL=http://server:80/mcp \
+  based/agent-cli:latest
 ```
 
 ## Commands
@@ -73,7 +96,8 @@ While in the chat interface:
 ### Requirements
 
 - Ruby 3.4+
-- Docker & Docker Compose
+- Docker (for local development)
+- Kubernetes cluster (for production deployment)
 
 ### Build
 

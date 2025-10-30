@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := based/base-type
+IMAGE_NAME := git.theryans.io/langop/base
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 
@@ -8,6 +8,7 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 help:
 	@echo "Available targets:"
 	@echo "  build - Build the Docker image"
+	@echo "  push  - Push the Docker image to the registry"
 	@echo "  scan  - Scan the Docker image with Trivy"
 	@echo "  shell - Run the image and exec into it with an interactive shell"
 	@echo "  env   - Display sorted list of environment variables in the image"
@@ -16,6 +17,11 @@ help:
 .PHONY: build
 build:
 	docker build -t $(IMAGE_FULL) .
+
+# Push the Docker image to the registry
+.PHONY: push
+push:
+	docker push $(IMAGE_FULL)
 
 # Scan the Docker image with Trivy
 .PHONY: scan

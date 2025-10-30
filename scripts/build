@@ -55,10 +55,10 @@ build_image() {
     echo ""
 }
 
-# Build types in fixed order
-TYPES_ORDER=("base" "devel" "server" "client")
-for type in "${TYPES_ORDER[@]}"; do
-    build_image "based/${type}:latest" "types/${type}/"
+# Build components in fixed order
+COMPONENTS_ORDER=("base" "devel" "server" "client")
+for component in "${COMPONENTS_ORDER[@]}"; do
+    build_image "based/${component}:latest" "components/${component}/"
 done
 
 # Build all tool services by globbing the tools directory
@@ -81,9 +81,9 @@ print_success "All images built successfully!"
 echo ""
 echo "Built images:"
 
-# List type images
-for type in "${TYPES_ORDER[@]}"; do
-    echo "  - based/${type}:latest"
+# List component images
+for component in "${COMPONENTS_ORDER[@]}"; do
+    echo "  - based/${component}:latest"
 done
 
 # List tool images

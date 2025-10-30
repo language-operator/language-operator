@@ -5,7 +5,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/based/language-operator
+  repository: git.theryans.io/langop/language-operator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -129,9 +129,9 @@ config:
   health:
     bindAddress: ":8081"
 
-  # Webhook configuration (for future use)
+  # Webhook configuration
   webhook:
-    enabled: false
+    enabled: true
     port: 9443
     certDir: /tmp/k8s-webhook-server/serving-certs
 
@@ -183,6 +183,19 @@ rbac:
       verbs:
       - create
       - patch
+    # Coordination resources for leader election
+    - apiGroups:
+      - coordination.k8s.io
+      resources:
+      - leases
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
     # Apps resources
     - apiGroups:
       - apps
@@ -260,6 +273,7 @@ rbac:
       - languageagents
       - languagepersonas
       - languageclients
+      - languageclusters
       verbs:
       - get
       - list
@@ -276,6 +290,7 @@ rbac:
       - languageagents/status
       - languagepersonas/status
       - languageclients/status
+      - languageclusters/status
       verbs:
       - get
       - update
@@ -288,8 +303,57 @@ rbac:
       - languageagents/finalizers
       - languagepersonas/finalizers
       - languageclients/finalizers
+      - languageclusters/finalizers
       verbs:
       - update
+    # Networking resources for LanguageCluster
+    - apiGroups:
+      - networking.k8s.io
+      resources:
+      - networkpolicies
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Cilium resources for LanguageCluster
+    - apiGroups:
+      - cilium.io
+      resources:
+      - ciliumnetworkpolicies
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # Namespace management for LanguageCluster
+    - apiGroups:
+      - ""
+      resources:
+      - namespaces
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # DaemonSet for Cilium verification
+    - apiGroups:
+      - apps
+      resources:
+      - daemonsets
+      verbs:
+      - get
+      - list
+      - watch
 
 # Monitoring configuration
 monitoring:
