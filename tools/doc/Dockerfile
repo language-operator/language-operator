@@ -1,4 +1,4 @@
-FROM based/server:latest
+FROM git.theryans.io/langop/tool:latest
 
 # Switch to root to install packages
 USER root

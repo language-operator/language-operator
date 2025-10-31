@@ -102,28 +102,18 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build base image
+      - name: Build and push base image
         uses: docker/build-push-action@v5
         with:
           context: ./components/base
           file: ./components/base/Dockerfile
-          load: true  # Load into Docker daemon for local use
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest
-            based/base:latest
+          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Push base image to registry
-        if: github.event_name != 'pull_request' && (github.event.inputs.push != 'false')
-        run: |
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            docker tag based/base:latest $tag
-            docker push $tag
-          done
-
-  # Build component images that depend on base (devel, server, client)
+  # Build component images that depend on base (devel, tool, client)
   build-components:
     runs-on: builder
     permissions:
@@ -132,7 +122,7 @@ jobs:
     needs: build-base
     strategy:
       matrix:
-        component: [devel, server, client]
+        component: [devel, tool, client]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -147,16 +137,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Pull and tag base image
-        run: |
-          # Try to pull from registry first (in case base was already pushed)
-          if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest 2>/dev/null; then
-            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest based/base:latest
-            echo "✓ Pulled base image from registry"
-          else
-            echo "Base image not in registry yet, will be available from build-base job"
-          fi
 
       - name: Extract metadata
         id: meta

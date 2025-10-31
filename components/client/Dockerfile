@@ -1,4 +1,4 @@
-FROM based/base:latest
+FROM git.theryans.io/langop/base:latest
 
 # Install Ruby and development dependencies
 RUN apk add --no-cache \

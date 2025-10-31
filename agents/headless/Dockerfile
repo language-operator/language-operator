@@ -1,4 +1,4 @@
-FROM based/client:latest
+FROM git.theryans.io/langop/client:latest
 
 # Switch back to root for setup
 USER root
