@@ -68,15 +68,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build component images (base, devel, server, client)
-  build-components:
+  # Build base image first (required by other components)
+  build-base:
     runs-on: builder
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        component: [base, devel, server, client]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,6 +88,75 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build base image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./components/base
+          file: ./components/base/Dockerfile
+          load: true  # Load into Docker daemon for local use
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest
+            based/base:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push base image to registry
+        if: github.event_name != 'pull_request' && (github.event.inputs.push != 'false')
+        run: |
+          for tag in ${{ steps.meta.outputs.tags }}; do
+            docker tag based/base:latest $tag
+            docker push $tag
+          done
+
+  # Build component images that depend on base (devel, server, client)
+  build-components:
+    runs-on: builder
+    permissions:
+      contents: read
+      packages: write
+    needs: build-base
+    strategy:
+      matrix:
+        component: [devel, server, client]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Pull and tag base image
+        run: |
+          # Try to pull from registry first (in case base was already pushed)
+          if docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest 2>/dev/null; then
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/base:latest based/base:latest
+            echo "✓ Pulled base image from registry"
+          else
+            echo "Base image not in registry yet, will be available from build-base job"
+          fi
 
       - name: Extract metadata
         id: meta
