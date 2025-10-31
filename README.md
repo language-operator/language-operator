@@ -1,11 +1,9 @@
 # language-operator
 
-Kubernetes CRDs for spoken language goal-directed automations.
+Kubernetes CRDs for spoken language automations.
 
 
 ## Architecture
-
-**Cilium CNI is required**.  
 
 The language operator will install the following CRDs:
 
@@ -20,6 +18,67 @@ The language operator will install the following CRDs:
 
 
 ## Example
+
+Create a **personal-assistants** cluster:
+
+```yaml
+# cluster.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: personal-assistants
+spec:
+  namespace: personal-assistants
+```
+
+Create a tool for searching the web:
+
+```yaml
+# web-tool.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: web-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/web-tool:latest
+  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+```
+
+Create a tool for email:
+
+```yaml
+# email-tool.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: email-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/email-tool:latest
+  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+```
+
+Create a model configuration for the agent:
+
+```yaml
+# model.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: mistralai-magistral-small-2506
+spec:
+  cluster: personal-assistants
+  model:
+    provider: openai-compatible
+    model: mistralai/magistral-small-2506
+    endpoint: http://my-on-prem-model.com/v1
+    api_key: magistral
+  proxy:
+    image: git.theryans.io/langop/model:latest
+```
+
+Finally, define the agent and dependencies:
 
 ```yaml
 # agent.yaml
@@ -44,57 +103,6 @@ spec:
     enabled: true
     size: 10Gi
     mountPath: /workspace
-```
-
-```yaml
-# cluster.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: personal-assistants
-spec:
-  namespace: personal-assistants
-```
-
-```yaml
-# web-tool.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: web-tool
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/langop/web-tool:latest
-  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
-```
-
-```yaml
-# email-tool.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: email-tool
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/langop/email-tool:latest
-  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
-```
-
-```yaml
-# model.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageModel
-metadata:
-  name: mistralai-magistral-small-2506
-spec:
-  cluster: personal-assistants
-  model:
-    provider: openai-compatible
-    model: mistralai/magistral-small-2506
-    endpoint: http://my-on-prem-model.com/v1
-    api_key: magistral
-  proxy:
-    image: git.theryans.io/langop/model:latest
 ```
 
 ## Workspace Storage
@@ -245,7 +253,7 @@ The operator automatically creates Kubernetes NetworkPolicies:
 
 1. **Default policy**: Allow all traffic within the cluster namespace, deny all external egress
 2. **Per-resource policies**: For each resource with `egress` defined, create a NetworkPolicy allowing that specific external access
-3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI like Cilium. Otherwise, use CIDR blocks.
+3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI. Otherwise, use CIDR blocks for IP-based restrictions.
 
 ## Reusable Personas
 

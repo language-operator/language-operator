@@ -53,7 +53,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicies(ctx context.Context
 			createdPolicies = append(createdPolicies, ingressPolicy.Name)
 		}
 
-		// Create egress policy (filter out DNS rules - handled by Cilium)
+		// Create egress policy (filter out DNS rules - require DNS-aware CNI)
 		egressRules := filterNonDNSRules(group.Egress)
 		if len(egressRules) > 0 {
 			egressPolicy := buildEgressNetworkPolicy(cluster, group, namespace, egressRules)
@@ -284,7 +284,7 @@ func convertToPeer(peer *langopv1alpha1.NetworkPeer,
 func filterNonDNSRules(rules []langopv1alpha1.NetworkRule) []langopv1alpha1.NetworkRule {
 	var filtered []langopv1alpha1.NetworkRule
 	for _, rule := range rules {
-		// Skip rules that only have DNS (handled by Cilium)
+		// Skip rules that only have DNS (requires DNS-aware CNI)
 		if rule.To != nil && len(rule.To.DNS) > 0 && rule.To.Group == "" &&
 			rule.To.CIDR == "" && rule.To.Service == nil {
 			continue

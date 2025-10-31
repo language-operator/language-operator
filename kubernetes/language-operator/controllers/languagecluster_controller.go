@@ -19,11 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,8 +47,6 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cilium.io,resources=ciliumnetworkpolicies,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -75,18 +70,6 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 	}
-
-	// Check/Install Cilium
-	ciliumStatus, err := r.ensureCilium(ctx, cluster)
-	if err != nil {
-		log.Error(err, "Failed to ensure Cilium is ready")
-		cluster.Status.Phase = "Failed"
-		SetCondition(&cluster.Status.Conditions, "CiliumReady", metav1.ConditionFalse,
-			"CiliumError", err.Error(), cluster.Generation)
-		r.Status().Update(ctx, cluster)
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
-	}
-	cluster.Status.CiliumStatus = ciliumStatus
 
 	// Create/verify namespace
 	namespace, err := r.ensureNamespace(ctx, cluster)
@@ -126,14 +109,6 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	cluster.Status.NetworkPolicies = netpols
-
-	// Generate and apply Cilium policies
-	ciliumPols, err := r.reconcileCiliumPolicies(ctx, cluster, namespace, membership)
-	if err != nil {
-		log.Error(err, "Failed to reconcile Cilium policies")
-		return ctrl.Result{}, err
-	}
-	cluster.Status.CiliumPolicies = ciliumPols
 
 	// Update status
 	cluster.Status.Phase = "Ready"
@@ -186,46 +161,6 @@ func (r *LanguageClusterReconciler) handleDeletion(ctx context.Context, cluster 
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *LanguageClusterReconciler) ensureCilium(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) (langopv1alpha1.CiliumStatus, error) {
-	// Check if Cilium DaemonSet exists
-	ds := &appsv1.DaemonSet{}
-	err := r.Get(ctx, types.NamespacedName{Name: "cilium", Namespace: "kube-system"}, ds)
-
-	if err == nil {
-		// Cilium is installed
-		return langopv1alpha1.CiliumStatus{
-			Installed: true,
-			Version:   extractCiliumVersion(ds),
-			Ready:     isCiliumReady(ds),
-		}, nil
-	}
-
-	if !errors.IsNotFound(err) {
-		return langopv1alpha1.CiliumStatus{}, err
-	}
-
-	// Cilium not found - return error with helpful message
-	return langopv1alpha1.CiliumStatus{}, fmt.Errorf("Cilium is not installed. Please install Cilium before creating a LanguageCluster. See: https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/")
-}
-
-func extractCiliumVersion(ds *appsv1.DaemonSet) string {
-	for _, container := range ds.Spec.Template.Spec.Containers {
-		if container.Name == "cilium-agent" {
-			// Extract version from image tag
-			// Format: quay.io/cilium/cilium:v1.15.0
-			parts := strings.Split(container.Image, ":")
-			if len(parts) == 2 {
-				return strings.TrimPrefix(parts[1], "v")
-			}
-		}
-	}
-	return "unknown"
-}
-
-func isCiliumReady(ds *appsv1.DaemonSet) bool {
-	return ds.Status.NumberReady > 0 && ds.Status.NumberReady == ds.Status.DesiredNumberScheduled
 }
 
 func (r *LanguageClusterReconciler) ensureNamespace(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) (string, error) {
