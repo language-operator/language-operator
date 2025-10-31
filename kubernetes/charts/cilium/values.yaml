@@ -9,6 +9,10 @@ cluster:
 # Operator configuration
 operator:
   replicas: 1
+  # Add Prometheus annotations to operator
+  prometheus:
+    enabled: true
+    port: 9963
 
 # Use native routing mode (required for NixOS compatibility)
 routingMode: native
@@ -70,11 +74,46 @@ enableIPv6Masquerade: false
 # Enable Hubble for network observability
 hubble:
   enabled: true
+
+  # Hubble Relay - exposes gRPC API for Hubble clients
   relay:
     enabled: true
+    # Enable Prometheus metrics for relay with scrape annotations
+    prometheus:
+      enabled: true
+      port: 9966
+
+  # Hubble UI - Web interface
   ui:
     enabled: true
 
-# Monitoring
+  # Enable Hubble metrics
+  # See: https://docs.cilium.io/en/stable/observability/metrics/#hubble-metrics
+  metrics:
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
+    # Port for metrics endpoint
+    port: 9965
+    # Enable OpenMetrics format
+    enableOpenMetrics: true
+
+# Enable Prometheus metrics for cilium-agent
+# See: https://docs.cilium.io/en/stable/observability/metrics/
 prometheus:
   enabled: true
+  port: 9962
+  # Specific metrics to enable
+  metrics:
+    - "+cilium_forward_count_total"
+    - "+cilium_forward_bytes_total"
+    - "+cilium_drop_count_total"
+    - "+cilium_drop_bytes_total"
+    - "+cilium_policy_*"
+    - "+cilium_endpoint_*"
+    - "+cilium_datapath_*"
+    - "+cilium_bpf_*"

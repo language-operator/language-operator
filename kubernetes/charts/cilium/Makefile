@@ -1,7 +1,7 @@
 .PHONY: help install upgrade uninstall dry-run status logs restart check-health validate
 
 # Cilium Helm chart configuration
-CILIUM_VERSION ?= 1.16.5
+CILIUM_VERSION ?= 1.18.3
 CILIUM_NAMESPACE ?= kube-system
 HELM_RELEASE_NAME ?= cilium
 HELM_REPO ?= cilium
