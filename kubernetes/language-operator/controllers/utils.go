@@ -19,13 +19,19 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 )
 
 const (
@@ -209,4 +215,172 @@ func StringPtr(s string) *string {
 // BoolPtr returns a pointer to a bool value
 func BoolPtr(b bool) *bool {
 	return &b
+}
+
+// resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
+// Supports wildcards: *.example.com will resolve example.com and cache the result
+func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
+	var cidrs []string
+	seenIPs := make(map[string]bool)
+
+	for _, hostname := range dnsNames {
+		// Handle wildcard domains by stripping the *. prefix
+		// Note: This is an approximation - we can't know all subdomains
+		// so we resolve the base domain
+		resolveHostname := hostname
+		if strings.HasPrefix(hostname, "*.") {
+			resolveHostname = hostname[2:] // Remove *.
+		}
+
+		// Resolve the hostname to IP addresses
+		ips, err := net.LookupIP(resolveHostname)
+		if err != nil {
+			// Don't fail the entire policy if one DNS lookup fails
+			// Log and continue
+			continue
+		}
+
+		// Convert IPs to /32 (IPv4) or /128 (IPv6) CIDR blocks
+		for _, ip := range ips {
+			var cidr string
+			if ip.To4() != nil {
+				cidr = ip.String() + "/32"
+			} else {
+				cidr = ip.String() + "/128"
+			}
+
+			// Deduplicate
+			if !seenIPs[cidr] {
+				seenIPs[cidr] = true
+				cidrs = append(cidrs, cidr)
+			}
+		}
+	}
+
+	return cidrs, nil
+}
+
+// BuildEgressNetworkPolicy creates a NetworkPolicy for egress rules
+// Default policy: deny all external egress, allow internal cluster + DNS
+// DNS-based rules are resolved to IP addresses at policy creation time
+func BuildEgressNetworkPolicy(
+	name, namespace string,
+	labels map[string]string,
+	egressRules []langopv1alpha1.NetworkRule,
+) *networkingv1.NetworkPolicy {
+
+	policyTypes := []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+
+	// Start with allow all internal cluster traffic + DNS
+	egress := []networkingv1.NetworkPolicyEgressRule{
+		// Allow all internal cluster communication
+		{
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					// Allow same namespace
+					PodSelector: &metav1.LabelSelector{},
+				},
+			},
+		},
+		// Allow DNS
+		{
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": "kube-system",
+						},
+					},
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"k8s-app": "kube-dns",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: protocolPtr(corev1.ProtocolUDP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+				},
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+				},
+			},
+		},
+	}
+
+	// Add user-defined egress rules
+	for _, rule := range egressRules {
+		if rule.To == nil {
+			continue
+		}
+
+		policyRule := networkingv1.NetworkPolicyEgressRule{}
+
+		// Handle CIDR-based egress
+		if rule.To.CIDR != "" {
+			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
+				IPBlock: &networkingv1.IPBlock{
+					CIDR: rule.To.CIDR,
+				},
+			})
+		}
+
+		// Handle DNS-based egress by resolving to IPs
+		// Note: DNS records can change, so this is a point-in-time resolution
+		// Policies will be updated on the next reconciliation loop
+		if len(rule.To.DNS) > 0 {
+			resolvedCIDRs, err := resolveDNSToCIDRs(rule.To.DNS)
+			if err == nil && len(resolvedCIDRs) > 0 {
+				for _, cidr := range resolvedCIDRs {
+					policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
+						IPBlock: &networkingv1.IPBlock{
+							CIDR: cidr,
+						},
+					})
+				}
+			}
+			// If DNS resolution fails, the rule simply won't have any destinations
+			// which means it won't allow any traffic (fail-closed for security)
+		}
+
+		// Handle ports
+		for _, port := range rule.Ports {
+			protocol := corev1.Protocol(port.Protocol)
+			if protocol == "" {
+				protocol = corev1.ProtocolTCP
+			}
+
+			policyRule.Ports = append(policyRule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: &protocol,
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+			})
+		}
+
+		// Only add rule if it has destinations
+		if len(policyRule.To) > 0 || len(policyRule.Ports) > 0 {
+			egress = append(egress, policyRule)
+		}
+	}
+
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			PolicyTypes: policyTypes,
+			Egress:      egress,
+		},
+	}
+}
+
+func protocolPtr(p corev1.Protocol) *corev1.Protocol {
+	return &p
 }

@@ -24,9 +24,11 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,6 +51,7 @@ type LanguageModelReconciler struct {
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles a LanguageModel resource
 func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -106,6 +109,17 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcileService(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile Service")
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
+		model.Status.Phase = "Failed"
+		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
+			log.Error(statusErr, "Failed to update status")
+		}
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile NetworkPolicy for network isolation
+	if err := r.reconcileNetworkPolicy(ctx, model); err != nil {
+		log.Error(err, "Failed to reconcile NetworkPolicy")
+		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
@@ -347,6 +361,47 @@ func (r *LanguageModelReconciler) reconcileService(ctx context.Context, model *l
 	return err
 }
 
+func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
+	labels := GetCommonLabels(model.Name, "LanguageModel")
+
+	// Build NetworkPolicy using helper from utils.go
+	networkPolicy := BuildEgressNetworkPolicy(
+		model.Name,
+		model.Namespace,
+		labels,
+		model.Spec.Egress,
+	)
+
+	// Set owner reference so NetworkPolicy is cleaned up with model
+	if err := controllerutil.SetControllerReference(model, networkPolicy, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
+	// Create or update the NetworkPolicy
+	existingPolicy := &networkingv1.NetworkPolicy{}
+	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Create new NetworkPolicy
+			if err := r.Create(ctx, networkPolicy); err != nil {
+				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
+	}
+
+	// Update existing NetworkPolicy
+	existingPolicy.Spec = networkPolicy.Spec
+	existingPolicy.Labels = networkPolicy.Labels
+	if err := r.Update(ctx, existingPolicy); err != nil {
+		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
+	}
+
+	return nil
+}
+
 // handleDeletion handles the deletion of the LanguageModel
 func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *langopv1alpha1.LanguageModel) (ctrl.Result, error) {
 	log := r.Log.WithValues("languagemodel", client.ObjectKeyFromObject(model))
@@ -374,5 +429,9 @@ func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *lan
 func (r *LanguageModelReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageModel{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&networkingv1.NetworkPolicy{}).
 		Complete(r)
 }

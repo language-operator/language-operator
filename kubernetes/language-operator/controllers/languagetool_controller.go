@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +35,7 @@ type LanguageToolReconciler struct {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -94,6 +96,14 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := r.reconcileService(ctx, tool); err != nil {
 		log.Error(err, "Failed to reconcile Service")
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
+		r.Status().Update(ctx, tool)
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile NetworkPolicy for network isolation
+	if err := r.reconcileNetworkPolicy(ctx, tool); err != nil {
+		log.Error(err, "Failed to reconcile NetworkPolicy")
+		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
 		return ctrl.Result{}, err
 	}
@@ -274,6 +284,47 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 	return err
 }
 
+func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	labels := GetCommonLabels(tool.Name, "LanguageTool")
+
+	// Build NetworkPolicy using helper from utils.go
+	networkPolicy := BuildEgressNetworkPolicy(
+		tool.Name,
+		tool.Namespace,
+		labels,
+		tool.Spec.Egress,
+	)
+
+	// Set owner reference so NetworkPolicy is cleaned up with tool
+	if err := controllerutil.SetControllerReference(tool, networkPolicy, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
+	// Create or update the NetworkPolicy
+	existingPolicy := &networkingv1.NetworkPolicy{}
+	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Create new NetworkPolicy
+			if err := r.Create(ctx, networkPolicy); err != nil {
+				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
+	}
+
+	// Update existing NetworkPolicy
+	existingPolicy.Spec = networkPolicy.Spec
+	existingPolicy.Labels = networkPolicy.Labels
+	if err := r.Update(ctx, existingPolicy); err != nil {
+		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
+	}
+
+	return nil
+}
+
 func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
 	// Resources will be cleaned up automatically via owner references
 	return nil
@@ -286,5 +337,6 @@ func (r *LanguageToolReconciler) SetupWithManager(mgr ctrl.Manager, concurrency 
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&networkingv1.NetworkPolicy{}).
 		Complete(r)
 }

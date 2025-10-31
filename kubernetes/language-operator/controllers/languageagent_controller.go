@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,7 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -86,6 +88,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcilePVC(ctx, agent); err != nil {
 		log.Error(err, "Failed to reconcile PVC")
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "PVCError", err.Error(), agent.Generation)
+		r.Status().Update(ctx, agent)
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile NetworkPolicy for network isolation
+	if err := r.reconcileNetworkPolicy(ctx, agent); err != nil {
+		log.Error(err, "Failed to reconcile NetworkPolicy")
+		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
 		r.Status().Update(ctx, agent)
 		return ctrl.Result{}, err
 	}
@@ -220,6 +230,12 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return fmt.Errorf("failed to resolve tools: %w", err)
 	}
 
+	// Resolve sidecar tools
+	sidecarContainers, err := r.resolveSidecarTools(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("failed to resolve sidecar tools: %w", err)
+	}
+
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
@@ -261,6 +277,18 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			replicas = *agent.Spec.Replicas
 		}
 
+		// Build container list starting with the agent
+		containers := []corev1.Container{
+			{
+				Name:  "agent",
+				Image: agent.Spec.Image,
+				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
+			},
+		}
+
+		// Append sidecar tool containers
+		containers = append(containers, sidecarContainers...)
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -271,13 +299,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "agent",
-							Image: agent.Spec.Image,
-							Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
-						},
-					},
+					Containers: containers,
 				},
 			},
 		}
@@ -330,6 +352,12 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		return fmt.Errorf("failed to resolve tools: %w", err)
 	}
 
+	// Resolve sidecar tools
+	sidecarContainers, err := r.resolveSidecarTools(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("failed to resolve sidecar tools: %w", err)
+	}
+
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
@@ -371,6 +399,18 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			schedule = agent.Spec.Schedule
 		}
 
+		// Build container list starting with the agent
+		containers := []corev1.Container{
+			{
+				Name:  "agent",
+				Image: agent.Spec.Image,
+				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
+			},
+		}
+
+		// Append sidecar tool containers
+		containers = append(containers, sidecarContainers...)
+
 		cronJob.Spec = batchv1.CronJobSpec{
 			Schedule: schedule,
 			JobTemplate: batchv1.JobTemplateSpec{
@@ -381,13 +421,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 						},
 						Spec: corev1.PodSpec{
 							RestartPolicy: corev1.RestartPolicyOnFailure,
-							Containers: []corev1.Container{
-								{
-									Name:  "agent",
-									Image: agent.Spec.Image,
-									Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
-								},
-							},
+							Containers:    containers,
 						},
 					},
 				},
@@ -429,6 +463,47 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 	return err
 }
 
+func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	// Build NetworkPolicy using helper from utils.go
+	networkPolicy := BuildEgressNetworkPolicy(
+		agent.Name,
+		agent.Namespace,
+		labels,
+		agent.Spec.Egress,
+	)
+
+	// Set owner reference so NetworkPolicy is cleaned up with agent
+	if err := controllerutil.SetControllerReference(agent, networkPolicy, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
+	// Create or update the NetworkPolicy
+	existingPolicy := &networkingv1.NetworkPolicy{}
+	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Create new NetworkPolicy
+			if err := r.Create(ctx, networkPolicy); err != nil {
+				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
+	}
+
+	// Update existing NetworkPolicy
+	existingPolicy.Spec = networkPolicy.Spec
+	existingPolicy.Labels = networkPolicy.Labels
+	if err := r.Update(ctx, existingPolicy); err != nil {
+		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
+	}
+
+	return nil
+}
+
 func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
 	var modelURLs []string
 
@@ -457,6 +532,70 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 	return modelURLs, nil
 }
 
+func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, error) {
+	var sidecarContainers []corev1.Container
+
+	for _, toolRef := range agent.Spec.ToolRefs {
+		// Determine namespace
+		namespace := toolRef.Namespace
+		if namespace == "" {
+			namespace = agent.Namespace
+		}
+
+		// Fetch the LanguageTool
+		tool := &langopv1alpha1.LanguageTool{}
+		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: namespace}, tool); err != nil {
+			return nil, fmt.Errorf("failed to get tool %s/%s: %w", namespace, toolRef.Name, err)
+		}
+
+		// Only process sidecar tools
+		if tool.Spec.DeploymentMode != "sidecar" {
+			continue
+		}
+
+		// Build sidecar container spec
+		port := tool.Spec.Port
+		if port == 0 {
+			port = 8080 // Default MCP port
+		}
+
+		container := corev1.Container{
+			Name:  fmt.Sprintf("tool-%s", tool.Name),
+			Image: tool.Spec.Image,
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "mcp",
+					ContainerPort: port,
+					Protocol:      corev1.ProtocolTCP,
+				},
+			},
+			Env: tool.Spec.Env,
+		}
+
+		// Add resource requirements if specified
+		container.Resources = tool.Spec.Resources
+
+		// Mount workspace if agent has workspace enabled
+		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
+			mountPath := agent.Spec.Workspace.MountPath
+			if mountPath == "" {
+				mountPath = "/workspace"
+			}
+
+			container.VolumeMounts = []corev1.VolumeMount{
+				{
+					Name:      "workspace",
+					MountPath: mountPath,
+				},
+			}
+		}
+
+		sidecarContainers = append(sidecarContainers, container)
+	}
+
+	return sidecarContainers, nil
+}
+
 func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
 	var toolURLs []string
 
@@ -473,18 +612,21 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 			return nil, fmt.Errorf("failed to get tool %s/%s: %w", namespace, toolRef.Name, err)
 		}
 
-		// Skip sidecar tools (they'll be added as containers, not via URL)
-		if tool.Spec.DeploymentMode == "sidecar" {
-			continue
-		}
-
-		// Build MCP server URL (service mode)
-		// Format: http://<service-name>.<namespace>.svc.cluster.local:<port>
 		port := tool.Spec.Port
 		if port == 0 {
 			port = 8080 // Default MCP port
 		}
 
+		// Sidecar tools use localhost URLs
+		if tool.Spec.DeploymentMode == "sidecar" {
+			// Format: http://localhost:<port>
+			localhostURL := fmt.Sprintf("http://localhost:%d", port)
+			toolURLs = append(toolURLs, localhostURL)
+			continue
+		}
+
+		// Build MCP server URL (service mode)
+		// Format: http://<service-name>.<namespace>.svc.cluster.local:<port>
 		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, namespace, port)
 		toolURLs = append(toolURLs, serviceURL)
 	}
@@ -549,5 +691,6 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.CronJob{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&networkingv1.NetworkPolicy{}).
 		Complete(r)
 }

@@ -140,7 +140,6 @@ func (r *LanguageClusterReconciler) ensureNamespace(ctx context.Context, cluster
 	return namespace, nil
 }
 
-
 func (r *LanguageClusterReconciler) cleanupResources(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	namespace := cluster.Status.Namespace
 	if namespace == "" {
