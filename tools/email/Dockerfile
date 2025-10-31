@@ -10,10 +10,10 @@ RUN echo "gem 'mail', '~> 2.8'" >> /app/Gemfile && \
 # Copy email tools to /mcp
 COPY tools/ /mcp/
 
-# Ensure /mcp is owned by based user
-RUN chown -R based:based /mcp
+# Ensure /mcp is owned by langop user
+RUN chown -R langop:langop /mcp
 
-# Switch to based user
-USER based
+# Switch to langop user
+USER langop
 
-# The entrypoint and command are inherited from based/server
+# The entrypoint and command are inherited from langop/tool

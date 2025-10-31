@@ -1,4 +1,4 @@
-FROM git.theryans.io/langop/server:latest
+FROM git.theryans.io/langop/tool:latest
 
 # Switch to root to install packages
 USER root
@@ -12,9 +12,9 @@ RUN apk add --no-cache \
 COPY tools/ /mcp/
 
 # Ensure /mcp is owned by langop user
-RUN chown -R based:based /mcp
+RUN chown -R langop:langop /mcp
 
 # Switch to langop user
-USER based
+USER langop
 
-# The entrypoint and command are inherited from langop/server
+# The entrypoint and command are inherited from langop/tool
