@@ -9,7 +9,8 @@ This document tracks what's implemented vs what's documented in the README and A
 - **Phase 1 (Core Functionality)**: ✅ **COMPLETE** - Agents, tools, models, workspace, sidecars
 - **Phase 2 (Network Security)**: ✅ **COMPLETE** - DNS-based egress with automatic resolution
 - **Phase 3 (Personas)**: ⚠️ **PARTIAL** - CRD exists, controller not integrated
-- **Component Images**: ✅ **COMPLETE** - All images built and renamed to `git.theryans.io/langop/*`
+- **Phase 4 (Component Images)**: ✅ **COMPLETE** - Base image hierarchy with agent framework
+- **CI/CD Pipeline**: ✅ **COMPLETE** - Automated builds for all components
 - **End-to-End Testing**: ⚠️ **IN PROGRESS** - Operator deploys, found bugs to fix
 - **Production Ready**: 🟡 **TESTING** - Core features work, fixing status phase bugs
 
@@ -145,6 +146,32 @@ spec:
 - **Wildcard Support** - Wildcards like `*.openai.com` resolve the base domain (`openai.com`)
 - **Automatic Cleanup** - NetworkPolicies are owned by resources and cleaned up on deletion
 
+### Component Image Architecture (Implemented 2025-10-31)
+- **Base Image Hierarchy** - Clean separation of concerns with dependency layers:
+  - `base` → Alpine + langop user + basic packages
+  - `client` → base + ruby_llm libraries (MCP/LLM communication)
+  - `agent` → client + agent framework (autonomous execution)
+  - `tool` → base + MCP server framework
+  - `model` → base + LiteLLM proxy
+  - `devel` → base + development tools
+- **Agent Framework** - New `components/agent` provides:
+  - `Langop::Agent::Base` - Extends Based::Client::Base with agent capabilities
+  - `Langop::Agent::Executor` - Autonomous task execution with iteration limits
+  - `Langop::Agent::Scheduler` - Cron-based scheduled execution (rufus-scheduler)
+  - Workspace integration (`/workspace` volume support)
+  - Goal-directed execution modes (autonomous, interactive, scheduled, event-driven)
+  - Rate limiting and error handling
+- **Agent Implementations** - All agents extend `langop/agent`:
+  - `agents/cli` - Interactive CLI with Reline support
+  - `agents/headless` - Autonomous goal-directed execution
+  - `agents/web` - Rails + Vite web interface
+- **CI/CD Pipeline** - Automated build order ensures dependencies:
+  1. `build-base` → base image
+  2. `build-components` → client, tool, model, devel (parallel)
+  3. `build-agent` → agent component
+  4. `build-agents` → cli, headless, web (parallel)
+  5. `build-tools` → web-tool, email-tool, sms-tool, doc-tool (parallel)
+
 ## ⚠️ Partially Implemented
 
 _Nothing currently in this category._
@@ -230,14 +257,25 @@ _Nothing currently in this category._
 
 ### Phase 4: Component Images ✅ COMPLETE
 1. ✅ Renamed all images from `based/*` to `git.theryans.io/langop/*`
-2. ✅ Built `langop/base` - Alpine base with tini + non-root user
-3. ✅ Built `langop/server` - Generic MCP server with Ruby DSL
-4. ✅ Built `langop/web-tool` - Web search tool (DuckDuckGo + utilities)
-5. ✅ Tagged `langop/agent` - Headless autonomous agent
-6. ✅ Built `langop/model` - LiteLLM proxy (100+ providers)
+2. ✅ Built component image hierarchy:
+   - `langop/base` - Alpine base with langop user
+   - `langop/devel` - Development tools (clang, llvm)
+   - `langop/client` - MCP/LLM client library (ruby_llm, ruby_llm-mcp)
+   - `langop/agent` - Agent framework (autonomous execution, scheduling)
+   - `langop/tool` - MCP tool server framework (Ruby DSL)
+   - `langop/model` - LiteLLM proxy for model access
+3. ✅ Built agent implementations extending `langop/agent`:
+   - `langop/cli` - Interactive CLI agent with Reline
+   - `langop/headless` - Autonomous headless agent
+   - `langop/web` - Rails-based web interface agent
+4. ✅ Built tool implementations extending `langop/tool`:
+   - `langop/web-tool` - Web search (DuckDuckGo + utilities)
+   - `langop/email-tool` - Email capabilities
+   - `langop/sms-tool` - SMS messaging
+   - `langop/doc-tool` - Documentation tools
 
 **Image Registry**: `git.theryans.io/langop/`
-**Status**: Built locally, not yet pushed to registry
+**CI/CD**: Automated builds via Forgejo Actions on push to main
 
 ### Phase 5: Advanced Features (Future)
 1. Cost tracking
