@@ -150,13 +150,8 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		// Use cluster's namespace
 		targetNamespace = cluster.Status.Namespace
 
-		// Add security group labels
-		group := tool.Spec.Group
-		if group == "" {
-			group = "default"
-		}
+		// Add cluster label
 		labels["langop.io/cluster"] = tool.Spec.ClusterRef
-		labels["langop.io/group"] = group
 	}
 
 	deployment := &appsv1.Deployment{
@@ -241,13 +236,8 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		// Use cluster's namespace
 		targetNamespace = cluster.Status.Namespace
 
-		// Add security group labels
-		group := tool.Spec.Group
-		if group == "" {
-			group = "default"
-		}
+		// Add cluster label
 		labels["langop.io/cluster"] = tool.Spec.ClusterRef
-		labels["langop.io/group"] = group
 	}
 
 	service := &corev1.Service{

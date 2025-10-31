@@ -26,48 +26,6 @@ type LanguageClusterSpec struct {
 	// If empty, auto-generates: <cluster-name>-ns
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
-
-	// Network configuration
-	// +optional
-	Network NetworkConfig `json:"network,omitempty"`
-
-	// Security groups defining network boundaries (advanced use)
-	// By default, all resources in the cluster can communicate with each other,
-	// and external access is controlled by egress rules on individual resources
-	// +optional
-	Groups []SecurityGroup `json:"groups,omitempty"`
-}
-
-// NetworkConfig defines network-level settings
-type NetworkConfig struct {
-	// PodCIDR for documentation/validation purposes
-	// +optional
-	PodCIDR string `json:"podCIDR,omitempty"`
-
-	// DefaultPolicy: deny (default) or allow
-	// +kubebuilder:validation:Enum=deny;allow
-	// +kubebuilder:default=deny
-	DefaultPolicy string `json:"defaultPolicy,omitempty"`
-}
-
-// SecurityGroup defines a network isolation boundary
-type SecurityGroup struct {
-	// Name of the security group
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-	Name string `json:"name"`
-
-	// Description of this group's purpose
-	// +optional
-	Description string `json:"description,omitempty"`
-
-	// Ingress rules (who can connect TO this group)
-	// +optional
-	Ingress []NetworkRule `json:"ingress,omitempty"`
-
-	// Egress rules (where this group can connect TO)
-	// +optional
-	Egress []NetworkRule `json:"egress,omitempty"`
 }
 
 // NetworkRule defines a single network policy rule
@@ -91,7 +49,8 @@ type NetworkRule struct {
 
 // NetworkPeer defines the source/destination of network traffic
 type NetworkPeer struct {
-	// Group within the same LanguageCluster
+	// Group selects pods with matching langop.io/group label
+	// Used to allow communication with specific labeled resources
 	// +optional
 	Group string `json:"group,omitempty"`
 
@@ -152,21 +111,6 @@ type LanguageClusterStatus struct {
 
 	// Conditions
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	// Group membership tracking
-	GroupMembership map[string]GroupMembershipInfo `json:"groupMembership,omitempty"`
-
-	// NetworkPolicies created
-	NetworkPolicies []string `json:"networkPolicies,omitempty"`
-}
-
-// GroupMembershipInfo tracks resources in a security group
-type GroupMembershipInfo struct {
-	// Count of resources in this group
-	Count int `json:"count"`
-
-	// List of resource names
-	Resources []string `json:"resources,omitempty"`
 }
 
 //+kubebuilder:object:root=true

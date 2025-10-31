@@ -484,23 +484,6 @@ _Appears in:_
 | `filter` _object (keys:string, values:string)_ | Filter defines filtering criteria for events |  |  |
 
 
-#### GroupMembershipInfo
-
-
-
-GroupMembershipInfo tracks resources in a security group
-
-
-
-_Appears in:_
-- [LanguageClusterStatus](#languageclusterstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `count` _integer_ | Count of resources in this group |  |  |
-| `resources` _string array_ | List of resource names |  |  |
-
-
 #### HPASpec
 
 
@@ -620,7 +603,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this agent into |  |  |
-| `group` _string_ | Group specifies the security group within the cluster<br />Defaults to "default" if ClusterRef is set |  |  |
 | `image` _string_ | Image is the container image to run for this agent |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
@@ -725,7 +707,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this client into |  |  |
-| `group` _string_ | Group specifies the security group within the cluster<br />Defaults to "default" if ClusterRef is set |  |  |
 | `image` _string_ | Image is the container image to run for this client interface |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
@@ -837,8 +818,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `namespace` _string_ | Namespace to create/use for this cluster<br />If empty, auto-generates: <cluster-name>-ns |  |  |
-| `network` _[NetworkConfig](#networkconfig)_ | Network configuration |  |  |
-| `groups` _[SecurityGroup](#securitygroup) array_ | Security groups defining network boundaries (advanced use)<br />By default, all resources in the cluster can communicate with each other,<br />and external access is controlled by egress rules on individual resources |  |  |
 
 
 #### LanguageClusterStatus
@@ -857,8 +836,6 @@ _Appears in:_
 | `phase` _string_ | Phase of the cluster (Pending, Ready, Failed) |  |  |
 | `namespace` _string_ | Namespace created/used by this cluster |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
-| `groupMembership` _object (keys:string, values:[GroupMembershipInfo](#groupmembershipinfo))_ | Group membership tracking |  |  |
-| `networkPolicies` _string array_ | NetworkPolicies created |  |  |
 
 
 #### LanguageModel
@@ -1046,7 +1023,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this tool into |  |  |
-| `group` _string_ | Group specifies the security group within the cluster<br />Defaults to "default" if ClusterRef is set |  |  |
 | `image` _string_ | Image is the container image to run for this tool |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
@@ -1319,23 +1295,6 @@ _Appears in:_
 | `additionalLabels` _object (keys:string, values:string)_ | AdditionalLabels are labels for the ServiceMonitor |  |  |
 
 
-#### NetworkConfig
-
-
-
-NetworkConfig defines network-level settings
-
-
-
-_Appears in:_
-- [LanguageClusterSpec](#languageclusterspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `podCIDR` _string_ | PodCIDR for documentation/validation purposes |  |  |
-| `defaultPolicy` _string_ | DefaultPolicy: deny (default) or allow | deny | Enum: [deny allow] <br /> |
-
-
 #### NetworkPeer
 
 
@@ -1349,7 +1308,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `group` _string_ | Group within the same LanguageCluster |  |  |
+| `group` _string_ | Group selects pods with matching langop.io/group label<br />Used to allow communication with specific labeled resources |  |  |
 | `cidr` _string_ | CIDR block |  |  |
 | `dns` _string array_ | DNS names (supports wildcards with *)<br />Examples: "api.openai.com", "*.googleapis.com" |  |  |
 | `service` _[ServiceReference](#servicereference)_ | Kubernetes service reference |  |  |
@@ -1386,7 +1345,6 @@ _Appears in:_
 - [LanguageAgentSpec](#languageagentspec)
 - [LanguageModelSpec](#languagemodelspec)
 - [LanguageToolSpec](#languagetoolspec)
-- [SecurityGroup](#securitygroup)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1827,25 +1785,6 @@ _Appears in:_
 | `name` _string_ | Name is the name of the secret |  | Required: \{\} <br /> |
 | `namespace` _string_ | Namespace is the namespace of the secret (defaults to same namespace as LanguageModel) |  |  |
 | `key` _string_ | Key is the key within the secret containing the value | api-key |  |
-
-
-#### SecurityGroup
-
-
-
-SecurityGroup defines a network isolation boundary
-
-
-
-_Appears in:_
-- [LanguageClusterSpec](#languageclusterspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name of the security group |  | Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
-| `description` _string_ | Description of this group's purpose |  |  |
-| `ingress` _[NetworkRule](#networkrule) array_ | Ingress rules (who can connect TO this group) |  |  |
-| `egress` _[NetworkRule](#networkrule) array_ | Egress rules (where this group can connect TO) |  |  |
 
 
 #### ServiceReference

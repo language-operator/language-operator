@@ -151,13 +151,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Use cluster's namespace
 		targetNamespace = cluster.Status.Namespace
 
-		// Add security group labels
-		group := agent.Spec.Group
-		if group == "" {
-			group = "default"
-		}
+		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef
-		labels["langop.io/group"] = group
 	}
 
 	deployment := &appsv1.Deployment{
@@ -228,13 +223,8 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		// Use cluster's namespace
 		targetNamespace = cluster.Status.Namespace
 
-		// Add security group labels
-		group := agent.Spec.Group
-		if group == "" {
-			group = "default"
-		}
+		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef
-		labels["langop.io/group"] = group
 	}
 
 	cronJob := &batchv1.CronJob{

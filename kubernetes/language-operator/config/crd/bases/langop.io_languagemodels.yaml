@@ -178,7 +178,9 @@ spec:
                             type: string
                           type: array
                         group:
-                          description: Group within the same LanguageCluster
+                          description: |-
+                            Group selects pods with matching langop.io/group label
+                            Used to allow communication with specific labeled resources
                           type: string
                         namespaceSelector:
                           description: Namespace selector (for cross-namespace rules)
@@ -319,7 +321,9 @@ spec:
                             type: string
                           type: array
                         group:
-                          description: Group within the same LanguageCluster
+                          description: |-
+                            Group selects pods with matching langop.io/group label
+                            Used to allow communication with specific labeled resources
                           type: string
                         namespaceSelector:
                           description: Namespace selector (for cross-namespace rules)

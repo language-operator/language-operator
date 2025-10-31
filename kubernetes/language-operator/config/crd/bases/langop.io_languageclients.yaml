@@ -1511,11 +1511,6 @@ spec:
                       x-kubernetes-map-type: atomic
                   type: object
                 type: array
-              group:
-                description: |-
-                  Group specifies the security group within the cluster
-                  Defaults to "default" if ClusterRef is set
-                type: string
               horizontalPodAutoscaler:
                 description: HorizontalPodAutoscaler defines HPA configuration
                 properties:

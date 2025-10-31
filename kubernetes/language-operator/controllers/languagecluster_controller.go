@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,7 +45,6 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -79,37 +77,6 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	cluster.Status.Namespace = namespace
 
-	// Apply default-deny NetworkPolicy
-	if err := r.ensureDefaultDenyPolicy(ctx, cluster, namespace); err != nil {
-		log.Error(err, "Failed to apply default-deny policy")
-		return ctrl.Result{}, err
-	}
-
-	// Discover group members
-	membership, err := r.discoverGroupMembers(ctx, cluster)
-	if err != nil {
-		log.Error(err, "Failed to discover group members")
-		return ctrl.Result{}, err
-	}
-	cluster.Status.GroupMembership = membership
-
-	// Validate groups
-	if err := r.validateGroups(cluster, membership); err != nil {
-		cluster.Status.Phase = "Failed"
-		SetCondition(&cluster.Status.Conditions, "Valid", metav1.ConditionFalse,
-			"ValidationError", err.Error(), cluster.Generation)
-		r.Status().Update(ctx, cluster)
-		return ctrl.Result{}, err
-	}
-
-	// Generate and apply NetworkPolicies
-	netpols, err := r.reconcileNetworkPolicies(ctx, cluster, namespace, membership)
-	if err != nil {
-		log.Error(err, "Failed to reconcile NetworkPolicies")
-		return ctrl.Result{}, err
-	}
-	cluster.Status.NetworkPolicies = netpols
-
 	// Update status
 	cluster.Status.Phase = "Ready"
 	SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionTrue,
@@ -124,30 +91,11 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 }
 
 func (r *LanguageClusterReconciler) handleDeletion(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
 	if !controllerutil.ContainsFinalizer(cluster, FinalizerName) {
 		return ctrl.Result{}, nil
 	}
 
-	// Check for member resources
-	members, err := r.discoverGroupMembers(ctx, cluster)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	totalMembers := 0
-	for _, info := range members {
-		totalMembers += info.Count
-	}
-
-	if totalMembers > 0 {
-		log.Info("Cannot delete LanguageCluster with active members",
-			"cluster", cluster.Name, "memberCount", totalMembers)
-		return ctrl.Result{}, fmt.Errorf(
-			"cannot delete LanguageCluster %s: still has %d member resources",
-			cluster.Name, totalMembers)
-	}
+	// TODO: Check for member resources (agents, tools, models) before deleting
 
 	// Cleanup resources
 	if err := r.cleanupResources(ctx, cluster); err != nil {
@@ -192,104 +140,6 @@ func (r *LanguageClusterReconciler) ensureNamespace(ctx context.Context, cluster
 	return namespace, nil
 }
 
-func (r *LanguageClusterReconciler) ensureDefaultDenyPolicy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster, namespace string) error {
-	// Only create default-deny if policy is "deny"
-	if cluster.Spec.Network.DefaultPolicy != "deny" && cluster.Spec.Network.DefaultPolicy != "" {
-		return nil
-	}
-
-	// Default-deny policy handled in networkpolicy_builder.go
-	policy := buildDefaultDenyPolicy(cluster, namespace)
-
-	existing := &networkingv1.NetworkPolicy{}
-	err := r.Get(ctx, types.NamespacedName{Name: policy.Name, Namespace: namespace}, existing)
-
-	if errors.IsNotFound(err) {
-		return r.Create(ctx, policy)
-	} else if err != nil {
-		return err
-	}
-
-	// Update if needed
-	existing.Spec = policy.Spec
-	return r.Update(ctx, existing)
-}
-
-func (r *LanguageClusterReconciler) discoverGroupMembers(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) (map[string]langopv1alpha1.GroupMembershipInfo, error) {
-	membership := make(map[string]langopv1alpha1.GroupMembershipInfo)
-
-	// Initialize all groups
-	for _, group := range cluster.Spec.Groups {
-		membership[group.Name] = langopv1alpha1.GroupMembershipInfo{
-			Count:     0,
-			Resources: []string{},
-		}
-	}
-
-	// Add default group
-	membership["default"] = langopv1alpha1.GroupMembershipInfo{Count: 0, Resources: []string{}}
-
-	// Scan LanguageTools
-	tools := &langopv1alpha1.LanguageToolList{}
-	if err := r.List(ctx, tools); err != nil {
-		return nil, err
-	}
-	for _, tool := range tools.Items {
-		if tool.Spec.ClusterRef == cluster.Name {
-			group := tool.Spec.Group
-			if group == "" {
-				group = "default"
-			}
-			info := membership[group]
-			info.Count++
-			info.Resources = append(info.Resources, fmt.Sprintf("LanguageTool/%s", tool.Name))
-			membership[group] = info
-		}
-	}
-
-	// Scan LanguageAgents
-	agents := &langopv1alpha1.LanguageAgentList{}
-	if err := r.List(ctx, agents); err != nil {
-		return nil, err
-	}
-	for _, agent := range agents.Items {
-		if agent.Spec.ClusterRef == cluster.Name {
-			group := agent.Spec.Group
-			if group == "" {
-				group = "default"
-			}
-			info := membership[group]
-			info.Count++
-			info.Resources = append(info.Resources, fmt.Sprintf("LanguageAgent/%s", agent.Name))
-			membership[group] = info
-		}
-	}
-
-	// Scan LanguageClients
-	clients := &langopv1alpha1.LanguageClientList{}
-	if err := r.List(ctx, clients); err != nil {
-		return nil, err
-	}
-	for _, client := range clients.Items {
-		if client.Spec.ClusterRef == cluster.Name {
-			group := client.Spec.Group
-			if group == "" {
-				group = "default"
-			}
-			info := membership[group]
-			info.Count++
-			info.Resources = append(info.Resources, fmt.Sprintf("LanguageClient/%s", client.Name))
-			membership[group] = info
-		}
-	}
-
-	return membership, nil
-}
-
-func (r *LanguageClusterReconciler) validateGroups(cluster *langopv1alpha1.LanguageCluster, membership map[string]langopv1alpha1.GroupMembershipInfo) error {
-	// Allow empty groups for now
-	return nil
-}
 
 func (r *LanguageClusterReconciler) cleanupResources(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	namespace := cluster.Status.Namespace

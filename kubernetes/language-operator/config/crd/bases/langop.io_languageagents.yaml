@@ -981,7 +981,9 @@ spec:
                             type: string
                           type: array
                         group:
-                          description: Group within the same LanguageCluster
+                          description: |-
+                            Group selects pods with matching langop.io/group label
+                            Used to allow communication with specific labeled resources
                           type: string
                         namespaceSelector:
                           description: Namespace selector (for cross-namespace rules)
@@ -1122,7 +1124,9 @@ spec:
                             type: string
                           type: array
                         group:
-                          description: Group within the same LanguageCluster
+                          description: |-
+                            Group selects pods with matching langop.io/group label
+                            Used to allow communication with specific labeled resources
                           type: string
                         namespaceSelector:
                           description: Namespace selector (for cross-namespace rules)
@@ -1417,11 +1421,6 @@ spec:
                 type: string
               goal:
                 description: Goal defines the agent's objective (for autonomous agents)
-                type: string
-              group:
-                description: |-
-                  Group specifies the security group within the cluster
-                  Defaults to "default" if ClusterRef is set
                 type: string
               image:
                 description: Image is the container image to run for this agent
