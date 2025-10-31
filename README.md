@@ -15,12 +15,36 @@ The language operator will install the following CRDs:
 | `LanguageAgent`   | Perform an arbitrary goal-directed task in perpetuity |
 | `LanguageModel`   | A model configuration and access policy |
 | `LanguageTool`    | MCP-compatible tool server (web search, etc.) |
+| `LanguagePersona` | Reusable personality/behavior templates for agents |
 | `LanguageClient`  | Connect and interact with a running agent |
 
 
 ## Example
 
-A basic cluster with access control:
+```yaml
+# agent.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: retrieve-daily-headlines
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/agent:latest
+  toolRefs:
+  - name: email-tool
+  - name: web-tool
+  modelRefs:
+  - name: mistralai-magistral-small-2506
+  instructions: |
+    You are a helpful assistant designed to summarize world current events.
+    Every morning at 6am US central, send a summary to james@theryans.io.
+    Include a paragraph summary no more than 5 sentences.
+    Include a bullet list of links with no more than 10 items.
+  workspace:
+    enabled: true
+    size: 10Gi
+    mountPath: /workspace
+```
 
 ```yaml
 # cluster.yaml
@@ -71,31 +95,6 @@ spec:
     api_key: magistral
   proxy:
     image: git.theryans.io/langop/model:latest
-```
-
-```yaml
-# agent.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: retrieve-daily-headlines
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/langop/agent:latest
-  toolRefs:
-  - name: email-tool
-  - name: web-tool
-  modelRefs:
-  - name: mistralai-magistral-small-2506
-  instructions: |
-    You are a helpful assistant designed to summarize world current events.
-    Every morning at 6am US central, send a summary to james@theryans.io.
-    Include a paragraph summary no more than 5 sentences.
-    Include a bullet list of links with no more than 10 items.
-  workspace:
-    enabled: true
-    size: 10Gi
-    mountPath: /workspace
 ```
 
 ## Workspace Storage
@@ -247,3 +246,122 @@ The operator automatically creates Kubernetes NetworkPolicies:
 1. **Default policy**: Allow all traffic within the cluster namespace, deny all external egress
 2. **Per-resource policies**: For each resource with `egress` defined, create a NetworkPolicy allowing that specific external access
 3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI like Cilium. Otherwise, use CIDR blocks.
+
+## Reusable Personas
+
+LanguagePersona allows you to define reusable personality templates that agents can reference. This promotes consistency across agents and makes it easy to update behavior across multiple agents at once.
+
+### Example: Customer Support Persona
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguagePersona
+metadata:
+  name: customer-support
+spec:
+  displayName: "Friendly Customer Support"
+  description: "Empathetic and helpful customer service representative"
+
+  systemPrompt: |
+    You are a friendly and professional customer support representative.
+    Your goal is to help customers solve their problems efficiently while
+    maintaining a warm, empathetic tone.
+
+  tone: friendly
+
+  instructions:
+  - "Always greet customers warmly"
+  - "Listen carefully to understand the customer's issue"
+  - "Provide clear, step-by-step solutions"
+  - "Follow up to ensure the issue is resolved"
+  - "Thank the customer for their patience"
+
+  rules:
+  - name: escalate-angry-customer
+    condition: "when customer expresses frustration or anger"
+    action: "acknowledge their feelings, apologize for the inconvenience, and offer to escalate to a supervisor if needed"
+    priority: 10
+
+  - name: verify-account
+    condition: "when discussing account-specific information"
+    action: "verify customer identity before sharing sensitive information"
+    priority: 5
+
+  examples:
+  - input: "I've been waiting for my order for 3 weeks!"
+    output: "I sincerely apologize for the delay with your order. I understand how frustrating this must be. Let me look into this right away and find out what's happening with your shipment."
+    context: "Delayed order complaint"
+
+  - input: "How do I reset my password?"
+    output: "I'd be happy to help you reset your password! Here's what you need to do: 1) Go to the login page, 2) Click 'Forgot Password', 3) Enter your email address, 4) Check your email for the reset link. Let me know if you need any help with these steps!"
+    context: "Password reset request"
+
+  capabilities:
+  - "Order tracking"
+  - "Account management"
+  - "Product information"
+  - "Refund processing"
+
+  limitations:
+  - "Cannot modify orders already shipped"
+  - "Cannot access payment card details"
+  - "Cannot override company policies"
+
+  responseFormat:
+    type: markdown
+    maxLength: 500
+    includeSources: false
+
+  toolPreferences:
+    preferredTools:
+    - order-lookup-tool
+    - customer-db-tool
+    strategy: balanced
+    explainToolUse: true
+
+  constraints:
+    maxResponseTokens: 300
+    maxToolCalls: 5
+    responseTimeout: 30s
+    blockedTopics:
+    - "competitor comparisons"
+    - "medical advice"
+```
+
+### Using a Persona in an Agent
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: support-agent-1
+spec:
+  cluster: customer-support-cluster
+  image: git.theryans.io/langop/agent:latest
+
+  # Reference the persona
+  personaRef:
+    name: customer-support
+
+  # Agent-specific instructions (merged with persona)
+  instructions: |
+    You are assigned to the premium support queue.
+    Prioritize response time and white-glove service.
+
+  modelRefs:
+  - name: gpt-4
+
+  toolRefs:
+  - name: order-lookup-tool
+  - name: customer-db-tool
+  - name: email-tool
+```
+
+### Persona Benefits
+
+✅ **Consistency** - Same behavior across multiple agents
+✅ **Reusability** - Define once, use many times
+✅ **Centralized updates** - Update persona, all agents inherit changes
+✅ **Versioning** - Track persona versions and roll back if needed
+✅ **Inheritance** - Personas can inherit from parent personas
+✅ **Validation** - Built-in validation checks for persona quality
