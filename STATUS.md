@@ -11,35 +11,21 @@ Last updated: 2025-10-30
 - **LanguageAgent Deployments** - Creates Deployment for continuous/reactive modes
 - **LanguageAgent CronJobs** - Creates CronJob for scheduled mode
 - **LanguageTool Services** - Creates Deployment + Service for tools
-- **LanguageModel Proxies** - Creates LiteLLM proxy Deployment + Service
+- **LanguageModel Proxies** - Creates LiteLLM proxy Deployment + Service (NOTE: Deployment+Service not yet created, only ConfigMap)
 - **ConfigMap Management** - All resources create ConfigMaps with spec data
 - **Status Conditions** - Standard Kubernetes condition tracking
 - **Finalizers** - Proper cleanup on deletion
 
-### Network Policies (Group-Based)
-- **Standard Kubernetes NetworkPolicy** - Creates policies from cluster security groups
-- **Default deny** - Cluster-wide deny-all policy
-- **Ingress rules** - Group-to-group communication
-- **Egress rules** - Group-to-external communication (non-DNS)
-- **CIDR-based rules** - IP block restrictions
+### Agent Resource Management (Implemented 2025-10-30)
+- **Workspace Volumes** - PVC creation when `workspace.enabled: true`, volume mounting to agent pods (Deployment and CronJob), configurable storage class/size/access mode/mount path
+- **Tool Resolution** - Resolves toolRefs to LanguageTool resources, builds MCP server URLs for service mode tools, passes URLs via `MCP_SERVERS` env var
+- **Model Resolution** - Resolves modelRefs to LanguageModel resources, builds LiteLLM proxy URLs, passes URLs via `MODEL_ENDPOINTS` env var
 
 ## ⚠️ Partially Implemented
 
-### Network Policies
-- ✅ Group-based isolation works (via LanguageCluster.spec.groups)
-- ❌ Per-resource egress rules NOT implemented (Agent/Tool/Model.spec.egress ignored)
-- **Status**: CRD fields exist but controllers don't process them
+_Nothing currently in this category._
 
 ## ❌ Not Implemented (High Priority)
-
-### Workspace Volumes
-- **CRD Field**: `LanguageAgent.spec.workspace` ✅ exists
-- **Controller**: ❌ No PVC creation
-- **Impact**: Agents promised workspace storage won't have it
-- **Needed**:
-  - Create PVC when `workspace.enabled: true`
-  - Mount PVC to agent pod at `workspace.mountPath`
-  - Apply storage class, size, access mode from spec
 
 ### Sidecar Deployment Mode
 - **CRD Field**: `LanguageTool.spec.deploymentMode` ✅ exists
@@ -49,7 +35,7 @@ Last updated: 2025-10-30
   - LanguageAgent controller must check each toolRef
   - Fetch LanguageTool and check `deploymentMode`
   - If `sidecar`, add tool container to agent pod
-  - If `service`, use existing Service discovery
+  - If `service`, use existing Service discovery (already works)
 
 ### Per-Resource Egress Rules
 - **CRD Fields**:
@@ -63,16 +49,6 @@ Last updated: 2025-10-30
   - Default deny external egress
   - Allow specific egress based on spec.egress rules
 
-### Tool Resolution
-- **CRD Field**: `LanguageAgent.spec.toolRefs` ✅ exists
-- **Controller**: ❌ Not resolved or configured
-- **Impact**: Agents can't discover/use tools
-- **Needed**:
-  - Fetch each LanguageTool by name
-  - Build MCP server URL (service endpoint)
-  - Pass to agent via ConfigMap or environment variables
-  - Handle sidecar vs service mode
-
 ### Persona Integration
 - **CRD Field**: `LanguageAgent.spec.personaRef` ✅ exists
 - **LanguagePersona CRD**: ✅ exists
@@ -83,15 +59,6 @@ Last updated: 2025-10-30
   - Merge persona.systemPrompt + agent.instructions
   - Apply rules, examples, constraints
   - Pass to agent via ConfigMap
-
-### Model Resolution
-- **CRD Field**: `LanguageAgent.spec.modelRefs` ✅ exists
-- **Controller**: ❌ Not resolved
-- **Impact**: Agents can't connect to models
-- **Needed**:
-  - Fetch each LanguageModel by name
-  - Build model service URL
-  - Pass credentials/config to agent
 
 ## ❌ Not Implemented (Lower Priority)
 
@@ -120,15 +87,27 @@ Last updated: 2025-10-30
 - **Caching** - Spec exists, not implemented
 - **Multi-region** - Spec exists, not implemented
 
-## 🗑️ To Be Removed
+## 🗑️ Recently Removed
 
 ### Cilium Dependencies
-- **Status**: Being removed
-- **Files**:
-  - `controllers/cilium_policy_builder.go` - DELETE
-  - Cilium references in README - REMOVE
-  - Cilium logic in LanguageCluster controller - REMOVE
-- **Reason**: We decided to use standard Kubernetes NetworkPolicies only
+- **Status**: ✅ Completed (2025-10-30)
+- **Removed**:
+  - `controllers/cilium_policy_builder.go` - Deleted
+  - All Cilium references in README - Removed
+  - Cilium logic from LanguageCluster controller - Removed
+  - CiliumConfig and CiliumStatus types - Removed
+- **Reason**: Using standard Kubernetes NetworkPolicies only
+
+### Group-Based Security
+- **Status**: ✅ Completed (2025-10-30)
+- **Removed**:
+  - `controllers/networkpolicy_builder.go` - Deleted
+  - `LanguageCluster.spec.groups` field - Removed
+  - `LanguageAgent/Tool/Client.spec.group` fields - Removed
+  - SecurityGroup, NetworkConfig, GroupMembership types - Removed
+  - Group-based NetworkPolicy generation logic - Removed
+  - Group validation in webhook - Removed
+- **Reason**: Simplified to per-resource egress rules instead of group-based isolation
 
 ## 🎯 Implementation Priority
 
@@ -141,7 +120,6 @@ Last updated: 2025-10-30
 ### Phase 2: Network Policies (Important)
 1. Per-resource egress rules
 2. Default deny-all for resources
-3. Remove group-based policies (or mark optional)
 
 ### Phase 3: Personas (Nice to Have)
 1. Persona integration
