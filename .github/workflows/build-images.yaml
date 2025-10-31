@@ -113,7 +113,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build component images that depend on base (devel, tool, client)
+  # Build component images that depend on base (devel, tool, client, model)
   build-components:
     runs-on: builder
     permissions:
@@ -122,7 +122,7 @@ jobs:
     needs: build-base
     strategy:
       matrix:
-        component: [devel, tool, client]
+        component: [devel, tool, client, model]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,6 +156,52 @@ jobs:
         with:
           context: ./components/${{ matrix.component }}
           file: ./components/${{ matrix.component }}/Dockerfile
+          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Build agent component (depends on client)
+  build-agent:
+    runs-on: builder
+    permissions:
+      contents: read
+      packages: write
+    needs: build-components
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/agent
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push agent image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./components/agent
+          file: ./components/agent/Dockerfile
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -217,7 +263,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: build-components  # Agents depend on client component
+    needs: build-agent  # Agents depend on agent component
     strategy:
       matrix:
         agent: [cli, web, headless]

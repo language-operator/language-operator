@@ -1,4 +1,4 @@
-FROM git.theryans.io/langop/client:latest
+FROM git.theryans.io/langop/agent:latest
 
 # Switch back to root to install packages
 USER root
@@ -38,10 +38,10 @@ RUN mkdir -p public/vite public/vite-dev public/vite-test
 RUN npm run build || echo "Vite build skipped - will run in development mode"
 
 # Set ownership
-RUN chown -R based:based /app/web
+RUN chown -R langop:langop /app/web
 
-# Switch back to based user
-USER based
+# Switch back to langop user
+USER langop
 
 # Expose ports (3000 for Rails, 3036 for Vite dev server)
 EXPOSE 3000 3036

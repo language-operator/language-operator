@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+# Inherit base client dependencies (ruby_llm, ruby_llm-mcp)
+# These are already installed in the base client image
+
+# Agent-specific dependencies for autonomous execution
+gem 'rufus-scheduler', '~> 3.9'  # For scheduled/event-driven execution
+gem 'concurrent-ruby', '~> 1.3'  # For concurrent task execution
+
+group :development do
+  gem 'rubocop', '~> 1.60'
+  gem 'rubocop-performance', '~> 1.20'
+  gem 'yard', '~> 0.9.37'
+end

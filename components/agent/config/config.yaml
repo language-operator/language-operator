@@ -1,0 +1,47 @@
+# Agent Configuration Example
+#
+# This configuration file defines the behavior of a language agent.
+
+# LLM Configuration
+llm:
+  provider: openai_compatible  # openai, anthropic, or openai_compatible
+  model: llama3.2
+  endpoint: http://model-proxy:8080/v1
+  # api_key: optional for local models
+
+# MCP Server Connections
+mcp_servers:
+  - name: default-tools
+    url: http://tools:80/mcp
+    transport: streamable
+    enabled: true
+    description: "Default tool server"
+
+# Agent-specific configuration
+agent:
+  # Instructions for the agent
+  instructions: |
+    You are a helpful autonomous agent.
+    Monitor your workspace and complete assigned tasks.
+
+  # Execution mode: autonomous, interactive, scheduled, event-driven
+  mode: autonomous
+
+  # Maximum iterations for autonomous mode (prevents infinite loops)
+  max_iterations: 100
+
+  # Schedules for scheduled mode (cron format)
+  schedules:
+    - cron: "0 6 * * *"  # Daily at 6:00 AM
+      task: "Check for updates and report status"
+
+    # - cron: "0 * * * *"  # Every hour
+    #   task: "Monitor system health"
+
+# Workspace configuration
+workspace:
+  enabled: true
+  path: /workspace
+
+# Debug mode
+debug: false
