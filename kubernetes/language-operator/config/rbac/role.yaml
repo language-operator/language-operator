@@ -50,14 +50,6 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - daemonsets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - deployments
   verbs:
   - create
@@ -71,18 +63,6 @@ rules:
   - batch
   resources:
   - cronjobs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - cilium.io
-  resources:
-  - ciliumnetworkpolicies
   verbs:
   - create
   - delete

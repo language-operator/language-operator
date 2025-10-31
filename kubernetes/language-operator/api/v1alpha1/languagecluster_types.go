@@ -48,17 +48,6 @@ type NetworkConfig struct {
 	// +kubebuilder:validation:Enum=deny;allow
 	// +kubebuilder:default=deny
 	DefaultPolicy string `json:"defaultPolicy,omitempty"`
-
-	// Cilium configuration
-	// +optional
-	Cilium CiliumConfig `json:"cilium,omitempty"`
-}
-
-// CiliumConfig defines Cilium CNI settings
-type CiliumConfig struct {
-	// Version of Cilium (for documentation/verification purposes)
-	// +optional
-	Version string `json:"version,omitempty"`
 }
 
 // SecurityGroup defines a network isolation boundary
@@ -169,12 +158,6 @@ type LanguageClusterStatus struct {
 
 	// NetworkPolicies created
 	NetworkPolicies []string `json:"networkPolicies,omitempty"`
-
-	// CiliumNetworkPolicies created
-	CiliumPolicies []string `json:"ciliumPolicies,omitempty"`
-
-	// Cilium installation status
-	CiliumStatus CiliumStatus `json:"ciliumStatus,omitempty"`
 }
 
 // GroupMembershipInfo tracks resources in a security group
@@ -186,24 +169,11 @@ type GroupMembershipInfo struct {
 	Resources []string `json:"resources,omitempty"`
 }
 
-// CiliumStatus tracks Cilium CNI state
-type CiliumStatus struct {
-	// Installed indicates if Cilium is present
-	Installed bool `json:"installed"`
-
-	// Version of Cilium detected/installed
-	Version string `json:"version,omitempty"`
-
-	// Ready indicates Cilium is fully operational
-	Ready bool `json:"ready"`
-}
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="Namespace",type=string,JSONPath=`.status.namespace`
-//+kubebuilder:printcolumn:name="Cilium",type=boolean,JSONPath=`.status.ciliumStatus.ready`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageCluster is the Schema for the languageclusters API

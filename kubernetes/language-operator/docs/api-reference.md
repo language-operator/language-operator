@@ -232,40 +232,6 @@ _Appears in:_
 | `backend` _string_ | Backend specifies the caching backend (memory, redis, etc.) | memory | Enum: [memory redis memcached] <br /> |
 
 
-#### CiliumConfig
-
-
-
-CiliumConfig defines Cilium CNI settings
-
-
-
-_Appears in:_
-- [NetworkConfig](#networkconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `version` _string_ | Version of Cilium (for documentation/verification purposes) |  |  |
-
-
-#### CiliumStatus
-
-
-
-CiliumStatus tracks Cilium CNI state
-
-
-
-_Appears in:_
-- [LanguageClusterStatus](#languageclusterstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `installed` _boolean_ | Installed indicates if Cilium is present |  |  |
-| `version` _string_ | Version of Cilium detected/installed |  |  |
-| `ready` _boolean_ | Ready indicates Cilium is fully operational |  |  |
-
-
 #### ClientMetrics
 
 
@@ -893,8 +859,6 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
 | `groupMembership` _object (keys:string, values:[GroupMembershipInfo](#groupmembershipinfo))_ | Group membership tracking |  |  |
 | `networkPolicies` _string array_ | NetworkPolicies created |  |  |
-| `ciliumPolicies` _string array_ | CiliumNetworkPolicies created |  |  |
-| `ciliumStatus` _[CiliumStatus](#ciliumstatus)_ | Cilium installation status |  |  |
 
 
 #### LanguageModel
@@ -1370,7 +1334,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `podCIDR` _string_ | PodCIDR for documentation/validation purposes |  |  |
 | `defaultPolicy` _string_ | DefaultPolicy: deny (default) or allow | deny | Enum: [deny allow] <br /> |
-| `cilium` _[CiliumConfig](#ciliumconfig)_ | Cilium configuration |  |  |
 
 
 #### NetworkPeer

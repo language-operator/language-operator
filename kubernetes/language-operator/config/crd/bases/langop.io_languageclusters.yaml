@@ -21,9 +21,6 @@ spec:
     - jsonPath: .status.namespace
       name: Namespace
       type: string
-    - jsonPath: .status.ciliumStatus.ready
-      name: Cilium
-      type: boolean
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -629,14 +626,6 @@ spec:
               network:
                 description: Network configuration
                 properties:
-                  cilium:
-                    description: Cilium configuration
-                    properties:
-                      version:
-                        description: Version of Cilium (for documentation/verification
-                          purposes)
-                        type: string
-                    type: object
                   defaultPolicy:
                     default: deny
                     description: 'DefaultPolicy: deny (default) or allow'
@@ -652,27 +641,6 @@ spec:
           status:
             description: LanguageClusterStatus defines the observed state
             properties:
-              ciliumPolicies:
-                description: CiliumNetworkPolicies created
-                items:
-                  type: string
-                type: array
-              ciliumStatus:
-                description: Cilium installation status
-                properties:
-                  installed:
-                    description: Installed indicates if Cilium is present
-                    type: boolean
-                  ready:
-                    description: Ready indicates Cilium is fully operational
-                    type: boolean
-                  version:
-                    description: Version of Cilium detected/installed
-                    type: string
-                required:
-                - installed
-                - ready
-                type: object
               conditions:
                 description: Conditions
                 items:
