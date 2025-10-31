@@ -1,0 +1,149 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Lint and validate code
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'kubernetes/language-operator/go.mod'
+          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+
+      - name: Run go fmt
+        working-directory: kubernetes/language-operator
+        run: |
+          if [ -n "$(gofmt -s -l .)" ]; then
+            echo "Go code is not formatted:"
+            gofmt -s -d .
+            exit 1
+          fi
+
+      - name: Run go vet
+        working-directory: kubernetes/language-operator
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run staticcheck
+        working-directory: kubernetes/language-operator
+        run: staticcheck ./...
+
+  # Run unit tests
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'kubernetes/language-operator/go.mod'
+          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+
+      - name: Run tests
+        working-directory: kubernetes/language-operator
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage to Codecov
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: codecov/codecov-action@v3
+        with:
+          files: kubernetes/language-operator/coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+
+  # Validate CRD manifests
+  validate-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'kubernetes/language-operator/go.mod'
+          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+
+      - name: Generate manifests
+        working-directory: kubernetes/language-operator
+        run: make manifests
+
+      - name: Check for uncommitted changes
+        run: |
+          git diff --exit-code || (echo "Generated manifests are out of date. Run 'make manifests' and commit the changes." && exit 1)
+
+      - name: Validate CRDs
+        run: |
+          kubectl apply --dry-run=server --validate=true -f kubernetes/language-operator/config/crd/bases/ || \
+          kubectl apply --dry-run=client --validate=true -f kubernetes/language-operator/config/crd/bases/
+
+  # Validate Helm chart
+  validate-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Lint Helm chart
+        run: |
+          helm lint kubernetes/charts/language-operator
+
+      - name: Template Helm chart
+        run: |
+          helm template test-release kubernetes/charts/language-operator > /tmp/helm-output.yaml
+
+      - name: Validate Helm output
+        run: |
+          kubectl apply --dry-run=client --validate=true -f /tmp/helm-output.yaml
+
+  # Build and test Docker images (without pushing)
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component:
+          - context: kubernetes/language-operator
+            name: operator
+          - context: components/base
+            name: base
+          - context: tools/web
+            name: web-tool
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.component.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.context }}/Dockerfile
+          push: false
+          tags: test/${{ matrix.component.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

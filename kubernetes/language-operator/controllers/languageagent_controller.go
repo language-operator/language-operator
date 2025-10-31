@@ -102,7 +102,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Reconcile workload based on execution mode
 	switch agent.Spec.ExecutionMode {
-	case "continuous", "reactive", "":
+	case "autonomous", "interactive", "event-driven", "":
 		if err := r.reconcileDeployment(ctx, agent); err != nil {
 			log.Error(err, "Failed to reconcile Deployment")
 			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
@@ -119,7 +119,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Update status
-	agent.Status.Phase = "Ready"
+	agent.Status.Phase = "Running"
 	SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation)
 
 	if err := r.Status().Update(ctx, agent); err != nil {

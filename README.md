@@ -373,3 +373,77 @@ spec:
 ✅ **Versioning** - Track persona versions and roll back if needed
 ✅ **Inheritance** - Personas can inherit from parent personas
 ✅ **Validation** - Built-in validation checks for persona quality
+
+## Development & CI/CD
+
+### Building Images
+
+The project uses automated CI/CD pipelines to build and publish all container images:
+
+**Automated Builds** (via GitHub Actions / Forgejo Actions):
+- Triggered on push to `main`, tags, or PRs
+- Builds operator, components, tools, agents, and model images
+- Publishes to `git.theryans.io/langop/*`
+- See [.github/workflows/README.md](.github/workflows/README.md) for details
+
+**Local Development**:
+```bash
+# Build all images locally
+make build
+
+# Build and deploy operator
+make operator
+
+# Build specific component
+cd components/base && docker build -t based/base:latest .
+```
+
+### Image Registry
+
+All images are published to: `git.theryans.io/langop/`
+
+**Available Images**:
+- `language-operator` - The Kubernetes operator
+- `base`, `devel`, `server`, `client` - Base components
+- `web-tool`, `email-tool`, `sms-tool`, `doc-tool` - Tool servers
+- `agent-cli`, `agent-web`, `agent-headless` - Agent implementations
+- `model` - LiteLLM model proxy
+
+**Tags**:
+- `latest` - Latest build from main branch
+- `v1.2.3` - Semantic version releases
+- `main-<sha>` - Commit-specific builds
+
+### Running Tests
+
+```bash
+cd kubernetes/language-operator
+
+# Run all tests
+make test
+
+# Lint code
+make fmt
+make vet
+
+# Generate manifests and CRDs
+make manifests
+
+# Generate API documentation
+make docs
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Ensure tests pass: `make test`
+5. Ensure manifests are up-to-date: `make manifests`
+6. Submit a pull request
+
+**Commit Message Format**: Follow [Conventional Commits](https://www.conventionalcommits.org/)
+- `feat: add new feature`
+- `fix: resolve bug`
+- `docs: update documentation`
+- `chore: update dependencies`

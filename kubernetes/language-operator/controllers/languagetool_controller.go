@@ -109,7 +109,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Update status
-	tool.Status.Phase = "Ready"
+	tool.Status.Phase = "Running"
 	SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
 	if err := r.Status().Update(ctx, tool); err != nil {

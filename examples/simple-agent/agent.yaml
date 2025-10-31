@@ -1,0 +1,20 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: demo-agent
+  namespace: demo
+spec:
+  image: git.theryans.io/langop/agent:latest
+  executionMode: autonomous
+  toolRefs:
+  - name: web-tool
+  modelRefs:
+  - name: gpt-4
+  instructions: |
+    You are a helpful AI assistant with web search capabilities.
+    Your goal is to search for and summarize recent news about Kubernetes.
+    Use the web_search tool to find information, then provide a concise summary.
+  workspace:
+    enabled: true
+    size: 1Gi
+    mountPath: /workspace

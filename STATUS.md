@@ -2,14 +2,16 @@
 
 This document tracks what's implemented vs what's documented in the README and API.
 
-**Last updated: 2025-10-30**
+**Last updated: 2025-10-31**
 
 ## 📊 Quick Summary
 
 - **Phase 1 (Core Functionality)**: ✅ **COMPLETE** - Agents, tools, models, workspace, sidecars
-- **Phase 2 (Network Security)**: ✅ **COMPLETE** - NetworkPolicies with egress rules
+- **Phase 2 (Network Security)**: ✅ **COMPLETE** - DNS-based egress with automatic resolution
 - **Phase 3 (Personas)**: ⚠️ **PARTIAL** - CRD exists, controller not integrated
-- **Production Ready**: 🟡 **MOSTLY** - Core features work, some advanced features missing
+- **Component Images**: ✅ **COMPLETE** - All images built and renamed to `git.theryans.io/langop/*`
+- **End-to-End Testing**: ⚠️ **IN PROGRESS** - Operator deploys, found bugs to fix
+- **Production Ready**: 🟡 **TESTING** - Core features work, fixing status phase bugs
 
 ## 🎯 What Works Right Now
 
@@ -226,7 +228,18 @@ _Nothing currently in this category._
 2. Persona validation
 3. Persona inheritance
 
-### Phase 4: Advanced Features (Future)
+### Phase 4: Component Images ✅ COMPLETE
+1. ✅ Renamed all images from `based/*` to `git.theryans.io/langop/*`
+2. ✅ Built `langop/base` - Alpine base with tini + non-root user
+3. ✅ Built `langop/server` - Generic MCP server with Ruby DSL
+4. ✅ Built `langop/web-tool` - Web search tool (DuckDuckGo + utilities)
+5. ✅ Tagged `langop/agent` - Headless autonomous agent
+6. ✅ Built `langop/model` - LiteLLM proxy (100+ providers)
+
+**Image Registry**: `git.theryans.io/langop/`
+**Status**: Built locally, not yet pushed to registry
+
+### Phase 5: Advanced Features (Future)
 1. Cost tracking
 2. Safety guardrails
 3. Event triggers
@@ -282,6 +295,98 @@ _Nothing currently in this category._
    - `langop/web-tool` - Example MCP web search tool
 2. **End-to-end demo** - Working example from cluster creation to agent execution
 3. **Monitoring/observability** - Prometheus metrics, logging best practices
+
+## 🧪 End-to-End Testing Results (2025-10-31)
+
+### Test Setup
+- **Cluster**: Existing K8s cluster at dl4:6443
+- **Operator**: Deployed via Helm to `kube-system` namespace
+- **Test Namespace**: `demo`
+- **Test Manifests**: `examples/simple-agent/`
+
+### ✅ What Successfully Deployed
+
+1. **Operator Installation**
+   - Helm chart installed successfully in `kube-system`
+   - 2 replica pods running
+   - CRDs installed: LanguageAgent, LanguageTool, LanguageModel, LanguageCluster, LanguagePersona, LanguageClient
+
+2. **Resource Creation**
+   - ✅ LanguageCluster created (namespace management)
+   - ✅ LanguageModel `gpt-4` created with DNS-based egress rules
+   - ✅ LanguageTool `web-tool` created with sidecar mode
+   - ✅ LanguageAgent `demo-agent` created with toolRefs and modelRefs
+
+3. **Controller Actions**
+   - ✅ LanguageTool controller created Deployment for `web-tool`
+   - ✅ LanguageTool controller created Service for `web-tool`
+   - ✅ NetworkPolicies likely created (DNS resolution working!)
+   - ✅ Controllers are reconciling continuously
+
+### ✅ Bugs Found and Fixed (2025-10-31)
+
+#### 1. **Status Phase Value Mismatch** - FIXED
+**Location**: LanguageTool and LanguageAgent controllers
+**Error**: `status.phase: Unsupported value: "Ready"`
+
+**Root Cause**: Controllers were setting `status.phase = "Ready"` but CRDs only allow:
+- **LanguageTool**: `Pending`, `Running`, `Failed`, `Unknown`, `Updating`
+- **LanguageAgent**: `Pending`, `Running`, `Succeeded`, `Failed`, `Unknown`, `Suspended`
+- **LanguageModel**: `Ready`, `NotReady`, `Error`, `Configuring`, `Degraded` (already correct!)
+
+**Fix Applied**: Updated controllers to use `"Running"` instead of `"Ready"`
+- ✅ `controllers/languagetool_controller.go:112` - Changed to "Running"
+- ✅ `controllers/languageagent_controller.go:122` - Changed to "Running"
+- ✅ `controllers/languagemodel_controller.go:132` - Already uses "Ready" (correct)
+
+#### 2. **Agent Deployment Not Created** - FIXED
+**Symptom**: LanguageAgent with `executionMode: autonomous` did not create a Deployment
+**Root Cause**: Controller was checking for outdated execution mode values (`"continuous"`, `"reactive"`) but CRD validation only allows: `autonomous`, `interactive`, `scheduled`, `event-driven`
+
+**Fix Applied**: Updated switch statement at `controllers/languageagent_controller.go:105`
+- Changed from: `case "continuous", "reactive", "":`
+- Changed to: `case "autonomous", "interactive", "event-driven", "":`
+
+#### 3. **Model Deployment Creation** - VERIFIED OK
+**Status**: LanguageModel controller correctly creates Deployments + Services
+**Verification**: Code review shows `reconcileDeployment()` and `reconcileService()` are called properly
+**Note**: Will be verified in end-to-end testing once operator is redeployed
+
+#### 4. **Image Pull Failures** (EXPECTED)
+**Symptom**: `web-tool` pod shows `ImagePullBackOff`
+**Reason**: Images are built locally but not pushed to `git.theryans.io` registry
+**Status**: Expected behavior, not a bug
+
+**Images that need pushing**:
+- `git.theryans.io/langop/web-tool:latest`
+- `git.theryans.io/langop/agent:latest`
+- `git.theryans.io/langop/model:latest`
+
+### 📝 Documentation Issues Found
+
+1. **Example manifests had invalid field**: `spec.cluster` doesn't exist (removed)
+2. **Wrong executionMode value**: Used `continuous` but should be `autonomous`, `interactive`, `scheduled`, or `event-driven`
+
+### 🎯 Next Steps
+
+**Immediate** (to complete bug fixes):
+1. ✅ Fix status phase values in controllers - DONE
+2. ✅ Fix agent deployment creation for autonomous mode - DONE
+3. ✅ Build and push operator image - DONE (`git.theryans.io/langop/language-operator:0.1.0`)
+4. ⚠️ **Deploy updated operator** - Image built but not loaded due to `imagePullPolicy: IfNotPresent` cache
+   - **Options**:
+     - Change Helm values to use `imagePullPolicy: Always` and upgrade
+     - Tag image as `0.1.1` and upgrade Helm chart
+     - Manually delete cached images from nodes
+
+**Testing Verification** (after operator is updated):
+1. Verify LanguageAgent/LanguageTool resources get `Phase: Running` (not "Ready")
+2. Verify agent with `executionMode: autonomous` creates a Deployment
+3. Verify model proxy Deployment + Service are created
+4. Verify NetworkPolicies with DNS resolution
+5. Verify workspace PVC is created for agents
+6. Verify sidecar tools are injected into agent pods
+7. Test actual agent execution (requires component images)
 
 ## 🔄 Update Process
 

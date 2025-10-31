@@ -1,0 +1,65 @@
+name: Release Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/charts/**'
+      - 'kubernetes/language-operator/config/crd/**'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Copy CRDs to Helm chart
+        run: |
+          cd kubernetes/language-operator
+          make helm-crds
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p .helm-packages
+          helm package kubernetes/charts/language-operator -d .helm-packages
+
+      - name: Generate Helm index
+        run: |
+          helm repo index .helm-packages --url https://${{ env.REGISTRY }}/helm-charts
+
+      - name: Upload Helm chart
+        if: github.event_name != 'pull_request'
+        run: |
+          # Upload to OCI registry or file server
+          # Adjust this based on your registry setup
+          for chart in .helm-packages/*.tgz; do
+            echo "Uploading $chart"
+            # Example: helm push $chart oci://${{ env.REGISTRY }}/helm-charts
+          done
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: .helm-packages/*.tgz
+          generate_release_notes: true

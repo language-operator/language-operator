@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := based/svc/web
+IMAGE_NAME := git.theryans.io/langop/web-tool
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

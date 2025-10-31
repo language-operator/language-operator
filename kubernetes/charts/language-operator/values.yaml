@@ -319,11 +319,11 @@ rbac:
       - update
       - patch
       - delete
-    # Cilium resources for LanguageCluster
+    # PersistentVolumeClaims for agent workspaces
     - apiGroups:
-      - cilium.io
+      - ""
       resources:
-      - ciliumnetworkpolicies
+      - persistentvolumeclaims
       verbs:
       - get
       - list
@@ -345,15 +345,6 @@ rbac:
       - update
       - patch
       - delete
-    # DaemonSet for Cilium verification
-    - apiGroups:
-      - apps
-      resources:
-      - daemonsets
-      verbs:
-      - get
-      - list
-      - watch
 
 # Monitoring configuration
 monitoring:

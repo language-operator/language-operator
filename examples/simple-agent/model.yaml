@@ -1,0 +1,20 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: gpt-4
+  namespace: demo
+spec:
+  provider: openai
+  modelName: gpt-4
+  apiKeySecretRef:
+    name: openai-key
+    key: api-key
+  egress:
+  - description: Allow OpenAI API
+    to:
+      dns:
+      - "api.openai.com"
+      - "*.openai.com"
+    ports:
+    - port: 443
+      protocol: TCP
