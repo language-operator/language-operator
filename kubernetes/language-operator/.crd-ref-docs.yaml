@@ -1,0 +1,17 @@
+processor:
+  # Ignore standard Kubernetes metadata types
+  ignoreFields:
+    - "TypeMeta$"
+    - "ObjectMeta$"
+    - "ListMeta$"
+
+  # Exclude List types from detailed documentation
+  ignoreTypes:
+    - ".*List$"
+
+render:
+  # Kubernetes version for generating API reference links
+  kubernetesVersion: 1.28
+
+  # Group output by API kind for better organization
+  groupByKind: true

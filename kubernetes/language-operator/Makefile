@@ -43,6 +43,10 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet ## Run tests.
 	go test ./... -coverprofile cover.out
 
+.PHONY: docs
+docs: crd-ref-docs ## Generate CRD API reference documentation.
+	$(CRD_REF_DOCS) --source-path=./api/v1alpha1 --config=.crd-ref-docs.yaml --renderer=markdown --output-path=./docs/api-reference.md
+
 ##@ Build
 
 .PHONY: build
@@ -96,11 +100,18 @@ $(LOCALBIN):
 
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CRD_REF_DOCS_VERSION ?= v0.2.0
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)

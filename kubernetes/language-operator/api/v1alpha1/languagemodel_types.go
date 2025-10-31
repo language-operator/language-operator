@@ -65,6 +65,11 @@ type LanguageModelSpec struct {
 	// Regions specifies which regions this model is deployed in (for multi-region)
 	// +optional
 	Regions []RegionSpec `json:"regions,omitempty"`
+
+	// Egress defines external network access rules for this model proxy
+	// By default, model proxies can access all resources within the cluster but no external endpoints
+	// +optional
+	Egress []NetworkRule `json:"egress,omitempty"`
 }
 
 // SecretReference references a Kubernetes Secret

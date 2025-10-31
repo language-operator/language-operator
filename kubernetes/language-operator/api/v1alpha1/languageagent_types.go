@@ -159,6 +159,15 @@ type LanguageAgentSpec struct {
 	// SafetyConfig defines safety constraints and guardrails
 	// +optional
 	SafetyConfig *SafetyConfigSpec `json:"safetyConfig,omitempty"`
+
+	// Workspace defines persistent storage for the agent
+	// +optional
+	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
+
+	// Egress defines external network access rules for this agent
+	// By default, agents can access all resources within the cluster but no external endpoints
+	// +optional
+	Egress []NetworkRule `json:"egress,omitempty"`
 }
 
 // ModelReference references a LanguageModel
@@ -335,6 +344,36 @@ type AgentContentFilterSpec struct {
 	// Pattern is a regex pattern for custom filters
 	// +optional
 	Pattern string `json:"pattern,omitempty"`
+}
+
+// WorkspaceSpec defines persistent workspace storage for an agent
+type WorkspaceSpec struct {
+	// Enabled controls whether to create a workspace volume
+	// +kubebuilder:default=true
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// Size is the requested storage size (e.g., "10Gi", "1Ti")
+	// +kubebuilder:validation:Pattern=`^[0-9]+(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)$`
+	// +kubebuilder:default="10Gi"
+	// +optional
+	Size string `json:"size,omitempty"`
+
+	// StorageClassName specifies the StorageClass for the PVC
+	// If not specified, uses the cluster default
+	// +optional
+	StorageClassName *string `json:"storageClassName,omitempty"`
+
+	// AccessMode defines the volume access mode
+	// +kubebuilder:validation:Enum=ReadWriteOnce;ReadWriteMany
+	// +kubebuilder:default=ReadWriteOnce
+	// +optional
+	AccessMode string `json:"accessMode,omitempty"`
+
+	// MountPath is where the workspace is mounted in containers
+	// +kubebuilder:default="/workspace"
+	// +optional
+	MountPath string `json:"mountPath,omitempty"`
 }
 
 // LanguageAgentStatus defines the observed state of LanguageAgent

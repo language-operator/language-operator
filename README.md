@@ -1,100 +1,249 @@
 # language-operator
 
-Custom resource definitions for language-based automations.
+Kubernetes CRDs for spoken language goal-directed automations.
 
-
-## Quick Start
-
-
-```
 
 ## Architecture
 
-Based is deployed as a Kubernetes-native platform using custom resource definitions (CRDs):
+**Cilium CNI is required**.  
 
-- **LanguageCluster**: Defines a cluster of language agents with shared network policies
-- **LanguageAgent**: Represents a language model agent with specific capabilities
-- **LanguageClient**: Client applications that interact with language agents
-- **LanguageTool**: Deployable tools that agents can invoke (email, SMS, web search, etc.)
+The language operator will install the following CRDs:
 
-All components use the MCP (Model Context Protocol) JSON-RPC 2.0 format for communication.
+| CRD               | Purpose                                   |
+| ----------------- | ----------------------------------------- |
+| `LanguageCluster` | A network-isolated environment for agents and tools |
+| `LanguageAgent`   | Perform an arbitrary goal-directed task in perpetuity |
+| `LanguageModel`   | A model configuration and access policy |
+| `LanguageTool`    | MCP-compatible tool server (web search, etc.) |
+| `LanguageClient`  | Connect and interact with a running agent |
 
-### Example Tool Call
 
+## Example
+
+A basic cluster with access control:
+
+```yaml
+# cluster.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: personal-assistants
+spec:
+  namespace: personal-assistants
+```
+
+```yaml
+# web-tool.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: web-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/web-tool:latest
+  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+```
+
+```yaml
+# email-tool.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: email-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/email-tool:latest
+  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+```
+
+```yaml
+# model.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: mistralai-magistral-small-2506
+spec:
+  cluster: personal-assistants
+  model:
+    provider: openai-compatible
+    model: mistralai/magistral-small-2506
+    endpoint: http://my-on-prem-model.com/v1
+    api_key: magistral
+  proxy:
+    image: git.theryans.io/langop/model:latest
+```
+
+```yaml
+# agent.yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: retrieve-daily-headlines
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/agent:latest
+  toolRefs:
+  - name: email-tool
+  - name: web-tool
+  modelRefs:
+  - name: mistralai-magistral-small-2506
+  instructions: |
+    You are a helpful assistant designed to summarize world current events.
+    Every morning at 6am US central, send a summary to james@theryans.io.
+    Include a paragraph summary no more than 5 sentences.
+    Include a bullet list of links with no more than 10 items.
+  workspace:
+    enabled: true
+    size: 10Gi
+    mountPath: /workspace
+```
+
+## Workspace Storage
+
+Each agent can have a persistent workspace volume that acts as a shared whiteboard between the agent and its tools.
+
+### How It Works
+
+When `workspace.enabled: true`:
+1. Operator creates a PersistentVolumeClaim for the agent
+2. Agent container mounts the workspace at `/workspace` (or custom `mountPath`)
+3. Sidecar tools (with `deploymentMode: sidecar`) also mount the same workspace
+4. Agent and tools can read/write files to coordinate and persist state
+
+### Use Cases
+
+**Data persistence:** Agent remembers what it did yesterday
 ```bash
-# Call a tool service via the Kubernetes service endpoint
-kubectl run curl-test --rm -it --restart=Never --image=curlimages/curl -- \
-  curl -X POST http://web-tool.default.svc.cluster.local/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "web_status",
-      "arguments": {"url": "https://example.com"}
-    }
-  }'
+# Agent writes state
+echo "2025-10-30: Sent headlines to user" >> /workspace/history.log
+
+# Next run, agent reads history
+cat /workspace/history.log
 ```
 
-## Configuration
+**Tool coordination:** Web tool scrapes, agent summarizes, email tool sends
+```bash
+# web-tool sidecar writes
+curl https://news.ycombinator.com > /workspace/articles.html
 
-Configuration is managed through Kubernetes ConfigMaps and Secrets referenced in the CRD specs. See the [examples directory](kubernetes/language-operator/examples/) for sample configurations.
+# agent processes
+# (LLM reads /workspace/articles.html, generates summary)
 
-## Development Workflow
+# agent writes summary for email-tool
+echo "Summary: ..." > /workspace/email-body.txt
 
-1. Ensure you have a Kubernetes cluster (kind, minikube, or other):
-   ```bash
-   kind create cluster --name based
-   ```
-
-2. Build and deploy the language operator:
-   ```bash
-   make operator
-   ```
-
-3. Check the operator status:
-   ```bash
-   make k8s-status
-   ```
-
-4. Apply your LanguageCluster, LanguageAgent, and LanguageTool resources:
-   ```bash
-   kubectl apply -f kubernetes/language-operator/examples/
-   ```
-
-5. Make changes to the operator code and redeploy:
-   ```bash
-   make operator
-   ```
-
-## Available Make Targets
-
-Run `make help` to see all available targets:
-
-- `make build` - Build all Docker images
-- `make operator` - Build and deploy the language operator
-- `make k8s-install` - Install the language operator to Kubernetes
-- `make k8s-uninstall` - Uninstall the language operator from Kubernetes
-- `make k8s-status` - Check status of all language resources
-
-## Project Structure
-
+# email-tool sidecar reads and sends
+mail -s "Daily News" user@example.com < /workspace/email-body.txt
 ```
-based/
-├── components/             # Container components for agents and tools
-│   ├── server/            # MCP server framework
-│   ├── client/            # MCP client library
-│   └── ...                # Other components
-├── kubernetes/
-│   ├── language-operator/ # Kubernetes operator for managing language agents
-│   │   ├── api/           # CRD definitions
-│   │   ├── controllers/   # Reconciliation logic
-│   │   └── config/        # Operator manifests
-│   ├── charts/            # Helm charts for deployment
-│   │   └── language-operator/
-│   └── utilities/         # Helper scripts and tools
-├── scripts/
-│   └── build              # Build all images script
-└── Makefile               # Build and deployment commands
+
+### Tool Deployment Modes
+
+**Sidecar mode** (workspace access):
+```yaml
+kind: LanguageTool
+spec:
+  deploymentMode: sidecar  # Deployed in agent pod, shares workspace
 ```
+
+**Service mode** (shared, no workspace):
+```yaml
+kind: LanguageTool
+spec:
+  deploymentMode: service  # Deployed separately, called via HTTP
+  replicas: 3              # Can scale independently
+```
+
+## Network Isolation
+
+By default, all resources within a cluster can communicate with each other, but external access is denied. Individual agents, tools, and models can define egress rules to allow specific external endpoints.
+
+### Example: Web Tool with External Access
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: web-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/web-tool:latest
+  deploymentMode: sidecar
+  egress:
+  # Allow HTTPS to specific news sites
+  - description: Allow news websites
+    to:
+      dns:
+      - "news.ycombinator.com"
+      - "*.cnn.com"
+      - "*.bbc.com"
+    ports:
+    - port: 443
+      protocol: TCP
+```
+
+### Example: Email Tool with SMTP Access
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: email-tool
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/email-tool:latest
+  deploymentMode: sidecar
+  egress:
+  # Allow SMTP to mail server
+  - description: Allow SMTP to corporate mail server
+    to:
+      dns:
+      - "smtp.company.com"
+    ports:
+    - port: 587
+      protocol: TCP
+```
+
+### Example: Model Proxy with API Access
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: gpt-4
+spec:
+  cluster: personal-assistants
+  provider: openai
+  modelName: gpt-4
+  apiKeySecretRef:
+    name: openai-credentials
+  egress:
+  # Allow HTTPS to OpenAI API
+  - description: Allow OpenAI API access
+    to:
+      dns:
+      - "api.openai.com"
+    ports:
+    - port: 443
+      protocol: TCP
+```
+
+### Example: Agent with No External Access
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: internal-agent
+spec:
+  cluster: personal-assistants
+  image: git.theryans.io/langop/agent:latest
+  # No egress defined - can only talk to tools/models within cluster
+```
+
+### How It Works
+
+The operator automatically creates Kubernetes NetworkPolicies:
+
+1. **Default policy**: Allow all traffic within the cluster namespace, deny all external egress
+2. **Per-resource policies**: For each resource with `egress` defined, create a NetworkPolicy allowing that specific external access
+3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI like Cilium. Otherwise, use CIDR blocks.

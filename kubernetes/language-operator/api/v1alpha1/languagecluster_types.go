@@ -28,11 +28,14 @@ type LanguageClusterSpec struct {
 	Namespace string `json:"namespace,omitempty"`
 
 	// Network configuration
-	Network NetworkConfig `json:"network"`
+	// +optional
+	Network NetworkConfig `json:"network,omitempty"`
 
-	// Security groups defining network boundaries
-	// +kubebuilder:validation:MinItems=1
-	Groups []SecurityGroup `json:"groups"`
+	// Security groups defining network boundaries (advanced use)
+	// By default, all resources in the cluster can communicate with each other,
+	// and external access is controlled by egress rules on individual resources
+	// +optional
+	Groups []SecurityGroup `json:"groups,omitempty"`
 }
 
 // NetworkConfig defines network-level settings

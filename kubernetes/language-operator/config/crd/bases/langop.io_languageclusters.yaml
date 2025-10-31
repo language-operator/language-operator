@@ -53,7 +53,10 @@ spec:
             description: LanguageClusterSpec defines the desired state of LanguageCluster
             properties:
               groups:
-                description: Security groups defining network boundaries
+                description: |-
+                  Security groups defining network boundaries (advanced use)
+                  By default, all resources in the cluster can communicate with each other,
+                  and external access is controlled by egress rules on individual resources
                 items:
                   description: SecurityGroup defines a network isolation boundary
                   properties:
@@ -617,7 +620,6 @@ spec:
                   required:
                   - name
                   type: object
-                minItems: 1
                 type: array
               namespace:
                 description: |-
@@ -646,9 +648,6 @@ spec:
                     description: PodCIDR for documentation/validation purposes
                     type: string
                 type: object
-            required:
-            - groups
-            - network
             type: object
           status:
             description: LanguageClusterStatus defines the observed state

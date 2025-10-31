@@ -24,13 +24,18 @@ k8s-status:
 operator:
 	@cd kubernetes/language-operator && $(MAKE) docker-build docker-push deploy
 
+# Generate CRD API documentation
+docs:
+	@cd kubernetes/language-operator && $(MAKE) docs
+
 # Show help
 help:
-	@echo "Based - Kubernetes-Native Language Agent Platform"
+	@echo "Hi :-)"
 	@echo ""
 	@echo "Build & Management:"
 	@echo "  build          - Build all Docker images"
 	@echo "  operator       - Build and deploy the language operator"
+	@echo "  docs           - Generate CRD API reference documentation"
 	@echo ""
 	@echo "Kubernetes Operations:"
 	@echo "  k8s-install    - Install the language operator to Kubernetes"

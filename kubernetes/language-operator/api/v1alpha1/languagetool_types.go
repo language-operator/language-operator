@@ -36,6 +36,14 @@ type LanguageToolSpec struct {
 	// +kubebuilder:default=mcp
 	Type string `json:"type,omitempty"`
 
+	// DeploymentMode specifies how this tool should be deployed
+	// - "service": Deployed as a standalone Deployment+Service (default, shared across agents)
+	// - "sidecar": Deployed as a sidecar container in each agent pod (dedicated, with workspace access)
+	// +kubebuilder:validation:Enum=service;sidecar
+	// +kubebuilder:default=service
+	// +optional
+	DeploymentMode string `json:"deploymentMode,omitempty"`
+
 	// Port is the port the tool listens on
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
@@ -128,6 +136,11 @@ type LanguageToolSpec struct {
 	// UpdateStrategy defines the update strategy for the Deployment
 	// +optional
 	UpdateStrategy *UpdateStrategySpec `json:"updateStrategy,omitempty"`
+
+	// Egress defines external network access rules for this tool
+	// By default, tools can access all resources within the cluster but no external endpoints
+	// +optional
+	Egress []NetworkRule `json:"egress,omitempty"`
 }
 
 // PodDisruptionBudgetSpec defines PDB configuration
