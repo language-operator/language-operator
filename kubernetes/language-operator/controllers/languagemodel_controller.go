@@ -19,13 +19,18 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 )
@@ -42,6 +47,8 @@ type LanguageModelReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles a LanguageModel resource
 func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -84,11 +91,33 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	// Reconcile the Deployment
+	if err := r.reconcileDeployment(ctx, model); err != nil {
+		log.Error(err, "Failed to reconcile Deployment")
+		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
+		model.Status.Phase = "Failed"
+		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
+			log.Error(statusErr, "Failed to update status")
+		}
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile the Service
+	if err := r.reconcileService(ctx, model); err != nil {
+		log.Error(err, "Failed to reconcile Service")
+		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
+		model.Status.Phase = "Failed"
+		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
+			log.Error(statusErr, "Failed to update status")
+		}
+		return ctrl.Result{}, err
+	}
+
 	// Update status
 	model.Status.ObservedGeneration = model.Generation
 	model.Status.Phase = "Ready"
 	// Status fields updated
-	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model configuration is ready", model.Generation)
+	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model proxy is ready", model.Generation)
 
 	if err := r.Status().Update(ctx, model); err != nil {
 		log.Error(err, "Failed to update status")
@@ -151,6 +180,171 @@ func (r *LanguageModelReconciler) reconcileConfigMap(ctx context.Context, model 
 	// Create or update the ConfigMap
 	configMapName := GenerateConfigMapName(model.Name, "model")
 	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, model, configMapName, model.Namespace, data)
+}
+
+// reconcileDeployment creates or updates the LiteLLM proxy Deployment
+func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
+	labels := GetCommonLabels(model.Name, "LanguageModel")
+	configMapName := GenerateConfigMapName(model.Name, "model")
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      model.Name,
+			Namespace: model.Namespace,
+			Labels:    labels,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		if err := controllerutil.SetControllerReference(model, deployment, r.Scheme); err != nil {
+			return err
+		}
+
+		replicas := int32(1) // Default to 1 replica
+
+		deployment.Spec = appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "proxy",
+							Image: "git.theryans.io/langop/model:latest",
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									ContainerPort: 4000,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config",
+									MountPath: "/etc/langop",
+									ReadOnly:  true,
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/health",
+										Port: intstr.FromInt(4000),
+									},
+								},
+								InitialDelaySeconds: 10,
+								PeriodSeconds:       30,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/health",
+										Port: intstr.FromInt(4000),
+									},
+								},
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       10,
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapName,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Mount API key secret if specified
+		if model.Spec.APIKeySecretRef != nil {
+			secretName := model.Spec.APIKeySecretRef.Name
+			secretKey := model.Spec.APIKeySecretRef.Key
+			if secretKey == "" {
+				secretKey = "api-key"
+			}
+
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: "secrets",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretName,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  secretKey,
+								Path: fmt.Sprintf("%s/%s", secretName, secretKey),
+							},
+						},
+					},
+				},
+			})
+
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+				corev1.VolumeMount{
+					Name:      "secrets",
+					MountPath: "/etc/secrets",
+					ReadOnly:  true,
+				},
+			)
+		}
+
+		// TODO: Add resource requirements if Resources field is added to LanguageModelSpec
+
+		return nil
+	})
+
+	return err
+}
+
+// reconcileService creates or updates the Service for the LiteLLM proxy
+func (r *LanguageModelReconciler) reconcileService(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
+	labels := GetCommonLabels(model.Name, "LanguageModel")
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      model.Name,
+			Namespace: model.Namespace,
+			Labels:    labels,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
+		if err := controllerutil.SetControllerReference(model, service, r.Scheme); err != nil {
+			return err
+		}
+
+		port := int32(8000) // Default port for model proxy
+
+		service.Spec = corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       port,
+					TargetPort: intstr.FromInt(4000),
+				},
+			},
+			Type: corev1.ServiceTypeClusterIP,
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // handleDeletion handles the deletion of the LanguageModel

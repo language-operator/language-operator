@@ -11,7 +11,7 @@ Last updated: 2025-10-30
 - **LanguageAgent Deployments** - Creates Deployment for continuous/reactive modes
 - **LanguageAgent CronJobs** - Creates CronJob for scheduled mode
 - **LanguageTool Services** - Creates Deployment + Service for tools
-- **LanguageModel Proxies** - Creates LiteLLM proxy Deployment + Service (NOTE: Deployment+Service not yet created, only ConfigMap)
+- **LanguageModel Proxies** - Creates LiteLLM proxy Deployment + Service + ConfigMap
 - **ConfigMap Management** - All resources create ConfigMaps with spec data
 - **Status Conditions** - Standard Kubernetes condition tracking
 - **Finalizers** - Proper cleanup on deletion
