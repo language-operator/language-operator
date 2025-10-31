@@ -19,10 +19,10 @@ COPY server.rb /app/
 COPY lib/ /app/lib/
 
 # Create /mcp directory for tool definitions
-RUN mkdir -p /mcp && chown -R based:based /mcp
+RUN mkdir -p /mcp && chown -R langop:langop /mcp
 
-# Ensure app directory is owned by based user
-RUN chown -R based:based /app
+# Ensure app directory is owned by langop user
+RUN chown -R langop:langop /app
 
 # Expose default port
 EXPOSE 80
@@ -31,8 +31,8 @@ EXPOSE 80
 ENV PORT=80
 ENV RACK_ENV=production
 
-# Switch to based user
-USER based
+# Switch to langop user
+USER langop
 
 # Start the server
 CMD ["ruby", "server.rb"]

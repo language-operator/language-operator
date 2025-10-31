@@ -12,18 +12,18 @@ RUN apk add --no-cache \
     sudo \
     uv
 
-# Give based user sudo privileges
-RUN echo "based ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# Give langop user sudo privileges
+RUN echo "langop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 # Set bash as default shell
 ENV SHELL=/bin/bash
 
-# Set working directory and ensure it's owned by based user
+# Set working directory and ensure it's owned by langop user
 WORKDIR /workspace
-RUN chown -R based:based /workspace
+RUN chown -R langop:langop /workspace
 
-# End as based user - entrypoint will handle the switch at runtime
-USER based
+# End as langop user - entrypoint will handle the switch at runtime
+USER langop
 
 # Default command
 CMD ["/bin/bash"]

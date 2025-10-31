@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create based user
-RUN groupadd -r based && useradd -r -g based based
+# Create langop user
+RUN groupadd -r langop && useradd -r -g langop langop
 
 # Install LiteLLM with proxy support (Debian has pre-compiled wheels)
 RUN pip install --no-cache-dir \
@@ -29,7 +29,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Create directories for config and secrets
 RUN mkdir -p /etc/langop /app && \
-    chown -R based:based /app /etc/langop
+    chown -R langop:langop /app /etc/langop
 
 # Expose LiteLLM proxy port
 EXPOSE 4000
@@ -38,8 +38,8 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:4000/health || exit 1
 
-# Switch to based user
-USER based
+# Switch to langop user
+USER langop
 
 # Use tini as PID 1
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]

@@ -20,10 +20,10 @@ COPY lib/ /app/lib/
 COPY config/ /app/config/
 
 # Set ownership
-RUN chown -R based:based /app
+RUN chown -R langop:langop /app
 
-# Run as based user
-USER based
+# Run as langop user
+USER langop
 
 # This is a library image with no default command
 # Agents will extend this image and provide their own CMD
