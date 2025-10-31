@@ -12,7 +12,7 @@ on:
 jobs:
   # Lint and validate code
   lint:
-    runs-on: ubuntu-latest
+    runs-on: builder
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
 
   # Run unit tests
   unit-test:
-    runs-on: ubuntu-latest
+    runs-on: builder
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 
   # Validate CRD manifests
   validate-manifests:
-    runs-on: ubuntu-latest
+    runs-on: builder
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
 
   # Validate Helm chart
   validate-helm:
-    runs-on: ubuntu-latest
+    runs-on: builder
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,7 +121,7 @@ jobs:
 
   # Build and test Docker images (without pushing)
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: builder
     strategy:
       matrix:
         component:

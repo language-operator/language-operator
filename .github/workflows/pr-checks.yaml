@@ -7,7 +7,7 @@ on:
 jobs:
   # Run all PR validation checks
   validate:
-    runs-on: ubuntu-latest
+    runs-on: builder
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
 
   # Size check
   size-label:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       pull-requests: write
     steps:
@@ -75,7 +75,7 @@ jobs:
 
   # Comment with build status
   pr-comment:
-    runs-on: ubuntu-latest
+    runs-on: builder
     needs: [validate]
     if: always()
     permissions:

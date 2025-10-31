@@ -13,7 +13,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: write
       packages: write

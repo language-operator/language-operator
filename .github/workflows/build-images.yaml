@@ -24,7 +24,7 @@ env:
 jobs:
   # Build the operator image
   build-operator:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: read
       packages: write
@@ -70,7 +70,7 @@ jobs:
 
   # Build component images (base, devel, server, client)
   build-components:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: read
       packages: write
@@ -118,7 +118,7 @@ jobs:
 
   # Build tool images (web, email, sms, doc)
   build-tools:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: read
       packages: write
@@ -167,7 +167,7 @@ jobs:
 
   # Build agent images (cli, web, headless)
   build-agents:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: read
       packages: write
@@ -218,7 +218,7 @@ jobs:
 
   # Build the model proxy image (LiteLLM)
   build-model:
-    runs-on: ubuntu-latest
+    runs-on: builder
     permissions:
       contents: read
       packages: write
