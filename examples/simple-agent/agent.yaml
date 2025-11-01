@@ -9,7 +9,7 @@ spec:
   toolRefs:
   - name: web-tool
   modelRefs:
-  - name: gpt-4
+  - name: magistral-small-2509
   instructions: |
     You are a helpful AI assistant with web search capabilities.
     Your goal is to search for and summarize recent news about Kubernetes.

@@ -1,20 +1,16 @@
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt-4
+  name: magistral-small-2509
   namespace: demo
 spec:
-  provider: openai
-  modelName: gpt-4
-  apiKeySecretRef:
-    name: openai-key
-    key: api-key
+  provider: openai-compatible
+  modelName: mistralai/magistral-small-2509
+  endpoint: http://192.168.68.54:1234/v1
   egress:
-  - description: Allow OpenAI API
+  - description: Allow LM Studio API
     to:
-      dns:
-      - "api.openai.com"
-      - "*.openai.com"
+      cidr: "192.168.68.0/24"
     ports:
-    - port: 443
+    - port: 1234
       protocol: TCP

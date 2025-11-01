@@ -7,7 +7,8 @@ USER root
 RUN apk add --no-cache \
     jq \
     curl \
-    ca-certificates
+    ca-certificates \
+    tzdata
 
 WORKDIR /app/agent
 
