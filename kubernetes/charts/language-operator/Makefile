@@ -3,14 +3,14 @@
 # Chart configuration
 CHART_NAME := language-operator
 RELEASE_NAME := language-operator
-NAMESPACE := language-operator
+NAMESPACE := kube-system
 
 # Helm values
 VALUES_FILE := values.yaml
 VALUES_OVERRIDE :=
 
 # Image configuration (can be overridden)
-IMAGE_REPOSITORY ?= ghcr.io/based/language-operator
+IMAGE_REPOSITORY ?= git.theryans.io/langop/language-operator
 IMAGE_TAG ?= latest
 
 .PHONY: help
