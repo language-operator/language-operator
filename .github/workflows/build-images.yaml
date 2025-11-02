@@ -22,8 +22,30 @@ env:
   IMAGE_PREFIX: langop
 
 jobs:
+  # Build Ruby SDK gem first - if this fails, nothing else matters
+  build-gem:
+    runs-on: builder
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build gem
+        run: |
+          docker run --rm -v $PWD:/workspace -w /workspace/sdk/ruby ruby:3.2-alpine sh -c "apk add --no-cache git && gem build langop.gemspec"
+          cp sdk/ruby/langop-*.gem components/ruby/
+
+      - name: Upload gem artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: langop-gem
+          path: sdk/ruby/langop-*.gem
+          retention-days: 1
+
   # Build the operator image
   build-operator:
+    needs: build-gem
     runs-on: builder
     permissions:
       contents: read
@@ -74,6 +96,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+    needs: build-gem
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -112,28 +135,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # Build Ruby SDK gem (needed by ruby component)
-  build-gem:
-    runs-on: builder
-    permissions:
-      contents: read
-    needs: build-base
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build gem
-        run: |
-          docker run --rm -v $(pwd):/workspace -w /workspace/sdk/ruby ruby:3.2-alpine sh -c "apk add --no-cache git && ls -la && gem build langop.gemspec"
-          cp sdk/ruby/langop-*.gem components/ruby/
-
-      - name: Upload gem artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: langop-gem
-          path: sdk/ruby/langop-*.gem
-          retention-days: 1
 
   # Build ruby component (depends on base + gem)
   build-ruby:
