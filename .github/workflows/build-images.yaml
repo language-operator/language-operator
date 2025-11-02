@@ -33,13 +33,12 @@ jobs:
 
       - name: Build gem
         run: |
-          pwd
-          ls -la
-          ls -la sdk/ruby/
-          cd sdk/ruby
-          pwd
-          docker run --rm -v $(pwd):/build -w /build ruby:3.2-alpine sh -c "apk add --no-cache git && ls -la && pwd && gem build langop.gemspec"
-          cd ../..
+          # Create a temporary container to build the gem
+          docker create --name gem-builder ruby:3.2-alpine
+          docker cp sdk/ruby gem-builder:/build
+          docker start -a gem-builder sh -c "cd /build && apk add --no-cache git && gem build langop.gemspec"
+          docker cp gem-builder:/build/langop-0.1.0.gem sdk/ruby/
+          docker rm gem-builder
           cp sdk/ruby/langop-*.gem components/ruby/
 
       - name: Upload gem artifact
