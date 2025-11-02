@@ -33,6 +33,10 @@ Simple chronological checklist of what to do next.
   * ~~Handle startup race conditions gracefully~~
   * ~~Retry MCP server connections on failure~~
   * ~~Add exponential backoff~~
+* ~~DRY Phase 1: Fix agent inheritance~~
+  * ~~Change components/agent to inherit from Langop::Client::Base~~
+  * ~~Update components/agent/Gemfile to depend on langop gem~~
+  * ~~Fix require statements in agent code~~
 
 ## In Progress 🚧
 
@@ -193,8 +197,8 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
 * Wildcard DNS (*.example.com) only resolves base domain
 * ~~Agent logs connection error on first startup~~ - FIXED with retry logic
-* **Code duplication**: 1,600+ lines duplicated between SDK gem and components (see Code Quality & DRY section)
-* **Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`
+* ~~**Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`~~ - FIXED (Phase 1)
+* **Code duplication**: 1,600+ lines duplicated between SDK gem and components (see Code Quality & DRY section - Phases 2-3 remaining)
 
 ## Notes
 
