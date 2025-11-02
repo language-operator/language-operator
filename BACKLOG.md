@@ -75,9 +75,9 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
   * ~~Add note about wildcard DNS behavior (*.example.com)~~
   * Persona examples already complete ✅
 
-* Update CLAUDE.md
-  * Document ruby_llm dependency findings
-  * Add any new project conventions discovered
+* ~~Update CLAUDE.md~~
+  * ~~Document ruby_llm dependency findings~~
+  * ~~Add any new project conventions discovered~~
 
 ## Future Enhancements 🔮
 
