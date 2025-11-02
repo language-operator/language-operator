@@ -480,13 +480,15 @@ jobs:
           #!/bin/sh
           set -e
           cd /gem
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << 'CREDS'
-          ---
-          :rubygems_api_key: ${GEM_HOST_API_KEY}
-          CREDS
-          chmod 0600 ~/.gem/credentials
-          gem push langop-0.1.0.gem --host https://${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}@${{ env.REGISTRY }}/api/packages/langop/rubygems
+
+          # Configure gem to use the private registry
+          gem source --add https://${{ env.REGISTRY }}/api/packages/langop/rubygems/
+
+          # Push gem using basic auth via environment or curl
+          # Forgejo/Gitea uses basic auth for gem push
+          curl -u "${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}" \
+               --upload-file langop-0.1.0.gem \
+               https://${{ env.REGISTRY }}/api/packages/langop/rubygems
           SCRIPT
           chmod +x /tmp/publish-gem.sh
 
