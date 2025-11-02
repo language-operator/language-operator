@@ -125,7 +125,7 @@ jobs:
 
       - name: Build gem
         run: |
-          docker run --rm -v $(pwd):/workspace -w /workspace/sdk/ruby ruby:3.2-alpine gem build langop.gemspec
+          docker run --rm -v $(pwd):/workspace -w /workspace/sdk/ruby ruby:3.2-alpine sh -c "apk add --no-cache git && gem build langop.gemspec"
           cp sdk/ruby/langop-*.gem components/ruby/
 
       - name: Upload gem artifact
