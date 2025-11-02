@@ -472,10 +472,6 @@ jobs:
         env:
           GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          # Debug: show what we have
-          ls -la
-          find . -name "*.gem" -type f
-
           # Clean up old container if exists
           docker rm -f gem-publisher 2>/dev/null || true
 
@@ -483,7 +479,7 @@ jobs:
           cat > /tmp/publish-gem.sh << 'SCRIPT'
           #!/bin/sh
           set -e
-          cd /workspace
+          cd /gem
           mkdir -p ~/.gem
           cat > ~/.gem/credentials << 'CREDS'
           ---
@@ -495,7 +491,8 @@ jobs:
           chmod +x /tmp/publish-gem.sh
 
           docker run -d --name gem-publisher -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" ruby:3.2-alpine sleep 300
-          docker cp ./langop-0.1.0.gem gem-publisher:/workspace/langop-0.1.0.gem
+          docker exec gem-publisher mkdir -p /gem
+          docker cp langop-0.1.0.gem gem-publisher:/gem/langop-0.1.0.gem
           docker cp /tmp/publish-gem.sh gem-publisher:/publish-gem.sh
           docker exec -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" gem-publisher /publish-gem.sh
           docker rm -f gem-publisher
