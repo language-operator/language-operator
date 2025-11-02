@@ -41,6 +41,10 @@ Simple chronological checklist of what to do next.
   * ~~Delete duplicate client files base.rb and config.rb~~
   * ~~Create namespace wrapper Based::Client = Langop::Client~~
   * ~~Remove duplicate gem dependencies~~
+* ~~DRY Phase 3: Consolidate DSL code (950 lines removed)~~
+  * ~~Delete 8 duplicate DSL files (adapter, config, helpers, http, parameter_definition, registry, shell, tool_definition)~~
+  * ~~Create namespace wrapper Based::Dsl = Langop::Dsl~~
+  * ~~Update tool server and loader to use gem DSL~~
 
 ## In Progress 🚧
 
@@ -91,13 +95,13 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
   * ~~Update `components/client/lib/based_client.rb` to require and wrap gem~~
   * **Impact**: ✅ Removed 363 lines of duplicate code, single source of truth for client logic
 
-* **Phase 3: Consolidate DSL Code (1,000+ lines)**
-  * Delete 8 duplicate DSL files from `components/tool/lib/based/dsl/`
-  * Update `components/tool/Gemfile` to depend on `langop` gem
-  * Create namespace wrapper: `Based::Dsl = Langop::Dsl` for backwards compatibility
-  * Keep component-specific files: `execution_context.rb`, `tool_loader.rb`, `server.rb`
-  * Update tool server and loader to use gem DSL
-  * **Impact**: Removes 1,000+ lines of duplicate code
+* ~~**Phase 3: Consolidate DSL Code (950 lines)**~~ ✅ COMPLETE
+  * ~~Delete 8 duplicate DSL files from `components/tool/lib/based/dsl/`~~
+  * ~~Update `components/tool/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
+  * ~~Create namespace wrapper: `Based::Dsl = Langop::Dsl` for backwards compatibility~~
+  * ~~Keep component-specific files: `context.rb`, `execution_context.rb`, `tool_loader.rb`, `server.rb`~~
+  * ~~Update tool server and loader to use gem DSL~~
+  * **Impact**: ✅ Removed 950 lines of duplicate code, single source of truth for DSL logic
 
 * **Phase 4: Move Component-Specific Code to SDK (Optional)**
   * Move `ExecutionContext` to SDK as `Langop::Dsl::ExecutionContext`
@@ -202,7 +206,7 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
 * Wildcard DNS (*.example.com) only resolves base domain
 * ~~Agent logs connection error on first startup~~ - FIXED with retry logic
 * ~~**Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`~~ - FIXED (Phase 1)
-* **Code duplication**: 1,600+ lines duplicated between SDK gem and components (see Code Quality & DRY section - Phases 2-3 remaining)
+* ~~**Code duplication**: 1,600+ lines duplicated between SDK gem and components~~ - FIXED (Phases 1-3 complete, removed 1,313 lines)
 
 ## Notes
 
