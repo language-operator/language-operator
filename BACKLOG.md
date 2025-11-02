@@ -37,6 +37,10 @@ Simple chronological checklist of what to do next.
   * ~~Change components/agent to inherit from Langop::Client::Base~~
   * ~~Update components/agent/Gemfile to depend on langop gem~~
   * ~~Fix require statements in agent code~~
+* ~~DRY Phase 2: Consolidate client code (363 lines removed)~~
+  * ~~Delete duplicate client files base.rb and config.rb~~
+  * ~~Create namespace wrapper Based::Client = Langop::Client~~
+  * ~~Remove duplicate gem dependencies~~
 
 ## In Progress 🚧
 
@@ -80,12 +84,12 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
   * ~~Files: `components/agent/lib/langop/agent.rb`, `components/agent/lib/langop/agent/base.rb`~~
   * **Impact**: ✅ Fixed broken inheritance, agent now gets client improvements automatically
 
-* **Phase 2: Consolidate Client Code (363 lines)**
-  * Delete duplicate files: `components/client/lib/based/client/base.rb`, `components/client/lib/based/client/config.rb`
-  * Update `components/client/Gemfile` to depend on `langop` gem
-  * Create namespace wrapper: `Based::Client = Langop::Client` for backwards compatibility
-  * Update `components/client/lib/based_client.rb` to require and wrap gem
-  * **Impact**: Removes 363 lines of duplicate code, single source of truth for client logic
+* ~~**Phase 2: Consolidate Client Code (363 lines)**~~ ✅ COMPLETE
+  * ~~Delete duplicate files: `components/client/lib/based/client/base.rb`, `components/client/lib/based/client/config.rb`~~
+  * ~~Update `components/client/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
+  * ~~Create namespace wrapper: `Based::Client = Langop::Client` for backwards compatibility~~
+  * ~~Update `components/client/lib/based_client.rb` to require and wrap gem~~
+  * **Impact**: ✅ Removed 363 lines of duplicate code, single source of truth for client logic
 
 * **Phase 3: Consolidate DSL Code (1,000+ lines)**
   * Delete 8 duplicate DSL files from `components/tool/lib/based/dsl/`
