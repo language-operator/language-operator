@@ -16,6 +16,7 @@ Simple chronological checklist of what to do next.
 * ~~Fix agent deployment creation for autonomous mode~~
 * ~~Set up CI/CD for automated image builds~~
 * ~~Publish Ruby gem to private registry~~
+* ~~Build and push all component images to registry~~
 
 ## In Progress 🚧
 
@@ -24,15 +25,6 @@ Simple chronological checklist of what to do next.
 ## Next Up (Working Demo) 📋
 
 ### Critical Path to Working Demo
-
-* Build and push all component images to registry
-  * langop/base:latest
-  * langop/ruby:latest
-  * langop/tool:latest
-  * langop/client:latest
-  * langop/agent:latest
-  * langop/model:latest
-  * langop/web-tool:latest
 
 * Implement Persona integration in LanguageAgent controller
   * Fetch LanguagePersona resource by personaRef

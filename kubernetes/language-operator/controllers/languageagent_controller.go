@@ -34,6 +34,7 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/finalizers,verbs=update
+//+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -131,7 +132,35 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
 	data := make(map[string]string)
+
+	// Fetch persona if referenced
+	persona, err := r.fetchPersona(ctx, agent)
+	if err != nil {
+		// Log warning but continue without persona
+		log.Error(err, "Failed to fetch persona, continuing without it")
+	}
+
+	// Merge instructions with persona systemPrompt if persona is available
+	instructions := agent.Spec.Instructions
+	if persona != nil {
+		if persona.Spec.SystemPrompt != "" {
+			if instructions != "" {
+				instructions = persona.Spec.SystemPrompt + "\n\n" + instructions
+			} else {
+				instructions = persona.Spec.SystemPrompt
+			}
+		}
+
+		// Add persona instructions if available
+		if len(persona.Spec.Instructions) > 0 {
+			instructions = instructions + "\n\nAdditional Guidelines:\n"
+			for _, inst := range persona.Spec.Instructions {
+				instructions = instructions + "- " + inst + "\n"
+			}
+		}
+	}
 
 	// Add agent spec as JSON
 	specJSON, err := json.Marshal(agent.Spec)
@@ -140,12 +169,27 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 	data["agent.json"] = string(specJSON)
 
+	// Add persona data as JSON if available
+	if persona != nil {
+		personaJSON, err := json.Marshal(persona.Spec)
+		if err != nil {
+			return err
+		}
+		data["persona.json"] = string(personaJSON)
+		data["persona_name"] = persona.Name
+	}
+
 	// Add other useful data
 	data["name"] = agent.Name
 	data["namespace"] = agent.Namespace
 	data["mode"] = agent.Spec.ExecutionMode
 	if agent.Spec.Goal != "" {
 		data["goal"] = agent.Spec.Goal
+	}
+
+	// Add merged instructions
+	if instructions != "" {
+		data["instructions"] = instructions
 	}
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
@@ -218,6 +262,15 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 }
 
 func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Fetch persona if referenced
+	persona, err := r.fetchPersona(ctx, agent)
+	if err != nil {
+		// Log warning but continue without persona
+		log.Error(err, "Failed to fetch persona for deployment, continuing without it")
+	}
+
 	// Resolve model URLs
 	modelURLs, err := r.resolveModels(ctx, agent)
 	if err != nil {
@@ -282,7 +335,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
+				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs, persona),
 			},
 		}
 
@@ -340,6 +393,15 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 }
 
 func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Fetch persona if referenced
+	persona, err := r.fetchPersona(ctx, agent)
+	if err != nil {
+		// Log warning but continue without persona
+		log.Error(err, "Failed to fetch persona for cronjob, continuing without it")
+	}
+
 	// Resolve model URLs
 	modelURLs, err := r.resolveModels(ctx, agent)
 	if err != nil {
@@ -404,7 +466,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs),
+				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs, persona),
 			},
 		}
 
@@ -634,7 +696,7 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	return toolURLs, nil
 }
 
-func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, toolURLs []string) []corev1.EnvVar {
+func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "AGENT_NAME",
@@ -657,6 +719,26 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 		})
 	}
 
+	// Add persona environment variables if persona is set
+	if persona != nil {
+		env = append(env, corev1.EnvVar{
+			Name:  "PERSONA_NAME",
+			Value: persona.Name,
+		})
+		if persona.Spec.Tone != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "PERSONA_TONE",
+				Value: persona.Spec.Tone,
+			})
+		}
+		if persona.Spec.Language != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "PERSONA_LANGUAGE",
+				Value: persona.Spec.Language,
+			})
+		}
+	}
+
 	// Add LiteLLM model proxy URLs (comma-separated)
 	if len(modelURLs) > 0 {
 		env = append(env, corev1.EnvVar{
@@ -677,6 +759,35 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 	env = append(env, agent.Spec.Env...)
 
 	return env
+}
+
+func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguagePersona, error) {
+	// Return nil if no persona is referenced
+	if agent.Spec.PersonaRef == nil {
+		return nil, nil
+	}
+
+	// Determine namespace
+	namespace := agent.Spec.PersonaRef.Namespace
+	if namespace == "" {
+		namespace = agent.Namespace
+	}
+
+	// Fetch the LanguagePersona
+	persona := &langopv1alpha1.LanguagePersona{}
+	if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.PersonaRef.Name, Namespace: namespace}, persona); err != nil {
+		if errors.IsNotFound(err) {
+			return nil, fmt.Errorf("persona %s/%s not found", namespace, agent.Spec.PersonaRef.Name)
+		}
+		return nil, fmt.Errorf("failed to get persona %s/%s: %w", namespace, agent.Spec.PersonaRef.Name, err)
+	}
+
+	// Check if persona is ready
+	if persona.Status.Phase != "Ready" {
+		return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", namespace, agent.Spec.PersonaRef.Name, persona.Status.Phase)
+	}
+
+	return persona, nil
 }
 
 func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {

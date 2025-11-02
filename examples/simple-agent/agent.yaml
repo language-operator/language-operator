@@ -10,8 +10,9 @@ spec:
   - name: web-tool
   modelRefs:
   - name: magistral-small-2509
+  personaRef:
+    name: helpful-assistant
   instructions: |
-    You are a helpful AI assistant with web search capabilities.
     Your goal is to search for and summarize recent news about Kubernetes.
     Use the web_search tool to find information, then provide a concise summary.
   workspace:
