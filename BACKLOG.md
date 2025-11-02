@@ -29,6 +29,10 @@ Simple chronological checklist of what to do next.
 * ~~Add basic controller unit tests~~
 * ~~Standardize all Makefiles with Docker targets (build, scan, shell, run)~~
 * ~~Update .gitignore for Go build artifacts~~
+* ~~Add retry logic to agent connection code~~
+  * ~~Handle startup race conditions gracefully~~
+  * ~~Retry MCP server connections on failure~~
+  * ~~Add exponential backoff~~
 
 ## In Progress 🚧
 
@@ -37,11 +41,6 @@ Simple chronological checklist of what to do next.
 ## Next Up (Working Demo) 📋
 
 ### Critical Path to Working Demo
-
-* Add retry logic to agent connection code
-  * Handle startup race conditions gracefully
-  * Retry MCP server connections on failure
-  * Add exponential backoff
 
 * Verify agent can execute tasks end-to-end
   * Test with actual task execution
