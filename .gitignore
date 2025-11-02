@@ -1,2 +1,11 @@
 .env
 langop-*.gem
+
+# Go test coverage
+*.out
+cover.out
+coverage.out
+
+# Go build artifacts
+bin/
+*.test
