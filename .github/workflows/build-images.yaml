@@ -116,6 +116,8 @@ jobs:
   # Build Ruby SDK gem (needed by ruby component)
   build-gem:
     runs-on: builder
+    container:
+      image: ruby:3.2-alpine
     permissions:
       contents: read
     needs: build-base
@@ -125,9 +127,7 @@ jobs:
 
       - name: Build gem
         working-directory: ./sdk/ruby
-        run: |
-          apk add --no-cache ruby ruby-dev build-base
-          gem build langop.gemspec
+        run: gem build langop.gemspec
 
       - name: Copy gem to ruby component
         run: cp sdk/ruby/langop-*.gem components/ruby/
@@ -191,7 +191,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build component images that depend on base (devel, model)
+  # Build component images that depend on base (model)
   build-components:
     runs-on: builder
     permissions:
@@ -200,7 +200,7 @@ jobs:
     needs: build-base
     strategy:
       matrix:
-        component: [devel, model]
+        component: [model]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -438,6 +438,8 @@ jobs:
   # Publish Ruby gem to registry
   publish-ruby-gem:
     runs-on: builder
+    container:
+      image: ruby:3.2-alpine
     permissions:
       contents: read
       packages: write
@@ -457,7 +459,6 @@ jobs:
         env:
           GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          apk add --no-cache ruby
           mkdir -p ~/.gem
           cat > ~/.gem/credentials << EOF
           ---
