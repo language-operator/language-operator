@@ -123,15 +123,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: false
-
       - name: Build gem
         working-directory: ./sdk/ruby
-        run: gem build langop.gemspec
+        run: |
+          apk add --no-cache ruby ruby-dev build-base
+          gem build langop.gemspec
 
       - name: Copy gem to ruby component
         run: cp sdk/ruby/langop-*.gem components/ruby/
@@ -456,17 +452,12 @@ jobs:
           name: langop-gem
           path: .
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: false
-
       - name: Publish gem to registry
         if: github.event_name != 'pull_request' && (github.event.inputs.push != 'false')
         env:
           GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
+          apk add --no-cache ruby
           mkdir -p ~/.gem
           cat > ~/.gem/credentials << EOF
           ---
