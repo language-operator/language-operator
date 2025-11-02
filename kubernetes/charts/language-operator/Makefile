@@ -41,6 +41,10 @@ prereqs: check-helm check-kubectl check-cluster ## Check all prerequisites
 
 ##@ Chart Operations
 
+.PHONY: test
+test: lint ## Run tests (lint chart)
+	@echo "✓ All tests passed!"
+
 .PHONY: lint
 lint: check-helm ## Lint the Helm chart
 	@echo "Linting Helm chart..."

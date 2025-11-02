@@ -54,6 +54,9 @@ uninstall: ## Uninstall Cilium
 
 ##@ Testing & Validation
 
+test: validate ## Run tests (validate chart)
+	@echo "$(GREEN)✓ All tests passed!$(NC)"
+
 dry-run: add-repo ## Dry-run installation to see what would be applied
 	@echo "$(YELLOW)Running dry-run for Cilium $(CILIUM_VERSION)...$(NC)"
 	helm install $(HELM_RELEASE_NAME) $(HELM_REPO)/cilium \

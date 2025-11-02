@@ -5,6 +5,7 @@ help:
 	@echo "  scan   - Scan Docker image with Trivy"
 	@echo "  shell  - Run interactive shell in container"
 	@echo "  run    - Run CLI agent"
+	@echo "  test   - Run tests (linting)"
 	@echo "  lint   - Run RuboCop linter"
 	@echo "  doc    - Generate YARD documentation"
 	@echo "  clean  - Clean generated files"
@@ -31,6 +32,10 @@ run:
 		-v $(PWD)/config:/app/agent/config \
 		-e CONFIG_PATH=/app/agent/config/config.yaml \
 		based/agent-cli:latest
+
+.PHONY: test
+test: lint ## Run tests (linting)
+	@echo "All tests passed!"
 
 .PHONY: lint
 lint:

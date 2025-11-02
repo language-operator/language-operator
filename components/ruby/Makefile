@@ -9,6 +9,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build   - Build the Docker image"
 	@echo "  scan    - Scan the Docker image with Trivy"
+	@echo "  test    - Test the Docker image"
 	@echo "  shell   - Run interactive shell in container"
 	@echo "  run     - Run the container"
 
@@ -21,6 +22,13 @@ build:
 .PHONY: scan
 scan:
 	trivy image $(IMAGE_FULL)
+
+# Test the Docker image
+.PHONY: test
+test: ## Test the Docker image
+	@echo "Testing ruby image with Langop gem..."
+	docker run --rm $(IMAGE_FULL) ruby -e "require 'langop'; puts 'Langop gem loaded successfully'"
+	@echo "All tests passed!"
 
 # Run interactive shell in container
 .PHONY: shell

@@ -10,6 +10,7 @@ help:
 	@echo "  build - Build the Docker image"
 	@echo "  push  - Push the Docker image to the registry"
 	@echo "  scan  - Scan the Docker image with Trivy"
+	@echo "  test  - Test the Docker image"
 	@echo "  shell - Run the image and exec into it with an interactive shell"
 	@echo "  run   - Run the container"
 	@echo "  env   - Display sorted list of environment variables in the image"
@@ -28,6 +29,14 @@ push:
 .PHONY: scan
 scan:
 	trivy image $(IMAGE_FULL)
+
+# Test the Docker image
+.PHONY: test
+test: ## Test the Docker image
+	@echo "Testing base image..."
+	docker run --rm $(IMAGE_FULL) ruby --version
+	docker run --rm $(IMAGE_FULL) bundle --version
+	@echo "All tests passed!"
 
 # Run the image and exec into it with an interactive shell
 .PHONY: shell

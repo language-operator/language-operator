@@ -11,6 +11,7 @@ help:
 	@echo "  scan    - Scan the Docker image with Trivy"
 	@echo "  shell   - Run interactive shell in container"
 	@echo "  run     - Run the web agent (Rails + Vite)"
+	@echo "  test    - Run tests (linting)"
 	@echo "  lint    - Run RuboCop linter"
 	@echo "  doc     - Generate YARD documentation"
 	@echo "  clean   - Clean generated files"
@@ -39,6 +40,11 @@ run:
 		-v $(PWD)/config:/app/web/config \
 		-e RAILS_ENV=development \
 		$(IMAGE_FULL)
+
+# Run tests
+.PHONY: test
+test: lint ## Run tests (linting)
+	@echo "All tests passed!"
 
 # Run RuboCop linter
 .PHONY: lint

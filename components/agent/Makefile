@@ -11,6 +11,7 @@ help:
 	@echo "  scan    - Scan the Docker image with Trivy"
 	@echo "  shell   - Run interactive shell in container"
 	@echo "  run     - Run the agent framework"
+	@echo "  test    - Run tests (linting)"
 	@echo "  lint    - Run RuboCop linter"
 	@echo "  doc     - Generate YARD documentation"
 	@echo "  clean   - Clean generated files"
@@ -38,6 +39,11 @@ run:
 		-e WORKSPACE_PATH=/workspace \
 		-e AGENT_MODE=autonomous \
 		$(IMAGE_FULL)
+
+# Run tests
+.PHONY: test
+test: lint ## Run tests (linting)
+	@echo "All tests passed!"
 
 # Run RuboCop linter
 .PHONY: lint

@@ -28,6 +28,12 @@ operator:
 docs:
 	@cd kubernetes/language-operator && $(MAKE) docs
 
+# Run tests
+test:
+	@echo "Running tests for Language Operator..."
+	@cd kubernetes/language-operator && $(MAKE) test
+	@echo "✓ All tests passed!"
+
 # Show help
 help:
 	@echo "Hi :-)"
@@ -36,6 +42,7 @@ help:
 	@echo "  build          - Build all Docker images"
 	@echo "  operator       - Build and deploy the language operator"
 	@echo "  docs           - Generate CRD API reference documentation"
+	@echo "  test           - Run all tests"
 	@echo ""
 	@echo "Kubernetes Operations:"
 	@echo "  k8s-install    - Install the language operator to Kubernetes"
