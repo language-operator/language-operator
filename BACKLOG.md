@@ -17,6 +17,7 @@ Simple chronological checklist of what to do next.
 * ~~Set up CI/CD for automated image builds~~
 * ~~Publish Ruby gem to private registry~~
 * ~~Build and push all component images to registry~~
+* ~~Implement Persona integration in LanguageAgent controller~~
 
 ## In Progress 🚧
 
@@ -25,12 +26,6 @@ Simple chronological checklist of what to do next.
 ## Next Up (Working Demo) 📋
 
 ### Critical Path to Working Demo
-
-* Implement Persona integration in LanguageAgent controller
-  * Fetch LanguagePersona resource by personaRef
-  * Merge persona.systemPrompt with agent.instructions
-  * Apply persona rules, examples, constraints to ConfigMap
-  * Test with example manifests
 
 * Fix Ruby SDK ruby_llm dependency issues
   * Investigate ruby_llm gem availability/status
