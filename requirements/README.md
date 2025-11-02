@@ -6,7 +6,7 @@ This directory contains project requirements and conventions. Each requirement f
 
 ### Makefile Requirements
 - [MUST-have-help-target](makefile/MUST-have-help-target.md) - All Makefiles must provide help documentation
-- [MUST-include-docker-targets](makefile/MUST-include-docker-targets.md) - Makefiles with Dockerfile must include build, scan, shell, run, publish targets
+- [MUST-include-docker-targets](makefile/MUST-include-docker-targets.md) - Makefiles with Dockerfile must include build, scan, shell, run targets
 
 ### Ruby Requirements
 - [MUST-use-pessimistic-versioning](ruby/MUST-use-pessimistic-versioning.md) - All gems must use ~> version constraints

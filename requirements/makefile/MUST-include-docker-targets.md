@@ -3,7 +3,7 @@
 **Status**: REQUIRED
 **Applies to**: All Makefiles in directories containing a Dockerfile
 **RFC 2119**: MUST
-**Check**: Verify presence of `build`, `scan`, `shell`, `run`, `publish` targets
+**Check**: Verify presence of `build`, `scan`, `shell`, `run` targets
 
 ## Description
 
@@ -17,7 +17,12 @@ All Dockerized projects MUST include:
 2. **scan** - Security scan the built image
 3. **shell** - Open interactive shell in container
 4. **run** - Run the container
-5. **publish** - Push image to registry
+
+## Optional Targets
+
+Projects MAY include:
+
+- **publish** - Push image to registry (typically handled by CI/CD)
 
 ## Example Implementation
 
@@ -33,7 +38,6 @@ help:
 	@echo "  scan       - Security scan the image with trivy"
 	@echo "  shell      - Open interactive shell in container"
 	@echo "  run        - Run the container"
-	@echo "  publish    - Push image to registry"
 
 .PHONY: build
 build:
@@ -52,9 +56,6 @@ shell:
 run:
 	docker run --rm -it $(IMAGE_FULL)
 
-.PHONY: publish
-publish: build
-	docker push $(IMAGE_FULL)
 ```
 
 ## Variable Naming Convention
@@ -81,7 +82,6 @@ for dir in $(find . -name Dockerfile -exec dirname {} \;); do
     grep -q "^scan:" "$dir/Makefile" || echo "  Missing: scan"
     grep -q "^shell:" "$dir/Makefile" || echo "  Missing: shell"
     grep -q "^run:" "$dir/Makefile" || echo "  Missing: run"
-    grep -q "^publish:" "$dir/Makefile" || echo "  Missing: publish"
   else
     echo "WARNING: $dir has Dockerfile but no Makefile"
   fi
@@ -112,10 +112,6 @@ done
 - MAY include volume mounts or environment variables as needed
 - MUST use `--rm` flag for cleanup
 
-### publish
-- MUST push image to configured registry
-- SHOULD depend on `build` target to ensure image is built
-- MAY include authentication steps if needed
 
 ## Rationale
 
