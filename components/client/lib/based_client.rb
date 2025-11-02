@@ -1,14 +1,12 @@
 # frozen_string_literal: true
 
+require 'langop/client'
 require_relative 'based/client/version'
-require_relative 'based/client/config'
-require_relative 'based/client/base'
 
 # Based MCP Client Library
 #
-# A reusable backend library for connecting to MCP (Model Context Protocol)
-# servers and managing LLM chat sessions. This library is UI-agnostic and
-# can be used by CLI, web, or headless agents.
+# This is now a thin wrapper around the Langop SDK gem for backwards compatibility.
+# All actual client logic lives in the langop gem which is pre-installed in the base image.
 #
 # @example Quick start
 #   require 'based_client'
@@ -26,6 +24,18 @@ require_relative 'based/client/base'
 #   config = Based::Client::Config.from_env
 #   client = Based::Client::Base.new(config)
 #   client.connect!
+module Based
+  # Namespace wrapper for backwards compatibility
+  #
+  # Based::Client is now an alias for Langop::Client
+  module Client
+    # Use Langop::Client classes directly
+    Base = ::Langop::Client::Base
+    Config = ::Langop::Client::Config
+  end
+end
+
+# Convenience module for creating clients
 module BasedClient
   # Convenience method to create a client from config file or ENV
   #

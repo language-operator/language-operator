@@ -73,12 +73,12 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
 
 **Problem**: 1,600+ lines of duplicated code between SDK gem and components. Components copy-paste from SDK instead of using it as dependency.
 
-* **Phase 1: Fix Agent Inheritance (Quick Win)**
-  * Change `components/agent` to inherit from `Langop::Client::Base` instead of `Based::Client::Base`
-  * Update `components/agent/Gemfile` to depend on `langop` gem
-  * Fix require statements in agent code
-  * Files: `components/agent/lib/langop/agent.rb`, `components/agent/lib/langop/agent/base.rb`
-  * **Impact**: Fixes broken inheritance, enables agent to get client improvements automatically
+* ~~**Phase 1: Fix Agent Inheritance (Quick Win)**~~ ✅ COMPLETE
+  * ~~Change `components/agent` to inherit from `Langop::Client::Base` instead of `Based::Client::Base`~~
+  * ~~Update `components/agent/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
+  * ~~Fix require statements in agent code~~
+  * ~~Files: `components/agent/lib/langop/agent.rb`, `components/agent/lib/langop/agent/base.rb`~~
+  * **Impact**: ✅ Fixed broken inheritance, agent now gets client improvements automatically
 
 * **Phase 2: Consolidate Client Code (363 lines)**
   * Delete duplicate files: `components/client/lib/based/client/base.rb`, `components/client/lib/based/client/config.rb`

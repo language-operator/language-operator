@@ -2,9 +2,9 @@
 
 source 'https://rubygems.org'
 
-# Backend library dependencies (no UI)
-gem 'ruby_llm', '~> 1.8'
-gem 'ruby_llm-mcp', '~> 0.1'
+# Use langop gem for client functionality
+# The gem is pre-installed in the langop/ruby base image
+# Dependencies (ruby_llm, ruby_llm-mcp) come from the gem
 
 group :development do
   gem 'rubocop', '~> 1.60'
