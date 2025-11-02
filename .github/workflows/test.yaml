@@ -54,13 +54,10 @@ jobs:
         run: |
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Upload coverage
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: codecov/codecov-action@v3
-        with:
-          files: kubernetes/language-operator/coverage.out
-          flags: unittests
-          fail_ci_if_error: false
+      - name: Display coverage summary
+        working-directory: kubernetes/language-operator
+        run: |
+          go tool cover -func=coverage.out | tail -1
 
   # Validate CRD manifests
   validate-manifests:
