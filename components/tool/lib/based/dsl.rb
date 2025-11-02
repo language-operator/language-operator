@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'langop/dsl'
+require 'langop/tool_loader'
 
 # Based DSL - Namespace wrapper for backwards compatibility
 #
@@ -17,9 +18,10 @@ module Based
     HTTP = ::Langop::Dsl::HTTP
     Shell = ::Langop::Dsl::Shell
     Adapter = ::Langop::Dsl::Adapter
+    Context = ::Langop::Dsl::Context
+    ExecutionContext = ::Langop::Dsl::ExecutionContext
   end
 end
 
-# Load component-specific extensions
-require_relative 'dsl/context'
-require_relative 'dsl/execution_context'
+# Alias ToolLoader at top level for backwards compatibility
+ToolLoader = ::Langop::ToolLoader

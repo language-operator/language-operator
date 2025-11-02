@@ -4,6 +4,7 @@ require_relative 'langop/version'
 require_relative 'langop/dsl'
 require_relative 'langop/client'
 require_relative 'langop/agent'
+require_relative 'langop/tool_loader'
 
 # Langop - Ruby SDK for building MCP tools and language agents
 #

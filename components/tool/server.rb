@@ -15,9 +15,8 @@ module Rack
   end
 end
 
-# Load Based DSL wrapper (which loads langop gem)
+# Load Based DSL wrapper (which loads langop gem including ToolLoader)
 require_relative 'lib/based/dsl'
-require_relative 'lib/tool_loader'
 
 # Based MCP Server using official Ruby SDK
 module Based

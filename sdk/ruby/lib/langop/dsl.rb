@@ -8,6 +8,8 @@ require_relative 'dsl/config'
 require_relative 'dsl/helpers'
 require_relative 'dsl/http'
 require_relative 'dsl/shell'
+require_relative 'dsl/context'
+require_relative 'dsl/execution_context'
 
 module Langop
   # DSL for defining MCP tools
@@ -93,44 +95,6 @@ module Langop
       #   server = Langop::Dsl.create_server(server_name: "my-tools")
       def create_server(server_name: 'langop-tools', server_context: {})
         Adapter.create_mcp_server(registry, server_name: server_name, server_context: server_context)
-      end
-    end
-
-    # Context for evaluating DSL blocks
-    #
-    # Provides the `tool` method and helper access within DSL blocks.
-    class Context
-      include Helpers
-
-      def initialize(registry)
-        @registry = registry
-      end
-
-      # Define a tool
-      #
-      # @param name [String] Tool name
-      # @yield Block defining the tool's parameters and execution
-      # @return [ToolDefinition] The defined tool
-      def tool(name, &block)
-        tool_def = ToolDefinition.new(name)
-        tool_def.instance_eval(&block)
-        @registry.register(tool_def)
-        tool_def
-      end
-
-      # Access to Config helper
-      def config
-        Config
-      end
-
-      # Access to HTTP helper
-      def http
-        HTTP
-      end
-
-      # Access to Shell helper
-      def shell
-        Shell
       end
     end
   end
