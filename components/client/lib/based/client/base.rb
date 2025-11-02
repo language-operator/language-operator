@@ -158,13 +158,8 @@ module Based
         all_tools = []
 
         enabled_servers.each do |server_config|
-          client = RubyLLM::MCP.client(
-            name: server_config['name'],
-            transport_type: server_config['transport'].to_sym,
-            config: {
-              url: server_config['url']
-            }
-          )
+          client = connect_with_retry(server_config)
+          next unless client
 
           @clients << client
           all_tools.concat(client.tools)
@@ -179,6 +174,37 @@ module Based
         @chat = RubyLLM.chat(**chat_params)
 
         @chat.with_tools(*all_tools) unless all_tools.empty?
+      end
+
+      # Connect to MCP server with exponential backoff retry logic
+      #
+      # @param server_config [Hash] Server configuration
+      # @return [RubyLLM::MCP::Client, nil] Client if successful, nil if all retries failed
+      def connect_with_retry(server_config)
+        max_retries = 3
+        base_delay = 1.0
+        max_delay = 30.0
+
+        (0..max_retries).each do |attempt|
+          return RubyLLM::MCP.client(
+            name: server_config['name'],
+            transport_type: server_config['transport'].to_sym,
+            config: {
+              url: server_config['url']
+            }
+          )
+        rescue StandardError => e
+          if attempt < max_retries
+            delay = [base_delay * (2**attempt), max_delay].min
+            warn "Failed to connect to #{server_config['name']} (attempt #{attempt + 1}/#{max_retries + 1}): #{e.message}"
+            warn "Retrying in #{delay}s..."
+            sleep(delay)
+          else
+            warn "Failed to connect to #{server_config['name']} after #{max_retries + 1} attempts: #{e.message}"
+            warn e.backtrace.join("\n") if @debug
+            return nil
+          end
+        end
       end
 
       # Build chat parameters based on LLM config
