@@ -38,14 +38,11 @@ Simple chronological checklist of what to do next.
 
 (none)
 
-## Next Up (Working Demo) 📋
+## Next Up 📋
 
-### Critical Path to Working Demo
+### Immediate Priority: Fix Code Architecture
 
-* Verify agent can execute tasks end-to-end
-  * Test with actual task execution
-  * Verify tool calls work correctly
-  * Confirm persona behavior
+The DRY consolidation (see below) must be done FIRST before building/testing can proceed. The current broken inheritance and code duplication will cause runtime issues.
 
 ### Documentation Updates
 
@@ -99,6 +96,45 @@ Simple chronological checklist of what to do next.
   * Move `ToolLoader` to SDK as `Langop::ToolLoader`
   * Keep `server.rb` in component (Sinatra-specific)
   * **Impact**: Better code organization, reusable across tools
+
+### End-to-End Testing & Deployment (After DRY Consolidation)
+
+**Prerequisites**: Phases 1-3 of DRY consolidation must be complete before this work can begin.
+
+* **Build and push updated component images**
+  * Rebuild `langop/client` image with consolidated code
+  * Rebuild `langop/agent` image with fixed inheritance
+  * Rebuild `langop/tool` image with consolidated DSL
+  * Rebuild agent implementations (cli, headless, web)
+  * Push images to registry
+  * Verify images pull successfully in cluster
+
+* **Deploy test environment**
+  * Create test LanguageCluster
+  * Deploy LanguageModel with API key
+  * Deploy LanguageTool in sidecar mode
+  * Deploy LanguageAgent with toolRefs and modelRefs
+  * Verify all resources reach "Running" state
+
+* **Test connectivity and integration**
+  * Check agent pod logs for successful MCP connection (no errors after retry)
+  * Verify sidecar tool container is healthy
+  * Verify agent can connect to model proxy
+  * Test tool invocation from agent
+  * Test LLM API calls through proxy
+
+* **End-to-end task execution test**
+  * Deploy agent with simple task/goal
+  * Verify agent can call tools via MCP
+  * Verify agent can call LLM via model proxy
+  * Confirm task completes successfully
+  * Check logs for complete execution flow
+
+* **Test persona integration**
+  * Deploy LanguagePersona resource
+  * Deploy agent with personaRef
+  * Verify persona environment variables set correctly
+  * Test agent behavior matches persona configuration
 
 ### Production Readiness
 
