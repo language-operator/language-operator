@@ -72,9 +72,15 @@ jobs:
           go-version-file: 'kubernetes/language-operator/go.mod'
           cache-dependency-path: 'kubernetes/language-operator/go.sum'
 
+      - name: Install controller-gen
+        working-directory: kubernetes/language-operator
+        run: |
+          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
+
       - name: Generate manifests
         working-directory: kubernetes/language-operator
-        run: make manifests
+        run: |
+          $(go env GOPATH)/bin/controller-gen rbac:roleName=manager-role crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
       - name: Check for uncommitted changes
         run: |
