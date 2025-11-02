@@ -1,5 +1,4 @@
-require_relative 'based/dsl/registry'
-require_relative 'based/dsl/context'
+require_relative 'based/dsl'
 
 # Loads tool definitions from Ruby files
 class ToolLoader

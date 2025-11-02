@@ -1,7 +1,6 @@
 require 'sinatra'
 require 'sinatra/json'
 require 'json'
-require 'mcp'
 require 'rack/protection'
 
 # Monkeypatch Rack::Protection::HostAuthorization to allow all hosts
@@ -15,16 +14,9 @@ module Rack
     end
   end
 end
-require_relative 'lib/based/dsl/helpers'
-require_relative 'lib/based/dsl/config'
-require_relative 'lib/based/dsl/http'
-require_relative 'lib/based/dsl/shell'
-require_relative 'lib/based/dsl/parameter_definition'
-require_relative 'lib/based/dsl/tool_definition'
-require_relative 'lib/based/dsl/registry'
-require_relative 'lib/based/dsl/context'
-require_relative 'lib/based/dsl/execution_context'
-require_relative 'lib/based/dsl/adapter'
+
+# Load Based DSL wrapper (which loads langop gem)
+require_relative 'lib/based/dsl'
 require_relative 'lib/tool_loader'
 
 # Based MCP Server using official Ruby SDK

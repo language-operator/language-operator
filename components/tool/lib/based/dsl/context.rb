@@ -1,8 +1,11 @@
-require_relative 'tool_definition'
-require_relative 'helpers'
+# frozen_string_literal: true
 
 module Based
   module Dsl
+    # DSL context for defining tools
+    #
+    # This class provides the context for tool definitions and delegates
+    # to the SDK gem's ToolDefinition and Helpers classes.
     class Context
       include Based::Dsl::Helpers
 

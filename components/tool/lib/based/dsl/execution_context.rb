@@ -1,8 +1,10 @@
-require_relative 'helpers'
+# frozen_string_literal: true
 
 module Based
   module Dsl
-    # Execution context that includes helpers
+    # Execution context that includes helpers for tool execution
+    #
+    # Provides helper methods from the SDK gem during tool execution.
     class ExecutionContext
       include Based::Dsl::Helpers
 
