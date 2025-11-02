@@ -7,6 +7,11 @@ This directory contains project requirements and conventions. Each requirement f
 ### Makefile Requirements
 - [MUST-have-help-target](makefile/MUST-have-help-target.md) - All Makefiles must provide help documentation
 
+### Ruby Requirements
+- [MUST-use-pessimistic-versioning](ruby/MUST-use-pessimistic-versioning.md) - All gems must use ~> version constraints
+- [MUST-document-public-apis](ruby/MUST-document-public-apis.md) - Public methods must have YARD documentation
+- [SHOULD-include-development-gems](ruby/SHOULD-include-development-gems.md) - Include rubocop, yard in development group
+
 ## Checking Compliance
 
 Each requirement file includes a "Compliance" section with instructions for checking adherence. To run a full audit:
