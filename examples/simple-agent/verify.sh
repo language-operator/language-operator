@@ -131,6 +131,7 @@ cleanup() {
     kubectl delete languageagent --all -n "$NAMESPACE" --ignore-not-found=true --wait=false
     kubectl delete languagetool --all -n "$NAMESPACE" --ignore-not-found=true --wait=false
     kubectl delete languagemodel --all -n "$NAMESPACE" --ignore-not-found=true --wait=false
+    kubectl delete languagepersona --all -n "$NAMESPACE" --ignore-not-found=true --wait=false
 
     # Wait a bit for finalizers
     sleep 3
@@ -281,12 +282,17 @@ apply_manifests() {
   run_kubectl apply -f model.yaml
   success "Applied model.yaml"
 
-  # 3. Tool
+  # 3. Persona
+  log "Applying persona.yaml..."
+  run_kubectl apply -f persona.yaml
+  success "Applied persona.yaml"
+
+  # 4. Tool
   log "Applying tool.yaml..."
   run_kubectl apply -f tool.yaml
   success "Applied tool.yaml"
 
-  # 4. Agent
+  # 5. Agent
   log "Applying agent.yaml..."
   run_kubectl apply -f agent.yaml
   success "Applied agent.yaml"
