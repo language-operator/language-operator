@@ -70,10 +70,10 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
   * ~~Update "Last updated" date~~
   * ~~Document Makefile standardization~~
 
-* Update README.md
-  * Add note about DNS resolution timing
-  * Add note about wildcard DNS behavior (*.example.com)
-  * Update persona examples when integration complete
+* ~~Update README.md~~
+  * ~~Add note about DNS resolution timing~~
+  * ~~Add note about wildcard DNS behavior (*.example.com)~~
+  * Persona examples already complete ✅
 
 * Update CLAUDE.md
   * Document ruby_llm dependency findings
