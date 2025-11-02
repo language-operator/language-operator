@@ -61,6 +61,14 @@ run: manifests generate fmt vet ## Run a controller from your host.
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
+.PHONY: scan
+scan: ## Scan docker image with Trivy.
+	trivy image ${IMG}
+
+.PHONY: shell
+shell: ## Run interactive shell in container.
+	docker run --rm -it ${IMG} /bin/sh
+
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

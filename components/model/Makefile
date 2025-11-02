@@ -11,6 +11,7 @@ help:
 	@echo "  push    - Push the Docker image to the registry"
 	@echo "  scan    - Scan the Docker image with Trivy"
 	@echo "  shell   - Run the image and exec into it with an interactive shell"
+	@echo "  run     - Run the container"
 	@echo "  env     - Display sorted list of environment variables in the image"
 	@echo "  test    - Test the proxy with a sample configuration"
 	@echo "  clean   - Clean up test artifacts"
@@ -34,6 +35,11 @@ scan:
 .PHONY: shell
 shell:
 	docker run --rm -it $(IMAGE_FULL) /bin/sh
+
+# Run the container
+.PHONY: run
+run:
+	docker run --rm -it -p 4000:4000 $(IMAGE_FULL)
 
 # Display sorted list of environment variables in the image
 .PHONY: env

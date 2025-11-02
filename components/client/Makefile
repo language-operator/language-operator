@@ -6,6 +6,8 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 help:
 	@echo "Available targets:"
 	@echo "  build       - Build the Docker image"
+	@echo "  scan        - Scan the Docker image with Trivy"
+	@echo "  shell       - Run interactive shell in container"
 	@echo "  run         - Run the chat client interactively"
 	@echo "  test        - Run tests (not yet implemented)"
 	@echo "  lint        - Run RuboCop linter"
@@ -19,6 +21,16 @@ help:
 build:
 	@echo "Building Docker image $(IMAGE_FULL)..."
 	docker build -t $(IMAGE_FULL) .
+
+.PHONY: scan
+scan:
+	@echo "Scanning Docker image $(IMAGE_FULL) with Trivy..."
+	trivy image $(IMAGE_FULL)
+
+.PHONY: shell
+shell:
+	@echo "Running interactive shell in $(IMAGE_FULL)..."
+	docker run --rm -it $(IMAGE_FULL) /bin/sh
 
 .PHONY: run
 run:
