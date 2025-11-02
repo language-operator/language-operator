@@ -38,16 +38,36 @@ module Based
             'endpoint' => ENV.fetch('OPENAI_ENDPOINT', nil),
             'api_key' => ENV.fetch('OPENAI_API_KEY') { ENV.fetch('ANTHROPIC_API_KEY', nil) }
           },
-          'mcp_servers' => [
+          'mcp_servers' => parse_mcp_servers_from_env,
+          'debug' => ENV['DEBUG'] == 'true'
+        }
+      end
+
+      # Parse MCP servers from environment variable
+      #
+      # @return [Array<Hash>] Array of MCP server configurations
+      def self.parse_mcp_servers_from_env
+        # Support both MCP_SERVERS (comma-separated) and legacy MCP_URL
+        servers_env = ENV['MCP_SERVERS']
+        if servers_env && !servers_env.empty?
+          # Parse comma-separated URLs
+          servers_env.split(',').map.with_index do |url, index|
             {
-              'name' => 'default',
-              'url' => ENV.fetch('MCP_URL', 'http://server:80/mcp'),
+              'name' => "default-tools-#{index}",
+              'url' => url.strip,
               'transport' => 'streamable',
               'enabled' => true
             }
-          ],
-          'debug' => ENV['DEBUG'] == 'true'
-        }
+          end
+        else
+          # Fallback to legacy MCP_URL
+          [{
+            'name' => 'default-tools',
+            'url' => ENV.fetch('MCP_URL', 'http://server:80/mcp'),
+            'transport' => 'streamable',
+            'enabled' => true
+          }]
+        end
       end
 
       # Load configuration with automatic fallback to environment variables
@@ -69,14 +89,14 @@ module Based
       # @return [String] Provider name (openai_compatible, openai, or anthropic)
       # @raise [RuntimeError] If no API key or endpoint is found
       def self.detect_provider_from_env
-        if ENV['OPENAI_ENDPOINT']
+        if ENV['OPENAI_ENDPOINT'] || ENV['MODEL_ENDPOINTS']
           'openai_compatible'
         elsif ENV['OPENAI_API_KEY']
           'openai'
         elsif ENV['ANTHROPIC_API_KEY']
           'anthropic'
         else
-          raise 'No API key or endpoint found. Set OPENAI_ENDPOINT for local LLM, ' \
+          raise 'No API key or endpoint found. Set OPENAI_ENDPOINT or MODEL_ENDPOINTS for local LLM, ' \
                 'or OPENAI_API_KEY/ANTHROPIC_API_KEY for cloud providers.'
         end
       end

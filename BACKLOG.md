@@ -19,6 +19,12 @@ Simple chronological checklist of what to do next.
 * ~~Build and push all component images to registry~~
 * ~~Implement Persona integration in LanguageAgent controller~~
 * ~~Fix Ruby SDK ruby_llm dependency issues~~
+* ~~Fix sidecar tool injection bug~~
+* ~~Add environment variable config support (MCP_SERVERS, MODEL_ENDPOINTS)~~
+* ~~Add TCP readiness probes to sidecar containers~~
+* ~~Deploy operator to cluster with all fixes~~
+* ~~Run end-to-end demo (LanguageCluster + Model + Tool + Agent)~~
+* ~~Verify agent pod runs with sidecar + workspace~~
 
 ## In Progress 🚧
 
@@ -28,18 +34,15 @@ Simple chronological checklist of what to do next.
 
 ### Critical Path to Working Demo
 
-* Deploy operator to cluster with latest fixes
-  * Build operator image with persona integration
-  * Update Helm chart if needed
-  * Deploy to kube-system namespace
+* Add retry logic to agent connection code
+  * Handle startup race conditions gracefully
+  * Retry MCP server connections on failure
+  * Add exponential backoff
 
-* Run end-to-end demo
-  * Deploy LanguageCluster
-  * Deploy LanguageModel with persona
-  * Deploy LanguageTool (sidecar mode)
-  * Deploy LanguageAgent with personaRef
-  * Verify agent pod runs with sidecar + workspace
-  * Verify agent can execute tasks
+* Verify agent can execute tasks end-to-end
+  * Test with actual task execution
+  * Verify tool calls work correctly
+  * Confirm persona behavior
 
 ### Documentation Updates
 
@@ -117,7 +120,7 @@ Simple chronological checklist of what to do next.
 * LanguageClient controller incomplete (ingress/auth/session management)
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
 * Wildcard DNS (*.example.com) only resolves base domain
-* Sidecar tool injection not working - agent deployments missing tool sidecar containers
+* Agent logs connection error on first startup (cosmetic - both containers start simultaneously, agent retries and succeeds)
 
 ## Notes
 

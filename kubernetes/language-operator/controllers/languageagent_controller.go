@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -632,6 +633,18 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 				},
 			},
 			Env: tool.Spec.Env,
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					TCPSocket: &corev1.TCPSocketAction{
+						Port: intstr.FromInt(int(port)),
+					},
+				},
+				InitialDelaySeconds: 2,
+				PeriodSeconds:       2,
+				TimeoutSeconds:      1,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
+			},
 		}
 
 		// Add resource requirements if specified
@@ -698,6 +711,10 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 
 func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
 	env := []corev1.EnvVar{
+		{
+			Name:  "CONFIG_PATH",
+			Value: "/nonexistent/config.yaml", // Force config to load from env vars
+		},
 		{
 			Name:  "AGENT_NAME",
 			Value: agent.Name,

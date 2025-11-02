@@ -84,20 +84,24 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile Deployment
-	if err := r.reconcileDeployment(ctx, tool); err != nil {
-		log.Error(err, "Failed to reconcile Deployment")
-		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
-		r.Status().Update(ctx, tool)
-		return ctrl.Result{}, err
-	}
+	// Skip Deployment and Service for sidecar mode tools
+	// Sidecar tools are injected into agent pods directly
+	if tool.Spec.DeploymentMode != "sidecar" {
+		// Reconcile Deployment
+		if err := r.reconcileDeployment(ctx, tool); err != nil {
+			log.Error(err, "Failed to reconcile Deployment")
+			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
+			r.Status().Update(ctx, tool)
+			return ctrl.Result{}, err
+		}
 
-	// Reconcile Service
-	if err := r.reconcileService(ctx, tool); err != nil {
-		log.Error(err, "Failed to reconcile Service")
-		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
-		r.Status().Update(ctx, tool)
-		return ctrl.Result{}, err
+		// Reconcile Service
+		if err := r.reconcileService(ctx, tool); err != nil {
+			log.Error(err, "Failed to reconcile Service")
+			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
+			r.Status().Update(ctx, tool)
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Reconcile NetworkPolicy for network isolation
