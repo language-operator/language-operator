@@ -27,6 +27,8 @@ Simple chronological checklist of what to do next.
 * ~~Verify agent pod runs with sidecar + workspace~~
 * ~~Re-enable automated testing in CI~~
 * ~~Add basic controller unit tests~~
+* ~~Standardize all Makefiles with Docker targets (build, scan, shell, run)~~
+* ~~Update .gitignore for Go build artifacts~~
 
 ## In Progress 🚧
 
@@ -48,12 +50,13 @@ Simple chronological checklist of what to do next.
 
 ### Documentation Updates
 
-* Update STATUS.md
-  * Add Ruby SDK & CI/CD section
-  * Mark gem publishing as complete
-  * Update component image status
-  * Document persona integration when done
-  * Update "Last updated" date
+* ~~Update STATUS.md~~
+  * ~~Add Ruby SDK & CI/CD section~~
+  * ~~Mark gem publishing as complete~~
+  * ~~Update component image status~~
+  * ~~Document persona integration when done~~
+  * ~~Update "Last updated" date~~
+  * ~~Document Makefile standardization~~
 
 * Update README.md
   * Add note about DNS resolution timing
