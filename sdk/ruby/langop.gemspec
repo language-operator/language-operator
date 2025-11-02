@@ -29,8 +29,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   # Runtime dependencies
-  spec.add_dependency 'mcp', '~> 0.1'
-  spec.add_dependency 'ruby_llm', '~> 0.1'
+  spec.add_dependency 'mcp', '~> 0.4'
+  spec.add_dependency 'ruby_llm', '~> 1.8'
   spec.add_dependency 'thor', '~> 1.3'
 
   # Development dependencies
