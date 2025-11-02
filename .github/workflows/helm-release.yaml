@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'kubernetes/charts/**'
-      - 'kubernetes/language-operator/config/crd/**'
   release:
     types: [published]
   workflow_dispatch:
