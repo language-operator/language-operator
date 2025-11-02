@@ -57,9 +57,11 @@ jobs:
             # Example: helm push $chart oci://${{ env.REGISTRY }}/helm-charts
           done
 
-      - name: Create GitHub Release
+      - name: Create Forgejo Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v1
+        uses: https://code.forgejo.org/forgejo/forgejo-release@v2
         with:
-          files: .helm-packages/*.tgz
-          generate_release_notes: true
+          direction: upload
+          release-dir: .helm-packages
+          release-notes: "Helm chart release"
+          token: ${{ secrets.GITHUB_TOKEN }}
