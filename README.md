@@ -255,6 +255,25 @@ The operator automatically creates Kubernetes NetworkPolicies:
 2. **Per-resource policies**: For each resource with `egress` defined, create a NetworkPolicy allowing that specific external access
 3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI. Otherwise, use CIDR blocks for IP-based restrictions.
 
+### DNS Resolution Notes
+
+**Resolution Timing**: DNS hostnames in egress rules are resolved to IP addresses at policy creation and reconciliation time. This is a snapshot-based approach - the operator doesn't continuously monitor DNS changes. Policies will auto-refresh during reconciliation loops.
+
+**Wildcard Behavior**: Wildcard DNS patterns like `*.example.com` will resolve the base domain (`example.com`) and use that IP address. This works well for sites hosted on the same IP, but may not cover all subdomains if they're hosted separately. For comprehensive coverage, list specific subdomains explicitly:
+
+```yaml
+egress:
+  - description: Allow CNN sites
+    to:
+      dns:
+      - "cnn.com"           # Main site
+      - "www.cnn.com"       # WWW subdomain
+      - "edition.cnn.com"   # International edition
+    ports:
+    - port: 443
+      protocol: TCP
+```
+
 ## Reusable Personas
 
 LanguagePersona allows you to define reusable personality templates that agents can reference. This promotes consistency across agents and makes it easy to update behavior across multiple agents at once.
