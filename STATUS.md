@@ -422,7 +422,17 @@ _Nothing currently in this category._
 
 ### 📝 Recent Fixes (2025-11-02)
 
-#### 5. **Sidecar Tool Injection Bug** - FIXED
+#### 5. **Makefile Standardization** - COMPLETE
+**Requirement**: `requirements/makefile/MUST-include-docker-targets.md`
+**Action**: Standardized all Makefiles to include Docker lifecycle targets
+**Changes**:
+- ✅ Added missing `build`, `scan`, `shell`, `run` targets to existing Makefiles
+- ✅ Created new Makefiles for 4 directories (agents/headless, agents/web, components/agent, components/ruby)
+- ✅ Fixed PHONY declarations to use individual lines per requirement
+- ✅ Updated `.gitignore` to exclude Go build artifacts (`*.out`, `bin/`, `*.test`)
+**Result**: 100% compliance (10/10 directories with Dockerfiles now have compliant Makefiles)
+
+#### 6. **Sidecar Tool Injection Bug** - FIXED
 **Symptom**: Agent pods missing tool sidecar containers, only had agent container
 **Root Cause**: LanguageTool controller was creating Deployment/Service for ALL tools, including sidecar mode
 **Fix Applied**:
@@ -433,7 +443,7 @@ _Nothing currently in this category._
 - ✅ `controllers/languageagent_controller.go:636-647` - Add TCP readiness probe to sidecars
 **Result**: Agent pods now run with 2/2 containers (agent + tool-web-tool sidecar)
 
-#### 6. **Persona Integration** - IMPLEMENTED
+#### 7. **Persona Integration** - IMPLEMENTED
 **Status**: Full persona support added to LanguageAgent controller
 **Implementation**:
 - ✅ Fetch LanguagePersona by personaRef
@@ -441,14 +451,14 @@ _Nothing currently in this category._
 - ✅ Persona ConfigMap mounting (if needed)
 **Result**: Agents can now use persona references for customized behavior
 
-#### 7. **Ruby SDK Dependency Fix** - RESOLVED
+#### 8. **Ruby SDK Dependency Fix** - RESOLVED
 **Issue**: SDK required `ruby_llm` gem which had broken dependencies
 **Fix**: Updated to use working gems from rubygems.org:
 - `ruby_llm` (0.6.12) - Core LLM library
 - `ruby_llm-mcp` (0.2.8) - MCP protocol support
 **Status**: ✅ Agent images build successfully with all dependencies
 
-#### 8. **CI Testing Re-enabled** - COMPLETE
+#### 9. **CI Testing Re-enabled** - COMPLETE
 **Previous State**: All tests commented out in `.github/workflows/test.yaml`
 **Actions**:
 - ✅ Created controller tests for LanguageTool (sidecar vs service mode)
