@@ -116,8 +116,6 @@ jobs:
   # Build Ruby SDK gem (needed by ruby component)
   build-gem:
     runs-on: builder
-    container:
-      image: ruby:3.2-alpine
     permissions:
       contents: read
     needs: build-base
@@ -126,11 +124,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build gem
-        working-directory: ./sdk/ruby
-        run: gem build langop.gemspec
-
-      - name: Copy gem to ruby component
-        run: cp sdk/ruby/langop-*.gem components/ruby/
+        run: |
+          docker run --rm -v $(pwd):/workspace -w /workspace/sdk/ruby ruby:3.2-alpine gem build langop.gemspec
+          cp sdk/ruby/langop-*.gem components/ruby/
 
       - name: Upload gem artifact
         uses: actions/upload-artifact@v4
@@ -438,8 +434,6 @@ jobs:
   # Publish Ruby gem to registry
   publish-ruby-gem:
     runs-on: builder
-    container:
-      image: ruby:3.2-alpine
     permissions:
       contents: read
       packages: write
@@ -459,13 +453,15 @@ jobs:
         env:
           GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << EOF
+          docker run --rm -v $(pwd):/workspace -w /workspace ruby:3.2-alpine sh -c "
+            mkdir -p ~/.gem
+            cat > ~/.gem/credentials << EOF
           ---
           :rubygems_api_key: ${GEM_HOST_API_KEY}
           EOF
-          chmod 0600 ~/.gem/credentials
-          gem push langop-*.gem --host https://${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}@${{ env.REGISTRY }}/api/packages/langop/rubygems
+            chmod 0600 ~/.gem/credentials
+            gem push langop-*.gem --host https://${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}@${{ env.REGISTRY }}/api/packages/langop/rubygems
+          "
 
   # Build the model proxy image (LiteLLM)
   build-model:
