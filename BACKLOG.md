@@ -25,6 +25,8 @@ Simple chronological checklist of what to do next.
 * ~~Deploy operator to cluster with all fixes~~
 * ~~Run end-to-end demo (LanguageCluster + Model + Tool + Agent)~~
 * ~~Verify agent pod runs with sidecar + workspace~~
+* ~~Re-enable automated testing in CI~~
+* ~~Add basic controller unit tests~~
 
 ## In Progress 🚧
 
@@ -66,10 +68,11 @@ Simple chronological checklist of what to do next.
 
 ### Production Readiness
 
-* Re-enable automated testing in CI
-  * Uncomment .github/workflows/test.yaml
-  * Fix broken tests
-  * Add coverage reporting
+* Add more comprehensive test coverage
+  * Add tests for LanguageAgent controller
+  * Add tests for LanguageModel controller
+  * Add tests for LanguageCluster controller
+  * Add integration tests
 
 * Complete LanguageClient controller
   * Implement ingress reconciliation
@@ -116,7 +119,6 @@ Simple chronological checklist of what to do next.
 
 ## Known Issues 🐛
 
-* Testing completely disabled in CI (deferred for production readiness phase)
 * LanguageClient controller incomplete (ingress/auth/session management)
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
 * Wildcard DNS (*.example.com) only resolves base domain
