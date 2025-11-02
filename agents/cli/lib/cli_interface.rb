@@ -2,20 +2,20 @@
 
 require 'reline'
 
-# Terminal interface for Based MCP Client
+# Terminal interface for Langop MCP Client
 #
 # Provides an interactive REPL (Read-Eval-Print Loop) for chatting with the LLM
 # and using MCP tools. This interface is designed to be simple and familiar to
 # users of command-line tools.
 #
 # @example Basic usage
-#   client = BasedClient.create('config/config.yaml')
+#   client = LangopClient.create('config/config.yaml')
 #   interface = CLIInterface.new(client)
 #   interface.run
 class CLIInterface
   # Initialize the CLI interface
   #
-  # @param client [Based::Client::Base] Configured client instance
+  # @param client [Langop::Client::Base] Configured client instance
   def initialize(client)
     @client = client
   end
@@ -37,7 +37,7 @@ class CLIInterface
   #
   # @return [void]
   def display_welcome
-    puts '🚀 Based MCP Chat Client Starting...'
+    puts '🚀 Langop MCP Chat Client Starting...'
     puts
   end
 

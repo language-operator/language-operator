@@ -1,4 +1,4 @@
-# Based MCP CLI Agent
+# Langop MCP CLI Agent
 
 Interactive terminal interface for chatting with LLMs and using MCP tools.
 

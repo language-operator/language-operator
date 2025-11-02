@@ -47,7 +47,7 @@ class ChatSession
 
   def initialize(config)
     @id = SecureRandom.uuid
-    @client = Based::Client::Base.new(config)
+    @client = Langop::Client::Base.new(config)
     @client.connect!
     @messages = []
     @created_at = Time.current

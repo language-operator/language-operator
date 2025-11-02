@@ -1,6 +1,6 @@
-# Based MCP Chat Client
+# Langop MCP Chat Client
 
-A command-line chat interface that connects to **multiple** Based MCP servers using [RubyLLM](https://rubyllm.com/) and [RubyLLM::MCP](https://www.rubyllm-mcp.com/).
+A command-line chat interface that connects to **multiple** Langop MCP servers using [RubyLLM](https://rubyllm.com/) and [RubyLLM::MCP](https://www.rubyllm-mcp.com/).
 
 ## Features
 
@@ -19,7 +19,7 @@ A command-line chat interface that connects to **multiple** Based MCP servers us
   - Local LLM server with OpenAI-compatible API (Ollama, LM Studio, vLLM, etc.)
   - OpenAI API key
   - Anthropic API key
-- Access to one or more Based MCP servers
+- Access to one or more Langop MCP servers
 
 ## Configuration
 
@@ -175,7 +175,7 @@ OPENAI_API_KEY=sk-... ruby chat.rb
 ### With Multiple MCP Servers and Local LLM
 
 ```
-🚀 Based MCP Chat Client Starting...
+🚀 Langop MCP Chat Client Starting...
 
 📝 LLM: llama3.2 (custom endpoint: http://host.docker.internal:11434/v1)
 
@@ -214,7 +214,7 @@ Connected MCP servers:
 ### With Single Server and OpenAI
 
 ```
-🚀 Based MCP Chat Client Starting...
+🚀 Langop MCP Chat Client Starting...
 
 📝 LLM: gpt-4 (openai)
 

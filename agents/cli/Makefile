@@ -1,6 +1,6 @@
 .PHONY: help
 help:
-	@echo "Based CLI Agent - Make targets:"
+	@echo "Langop CLI Agent - Make targets:"
 	@echo "  build  - Build Docker image"
 	@echo "  scan   - Scan Docker image with Trivy"
 	@echo "  shell  - Run interactive shell in container"

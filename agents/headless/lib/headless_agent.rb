@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'based_client'
+require 'langop'
 require_relative 'goal_evaluator'
 
 # Autonomous headless agent
@@ -15,7 +15,7 @@ class HeadlessAgent
   def initialize(config, goals)
     @config = config
     @goals = goals
-    @client = Based::Client::Base.new(config)
+    @client = Langop::Client::Base.new(config)
     @evaluator = GoalEvaluator.new(goals)
   end
 
@@ -35,7 +35,7 @@ class HeadlessAgent
   #
   # @return [void]
   def display_startup
-    puts '🤖 Based Headless Agent Starting...'
+    puts '🤖 Langop Headless Agent Starting...'
     puts
     puts "📋 Objectives (#{@goals['objectives']&.length || 0}):"
     @goals['objectives']&.each_with_index do |objective, index|

@@ -7,5 +7,6 @@ cover.out
 coverage.out
 
 # Go build artifacts
-bin/
+# Note: Ruby bin/ directories with entrypoints are tracked
+/bin/
 *.test

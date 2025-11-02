@@ -7,20 +7,20 @@ require 'reline'
 require 'json'
 require 'yaml'
 
-# Based MCP Chat Client
+# Langop MCP Chat Client
 #
 # An interactive chat interface that connects to multiple MCP (Model Context Protocol)
 # servers and provides access to their tools through a conversational LLM interface.
 #
 # @example Basic usage
-#   client = BasedChat.new
+#   client = LangopChat.new
 #   client.run
 #
 # @example With custom config
 #   ENV['CONFIG_PATH'] = '/path/to/config.yaml'
-#   client = BasedChat.new
+#   client = LangopChat.new
 #   client.run
-class BasedChat
+class LangopChat
   # Initialize the chat client
   #
   # Loads configuration from YAML file or environment variables
@@ -133,7 +133,7 @@ class BasedChat
   #
   # @raise [RuntimeError] If connection fails
   def connect
-    puts '🚀 Based MCP Chat Client Starting...'
+    puts '🚀 Langop MCP Chat Client Starting...'
     puts
 
     configure_llm
@@ -210,7 +210,7 @@ class BasedChat
   # Run the interactive chat loop
   #
   # @example
-  #   client = BasedChat.new
+  #   client = LangopChat.new
   #   client.run
   def run
     connect
@@ -316,6 +316,6 @@ end
 
 # Run the chat client
 if __FILE__ == $PROGRAM_NAME
-  client = BasedChat.new
+  client = LangopChat.new
   client.run
 end

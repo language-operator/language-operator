@@ -157,7 +157,7 @@ spec:
   - `model` → base + LiteLLM proxy
   - `devel` → base + development tools
 - **Agent Framework** - New `components/agent` provides:
-  - `Langop::Agent::Base` - Extends Based::Client::Base with agent capabilities
+  - `Langop::Agent::Base` - Extends Langop::Client::Base with agent capabilities
   - `Langop::Agent::Executor` - Autonomous task execution with iteration limits
   - `Langop::Agent::Scheduler` - Cron-based scheduled execution (rufus-scheduler)
   - Workspace integration (`/workspace` volume support)

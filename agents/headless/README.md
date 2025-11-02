@@ -1,4 +1,4 @@
-# Based MCP Headless Agent
+# Langop MCP Headless Agent
 
 Autonomous agent that runs in a continuous loop to achieve specified goals.
 
@@ -101,7 +101,7 @@ The agent uses simple keyword matching to determine if an objective has been add
 ```bash
 cd agents/headless
 bundle install
-bin/based-headless
+bin/langop-headless
 ```
 
 ### Custom Goals
@@ -120,7 +120,7 @@ timeout_minutes: 30
 ## Example Output
 
 ```
-🤖 Based Headless Agent Starting...
+🤖 Langop Headless Agent Starting...
 
 📋 Objectives (2):
    1. Search for and summarize the latest Ruby news
@@ -132,7 +132,7 @@ timeout_minutes: 30
 🚀 Starting autonomous execution...
 
 1. 🎯 Task: Search for and summarize the latest Ruby news
-   ✅ Response: Based on my web search, here are the latest Ruby news...
+   ✅ Response: Langop on my web search, here are the latest Ruby news...
 
 2. 🎯 Task: Check documentation for man pages on grep
    ✅ Response: The grep manual page shows...

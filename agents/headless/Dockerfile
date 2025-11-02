@@ -16,7 +16,7 @@ COPY bin/ /app/headless/bin/
 COPY config/ /app/headless/config/
 
 # Make executable
-RUN chmod +x /app/headless/bin/based-headless
+RUN chmod +x /app/headless/bin/langop-headless
 
 # Set ownership
 RUN chown -R langop:langop /app/headless
@@ -29,4 +29,4 @@ ENV CONFIG_PATH="/app/headless/config/config.yaml" \
     GOALS_PATH="/app/headless/config/goals.yaml"
 
 # Default command
-CMD ["/app/headless/bin/based-headless"]
+CMD ["/app/headless/bin/langop-headless"]

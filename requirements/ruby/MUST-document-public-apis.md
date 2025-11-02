@@ -22,7 +22,7 @@ All public methods, classes, and modules MUST have YARD documentation including:
 #
 # @example Creating a simple tool
 #   class MyTool
-#     include Based::Tool::DSL
+#     include Langop::Tool::DSL
 #
 #     tool "weather" do
 #       description "Get weather information"
@@ -30,7 +30,7 @@ All public methods, classes, and modules MUST have YARD documentation including:
 #       execute { |args| fetch_weather(args[:city]) }
 #     end
 #   end
-module Based
+module Langop
   module Tool
     # Tool definition DSL
     module DSL

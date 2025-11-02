@@ -19,7 +19,7 @@ COPY bin/ /app/cli/bin/
 COPY config/ /app/cli/config/
 
 # Make executable
-RUN chmod +x /app/cli/bin/based-cli
+RUN chmod +x /app/cli/bin/langop-cli
 
 # Set ownership
 RUN chown -R langop:langop /app/cli
@@ -31,4 +31,4 @@ USER langop
 ENV CONFIG_PATH="/app/cli/config/config.yaml"
 
 # Default command
-CMD ["/app/cli/bin/based-cli"]
+CMD ["/app/cli/bin/langop-cli"]

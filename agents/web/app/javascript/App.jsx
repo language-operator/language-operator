@@ -45,7 +45,7 @@ function App() {
     return (
       <div className="app loading">
         <div className="loading-spinner"></div>
-        <p>Connecting to Based MCP...</p>
+        <p>Connecting to Langop MCP...</p>
       </div>
     )
   }

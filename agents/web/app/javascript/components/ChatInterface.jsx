@@ -207,7 +207,7 @@ function ChatInterface({ sessionId, onNewSession }) {
     <div className="chat-interface">
       <header className="chat-header">
         <div className="header-left">
-          <h1>Based MCP Chat</h1>
+          <h1>Langop MCP Chat</h1>
           {serverInfo && (
             <span className="server-count">
               {serverInfo.length} servers • {serverInfo.reduce((acc, s) => acc + s.tool_count, 0)} tools
@@ -223,7 +223,7 @@ function ChatInterface({ sessionId, onNewSession }) {
       <div className="messages-container">
         {messages.length === 0 ? (
           <div className="welcome-message">
-            <h2>Welcome to Based MCP</h2>
+            <h2>Welcome to Langop MCP</h2>
             <p>Start a conversation with your AI assistant powered by multiple MCP servers.</p>
             {serverInfo && serverInfo.length > 0 && (
               <div className="connected-servers">

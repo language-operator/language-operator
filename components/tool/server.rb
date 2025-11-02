@@ -15,11 +15,11 @@ module Rack
   end
 end
 
-# Load Based DSL wrapper (which loads langop gem including ToolLoader)
-require_relative 'lib/based/dsl'
+# Load Langop DSL wrapper (which loads langop gem including ToolLoader)
+require_relative 'lib/langop/dsl'
 
-# Based MCP Server using official Ruby SDK
-module Based
+# Langop MCP Server using official Ruby SDK
+module Langop
   class Server < Sinatra::Base
   helpers Sinatra::JSON
 
@@ -51,12 +51,12 @@ module Based
   # Initialize registry and load tools
   configure do
     # Create our DSL registry and load tools
-    registry = Based::Dsl::Registry.new
+    registry = Langop::Dsl::Registry.new
     loader = ToolLoader.new(registry)
     loader.load_tools
 
     # Create MCP::Server from our registry
-    mcp_server = Based::Dsl::Adapter.create_mcp_server(
+    mcp_server = Langop::Dsl::Adapter.create_mcp_server(
       registry,
       server_name: 'based-mcp',
       server_context: {}
@@ -141,7 +141,7 @@ module Based
     settings.loader.reload
 
     # Recreate MCP server with updated tools
-    mcp_server = Based::Dsl::Adapter.create_mcp_server(
+    mcp_server = Langop::Dsl::Adapter.create_mcp_server(
       settings.registry,
       server_name: 'based-mcp',
       server_context: {}

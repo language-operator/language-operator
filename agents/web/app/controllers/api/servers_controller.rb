@@ -6,7 +6,7 @@ module Api
 
     def index
       # Create a temporary client to get server info
-      client = Based::Client::Base.new(@mcp_config)
+      client = Langop::Client::Base.new(@mcp_config)
       client.connect!
       servers = client.servers_info
 
