@@ -49,35 +49,23 @@ Simple chronological checklist of what to do next.
   * ~~Move Context, ExecutionContext, and ToolLoader to SDK~~
   * ~~Update component wrapper to alias SDK classes~~
   * ~~SDK now provides complete tool development experience~~
+* ~~Complete migration from "Based" to "Langop" nomenclature~~
+  * ~~Updated all Ruby code, Go code, configurations, and documentation~~
+  * ~~Fixed .gitignore to track agent bin/ directories~~
+  * ~~Removed all proof-of-concept naming~~
+* ~~Add test targets to all Makefiles for compliance~~
+  * ~~Implemented test targets in 9 non-compliant Makefiles~~
+  * ~~Achieved 100% compliance with MUST-have-test-target requirement~~
+* ~~Documentation Updates~~
+  * ~~Update STATUS.md (Ruby SDK, CI/CD, persona integration, Makefile standardization)~~
+  * ~~Update README.md (DNS resolution timing, wildcard DNS behavior)~~
+  * ~~Update CLAUDE.md (ruby_llm dependency findings, project conventions)~~
 
 ## In Progress 🚧
 
 (none)
 
 ## Next Up 📋
-
-### Immediate Priority: Fix Code Architecture
-
-The DRY consolidation (see below) must be done FIRST before building/testing can proceed. The current broken inheritance and code duplication will cause runtime issues.
-
-### Documentation Updates
-
-* ~~Update STATUS.md~~
-  * ~~Add Ruby SDK & CI/CD section~~
-  * ~~Mark gem publishing as complete~~
-  * ~~Update component image status~~
-  * ~~Document persona integration when done~~
-  * ~~Update "Last updated" date~~
-  * ~~Document Makefile standardization~~
-
-* ~~Update README.md~~
-  * ~~Add note about DNS resolution timing~~
-  * ~~Add note about wildcard DNS behavior (*.example.com)~~
-  * Persona examples already complete ✅
-
-* ~~Update CLAUDE.md~~
-  * ~~Document ruby_llm dependency findings~~
-  * ~~Add any new project conventions discovered~~
 
 ## Future Enhancements 🔮
 
