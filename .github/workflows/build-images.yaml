@@ -33,11 +33,22 @@ jobs:
 
       - name: Build gem
         run: |
-          # Create a temporary container to build the gem
-          docker create --name gem-builder ruby:3.2-alpine
+          # Build gem using docker without volume mounts (which don't work in this CI environment)
+          cat > /tmp/build-gem.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          cd /build
+          apk add --no-cache git
+          gem build langop.gemspec
+          EOF
+          chmod +x /tmp/build-gem.sh
+          docker run --name gem-builder ruby:3.2-alpine sleep 60 &
+          sleep 2
           docker cp sdk/ruby gem-builder:/build
-          docker start -a gem-builder sh -c "cd /build && apk add --no-cache git && gem build langop.gemspec"
+          docker cp /tmp/build-gem.sh gem-builder:/build-gem.sh
+          docker exec gem-builder /build-gem.sh
           docker cp gem-builder:/build/langop-0.1.0.gem sdk/ruby/
+          docker stop gem-builder
           docker rm gem-builder
           cp sdk/ruby/langop-*.gem components/ruby/
 
