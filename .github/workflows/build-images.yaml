@@ -481,10 +481,10 @@ jobs:
           set -e
           cd /gem
 
-          # Configure gem to use the private registry
-          gem source --add https://${{ env.REGISTRY }}/api/packages/langop/rubygems/
+          # Install curl for uploading
+          apk add --no-cache curl
 
-          # Push gem using basic auth via environment or curl
+          # Push gem using basic auth via curl
           # Forgejo/Gitea uses basic auth for gem push
           curl -u "${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}" \
                --upload-file langop-0.1.0.gem \
