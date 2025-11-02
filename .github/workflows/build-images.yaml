@@ -472,15 +472,29 @@ jobs:
         env:
           GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          docker run --rm -v $(pwd):/workspace -w /workspace ruby:3.2-alpine sh -c "
-            mkdir -p ~/.gem
-            cat > ~/.gem/credentials << EOF
+          # Clean up old container if exists
+          docker rm -f gem-publisher 2>/dev/null || true
+
+          # Create publish script
+          cat > /tmp/publish-gem.sh << 'SCRIPT'
+          #!/bin/sh
+          set -e
+          cd /workspace
+          mkdir -p ~/.gem
+          cat > ~/.gem/credentials << 'CREDS'
           ---
           :rubygems_api_key: ${GEM_HOST_API_KEY}
-          EOF
-            chmod 0600 ~/.gem/credentials
-            gem push langop-*.gem --host https://${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}@${{ env.REGISTRY }}/api/packages/langop/rubygems
-          "
+          CREDS
+          chmod 0600 ~/.gem/credentials
+          gem push langop-0.1.0.gem --host https://${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}@${{ env.REGISTRY }}/api/packages/langop/rubygems
+          SCRIPT
+          chmod +x /tmp/publish-gem.sh
+
+          docker run -d --name gem-publisher -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" ruby:3.2-alpine sleep 300
+          docker cp langop-0.1.0.gem gem-publisher:/workspace/
+          docker cp /tmp/publish-gem.sh gem-publisher:/publish-gem.sh
+          docker exec -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" gem-publisher /publish-gem.sh
+          docker rm -f gem-publisher
 
   # Build the model proxy image (LiteLLM)
   build-model:
