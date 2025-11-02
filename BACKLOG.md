@@ -68,6 +68,38 @@ Simple chronological checklist of what to do next.
 
 ## Future Enhancements 🔮
 
+### Code Quality & DRY (High Priority)
+
+**Problem**: 1,600+ lines of duplicated code between SDK gem and components. Components copy-paste from SDK instead of using it as dependency.
+
+* **Phase 1: Fix Agent Inheritance (Quick Win)**
+  * Change `components/agent` to inherit from `Langop::Client::Base` instead of `Based::Client::Base`
+  * Update `components/agent/Gemfile` to depend on `langop` gem
+  * Fix require statements in agent code
+  * Files: `components/agent/lib/langop/agent.rb`, `components/agent/lib/langop/agent/base.rb`
+  * **Impact**: Fixes broken inheritance, enables agent to get client improvements automatically
+
+* **Phase 2: Consolidate Client Code (363 lines)**
+  * Delete duplicate files: `components/client/lib/based/client/base.rb`, `components/client/lib/based/client/config.rb`
+  * Update `components/client/Gemfile` to depend on `langop` gem
+  * Create namespace wrapper: `Based::Client = Langop::Client` for backwards compatibility
+  * Update `components/client/lib/based_client.rb` to require and wrap gem
+  * **Impact**: Removes 363 lines of duplicate code, single source of truth for client logic
+
+* **Phase 3: Consolidate DSL Code (1,000+ lines)**
+  * Delete 8 duplicate DSL files from `components/tool/lib/based/dsl/`
+  * Update `components/tool/Gemfile` to depend on `langop` gem
+  * Create namespace wrapper: `Based::Dsl = Langop::Dsl` for backwards compatibility
+  * Keep component-specific files: `execution_context.rb`, `tool_loader.rb`, `server.rb`
+  * Update tool server and loader to use gem DSL
+  * **Impact**: Removes 1,000+ lines of duplicate code
+
+* **Phase 4: Move Component-Specific Code to SDK (Optional)**
+  * Move `ExecutionContext` to SDK as `Langop::Dsl::ExecutionContext`
+  * Move `ToolLoader` to SDK as `Langop::ToolLoader`
+  * Keep `server.rb` in component (Sinatra-specific)
+  * **Impact**: Better code organization, reusable across tools
+
 ### Production Readiness
 
 * Add more comprehensive test coverage
@@ -124,7 +156,9 @@ Simple chronological checklist of what to do next.
 * LanguageClient controller incomplete (ingress/auth/session management)
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
 * Wildcard DNS (*.example.com) only resolves base domain
-* Agent logs connection error on first startup (cosmetic - both containers start simultaneously, agent retries and succeeds)
+* ~~Agent logs connection error on first startup~~ - FIXED with retry logic
+* **Code duplication**: 1,600+ lines duplicated between SDK gem and components (see Code Quality & DRY section)
+* **Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`
 
 ## Notes
 
