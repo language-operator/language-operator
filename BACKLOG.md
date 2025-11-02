@@ -117,6 +117,7 @@ Simple chronological checklist of what to do next.
 * LanguageClient controller incomplete (ingress/auth/session management)
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
 * Wildcard DNS (*.example.com) only resolves base domain
+* Sidecar tool injection not working - agent deployments missing tool sidecar containers
 
 ## Notes
 
