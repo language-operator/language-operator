@@ -18,6 +18,7 @@ Simple chronological checklist of what to do next.
 * ~~Publish Ruby gem to private registry~~
 * ~~Build and push all component images to registry~~
 * ~~Implement Persona integration in LanguageAgent controller~~
+* ~~Fix Ruby SDK ruby_llm dependency issues~~
 
 ## In Progress 🚧
 
@@ -26,12 +27,6 @@ Simple chronological checklist of what to do next.
 ## Next Up (Working Demo) 📋
 
 ### Critical Path to Working Demo
-
-* Fix Ruby SDK ruby_llm dependency issues
-  * Investigate ruby_llm gem availability/status
-  * Fix require statements in client/base.rb
-  * Test SDK functionality locally
-  * Update component Gemfiles if needed
 
 * Deploy operator to cluster with latest fixes
   * Build operator image with persona integration
