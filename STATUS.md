@@ -2,17 +2,17 @@
 
 This document tracks what's implemented vs what's documented in the README and API.
 
-**Last updated: 2025-10-31**
+**Last updated: 2025-11-01**
 
 ## 📊 Quick Summary
 
 - **Phase 1 (Core Functionality)**: ✅ **COMPLETE** - Agents, tools, models, workspace, sidecars
 - **Phase 2 (Network Security)**: ✅ **COMPLETE** - DNS-based egress with automatic resolution
 - **Phase 3 (Personas)**: ⚠️ **PARTIAL** - CRD exists, controller not integrated
-- **Phase 4 (Component Images)**: ✅ **COMPLETE** - Base image hierarchy with agent framework
-- **CI/CD Pipeline**: ✅ **COMPLETE** - Automated builds for all components
-- **End-to-End Testing**: ⚠️ **IN PROGRESS** - Operator deploys, found bugs to fix
-- **Production Ready**: 🟡 **TESTING** - Core features work, fixing status phase bugs
+- **Phase 4 (Component Images)**: ✅ **COMPLETE** - Base image hierarchy with Ruby SDK integration
+- **Phase 5 (Ruby SDK & CI/CD)**: ✅ **COMPLETE** - Gem builds and publishes automatically
+- **End-to-End Testing**: ✅ **VERIFIED** - Working E2E verification script, operator deploys successfully
+- **Production Ready**: 🟡 **DEMO READY** - Core features work, working toward full demo
 
 ## 🎯 What Works Right Now
 
@@ -181,13 +181,24 @@ _Nothing currently in this category._
 ### Persona Integration
 - **CRD Field**: `LanguageAgent.spec.personaRef` ✅ exists
 - **LanguagePersona CRD**: ✅ exists
-- **Controller**: ❌ personaRef not processed
+- **LanguagePersona Controller**: ✅ exists (creates ConfigMap)
+- **LanguageAgent Integration**: ❌ personaRef not processed
 - **Impact**: Persona feature documented but unusable
 - **Needed**:
-  - Fetch LanguagePersona by personaRef
+  - Fetch LanguagePersona by personaRef in LanguageAgent controller
   - Merge persona.systemPrompt + agent.instructions
   - Apply rules, examples, constraints
   - Pass to agent via ConfigMap
+
+### Ruby SDK Dependencies
+- **Gem Published**: ✅ `langop-0.1.0.gem` to git.theryans.io
+- **Issue**: SDK requires `ruby_llm` gem but status/availability unknown
+- **Impact**: Client library may not function without external dependencies
+- **Needed**:
+  - Investigate ruby_llm gem availability
+  - Fix require statements if needed
+  - Test SDK functionality end-to-end
+  - Document or vendor dependencies
 
 ## ❌ Not Implemented (Lower Priority)
 
@@ -195,9 +206,11 @@ _Nothing currently in this category._
 - **Status**: Basic controller scaffolded
 - **Missing**: Ingress, authentication, session management
 
-### LanguagePersona Controller
-- **Status**: Basic controller scaffolded
-- **Missing**: Validation, inheritance, usage tracking
+### Automated Testing
+- **Status**: Test workflow completely disabled in CI
+- **File**: `.github/workflows/test.yaml` (all tests commented out)
+- **Impact**: No automated validation of controller changes
+- **Missing**: Unit tests, integration tests, manifest validation, Helm chart validation
 
 ### Advanced Agent Features
 - **Memory backends** (Redis, Postgres, S3) - Spec exists, not implemented
@@ -259,11 +272,11 @@ _Nothing currently in this category._
 1. ✅ Renamed all images from `based/*` to `git.theryans.io/langop/*`
 2. ✅ Built component image hierarchy:
    - `langop/base` - Alpine base with langop user
-   - `langop/devel` - Development tools (clang, llvm)
-   - `langop/client` - MCP/LLM client library (ruby_llm, ruby_llm-mcp)
-   - `langop/agent` - Agent framework (autonomous execution, scheduling)
-   - `langop/tool` - MCP tool server framework (Ruby DSL)
-   - `langop/model` - LiteLLM proxy for model access
+   - `langop/ruby` - base + Ruby 3.2 + langop gem pre-installed
+   - `langop/client` - ruby + MCP/LLM client library (ruby_llm, ruby_llm-mcp)
+   - `langop/agent` - client + agent framework (autonomous execution, scheduling)
+   - `langop/tool` - ruby + MCP tool server framework (Ruby DSL)
+   - `langop/model` - Python 3.11 + LiteLLM proxy for model access
 3. ✅ Built agent implementations extending `langop/agent`:
    - `langop/cli` - Interactive CLI agent with Reline
    - `langop/headless` - Autonomous headless agent
@@ -276,6 +289,27 @@ _Nothing currently in this category._
 
 **Image Registry**: `git.theryans.io/langop/`
 **CI/CD**: Automated builds via Forgejo Actions on push to main
+
+### Phase 5: Ruby SDK & CI/CD ✅ COMPLETE
+1. ✅ Created Ruby SDK gem (`sdk/ruby/`)
+   - CLI tooling for project generation (`langop new tool/agent`)
+   - Clean DSL for tool definitions
+   - Agent framework with scheduling (rufus-scheduler)
+   - Client library interfaces (requires ruby_llm gems)
+2. ✅ CI/CD pipeline for gem builds:
+   - Builds gem in Docker container (Forgejo compatibility workaround)
+   - Publishes to private registry: `git.theryans.io/api/packages/langop/rubygems`
+   - Artifact sharing between jobs
+   - Uses `actions/upload-artifact@v3` for Forgejo compatibility
+3. ✅ Ruby base image integration:
+   - Created `langop/ruby` base image with gem pre-installed
+   - All Ruby-based components inherit the SDK automatically
+   - Simplified Dockerfiles (just `FROM langop/ruby:latest`)
+4. ✅ Build order optimization:
+   - `build-gem` runs first (fail fast if gem broken)
+   - `build-base` → `build-ruby` → `build-ruby-components` → rest
+   - Parallel builds where possible
+   - Proper dependency management
 
 ### Phase 5: Advanced Features (Future)
 1. Cost tracking
