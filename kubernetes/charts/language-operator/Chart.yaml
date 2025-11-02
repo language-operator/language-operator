@@ -3,7 +3,7 @@ name: language-operator
 description: A Kubernetes operator for managing language models, tools, agents, personas, and clients
 type: application
 version: 0.1.0
-appVersion: "0.1.0"
+appVersion: "latest"
 keywords:
   - ai
   - llm
