@@ -1,4 +1,7 @@
-When committing code, use semantic messages like "feat: " with a brief one-line summary, not a multiline essay.
+# Standards
+
+## Git
+- When committing code, use semantic nouns like "feat: " with a brief one-line summary, not a multiline essay.
 
 # Project Defaults
 
