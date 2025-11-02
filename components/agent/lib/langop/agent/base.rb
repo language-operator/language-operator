@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'based_client'
+require 'langop/client'
 
 module Langop
   module Agent
     # Base Agent Class
     #
-    # Extends Based::Client::Base with agent-specific functionality including:
+    # Extends Langop::Client::Base with agent-specific functionality including:
     # - Workspace integration
     # - Goal-directed execution
     # - Autonomous operation modes
@@ -15,7 +15,7 @@ module Langop
     #   agent = Langop::Agent::Base.new(config)
     #   agent.connect!
     #   agent.execute_goal("Complete the task")
-    class Base < Based::Client::Base
+    class Base < Langop::Client::Base
       attr_reader :workspace_path, :mode
 
       # Initialize the agent

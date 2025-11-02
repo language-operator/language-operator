@@ -2,8 +2,8 @@
 
 source 'https://rubygems.org'
 
-# Inherit base client dependencies (ruby_llm, ruby_llm-mcp)
-# These are already installed in the base client image
+# Use langop gem for client functionality instead of duplicating code
+gem 'langop', path: '/app/sdk/ruby'
 
 # Agent-specific dependencies for autonomous execution
 gem 'rufus-scheduler', '~> 3.9'  # For scheduled/event-driven execution
