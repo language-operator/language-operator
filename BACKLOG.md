@@ -45,6 +45,10 @@ Simple chronological checklist of what to do next.
   * ~~Delete 8 duplicate DSL files (adapter, config, helpers, http, parameter_definition, registry, shell, tool_definition)~~
   * ~~Create namespace wrapper Based::Dsl = Langop::Dsl~~
   * ~~Update tool server and loader to use gem DSL~~
+* ~~DRY Phase 4: Move reusable code to SDK for better developer experience~~
+  * ~~Move Context, ExecutionContext, and ToolLoader to SDK~~
+  * ~~Update component wrapper to alias SDK classes~~
+  * ~~SDK now provides complete tool development experience~~
 
 ## In Progress 🚧
 
@@ -103,11 +107,12 @@ The DRY consolidation (see below) must be done FIRST before building/testing can
   * ~~Update tool server and loader to use gem DSL~~
   * **Impact**: ✅ Removed 950 lines of duplicate code, single source of truth for DSL logic
 
-* **Phase 4: Move Component-Specific Code to SDK (Optional)**
-  * Move `ExecutionContext` to SDK as `Langop::Dsl::ExecutionContext`
-  * Move `ToolLoader` to SDK as `Langop::ToolLoader`
-  * Keep `server.rb` in component (Sinatra-specific)
-  * **Impact**: Better code organization, reusable across tools
+* ~~**Phase 4: Move Component-Specific Code to SDK**~~ ✅ COMPLETE
+  * ~~Move `ExecutionContext` to SDK as `Langop::Dsl::ExecutionContext`~~
+  * ~~Move `Context` to SDK as `Langop::Dsl::Context`~~
+  * ~~Move `ToolLoader` to SDK as `Langop::ToolLoader`~~
+  * ~~Keep `server.rb` in component (Sinatra-specific)~~
+  * **Impact**: ✅ Better code organization, classes now reusable across all tools and projects
 
 ### End-to-End Testing & Deployment (After DRY Consolidation)
 
