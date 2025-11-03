@@ -25,6 +25,10 @@ module Langop
     # @param config_path [String] Path to configuration file
     # @return [void]
     def self.run(config_path: nil)
+      # Disable stdout buffering for real-time logging in containers
+      $stdout.sync = true
+      $stderr.sync = true
+
       config_path ||= ENV.fetch('CONFIG_PATH', 'config.yaml')
       config = Langop::Client::Config.load_with_fallback(config_path)
 
