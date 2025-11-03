@@ -272,8 +272,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		log.Error(err, "Failed to fetch persona for deployment, continuing without it")
 	}
 
-	// Resolve model URLs
-	modelURLs, err := r.resolveModels(ctx, agent)
+	// Resolve model URLs and names
+	modelURLs, modelNames, err := r.resolveModels(ctx, agent)
 	if err != nil {
 		return fmt.Errorf("failed to resolve models: %w", err)
 	}
@@ -336,7 +336,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs, persona),
+				Env:   r.buildAgentEnv(agent, modelURLs, modelNames, toolURLs, persona),
 			},
 		}
 
@@ -403,8 +403,8 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		log.Error(err, "Failed to fetch persona for cronjob, continuing without it")
 	}
 
-	// Resolve model URLs
-	modelURLs, err := r.resolveModels(ctx, agent)
+	// Resolve model URLs and names
+	modelURLs, modelNames, err := r.resolveModels(ctx, agent)
 	if err != nil {
 		return fmt.Errorf("failed to resolve models: %w", err)
 	}
@@ -467,7 +467,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, toolURLs, persona),
+				Env:   r.buildAgentEnv(agent, modelURLs, modelNames, toolURLs, persona),
 			},
 		}
 
@@ -567,8 +567,9 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 	return nil
 }
 
-func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
+func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, []string, error) {
 	var modelURLs []string
+	var modelNames []string
 
 	for _, modelRef := range agent.Spec.ModelRefs {
 		// Determine namespace
@@ -580,7 +581,7 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 		// Fetch the LanguageModel
 		model := &langopv1alpha1.LanguageModel{}
 		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: namespace}, model); err != nil {
-			return nil, fmt.Errorf("failed to get model %s/%s: %w", namespace, modelRef.Name, err)
+			return nil, nil, fmt.Errorf("failed to get model %s/%s: %w", namespace, modelRef.Name, err)
 		}
 
 		// Build LiteLLM proxy URL
@@ -590,9 +591,14 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 
 		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", model.Name, namespace, port)
 		modelURLs = append(modelURLs, serviceURL)
+
+		// Collect model name from spec
+		if model.Spec.ModelName != "" {
+			modelNames = append(modelNames, model.Spec.ModelName)
+		}
 	}
 
-	return modelURLs, nil
+	return modelURLs, modelNames, nil
 }
 
 func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, error) {
@@ -709,7 +715,7 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	return toolURLs, nil
 }
 
-func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
+func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "CONFIG_PATH",
@@ -761,6 +767,15 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 		env = append(env, corev1.EnvVar{
 			Name:  "MODEL_ENDPOINTS",
 			Value: strings.Join(modelURLs, ","),
+		})
+	}
+
+	// Add model names (comma-separated)
+	// This tells the agent which model to request from the proxy
+	if len(modelNames) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "LLM_MODEL",
+			Value: strings.Join(modelNames, ","),
 		})
 	}
 

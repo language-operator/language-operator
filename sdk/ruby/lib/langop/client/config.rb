@@ -36,7 +36,7 @@ module Langop
             'provider' => detect_provider_from_env,
             'model' => ENV.fetch('LLM_MODEL') { default_model_from_env },
             'endpoint' => parse_model_endpoint_from_env,
-            'api_key' => ENV.fetch('OPENAI_API_KEY') { ENV.fetch('ANTHROPIC_API_KEY', nil) }
+            'api_key' => ENV.fetch('OPENAI_API_KEY') { ENV.fetch('ANTHROPIC_API_KEY') { 'dummy-key-for-local-proxy' } }
           },
           'mcp_servers' => parse_mcp_servers_from_env,
           'debug' => ENV['DEBUG'] == 'true'
