@@ -86,9 +86,24 @@ Simple chronological checklist of what to do next.
   * ~~Create test suite for agents~~
   * ~~Mock LLM/MCP calls for unit testing~~
   * ~~Update Makefile with test and version-bump targets~~
-  * TODO: Integrate tests into CI pipeline
+  * ✅ Tests integrated into CI pipeline (`.github/workflows/test.yaml`)
   * TODO: Implement remaining 23 pending tests (mock refinement)
-  * Status: Ready for CI! Core functionality 100% tested
+  * Status: Ready for production! Core functionality 100% tested
+
+* Add DNS resolution documentation notes
+  * Document DNS resolution timing (resolved at policy creation/update)
+  * Document wildcard behavior (*.example.com resolves base domain only)
+  * Add caveats to README.md network isolation section
+
+* Create testing suite with example manifests
+  * Package example manifests as integration tests
+  * Document verification procedures
+  * Add more E2E test scenarios
+
+* Package Helm chart for easy installation
+  * Document installation process
+  * Add configuration examples
+  * Publish to chart repository
 
 * Add more comprehensive test coverage
   * Add tests for LanguageAgent controller
@@ -139,17 +154,47 @@ Simple chronological checklist of what to do next.
   * Postgres support
   * S3 support
 
-## Known Issues 🐛
+## Known Issues & Limitations 🐛
 
-* LanguageClient controller incomplete (ingress/auth/session management)
+### Known Limitations
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
+  * IPs are cached until next reconciliation
+  * For frequently changing IPs, use CIDR ranges or accept refresh delays
 * Wildcard DNS (*.example.com) only resolves base domain
+  * Wildcards resolve the base domain only, not all subdomains
+* Agent startup race condition (cosmetic)
+  * Agent logs one connection error on first startup before sidecar is ready
+  * Sidecar has readiness probe but both containers start simultaneously
+  * Agent continues running normally after initial error
+
+### Incomplete Features
+* LanguageClient controller incomplete (ingress/auth/session management)
+* Advanced agent features not implemented:
+  * Memory backends (Redis, Postgres, S3) - spec exists
+  * Event-driven triggers - spec exists
+  * Cost tracking - status fields exist
+  * Safety guardrails - spec exists
+* Advanced tool features not implemented:
+  * HPA (Horizontal Pod Autoscaling) - spec exists
+  * PDB (PodDisruptionBudget) - spec exists
+  * Custom health probes - spec exists
+* Advanced model features not implemented:
+  * Load balancing - spec exists
+  * Fallback models - spec exists
+  * Caching - spec exists
+  * Multi-region support - spec exists
+
+### Fixed Issues
 * ~~Agent logs connection error on first startup~~ - FIXED with retry logic
 * ~~**Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`~~ - FIXED (Phase 1)
 * ~~**Code duplication**: 1,600+ lines duplicated between SDK gem and components~~ - FIXED (Phases 1-4 complete, removed 1,313 lines)
 * ~~**Agent code duplication**: Agent code existed in both SDK and components/agent/lib~~ - FIXED (moved to SDK, deleted 300+ lines from components)
 * ~~**VERSION constant error**: DSL module didn't require version.rb~~ - FIXED (added require_relative 'version' to dsl.rb)
 * ~~**CI build order**: Agent depended on client, tools depended on ruby directly~~ - FIXED (agent depends on ruby, tools depend on tool component)
+* ~~**Status phase values**: Controllers used "Ready" but CRDs required "Running"~~ - FIXED
+* ~~**Sidecar injection**: Tool controller created deployments for sidecar mode~~ - FIXED
+* ~~**8-second timeout**: MCP requests timed out despite 120s config~~ - FIXED (separate MCP.configure block)
+* ~~**Helm release auth**: Workflow failed with Forgejo authentication~~ - FIXED (native Helm OCI push)
 
 ## Notes
 
