@@ -1,0 +1,111 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Semantic Version Bumper
+#
+# Usage:
+#   bin/bump-version patch   # 0.1.0 -> 0.1.1
+#   bin/bump-version minor   # 0.1.0 -> 0.2.0
+#   bin/bump-version major   # 0.1.0 -> 1.0.0
+
+require 'fileutils'
+
+VERSION_FILE = File.expand_path('../lib/langop/version.rb', __dir__)
+CHANGELOG_FILE = File.expand_path('../CHANGELOG.md', __dir__)
+
+def current_version
+  content = File.read(VERSION_FILE)
+  content.match(/VERSION = ['"](.+?)['"]/)[1]
+end
+
+def bump_version(type)
+  version = current_version
+  major, minor, patch = version.split('.').map(&:to_i)
+
+  case type
+  when 'major'
+    major += 1
+    minor = 0
+    patch = 0
+  when 'minor'
+    minor += 1
+    patch = 0
+  when 'patch'
+    patch += 1
+  else
+    puts "❌ Unknown version type: #{type}"
+    puts "Usage: bin/bump-version [major|minor|patch]"
+    exit 1
+  end
+
+  "#{major}.#{minor}.#{patch}"
+end
+
+def update_version_file(new_version)
+  content = File.read(VERSION_FILE)
+  updated = content.gsub(/VERSION = ['"].+?['"]/, "VERSION = '#{new_version}'")
+  File.write(VERSION_FILE, updated)
+  puts "✅ Updated #{VERSION_FILE}"
+end
+
+def update_changelog(old_version, new_version)
+  unless File.exist?(CHANGELOG_FILE)
+    File.write(CHANGELOG_FILE, "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n")
+  end
+
+  content = File.read(CHANGELOG_FILE)
+  date = Time.now.strftime('%Y-%m-%d')
+
+  entry = <<~ENTRY
+
+    ## [#{new_version}] - #{date}
+
+    ### Added
+    -
+
+    ### Changed
+    -
+
+    ### Fixed
+    -
+
+  ENTRY
+
+  # Insert after the header
+  if content.include?('## [')
+    updated = content.sub(/\n## \[/, "\n#{entry}## [")
+  else
+    updated = content + entry
+  end
+
+  File.write(CHANGELOG_FILE, updated)
+  puts "✅ Updated #{CHANGELOG_FILE}"
+  puts "📝 Remember to edit CHANGELOG.md with your changes!"
+end
+
+def create_git_tag(version)
+  system("git add #{VERSION_FILE} #{CHANGELOG_FILE}")
+  puts "\n📦 Staged version and changelog files"
+  puts "\nNext steps:"
+  puts "  1. Edit CHANGELOG.md to describe your changes"
+  puts "  2. git commit -m 'chore: bump version to #{version}'"
+  puts "  3. git tag -a v#{version} -m 'Release v#{version}'"
+  puts "  4. git push && git push --tags"
+end
+
+# Main
+if ARGV.empty?
+  puts "Usage: bin/bump-version [major|minor|patch]"
+  exit 1
+end
+
+type = ARGV[0]
+old_version = current_version
+new_version = bump_version(type)
+
+puts "🔼 Bumping version: #{old_version} -> #{new_version}"
+update_version_file(new_version)
+update_changelog(old_version, new_version)
+create_git_tag(new_version)
+
+puts "\n✨ Version bumped successfully!"
