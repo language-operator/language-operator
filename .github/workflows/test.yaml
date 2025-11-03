@@ -95,12 +95,15 @@ jobs:
 
       - name: Run SDK tests in Docker
         run: |
-          docker run --rm \
-            -v $(pwd)/sdk/ruby:/app \
-            -w /app \
-            ruby:3.4-alpine \
-            sh -c '
-              apk add --no-cache build-base git &&
-              bundle install &&
-              bundle exec rspec
-            '
+          # Volume mounts don't work in CI, so copy files into container
+          docker rm -f ruby-test 2>/dev/null || true
+
+          docker run -d --name ruby-test ruby:3.4-alpine sleep 300
+          docker cp sdk/ruby ruby-test:/app
+          docker exec ruby-test sh -c '
+            cd /app &&
+            apk add --no-cache build-base git &&
+            bundle install &&
+            bundle exec rspec
+          '
+          docker rm -f ruby-test
