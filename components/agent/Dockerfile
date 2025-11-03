@@ -33,4 +33,4 @@ ENV WORKSPACE_PATH="/workspace" \
     AGENT_MODE="autonomous"
 
 # Default command - agents will override this
-CMD ["ruby", "-I/app/lib", "-I/app/agent/lib", "-e", "require 'langop/agent'; Langop::Agent.run"]
+CMD ["ruby", "-I/app/agent/lib", "-e", "require 'langop/agent'; Langop::Agent.run"]
