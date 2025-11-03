@@ -8,6 +8,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  REGISTRY: git.theryans.io
+
 jobs:
   release:
     runs-on: builder
