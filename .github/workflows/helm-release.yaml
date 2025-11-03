@@ -33,7 +33,7 @@ jobs:
       - name: Copy CRDs to Helm chart
         run: |
           cd kubernetes/language-operator
-          make helm-crds
+          make helm-crds-copy
 
       - name: Package Helm chart
         run: |

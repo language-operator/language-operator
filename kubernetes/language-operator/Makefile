@@ -96,7 +96,11 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	cd config/manager && kubectl delete --ignore-not-found=$(ignore-not-found) -k .
 
 .PHONY: helm-crds
-helm-crds: manifests ## Copy generated CRDs to Helm chart.
+helm-crds: manifests ## Generate and copy CRDs to Helm chart.
+	cp config/crd/bases/*.yaml ../charts/language-operator/crds/
+
+.PHONY: helm-crds-copy
+helm-crds-copy: ## Copy existing CRDs to Helm chart (no generation, for CI).
 	cp config/crd/bases/*.yaml ../charts/language-operator/crds/
 
 ##@ Build Dependencies
