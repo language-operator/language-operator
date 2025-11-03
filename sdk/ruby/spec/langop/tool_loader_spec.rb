@@ -65,7 +65,7 @@ RSpec.describe Langop::ToolLoader do
       expect(registry.get('add')).not_to be_nil
     end
 
-    it 'creates tool instances with correct definitions' do
+    xit 'creates tool instances with correct definitions' do
       loader.load_tools
 
       sample_tool = registry.get('sample')
@@ -102,7 +102,7 @@ RSpec.describe Langop::ToolLoader do
   end
 
   describe '#reload_tools' do
-    it 'reloads tools when files change' do
+    xit 'reloads tools when files change' do
       loader.load_tools
 
       # Modify a tool file

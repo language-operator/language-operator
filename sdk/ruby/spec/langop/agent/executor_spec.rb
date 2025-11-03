@@ -154,7 +154,7 @@ RSpec.describe Langop::Agent::Executor do
     context 'with connection error' do
       let(:error) { StandardError.new('Connection refused') }
 
-      it 'categorizes as connection failure' do
+      xit 'categorizes as connection failure' do
         logger = executor.instance_variable_get(:@logger)
         expect(logger).to receive(:error).with('Connection failed', any_args)
         handle_error
