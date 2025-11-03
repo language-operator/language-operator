@@ -55,6 +55,8 @@ RSpec.describe Langop::Agent::Base do
     end
 
     it 'returns false for read-only workspace' do
+      skip 'Root user can write to read-only directories' if Process.uid == 0
+
       Dir.mktmpdir do |dir|
         agent.instance_variable_set(:@workspace_path, dir)
         File.chmod(0o444, dir)
