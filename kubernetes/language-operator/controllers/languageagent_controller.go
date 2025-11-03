@@ -779,6 +779,15 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 		})
 	}
 
+	// Add dummy API key for local proxies (LiteLLM doesn't need auth)
+	// RubyLLM requires an API key to be set, so we provide a placeholder
+	if len(modelURLs) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "OPENAI_API_KEY",
+			Value: "sk-dummy-key-for-local-proxy",
+		})
+	}
+
 	// Add MCP tool server URLs (comma-separated)
 	if len(toolURLs) > 0 {
 		env = append(env, corev1.EnvVar{
