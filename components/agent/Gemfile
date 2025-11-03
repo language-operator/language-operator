@@ -2,9 +2,9 @@
 
 source 'https://rubygems.org'
 
-# Use langop gem for client functionality instead of duplicating code
-# The gem is pre-installed in the langop/ruby base image that client extends from
-# No need to specify it here - it's already available globally
+# Note: langop gem is pre-installed in the parent langop/ruby image
+# We don't declare it here because it's system-installed, not from rubygems.org
+# The ruby command will find it automatically via the system gem path
 
 # Agent-specific dependencies for autonomous execution
 gem 'rufus-scheduler', '~> 3.9'  # For scheduled/event-driven execution

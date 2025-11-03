@@ -13,13 +13,12 @@ RUN apk add --no-cache \
 WORKDIR /app/agent
 
 # Copy agent framework Gemfile and install dependencies
+# Use --system to allow bundler to use system-installed gems like langop
 COPY Gemfile /app/agent/
-RUN bundle install --no-cache
-
-# Copy agent framework library
-COPY lib/ /app/agent/lib/
+RUN bundle install --no-cache --system
 
 # Copy default agent configuration
+# Note: Agent code is in the langop SDK gem, not copied here
 COPY config/ /app/agent/config/
 
 # Set ownership
@@ -33,4 +32,6 @@ ENV WORKSPACE_PATH="/workspace" \
     AGENT_MODE="autonomous"
 
 # Default command - agents will override this
-CMD ["ruby", "-I/app/agent/lib", "-e", "require 'langop/agent'; Langop::Agent.run"]
+# Note: Don't use 'bundle exec' here because langop gem is system-installed, not in Gemfile.lock
+# Agent code is in the langop gem, just require and run
+CMD ["ruby", "-e", "require 'langop/agent'; Langop::Agent.run"]

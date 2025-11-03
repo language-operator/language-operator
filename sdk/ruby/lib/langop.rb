@@ -3,8 +3,16 @@
 require_relative 'langop/version'
 require_relative 'langop/dsl'
 require_relative 'langop/client'
-require_relative 'langop/agent'
 require_relative 'langop/tool_loader'
+
+# Agent module is optional - only load if dependencies are available
+# This allows the SDK to be used in environments without agent dependencies
+begin
+  require_relative 'langop/agent'
+rescue LoadError => e
+  # Agent dependencies not available, skip loading
+  warn "Langop: Agent module not loaded (missing dependency: #{e.message})" if ENV['DEBUG']
+end
 
 # Langop - Ruby SDK for building MCP tools and language agents
 #
