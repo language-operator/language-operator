@@ -1,4 +1,4 @@
-FROM git.theryans.io/langop/client:latest
+FROM git.theryans.io/langop/ruby:latest
 
 # Switch back to root to install agent-specific packages
 USER root

@@ -8,7 +8,7 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 help:
 	@echo "Available targets:"
 	@echo "  build       - Build the Docker image"
-	@echo "  build-all   - Build all inherited images in order (base→ruby→client→agent)"
+	@echo "  build-all   - Build all inherited images in order (base→ruby→agent)"
 	@echo "  scan        - Scan the Docker image with Trivy"
 	@echo "  shell       - Run interactive shell in container"
 	@echo "  run         - Run the agent framework"
@@ -20,16 +20,13 @@ help:
 # Build all inherited images in dependency order
 .PHONY: build-all
 build-all:
-	@echo "Building inherited image chain: base → ruby → client → agent"
+	@echo "Building inherited image chain: base → ruby → agent"
 	@echo ""
 	@echo "==> Building base image..."
 	cd ../base && $(MAKE) build
 	@echo ""
 	@echo "==> Building ruby image (with fresh gem)..."
 	cd ../ruby && $(MAKE) build
-	@echo ""
-	@echo "==> Building client image..."
-	cd ../client && $(MAKE) build
 	@echo ""
 	@echo "==> Building agent image..."
 	$(MAKE) build
