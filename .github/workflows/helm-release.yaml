@@ -44,21 +44,21 @@ jobs:
         run: |
           helm repo index .helm-packages --url https://${{ env.REGISTRY }}/helm-charts
 
-      - name: Upload Helm chart
+      - name: Upload Helm chart to OCI registry
         if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          # Upload to OCI registry or file server
-          # Adjust this based on your registry setup
+          # Login to OCI registry
+          echo "$REGISTRY_PASSWORD" | helm registry login ${{ env.REGISTRY }} --username "$REGISTRY_USERNAME" --password-stdin
+
+          # Push chart to OCI registry
           for chart in .helm-packages/*.tgz; do
-            echo "Uploading $chart"
-            # Example: helm push $chart oci://${{ env.REGISTRY }}/helm-charts
+            if [ -f "$chart" ]; then
+              echo "Uploading $chart to oci://${{ env.REGISTRY }}/helm-charts"
+              helm push "$chart" oci://${{ env.REGISTRY }}/helm-charts
+            fi
           done
 
-      - name: Create Forgejo Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: https://code.forgejo.org/forgejo/forgejo-release@v2
-        with:
-          direction: upload
-          release-dir: .helm-packages
-          release-notes: "Helm chart release"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          helm registry logout ${{ env.REGISTRY }}
