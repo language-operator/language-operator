@@ -374,6 +374,24 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 		model.Spec.Egress,
 	)
 
+	// Add Ingress rules to allow agents to connect to the model service
+	// Only allow pods labeled as LanguageAgents to connect
+	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+		{
+			// Allow from LanguageAgent pods only
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"langop.io/kind": "LanguageAgent",
+						},
+					},
+				},
+			},
+		},
+	}
+
 	// Set owner reference so NetworkPolicy is cleaned up with model
 	if err := controllerutil.SetControllerReference(model, networkPolicy, r.Scheme); err != nil {
 		return fmt.Errorf("failed to set owner reference: %w", err)
