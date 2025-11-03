@@ -253,7 +253,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 								},
 								InitialDelaySeconds: 30,
 								TimeoutSeconds:      30,
-								PeriodSeconds:       30,
+								PeriodSeconds:       300, // 5 minutes
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -264,7 +264,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 								},
 								InitialDelaySeconds: 30,
 								TimeoutSeconds:      30,
-								PeriodSeconds:       10,
+								PeriodSeconds:       300, // 5 minutes
 							},
 						},
 					},

@@ -142,9 +142,17 @@ module Langop
             raise "Unknown provider: #{provider}"
           end
 
-          # Set timeout if the method exists (RubyLLM may not support it yet)
-          timeout = llm_config['timeout'] || 600
-          config.timeout = timeout if config.respond_to?(:timeout=)
+          # Set timeout for LLM inference (default 300 seconds for slow local models)
+          # RubyLLM uses request_timeout to control HTTP request timeouts
+          timeout = llm_config['timeout'] || 300
+          config.request_timeout = timeout if config.respond_to?(:request_timeout=)
+        end
+
+        # Configure MCP timeout separately (MCP has its own timeout setting)
+        # MCP request_timeout is in milliseconds, default is 300000ms (5 minutes)
+        RubyLLM::MCP.configure do |config|
+          mcp_timeout_ms = (llm_config['timeout'] || 300) * 1000
+          config.request_timeout = mcp_timeout_ms if config.respond_to?(:request_timeout=)
         end
       end
 
@@ -218,6 +226,7 @@ module Langop
           chat_params[:provider] = :openai
           chat_params[:assume_model_exists] = true
         end
+
         chat_params
       end
     end

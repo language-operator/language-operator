@@ -742,6 +742,13 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 		})
 	}
 
+	if agent.Spec.Instructions != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AGENT_INSTRUCTIONS",
+			Value: agent.Spec.Instructions,
+		})
+	}
+
 	// Add persona environment variables if persona is set
 	if persona != nil {
 		env = append(env, corev1.EnvVar{
@@ -787,6 +794,13 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 			Value: "sk-dummy-key-for-local-proxy",
 		})
 	}
+
+	// Disable HTTPX io_uring to avoid permission errors in containers
+	// HTTPX's io_uring implementation can fail with EPERM in restricted environments
+	env = append(env, corev1.EnvVar{
+		Name:  "HTTPX_NO_IO_URING",
+		Value: "1",
+	})
 
 	// Add MCP tool server URLs (comma-separated)
 	if len(toolURLs) > 0 {
