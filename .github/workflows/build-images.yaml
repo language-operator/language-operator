@@ -304,13 +304,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build agent component (depends on client)
+  # Build agent component (depends on ruby)
   build-agent:
     runs-on: builder
     permissions:
       contents: read
       packages: write
-    needs: build-ruby-components
+    needs: build-ruby
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -356,7 +356,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: build-ruby  # Tools depend on ruby component
+    needs: build-ruby-components  # Tools depend on tool component (which inherits from ruby)
     strategy:
       matrix:
         tool: [web, email, sms, doc]
