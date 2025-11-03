@@ -87,9 +87,12 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[s
     if endpoint:
         params["api_base"] = endpoint
 
-    # Set API key
+    # Set API key - use dummy for local/compatible endpoints without auth
     if api_key:
         params["api_key"] = api_key
+    elif provider in ["openai-compatible", "custom"]:
+        # Local LLM servers (LM Studio, Ollama, etc.) don't need auth but litellm requires the field
+        params["api_key"] = "sk-local-dummy-key"
 
     # Add provider-specific configuration
     config = spec.get("configuration", {})
