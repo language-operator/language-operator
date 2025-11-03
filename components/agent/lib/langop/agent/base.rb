@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'langop/client'
+require 'langop'
 
 module Langop
   module Agent

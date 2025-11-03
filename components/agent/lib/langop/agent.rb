@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'langop/client'
+require 'langop'
 require_relative 'agent/version'
 require_relative 'agent/base'
 require_relative 'agent/executor'

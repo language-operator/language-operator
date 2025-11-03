@@ -67,41 +67,6 @@ Simple chronological checklist of what to do next.
 
 ## Next Up 📋
 
-## Future Enhancements 🔮
-
-### Code Quality & DRY (High Priority)
-
-**Problem**: 1,600+ lines of duplicated code between SDK gem and components. Components copy-paste from SDK instead of using it as dependency.
-
-* ~~**Phase 1: Fix Agent Inheritance (Quick Win)**~~ ✅ COMPLETE
-  * ~~Change `components/agent` to inherit from `Langop::Client::Base` instead of `Based::Client::Base`~~
-  * ~~Update `components/agent/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
-  * ~~Fix require statements in agent code~~
-  * ~~Files: `components/agent/lib/langop/agent.rb`, `components/agent/lib/langop/agent/base.rb`~~
-  * **Impact**: ✅ Fixed broken inheritance, agent now gets client improvements automatically
-
-* ~~**Phase 2: Consolidate Client Code (363 lines)**~~ ✅ COMPLETE
-  * ~~Delete duplicate files: `components/client/lib/based/client/base.rb`, `components/client/lib/based/client/config.rb`~~
-  * ~~Update `components/client/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
-  * ~~Create namespace wrapper: `Based::Client = Langop::Client` for backwards compatibility~~
-  * ~~Update `components/client/lib/based_client.rb` to require and wrap gem~~
-  * **Impact**: ✅ Removed 363 lines of duplicate code, single source of truth for client logic
-
-* ~~**Phase 3: Consolidate DSL Code (950 lines)**~~ ✅ COMPLETE
-  * ~~Delete 8 duplicate DSL files from `components/tool/lib/based/dsl/`~~
-  * ~~Update `components/tool/Gemfile` to depend on `langop` gem (uses pre-installed gem from base image)~~
-  * ~~Create namespace wrapper: `Based::Dsl = Langop::Dsl` for backwards compatibility~~
-  * ~~Keep component-specific files: `context.rb`, `execution_context.rb`, `tool_loader.rb`, `server.rb`~~
-  * ~~Update tool server and loader to use gem DSL~~
-  * **Impact**: ✅ Removed 950 lines of duplicate code, single source of truth for DSL logic
-
-* ~~**Phase 4: Move Component-Specific Code to SDK**~~ ✅ COMPLETE
-  * ~~Move `ExecutionContext` to SDK as `Langop::Dsl::ExecutionContext`~~
-  * ~~Move `Context` to SDK as `Langop::Dsl::Context`~~
-  * ~~Move `ToolLoader` to SDK as `Langop::ToolLoader`~~
-  * ~~Keep `server.rb` in component (Sinatra-specific)~~
-  * **Impact**: ✅ Better code organization, classes now reusable across all tools and projects
-
 ### End-to-End Testing & Deployment (After DRY Consolidation)
 
 **Prerequisites**: Phases 1-3 of DRY consolidation must be complete before this work can begin.
