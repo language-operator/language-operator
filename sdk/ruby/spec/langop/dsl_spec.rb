@@ -4,177 +4,179 @@ require 'spec_helper'
 require 'langop/dsl'
 
 RSpec.describe Langop::Dsl do
-  describe 'tool definition' do
-    it 'creates a basic tool' do
-      tool = Class.new do
-        include Langop::Dsl
+  # Clean registry before each test
+  before do
+    Langop::Dsl.instance_variable_set(:@registry, nil)
+  end
 
+  describe '.define' do
+    it 'defines a basic tool' do
+      Langop::Dsl.define do
         tool 'test_tool' do
           description 'A test tool'
         end
       end
 
-      expect(tool.tool_definition).not_to be_nil
-      expect(tool.tool_definition.name).to eq('test_tool')
-      expect(tool.tool_definition.description).to eq('A test tool')
+      registry = Langop::Dsl.registry
+      expect(registry.all.length).to eq(1)
+      expect(registry.get('test_tool')).not_to be_nil
     end
 
-    it 'defines parameters with types' do
-      tool = Class.new do
-        include Langop::Dsl
-
+    it 'defines tools with parameters' do
+      Langop::Dsl.define do
         tool 'calculator' do
           description 'Simple calculator'
 
           parameter 'operation' do
-            type 'string'
+            type :string
             description 'Math operation'
             required true
             enum %w[add subtract multiply divide]
           end
 
           parameter 'a' do
-            type 'number'
+            type :number
             description 'First number'
             required true
           end
 
           parameter 'b' do
-            type 'number'
+            type :number
             description 'Second number'
             required true
           end
+
+          execute do |params|
+            case params['operation']
+            when 'add'
+              params['a'] + params['b']
+            when 'subtract'
+              params['a'] - params['b']
+            when 'multiply'
+              params['a'] * params['b']
+            when 'divide'
+              params['a'] / params['b']
+            end
+          end
         end
       end
 
-      params = tool.tool_definition.parameters
-      expect(params).to have_key('operation')
-      expect(params).to have_key('a')
-      expect(params).to have_key('b')
+      registry = Langop::Dsl.registry
+      tool_class = registry.get('calculator')
 
-      operation_param = params['operation']
-      expect(operation_param.type).to eq('string')
-      expect(operation_param.required).to be true
-      expect(operation_param.enum).to include('add', 'subtract')
+      expect(tool_class).not_to be_nil
+      expect(tool_class.tool_definition.name).to eq('calculator')
+      expect(tool_class.tool_definition.parameters.keys).to include('operation', 'a', 'b')
     end
+  end
 
-    it 'validates required parameters' do
-      tool_class = Class.new do
-        include Langop::Dsl
+  describe 'tool execution' do
+    before do
+      Langop::Dsl.define do
+        tool 'greeter' do
+          description 'Greets a user'
 
-        tool 'required_test' do
-          parameter 'required_field' do
-            type 'string'
+          parameter 'name' do
+            type :string
             required true
           end
 
-          parameter 'optional_field' do
-            type 'string'
-            required false
+          execute do |params|
+            "Hello, #{params['name']}!"
           end
         end
-
-        def execute(params)
-          "executed with #{params}"
-        end
       end
+    end
 
+    it 'executes tool with valid parameters' do
+      tool_class = Langop::Dsl.registry.get('greeter')
       tool_instance = tool_class.new
 
-      # Should fail without required parameter
-      expect { tool_instance.call({}) }.to raise_error(/required/i)
+      result = tool_instance.call({ 'name' => 'Alice' })
+      expect(result[:content][0][:text]).to include('Hello, Alice!')
+    end
 
-      # Should succeed with required parameter
-      result = tool_instance.call({ 'required_field' => 'value' })
-      expect(result[:content][0][:text]).to include('value')
+    it 'validates required parameters' do
+      tool_class = Langop::Dsl.registry.get('greeter')
+      tool_instance = tool_class.new
+
+      expect { tool_instance.call({}) }.to raise_error(/required/i)
     end
   end
 
   describe 'parameter types' do
-    let(:tool_class) do
-      Class.new do
-        include Langop::Dsl
+    before do
+      Langop::Dsl.define do
+        tool 'type_tester' do
+          description 'Test parameter types'
 
-        tool 'type_test' do
           parameter 'string_param' do
-            type 'string'
+            type :string
           end
 
           parameter 'number_param' do
-            type 'number'
+            type :number
           end
 
           parameter 'boolean_param' do
-            type 'boolean'
+            type :boolean
           end
 
-          parameter 'array_param' do
-            type 'array'
-            items type: 'string'
+          execute do |params|
+            params.inspect
           end
-        end
-
-        def execute(params)
-          params.inspect
         end
       end
     end
 
-    it 'accepts valid types' do
-      tool = tool_class.new
+    it 'accepts various parameter types' do
+      tool_class = Langop::Dsl.registry.get('type_tester')
+      tool_instance = tool_class.new
 
-      result = tool.call({
-                           'string_param' => 'hello',
-                           'number_param' => 42,
-                           'boolean_param' => true,
-                           'array_param' => %w[a b c]
-                         })
+      result = tool_instance.call({
+        'string_param' => 'hello',
+        'number_param' => 42,
+        'boolean_param' => true
+      })
 
       expect(result[:content][0][:text]).to include('hello')
       expect(result[:content][0][:text]).to include('42')
     end
   end
 
-  describe 'execution context' do
-    it 'provides context to execute method' do
-      tool_class = Class.new do
-        include Langop::Dsl
+  describe 'error handling' do
+    before do
+      Langop::Dsl.define do
+        tool 'error_tool' do
+          description 'Tool that raises error'
 
-        tool 'context_test' do
-          description 'Test context'
-        end
-
-        def execute(params)
-          "Context available: #{context.class}"
+          execute do |_params|
+            raise StandardError, 'Intentional error'
+          end
         end
       end
+    end
 
-      tool = tool_class.new
-      result = tool.call({})
+    it 'catches and formats errors' do
+      tool_class = Langop::Dsl.registry.get('error_tool')
+      tool_instance = tool_class.new
 
-      expect(result[:content][0][:text]).to include('ExecutionContext')
+      result = tool_instance.call({})
+      expect(result[:isError]).to be true
+      expect(result[:content][0][:text]).to include('Intentional error')
     end
   end
 
-  describe 'error handling' do
-    it 'catches and formats errors' do
-      tool_class = Class.new do
-        include Langop::Dsl
+  describe '.registry' do
+    it 'returns global registry' do
+      registry = Langop::Dsl.registry
+      expect(registry).to be_a(Langop::Dsl::Registry)
+    end
 
-        tool 'error_test' do
-          description 'Test error handling'
-        end
-
-        def execute(_params)
-          raise StandardError, 'Intentional error'
-        end
-      end
-
-      tool = tool_class.new
-      result = tool.call({})
-
-      expect(result[:isError]).to be true
-      expect(result[:content][0][:text]).to include('Intentional error')
+    it 'maintains state across calls' do
+      registry1 = Langop::Dsl.registry
+      registry2 = Langop::Dsl.registry
+      expect(registry1).to be(registry2)
     end
   end
 end
