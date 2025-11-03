@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative 'version'
 require_relative 'dsl/tool_definition'
 require_relative 'dsl/parameter_definition'
 require_relative 'dsl/registry'
