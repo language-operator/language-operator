@@ -60,51 +60,23 @@ Simple chronological checklist of what to do next.
   * ~~Update STATUS.md (Ruby SDK, CI/CD, persona integration, Makefile standardization)~~
   * ~~Update README.md (DNS resolution timing, wildcard DNS behavior)~~
   * ~~Update CLAUDE.md (ruby_llm dependency findings, project conventions)~~
+* ~~End-to-End Testing & Deployment~~
+  * ~~Move agent code from components/agent/lib to SDK gem~~
+  * ~~Fix agent image to inherit from ruby (not client)~~
+  * ~~Fix Langop::VERSION constant loading in DSL~~
+  * ~~Build and push all updated images with fresh SDK gem~~
+  * ~~Run E2E verification script - all checks passed~~
+  * ~~Fix CI build order (agent depends on ruby, tools depend on tool component)~~
+  * ~~Verify agent pod runs successfully (2/2 containers)~~
+  * ~~Verify tool sidecar loads without errors~~
+  * ~~Verify model proxy is healthy~~
+  * ~~Verify all CRDs reach Running/Ready state~~
 
 ## In Progress 🚧
 
 (none)
 
 ## Next Up 📋
-
-### End-to-End Testing & Deployment (After DRY Consolidation)
-
-**Prerequisites**: Phases 1-3 of DRY consolidation must be complete before this work can begin.
-
-* **Build and push updated component images**
-  * Rebuild `langop/client` image with consolidated code
-  * Rebuild `langop/agent` image with fixed inheritance
-  * Rebuild `langop/tool` image with consolidated DSL
-  * Rebuild agent implementations (cli, headless, web)
-  * Push images to registry
-  * Verify images pull successfully in cluster
-
-* **Deploy test environment**
-  * Create test LanguageCluster
-  * Deploy LanguageModel with API key
-  * Deploy LanguageTool in sidecar mode
-  * Deploy LanguageAgent with toolRefs and modelRefs
-  * Verify all resources reach "Running" state
-
-* **Test connectivity and integration**
-  * Check agent pod logs for successful MCP connection (no errors after retry)
-  * Verify sidecar tool container is healthy
-  * Verify agent can connect to model proxy
-  * Test tool invocation from agent
-  * Test LLM API calls through proxy
-
-* **End-to-end task execution test**
-  * Deploy agent with simple task/goal
-  * Verify agent can call tools via MCP
-  * Verify agent can call LLM via model proxy
-  * Confirm task completes successfully
-  * Check logs for complete execution flow
-
-* **Test persona integration**
-  * Deploy LanguagePersona resource
-  * Deploy agent with personaRef
-  * Verify persona environment variables set correctly
-  * Test agent behavior matches persona configuration
 
 ### Production Readiness
 
@@ -164,7 +136,10 @@ Simple chronological checklist of what to do next.
 * Wildcard DNS (*.example.com) only resolves base domain
 * ~~Agent logs connection error on first startup~~ - FIXED with retry logic
 * ~~**Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`~~ - FIXED (Phase 1)
-* ~~**Code duplication**: 1,600+ lines duplicated between SDK gem and components~~ - FIXED (Phases 1-3 complete, removed 1,313 lines)
+* ~~**Code duplication**: 1,600+ lines duplicated between SDK gem and components~~ - FIXED (Phases 1-4 complete, removed 1,313 lines)
+* ~~**Agent code duplication**: Agent code existed in both SDK and components/agent/lib~~ - FIXED (moved to SDK, deleted 300+ lines from components)
+* ~~**VERSION constant error**: DSL module didn't require version.rb~~ - FIXED (added require_relative 'version' to dsl.rb)
+* ~~**CI build order**: Agent depended on client, tools depended on ruby directly~~ - FIXED (agent depends on ruby, tools depend on tool component)
 
 ## Notes
 
