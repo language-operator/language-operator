@@ -85,3 +85,22 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           git diff --exit-code || (echo "Generated manifests are out of date. Run 'make manifests' and commit the changes." && exit 1)
+
+  # Test Ruby SDK
+  ruby-sdk-test:
+    runs-on: builder
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run SDK tests in Docker
+        run: |
+          docker run --rm \
+            -v $(pwd)/sdk/ruby:/app \
+            -w /app \
+            ruby:3.4-alpine \
+            sh -c '
+              apk add --no-cache build-base git &&
+              bundle install &&
+              bundle exec rspec
+            '
