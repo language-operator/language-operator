@@ -31,11 +31,11 @@ import (
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	Log             logr.Logger
-	Synthesizer     *synthesis.Synthesizer
-	SynthesisModel  string
-	Recorder        record.EventRecorder
+	Scheme         *runtime.Scheme
+	Log            logr.Logger
+	Synthesizer    synthesis.AgentSynthesizer
+	SynthesisModel string
+	Recorder       record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -262,13 +262,13 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			log.Info("Instructions changed, will re-synthesize",
 				"previousHash", previousInstructionsHash,
 				"currentHash", currentInstructionsHash)
-		// Persona changed → re-distill without full synthesis
+			// Persona changed → re-distill without full synthesis
 		} else if currentPersonaHash != previousPersonaHash {
 			needsPersonaUpdate = true
 			log.Info("Persona changed, will re-distill",
 				"previousPersona", previousPersonaHash,
 				"currentPersona", currentPersonaHash)
-		// Tools/models changed → logged but no synthesis needed (env vars handle this)
+			// Tools/models changed → logged but no synthesis needed (env vars handle this)
 		} else if currentToolsHash != previousToolsHash || currentModelsHash != previousModelsHash {
 			log.Info("Tools or models changed, deployment will update env vars",
 				"toolsChanged", currentToolsHash != previousToolsHash,

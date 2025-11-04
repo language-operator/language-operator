@@ -10,6 +10,12 @@ import (
 	"github.com/teilomillet/gollm"
 )
 
+// AgentSynthesizer is the interface for synthesizing agent code
+type AgentSynthesizer interface {
+	SynthesizeAgent(ctx context.Context, req AgentSynthesisRequest) (*AgentSynthesisResponse, error)
+	DistillPersona(ctx context.Context, persona PersonaInfo, agentContext AgentContext) (string, error)
+}
+
 // Synthesizer generates agent DSL code from natural language instructions
 type Synthesizer struct {
 	llm gollm.LLM
