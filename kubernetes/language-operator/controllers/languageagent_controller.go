@@ -222,27 +222,58 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
 
 	// Check if we need to synthesize
-	// We synthesize if:
-	// 1. ConfigMap doesn't exist, OR
-	// 2. Instructions have changed (detected by annotation)
+	// Smart change detection:
+	// 1. ConfigMap doesn't exist → full synthesis
+	// 2. Instructions changed → full synthesis
+	// 3. Persona changed → re-distill only (update existing code's context)
+	// 4. Tools/models changed → env var update only (no synthesis needed)
 	existingCM := &corev1.ConfigMap{}
 	err := r.Get(ctx, types.NamespacedName{Name: codeConfigMapName, Namespace: agent.Namespace}, existingCM)
 
 	needsSynthesis := false
+	needsPersonaUpdate := false
+
 	if errors.IsNotFound(err) {
 		needsSynthesis = true
 		log.Info("Code ConfigMap not found, will synthesize")
 	} else if err != nil {
 		return err
 	} else {
-		// Check if instructions changed by comparing hash
-		currentHash := hashString(agent.Spec.Instructions)
-		previousHash := existingCM.Annotations["langop.io/instructions-hash"]
-		if currentHash != previousHash {
+		// Compare current vs previous hashes for smart change detection
+		currentInstructionsHash := hashString(agent.Spec.Instructions)
+		previousInstructionsHash := existingCM.Annotations["langop.io/instructions-hash"]
+
+		currentToolsHash := hashString(strings.Join(r.getToolNames(agent), ","))
+		previousToolsHash := existingCM.Annotations["langop.io/tools-hash"]
+
+		currentModelsHash := hashString(strings.Join(r.getModelNames(agent), ","))
+		previousModelsHash := existingCM.Annotations["langop.io/models-hash"]
+
+		personaRef := ""
+		if agent.Spec.PersonaRef != nil {
+			personaRef = agent.Spec.PersonaRef.Name
+		}
+		currentPersonaHash := hashString(personaRef)
+		previousPersonaHash := existingCM.Annotations["langop.io/persona-hash"]
+
+		// Instructions changed → full re-synthesis
+		if currentInstructionsHash != previousInstructionsHash {
 			needsSynthesis = true
 			log.Info("Instructions changed, will re-synthesize",
-				"previousHash", previousHash,
-				"currentHash", currentHash)
+				"previousHash", previousInstructionsHash,
+				"currentHash", currentInstructionsHash)
+		// Persona changed → re-distill without full synthesis
+		} else if currentPersonaHash != previousPersonaHash {
+			needsPersonaUpdate = true
+			log.Info("Persona changed, will re-distill",
+				"previousPersona", previousPersonaHash,
+				"currentPersona", currentPersonaHash)
+		// Tools/models changed → logged but no synthesis needed (env vars handle this)
+		} else if currentToolsHash != previousToolsHash || currentModelsHash != previousModelsHash {
+			log.Info("Tools or models changed, deployment will update env vars",
+				"toolsChanged", currentToolsHash != previousToolsHash,
+				"modelsChanged", currentModelsHash != previousModelsHash)
+			// No synthesis needed - deployment reconciliation handles env var updates
 		}
 	}
 
@@ -324,6 +355,25 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		if err := r.Status().Update(ctx, agent); err != nil {
 			log.Error(err, "Failed to update synthesis info in status")
 		}
+	} else if needsPersonaUpdate {
+		// Persona changed but instructions didn't → re-distill only
+		// This updates the persona context without re-synthesizing the entire code
+		dslCode = existingCM.Data["agent.rb"]
+
+		persona, err := r.fetchPersona(ctx, agent)
+		if err != nil {
+			log.Error(err, "Failed to fetch persona for update")
+		} else if persona != nil {
+			_, err = r.distillPersona(ctx, persona, agent)
+			if err != nil {
+				log.Error(err, "Failed to re-distill persona")
+			} else {
+				log.Info("Persona re-distilled successfully")
+				if r.Recorder != nil {
+					r.Recorder.Event(agent, corev1.EventTypeNormal, "PersonaUpdated", "Persona re-distilled without code re-synthesis")
+				}
+			}
+		}
 	} else {
 		// Use existing code
 		dslCode = existingCM.Data["agent.rb"]
@@ -335,9 +385,17 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		"agent.rb": dslCode,
 	}
 
-	// Store hash of instructions for change detection
+	// Store all hashes for smart change detection
+	personaRef := ""
+	if agent.Spec.PersonaRef != nil {
+		personaRef = agent.Spec.PersonaRef.Name
+	}
+
 	annotations := map[string]string{
 		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
+		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
+		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
+		"langop.io/persona-hash":      hashString(personaRef),
 		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
 	}
 
