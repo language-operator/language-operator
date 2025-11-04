@@ -405,6 +405,74 @@ verify_agent() {
 
   wait_for_resource languageagent demo-agent "$NAMESPACE"
 
+  # Check synthesis status
+  log "Checking code synthesis..."
+  local has_instructions
+  has_instructions=$(kubectl get languageagent demo-agent -n "$NAMESPACE" -o jsonpath='{.spec.instructions}' 2>/dev/null || echo "")
+
+  if [ -n "$has_instructions" ]; then
+    log "Agent has instructions field, checking synthesis..."
+
+    # Check for Synthesized condition
+    local synthesized_status
+    synthesized_status=$(kubectl get languageagent demo-agent -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Synthesized")].status}' 2>/dev/null || echo "")
+
+    if [ "$synthesized_status" = "True" ]; then
+      success "Code synthesis completed successfully"
+
+      # Check synthesis metrics
+      local synthesis_model synthesis_duration
+      synthesis_model=$(kubectl get languageagent demo-agent -n "$NAMESPACE" -o jsonpath='{.status.synthesisInfo.synthesisModel}' 2>/dev/null || echo "")
+      synthesis_duration=$(kubectl get languageagent demo-agent -n "$NAMESPACE" -o jsonpath='{.status.synthesisInfo.synthesisDuration}' 2>/dev/null || echo "")
+
+      if [ -n "$synthesis_model" ]; then
+        success "Synthesis model: $synthesis_model"
+      fi
+      if [ -n "$synthesis_duration" ]; then
+        success "Synthesis duration: ${synthesis_duration}s"
+      fi
+
+      # Check code ConfigMap exists
+      if kubectl get configmap demo-agent-code -n "$NAMESPACE" &> /dev/null; then
+        success "Code ConfigMap created"
+
+        # Verify ConfigMap has agent.rb
+        if kubectl get configmap demo-agent-code -n "$NAMESPACE" -o jsonpath='{.data.agent\.rb}' 2>/dev/null | grep -q "require 'langop'"; then
+          success "ConfigMap contains synthesized DSL code"
+        else
+          warning "ConfigMap exists but may not contain valid code"
+        fi
+
+        # Check for synthesis annotations
+        local instructions_hash
+        instructions_hash=$(kubectl get configmap demo-agent-code -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.langop\.io/instructions-hash}' 2>/dev/null || echo "")
+        if [ -n "$instructions_hash" ]; then
+          success "ConfigMap has instructions hash annotation for change detection"
+        fi
+      else
+        warning "Code ConfigMap not found"
+      fi
+
+      # Check for synthesis events
+      if kubectl get events -n "$NAMESPACE" --field-selector involvedObject.name=demo-agent 2>/dev/null | grep -q "SynthesisSucceeded"; then
+        success "SynthesisSucceeded event recorded"
+      fi
+    elif [ "$synthesized_status" = "False" ]; then
+      fail "Code synthesis failed"
+      # Show synthesis error if available
+      local synthesis_message
+      synthesis_message=$(kubectl get languageagent demo-agent -n "$NAMESPACE" -o jsonpath='{.status.conditions[?(@.type=="Synthesized")].message}' 2>/dev/null || echo "")
+      if [ -n "$synthesis_message" ]; then
+        error "Synthesis error: $synthesis_message"
+      fi
+      return 1
+    else
+      warning "Synthesized condition not found (synthesis may not be enabled)"
+    fi
+  else
+    log "Agent does not have instructions field (using pre-built image)"
+  fi
+
   # Check pod with sidecar (should have 2 containers)
   log "Checking agent pod with sidecar..."
   wait_for_pod "app.kubernetes.io/name=demo-agent" "$NAMESPACE" "2/2"
@@ -451,6 +519,20 @@ verify_agent() {
       success "Agent has MCP_SERVERS environment variable"
     else
       warning "MCP_SERVERS not found in agent environment"
+    fi
+
+    # Check if code ConfigMap is mounted
+    if [ -n "$has_instructions" ]; then
+      if kubectl get pod "$pod_name" -n "$NAMESPACE" -o json | grep -q "demo-agent-code"; then
+        success "Code ConfigMap is mounted to agent pod"
+
+        # Verify mount path
+        if kubectl get pod "$pod_name" -n "$NAMESPACE" -o json | grep -q "/etc/agent/code"; then
+          success "Code mounted at /etc/agent/code"
+        fi
+      else
+        warning "Code ConfigMap not mounted (synthesis may have failed)"
+      fi
     fi
   fi
 }
