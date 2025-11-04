@@ -6,6 +6,7 @@ require 'json'
 require_relative 'config'
 require_relative '../logger'
 require_relative '../loggable'
+require_relative '../retryable'
 
 module Langop
   module Client
@@ -27,6 +28,7 @@ module Langop
     #   end
     class Base
       include Langop::Loggable
+      include Langop::Retryable
 
       attr_reader :config, :clients, :chat
 
@@ -234,16 +236,33 @@ module Langop
       # @param server_config [Hash] Server configuration
       # @return [RubyLLM::MCP::Client, nil] Client if successful, nil if all retries failed
       def connect_with_retry(server_config)
-        max_retries = 3
-        base_delay = 1.0
-        max_delay = 30.0
-
         logger.debug("Attempting to connect to MCP server",
                      server: server_config['name'],
                      transport: server_config['transport'],
                      url: server_config['url'])
 
-        (0..max_retries).each do |attempt|
+        with_retry_or_nil(
+          max_attempts: 4, # 1 initial attempt + 3 retries
+          base_delay: 1.0,
+          max_delay: 30.0,
+          on_retry: lambda { |error, attempt, delay|
+            logger.warn("MCP server connection failed, retrying",
+                        server: server_config['name'],
+                        attempt: attempt,
+                        max_attempts: 4,
+                        error: error.message,
+                        retry_delay: delay)
+          },
+          on_failure: lambda { |error, attempts|
+            logger.error("MCP server connection failed after all retries",
+                         server: server_config['name'],
+                         attempts: attempts,
+                         error: error.message)
+            logger.debug("Final connection error backtrace",
+                         server: server_config['name'],
+                         backtrace: error.backtrace.join("\n")) if @debug
+          }
+        ) do
           client = RubyLLM::MCP.client(
             name: server_config['name'],
             transport_type: server_config['transport'].to_sym,
@@ -253,29 +272,8 @@ module Langop
           )
 
           logger.info("Successfully connected to MCP server",
-                      server: server_config['name'],
-                      attempt: attempt + 1)
-          return client
-        rescue StandardError => e
-          if attempt < max_retries
-            delay = [base_delay * (2**attempt), max_delay].min
-            logger.warn("MCP server connection failed, retrying",
-                        server: server_config['name'],
-                        attempt: attempt + 1,
-                        max_attempts: max_retries + 1,
-                        error: e.message,
-                        retry_delay: delay)
-            sleep(delay)
-          else
-            logger.error("MCP server connection failed after all retries",
-                         server: server_config['name'],
-                         attempts: max_retries + 1,
-                         error: e.message)
-            logger.debug("Final connection error backtrace",
-                         server: server_config['name'],
-                         backtrace: e.backtrace.join("\n")) if @debug
-            return nil
-          end
+                      server: server_config['name'])
+          client
         end
       end
 

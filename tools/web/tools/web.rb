@@ -26,12 +26,14 @@ tool "web_search" do
     # Use DuckDuckGo HTML interface
     url = "https://html.duckduckgo.com/html/?q=#{encoded_query}"
 
-    # Fetch results using curl
-    html = `curl -s -A "Mozilla/5.0" "#{url}"`
+    # Fetch results using SDK HTTP client
+    response = Langop::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
-    unless $?.success?
-      return "Error: Failed to fetch search results"
+    unless response[:success]
+      return "Error: Failed to fetch search results - #{response[:error] || response[:status]}"
     end
+
+    html = response[:body]
 
     # Parse results (simple text extraction)
     results = []
@@ -80,12 +82,14 @@ tool "web_fetch" do
       return "Error: Invalid URL. Must start with http:// or https://"
     end
 
-    # Fetch the URL
-    content = `curl -s -L -A "Mozilla/5.0" "#{url}"`
+    # Fetch the URL using SDK HTTP client
+    response = Langop::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
-    unless $?.success?
-      return "Error: Failed to fetch URL: #{url}"
+    unless response[:success]
+      return "Error: Failed to fetch URL: #{url} - #{response[:error] || response[:status]}"
     end
+
+    content = response[:body]
 
     if return_html
       content
@@ -123,14 +127,15 @@ tool "web_headers" do
       return "Error: Invalid URL. Must start with http:// or https://"
     end
 
-    # Fetch headers
-    headers = `curl -s -I -L "#{url}"`
+    # Fetch headers using SDK HTTP client
+    response = Langop::Dsl::HTTP.head(url)
 
-    unless $?.success?
-      return "Error: Failed to fetch headers from: #{url}"
+    unless response[:success]
+      return "Error: Failed to fetch headers from: #{url} - #{response[:error] || response[:status]}"
     end
 
-    "Headers for #{url}:\n\n#{headers}"
+    headers_text = response[:headers].map { |k, v| "#{k}: #{Array(v).join(', ')}" }.join("\n")
+    "Headers for #{url}:\n\n#{headers_text}"
   end
 end
 
@@ -151,25 +156,23 @@ tool "web_status" do
       return "Error: Invalid URL. Must start with http:// or https://"
     end
 
-    # Get status code
-    status = `curl -s -o /dev/null -w "%{http_code}" -L "#{url}"`.strip
+    # Get status code using SDK HTTP client
+    response = Langop::Dsl::HTTP.get(url, follow_redirects: true)
 
-    unless $?.success?
-      return "Error: Failed to check URL: #{url}"
-    end
+    status = response[:status] || 0
 
     status_text = case status
-    when "200" then "OK"
-    when "301" then "Moved Permanently"
-    when "302" then "Found (Redirect)"
-    when "304" then "Not Modified"
-    when "400" then "Bad Request"
-    when "401" then "Unauthorized"
-    when "403" then "Forbidden"
-    when "404" then "Not Found"
-    when "500" then "Internal Server Error"
-    when "502" then "Bad Gateway"
-    when "503" then "Service Unavailable"
+    when 200 then "OK"
+    when 301 then "Moved Permanently"
+    when 302 then "Found (Redirect)"
+    when 304 then "Not Modified"
+    when 400 then "Bad Request"
+    when 401 then "Unauthorized"
+    when 403 then "Forbidden"
+    when 404 then "Not Found"
+    when 500 then "Internal Server Error"
+    when 502 then "Bad Gateway"
+    when 503 then "Service Unavailable"
     else "Unknown"
     end
 
