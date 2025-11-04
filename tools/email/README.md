@@ -162,7 +162,13 @@ SMTP_PASSWORD=app-password \
 make run
 ```
 
-Test the endpoints:
+Run unit tests:
+
+```bash
+make spec
+```
+
+Test all endpoints (integration):
 
 ```bash
 make test
@@ -179,6 +185,27 @@ Auto-fix linting issues:
 ```bash
 make lint-fix
 ```
+
+### Testing
+
+The project includes comprehensive test coverage using RSpec:
+
+- **Unit tests** for all 3 email tools (`send_email`, `test_smtp`, `email_config`)
+- **Integration tests** for tool loading and registry
+- **Mocked SMTP connections** using RSpec doubles to avoid external dependencies
+- **Environment variable testing** for configuration validation
+
+Test coverage includes:
+- Parameter validation (to, subject, body, from, cc, bcc, html)
+- SMTP configuration validation
+- Email address parsing and formatting
+- Error handling (missing config, connection errors, authentication failures)
+- TLS/non-TLS connection modes
+- Multiple recipient support (to, cc, bcc)
+- HTML vs plain text email modes
+- Configuration display (without exposing secrets)
+
+Run tests with `make spec` to execute the full test suite in Docker.
 
 ## Documentation
 

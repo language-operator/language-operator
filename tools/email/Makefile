@@ -19,6 +19,7 @@ help:
 	@echo "  shell     - Run the image and exec into it with an interactive shell"
 	@echo "  env       - Display sorted list of environment variables in the image"
 	@echo "  run       - Run the email MCP server on port 8080"
+	@echo "  spec      - Run RSpec unit tests"
 	@echo "  test      - Run the server and test the email endpoints"
 	@echo "  lint      - Run RuboCop linter"
 	@echo "  lint-fix  - Auto-fix RuboCop issues"
@@ -71,24 +72,38 @@ run:
 		-e SMTP_FROM=$(SMTP_FROM) \
 		--name email-server $(IMAGE_FULL)
 
-# Test the server endpoints
+# Run RSpec unit tests
+.PHONY: spec
+spec:
+	@echo "Running RSpec unit tests in Docker..."
+	@echo "Note: Tests require rspec and webmock gems. Run 'gem install rspec webmock' if needed."
+	docker run --rm --user $$(id -u):$$(id -g) -v $$(pwd):/workspace -w /workspace $(IMAGE_FULL) sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+
+# Test the server endpoints using MCP JSON-RPC protocol
 .PHONY: test
 test:
 	@echo "Testing health endpoint..."
 	@curl -s http://localhost:8080/health | jq .
 	@echo ""
-	@echo "Listing available tools..."
-	@curl -s http://localhost:8080/tools | jq .
+	@echo "Initializing MCP session..."
+	@curl -s -X POST http://localhost:8080/mcp \
+		-H "Content-Type: application/json" \
+		-d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}' | jq '.result.serverInfo'
+	@echo ""
+	@echo "Listing available tools via MCP..."
+	@curl -s -X POST http://localhost:8080/mcp \
+		-H "Content-Type: application/json" \
+		-d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | jq '.result.tools[] | {name, description}'
 	@echo ""
 	@echo "Checking email configuration..."
-	@curl -s -X POST http://localhost:8080/tools/call \
+	@curl -s -X POST http://localhost:8080/mcp \
 		-H "Content-Type: application/json" \
-		-d '{"name":"email_config","arguments":{}}' | jq -r '.content[0].text'
+		-d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"email_config","arguments":{}}}' | jq -r '.result.content[0].text'
 	@echo ""
 	@echo "Note: To test actual email sending, configure SMTP credentials and use:"
-	@echo "  curl -X POST http://localhost:8080/tools/call \\"
+	@echo "  curl -X POST http://localhost:8080/mcp \\"
 	@echo "    -H 'Content-Type: application/json' \\"
-	@echo "    -d '{\"name\":\"send_email\",\"arguments\":{\"to\":\"recipient@example.com\",\"subject\":\"Test\",\"body\":\"Hello World\"}}'"
+	@echo "    -d '{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"send_email\",\"arguments\":{\"to\":\"recipient@example.com\",\"subject\":\"Test\",\"body\":\"Hello World\"}}}'"
 
 # Lint Ruby code
 .PHONY: lint
