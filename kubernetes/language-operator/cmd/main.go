@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"time"
@@ -34,7 +35,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/teilomillet/gollm"
+	"github.com/cloudwego/eino-ext/components/model/openai"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 	"github.com/based/language-operator/controllers"
@@ -157,43 +158,47 @@ func main() {
 
 	// Initialize synthesizer if LLM configuration is provided
 	synthesisModel := os.Getenv("SYNTHESIS_MODEL")
-	synthesisProvider := os.Getenv("SYNTHESIS_PROVIDER")
 	synthesisAPIKey := os.Getenv("SYNTHESIS_API_KEY")
-	synthesisEndpoint := os.Getenv("SYNTHESIS_ENDPOINT") // For Ollama or custom endpoints
+	synthesisEndpoint := os.Getenv("SYNTHESIS_ENDPOINT") // For custom OpenAI-compatible endpoints
 
 	if synthesisModel != "" {
-		setupLog.Info("Initializing synthesis engine", "model", synthesisModel, "provider", synthesisProvider)
+		setupLog.Info("Initializing synthesis engine", "model", synthesisModel, "endpoint", synthesisEndpoint)
 
-		// Use anthropic as default provider
-		if synthesisProvider == "" {
-			synthesisProvider = "anthropic"
+		// Default API key for local endpoints that don't validate it
+		if synthesisAPIKey == "" {
+			synthesisAPIKey = "sk-local-not-needed"
 		}
 
-		// Create gollm LLM instance
-		llmOpts := []gollm.ConfigOption{
-			gollm.SetProvider(synthesisProvider),
-			gollm.SetModel(synthesisModel),
-			gollm.SetMaxTokens(4096),
-			gollm.SetTemperature(0.3), // Lower temperature for more consistent code generation
+		// Create eino OpenAI ChatModel config
+		config := &openai.ChatModelConfig{
+			Model:  synthesisModel,
+			APIKey: synthesisAPIKey,
 		}
 
-		if synthesisAPIKey != "" {
-			llmOpts = append(llmOpts, gollm.SetAPIKey(synthesisAPIKey))
+		// Set custom BaseURL if provided (for LM Studio, Ollama with OpenAI compat, etc.)
+		if synthesisEndpoint != "" {
+			config.BaseURL = synthesisEndpoint
+			setupLog.Info("Using custom OpenAI-compatible endpoint", "baseURL", synthesisEndpoint)
 		}
 
-		// For Ollama or custom endpoints
-		if synthesisEndpoint != "" && synthesisProvider == "ollama" {
-			llmOpts = append(llmOpts, gollm.SetOllamaEndpoint(synthesisEndpoint))
-		}
+		// Set temperature for consistent code generation
+		temp := float32(0.3)
+		config.Temperature = &temp
 
-		llm, err := gollm.NewLLM(llmOpts...)
+		// Set max tokens
+		maxTokens := 4096
+		config.MaxTokens = &maxTokens
+
+		// Create ChatModel
+		ctx := context.Background()
+		chatModel, err := openai.NewChatModel(ctx, config)
 		if err != nil {
-			setupLog.Error(err, "failed to create synthesis LLM")
+			setupLog.Error(err, "failed to create synthesis ChatModel")
 			os.Exit(1)
 		}
 
 		// Create synthesizer
-		synthesizer := synthesis.NewSynthesizer(llm, ctrl.Log.WithName("synthesis"))
+		synthesizer := synthesis.NewSynthesizer(chatModel, ctrl.Log.WithName("synthesis"))
 		agentReconciler.Synthesizer = synthesizer
 		agentReconciler.SynthesisModel = synthesisModel
 		setupLog.Info("Synthesis engine initialized successfully")

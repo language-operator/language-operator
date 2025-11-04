@@ -381,9 +381,11 @@ volumeMounts: []
 #   mountPath: /tmp
 
 # Extra environment variables
-env: []
-# - name: LOG_LEVEL
-#   value: debug
+env:
+  - name: SYNTHESIS_MODEL
+    value: "mistralai/magistral-small-2509"
+  - name: SYNTHESIS_ENDPOINT
+    value: "http://192.168.68.54:1234/v1"
 
 # Extra environment variables from ConfigMap or Secret
 envFrom: []

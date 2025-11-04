@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
-	"github.com/teilomillet/gollm"
 )
 
 // AgentSynthesizer is the interface for synthesizing agent code
@@ -16,10 +17,15 @@ type AgentSynthesizer interface {
 	DistillPersona(ctx context.Context, persona PersonaInfo, agentContext AgentContext) (string, error)
 }
 
+// ChatModel is the interface for LLM chat models (eino)
+type ChatModel interface {
+	Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error)
+}
+
 // Synthesizer generates agent DSL code from natural language instructions
 type Synthesizer struct {
-	llm gollm.LLM
-	log logr.Logger
+	chatModel ChatModel
+	log       logr.Logger
 }
 
 // AgentSynthesisRequest contains all information needed to synthesize an agent
@@ -56,11 +62,11 @@ type AgentContext struct {
 	Tools        string
 }
 
-// NewSynthesizer creates a new synthesizer instance using gollm
-func NewSynthesizer(llm gollm.LLM, log logr.Logger) *Synthesizer {
+// NewSynthesizer creates a new synthesizer instance using eino ChatModel
+func NewSynthesizer(chatModel ChatModel, log logr.Logger) *Synthesizer {
 	return &Synthesizer{
-		llm: llm,
-		log: log,
+		chatModel: chatModel,
+		log:       log,
 	}
 }
 
@@ -77,8 +83,15 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	// Build the synthesis prompt
 	prompt := s.buildSynthesisPrompt(req)
 
-	// Call LLM using gollm
-	dslCode, err := s.llm.Generate(ctx, gollm.NewPrompt(prompt))
+	// Call LLM using eino ChatModel
+	messages := []*schema.Message{
+		{
+			Role:    schema.User,
+			Content: prompt,
+		},
+	}
+
+	response, err := s.chatModel.Generate(ctx, messages)
 	if err != nil {
 		duration := time.Since(startTime).Seconds()
 		return &AgentSynthesisResponse{
@@ -86,6 +99,8 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 			DurationSeconds: duration,
 		}, err
 	}
+
+	dslCode := response.Content
 
 	// Extract code from markdown blocks if present
 	dslCode = extractCodeFromMarkdown(dslCode)
@@ -124,10 +139,19 @@ func (s *Synthesizer) DistillPersona(ctx context.Context, persona PersonaInfo, a
 
 	prompt := s.buildPersonaDistillationPrompt(persona, agentContext)
 
-	distilled, err := s.llm.Generate(ctx, gollm.NewPrompt(prompt))
+	messages := []*schema.Message{
+		{
+			Role:    schema.User,
+			Content: prompt,
+		},
+	}
+
+	response, err := s.chatModel.Generate(ctx, messages)
 	if err != nil {
 		return "", err
 	}
+
+	distilled := response.Content
 
 	s.log.Info("Persona distilled successfully",
 		"persona", persona.Name,
