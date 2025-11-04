@@ -71,6 +71,20 @@ Simple chronological checklist of what to do next.
   * ~~Verify tool sidecar loads without errors~~
   * ~~Verify model proxy is healthy~~
   * ~~Verify all CRDs reach Running/Ready state~~
+* ~~Agent DSL & Synthesis Pipeline~~
+  * ~~Phase 1: Create Agent DSL in Ruby SDK~~
+    * ~~Create agent_definition.rb, workflow_definition.rb, agent_context.rb~~
+    * ~~Update dsl.rb to include agent DSL methods~~
+    * ~~Update langop/agent entrypoint to auto-load /etc/agent/code/agent.rb~~
+    * ~~Add comprehensive tests (96 examples, 0 failures, 23 pending)~~
+  * ~~Phase 2: Implement Operator Synthesis Logic~~
+    * ~~Create synthesis package with gollm integration~~
+    * ~~Add SynthesizeAgent() and DistillPersona() methods~~
+    * ~~Add reconcileCodeConfigMap() to controller~~
+    * ~~Implement SHA256 hash-based change detection~~
+    * ~~Mount code ConfigMap to Deployment and CronJob~~
+    * ~~Initialize synthesizer in operator main.go~~
+    * ~~Add CreateOrUpdateConfigMapWithAnnotations() utility~~
 
 ## In Progress 🚧
 
@@ -96,29 +110,29 @@ Simple chronological checklist of what to do next.
 - Failure handling: Log detailed errors, mark LanguageAgent status as Failed, emit K8s events
 - Persona handling: Distill persona into single-paragraph system message via LLM
 
-**Phase 1: DSL Foundation (SDK)**
-* Create Agent DSL module in SDK
-  * `sdk/ruby/lib/langop/dsl/agent_definition.rb` - Agent DSL builder
-  * `sdk/ruby/lib/langop/dsl/agent_context.rb` - DSL context for evaluation
-  * `sdk/ruby/lib/langop/dsl/workflow_definition.rb` - Workflow steps DSL
-  * Update `sdk/ruby/lib/langop/dsl.rb` to include agent DSL
-* Define agent DSL syntax: `agent "name" do ... end` with schedule, objectives, workflow, constraints
-* Update langop/agent image entrypoint to auto-load `/etc/agent/code/agent.rb`
-* Add `AGENT_CODE_PATH` environment variable for override
-* Add SDK tests for agent DSL parsing and execution
+**Phase 1: DSL Foundation (SDK)** ✅
+* ~~Create Agent DSL module in SDK~~
+  * ~~`sdk/ruby/lib/langop/dsl/agent_definition.rb` - Agent DSL builder~~
+  * ~~`sdk/ruby/lib/langop/dsl/agent_context.rb` - DSL context for evaluation~~
+  * ~~`sdk/ruby/lib/langop/dsl/workflow_definition.rb` - Workflow steps DSL~~
+  * ~~Update `sdk/ruby/lib/langop/dsl.rb` to include agent DSL~~
+* ~~Define agent DSL syntax: `agent "name" do ... end` with schedule, objectives, workflow, constraints~~
+* ~~Update langop/agent image entrypoint to auto-load `/etc/agent/code/agent.rb`~~
+* ~~Add `AGENT_CODE_PATH` environment variable for override~~
+* ~~Add SDK tests for agent DSL parsing and execution~~
 
-**Phase 2: Operator Synthesis Logic**
-* Add synthesis controller methods
-  * `synthesizeAgentCode()` - Call LLM to generate DSL from instructions
-  * `distillPersona()` - Distill persona into single-paragraph system message
-  * `validateSynthesizedCode()` - Basic Ruby syntax validation
-  * `createCodeConfigMap()` - Store synthesized code in ConfigMap
-  * `updateCodeConfigMap()` - Update on instruction changes
-* Add synthesis LLM configuration (env var or ConfigMap)
-* Support local/remote LLM for synthesis
-* Create structured prompt templates for synthesis
-* ConfigMap management with owner references for cleanup
-* Hash annotation on Deployment to trigger restart on code change
+**Phase 2: Operator Synthesis Logic** ✅
+* ~~Add synthesis controller methods~~
+  * ~~`synthesizeAgentCode()` - Call LLM to generate DSL from instructions~~
+  * ~~`distillPersona()` - Distill persona into single-paragraph system message~~
+  * ~~`validateSynthesizedCode()` - Basic Ruby syntax validation~~
+  * ~~`createCodeConfigMap()` - Store synthesized code in ConfigMap~~
+  * ~~`updateCodeConfigMap()` - Update on instruction changes~~
+* ~~Add synthesis LLM configuration (env var or ConfigMap)~~
+* ~~Support local/remote LLM for synthesis~~
+* ~~Create structured prompt templates for synthesis~~
+* ~~ConfigMap management with owner references for cleanup~~
+* ~~Hash annotation on Deployment to trigger restart on code change~~
 
 **Phase 3: Status & Error Handling**
 * Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`

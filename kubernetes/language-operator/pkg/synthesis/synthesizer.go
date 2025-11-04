@@ -154,7 +154,7 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 
 Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
 
-` + "```ruby" + `
+`+"```ruby"+`
 require 'langop'
 
 agent "%s" do
@@ -187,7 +187,7 @@ agent "%s" do
     workspace "results/output.txt"
   end
 end
-` + "```" + `
+`+"```"+`
 
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
