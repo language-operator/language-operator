@@ -78,6 +78,78 @@ Simple chronological checklist of what to do next.
 
 ## Next Up 📋
 
+### Agent DSL & Synthesis Pipeline
+
+**Vision**: Natural language instructions → LLM-generated DSL → ConfigMap → Executed by agent container
+
+**Architecture**:
+- User creates LanguageAgent CRD with natural language instructions
+- Operator validates tools/models exist
+- Operator calls LLM to synthesize Ruby DSL code from instructions
+- Operator stores synthesized code in ConfigMap (mounted as volume)
+- langop/agent container auto-loads synthesized code on boot
+- Agent executes synthesized behavior
+
+**Design Decisions**:
+- Synthesis LLM: Same model as agent uses (future: allow SOTA model override)
+- Code regeneration: Only when instructions change (users wanting custom agents build from components/agent)
+- Failure handling: Log detailed errors, mark LanguageAgent status as Failed, emit K8s events
+- Persona handling: Distill persona into single-paragraph system message via LLM
+
+**Phase 1: DSL Foundation (SDK)**
+* Create Agent DSL module in SDK
+  * `sdk/ruby/lib/langop/dsl/agent_definition.rb` - Agent DSL builder
+  * `sdk/ruby/lib/langop/dsl/agent_context.rb` - DSL context for evaluation
+  * `sdk/ruby/lib/langop/dsl/workflow_definition.rb` - Workflow steps DSL
+  * Update `sdk/ruby/lib/langop/dsl.rb` to include agent DSL
+* Define agent DSL syntax: `agent "name" do ... end` with schedule, objectives, workflow, constraints
+* Update langop/agent image entrypoint to auto-load `/etc/agent/code/agent.rb`
+* Add `AGENT_CODE_PATH` environment variable for override
+* Add SDK tests for agent DSL parsing and execution
+
+**Phase 2: Operator Synthesis Logic**
+* Add synthesis controller methods
+  * `synthesizeAgentCode()` - Call LLM to generate DSL from instructions
+  * `distillPersona()` - Distill persona into single-paragraph system message
+  * `validateSynthesizedCode()` - Basic Ruby syntax validation
+  * `createCodeConfigMap()` - Store synthesized code in ConfigMap
+  * `updateCodeConfigMap()` - Update on instruction changes
+* Add synthesis LLM configuration (env var or ConfigMap)
+* Support local/remote LLM for synthesis
+* Create structured prompt templates for synthesis
+* ConfigMap management with owner references for cleanup
+* Hash annotation on Deployment to trigger restart on code change
+
+**Phase 3: Status & Error Handling**
+* Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`
+* Event recording: `SynthesisStarted`, `SynthesisSucceeded`, `SynthesisFailed`, `CodeUpdated`
+* Failure modes:
+  * Invalid syntax → Status: Failed, Event emitted
+  * Missing tools → Status: Pending, suggest installation
+  * LLM timeout → Retry with backoff
+
+**Phase 4: Surgical Re-synthesis**
+* Change detection: Compare old vs new LanguageAgent spec
+* Instruction changes → full re-synthesis
+* Tool/model ref changes → env var update only (no re-synthesis)
+* Persona changes → re-distill + update ConfigMap
+* Future optimization: Cache synthesis results, incremental updates
+
+**Phase 5: Testing & Documentation**
+* Operator tests with mock LLM synthesis
+* Test ConfigMap creation/update and re-synthesis triggers
+* E2E test: Create LanguageAgent with NL → verify synthesis → verify execution → update instructions → verify re-synthesis
+* Update sdk/ruby/README.md with agent DSL examples
+* Add synthesis architecture documentation
+* Add troubleshooting guide for synthesis failures
+
+**Success Criteria**:
+- User creates LanguageAgent with natural language → agent runs
+- Instruction changes → automatic re-synthesis
+- Synthesis failures → clear status/events
+- Synthesized code visible in ConfigMap for debugging
+- Persona distilled and injected into agent context
+
 ### Production Readiness
 
 * ~~Ruby SDK Testing & Versioning~~ - ✅ COMPLETE (62/85 passing, 23 pending, 0 failures)
