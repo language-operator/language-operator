@@ -134,28 +134,36 @@ Simple chronological checklist of what to do next.
 * ~~ConfigMap management with owner references for cleanup~~
 * ~~Hash annotation on Deployment to trigger restart on code change~~
 
-**Phase 3: Status & Error Handling**
-* Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`
-* Event recording: `SynthesisStarted`, `SynthesisSucceeded`, `SynthesisFailed`, `CodeUpdated`
-* Failure modes:
-  * Invalid syntax → Status: Failed, Event emitted
-  * Missing tools → Status: Pending, suggest installation
-  * LLM timeout → Retry with backoff
+**Phase 3: Status & Error Handling** ✅
+* ~~Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`~~
+* ~~Event recording: `SynthesisStarted`, `SynthesisSucceeded`, `SynthesisFailed`, `ValidationFailed`~~
+* ~~Add SynthesisInfo status type with detailed metrics~~
+  * ~~LastSynthesisTime, SynthesisModel, SynthesisDuration~~
+  * ~~CodeHash, InstructionsHash, ValidationErrors~~
+  * ~~SynthesisAttempts counter~~
+* ~~Failure modes implemented:~~
+  * ~~Invalid syntax → Status: Failed, Event emitted~~
+  * ~~LLM failures → Event with error details~~
 
-**Phase 4: Surgical Re-synthesis**
-* Change detection: Compare old vs new LanguageAgent spec
-* Instruction changes → full re-synthesis
-* Tool/model ref changes → env var update only (no re-synthesis)
-* Persona changes → re-distill + update ConfigMap
+**Phase 4: Surgical Re-synthesis** ✅
+* ~~Change detection: Compare old vs new LanguageAgent spec~~
+* ~~Instruction changes → full re-synthesis~~
+* ~~Tool/model ref changes → env var update only (no re-synthesis)~~
+* ~~Persona changes → re-distill without full re-synthesis~~
+* ~~Multi-hash annotation tracking (instructions, tools, models, persona)~~
 * Future optimization: Cache synthesis results, incremental updates
 
-**Phase 5: Testing & Documentation**
-* Operator tests with mock LLM synthesis
-* Test ConfigMap creation/update and re-synthesis triggers
+**Phase 5: Testing & Documentation** (Partially Complete)
+* ~~Operator tests with mock LLM synthesis~~ ✅
+  * ~~MockSynthesizer with AgentSynthesizer interface~~
+  * ~~3 comprehensive controller tests~~
+  * ~~Coverage: 7.9% → 27.0%~~
+* ~~Test ConfigMap creation/update and re-synthesis triggers~~ ✅
 * E2E test: Create LanguageAgent with NL → verify synthesis → verify execution → update instructions → verify re-synthesis
 * Update sdk/ruby/README.md with agent DSL examples
 * Add synthesis architecture documentation
 * Add troubleshooting guide for synthesis failures
+* Document synthesis environment variables
 
 **Success Criteria**:
 - User creates LanguageAgent with natural language → agent runs
