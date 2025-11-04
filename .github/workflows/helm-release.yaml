@@ -47,21 +47,20 @@ jobs:
         run: |
           helm repo index .helm-packages --url https://${{ env.REGISTRY }}/helm-charts
 
-      - name: Upload Helm chart to OCI registry
+      - name: Upload Helm chart to Forgejo
         if: github.event_name != 'pull_request'
         env:
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          HELM_OWNER: langop
         run: |
-          # Login to OCI registry
-          echo "$REGISTRY_PASSWORD" | helm registry login ${{ env.REGISTRY }} --username "$REGISTRY_USERNAME" --password-stdin
-
-          # Push chart to OCI registry
+          # Upload chart to Forgejo Helm registry using HTTP API
           for chart in .helm-packages/*.tgz; do
             if [ -f "$chart" ]; then
-              echo "Uploading $chart to oci://${{ env.REGISTRY }}/helm-charts"
-              helm push "$chart" oci://${{ env.REGISTRY }}/helm-charts
+              echo "Uploading $chart to https://${{ env.REGISTRY }}/api/packages/${HELM_OWNER}/helm/api/charts"
+              curl --user "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
+                -X POST \
+                --upload-file "$chart" \
+                "https://${{ env.REGISTRY }}/api/packages/${HELM_OWNER}/helm/api/charts"
             fi
           done
-
-          helm registry logout ${{ env.REGISTRY }}
