@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/teilomillet/gollm"
@@ -27,8 +28,10 @@ type AgentSynthesisRequest struct {
 
 // AgentSynthesisResponse contains the synthesized DSL code
 type AgentSynthesisResponse struct {
-	DSLCode string
-	Error   string
+	DSLCode          string
+	Error            string
+	DurationSeconds  float64
+	ValidationErrors []string
 }
 
 // PersonaInfo contains persona details for distillation
@@ -57,6 +60,8 @@ func NewSynthesizer(llm gollm.LLM, log logr.Logger) *Synthesizer {
 
 // SynthesizeAgent generates Ruby DSL code from natural language instructions
 func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisRequest) (*AgentSynthesisResponse, error) {
+	startTime := time.Now()
+
 	s.log.Info("Synthesizing agent code",
 		"agent", req.AgentName,
 		"namespace", req.Namespace,
@@ -69,25 +74,40 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	// Call LLM using gollm
 	dslCode, err := s.llm.Generate(ctx, gollm.NewPrompt(prompt))
 	if err != nil {
-		return &AgentSynthesisResponse{Error: err.Error()}, err
+		duration := time.Since(startTime).Seconds()
+		return &AgentSynthesisResponse{
+			Error:           err.Error(),
+			DurationSeconds: duration,
+		}, err
 	}
 
 	// Extract code from markdown blocks if present
 	dslCode = extractCodeFromMarkdown(dslCode)
 
 	// Validate the synthesized code (basic syntax check)
+	validationErrors := []string{}
 	if err := s.validateDSL(dslCode); err != nil {
+		validationErrors = append(validationErrors, err.Error())
+		duration := time.Since(startTime).Seconds()
 		return &AgentSynthesisResponse{
-			DSLCode: dslCode,
-			Error:   fmt.Sprintf("Validation failed: %v", err),
+			DSLCode:          dslCode,
+			Error:            fmt.Sprintf("Validation failed: %v", err),
+			DurationSeconds:  duration,
+			ValidationErrors: validationErrors,
 		}, err
 	}
 
+	duration := time.Since(startTime).Seconds()
+
 	s.log.Info("Agent code synthesized successfully",
 		"agent", req.AgentName,
-		"codeLength", len(dslCode))
+		"codeLength", len(dslCode),
+		"duration", duration)
 
-	return &AgentSynthesisResponse{DSLCode: dslCode}, nil
+	return &AgentSynthesisResponse{
+		DSLCode:         dslCode,
+		DurationSeconds: duration,
+	}, nil
 }
 
 // DistillPersona converts a detailed persona into a concise system message

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -30,9 +31,11 @@ import (
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	Log         logr.Logger
-	Synthesizer *synthesis.Synthesizer
+	Scheme          *runtime.Scheme
+	Log             logr.Logger
+	Synthesizer     *synthesis.Synthesizer
+	SynthesisModel  string
+	Recorder        record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -273,19 +276,54 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 
 		// Synthesize code
 		log.Info("Synthesizing agent code", "agent", agent.Name)
+		if r.Recorder != nil {
+			r.Recorder.Event(agent, corev1.EventTypeNormal, "SynthesisStarted", "Starting code synthesis from natural language instructions")
+		}
+
 		resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
 		if err != nil {
+			if r.Recorder != nil {
+				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SynthesisFailed", "Code synthesis failed: %v", err)
+			}
 			return fmt.Errorf("synthesis failed: %w", err)
 		}
 
 		if resp.Error != "" {
+			if r.Recorder != nil {
+				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "ValidationFailed", "Synthesized code validation failed: %s", resp.Error)
+			}
 			return fmt.Errorf("synthesis validation failed: %s", resp.Error)
 		}
 
 		dslCode = resp.DSLCode
 		log.Info("Agent code synthesized successfully",
 			"agent", agent.Name,
-			"codeLength", len(dslCode))
+			"codeLength", len(dslCode),
+			"duration", resp.DurationSeconds)
+
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SynthesisSucceeded", "Code synthesized successfully in %.2fs", resp.DurationSeconds)
+		}
+
+		// Update synthesis info in status
+		now := metav1.Now()
+		if agent.Status.SynthesisInfo == nil {
+			agent.Status.SynthesisInfo = &langopv1alpha1.SynthesisInfo{}
+		}
+		agent.Status.SynthesisInfo.LastSynthesisTime = &now
+		agent.Status.SynthesisInfo.SynthesisModel = r.SynthesisModel
+		agent.Status.SynthesisInfo.SynthesisDuration = resp.DurationSeconds
+		agent.Status.SynthesisInfo.CodeHash = hashString(dslCode)
+		agent.Status.SynthesisInfo.InstructionsHash = hashString(agent.Spec.Instructions)
+		agent.Status.SynthesisInfo.ValidationErrors = resp.ValidationErrors
+		if agent.Status.SynthesisInfo.SynthesisAttempts == 0 || needsSynthesis {
+			agent.Status.SynthesisInfo.SynthesisAttempts++
+		}
+
+		// Update agent status
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update synthesis info in status")
+		}
 	} else {
 		// Use existing code
 		dslCode = existingCM.Data["agent.rb"]

@@ -3986,6 +3986,40 @@ spec:
                 description: SuccessfulExecutions is the number of successful executions
                 format: int64
                 type: integer
+              synthesisInfo:
+                description: SynthesisInfo contains information about code synthesis
+                properties:
+                  codeHash:
+                    description: CodeHash is the SHA256 hash of the current synthesized
+                      code
+                    type: string
+                  instructionsHash:
+                    description: InstructionsHash is the SHA256 hash of the instructions
+                      that generated the code
+                    type: string
+                  lastSynthesisTime:
+                    description: LastSynthesisTime is when the code was last synthesized
+                    format: date-time
+                    type: string
+                  synthesisAttempts:
+                    description: SynthesisAttempts is the number of synthesis attempts
+                      for current instructions
+                    format: int32
+                    type: integer
+                  synthesisDuration:
+                    description: SynthesisDuration is how long synthesis took (in
+                      seconds)
+                    type: number
+                  synthesisModel:
+                    description: SynthesisModel is the LLM model used for synthesis
+                    type: string
+                  validationErrors:
+                    description: ValidationErrors contains any validation errors from
+                      the last synthesis
+                    items:
+                      type: string
+                    type: array
+                type: object
               toolUsage:
                 description: ToolUsage tracks tool invocation statistics
                 items:

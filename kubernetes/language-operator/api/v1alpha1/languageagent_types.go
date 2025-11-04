@@ -457,6 +457,41 @@ type LanguageAgentStatus struct {
 	// Reason provides a machine-readable reason for the current state
 	// +optional
 	Reason string `json:"reason,omitempty"`
+
+	// SynthesisInfo contains information about code synthesis
+	// +optional
+	SynthesisInfo *SynthesisInfo `json:"synthesisInfo,omitempty"`
+}
+
+// SynthesisInfo contains metadata about agent code synthesis
+type SynthesisInfo struct {
+	// LastSynthesisTime is when the code was last synthesized
+	// +optional
+	LastSynthesisTime *metav1.Time `json:"lastSynthesisTime,omitempty"`
+
+	// SynthesisModel is the LLM model used for synthesis
+	// +optional
+	SynthesisModel string `json:"synthesisModel,omitempty"`
+
+	// SynthesisDuration is how long synthesis took (in seconds)
+	// +optional
+	SynthesisDuration float64 `json:"synthesisDuration,omitempty"`
+
+	// CodeHash is the SHA256 hash of the current synthesized code
+	// +optional
+	CodeHash string `json:"codeHash,omitempty"`
+
+	// InstructionsHash is the SHA256 hash of the instructions that generated the code
+	// +optional
+	InstructionsHash string `json:"instructionsHash,omitempty"`
+
+	// ValidationErrors contains any validation errors from the last synthesis
+	// +optional
+	ValidationErrors []string `json:"validationErrors,omitempty"`
+
+	// SynthesisAttempts is the number of synthesis attempts for current instructions
+	// +optional
+	SynthesisAttempts int32 `json:"synthesisAttempts,omitempty"`
 }
 
 // AgentMetrics contains agent execution metrics

@@ -149,9 +149,10 @@ func main() {
 
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder: mgr.GetEventRecorderFor("languageagent-controller"),
 	}
 
 	// Initialize synthesizer if LLM configuration is provided
@@ -194,6 +195,7 @@ func main() {
 		// Create synthesizer
 		synthesizer := synthesis.NewSynthesizer(llm, ctrl.Log.WithName("synthesis"))
 		agentReconciler.Synthesizer = synthesizer
+		agentReconciler.SynthesisModel = synthesisModel
 		setupLog.Info("Synthesis engine initialized successfully")
 	} else {
 		setupLog.Info("Synthesis engine disabled (SYNTHESIS_MODEL not set)")
