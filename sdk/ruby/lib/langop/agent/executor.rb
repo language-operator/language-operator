@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../logger'
+require_relative '../loggable'
 
 module Langop
   module Agent
@@ -12,6 +13,8 @@ module Langop
     #   executor = Executor.new(agent)
     #   executor.execute("Complete the task")
     class Executor
+      include Langop::Loggable
+
       attr_reader :agent, :iteration_count
 
       # Initialize the executor
@@ -21,8 +24,12 @@ module Langop
         @agent = agent
         @iteration_count = 0
         @max_iterations = 100
-        @logger = Langop::Logger.new(component: 'Agent::Executor')
         @show_full_responses = ENV.fetch('SHOW_FULL_RESPONSES', 'false') == 'true'
+
+        logger.debug("Executor initialized",
+                     max_iterations: @max_iterations,
+                     show_full_responses: @show_full_responses,
+                     workspace: @agent.workspace_path)
       end
 
       # Execute a single task or workflow
@@ -39,12 +46,20 @@ module Langop
         end
 
         # Standard instruction-based execution
-        @logger.info("Starting iteration #{@iteration_count}")
-        @logger.debug("Prompt", prompt: task[0..200])
+        logger.info("Starting iteration",
+                    iteration: @iteration_count,
+                    max_iterations: @max_iterations)
+        logger.debug("Prompt", prompt: task[0..200])
 
-        result = @logger.timed("LLM request completed") do
+        result = logger.timed("LLM request") do
           @agent.send_message(task)
         end
+
+        result_text = result.is_a?(String) ? result : result.content
+        logger.info("Iteration completed",
+                    iteration: @iteration_count,
+                    response_length: result_text.length)
+        logger.debug("Response preview", response: result_text[0..200])
 
         result
       rescue StandardError => e
@@ -55,14 +70,16 @@ module Langop
       #
       # @return [void]
       def run_loop
-        @logger.info("Agent starting in autonomous mode")
-        @logger.info("Workspace: #{@agent.workspace_path}")
-        @logger.info("Connected to #{@agent.servers_info.length} MCP server(s)")
+        logger.info("Agent starting in autonomous mode")
+        logger.info("Configuration",
+                    workspace: @agent.workspace_path,
+                    mcp_servers: @agent.servers_info.length,
+                    max_iterations: @max_iterations)
 
         # Log MCP server details
         if @agent.servers_info.any?
           @agent.servers_info.each do |server|
-            @logger.info("  MCP server", name: server[:name], url: server[:url])
+            logger.info("  MCP server", name: server[:name], tool_count: server[:tool_count])
           end
         end
 
@@ -71,31 +88,42 @@ module Langop
                       ENV['AGENT_INSTRUCTIONS'] ||
                       "Monitor workspace and respond to changes"
 
-        @logger.info("Instructions: #{instructions}")
-        @logger.info("")
+        logger.info("Instructions", instructions: instructions[0..200])
+        logger.info("Starting autonomous execution loop")
 
         loop do
           break if @iteration_count >= @max_iterations
+
+          progress_pct = ((@iteration_count.to_f / @max_iterations) * 100).round(1)
+          logger.debug("Loop progress",
+                       iteration: @iteration_count,
+                       max: @max_iterations,
+                       progress: "#{progress_pct}%")
 
           result = execute(instructions)
           result_text = result.is_a?(String) ? result : result.content
 
           # Log result based on verbosity settings
           if @show_full_responses
-            @logger.info("Iteration #{@iteration_count} result:\n#{result_text}")
+            logger.info("Full iteration result",
+                        iteration: @iteration_count,
+                        result: result_text)
           else
             preview = result_text[0..200]
             preview += '...' if result_text.length > 200
-            @logger.info("Iteration #{@iteration_count} result: #{preview}")
+            logger.info("Iteration result",
+                        iteration: @iteration_count,
+                        preview: preview)
           end
 
-          @logger.info("")
-
           # Rate limiting
+          logger.debug("Rate limit pause", duration: 5)
           sleep 5
         end
 
-        @logger.warn("Maximum iterations (#{@max_iterations}) reached")
+        logger.warn("Maximum iterations reached",
+                    iterations: @max_iterations,
+                    reason: "Hit max_iterations limit")
       end
 
       # Execute a workflow-based agent
@@ -103,15 +131,15 @@ module Langop
       # @param agent_def [Langop::Dsl::AgentDefinition] The agent definition
       # @return [RubyLLM::Message] The final response
       def execute_workflow(agent_def)
-        @logger.info("🔄 Starting workflow execution: #{agent_def.name}")
+        logger.info("🔄 Starting workflow execution: #{agent_def.name}")
 
         # Build orchestration prompt from agent definition
         prompt = build_workflow_prompt(agent_def)
-        @logger.debug("Workflow prompt", prompt: prompt[0..300])
+        logger.debug("Workflow prompt", prompt: prompt[0..300])
 
         # Register workflow steps as tools (placeholder - will implement after tool converter)
         # For now, just execute with instructions
-        result = @logger.timed("Workflow execution completed") do
+        result = logger.timed("Workflow execution completed") do
           @agent.send_message(prompt)
         end
 
@@ -120,10 +148,10 @@ module Langop
           write_output(agent_def, result)
         end
 
-        @logger.info("✅ Workflow execution completed")
+        logger.info("✅ Workflow execution completed")
         result
       rescue StandardError => e
-        @logger.error("Workflow execution failed", error: e.message)
+        logger.error("Workflow execution failed", error: e.message)
         handle_error(e)
       end
 
@@ -186,44 +214,48 @@ module Langop
           begin
             FileUtils.mkdir_p(File.dirname(full_path))
             File.write(full_path, content)
-            @logger.info("📝 Wrote output to #{workspace_path}")
+            logger.info("📝 Wrote output to #{workspace_path}")
           rescue Errno::EACCES, Errno::EPERM => e
             # Permission denied - try writing to workspace root
             fallback_path = File.join(@agent.workspace_path, 'output.txt')
             begin
               File.write(fallback_path, content)
-              @logger.warn("⚠️  Could not write to #{workspace_path}, wrote to output.txt instead")
+              logger.warn("⚠️  Could not write to #{workspace_path}, wrote to output.txt instead")
             rescue StandardError => e2
-              @logger.warn("⚠️  Could not write output to workspace: #{e2.message}")
-              @logger.info("📄 Output (first 500 chars): #{content[0..500]}")
+              logger.warn("⚠️  Could not write output to workspace: #{e2.message}")
+              logger.info("📄 Output (first 500 chars): #{content[0..500]}")
             end
           end
         end
 
         # Future: Handle Slack, email outputs
       rescue StandardError => e
-        @logger.warn("Output writing failed", error: e.message)
+        logger.warn("Output writing failed", error: e.message)
       end
 
       private
 
+      def logger_component
+        'Agent::Executor'
+      end
+
       def handle_error(error)
         case error
         when Timeout::Error, /timeout/i.match?(error.message)
-          @logger.error("Request timeout",
+          logger.error("Request timeout",
                        error: error.class.name,
                        message: error.message,
                        iteration: @iteration_count)
         when /connection refused|operation not permitted/i.match?(error.message)
-          @logger.error("Connection failed",
+          logger.error("Connection failed",
                        error: error.class.name,
                        message: error.message,
                        hint: "Check if model service is healthy and accessible")
         else
-          @logger.error("Task execution failed",
+          logger.error("Task execution failed",
                        error: error.class.name,
                        message: error.message)
-          @logger.debug("Backtrace", trace: error.backtrace[0..5].join("\n")) if error.backtrace
+          logger.debug("Backtrace", trace: error.backtrace[0..5].join("\n")) if error.backtrace
         end
 
         "Error executing task: #{error.message}"

@@ -2,6 +2,8 @@
 
 require 'rufus-scheduler'
 require_relative 'executor'
+require_relative '../logger'
+require_relative '../loggable'
 
 module Langop
   module Agent
@@ -13,6 +15,8 @@ module Langop
     #   scheduler = Scheduler.new(agent)
     #   scheduler.start
     class Scheduler
+      include Langop::Loggable
+
       attr_reader :agent, :rufus_scheduler
 
       # Initialize the scheduler
@@ -22,18 +26,22 @@ module Langop
         @agent = agent
         @rufus_scheduler = Rufus::Scheduler.new
         @executor = Executor.new(agent)
+
+        logger.debug("Scheduler initialized",
+                      workspace: @agent.workspace_path,
+                      servers: @agent.servers_info.length)
       end
 
       # Start the scheduler
       #
       # @return [void]
       def start
-        puts "🕐 Agent starting in scheduled mode..."
-        puts "📁 Workspace: #{@agent.workspace_path}"
-        puts "🔌 Connected to #{@agent.servers_info.length} MCP server(s)"
-        puts
+        logger.info("Agent starting in scheduled mode")
+        logger.info("Workspace: #{@agent.workspace_path}")
+        logger.info("Connected to #{@agent.servers_info.length} MCP server(s)")
 
         setup_schedules
+        logger.info("Scheduler started, waiting for scheduled tasks")
         @rufus_scheduler.join
       end
 
@@ -41,10 +49,16 @@ module Langop
       #
       # @return [void]
       def stop
+        logger.info("Shutting down scheduler")
         @rufus_scheduler.shutdown
+        logger.info("Scheduler stopped")
       end
 
       private
+
+      def logger_component
+        'Agent::Scheduler'
+      end
 
       # Setup schedules from config
       #
@@ -52,8 +66,10 @@ module Langop
       def setup_schedules
         schedules = @agent.config.dig('agent', 'schedules') || []
 
+        logger.debug("Loading schedules from config", count: schedules.length)
+
         if schedules.empty?
-          puts "⚠️  No schedules configured, using default daily schedule"
+          logger.warn("No schedules configured, using default daily schedule")
           setup_default_schedule
           return
         end
@@ -61,6 +77,8 @@ module Langop
         schedules.each do |schedule|
           add_schedule(schedule)
         end
+
+        logger.info("#{schedules.length} schedule(s) configured")
       end
 
       # Add a single schedule
@@ -71,14 +89,17 @@ module Langop
         cron = schedule['cron']
         task = schedule['task']
 
-        @rufus_scheduler.cron(cron) do
-          puts "🕐 Executing scheduled task: #{task}"
-          result = @executor.execute(task)
-          puts "✅ Result: #{result[0..200]}#{'...' if result.length > 200}"
-          puts
-        end
+        logger.info("Scheduling task", cron: cron, task: task[0..100])
 
-        puts "📅 Scheduled: #{task} (#{cron})"
+        @rufus_scheduler.cron(cron) do
+          logger.timed("Scheduled task execution") do
+            logger.info("Executing scheduled task", task: task[0..100])
+            result = @executor.execute(task)
+            preview = result[0..200]
+            preview += '...' if result.length > 200
+            logger.info("Task completed", result_preview: preview)
+          end
+        end
       end
 
       # Setup default daily schedule
@@ -88,14 +109,20 @@ module Langop
         instructions = @agent.config.dig('agent', 'instructions') ||
                       "Check for updates and report status"
 
+        logger.info("Setting up default schedule", cron: '0 6 * * *',
+                     instructions: instructions[0..100])
+
         @rufus_scheduler.cron('0 6 * * *') do
-          puts "🕐 Executing daily task"
-          result = @executor.execute(instructions)
-          puts "✅ Result: #{result[0..200]}#{'...' if result.length > 200}"
-          puts
+          logger.timed("Daily task execution") do
+            logger.info("Executing daily task")
+            result = @executor.execute(instructions)
+            preview = result[0..200]
+            preview += '...' if result.length > 200
+            logger.info("Daily task completed", result_preview: preview)
+          end
         end
 
-        puts "📅 Scheduled: Daily at 6:00 AM"
+        logger.info("Scheduled: Daily at 6:00 AM")
       end
     end
   end

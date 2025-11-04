@@ -4,6 +4,8 @@ require 'ruby_llm'
 require 'ruby_llm/mcp'
 require 'json'
 require_relative 'config'
+require_relative '../logger'
+require_relative '../loggable'
 
 module Langop
   module Client
@@ -24,6 +26,8 @@ module Langop
     #     print chunk
     #   end
     class Base
+      include Langop::Loggable
+
       attr_reader :config, :clients, :chat
 
       # Initialize the client with configuration
@@ -34,6 +38,11 @@ module Langop
         @clients = []
         @chat = nil
         @debug = @config['debug'] || false
+
+        logger.debug("Client initialized",
+                      debug: @debug,
+                      llm_provider: @config.dig('llm', 'provider'),
+                      llm_model: @config.dig('llm', 'model'))
       end
 
       # Connect to all enabled MCP servers and configure LLM
@@ -122,12 +131,27 @@ module Langop
 
       private
 
+      def logger_component
+        'Client'
+      end
+
       # Configure RubyLLM with provider settings
       #
       # @raise [RuntimeError] If provider is unknown
       def configure_llm
         llm_config = @config['llm']
         provider = llm_config['provider']
+        model = llm_config['model']
+        timeout = llm_config['timeout'] || 300
+
+        logger.info("Configuring LLM",
+                     provider: provider,
+                     model: model,
+                     timeout: timeout)
+
+        if provider == 'openai_compatible' && llm_config['endpoint']
+          logger.debug("Using custom endpoint", endpoint: llm_config['endpoint'])
+        end
 
         RubyLLM.configure do |config|
           case provider
@@ -139,21 +163,23 @@ module Langop
           when 'anthropic'
             config.anthropic_api_key = llm_config['api_key']
           else
+            logger.error("Unknown LLM provider", provider: provider)
             raise "Unknown provider: #{provider}"
           end
 
           # Set timeout for LLM inference (default 300 seconds for slow local models)
           # RubyLLM uses request_timeout to control HTTP request timeouts
-          timeout = llm_config['timeout'] || 300
           config.request_timeout = timeout if config.respond_to?(:request_timeout=)
         end
 
         # Configure MCP timeout separately (MCP has its own timeout setting)
         # MCP request_timeout is in milliseconds, default is 300000ms (5 minutes)
         RubyLLM::MCP.configure do |config|
-          mcp_timeout_ms = (llm_config['timeout'] || 300) * 1000
+          mcp_timeout_ms = timeout * 1000
           config.request_timeout = mcp_timeout_ms if config.respond_to?(:request_timeout=)
         end
+
+        logger.info("LLM configuration complete")
       end
 
       # Connect to all enabled MCP servers
@@ -164,6 +190,8 @@ module Langop
 
         raise 'No MCP servers enabled in config' if enabled_servers.empty?
 
+        logger.info("Connecting to MCP servers", count: enabled_servers.length)
+
         all_tools = []
 
         enabled_servers.each do |server_config|
@@ -171,11 +199,25 @@ module Langop
           next unless client
 
           @clients << client
+          tool_count = client.tools.length
           all_tools.concat(client.tools)
+
+          logger.info("MCP server connected",
+                       server: server_config['name'],
+                       tool_count: tool_count,
+                       tools: client.tools.map(&:name))
         rescue StandardError => e
-          warn "Error connecting to #{server_config['name']}: #{e.message}"
-          warn e.backtrace.join("\n") if @debug
+          logger.error("Error connecting to MCP server",
+                       server: server_config['name'],
+                       error: e.message)
+          logger.debug("Connection error backtrace",
+                       server: server_config['name'],
+                       backtrace: e.backtrace.join("\n")) if @debug
         end
+
+        logger.info("MCP connection summary",
+                     connected_servers: @clients.length,
+                     total_tools: all_tools.length)
 
         # Create chat with all collected tools
         llm_config = @config['llm']
@@ -183,6 +225,8 @@ module Langop
         @chat = RubyLLM.chat(**chat_params)
 
         @chat.with_tools(*all_tools) unless all_tools.empty?
+
+        logger.info("Chat session initialized", with_tools: !all_tools.empty?)
       end
 
       # Connect to MCP server with exponential backoff retry logic
@@ -194,23 +238,42 @@ module Langop
         base_delay = 1.0
         max_delay = 30.0
 
+        logger.debug("Attempting to connect to MCP server",
+                     server: server_config['name'],
+                     transport: server_config['transport'],
+                     url: server_config['url'])
+
         (0..max_retries).each do |attempt|
-          return RubyLLM::MCP.client(
+          client = RubyLLM::MCP.client(
             name: server_config['name'],
             transport_type: server_config['transport'].to_sym,
             config: {
               url: server_config['url']
             }
           )
+
+          logger.info("Successfully connected to MCP server",
+                      server: server_config['name'],
+                      attempt: attempt + 1)
+          return client
         rescue StandardError => e
           if attempt < max_retries
             delay = [base_delay * (2**attempt), max_delay].min
-            warn "Failed to connect to #{server_config['name']} (attempt #{attempt + 1}/#{max_retries + 1}): #{e.message}"
-            warn "Retrying in #{delay}s..."
+            logger.warn("MCP server connection failed, retrying",
+                        server: server_config['name'],
+                        attempt: attempt + 1,
+                        max_attempts: max_retries + 1,
+                        error: e.message,
+                        retry_delay: delay)
             sleep(delay)
           else
-            warn "Failed to connect to #{server_config['name']} after #{max_retries + 1} attempts: #{e.message}"
-            warn e.backtrace.join("\n") if @debug
+            logger.error("MCP server connection failed after all retries",
+                         server: server_config['name'],
+                         attempts: max_retries + 1,
+                         error: e.message)
+            logger.debug("Final connection error backtrace",
+                         server: server_config['name'],
+                         backtrace: e.backtrace.join("\n")) if @debug
             return nil
           end
         end

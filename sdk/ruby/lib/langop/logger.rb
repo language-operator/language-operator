@@ -86,7 +86,7 @@ module Langop
     end
 
     def format_message(severity, timestamp, progname, msg)
-      msg # Already formatted by log method
+      "#{msg}\n" # Already formatted by log method, add newline
     end
 
     def format_json(severity, message, **metadata)

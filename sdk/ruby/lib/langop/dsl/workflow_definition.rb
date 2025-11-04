@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require_relative '../logger'
+require_relative '../loggable'
+
 module Langop
   module Dsl
     # Workflow definition for agent execution
@@ -20,6 +23,8 @@ module Langop
     #     end
     #   end
     class WorkflowDefinition
+      include Langop::Loggable
+
       attr_reader :steps, :step_order
 
       def initialize
@@ -36,7 +41,7 @@ module Langop
       # @yield Step definition block
       # @return [void]
       def step(name, tool: nil, params: {}, depends_on: nil, &block)
-        step_def = StepDefinition.new(name)
+        step_def = StepDefinition.new(name, logger: @logger)
 
         if tool
           step_def.tool(tool)
@@ -59,47 +64,65 @@ module Langop
       def execute(context = nil)
         results = {}
 
-        log_info "Executing workflow with #{@steps.size} steps"
+        logger.info("Executing workflow", step_count: @steps.size)
 
         @step_order.each do |step_name|
           step_def = @steps[step_name]
 
           # Check dependencies
           if step_def.dependencies.any?
+            logger.debug("Checking dependencies",
+                         step: step_name,
+                         dependencies: step_def.dependencies)
             step_def.dependencies.each do |dep|
               unless results.key?(dep)
+                logger.error("Dependency not satisfied",
+                             step: step_name,
+                             missing_dependency: dep)
                 raise "Step #{step_name} depends on #{dep}, but #{dep} has not been executed"
               end
             end
           end
 
           # Execute step
-          log_info "Executing step: #{step_name}"
-          result = step_def.execute(results, context)
+          logger.info("Executing step",
+                      step: step_name,
+                      tool: step_def.tool_name,
+                      has_prompt: !step_def.prompt_template.nil?)
+
+          result = logger.timed("Step execution") do
+            step_def.execute(results, context)
+          end
+
           results[step_name] = result
+          logger.info("Step completed", step: step_name)
         end
 
+        logger.info("Workflow execution completed", total_steps: @steps.size)
         results
       end
 
       private
 
-      def log_info(message)
-        puts "[Workflow] #{message}"
+      def logger_component
+        'Workflow'
       end
     end
 
     # Individual step definition
     class StepDefinition
+      include Langop::Loggable
+
       attr_reader :name, :dependencies, :tool_name, :tool_params, :prompt_template
 
-      def initialize(name)
+      def initialize(name, logger: nil)
         @name = name
         @tool_name = nil
         @tool_params = {}
         @prompt_template = nil
         @dependencies = []
         @execute_block = nil
+        @parent_logger = logger
       end
 
       # Set the tool to use
@@ -154,22 +177,28 @@ module Langop
       def execute_step(results, context)
         if @execute_block
           # Custom execution logic
+          logger.debug("Executing custom logic", step: @name)
           @execute_block.call(results, context)
         elsif @tool_name
           # Tool execution
           params = interpolate_params(@tool_params, results)
-          log_debug "Calling tool #{@tool_name} with params: #{params.inspect}"
+          logger.info("Calling tool",
+                      step: @name,
+                      tool: @tool_name,
+                      params: params)
           # In real implementation, this would call the actual tool
           "Tool #{@tool_name} executed with #{params.inspect}"
         elsif @prompt_template
           # LLM processing
           prompt = interpolate_template(@prompt_template, results)
-          log_debug "LLM prompt: #{prompt}"
+          logger.debug("LLM prompt",
+                       step: @name,
+                       prompt: prompt[0..200])
           # In real implementation, this would call the LLM
           "LLM processed: #{prompt}"
         else
           # No-op step
-          log_debug "Step #{@name} has no execution logic"
+          logger.debug("No execution logic defined", step: @name)
           nil
         end
       end
@@ -177,6 +206,14 @@ module Langop
       alias execute execute_step
 
       private
+
+      def logger
+        @parent_logger || super
+      end
+
+      def logger_component
+        "Step:#{@name}"
+      end
 
       # Interpolate parameters with results from previous steps
       #
@@ -214,10 +251,6 @@ module Langop
             results[step_name]&.to_s || "{#{step_name}}"
           end
         end
-      end
-
-      def log_debug(message)
-        puts "[Step:#{@name}] #{message}" if ENV['DEBUG']
       end
     end
   end
