@@ -22,10 +22,9 @@ import (
 
 // LanguageClusterSpec defines the desired state of LanguageCluster
 type LanguageClusterSpec struct {
-	// Namespace to create/use for this cluster
-	// If empty, auto-generates: <cluster-name>-ns
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	// LanguageCluster is now a namespaced resource.
+	// All resources referencing this cluster must be in the same namespace.
+	// No configuration needed - cluster provides logical grouping for resources.
 }
 
 // NetworkRule defines a single network policy rule
@@ -106,18 +105,14 @@ type LanguageClusterStatus struct {
 	// Phase of the cluster (Pending, Ready, Failed)
 	Phase string `json:"phase,omitempty"`
 
-	// Namespace created/used by this cluster
-	Namespace string `json:"namespace,omitempty"`
-
 	// Conditions
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:scope=Namespaced
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-//+kubebuilder:printcolumn:name="Namespace",type=string,JSONPath=`.status.namespace`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageCluster is the Schema for the languageclusters API

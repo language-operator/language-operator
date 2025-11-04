@@ -12,14 +12,11 @@ spec:
     listKind: LanguageClusterList
     plural: languageclusters
     singular: languagecluster
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.phase
       name: Phase
-      type: string
-    - jsonPath: .status.namespace
-      name: Namespace
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -48,12 +45,6 @@ spec:
             type: object
           spec:
             description: LanguageClusterSpec defines the desired state of LanguageCluster
-            properties:
-              namespace:
-                description: |-
-                  Namespace to create/use for this cluster
-                  If empty, auto-generates: <cluster-name>-ns
-                type: string
             type: object
           status:
             description: LanguageClusterStatus defines the observed state
@@ -128,9 +119,6 @@ spec:
                   - type
                   type: object
                 type: array
-              namespace:
-                description: Namespace created/used by this cluster
-                type: string
               phase:
                 description: Phase of the cluster (Pending, Ready, Failed)
                 type: string

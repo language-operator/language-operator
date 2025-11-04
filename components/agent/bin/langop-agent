@@ -9,7 +9,48 @@
 # The operator synthesizes agent DSL code from natural language instructions
 # and mounts it as a ConfigMap at AGENT_CODE_PATH.
 
+# Disable output buffering for immediate log visibility
+$stdout.sync = true
+$stderr.sync = true
+
 require 'langop'
+
+# Wait for tool sidecars to be ready
+def wait_for_tools(config)
+  return unless config['mcp_servers']
+
+  require 'net/http'
+  require 'uri'
+
+  servers = config['mcp_servers'] || []
+  servers.each do |server|
+    url = server['url']
+    next unless url&.start_with?('http')
+
+    uri = URI.parse(url)
+    max_attempts = 30
+    delay = 1
+
+    puts "⏳ Waiting for tool at #{uri.host}:#{uri.port}..."
+
+    max_attempts.times do |attempt|
+      begin
+        # Try to connect to the health endpoint or root
+        response = Net::HTTP.start(uri.host, uri.port, open_timeout: 1, read_timeout: 1) do |http|
+          http.head('/')
+        end
+        puts "✅ Tool ready at #{uri.host}:#{uri.port}"
+        break
+      rescue StandardError => e
+        if attempt < max_attempts - 1
+          sleep(delay)
+        else
+          puts "⚠️  Tool at #{uri.host}:#{uri.port} not ready after #{max_attempts} attempts"
+        end
+      end
+    end
+  end
+end
 
 # Configuration
 code_path = ENV.fetch('AGENT_CODE_PATH', '/etc/agent/code/agent.rb')
@@ -23,12 +64,45 @@ if File.exist?(code_path)
   puts "✅ Found synthesized agent code, loading..."
 
   begin
-    # Load the synthesized DSL code
-    load code_path
+    # Load the synthesized DSL code using the agent loader
+    # This provides the DSL context with the 'agent' method
+    Langop::Dsl.load_agent_file(code_path)
 
-    # The synthesized code should define an agent and call run!
-    # If it doesn't, we'll get to the fallback below
+    # The synthesized code should define an agent
     puts "✅ Agent code loaded successfully"
+
+    # Get the agent from the registry
+    agents = Langop::Dsl.agent_registry.all
+    if agents.empty?
+      puts "❌ No agent defined in code"
+      exit 1
+    end
+
+    agent_def = agents.first
+    puts "🚀 Running agent: #{agent_def.name}"
+
+    # Execute the agent based on its definition
+    # For now, create a basic executor with the environment config
+    # TODO: Implement proper agent execution based on AgentDefinition workflows
+    config = Langop::Client::Config.from_env
+    agent = Langop::Agent::Base.new(config)
+
+    # Wait for tool sidecars to be ready before connecting
+    # This prevents connection failures during pod startup
+    wait_for_tools(config)
+
+    agent.connect!
+
+    # Get instructions from agent definition or environment
+    instructions = agent_def.description || ENV['AGENT_INSTRUCTIONS']
+    if instructions && !instructions.empty?
+      puts "📋 Instructions: #{instructions[0..200]}..."
+      executor = Langop::Agent::Executor.new(agent)
+      executor.execute(instructions)
+    else
+      puts "❌ No instructions provided"
+      exit 1
+    end
 
   rescue StandardError => e
     puts "❌ Error loading agent code: #{e.message}"

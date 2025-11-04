@@ -19,17 +19,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - namespaces
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - persistentvolumeclaims
   verbs:
   - create
@@ -147,12 +136,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languageclusters/finalizers
-  verbs:
-  - update
 - apiGroups:
   - langop.io
   resources:

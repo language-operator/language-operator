@@ -452,17 +452,18 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 		return nil
 	}
 
-	// Determine target namespace
+	// Determine target namespace - always use agent's namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	targetNamespace := agent.Namespace
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
 			return err
 		}
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
 		}
-		targetNamespace = cluster.Status.Namespace
+		// Cluster is in same namespace - agent.Namespace is correct
 	}
 
 	// Set defaults from WorkspaceSpec
@@ -543,10 +544,10 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -554,9 +555,6 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef
@@ -702,10 +700,10 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -713,9 +711,6 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef

@@ -2,5 +2,5 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
   name: demo
-spec:
   namespace: demo
+spec: {}

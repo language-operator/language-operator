@@ -148,10 +148,10 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 	targetNamespace := tool.Namespace
 	labels := GetCommonLabels(tool.Name, "LanguageTool")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if tool.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef, Namespace: tool.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -160,9 +160,6 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 			// Return error to trigger requeue
 			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = tool.Spec.ClusterRef
@@ -235,10 +232,10 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 	targetNamespace := tool.Namespace
 	labels := GetCommonLabels(tool.Name, "LanguageTool")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if tool.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef, Namespace: tool.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -246,9 +243,6 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = tool.Spec.ClusterRef

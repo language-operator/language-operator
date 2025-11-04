@@ -154,10 +154,10 @@ func (r *LanguageClientReconciler) reconcileDeployment(ctx context.Context, lc *
 	targetNamespace := lc.Namespace
 	labels := GetCommonLabels(lc.Name, "LanguageClient")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if lc.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: lc.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: lc.Spec.ClusterRef, Namespace: lc.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -165,9 +165,6 @@ func (r *LanguageClientReconciler) reconcileDeployment(ctx context.Context, lc *
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", lc.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = lc.Spec.ClusterRef
@@ -238,10 +235,10 @@ func (r *LanguageClientReconciler) reconcileService(ctx context.Context, lc *lan
 	targetNamespace := lc.Namespace
 	labels := GetCommonLabels(lc.Name, "LanguageClient")
 
-	// If cluster ref is set, fetch cluster and use its namespace
+	// If cluster ref is set, verify cluster exists in same namespace
 	if lc.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: lc.Spec.ClusterRef}, cluster); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: lc.Spec.ClusterRef, Namespace: lc.Namespace}, cluster); err != nil {
 			return err
 		}
 
@@ -249,9 +246,6 @@ func (r *LanguageClientReconciler) reconcileService(ctx context.Context, lc *lan
 		if cluster.Status.Phase != "Ready" {
 			return fmt.Errorf("cluster %s is not ready yet", lc.Spec.ClusterRef)
 		}
-
-		// Use cluster's namespace
-		targetNamespace = cluster.Status.Namespace
 
 		// Add cluster label
 		labels["langop.io/cluster"] = lc.Spec.ClusterRef
