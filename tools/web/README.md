@@ -110,7 +110,13 @@ Run the server:
 make run
 ```
 
-Test all endpoints:
+Run unit tests:
+
+```bash
+make spec
+```
+
+Test all endpoints (integration):
 
 ```bash
 make test
@@ -127,6 +133,26 @@ Auto-fix linting issues:
 ```bash
 make lint-fix
 ```
+
+### Testing
+
+The project includes comprehensive test coverage using RSpec:
+
+- **Unit tests** for all 4 web tools (`web_search`, `web_fetch`, `web_headers`, `web_status`)
+- **Integration tests** for tool loading and registry
+- **Mocked HTTP requests** using WebMock to avoid external dependencies
+- **Real fixtures** captured from actual DuckDuckGo responses
+
+Test coverage includes:
+- Parameter validation
+- URL validation
+- Error handling
+- Edge cases (empty results, malformed HTML, network errors)
+- All HTTP status codes
+- HTML stripping and text extraction
+- Content truncation
+
+Run tests with `make spec` to execute the full test suite in Docker.
 
 ## Documentation
 

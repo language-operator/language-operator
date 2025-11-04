@@ -1,164 +1,13 @@
 # Language Operator Backlog
 
-Simple chronological checklist of what to do next.
+When asked to iterate, plan the top item on the backlog.
 
-## Completed ✅
+## Prioritized Requests
 
-* ~~Create Ruby SDK gem and build pipeline~~
-* ~~Build component image hierarchy (base → ruby → client/tool/agent)~~
-* ~~Implement LanguageCluster controller (namespace management)~~
-* ~~Implement LanguageAgent controller (deployments, cronjobs, workspace, networking)~~
-* ~~Implement LanguageTool controller (service + sidecar modes)~~
-* ~~Implement LanguageModel controller (LiteLLM proxy)~~
-* ~~Add DNS-based egress rules with automatic IP resolution~~
-* ~~Create working E2E verification script (examples/simple-agent/verify.sh)~~
-* ~~Fix status phase values (Running vs Ready)~~
-* ~~Fix agent deployment creation for autonomous mode~~
-* ~~Set up CI/CD for automated image builds~~
-* ~~Publish Ruby gem to private registry~~
-* ~~Build and push all component images to registry~~
-* ~~Implement Persona integration in LanguageAgent controller~~
-* ~~Fix Ruby SDK ruby_llm dependency issues~~
-* ~~Fix sidecar tool injection bug~~
-* ~~Add environment variable config support (MCP_SERVERS, MODEL_ENDPOINTS)~~
-* ~~Add TCP readiness probes to sidecar containers~~
-* ~~Deploy operator to cluster with all fixes~~
-* ~~Run end-to-end demo (LanguageCluster + Model + Tool + Agent)~~
-* ~~Verify agent pod runs with sidecar + workspace~~
-* ~~Re-enable automated testing in CI~~
-* ~~Add basic controller unit tests~~
-* ~~Standardize all Makefiles with Docker targets (build, scan, shell, run)~~
-* ~~Update .gitignore for Go build artifacts~~
-* ~~Add retry logic to agent connection code~~
-  * ~~Handle startup race conditions gracefully~~
-  * ~~Retry MCP server connections on failure~~
-  * ~~Add exponential backoff~~
-* ~~DRY Phase 1: Fix agent inheritance~~
-  * ~~Change components/agent to inherit from Langop::Client::Base~~
-  * ~~Update components/agent/Gemfile to depend on langop gem~~
-  * ~~Fix require statements in agent code~~
-* ~~DRY Phase 2: Consolidate client code (363 lines removed)~~
-  * ~~Delete duplicate client files base.rb and config.rb~~
-  * ~~Create namespace wrapper Based::Client = Langop::Client~~
-  * ~~Remove duplicate gem dependencies~~
-* ~~DRY Phase 3: Consolidate DSL code (950 lines removed)~~
-  * ~~Delete 8 duplicate DSL files (adapter, config, helpers, http, parameter_definition, registry, shell, tool_definition)~~
-  * ~~Create namespace wrapper Based::Dsl = Langop::Dsl~~
-  * ~~Update tool server and loader to use gem DSL~~
-* ~~DRY Phase 4: Move reusable code to SDK for better developer experience~~
-  * ~~Move Context, ExecutionContext, and ToolLoader to SDK~~
-  * ~~Update component wrapper to alias SDK classes~~
-  * ~~SDK now provides complete tool development experience~~
-* ~~Complete migration from "Based" to "Langop" nomenclature~~
-  * ~~Updated all Ruby code, Go code, configurations, and documentation~~
-  * ~~Fixed .gitignore to track agent bin/ directories~~
-  * ~~Removed all proof-of-concept naming~~
-* ~~Add test targets to all Makefiles for compliance~~
-  * ~~Implemented test targets in 9 non-compliant Makefiles~~
-  * ~~Achieved 100% compliance with MUST-have-test-target requirement~~
-* ~~Documentation Updates~~
-  * ~~Update STATUS.md (Ruby SDK, CI/CD, persona integration, Makefile standardization)~~
-  * ~~Update README.md (DNS resolution timing, wildcard DNS behavior)~~
-  * ~~Update CLAUDE.md (ruby_llm dependency findings, project conventions)~~
-* ~~End-to-End Testing & Deployment~~
-  * ~~Move agent code from components/agent/lib to SDK gem~~
-  * ~~Fix agent image to inherit from ruby (not client)~~
-  * ~~Fix Langop::VERSION constant loading in DSL~~
-  * ~~Build and push all updated images with fresh SDK gem~~
-  * ~~Run E2E verification script - all checks passed~~
-  * ~~Fix CI build order (agent depends on ruby, tools depend on tool component)~~
-  * ~~Verify agent pod runs successfully (2/2 containers)~~
-  * ~~Verify tool sidecar loads without errors~~
-  * ~~Verify model proxy is healthy~~
-  * ~~Verify all CRDs reach Running/Ready state~~
-* ~~Agent DSL & Synthesis Pipeline~~
-  * ~~Phase 1: Create Agent DSL in Ruby SDK~~
-    * ~~Create agent_definition.rb, workflow_definition.rb, agent_context.rb~~
-    * ~~Update dsl.rb to include agent DSL methods~~
-    * ~~Update langop/agent entrypoint to auto-load /etc/agent/code/agent.rb~~
-    * ~~Add comprehensive tests (96 examples, 0 failures, 23 pending)~~
-  * ~~Phase 2: Implement Operator Synthesis Logic~~
-    * ~~Create synthesis package with gollm integration~~
-    * ~~Add SynthesizeAgent() and DistillPersona() methods~~
-    * ~~Add reconcileCodeConfigMap() to controller~~
-    * ~~Implement SHA256 hash-based change detection~~
-    * ~~Mount code ConfigMap to Deployment and CronJob~~
-    * ~~Initialize synthesizer in operator main.go~~
-    * ~~Add CreateOrUpdateConfigMapWithAnnotations() utility~~
 
-## In Progress 🚧
+* Audit web_tool functionality and add test coverage
+* LanguageCluster should deploy a cluster dashboard with information about the cluster (tools, models, personas, agents) like events and logs and status details
 
-(none)
-
-## Next Up 📋
-
-### Agent DSL & Synthesis Pipeline
-
-**Vision**: Natural language instructions → LLM-generated DSL → ConfigMap → Executed by agent container
-
-**Architecture**:
-- User creates LanguageAgent CRD with natural language instructions
-- Operator validates tools/models exist
-- Operator calls LLM to synthesize Ruby DSL code from instructions
-- Operator stores synthesized code in ConfigMap (mounted as volume)
-- langop/agent container auto-loads synthesized code on boot
-- Agent executes synthesized behavior
-
-**Design Decisions**:
-- Synthesis LLM: Same model as agent uses (future: allow SOTA model override)
-- Code regeneration: Only when instructions change (users wanting custom agents build from components/agent)
-- Failure handling: Log detailed errors, mark LanguageAgent status as Failed, emit K8s events
-- Persona handling: Distill persona into single-paragraph system message via LLM
-
-**Phase 1: DSL Foundation (SDK)** ✅
-* ~~Create Agent DSL module in SDK~~
-  * ~~`sdk/ruby/lib/langop/dsl/agent_definition.rb` - Agent DSL builder~~
-  * ~~`sdk/ruby/lib/langop/dsl/agent_context.rb` - DSL context for evaluation~~
-  * ~~`sdk/ruby/lib/langop/dsl/workflow_definition.rb` - Workflow steps DSL~~
-  * ~~Update `sdk/ruby/lib/langop/dsl.rb` to include agent DSL~~
-* ~~Define agent DSL syntax: `agent "name" do ... end` with schedule, objectives, workflow, constraints~~
-* ~~Update langop/agent image entrypoint to auto-load `/etc/agent/code/agent.rb`~~
-* ~~Add `AGENT_CODE_PATH` environment variable for override~~
-* ~~Add SDK tests for agent DSL parsing and execution~~
-
-**Phase 2: Operator Synthesis Logic** ✅
-* ~~Add synthesis controller methods~~
-  * ~~`synthesizeAgentCode()` - Call LLM to generate DSL from instructions~~
-  * ~~`distillPersona()` - Distill persona into single-paragraph system message~~
-  * ~~`validateSynthesizedCode()` - Basic Ruby syntax validation~~
-  * ~~`createCodeConfigMap()` - Store synthesized code in ConfigMap~~
-  * ~~`updateCodeConfigMap()` - Update on instruction changes~~
-* ~~Add synthesis LLM configuration (env var or ConfigMap)~~
-* ~~Support local/remote LLM for synthesis~~
-* ~~Create structured prompt templates for synthesis~~
-* ~~ConfigMap management with owner references for cleanup~~
-* ~~Hash annotation on Deployment to trigger restart on code change~~
-
-**Phase 3: Status & Error Handling** ✅
-* ~~Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`~~
-* ~~Event recording: `SynthesisStarted`, `SynthesisSucceeded`, `SynthesisFailed`, `ValidationFailed`~~
-* ~~Add SynthesisInfo status type with detailed metrics~~
-  * ~~LastSynthesisTime, SynthesisModel, SynthesisDuration~~
-  * ~~CodeHash, InstructionsHash, ValidationErrors~~
-  * ~~SynthesisAttempts counter~~
-* ~~Failure modes implemented:~~
-  * ~~Invalid syntax → Status: Failed, Event emitted~~
-  * ~~LLM failures → Event with error details~~
-
-**Phase 4: Surgical Re-synthesis** ✅
-* ~~Change detection: Compare old vs new LanguageAgent spec~~
-* ~~Instruction changes → full re-synthesis~~
-* ~~Tool/model ref changes → env var update only (no re-synthesis)~~
-* ~~Persona changes → re-distill without full re-synthesis~~
-* ~~Multi-hash annotation tracking (instructions, tools, models, persona)~~
-* Future optimization: Cache synthesis results, incremental updates
-
-**Phase 5: Testing & Documentation** (Partially Complete)
-* ~~Operator tests with mock LLM synthesis~~ ✅
-  * ~~MockSynthesizer with AgentSynthesizer interface~~
-  * ~~3 comprehensive controller tests~~
-  * ~~Coverage: 7.9% → 27.0%~~
-* ~~Test ConfigMap creation/update and re-synthesis triggers~~ ✅
 * E2E test: Create LanguageAgent with NL → verify synthesis → verify execution → update instructions → verify re-synthesis
 * Update sdk/ruby/README.md with agent DSL examples
 * Add synthesis architecture documentation
@@ -248,7 +97,6 @@ Simple chronological checklist of what to do next.
   * Postgres support
   * S3 support
 
-## Known Issues & Limitations 🐛
 
 ### Known Limitations
 * DNS resolution is snapshot-based (refreshes on reconciliation, not continuous)
@@ -278,20 +126,129 @@ Simple chronological checklist of what to do next.
   * Caching - spec exists
   * Multi-region support - spec exists
 
-### Fixed Issues
-* ~~Agent logs connection error on first startup~~ - FIXED with retry logic
-* ~~**Broken inheritance**: Agent inherits from `Based::Client::Base` instead of `Langop::Client::Base`~~ - FIXED (Phase 1)
-* ~~**Code duplication**: 1,600+ lines duplicated between SDK gem and components~~ - FIXED (Phases 1-4 complete, removed 1,313 lines)
-* ~~**Agent code duplication**: Agent code existed in both SDK and components/agent/lib~~ - FIXED (moved to SDK, deleted 300+ lines from components)
-* ~~**VERSION constant error**: DSL module didn't require version.rb~~ - FIXED (added require_relative 'version' to dsl.rb)
-* ~~**CI build order**: Agent depended on client, tools depended on ruby directly~~ - FIXED (agent depends on ruby, tools depend on tool component)
-* ~~**Status phase values**: Controllers used "Ready" but CRDs required "Running"~~ - FIXED
-* ~~**Sidecar injection**: Tool controller created deployments for sidecar mode~~ - FIXED
-* ~~**8-second timeout**: MCP requests timed out despite 120s config~~ - FIXED (separate MCP.configure block)
-* ~~**Helm release auth**: Workflow failed with Forgejo authentication~~ - FIXED (native Helm OCI push)
 
-## Notes
 
-* Focus: Get working demo running end-to-end
-* Priority: Features > Infrastructure > Testing > Polish
-* Target: Agent executing tasks with tools, models, and personas
+
+## Completed Requests ✅
+
+* ~~Create Ruby SDK gem and build pipeline~~
+* ~~Build component image hierarchy (base → ruby → client/tool/agent)~~
+* ~~Implement LanguageCluster controller (namespace management)~~
+* ~~Implement LanguageAgent controller (deployments, cronjobs, workspace, networking)~~
+* ~~Implement LanguageTool controller (service + sidecar modes)~~
+* ~~Implement LanguageModel controller (LiteLLM proxy)~~
+* ~~Add DNS-based egress rules with automatic IP resolution~~
+* ~~Create working E2E verification script (examples/simple-agent/verify.sh)~~
+* ~~Fix status phase values (Running vs Ready)~~
+* ~~Fix agent deployment creation for autonomous mode~~
+* ~~Set up CI/CD for automated image builds~~
+* ~~Publish Ruby gem to private registry~~
+* ~~Build and push all component images to registry~~
+* ~~Implement Persona integration in LanguageAgent controller~~
+* ~~Fix Ruby SDK ruby_llm dependency issues~~
+* ~~Fix sidecar tool injection bug~~
+* ~~Add environment variable config support (MCP_SERVERS, MODEL_ENDPOINTS)~~
+* ~~Add TCP readiness probes to sidecar containers~~
+* ~~Deploy operator to cluster with all fixes~~
+* ~~Run end-to-end demo (LanguageCluster + Model + Tool + Agent)~~
+* ~~Verify agent pod runs with sidecar + workspace~~
+* ~~Re-enable automated testing in CI~~
+* ~~Add basic controller unit tests~~
+* ~~Standardize all Makefiles with Docker targets (build, scan, shell, run)~~
+* ~~Update .gitignore for Go build artifacts~~
+* ~~Add retry logic to agent connection code~~
+  * ~~Handle startup race conditions gracefully~~
+  * ~~Retry MCP server connections on failure~~
+  * ~~Add exponential backoff~~
+* ~~DRY Phase 1: Fix agent inheritance~~
+  * ~~Change components/agent to inherit from Langop::Client::Base~~
+  * ~~Update components/agent/Gemfile to depend on langop gem~~
+  * ~~Fix require statements in agent code~~
+* ~~DRY Phase 2: Consolidate client code (363 lines removed)~~
+  * ~~Delete duplicate client files base.rb and config.rb~~
+  * ~~Create namespace wrapper Based::Client = Langop::Client~~
+  * ~~Remove duplicate gem dependencies~~
+* ~~DRY Phase 3: Consolidate DSL code (950 lines removed)~~
+  * ~~Delete 8 duplicate DSL files (adapter, config, helpers, http, parameter_definition, registry, shell, tool_definition)~~
+  * ~~Create namespace wrapper Based::Dsl = Langop::Dsl~~
+  * ~~Update tool server and loader to use gem DSL~~
+* ~~DRY Phase 4: Move reusable code to SDK for better developer experience~~
+  * ~~Move Context, ExecutionContext, and ToolLoader to SDK~~
+  * ~~Update component wrapper to alias SDK classes~~
+  * ~~SDK now provides complete tool development experience~~
+* ~~Complete migration from "Based" to "Langop" nomenclature~~
+  * ~~Updated all Ruby code, Go code, configurations, and documentation~~
+  * ~~Fixed .gitignore to track agent bin/ directories~~
+  * ~~Removed all proof-of-concept naming~~
+* ~~Add test targets to all Makefiles for compliance~~
+  * ~~Implemented test targets in 9 non-compliant Makefiles~~
+  * ~~Achieved 100% compliance with MUST-have-test-target requirement~~
+* ~~Documentation Updates~~
+  * ~~Update STATUS.md (Ruby SDK, CI/CD, persona integration, Makefile standardization)~~
+  * ~~Update README.md (DNS resolution timing, wildcard DNS behavior)~~
+  * ~~Update CLAUDE.md (ruby_llm dependency findings, project conventions)~~
+* ~~End-to-End Testing & Deployment~~
+  * ~~Move agent code from components/agent/lib to SDK gem~~
+  * ~~Fix agent image to inherit from ruby (not client)~~
+  * ~~Fix Langop::VERSION constant loading in DSL~~
+  * ~~Build and push all updated images with fresh SDK gem~~
+  * ~~Run E2E verification script - all checks passed~~
+  * ~~Fix CI build order (agent depends on ruby, tools depend on tool component)~~
+  * ~~Verify agent pod runs successfully (2/2 containers)~~
+  * ~~Verify tool sidecar loads without errors~~
+  * ~~Verify model proxy is healthy~~
+  * ~~Verify all CRDs reach Running/Ready state~~
+* ~~Agent DSL & Synthesis Pipeline~~
+  * ~~Phase 1: Create Agent DSL in Ruby SDK~~
+    * ~~Create agent_definition.rb, workflow_definition.rb, agent_context.rb~~
+    * ~~Update dsl.rb to include agent DSL methods~~
+    * ~~Update langop/agent entrypoint to auto-load /etc/agent/code/agent.rb~~
+    * ~~Add comprehensive tests (96 examples, 0 failures, 23 pending)~~
+  * ~~Phase 2: Implement Operator Synthesis Logic~~
+    * ~~Create synthesis package with gollm integration~~
+    * ~~Add SynthesizeAgent() and DistillPersona() methods~~
+    * ~~Add reconcileCodeConfigMap() to controller~~
+    * ~~Implement SHA256 hash-based change detection~~
+    * ~~Mount code ConfigMap to Deployment and CronJob~~
+    * ~~Initialize synthesizer in operator main.go~~
+    * ~~Add CreateOrUpdateConfigMapWithAnnotations() utility~~
+* ~~Create Agent DSL module in SDK~~
+  * ~~`sdk/ruby/lib/langop/dsl/agent_definition.rb` - Agent DSL builder~~
+  * ~~`sdk/ruby/lib/langop/dsl/agent_context.rb` - DSL context for evaluation~~
+  * ~~`sdk/ruby/lib/langop/dsl/workflow_definition.rb` - Workflow steps DSL~~
+  * ~~Update `sdk/ruby/lib/langop/dsl.rb` to include agent DSL~~
+* ~~Define agent DSL syntax: `agent "name" do ... end` with schedule, objectives, workflow, constraints~~
+* ~~Update langop/agent image entrypoint to auto-load `/etc/agent/code/agent.rb`~~
+* ~~Add `AGENT_CODE_PATH` environment variable for override~~
+* ~~Add SDK tests for agent DSL parsing and execution~~
+* ~~Add synthesis controller methods~~
+  * ~~`synthesizeAgentCode()` - Call LLM to generate DSL from instructions~~
+  * ~~`distillPersona()` - Distill persona into single-paragraph system message~~
+  * ~~`validateSynthesizedCode()` - Basic Ruby syntax validation~~
+  * ~~`createCodeConfigMap()` - Store synthesized code in ConfigMap~~
+  * ~~`updateCodeConfigMap()` - Update on instruction changes~~
+* ~~Add synthesis LLM configuration (env var or ConfigMap)~~
+* ~~Support local/remote LLM for synthesis~~
+* ~~Create structured prompt templates for synthesis~~
+* ~~ConfigMap management with owner references for cleanup~~
+* ~~Hash annotation on Deployment to trigger restart on code change~~
+* ~~Add status conditions: `Synthesized`, `Validated`, `CodeUpdated`~~
+* ~~Event recording: `SynthesisStarted`, `SynthesisSucceeded`, `SynthesisFailed`, `ValidationFailed`~~
+* ~~Add SynthesisInfo status type with detailed metrics~~
+  * ~~LastSynthesisTime, SynthesisModel, SynthesisDuration~~
+  * ~~CodeHash, InstructionsHash, ValidationErrors~~
+  * ~~SynthesisAttempts counter~~
+* ~~Failure modes implemented:~~
+  * ~~Invalid syntax → Status: Failed, Event emitted~~
+  * ~~LLM failures → Event with error details~~
+* ~~Change detection: Compare old vs new LanguageAgent spec~~
+* ~~Instruction changes → full re-synthesis~~
+* ~~Tool/model ref changes → env var update only (no re-synthesis)~~
+* ~~Persona changes → re-distill without full re-synthesis~~
+* ~~Multi-hash annotation tracking (instructions, tools, models, persona)~~
+* ~~Operator tests with mock LLM synthesis~~ ✅
+  * ~~MockSynthesizer with AgentSynthesizer interface~~
+  * ~~3 comprehensive controller tests~~
+  * ~~Coverage: 7.9% → 27.0%~~
+* ~~Test ConfigMap creation/update and re-synthesis triggers~~ ✅
+

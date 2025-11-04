@@ -1,0 +1,7 @@
+HTTP/2 200
+content-type: text/html
+etag: "bc2473a18e003bdb249eba5ce893033f:1760028122.592274"
+last-modified: Thu, 09 Oct 2025 16:42:02 GMT
+cache-control: max-age=86000
+date: Tue, 04 Nov 2025 19:23:18 GMT
+alt-svc: h3=":443"; ma=93600

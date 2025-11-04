@@ -12,36 +12,44 @@ This example demonstrates a complete working deployment of the language-operator
 2. language-operator installed
 3. Local LLM running (e.g., LM Studio) or OpenAI API key
 
-## Automated Verification
+## Quick Start
 
-The easiest way to test this example is using the automated verification script:
+### Deploy the Example
+
+Use the deployment script to deploy all resources in the correct order with proper waiting:
 
 ```bash
-# Run full end-to-end verification
+# Deploy all resources
+./deploy.sh
+```
+
+The script will:
+1. Create the namespace
+2. Deploy LanguageCluster
+3. Deploy LanguagePersona
+4. Deploy and wait for LanguageModel to be ready
+5. Deploy LanguageTool
+6. Deploy LanguageAgent and wait for synthesis
+
+### Verify the Deployment
+
+After deployment, verify that all resources are working:
+
+```bash
+# Run verification checks
 ./verify.sh
 
 # Run with verbose output for debugging
 ./verify.sh --verbose
-
-# Continue on errors (don't exit on first failure)
-./verify.sh --no-fail-fast
-
-# Custom timeout (default: 300 seconds)
-./verify.sh --timeout 600
-
-# Clean up after testing
-./verify.sh --cleanup-only
 ```
 
-The verification script will:
-1. Check prerequisites (kubectl, operator running)
-2. Clean up any existing resources
-3. Apply all manifests in the correct order
-4. Wait for resources to become ready
-5. Verify pod status, sidecar injection, and workspace PVC
-6. Check environment variables and configurations
-7. Examine logs for errors
-8. Print a detailed summary
+The verification script will check:
+1. Namespace exists
+2. LanguageCluster is deployed
+3. LanguagePersona is deployed
+4. LanguageModel is Ready and pod is running
+5. LanguageTool is deployed
+6. LanguageAgent is Synthesized with deployment and pods ready
 
 ## Manual Deployment
 
@@ -115,6 +123,35 @@ kubectl delete languagecluster demo-cluster -n demo
 ```
 
 ## Troubleshooting
+
+### Deployment Issues
+
+If deployment fails or resources don't become ready:
+
+```bash
+# Check operator logs for synthesis errors
+kubectl logs -n kube-system -l app.kubernetes.io/name=language-operator
+
+# Check if model is ready before agent deployment
+kubectl get languagemodel magistral-small-2509 -n demo -o jsonpath='{.status.phase}'
+
+# Check agent synthesis status
+kubectl get languageagent demo-agent -n demo -o jsonpath='{.status.conditions[?(@.type=="Synthesized")]}'
+```
+
+**Tip**: Always ensure models are Ready before deploying agents. The deploy.sh script handles this automatically with proper waiting.
+
+### Agent Crash Loops
+
+If the agent pod is restarting frequently, check for permission errors:
+
+```bash
+# Check agent logs for errors
+kubectl logs -n demo -l app=demo-agent -c agent --tail=50
+
+# Common issue: workspace permission denied
+# The agent will now log output instead of crashing
+```
 
 ### ImagePullBackOff Errors
 
