@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -601,6 +602,9 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				},
 				Spec: corev1.PodSpec{
 					Containers: containers,
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: ptr.To[int64](101), // langop group
+					},
 				},
 			},
 		}
@@ -757,6 +761,9 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 						Spec: corev1.PodSpec{
 							RestartPolicy: corev1.RestartPolicyOnFailure,
 							Containers:    containers,
+							SecurityContext: &corev1.PodSecurityContext{
+								FSGroup: ptr.To[int64](101), // langop group
+							},
 						},
 					},
 				},
