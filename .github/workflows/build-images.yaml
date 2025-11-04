@@ -301,7 +301,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build tool images (web, email, sms, doc)
+  # Build tool images (web, email)
   build-tools:
     runs-on: builder
     permissions:
@@ -310,7 +310,7 @@ jobs:
     needs: build-ruby-components  # Tools depend on tool component (which inherits from ruby)
     strategy:
       matrix:
-        tool: [web, email, sms, doc]
+        tool: [web, email]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
