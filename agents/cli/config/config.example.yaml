@@ -36,26 +36,12 @@ mcp_servers:
     enabled: true
     description: "Main based MCP server with core tools"
 
-  # Documentation tools server
-  - name: doc-tools
-    url: http://doc:80/mcp
-    transport: streamable
-    enabled: true
-    description: "Documentation generation and man page tools"
-
   # Email tools server
   - name: email-tools
     url: http://email:80/mcp
     transport: streamable
     enabled: true
     description: "Email sending and management tools"
-
-  # SMS tools server
-  - name: sms-tools
-    url: http://sms:80/mcp
-    transport: streamable
-    enabled: true
-    description: "SMS sending tools (Twilio/Vonage)"
 
   # Web tools server
   - name: web-tools

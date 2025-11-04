@@ -31,7 +31,6 @@ spec:
     model: llama3.2
     endpoint: http://llm-service:8080/v1
   tools:
-    - doc-tools
     - web-tools
 EOF
 ```
@@ -57,11 +56,6 @@ llm:
   endpoint: http://192.168.68.54:1234/v1
 
 mcp_servers:
-  - name: doc-tools
-    url: http://doc:80/mcp
-    transport: streamable
-    enabled: true
-
   - name: web-tools
     url: http://web:80/mcp
     transport: streamable

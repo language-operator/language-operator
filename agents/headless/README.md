@@ -30,7 +30,6 @@ spec:
     model: llama3.2
     endpoint: http://llm-service:8080/v1
   tools:
-    - doc-tools
     - web-tools
   goals:
     objectives:

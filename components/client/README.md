@@ -51,12 +51,6 @@ mcp_servers:
     enabled: true
     description: "Main based MCP server"
 
-  - name: doc-tools
-    url: http://doc:80/mcp
-    transport: streamable
-    enabled: true
-    description: "Documentation tools"
-
   - name: email-tools
     url: http://email:80/mcp
     transport: streamable
@@ -179,20 +173,16 @@ OPENAI_API_KEY=sk-... ruby chat.rb
 
 📝 LLM: llama3.2 (custom endpoint: http://host.docker.internal:11434/v1)
 
-🔌 Connecting to 5 MCP server(s)...
+🔌 Connecting to 3 MCP server(s)...
 
   • based-server: http://server:80/mcp
     └─ No tools available
-  • doc-tools: http://doc:80/mcp
-    └─ 4 tool(s): generate_docs, view_man_page, search_docs, list_docs
   • email-tools: http://email:80/mcp
     └─ 3 tool(s): send_email, send_bulk_email, validate_email
-  • sms-tools: http://sms:80/mcp
-    └─ 3 tool(s): send_sms, send_bulk_sms, get_sms_status
   • web-tools: http://web:80/mcp
     └─ 4 tool(s): fetch_url, scrape_page, http_request, extract_links
 
-✅ Ready with 14 tool(s) from 5 server(s)
+✅ Ready with 7 tool(s) from 3 server(s)
 
 Type your messages below. Commands:
   /help     - Show available tools
@@ -205,9 +195,7 @@ You: What tools do you have available?
 You: /servers
 
 Connected MCP servers:
-  • doc-tools - 4 tool(s)
   • email-tools - 3 tool(s)
-  • sms-tools - 3 tool(s)
   • web-tools - 4 tool(s)
 ```
 

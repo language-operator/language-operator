@@ -107,3 +107,24 @@ jobs:
             bundle exec rspec
           '
           docker rm -f ruby-test
+
+  # Test web tool
+  web-tool-test:
+    runs-on: builder
+    needs: [ruby-sdk-test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build web tool image
+        working-directory: tools/web
+        run: make build
+
+      - name: Run web tool unit tests
+        working-directory: tools/web
+        run: |
+          # Run tests in the built image
+          docker run --rm --user $(id -u):$(id -g) \
+            -v $(pwd):/workspace -w /workspace \
+            git.theryans.io/langop/web-tool:latest \
+            sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"

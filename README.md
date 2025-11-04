@@ -424,7 +424,7 @@ All images are published to: `git.theryans.io/langop/`
 **Available Images**:
 - `language-operator` - The Kubernetes operator
 - `base`, `devel`, `server`, `client` - Base components
-- `web-tool`, `email-tool`, `sms-tool`, `doc-tool` - Tool servers
+- `web-tool`, `email-tool` - Tool servers
 - `agent-cli`, `agent-web`, `agent-headless` - Agent implementations
 - `model` - LiteLLM model proxy
 
