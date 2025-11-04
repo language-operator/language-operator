@@ -30,8 +30,14 @@ docs:
 
 # Run tests
 test:
-	@echo "Running tests for Language Operator..."
+	@echo "Running full test suite..."
+	@echo ""
+	@echo "==> Testing Ruby SDK"
+	@cd sdk/ruby && $(MAKE) test
+	@echo ""
+	@echo "==> Testing Language Operator (Go)"
 	@cd kubernetes/language-operator && $(MAKE) test
+	@echo ""
 	@echo "✓ All tests passed!"
 
 # Show help
