@@ -162,19 +162,24 @@ RSpec.describe 'web_status tool' do
   end
 
   describe 'error handling' do
-    it 'returns error message when check fails' do
-      stub_request(:get, 'https://example.com/fail')
-        .to_return(status: 500)
+    it 'returns error message on network timeout' do
+      stub_request(:get, 'https://example.com/timeout')
+        .to_timeout
 
       tool = registry.get('web_status')
+      result = tool.call('url' => 'https://example.com/timeout')
 
-      # Mock curl failure
-      allow(tool).to receive(:`).and_return('')
-      allow($?).to receive(:success?).and_return(false)
+      expect(result).to include('Status for https://example.com/timeout: 0')
+    end
 
-      result = tool.call('url' => 'https://example.com/fail')
+    it 'returns error message on connection refused' do
+      stub_request(:get, 'https://example.com/refused')
+        .to_raise(Errno::ECONNREFUSED)
 
-      expect(result).to include('Error: Failed to check URL')
+      tool = registry.get('web_status')
+      result = tool.call('url' => 'https://example.com/refused')
+
+      expect(result).to include('Status for https://example.com/refused: 0')
     end
   end
 

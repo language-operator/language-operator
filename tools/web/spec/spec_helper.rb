@@ -1,4 +1,17 @@
 require 'bundler/setup'
+
+# Start SimpleCov before loading application code
+# require 'simplecov'
+# SimpleCov.start do
+#   add_filter '/spec/'
+#   add_filter '/vendor/'
+# 
+#   add_group 'Tools', 'tools'
+# 
+#   minimum_coverage 80
+#   minimum_coverage_by_file 70
+# end
+
 require 'langop'
 require 'webmock/rspec'
 

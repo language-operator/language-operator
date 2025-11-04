@@ -68,17 +68,33 @@ RSpec.describe 'web_headers tool' do
   end
 
   describe 'error handling' do
-    it 'returns error message when fetch fails' do
+    it 'returns error message when fetch fails with 500' do
       stub_request(:head, 'https://example.com/error')
         .to_return(status: 500, body: '')
 
       tool = registry.get('web_headers')
-
-      # Mock curl failure
-      allow(tool).to receive(:`).and_return('')
-      allow($?).to receive(:success?).and_return(false)
-
       result = tool.call('url' => 'https://example.com/error')
+
+      expect(result).to include('Error: Failed to fetch headers')
+      expect(result).to include('https://example.com/error')
+    end
+
+    it 'returns error message on network timeout' do
+      stub_request(:head, 'https://example.com/timeout')
+        .to_timeout
+
+      tool = registry.get('web_headers')
+      result = tool.call('url' => 'https://example.com/timeout')
+
+      expect(result).to include('Error: Failed to fetch headers')
+    end
+
+    it 'returns error message on DNS resolution failure' do
+      stub_request(:head, 'https://invalid.example.test/')
+        .to_raise(SocketError.new('getaddrinfo: Name or service not known'))
+
+      tool = registry.get('web_headers')
+      result = tool.call('url' => 'https://invalid.example.test/')
 
       expect(result).to include('Error: Failed to fetch headers')
     end

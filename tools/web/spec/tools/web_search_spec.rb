@@ -102,17 +102,23 @@ RSpec.describe 'web_search tool' do
   end
 
   describe 'error handling' do
-    it 'returns error message when curl fails' do
+    it 'returns error message when HTTP request fails' do
       stub_request(:get, /html\.duckduckgo\.com\/html\/\?q=test/)
-        .to_return(status: 500, body: '')
+        .to_return(status: 500, body: 'Internal Server Error')
 
       tool = registry.get('web_search')
-
-      # Mock the curl command to simulate failure
-      allow(tool).to receive(:`).and_return('')
-      allow($?).to receive(:success?).and_return(false)
-
       result = tool.call('query' => 'test')
+
+      expect(result).to include('Error')
+      expect(result).to include('Failed to fetch search results')
+    end
+
+    it 'returns error message on network timeout' do
+      stub_request(:get, /html\.duckduckgo\.com\/html\/\?q=timeout/)
+        .to_timeout
+
+      tool = registry.get('web_search')
+      result = tool.call('query' => 'timeout')
 
       expect(result).to include('Error')
     end

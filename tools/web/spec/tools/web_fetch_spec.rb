@@ -133,19 +133,67 @@ RSpec.describe 'web_fetch tool' do
   end
 
   describe 'error handling' do
-    it 'returns error message when fetch fails' do
+    it 'returns error message when fetch fails with 500' do
       stub_request(:get, 'https://example.com/error')
-        .to_return(status: 500, body: '')
+        .to_return(status: 500, body: 'Internal Server Error')
 
       tool = registry.get('web_fetch')
-
-      # Mock curl failure
-      allow(tool).to receive(:`).and_return('')
-      allow($?).to receive(:success?).and_return(false)
-
       result = tool.call('url' => 'https://example.com/error')
 
       expect(result).to include('Error: Failed to fetch URL')
+      expect(result).to include('https://example.com/error')
+    end
+
+    it 'returns error message on network timeout' do
+      stub_request(:get, 'https://example.com/timeout')
+        .to_timeout
+
+      tool = registry.get('web_fetch')
+      result = tool.call('url' => 'https://example.com/timeout')
+
+      expect(result).to include('Error: Failed to fetch URL')
+    end
+
+    it 'returns error message on connection refused' do
+      stub_request(:get, 'https://example.com/refused')
+        .to_raise(Errno::ECONNREFUSED)
+
+      tool = registry.get('web_fetch')
+      result = tool.call('url' => 'https://example.com/refused')
+
+      expect(result).to include('Error: Failed to fetch URL')
+    end
+  end
+
+  describe 'redirect handling' do
+    it 'follows redirects automatically' do
+      stub_request(:get, 'https://example.com/redirect')
+        .to_return(status: 301, headers: { 'Location' => 'https://example.com/final' })
+
+      stub_request(:get, 'https://example.com/final')
+        .to_return(status: 200, body: example_html)
+
+      tool = registry.get('web_fetch')
+      result = tool.call('url' => 'https://example.com/redirect')
+
+      expect(result).to include('Content from https://example.com/redirect')
+      expect(result).to include('Example Domain')
+    end
+
+    it 'handles multiple redirects' do
+      stub_request(:get, 'https://example.com/redirect1')
+        .to_return(status: 302, headers: { 'Location' => 'https://example.com/redirect2' })
+
+      stub_request(:get, 'https://example.com/redirect2')
+        .to_return(status: 302, headers: { 'Location' => 'https://example.com/final' })
+
+      stub_request(:get, 'https://example.com/final')
+        .to_return(status: 200, body: example_html)
+
+      tool = registry.get('web_fetch')
+      result = tool.call('url' => 'https://example.com/redirect1')
+
+      expect(result).to include('Example Domain')
     end
   end
 

@@ -46,12 +46,14 @@ env:
 run:
 	docker run --rm -p 8080:80 --name web-server $(IMAGE_FULL)
 
-# Run RSpec unit tests
+# Run RSpec unit tests with coverage
 .PHONY: spec
 spec:
-	@echo "Running RSpec unit tests in Docker..."
-	@echo "Note: Tests require rspec and webmock gems. Run 'gem install rspec webmock' if needed."
-	docker run --rm --user $$(id -u):$$(id -g) -v $$(pwd):/workspace -w /workspace $(IMAGE_FULL) sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+	@echo "Running RSpec unit tests with coverage in Docker..."
+	@echo "Installing dependencies and running tests..."
+	docker run --rm --user root -v $$(pwd):/workspace -w /workspace $(IMAGE_FULL) sh -c "chmod -R a+rX /workspace && bundle install --quiet && bundle exec rspec --format documentation && chown -R $$(id -u):$$(id -g) coverage 2>/dev/null || true"
+	@echo ""
+	@echo "Coverage report generated in coverage/index.html"
 
 # Test the server endpoints using MCP JSON-RPC protocol
 .PHONY: test
