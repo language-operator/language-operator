@@ -182,14 +182,27 @@ module Langop
 
         if workspace_path = agent_def.output_config[:workspace]
           full_path = File.join(@agent.workspace_path, workspace_path)
-          FileUtils.mkdir_p(File.dirname(full_path))
-          File.write(full_path, content)
-          @logger.info("📝 Wrote output to #{workspace_path}")
+
+          begin
+            FileUtils.mkdir_p(File.dirname(full_path))
+            File.write(full_path, content)
+            @logger.info("📝 Wrote output to #{workspace_path}")
+          rescue Errno::EACCES, Errno::EPERM => e
+            # Permission denied - try writing to workspace root
+            fallback_path = File.join(@agent.workspace_path, 'output.txt')
+            begin
+              File.write(fallback_path, content)
+              @logger.warn("⚠️  Could not write to #{workspace_path}, wrote to output.txt instead")
+            rescue StandardError => e2
+              @logger.warn("⚠️  Could not write output to workspace: #{e2.message}")
+              @logger.info("📄 Output (first 500 chars): #{content[0..500]}")
+            end
+          end
         end
 
         # Future: Handle Slack, email outputs
       rescue StandardError => e
-        @logger.error("Failed to write output", error: e.message)
+        @logger.warn("Output writing failed", error: e.message)
       end
 
       private
