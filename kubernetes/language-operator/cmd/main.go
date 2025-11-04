@@ -34,8 +34,11 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/teilomillet/gollm"
+
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 	"github.com/based/language-operator/controllers"
+	"github.com/based/language-operator/pkg/synthesis"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -144,12 +147,59 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup LanguageAgent controller
-	if err = (&controllers.LanguageAgentReconciler{
+	// Setup LanguageAgent controller with optional synthesizer
+	agentReconciler := &controllers.LanguageAgentReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
-	}).SetupWithManager(mgr, concurrency); err != nil {
+	}
+
+	// Initialize synthesizer if LLM configuration is provided
+	synthesisModel := os.Getenv("SYNTHESIS_MODEL")
+	synthesisProvider := os.Getenv("SYNTHESIS_PROVIDER")
+	synthesisAPIKey := os.Getenv("SYNTHESIS_API_KEY")
+	synthesisEndpoint := os.Getenv("SYNTHESIS_ENDPOINT") // For Ollama or custom endpoints
+
+	if synthesisModel != "" {
+		setupLog.Info("Initializing synthesis engine", "model", synthesisModel, "provider", synthesisProvider)
+
+		// Use anthropic as default provider
+		if synthesisProvider == "" {
+			synthesisProvider = "anthropic"
+		}
+
+		// Create gollm LLM instance
+		llmOpts := []gollm.ConfigOption{
+			gollm.SetProvider(synthesisProvider),
+			gollm.SetModel(synthesisModel),
+			gollm.SetMaxTokens(4096),
+			gollm.SetTemperature(0.3), // Lower temperature for more consistent code generation
+		}
+
+		if synthesisAPIKey != "" {
+			llmOpts = append(llmOpts, gollm.SetAPIKey(synthesisAPIKey))
+		}
+
+		// For Ollama or custom endpoints
+		if synthesisEndpoint != "" && synthesisProvider == "ollama" {
+			llmOpts = append(llmOpts, gollm.SetOllamaEndpoint(synthesisEndpoint))
+		}
+
+		llm, err := gollm.NewLLM(llmOpts...)
+		if err != nil {
+			setupLog.Error(err, "failed to create synthesis LLM")
+			os.Exit(1)
+		}
+
+		// Create synthesizer
+		synthesizer := synthesis.NewSynthesizer(llm, ctrl.Log.WithName("synthesis"))
+		agentReconciler.Synthesizer = synthesizer
+		setupLog.Info("Synthesis engine initialized successfully")
+	} else {
+		setupLog.Info("Synthesis engine disabled (SYNTHESIS_MODEL not set)")
+	}
+
+	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgent")
 		os.Exit(1)
 	}

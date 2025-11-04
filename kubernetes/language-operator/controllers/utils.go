@@ -108,6 +108,55 @@ func CreateOrUpdateConfigMap(
 	return nil
 }
 
+// CreateOrUpdateConfigMapWithAnnotations creates or updates a ConfigMap with custom annotations
+func CreateOrUpdateConfigMapWithAnnotations(
+	ctx context.Context,
+	c client.Client,
+	scheme *runtime.Scheme,
+	owner client.Object,
+	name, namespace string,
+	data map[string]string,
+	annotations map[string]string,
+) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
+		// Set owner reference
+		if err := controllerutil.SetControllerReference(owner, configMap, scheme); err != nil {
+			return err
+		}
+
+		// Update data
+		configMap.Data = data
+
+		// Update annotations
+		if configMap.Annotations == nil {
+			configMap.Annotations = make(map[string]string)
+		}
+		for k, v := range annotations {
+			configMap.Annotations[k] = v
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		// Log or track the operation if needed
+		_ = op
+	}
+
+	return nil
+}
+
 // DeleteConfigMap deletes a ConfigMap if it exists
 func DeleteConfigMap(ctx context.Context, c client.Client, name, namespace string) error {
 	configMap := &corev1.ConfigMap{

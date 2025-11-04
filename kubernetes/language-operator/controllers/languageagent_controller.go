@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -23,13 +24,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/pkg/synthesis"
 )
 
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme      *runtime.Scheme
+	Log         logr.Logger
+	Synthesizer *synthesis.Synthesizer
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -76,6 +79,17 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Update(ctx, agent); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	// Synthesize agent code from instructions (if synthesizer is configured)
+	if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+		if err := r.reconcileCodeConfigMap(ctx, agent); err != nil {
+			log.Error(err, "Failed to synthesize/reconcile agent code")
+			SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionFalse, "SynthesisFailed", err.Error(), agent.Generation)
+			r.Status().Update(ctx, agent)
+			return ctrl.Result{}, err
+		}
+		SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionTrue, "CodeGenerated", "Agent code synthesized successfully", agent.Generation)
 	}
 
 	// Reconcile ConfigMap
@@ -195,6 +209,145 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
 	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, configMapName, agent.Namespace, data)
+}
+
+// reconcileCodeConfigMap synthesizes agent DSL code and stores it in a ConfigMap
+func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// ConfigMap name for synthesized code
+	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+
+	// Check if we need to synthesize
+	// We synthesize if:
+	// 1. ConfigMap doesn't exist, OR
+	// 2. Instructions have changed (detected by annotation)
+	existingCM := &corev1.ConfigMap{}
+	err := r.Get(ctx, types.NamespacedName{Name: codeConfigMapName, Namespace: agent.Namespace}, existingCM)
+
+	needsSynthesis := false
+	if errors.IsNotFound(err) {
+		needsSynthesis = true
+		log.Info("Code ConfigMap not found, will synthesize")
+	} else if err != nil {
+		return err
+	} else {
+		// Check if instructions changed by comparing hash
+		currentHash := hashString(agent.Spec.Instructions)
+		previousHash := existingCM.Annotations["langop.io/instructions-hash"]
+		if currentHash != previousHash {
+			needsSynthesis = true
+			log.Info("Instructions changed, will re-synthesize",
+				"previousHash", previousHash,
+				"currentHash", currentHash)
+		}
+	}
+
+	var dslCode string
+	if needsSynthesis {
+		// Fetch persona for distillation
+		persona, err := r.fetchPersona(ctx, agent)
+		if err != nil {
+			log.Error(err, "Failed to fetch persona, continuing without it")
+		}
+
+		// Distill persona if available
+		var distilledPersona string
+		if persona != nil {
+			distilledPersona, err = r.distillPersona(ctx, persona, agent)
+			if err != nil {
+				log.Error(err, "Failed to distill persona, continuing without it")
+				distilledPersona = ""
+			}
+		}
+
+		// Build synthesis request
+		synthReq := synthesis.AgentSynthesisRequest{
+			Instructions: agent.Spec.Instructions,
+			Tools:        r.getToolNames(agent),
+			Models:       r.getModelNames(agent),
+			PersonaText:  distilledPersona,
+			AgentName:    agent.Name,
+			Namespace:    agent.Namespace,
+		}
+
+		// Synthesize code
+		log.Info("Synthesizing agent code", "agent", agent.Name)
+		resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
+		if err != nil {
+			return fmt.Errorf("synthesis failed: %w", err)
+		}
+
+		if resp.Error != "" {
+			return fmt.Errorf("synthesis validation failed: %s", resp.Error)
+		}
+
+		dslCode = resp.DSLCode
+		log.Info("Agent code synthesized successfully",
+			"agent", agent.Name,
+			"codeLength", len(dslCode))
+	} else {
+		// Use existing code
+		dslCode = existingCM.Data["agent.rb"]
+		log.Info("Using existing synthesized code", "agent", agent.Name)
+	}
+
+	// Create or update ConfigMap with synthesized code
+	data := map[string]string{
+		"agent.rb": dslCode,
+	}
+
+	// Store hash of instructions for change detection
+	annotations := map[string]string{
+		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
+		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
+	}
+
+	return CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations)
+}
+
+// distillPersona calls the synthesizer to distill a persona into a system message
+func (r *LanguageAgentReconciler) distillPersona(ctx context.Context, persona *langopv1alpha1.LanguagePersona, agent *langopv1alpha1.LanguageAgent) (string, error) {
+	personaInfo := synthesis.PersonaInfo{
+		Name:         persona.Name,
+		Description:  persona.Spec.Description,
+		SystemPrompt: persona.Spec.SystemPrompt,
+		Tone:         persona.Spec.Tone,
+		Language:     persona.Spec.Language,
+	}
+
+	agentCtx := synthesis.AgentContext{
+		AgentName:    agent.Name,
+		Instructions: agent.Spec.Instructions,
+		Tools:        strings.Join(r.getToolNames(agent), ", "),
+	}
+
+	return r.Synthesizer.DistillPersona(ctx, personaInfo, agentCtx)
+}
+
+// getToolNames extracts tool names from agent's toolRefs
+func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAgent) []string {
+	var names []string
+	for _, ref := range agent.Spec.ToolRefs {
+		names = append(names, ref.Name)
+	}
+	return names
+}
+
+// getModelNames extracts model names from agent's modelRefs
+func (r *LanguageAgentReconciler) getModelNames(agent *langopv1alpha1.LanguageAgent) []string {
+	var names []string
+	for _, ref := range agent.Spec.ModelRefs {
+		names = append(names, ref.Name)
+	}
+	return names
+}
+
+// hashString creates a SHA256 hash of a string for change detection
+func hashString(s string) string {
+	h := sha256.New()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
@@ -361,6 +514,30 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Add resource requirements if specified
 		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
+		// Initialize volumes and volume mounts
+		volumes := []corev1.Volume{}
+		volumeMounts := []corev1.VolumeMount{}
+
+		// Add code ConfigMap volume if synthesizer is configured and instructions exist
+		if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+			codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+			volumes = append(volumes, corev1.Volume{
+				Name: "agent-code",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: codeConfigMapName,
+						},
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "agent-code",
+				MountPath: "/etc/agent/code",
+				ReadOnly:  true,
+			})
+		}
+
 		// Add workspace volume if enabled
 		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
 			mountPath := agent.Spec.Workspace.MountPath
@@ -368,23 +545,27 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				mountPath = "/workspace"
 			}
 
-			deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
-				{
-					Name: "workspace",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: agent.Name + "-workspace",
-						},
+			volumes = append(volumes, corev1.Volume{
+				Name: "workspace",
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: agent.Name + "-workspace",
 					},
 				},
-			}
+			})
 
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-				{
-					Name:      "workspace",
-					MountPath: mountPath,
-				},
-			}
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "workspace",
+				MountPath: mountPath,
+			})
+		}
+
+		// Apply volumes and volume mounts to deployment
+		if len(volumes) > 0 {
+			deployment.Spec.Template.Spec.Volumes = volumes
+		}
+		if len(volumeMounts) > 0 {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 		}
 
 		return nil
@@ -494,6 +675,30 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		// Add resource requirements if specified
 		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
+		// Initialize volumes and volume mounts
+		volumes := []corev1.Volume{}
+		volumeMounts := []corev1.VolumeMount{}
+
+		// Add code ConfigMap volume if synthesizer is configured and instructions exist
+		if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+			codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+			volumes = append(volumes, corev1.Volume{
+				Name: "agent-code",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: codeConfigMapName,
+						},
+					},
+				},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "agent-code",
+				MountPath: "/etc/agent/code",
+				ReadOnly:  true,
+			})
+		}
+
 		// Add workspace volume if enabled
 		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
 			mountPath := agent.Spec.Workspace.MountPath
@@ -501,23 +706,27 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 				mountPath = "/workspace"
 			}
 
-			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes = []corev1.Volume{
-				{
-					Name: "workspace",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: agent.Name + "-workspace",
-						},
+			volumes = append(volumes, corev1.Volume{
+				Name: "workspace",
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: agent.Name + "-workspace",
 					},
 				},
-			}
+			})
 
-			cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-				{
-					Name:      "workspace",
-					MountPath: mountPath,
-				},
-			}
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "workspace",
+				MountPath: mountPath,
+			})
+		}
+
+		// Apply volumes and volume mounts to cronjob
+		if len(volumes) > 0 {
+			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes = volumes
+		}
+		if len(volumeMounts) > 0 {
+			cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 		}
 
 		return nil
