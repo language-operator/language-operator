@@ -25,13 +25,20 @@ module Langop
         @show_full_responses = ENV.fetch('SHOW_FULL_RESPONSES', 'false') == 'true'
       end
 
-      # Execute a single task
+      # Execute a single task or workflow
       #
       # @param task [String] The task to execute
+      # @param agent_definition [Langop::Dsl::AgentDefinition, nil] Optional agent definition with workflow
       # @return [String] The result
-      def execute(task)
+      def execute(task, agent_definition: nil)
         @iteration_count += 1
 
+        # Route to workflow execution if agent has a workflow defined
+        if agent_definition&.workflow
+          return execute_workflow(agent_definition)
+        end
+
+        # Standard instruction-based execution
         @logger.info("Starting iteration #{@iteration_count}")
         @logger.debug("Prompt", prompt: task[0..200])
 
@@ -89,6 +96,100 @@ module Langop
         end
 
         @logger.warn("Maximum iterations (#{@max_iterations}) reached")
+      end
+
+      # Execute a workflow-based agent
+      #
+      # @param agent_def [Langop::Dsl::AgentDefinition] The agent definition
+      # @return [RubyLLM::Message] The final response
+      def execute_workflow(agent_def)
+        @logger.info("🔄 Starting workflow execution: #{agent_def.name}")
+
+        # Build orchestration prompt from agent definition
+        prompt = build_workflow_prompt(agent_def)
+        @logger.debug("Workflow prompt", prompt: prompt[0..300])
+
+        # Register workflow steps as tools (placeholder - will implement after tool converter)
+        # For now, just execute with instructions
+        result = @logger.timed("Workflow execution completed") do
+          @agent.send_message(prompt)
+        end
+
+        # Write output if configured
+        if agent_def.output_config && result
+          write_output(agent_def, result)
+        end
+
+        @logger.info("✅ Workflow execution completed")
+        result
+      rescue StandardError => e
+        @logger.error("Workflow execution failed", error: e.message)
+        handle_error(e)
+      end
+
+      # Build orchestration prompt from agent definition
+      #
+      # @param agent_def [Langop::Dsl::AgentDefinition] The agent definition
+      # @return [String] The prompt
+      def build_workflow_prompt(agent_def)
+        prompt = "# Task: #{agent_def.description}\n\n"
+
+        if agent_def.objectives && agent_def.objectives.any?
+          prompt += "## Objectives:\n"
+          agent_def.objectives.each { |obj| prompt += "- #{obj}\n" }
+          prompt += "\n"
+        end
+
+        if agent_def.workflow && agent_def.workflow.steps.any?
+          prompt += "## Workflow Steps:\n"
+          agent_def.workflow.step_order.each do |step_name|
+            step = agent_def.workflow.steps[step_name]
+            prompt += "#{step_name.to_s.tr('_', ' ').capitalize}"
+            if step.tool_name
+              prompt += " (using tool: #{step.tool_name})"
+            end
+            if step.dependencies && step.dependencies.any?
+              prompt += " - depends on: #{step.dependencies.join(', ')}"
+            end
+            prompt += "\n"
+          end
+          prompt += "\n"
+        end
+
+        if agent_def.constraints
+          prompt += "## Constraints:\n"
+          if agent_def.constraints[:max_iterations]
+            prompt += "- Maximum iterations: #{agent_def.constraints[:max_iterations]}\n"
+          end
+          if agent_def.constraints[:timeout]
+            prompt += "- Timeout: #{agent_def.constraints[:timeout]}\n"
+          end
+          prompt += "\n"
+        end
+
+        prompt += "Please complete this task following the workflow steps."
+        prompt
+      end
+
+      # Write output to configured destinations
+      #
+      # @param agent_def [Langop::Dsl::AgentDefinition] The agent definition
+      # @param result [RubyLLM::Message] The result to write
+      def write_output(agent_def, result)
+        return unless agent_def.output_config
+
+        content = result.is_a?(String) ? result : result.content
+
+        if workspace_path = agent_def.output_config[:workspace]
+          full_path = File.join(@agent.workspace_path, workspace_path)
+          FileUtils.mkdir_p(File.dirname(full_path))
+          File.write(full_path, content)
+          @logger.info("📝 Wrote output to #{workspace_path}")
+        end
+
+        # Future: Handle Slack, email outputs
+      rescue StandardError => e
+        @logger.error("Failed to write output", error: e.message)
       end
 
       private

@@ -98,7 +98,7 @@ if File.exist?(code_path)
     if instructions && !instructions.empty?
       puts "📋 Instructions: #{instructions[0..200]}..."
       executor = Langop::Agent::Executor.new(agent)
-      executor.execute(instructions)
+      executor.execute(instructions, agent_definition: agent_def)
     else
       puts "❌ No instructions provided"
       exit 1

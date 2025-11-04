@@ -20,7 +20,7 @@ module Langop
     #     end
     #   end
     class WorkflowDefinition
-      attr_reader :steps
+      attr_reader :steps, :step_order
 
       def initialize
         @steps = {}
@@ -91,7 +91,7 @@ module Langop
 
     # Individual step definition
     class StepDefinition
-      attr_reader :name, :dependencies
+      attr_reader :name, :dependencies, :tool_name, :tool_params, :prompt_template
 
       def initialize(name)
         @name = name
