@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Langop Agent Entrypoint
+#
+# This script auto-loads synthesized agent code from a ConfigMap volume
+# or falls back to default agent behavior if no code is provided.
+#
+# The operator synthesizes agent DSL code from natural language instructions
+# and mounts it as a ConfigMap at AGENT_CODE_PATH.
+
+require 'langop'
+
+# Configuration
+code_path = ENV.fetch('AGENT_CODE_PATH', '/etc/agent/code/agent.rb')
+fallback_mode = ENV.fetch('AGENT_FALLBACK_MODE', 'error') # error | autonomous | interactive
+
+puts "🤖 Langop Agent starting..."
+puts "📁 Code path: #{code_path}"
+
+# Check if synthesized code exists
+if File.exist?(code_path)
+  puts "✅ Found synthesized agent code, loading..."
+
+  begin
+    # Load the synthesized DSL code
+    load code_path
+
+    # The synthesized code should define an agent and call run!
+    # If it doesn't, we'll get to the fallback below
+    puts "✅ Agent code loaded successfully"
+
+  rescue StandardError => e
+    puts "❌ Error loading agent code: #{e.message}"
+    puts e.backtrace.take(5).join("\n")
+
+    case fallback_mode
+    when 'autonomous'
+      puts "⚠️  Falling back to autonomous mode with default config"
+      fallback_to_autonomous
+    when 'interactive'
+      puts "⚠️  Falling back to interactive mode"
+      fallback_to_interactive
+    else
+      puts "❌ No fallback configured, exiting"
+      exit 1
+    end
+  end
+
+else
+  puts "⚠️  No synthesized code found at #{code_path}"
+
+  case fallback_mode
+  when 'autonomous'
+    puts "📝 Starting in autonomous mode with default config"
+    fallback_to_autonomous
+  when 'interactive'
+    puts "📝 Starting in interactive mode"
+    fallback_to_interactive
+  else
+    puts "❌ No agent code provided and no fallback configured"
+    puts "💡 The operator should have created a ConfigMap with synthesized code"
+    puts "💡 Check LanguageAgent status for synthesis errors"
+    exit 1
+  end
+end
+
+# Fallback implementations
+def fallback_to_autonomous
+  config = Langop::Client::Config.load_with_fallback
+  agent = Langop::Agent::Base.new(config)
+
+  # Get instructions from environment
+  instructions = ENV['AGENT_INSTRUCTIONS']
+
+  if instructions && !instructions.empty?
+    puts "📋 Instructions: #{instructions[0..200]}..."
+    agent.connect!
+
+    # Simple autonomous loop
+    executor = Langop::Agent::Executor.new(agent)
+    executor.execute(instructions)
+  else
+    puts "❌ No instructions provided in AGENT_INSTRUCTIONS"
+    exit 1
+  end
+end
+
+def fallback_to_interactive
+  puts "Interactive mode not yet implemented"
+  exit 1
+end

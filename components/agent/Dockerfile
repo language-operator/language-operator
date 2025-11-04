@@ -21,6 +21,10 @@ RUN bundle install --no-cache --system
 # Note: Agent code is in the langop SDK gem, not copied here
 COPY config/ /app/agent/config/
 
+# Copy entrypoint script
+COPY bin/langop-agent /usr/local/bin/langop-agent
+RUN chmod +x /usr/local/bin/langop-agent
+
 # Set ownership
 RUN chown -R langop:langop /app/agent
 
@@ -29,9 +33,9 @@ USER langop
 
 # Set environment defaults
 ENV WORKSPACE_PATH="/workspace" \
-    AGENT_MODE="autonomous"
+    AGENT_MODE="autonomous" \
+    AGENT_CODE_PATH="/etc/agent/code/agent.rb" \
+    AGENT_FALLBACK_MODE="error"
 
-# Default command - agents will override this
-# Note: Don't use 'bundle exec' here because langop gem is system-installed, not in Gemfile.lock
-# Agent code is in the langop gem, just require and run
-CMD ["ruby", "-e", "require 'langop/agent'; Langop::Agent.run"]
+# Default command - auto-loads synthesized code from ConfigMap
+CMD ["/usr/local/bin/langop-agent"]

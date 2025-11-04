@@ -62,4 +62,8 @@ end
 ## Agents
 
 ```ruby
+require 'langop'
+
+agent "demo" do
+end
 ```
