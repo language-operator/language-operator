@@ -32,14 +32,19 @@ module Langop
       # @param name [Symbol] Step name
       # @param tool [String, nil] Tool to use (optional)
       # @param params [Hash] Tool parameters (optional)
+      # @param depends_on [Symbol, Array<Symbol>] Dependencies (optional)
       # @yield Step definition block
       # @return [void]
-      def step(name, tool: nil, params: {}, &block)
+      def step(name, tool: nil, params: {}, depends_on: nil, &block)
         step_def = StepDefinition.new(name)
 
         if tool
           step_def.tool(tool)
           step_def.params(params) unless params.empty?
+        end
+
+        if depends_on
+          step_def.depends_on(depends_on)
         end
 
         step_def.instance_eval(&block) if block
