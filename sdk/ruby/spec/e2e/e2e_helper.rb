@@ -5,7 +5,7 @@ require_relative 'support/aictl_helper'
 
 RSpec.configure do |config|
   # Include E2E helper methods in all E2E specs
-  config.include E2E::AictlHelper, type: :e2e
+  config.include E2E::LanguageOperatorHelper, type: :e2e
 
   # Skip E2E tests by default (run with: rspec --tag e2e)
   config.filter_run_excluding type: :e2e unless ENV['E2E'] == 'true' || config.inclusion_filter[:e2e]
