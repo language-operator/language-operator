@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'aictl/tool_loader'
+require 'language_operator/tool_loader'
 
-RSpec.describe Aictl::ToolLoader do
+RSpec.describe LanguageOperator::ToolLoader do
   let(:tool_dir) { File.join(__dir__, '../fixtures/tools') }
-  let(:registry) { Aictl::Dsl::Registry.new }
+  let(:registry) { LanguageOperator::Dsl::Registry.new }
   let(:loader) { described_class.new(registry, tool_dir) }
 
   before do

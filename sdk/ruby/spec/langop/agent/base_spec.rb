@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'aictl/agent/base'
+require 'language_operator/agent/base'
 
-RSpec.describe Aictl::Agent::Base do
+RSpec.describe LanguageOperator::Agent::Base do
   let(:config) do
     {
       'llm' => {
@@ -69,8 +69,8 @@ RSpec.describe Aictl::Agent::Base do
   describe '#execute_goal' do
     it 'creates executor and executes goal' do
       # Mock the executor
-      executor_double = instance_double(Aictl::Agent::Executor)
-      allow(Aictl::Agent::Executor).to receive(:new).and_return(executor_double)
+      executor_double = instance_double(LanguageOperator::Agent::Executor)
+      allow(LanguageOperator::Agent::Executor).to receive(:new).and_return(executor_double)
       allow(executor_double).to receive(:execute).and_return('Goal completed')
 
       result = agent.execute_goal('Test goal')

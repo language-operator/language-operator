@@ -28,7 +28,7 @@ end
 desc 'Open console with gem loaded'
 task :console do
   require 'irb'
-  require 'langop'
+  require 'language_operator'
   ARGV.clear
   IRB.start
 end

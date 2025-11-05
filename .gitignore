@@ -1,5 +1,5 @@
 .env
-langop-*.gem
+language-operator-*.gem
 
 # Go test coverage
 *.out

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'aictl/agent/executor'
+require 'language_operator/agent/executor'
 
-RSpec.describe Aictl::Agent::Executor do
+RSpec.describe LanguageOperator::Agent::Executor do
   let(:agent_double) do
     instance_double(
-      Aictl::Agent::Base,
+      LanguageOperator::Agent::Base,
       workspace_path: '/workspace',
       servers_info: [{ name: 'test-server', url: 'http://localhost:8080' }],
       config: { 'agent' => { 'instructions' => 'Test instructions' } },
@@ -27,7 +27,7 @@ RSpec.describe Aictl::Agent::Executor do
 
     it 'initializes logger' do
       logger = executor.instance_variable_get(:@logger)
-      expect(logger).to be_a(Aictl::Logger)
+      expect(logger).to be_a(LanguageOperator::Logger)
     end
 
     it 'reads SHOW_FULL_RESPONSES from environment' do

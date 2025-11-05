@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'aictl/client/base'
+require 'language_operator/client/base'
 
-RSpec.describe Aictl::Client::Base do
+RSpec.describe LanguageOperator::Client::Base do
   let(:config) do
     {
       'llm' => {

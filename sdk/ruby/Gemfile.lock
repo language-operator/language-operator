@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    aictl (0.1.0)
+    language-operator (0.1.0)
       k8s-ruby (~> 0.17)
       mcp (~> 0.4)
       pastel (~> 0.8)
@@ -205,8 +205,8 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  aictl!
   bundler (~> 2.0)
+  language-operator!
   pry (~> 0.14)
   rake (~> 13.0)
   rspec (~> 3.0)

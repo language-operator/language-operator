@@ -9,8 +9,8 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 build: ## Build the gem
-	@echo "Building langop gem..."
-	@gem build langop.gemspec
+	@echo "Building language-operator gem..."
+	@gem build language-operator.gemspec
 	@echo "✅ Gem built successfully"
 
 test: ## Run the test suite
@@ -20,7 +20,7 @@ test: ## Run the test suite
 
 install: build ## Build and install the gem locally
 	@echo "Installing gem..."
-	@gem install langop-*.gem
+	@gem install language-operator-*.gem
 	@echo "✅ Gem installed successfully"
 
 console: ## Open an IRB console with the gem loaded
@@ -42,7 +42,7 @@ lint-fix: ## Auto-fix RuboCop issues
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
-	@rm -f langop-*.gem
+	@rm -f language-operator-*.gem
 	@rm -rf doc/
 	@rm -rf .yardoc/
 	@echo "✅ Cleaned"

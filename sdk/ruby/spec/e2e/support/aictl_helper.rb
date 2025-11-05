@@ -12,7 +12,7 @@ module E2E
   # - Waiting for resources to reach desired states
   # - Cleaning up test resources
   # - Validating synthesis and deployment
-  module AictlHelper
+  module LanguageOperatorHelper
     # Run an aictl command and return stdout, stderr, and exit status
     #
     # @param command [String] The aictl command to run (without 'aictl' prefix)

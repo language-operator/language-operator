@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'aictl/dsl/execution_context'
+require 'language_operator/dsl/execution_context'
 
-RSpec.describe Aictl::Dsl::ExecutionContext do
+RSpec.describe LanguageOperator::Dsl::ExecutionContext do
   let(:params) { { 'input' => 'test', 'email' => 'user@example.com' } }
   let(:context) { described_class.new(params) }
 
