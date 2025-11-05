@@ -6,6 +6,7 @@ require_relative 'commands/cluster'
 require_relative 'commands/use'
 require_relative 'commands/agent'
 require_relative 'commands/status'
+require_relative 'commands/persona'
 require_relative 'formatters/progress_formatter'
 require_relative '../config/cluster_config'
 require_relative '../kubernetes/client'
@@ -73,6 +74,9 @@ module Aictl
 
       desc 'agent SUBCOMMAND ...ARGS', 'Manage autonomous agents'
       subcommand 'agent', Commands::Agent
+
+      desc 'persona SUBCOMMAND ...ARGS', 'Manage agent personas'
+      subcommand 'persona', Commands::Persona
 
       desc 'new TYPE NAME', 'Generate a new tool or agent project (TYPE: tool, agent)'
       long_desc <<-DESC
