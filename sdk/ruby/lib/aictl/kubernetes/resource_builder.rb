@@ -103,6 +103,20 @@ module Aictl
           }
         end
 
+        # Build a LanguagePersona resource with full spec control
+        def build_persona(name:, spec:, namespace: nil, labels: {})
+          {
+            'apiVersion' => 'langop.io/v1alpha1',
+            'kind' => 'LanguagePersona',
+            'metadata' => {
+              'name' => name,
+              'namespace' => namespace || 'default',
+              'labels' => default_labels.merge(labels)
+            },
+            'spec' => spec
+          }
+        end
+
         private
 
         def default_labels

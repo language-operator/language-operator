@@ -57,11 +57,10 @@ When asked to iterate, plan the top item on the backlog.
 * Create built-in persona library - Ship 5+ personas as ConfigMaps in kubernetes/charts/language-operator/persona-library/: financial-analyst, devops-engineer, general-assistant, executive-assistant, customer-support with complete specs (systemPrompt, tone, capabilities, toolPreferences, responseFormat)
 * ~~Implement `aictl persona list` command~~ - Shows table of personas with NAME, TONE, USED BY count, DESCRIPTION; counts agent usage, provides helpful guidance if empty
 * ~~Implement `aictl persona show <name>` command~~ - Displays full persona YAML, shows usage example
-* Implement `aictl persona create <name>` command - Interactive wizard to create custom persona: prompt for displayName, description, tone, systemPrompt, capabilities, optionally inherit from existing persona
-* Add `--from <persona>` flag to persona create - Copy/inherit from existing persona as starting point
-* Implement `aictl persona edit <name>` command - Open editor to modify persona YAML, validate on save, trigger agent re-synthesis for agents using this persona
+* ~~Implement `aictl persona create <name>` command~~ - Interactive wizard to create custom persona: prompt for displayName, description, tone, systemPrompt, capabilities, optionally inherit from existing persona
+* ~~Add `--from <persona>` flag to persona create~~ - Copy/inherit from existing persona as starting point
+* ~~Implement `aictl persona edit <name>` command~~ - Open editor to modify persona YAML, validate on save, trigger agent re-synthesis for agents using this persona
 * ~~Implement `aictl persona delete <name>` command~~ - Deletes persona with check for agents using it, requires confirmation if in use, shows list of affected agents
-* Document persona system - Add to README: how personas work, when auto-selected, how to create custom personas, inheritance from parent personas, examples
 
 #### MVP: Tool Discovery & Management
 
