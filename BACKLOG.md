@@ -58,13 +58,13 @@ When asked to iterate, plan the top item on the backlog.
 
 #### MVP: Tool Discovery & Management
 
-* Implement `aictl tool list` command - Show table of tools in current cluster: NAME, TYPE, STATUS, AGENTS USING with connection health indicators
+* ~~Implement `aictl tool list` command~~ - Show table of tools in current cluster: NAME, TYPE, STATUS, AGENTS USING with connection health indicators
 * Implement `aictl tool install <name>` command - Create LanguageTool resource from template, apply to current cluster, show installation progress, prompt for authentication if needed
 * Implement `aictl tool auth <name>` command - Interactive authentication flow for tools requiring credentials (OAuth2, API keys), store in Kubernetes Secret, verify connection
 * Implement `aictl tool test <name>` command - Validate tool connectivity and basic functionality, show success/failure with detailed error messages
 * Create tool registry mapping - Add sdk/ruby/config/tool_patterns.yaml mapping common keywords to MCP tools: spreadsheet→mcp-gdrive, email→mcp-gmail, slack→mcp-slack, web→mcp-fetch, file→mcp-filesystem
 * Create tool installation templates - Add tool YAML templates to sdk/ruby/lib/langop/cli/templates/tools/ for common MCP servers
-* Implement `aictl tool delete <name>` command - Delete tool with check for agents using it, require confirmation if in use
+* ~~Implement `aictl tool delete <name>` command~~ - Delete tool with check for agents using it, require confirmation if in use
 
 #### MVP: CLI Foundation & Polish
 
