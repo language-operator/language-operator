@@ -2,20 +2,30 @@
 
 require 'thor'
 require 'fileutils'
+require_relative 'commands/cluster'
+require_relative 'commands/use'
 
 module Aictl
   module CLI
-    # Main CLI class for langop command
+    # Main CLI class for aictl command
     #
-    # Provides commands for creating, running, and managing MCP tools and agents.
+    # Provides commands for creating, running, and managing language-operator resources.
     class Main < Thor
       def self.exit_on_failure?
         true
       end
 
-      desc 'version', 'Show langop version'
+      desc 'version', 'Show aictl version'
       def version
-        puts "Langop v#{Aictl::VERSION}"
+        puts "aictl v#{Aictl::VERSION}"
+      end
+
+      desc 'cluster SUBCOMMAND ...ARGS', 'Manage language clusters'
+      subcommand 'cluster', Commands::Cluster
+
+      desc 'use CLUSTER', 'Switch to a different cluster context'
+      def use(cluster_name)
+        Commands::Use.new.switch(cluster_name)
       end
 
       desc 'new TYPE NAME', 'Generate a new tool or agent project (TYPE: tool, agent)'
@@ -23,8 +33,8 @@ module Aictl
         Generate a new tool or agent project with the specified name.
 
         Examples:
-          langop new tool calculator
-          langop new agent news-summarizer
+          aictl new tool calculator
+          aictl new agent news-summarizer
       DESC
       def new(type, name)
         case type
@@ -44,7 +54,7 @@ module Aictl
         If no FILE is specified, looks for mcp/tools.rb in the current directory.
 
         Example:
-          langop serve mcp/calculator.rb
+          aictl serve mcp/calculator.rb
       DESC
       option :port, type: :numeric, default: 80, desc: 'Port to listen on'
       option :host, type: :string, default: '0.0.0.0', desc: 'Host to bind to'
@@ -78,7 +88,7 @@ module Aictl
         Displays tool information and validates parameter schemas.
 
         Example:
-          langop test mcp/calculator.rb
+          aictl test mcp/calculator.rb
       DESC
       def test(file = 'mcp/tools.rb')
         unless File.exist?(file)
@@ -126,7 +136,7 @@ module Aictl
         variables if not found.
 
         Example:
-          langop run
+          aictl run
       DESC
       option :config, type: :string, desc: 'Path to configuration file'
       def run
@@ -136,10 +146,10 @@ module Aictl
         puts "\n\n👋 Agent stopped"
       end
 
-      desc 'console', 'Start an interactive Ruby console with langop loaded'
+      desc 'console', 'Start an interactive Ruby console with aictl loaded'
       def console
         require 'irb'
-        require "aictl'
+        require 'aictl'
         ARGV.clear
         IRB.start
       end
@@ -159,8 +169,8 @@ module Aictl
         puts "Next steps:"
         puts "  cd #{dir}"
         puts "  bundle install"
-        puts "  langop test mcp/#{name}.rb"
-        puts "  langop serve mcp/#{name}.rb"
+        puts "  aictl test mcp/#{name}.rb"
+        puts "  aictl serve mcp/#{name}.rb"
       end
 
       def generate_agent(name)
@@ -178,7 +188,7 @@ module Aictl
         puts "  cd #{dir}"
         puts "  bundle install"
         puts "  # Edit config/config.yaml"
-        puts "  langop run"
+        puts "  aictl run"
       end
 
       def copy_template(template_dir, target_dir, variables = {})

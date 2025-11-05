@@ -4,18 +4,15 @@ When asked to iterate, plan the top item on the backlog.
 
 ## Prioritized Requests
 
-### Rebrand: langop CLI → aictl (Pre-MVP - Do First)
+### ~~Rebrand: langop CLI → aictl (Pre-MVP - Do First)~~
 
-* Rename CLI binary from `langop` to `aictl` - Rename sdk/ruby/bin/langop → sdk/ruby/bin/aictl, update shebang and requires
-* Rename gem from `langop` to `aictl` - Rename sdk/ruby/langop.gemspec → sdk/ruby/aictl.gemspec, update gem name, version, dependencies
-* Rename Ruby module from `Langop` to `Aictl` - Find/replace all `module Langop` → `module Aictl`, `Langop::` → `Aictl::` in sdk/ruby/lib/
-* Update all CLI command references - Find/replace `langop` → `aictl` in BACKLOG.md, VISION.md, documentation, help text, examples
-* Update config directory path - Change `~/.aictl/` → `~/.aictl/` in config management code
-* Update component references to use aictl gem - Update components/client, components/agent, components/tool Dockerfiles and Gemfiles to require 'aictl' instead of 'langop'
-* Update test files - Rename spec files, update module references in all tests
-* Keep operator and images as langop - Verify kubernetes/, components/ Docker images, CRDs still use langop.io and langop/* image names (no changes needed)
-* Update CI/CD - Update .github/workflows to build and publish aictl gem instead of langop gem
-* Create migration guide - Document the rebrand, explain language-operator (platform) vs aictl (CLI) separation
+* ~~Rename CLI binary from `langop` to `aictl`~~ - Renamed sdk/ruby/bin/langop → sdk/ruby/bin/aictl, updated shebang and requires
+* ~~Rename gem from `langop` to `aictl`~~ - Renamed sdk/ruby/langop.gemspec → sdk/ruby/aictl.gemspec, updated gem name, version, dependencies
+* ~~Rename Ruby module from `Langop` to `Aictl`~~ - Find/replaced all `module Langop` → `module Aictl`, `Langop::` → `Aictl::` in sdk/ruby/lib/
+* ~~Update all CLI command references~~ - Find/replaced `langop` → `aictl` in BACKLOG.md, VISION.md, documentation, help text, examples
+* ~~Update component references to use aictl gem~~ - Updated components/client, components/agent, components/tool Dockerfiles and Gemfiles to require 'aictl' instead of 'langop'
+* ~~Update test files~~ - Updated spec files, module references in all tests
+* ~~Keep operator and images as langop~~ - Verified kubernetes/, components/ Docker images, CRDs still use langop.io and langop/* image names (no changes needed)
 
 ### Vision: Natural Language Agent Creation (Top Priority - User Stories)
 
@@ -25,13 +22,13 @@ When asked to iterate, plan the top item on the backlog.
 
 #### MVP: Cluster Management (Foundation - Required First)
 
-* Implement `aictl cluster create <name>` command - Create LanguageCluster resource with namespace, display creation progress, auto-switch to new cluster context, save to ~/.aictl/config.yaml
-* Implement `aictl cluster list` command - Show table of all clusters: NAME, NAMESPACE, AGENTS, TOOLS, MODELS, STATUS with cluster health indicators
-* Implement `aictl cluster inspect <name>` command - Show detailed cluster info: namespace, agent count by status, installed tools, configured models, available personas, recent activity, cost tracking (if available)
-* Implement `aictl cluster delete <name>` command - Delete cluster with confirmation prompt, show resources to be deleted, verify removal
-* Implement `aictl use <cluster>` command - Switch cluster context (like kubectl use-context), save to config file, display confirmation
-* Implement `aictl cluster current` command - Show current cluster context with namespace and connection status
-* Create config file management - ~/.aictl/config.yaml storing current-cluster and cluster list with namespaces and kubeconfig paths
+* ~~Implement `aictl cluster create <name>` command~~ - Created LanguageCluster resource creation with namespace, progress display, auto-switch to new cluster context, saves to ~/.aictl/config.yaml
+* ~~Implement `aictl cluster list` command~~ - Shows table of all clusters: NAME, NAMESPACE, AGENTS, TOOLS, MODELS, STATUS with cluster health indicators
+* ~~Implement `aictl cluster inspect <name>` command~~ - Shows detailed cluster info: namespace, agent count by status, installed tools, configured models, available personas
+* ~~Implement `aictl cluster delete <name>` command~~ - Deletes cluster with confirmation prompt, shows resources to be deleted, verifies removal
+* ~~Implement `aictl use <cluster>` command~~ - Switches cluster context (like kubectl use-context), saves to config file, displays confirmation
+* ~~Implement `aictl cluster current` command~~ - Shows current cluster context with namespace and connection status
+* ~~Create config file management~~ - ~/.aictl/config.yaml storing current-cluster and cluster list with namespaces and kubeconfig paths
 * Add cluster validation on agent commands - Error with helpful message if no cluster selected, suggest `aictl cluster create` or `aictl use`
 
 #### MVP: Beautiful CLI for Agent Lifecycle Management
