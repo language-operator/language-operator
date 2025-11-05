@@ -4,7 +4,6 @@ When asked to iterate, plan the top item on the backlog.
 
 ## Prioritized Requests
 
-* E2E test: Full agent lifecycle - Create LanguageAgent from natural language → verify synthesis succeeds → verify pod deployment → verify execution logs → update instructions → verify re-synthesis triggers → verify redeployment with new code
 * Complete remaining 23 pending SDK tests - Refine LLM/MCP connection mocks, add missing fixtures for edge cases, achieve 100% test pass rate, maintain 85+ examples coverage
 * Add comprehensive CLI help text - Include real-world usage examples in each command help, document common workflows (create first agent, monitor execution, troubleshooting), add links to online documentation
 * Add debug mode flag - Implement `--debug` global flag for verbose logging, show kubectl API calls, display synthesizer LLM prompts/responses, log timing information for troubleshooting
@@ -27,6 +26,10 @@ When asked to iterate, plan the top item on the backlog.
 * Add memory backend integration - Create Redis adapter for conversation history, Postgres adapter for structured data, S3 adapter for file storage, add backend configuration to LanguageAgent spec
 
 ## Completed Requests ✅
+
+### E2E Testing Framework
+
+* ~~E2E test: Full agent lifecycle~~ - Created comprehensive E2E testing framework in sdk/ruby/spec/e2e/ testing aictl CLI workflows: cluster creation → agent creation from natural language → synthesis verification → pod deployment → log access → agent inspection → code retrieval → cleanup. Includes AictlHelper module with utilities for running aictl commands, waiting for conditions, checking resource states. Added rake tasks (rake e2e, rake test), environment variable configuration (E2E_NAMESPACE, E2E_SYNTHESIS_TIMEOUT, E2E_POD_TIMEOUT, E2E_SKIP_CLEANUP), and comprehensive README with setup instructions, usage examples, troubleshooting guide
 
 ### Rebrand: langop CLI → aictl
 
