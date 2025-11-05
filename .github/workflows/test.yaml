@@ -121,14 +121,14 @@ jobs:
       - name: Install Ruby
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential
+          sudo apt-get install -y ruby ruby-dev build-essential rubygems
 
       - name: Set up Ruby environment
         run: |
           # Build and install SDK gem globally
           cd sdk/ruby
           gem build language-operator.gemspec
-          sudo gem install language-operator-0.1.0.gem
+          sudo gem install --local language-operator-0.1.0.gem
 
           # Create directory and copy SDK to satisfy path-based Gemfile dependency
           sudo mkdir -p /language-operator
@@ -151,14 +151,14 @@ jobs:
       - name: Install Ruby
         run: |
           sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential
+          sudo apt-get install -y ruby ruby-dev build-essential rubygems
 
       - name: Set up Ruby environment
         run: |
           # Build and install SDK gem globally
           cd sdk/ruby
           gem build language-operator.gemspec
-          sudo gem install language-operator-0.1.0.gem
+          sudo gem install --local language-operator-0.1.0.gem
 
           # Create directory and copy SDK to satisfy path-based Gemfile dependency
           sudo mkdir -p /language-operator
