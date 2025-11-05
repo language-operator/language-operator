@@ -30,7 +30,7 @@ tool "web_search" do
     response = LanguageOperator::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
     unless response[:success]
-      return "Error: Failed to fetch search results - #{response[:error] || response[:status]}"
+      next "Error: Failed to fetch search results - #{response[:error] || response[:status]}"
     end
 
     html = response[:body]
@@ -79,14 +79,14 @@ tool "web_fetch" do
 
     # Validate URL
     unless url =~ /^https?:\/\//
-      return "Error: Invalid URL. Must start with http:// or https://"
+      next "Error: Invalid URL. Must start with http:// or https://"
     end
 
     # Fetch the URL using SDK HTTP client
     response = LanguageOperator::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
     unless response[:success]
-      return "Error: Failed to fetch URL: #{url} - #{response[:error] || response[:status]}"
+      next "Error: Failed to fetch URL: #{url} - #{response[:error] || response[:status]}"
     end
 
     content = response[:body]
@@ -124,14 +124,14 @@ tool "web_headers" do
 
     # Validate URL
     unless url =~ /^https?:\/\//
-      return "Error: Invalid URL. Must start with http:// or https://"
+      next "Error: Invalid URL. Must start with http:// or https://"
     end
 
     # Fetch headers using SDK HTTP client
     response = LanguageOperator::Dsl::HTTP.head(url)
 
     unless response[:success]
-      return "Error: Failed to fetch headers from: #{url} - #{response[:error] || response[:status]}"
+      next "Error: Failed to fetch headers from: #{url} - #{response[:error] || response[:status]}"
     end
 
     headers_text = response[:headers].map { |k, v| "#{k}: #{Array(v).join(', ')}" }.join("\n")
@@ -153,11 +153,11 @@ tool "web_status" do
 
     # Validate URL
     unless url =~ /^https?:\/\//
-      return "Error: Invalid URL. Must start with http:// or https://"
+      next "Error: Invalid URL. Must start with http:// or https://"
     end
 
-    # Get status code using SDK HTTP client
-    response = LanguageOperator::Dsl::HTTP.get(url, follow_redirects: true)
+    # Get status code using SDK HTTP client (don't follow redirects to get actual status)
+    response = LanguageOperator::Dsl::HTTP.get(url, follow_redirects: false)
 
     status = response[:status] || 0
 
