@@ -411,3 +411,15 @@ podLabels: {}
 
 # Service labels
 serviceLabels: {}
+
+# Persona Library configuration
+personaLibrary:
+  # Enable persona library ConfigMaps
+  enabled: true
+  # List of built-in personas to install
+  personas:
+    - financial-analyst
+    - devops-engineer
+    - general-assistant
+    - executive-assistant
+    - customer-support

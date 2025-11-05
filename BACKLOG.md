@@ -14,12 +14,6 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Update test files~~ - Updated spec files, module references in all tests
 * ~~Keep operator and images as langop~~ - Verified kubernetes/, components/ Docker images, CRDs still use langop.io and langop/* image names (no changes needed)
 
-### Vision: Natural Language Agent Creation (Top Priority - User Stories)
-
-**Goal**: Enable users to create autonomous agents by describing tasks in natural language, inspired by how professionals describe their repetitive work.
-
-**User Story**: "As an accountant, I want to create an agent by saying 'review my spreadsheet at 4pm daily and email me any errors' without writing YAML or code."
-
 #### MVP: Cluster Management (Foundation - Required First)
 
 * ~~Implement `aictl cluster create <name>` command~~ - Created LanguageCluster resource creation with namespace, progress display, auto-switch to new cluster context, saves to ~/.aictl/config.yaml
@@ -54,7 +48,7 @@ When asked to iterate, plan the top item on the backlog.
 
 #### MVP: Persona Management
 
-* Create built-in persona library - Ship 5+ personas as ConfigMaps in kubernetes/charts/language-operator/persona-library/: financial-analyst, devops-engineer, general-assistant, executive-assistant, customer-support with complete specs (systemPrompt, tone, capabilities, toolPreferences, responseFormat)
+* ~~Create built-in persona library~~ - Ship 5+ personas as ConfigMaps in kubernetes/charts/language-operator/persona-library/: financial-analyst, devops-engineer, general-assistant, executive-assistant, customer-support with complete specs (systemPrompt, tone, capabilities, toolPreferences, responseFormat)
 * ~~Implement `aictl persona list` command~~ - Shows table of personas with NAME, TONE, USED BY count, DESCRIPTION; counts agent usage, provides helpful guidance if empty
 * ~~Implement `aictl persona show <name>` command~~ - Displays full persona YAML, shows usage example
 * ~~Implement `aictl persona create <name>` command~~ - Interactive wizard to create custom persona: prompt for displayName, description, tone, systemPrompt, capabilities, optionally inherit from existing persona
