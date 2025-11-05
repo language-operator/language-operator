@@ -136,7 +136,7 @@ jobs:
           docker rm -f web-test 2>/dev/null || true
           docker run -d --name web-test git.theryans.io/langop/web-tool:latest sleep 300
           docker cp . web-test:/tmp/workspace
-          docker exec web-test chown -R langop:langop /tmp/workspace
+          docker exec --user root web-test chown -R langop:langop /tmp/workspace
           docker exec -w /tmp/workspace web-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
           docker rm -f web-test
 
@@ -166,6 +166,6 @@ jobs:
           docker rm -f email-test 2>/dev/null || true
           docker run -d --name email-test git.theryans.io/langop/email-tool:latest sleep 300
           docker cp . email-test:/tmp/workspace
-          docker exec email-test chown -R langop:langop /tmp/workspace
+          docker exec --user root email-test chown -R langop:langop /tmp/workspace
           docker exec -w /tmp/workspace email-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
           docker rm -f email-test
