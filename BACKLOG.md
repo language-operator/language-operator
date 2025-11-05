@@ -4,6 +4,7 @@ When asked to iterate, plan the top item on the backlog.
 
 ## Prioritized Requests
 
+* Complete migration from "langop" naming to "language-operator"
 * Complete remaining 23 pending SDK tests - Refine LLM/MCP connection mocks, add missing fixtures for edge cases, achieve 100% test pass rate, maintain 85+ examples coverage
 * Add comprehensive CLI help text - Include real-world usage examples in each command help, document common workflows (create first agent, monitor execution, troubleshooting), add links to online documentation
 * Add debug mode flag - Implement `--debug` global flag for verbose logging, show kubectl API calls, display synthesizer LLM prompts/responses, log timing information for troubleshooting
