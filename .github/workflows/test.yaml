@@ -130,11 +130,12 @@ jobs:
       - name: Run web tool unit tests
         working-directory: tools/web
         run: |
-          # Run tests in the built image
-          docker run --rm --user $(id -u):$(id -g) \
-            -v $(pwd):/workspace -w /workspace \
-            git.theryans.io/langop/web-tool:latest \
-            sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+          # Volume mounts don't work in CI, so copy files into container
+          docker rm -f web-test 2>/dev/null || true
+          docker run -d --name web-test git.theryans.io/langop/web-tool:latest sleep 300
+          docker cp . web-test:/workspace
+          docker exec -w /workspace web-test sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+          docker rm -f web-test
 
   # Test email tool
   email-tool-test:
@@ -158,8 +159,9 @@ jobs:
       - name: Run email tool unit tests
         working-directory: tools/email
         run: |
-          # Run tests in the built image
-          docker run --rm --user $(id -u):$(id -g) \
-            -v $(pwd):/workspace -w /workspace \
-            git.theryans.io/langop/email-tool:latest \
-            sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+          # Volume mounts don't work in CI, so copy files into container
+          docker rm -f email-test 2>/dev/null || true
+          docker run -d --name email-test git.theryans.io/langop/email-tool:latest sleep 300
+          docker cp . email-test:/workspace
+          docker exec -w /workspace email-test sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+          docker rm -f email-test
