@@ -118,27 +118,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ruby
+      - name: Run web tool tests in Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential rubygems
-
-      - name: Set up Ruby environment
-        run: |
-          # Build and install SDK gem globally
-          cd sdk/ruby
-          gem build language-operator.gemspec
-          sudo gem install --local language-operator-0.1.0.gem
-
-          # Create directory and copy SDK to satisfy path-based Gemfile dependency
-          sudo mkdir -p /language-operator
-          sudo cp -r . /language-operator/
-
-      - name: Run web tool unit tests
-        working-directory: tools/web
-        run: |
-          bundle install
-          bundle exec rspec --format documentation
+          docker rm -f web-test 2>/dev/null || true
+          docker run -d --name web-test ruby:3.4-alpine sleep 300
+          docker cp sdk/ruby web-test:/sdk
+          docker cp tools/web web-test:/app
+          docker exec web-test sh -c '
+            cd /sdk &&
+            apk add --no-cache build-base git &&
+            gem build language-operator.gemspec &&
+            gem install language-operator-0.1.0.gem &&
+            mkdir -p /language-operator &&
+            cp -r . /language-operator/ &&
+            cd /app &&
+            bundle install &&
+            bundle exec rspec --format documentation
+          '
+          docker rm -f web-test
 
   # Test email tool
   email-tool-test:
@@ -148,24 +145,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Ruby
+      - name: Run email tool tests in Docker
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ruby ruby-dev build-essential rubygems
-
-      - name: Set up Ruby environment
-        run: |
-          # Build and install SDK gem globally
-          cd sdk/ruby
-          gem build language-operator.gemspec
-          sudo gem install --local language-operator-0.1.0.gem
-
-          # Create directory and copy SDK to satisfy path-based Gemfile dependency
-          sudo mkdir -p /language-operator
-          sudo cp -r . /language-operator/
-
-      - name: Run email tool unit tests
-        working-directory: tools/email
-        run: |
-          bundle install
-          bundle exec rspec --format documentation
+          docker rm -f email-test 2>/dev/null || true
+          docker run -d --name email-test ruby:3.4-alpine sleep 300
+          docker cp sdk/ruby email-test:/sdk
+          docker cp tools/email email-test:/app
+          docker exec email-test sh -c '
+            cd /sdk &&
+            apk add --no-cache build-base git &&
+            gem build language-operator.gemspec &&
+            gem install language-operator-0.1.0.gem &&
+            mkdir -p /language-operator &&
+            cp -r . /language-operator/ &&
+            cd /app &&
+            bundle install &&
+            bundle exec rspec --format documentation
+          '
+          docker rm -f email-test
