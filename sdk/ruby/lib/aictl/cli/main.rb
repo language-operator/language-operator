@@ -4,6 +4,7 @@ require 'thor'
 require 'fileutils'
 require_relative 'commands/cluster'
 require_relative 'commands/use'
+require_relative 'commands/agent'
 
 module Aictl
   module CLI
@@ -27,6 +28,9 @@ module Aictl
       def use(cluster_name)
         Commands::Use.new.switch(cluster_name)
       end
+
+      desc 'agent SUBCOMMAND ...ARGS', 'Manage autonomous agents'
+      subcommand 'agent', Commands::Agent
 
       desc 'new TYPE NAME', 'Generate a new tool or agent project (TYPE: tool, agent)'
       long_desc <<-DESC

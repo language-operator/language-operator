@@ -29,7 +29,7 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Implement `aictl use <cluster>` command~~ - Switches cluster context (like kubectl use-context), saves to config file, displays confirmation
 * ~~Implement `aictl cluster current` command~~ - Shows current cluster context with namespace and connection status
 * ~~Create config file management~~ - ~/.aictl/config.yaml storing current-cluster and cluster list with namespaces and kubeconfig paths
-* Add cluster validation on agent commands - Error with helpful message if no cluster selected, suggest `aictl cluster create` or `aictl use`
+* ~~Add cluster validation on agent commands~~ - Created ClusterValidator helper with helpful error messages, integrated into all agent commands, suggests `aictl cluster create` or `aictl use` when no cluster selected
 
 #### MVP: Beautiful CLI for Agent Lifecycle Management
 
