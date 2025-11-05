@@ -51,6 +51,13 @@ module LanguageOperator
       def call(params)
         log_debug "Calling tool '#{@name}' with params: #{params.inspect}"
 
+        # Apply default values for missing optional parameters
+        @parameters.each do |name, param_def|
+          if !params.key?(name) && !param_def.default.nil?
+            params[name] = param_def.default
+          end
+        end
+
         # Validate required parameters
         @parameters.each do |name, param_def|
           if param_def.required && !params.key?(name)

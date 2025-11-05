@@ -24,7 +24,7 @@ RSpec.describe 'web_headers tool' do
       result = tool.call('url' => 'https://example.com/')
 
       expect(result).to include('Headers for https://example.com/')
-      expect(result).to include('HTTP')
+      expect(result).to include('content-type')
     end
 
     it 'includes various header fields' do
