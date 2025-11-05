@@ -22,7 +22,7 @@ These tasks are:
 Users should create autonomous agents by simply stating their task:
 
 ```bash
-langop agent create "review my recent changes in https://docs.google.com/spreadsheets/d/xyz around 4pm every day, and let me know if I've made any mistakes before I sign off for the day"
+aictl agent create "review my recent changes in https://docs.google.com/spreadsheets/d/xyz around 4pm every day, and let me know if I've made any mistakes before I sign off for the day"
 ```
 
 The system:
@@ -100,7 +100,7 @@ When you change `spec.instructions`, the operator:
 
 ```bash
 # Create agent from natural language
-langop agent create "review my spreadsheet at 4pm daily and email me any errors"
+aictl agent create "review my spreadsheet at 4pm daily and email me any errors"
 
 # Output:
 Creating agent...
@@ -114,14 +114,14 @@ Next run: Today at 4:00 PM (in 2h 34m)
 Tools:    google-sheets, email
 Persona:  financial-analyst
 
-View logs: langop agent logs spreadsheet-reviewer -f
+View logs: aictl agent logs spreadsheet-reviewer -f
 ```
 
 ### Beautiful Monitoring
 
 ```bash
 # See all agents
-langop agent list
+aictl agent list
 
 # Output:
 NAME                    MODE         STATUS    NEXT RUN         EXECUTIONS
@@ -132,7 +132,7 @@ error-monitor          continuous   Running   -                1,203
 
 ```bash
 # Watch execution in real-time
-langop agent logs spreadsheet-reviewer -f
+aictl agent logs spreadsheet-reviewer -f
 
 # Output:
 2025-11-04 16:00:01 | Starting execution cycle 48
@@ -149,7 +149,7 @@ langop agent logs spreadsheet-reviewer -f
 
 ```bash
 # Show agent details
-langop agent inspect spreadsheet-reviewer
+aictl agent inspect spreadsheet-reviewer
 
 # Output:
 Name:              spreadsheet-reviewer
@@ -180,14 +180,14 @@ Synthesized Code:
   Size: 127 lines
   Hash: a3f8c2d
   Last Synthesized: 2 days ago
-  View: langop agent code spreadsheet-reviewer
+  View: aictl agent code spreadsheet-reviewer
 ```
 
 ### System Overview
 
 ```bash
 # See everything at a glance
-langop status
+aictl status
 
 # Output:
 Langop Status
@@ -270,17 +270,17 @@ spec:
 
 ```bash
 # List built-in personas
-langop persona list
+aictl persona list
 
 # Create custom persona
-langop persona create my-accountant --from financial-analyst
+aictl persona create my-accountant --from financial-analyst
 
 # Edit custom persona
-langop persona edit my-accountant
+aictl persona edit my-accountant
 
 # Agents automatically select appropriate persona based on task
 # Or you can specify:
-langop agent create "review my spreadsheet..." --persona my-accountant
+aictl agent create "review my spreadsheet..." --persona my-accountant
 ```
 
 ## Real-World Examples
@@ -288,7 +288,7 @@ langop agent create "review my spreadsheet..." --persona my-accountant
 ### 1. Accountant Workflow
 
 ```bash
-langop agent create "review my recent changes in https://docs.google.com/spreadsheets/d/xyz around 4pm every day, and let me know if I've made any mistakes before I sign off for the day"
+aictl agent create "review my recent changes in https://docs.google.com/spreadsheets/d/xyz around 4pm every day, and let me know if I've made any mistakes before I sign off for the day"
 ```
 
 **What happens:**
@@ -304,7 +304,7 @@ langop agent create "review my recent changes in https://docs.google.com/spreads
 ### 2. DevOps Error Monitoring
 
 ```bash
-langop agent create "check https://api.example.com/health every 5 minutes and page me if status isn't 200"
+aictl agent create "check https://api.example.com/health every 5 minutes and page me if status isn't 200"
 ```
 
 **What happens:**
@@ -320,7 +320,7 @@ langop agent create "check https://api.example.com/health every 5 minutes and pa
 ### 3. Email Triage
 
 ```bash
-langop agent create "scan my inbox every morning at 9am and categorize emails by urgency"
+aictl agent create "scan my inbox every morning at 9am and categorize emails by urgency"
 ```
 
 **What happens:**
@@ -336,7 +336,7 @@ langop agent create "scan my inbox every morning at 9am and categorize emails by
 ### 4. Executive Calendar Prep
 
 ```bash
-langop agent create "email me a summary of tomorrow's meetings every evening at 6pm"
+aictl agent create "email me a summary of tomorrow's meetings every evening at 6pm"
 ```
 
 **What happens:**
@@ -352,7 +352,7 @@ langop agent create "email me a summary of tomorrow's meetings every evening at 
 ### 5. Slack Incident Response
 
 ```bash
-langop agent create "when someone mentions 'incident' in #engineering, create a ticket and notify #ops"
+aictl agent create "when someone mentions 'incident' in #engineering, create a ticket and notify #ops"
 ```
 
 **What happens:**
@@ -494,38 +494,38 @@ Inspired by Cilium's excellent UX.
 
 ```bash
 # Agent management
-langop agent create <description>     # Create agent from natural language
-langop agent list                     # List all agents
-langop agent inspect <name>           # Show agent details
-langop agent logs <name> [-f]         # View execution logs
-langop agent code <name>              # View synthesized code
-langop agent edit <name>              # Edit instructions (triggers re-synthesis)
-langop agent pause <name>             # Pause agent
-langop agent resume <name>            # Resume agent
-langop agent delete <name>            # Delete agent
-langop agent test <description>       # Dry-run without deploying
+aictl agent create <description>     # Create agent from natural language
+aictl agent list                     # List all agents
+aictl agent inspect <name>           # Show agent details
+aictl agent logs <name> [-f]         # View execution logs
+aictl agent code <name>              # View synthesized code
+aictl agent edit <name>              # Edit instructions (triggers re-synthesis)
+aictl agent pause <name>             # Pause agent
+aictl agent resume <name>            # Resume agent
+aictl agent delete <name>            # Delete agent
+aictl agent test <description>       # Dry-run without deploying
 
 # Persona management
-langop persona list                   # List available personas
-langop persona show <name>            # Show persona details
-langop persona create <name>          # Create custom persona
-langop persona edit <name>            # Edit persona
-langop persona delete <name>          # Delete persona
+aictl persona list                   # List available personas
+aictl persona show <name>            # Show persona details
+aictl persona create <name>          # Create custom persona
+aictl persona edit <name>            # Edit persona
+aictl persona delete <name>          # Delete persona
 
 # Tool management
-langop tool list                      # List available tools
-langop tool install <name>            # Install MCP tool
-langop tool auth <name>               # Configure tool authentication
-langop tool test <name>               # Test tool connection
+aictl tool list                      # List available tools
+aictl tool install <name>            # Install MCP tool
+aictl tool auth <name>               # Configure tool authentication
+aictl tool test <name>               # Test tool connection
 
 # Model management
-langop model list                     # List configured models
-langop model add <name>               # Add model configuration
-langop model test <name>              # Test model connection
+aictl model list                     # List configured models
+aictl model add <name>               # Add model configuration
+aictl model test <name>              # Test model connection
 
 # System overview
-langop status                         # Show system status
-langop version                        # Show version info
+aictl status                         # Show system status
+aictl version                        # Show version info
 ```
 
 ### Design Principles
@@ -586,7 +586,7 @@ langop version                        # Show version info
 ### Multi-Agent Workflows
 
 ```bash
-langop workflow create "when sales closes a deal, notify legal to draft contract, then notify accounting to set up billing, then send welcome email to customer"
+aictl workflow create "when sales closes a deal, notify legal to draft contract, then notify accounting to set up billing, then send welcome email to customer"
 ```
 
 Creates orchestrated workflow across multiple specialized agents.
@@ -594,8 +594,8 @@ Creates orchestrated workflow across multiple specialized agents.
 ### Agent Marketplace
 
 ```bash
-langop marketplace search "accounting"
-langop marketplace install @acme/quarterly-report-generator
+aictl marketplace search "accounting"
+aictl marketplace install @acme/quarterly-report-generator
 ```
 
 Community-built agents you can install and customize.
@@ -603,7 +603,7 @@ Community-built agents you can install and customize.
 ### Voice Interface
 
 ```bash
-langop agent create --voice
+aictl agent create --voice
 # [Speaks into microphone]
 # "Review my spreadsheet every afternoon..."
 ```
@@ -611,7 +611,7 @@ langop agent create --voice
 ### Learning from Feedback
 
 ```bash
-langop feedback spreadsheet-reviewer "you missed the error in cell C15"
+aictl feedback spreadsheet-reviewer "you missed the error in cell C15"
 ```
 
 Agents learn from corrections and improve over time.
@@ -619,7 +619,7 @@ Agents learn from corrections and improve over time.
 ### Agent Teams
 
 ```bash
-langop team create finance-team \
+aictl team create finance-team \
   --agents spreadsheet-reviewer,expense-auditor,report-generator \
   --shared-workspace /finance
 ```
@@ -636,9 +636,9 @@ Cilium transformed Kubernetes networking by:
 5. **Production-ready** - Scales to largest clusters
 
 Langop applies the same principles to autonomous agents:
-1. **Beautiful UX** - `langop status` shows all agents, tools, personas
+1. **Beautiful UX** - `aictl status` shows all agents, tools, personas
 2. **Powerful abstractions** - Natural language → synthesized code
-3. **Deep visibility** - `langop agent logs` shows execution in real-time
+3. **Deep visibility** - `aictl agent logs` shows execution in real-time
 4. **Great docs** - Getting started is dead simple
 5. **Production-ready** - Runs on any Kubernetes cluster
 
@@ -657,14 +657,14 @@ Langop applies the same principles to autonomous agents:
 ## Getting Started
 
 ```bash
-# Install langop CLI
-curl -L https://get.langop.io | sh
+# Install aictl CLI
+curl -L https://get.aictl.io | sh
 
 # Create your first agent
-langop agent create "send me a summary of my inbox every morning at 9am"
+aictl agent create "send me a summary of my inbox every morning at 9am"
 
 # Watch it work
-langop agent logs inbox-summarizer -f
+aictl agent logs inbox-summarizer -f
 
 # Welcome to the future of work.
 ```
