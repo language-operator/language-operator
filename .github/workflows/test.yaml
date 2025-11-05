@@ -104,7 +104,7 @@ jobs:
             cd /app &&
             apk add --no-cache build-base git &&
             gem build language-operator.gemspec &&
-            gem install language-operator-*.gem &&
+            gem install language-operator-0.1.0.gem &&
             bundle install &&
             bundle exec rspec
           '

@@ -20,7 +20,7 @@ build-gem:
 	@echo "Building language-operator gem from SDK..."
 	cd ../../sdk/ruby && gem build language-operator.gemspec
 	@echo "Copying gem to components/ruby..."
-	cp ../../sdk/ruby/language-operator-*.gem .
+	cp ../../sdk/ruby/language-operator-0.1.0.gem .
 	@echo "Gem built successfully"
 
 # Build the Docker image (depends on gem being built)

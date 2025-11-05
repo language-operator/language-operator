@@ -43,6 +43,8 @@ jobs:
           cd /build
           apk add --no-cache git
           gem build language-operator.gemspec
+          # List the built gem for verification
+          ls -la language-operator-*.gem
           EOF
           chmod +x /tmp/build-gem.sh
 
@@ -50,15 +52,15 @@ jobs:
           docker cp sdk/ruby gem-builder:/build
           docker cp /tmp/build-gem.sh gem-builder:/build-gem.sh
           docker exec gem-builder /build-gem.sh
-          docker cp gem-builder:/build/language-operator-*.gem sdk/ruby/
+          docker cp gem-builder:/build/language-operator-0.1.0.gem sdk/ruby/
           docker rm -f gem-builder
-          cp sdk/ruby/language-operator-*.gem components/ruby/
+          cp sdk/ruby/language-operator-0.1.0.gem components/ruby/
 
       - name: Upload gem artifact
         uses: actions/upload-artifact@v3
         with:
           name: language-operator-gem
-          path: sdk/ruby/language-operator-*.gem
+          path: sdk/ruby/language-operator-0.1.0.gem
           retention-days: 1
 
   # Build the operator image
@@ -437,17 +439,15 @@ jobs:
 
           # Push gem using basic auth via curl
           # Forgejo/Gitea uses basic auth for gem push
-          for gem_file in language-operator-*.gem; do
-            curl -u "${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}" \
-                 --upload-file "$gem_file" \
-                 https://${{ env.REGISTRY }}/api/packages/langop/rubygems
-          done
+          curl -u "${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}" \
+               --upload-file "language-operator-0.1.0.gem" \
+               https://${{ env.REGISTRY }}/api/packages/langop/rubygems
           SCRIPT
           chmod +x /tmp/publish-gem.sh
 
           docker run -d --name gem-publisher -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" ruby:3.4-alpine sleep 300
           docker exec gem-publisher mkdir -p /gem
-          docker cp language-operator-*.gem gem-publisher:/gem/
+          docker cp language-operator-0.1.0.gem gem-publisher:/gem/
           docker cp /tmp/publish-gem.sh gem-publisher:/publish-gem.sh
           docker exec -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" gem-publisher /publish-gem.sh
           docker rm -f gem-publisher
