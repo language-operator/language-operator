@@ -35,7 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'thor', '~> 1.3'
 
   # Kubernetes client
-  spec.add_dependency 'k8s-client', '~> 0.20'
+  spec.add_dependency 'k8s-ruby', '~> 0.17'
 
   # Beautiful CLI output
   spec.add_dependency 'tty-spinner', '~> 0.9'
