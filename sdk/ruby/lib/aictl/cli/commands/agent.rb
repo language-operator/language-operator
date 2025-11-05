@@ -780,27 +780,11 @@ module Aictl
             end
           end
 
-          if all_agents.empty?
-            Formatters::ProgressFormatter.info('No agents found in any cluster')
-            return
-          end
+          # Group agents by cluster for formatted display
+          agents_by_cluster = all_agents.group_by { |agent| agent[:cluster] }
+                                        .transform_values { |agents| agents.map { |a| a.except(:cluster) } }
 
-          # Display with cluster column
-          headers = ['CLUSTER', 'NAME', 'MODE', 'STATUS', 'NEXT RUN', 'EXECUTIONS']
-          rows = all_agents.map do |agent|
-            [
-              agent[:cluster],
-              agent[:name],
-              agent[:mode],
-              agent[:status],
-              agent[:next_run],
-              agent[:executions]
-            ]
-          end
-
-          require 'tty-table'
-          table = TTY::Table.new(headers, rows)
-          puts table.render(:unicode, padding: [0, 1])
+          Formatters::TableFormatter.all_agents(agents_by_cluster)
         end
       end
     end

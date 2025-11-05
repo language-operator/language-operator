@@ -46,6 +46,29 @@ module Aictl
             puts table.render(:unicode, padding: [0, 1])
           end
 
+          def all_agents(agents_by_cluster)
+            return ProgressFormatter.info('No agents found across any cluster') if agents_by_cluster.empty?
+
+            headers = ['CLUSTER', 'NAME', 'MODE', 'STATUS', 'NEXT RUN', 'EXECUTIONS']
+            rows = []
+
+            agents_by_cluster.each do |cluster_name, agents|
+              agents.each do |agent|
+                rows << [
+                  cluster_name,
+                  agent[:name],
+                  agent[:mode],
+                  status_indicator(agent[:status]),
+                  agent[:next_run] || 'N/A',
+                  agent[:executions] || 0
+                ]
+              end
+            end
+
+            table = TTY::Table.new(headers, rows)
+            puts table.render(:unicode, padding: [0, 1])
+          end
+
           def tools(tools)
             return ProgressFormatter.info('No tools found') if tools.empty?
 
@@ -95,6 +118,32 @@ module Aictl
 
             table = TTY::Table.new(headers, rows)
             puts table.render(:unicode, padding: [0, 1])
+          end
+
+          def status_dashboard(cluster_summary, current_cluster: nil)
+            return ProgressFormatter.info('No clusters configured') if cluster_summary.empty?
+
+            headers = ['CLUSTER', 'AGENTS', 'TOOLS', 'MODELS', 'STATUS']
+            rows = cluster_summary.map do |cluster|
+              name = cluster[:name].to_s
+              name += ' *' if current_cluster && cluster[:name] == current_cluster
+
+              [
+                name,
+                cluster[:agents] || 0,
+                cluster[:tools] || 0,
+                cluster[:models] || 0,
+                status_indicator(cluster[:status])
+              ]
+            end
+
+            table = TTY::Table.new(headers, rows)
+            puts table.render(:unicode, padding: [0, 1])
+
+            if current_cluster
+              puts
+              puts "* = current cluster"
+            end
           end
 
           private

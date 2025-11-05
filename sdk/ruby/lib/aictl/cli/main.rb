@@ -210,7 +210,109 @@ module Aictl
         IRB.start
       end
 
+      desc 'completion SHELL', 'Install shell completion for aictl (bash, zsh, fish)'
+      long_desc <<-DESC
+        Install shell completion for aictl. Supports bash, zsh, and fish.
+
+        Examples:
+          aictl completion bash
+          aictl completion zsh
+          aictl completion fish
+
+        Manual installation:
+          bash: Add to ~/.bashrc:
+            source <(aictl completion bash --stdout)
+
+          zsh: Add to ~/.zshrc:
+            source <(aictl completion zsh --stdout)
+
+          fish: Run once:
+            aictl completion fish | source
+      DESC
+      option :stdout, type: :boolean, desc: 'Print completion script to stdout instead of installing'
+      def completion(shell)
+        case shell.downcase
+        when 'bash'
+          install_bash_completion
+        when 'zsh'
+          install_zsh_completion
+        when 'fish'
+          install_fish_completion
+        else
+          Formatters::ProgressFormatter.error("Unsupported shell: #{shell}")
+          puts
+          puts 'Supported shells: bash, zsh, fish'
+          exit 1
+        end
+      end
+
       private
+
+      def install_bash_completion
+        completion_file = File.expand_path('../../completions/aictl.bash', __dir__)
+
+        if options[:stdout]
+          puts File.read(completion_file)
+          return
+        end
+
+        target = File.expand_path('~/.bash_completion.d/aictl')
+        FileUtils.mkdir_p(File.dirname(target))
+        FileUtils.cp(completion_file, target)
+
+        Formatters::ProgressFormatter.success('Bash completion installed')
+        puts
+        puts 'Add to your ~/.bashrc:'
+        puts '  [ -f ~/.bash_completion.d/aictl ] && source ~/.bash_completion.d/aictl'
+        puts
+        puts 'Then reload your shell:'
+        puts '  source ~/.bashrc'
+      end
+
+      def install_zsh_completion
+        completion_file = File.expand_path('../../completions/_aictl', __dir__)
+
+        if options[:stdout]
+          puts File.read(completion_file)
+          return
+        end
+
+        # Check if user has a custom fpath directory
+        fpath_dir = File.expand_path('~/.zsh/completions')
+        FileUtils.mkdir_p(fpath_dir)
+
+        target = File.join(fpath_dir, '_aictl')
+        FileUtils.cp(completion_file, target)
+
+        Formatters::ProgressFormatter.success('Zsh completion installed')
+        puts
+        puts 'Add to your ~/.zshrc (before compinit):'
+        puts '  fpath=(~/.zsh/completions $fpath)'
+        puts '  autoload -Uz compinit && compinit'
+        puts
+        puts 'Then reload your shell:'
+        puts '  source ~/.zshrc'
+      end
+
+      def install_fish_completion
+        completion_file = File.expand_path('../../completions/aictl.fish', __dir__)
+
+        if options[:stdout]
+          puts File.read(completion_file)
+          return
+        end
+
+        target = File.expand_path('~/.config/fish/completions/aictl.fish')
+        FileUtils.mkdir_p(File.dirname(target))
+        FileUtils.cp(completion_file, target)
+
+        Formatters::ProgressFormatter.success('Fish completion installed')
+        puts
+        puts 'Reload completions:'
+        puts '  fish_update_completions'
+        puts
+        puts 'Or restart your fish shell'
+      end
 
       def generate_tool(name)
         dir = name

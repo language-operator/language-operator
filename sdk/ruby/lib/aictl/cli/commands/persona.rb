@@ -2,6 +2,7 @@
 
 require 'thor'
 require 'yaml'
+require 'pastel'
 require_relative '../formatters/progress_formatter'
 require_relative '../formatters/table_formatter'
 require_relative '../helpers/cluster_validator'
@@ -79,15 +80,52 @@ module Aictl
             exit 1
           end
 
-          puts "Persona: #{name}"
-          puts '=' * 80
           puts
-          puts YAML.dump(persona)
+          puts "Persona: #{pastel.cyan.bold(name)}"
+          puts '═' * 80
           puts
-          puts '=' * 80
+
+          # Format and display key persona details
+          spec = persona.dig('spec') || {}
+          puts "#{pastel.bold('Display Name:')} #{spec['displayName']}"
+          puts "#{pastel.bold('Tone:')} #{pastel.yellow(spec['tone'])}" if spec['tone']
           puts
-          puts 'Use this persona when creating agents:'
+          puts "#{pastel.bold('Description:')}"
+          puts "  #{spec['description']}"
+          puts
+
+          if spec['systemPrompt']
+            puts "#{pastel.bold('System Prompt:')}"
+            puts "  #{spec['systemPrompt']}"
+            puts
+          end
+
+          if spec['capabilities']&.any?
+            puts "#{pastel.bold('Capabilities:')}"
+            spec['capabilities'].each do |cap|
+              puts "  #{pastel.green('•')} #{cap}"
+            end
+            puts
+          end
+
+          if spec['toolPreferences']&.any?
+            puts "#{pastel.bold('Tool Preferences:')}"
+            spec['toolPreferences'].each do |pref|
+              puts "  #{pastel.green('•')} #{pref}"
+            end
+            puts
+          end
+
+          if spec['responseFormat']
+            puts "#{pastel.bold('Response Format:')} #{spec['responseFormat']}"
+            puts
+          end
+
+          puts '═' * 80
+          puts
+          Formatters::ProgressFormatter.info("Use this persona when creating agents:")
           puts "  aictl agent create \"description\" --persona #{name}"
+          puts
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to show persona: #{e.message}")
           raise if ENV['DEBUG']
@@ -393,6 +431,10 @@ module Aictl
           ensure
             tempfile.unlink
           end
+        end
+
+        def pastel
+          @pastel ||= Pastel.new
         end
       end
     end

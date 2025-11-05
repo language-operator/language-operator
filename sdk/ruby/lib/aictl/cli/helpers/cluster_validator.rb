@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative '../formatters/progress_formatter'
+require_relative 'kubeconfig_validator'
 require_relative '../../config/cluster_config'
 
 module Aictl
@@ -71,7 +72,29 @@ module Aictl
           # Get cluster config by name (with validation)
           def get_cluster_config(name)
             validate_cluster_exists!(name)
-            Config::ClusterConfig.get_cluster(name)
+            config = Config::ClusterConfig.get_cluster(name)
+
+            # Validate kubeconfig exists and is accessible
+            validate_kubeconfig!(config)
+
+            config
+          end
+
+          # Validate kubeconfig for the given cluster config
+          def validate_kubeconfig!(cluster_config)
+            # Check if kubeconfig file exists
+            kubeconfig_path = cluster_config[:kubeconfig]
+            unless kubeconfig_path && File.exist?(kubeconfig_path)
+              Formatters::ProgressFormatter.error("Kubeconfig not found: #{kubeconfig_path}")
+              puts
+              puts 'The kubeconfig file for this cluster does not exist.'
+              puts
+              puts 'To fix this issue:'
+              puts '  1. Verify the kubeconfig path in ~/.aictl/config.yaml'
+              puts '  2. Re-create the cluster configuration:'
+              puts "     aictl cluster create #{cluster_config[:name]}"
+              exit 1
+            end
           end
         end
       end

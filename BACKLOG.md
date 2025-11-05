@@ -4,7 +4,31 @@ When asked to iterate, plan the top item on the backlog.
 
 ## Prioritized Requests
 
-### ~~Rebrand: langop CLI → aictl (Pre-MVP - Do First)~~
+* E2E test: Full agent lifecycle - Create LanguageAgent from natural language → verify synthesis succeeds → verify pod deployment → verify execution logs → update instructions → verify re-synthesis triggers → verify redeployment with new code
+* Complete remaining 23 pending SDK tests - Refine LLM/MCP connection mocks, add missing fixtures for edge cases, achieve 100% test pass rate, maintain 85+ examples coverage
+* Add comprehensive CLI help text - Include real-world usage examples in each command help, document common workflows (create first agent, monitor execution, troubleshooting), add links to online documentation
+* Add debug mode flag - Implement `--debug` global flag for verbose logging, show kubectl API calls, display synthesizer LLM prompts/responses, log timing information for troubleshooting
+* Create GETTING_STARTED.md guide - Document installation steps, first cluster setup, first agent creation walkthrough, monitoring and logs, common troubleshooting scenarios
+* Add comprehensive controller test coverage - Test LanguageAgent synthesis/reconciliation logic, LanguageModel proxy configuration, LanguageCluster namespace management, achieve 50%+ coverage
+* Create integration test suite - Build example manifests for common scenarios, add packaging verification procedures, implement multiple E2E workflows (scheduled agent, autonomous agent, tool integration)
+* Add synthesis troubleshooting guide - Document common synthesis errors, validation failure patterns, LLM connection issues, debug procedures, status condition interpretation
+* Update sdk/ruby/README.md with DSL examples - Add complete agent DSL examples showing schedule syntax, objectives definition, workflow blocks, constraints usage, persona integration
+* Add synthesis architecture documentation - Create flow diagram showing synthesis pipeline, document LLM integration points, explain ConfigMap management, describe hash-based change detection mechanism
+* Document synthesis environment variables - Explain SYNTHESIS_MODEL configuration, SYNTHESIS_ENDPOINT usage, default values, override behavior for custom LLMs
+* Package Helm chart for distribution - Add comprehensive values.yaml with documentation, create configuration examples, publish to chart repository, write installation guide
+* Complete LanguageClient controller - Implement ingress reconciliation for client access, add authentication mechanisms (API keys, OAuth), session management, usage pattern documentation
+* Add monitoring and observability - Export Prometheus metrics (request counts, latencies, error rates), implement structured logging standards, add health check endpoints to all components
+* Implement LanguageCluster dashboard - Deploy web UI showing cluster resources, agent/tool/model status overview, live event stream, aggregated log viewer
+* Implement cost tracking - Add usage metrics to LanguageAgent status, count tokens per request, estimate costs by model pricing, aggregate cluster-wide costs
+* Add safety guardrails - Integrate content filtering APIs, implement per-agent rate limiting, enforce blocked topics lists, add configurable safety thresholds
+* Add advanced tool features - Support Horizontal Pod Autoscaling configuration, add PodDisruptionBudgets for availability, implement custom health probes, add resource limit recommendations
+* Add advanced model features - Implement load balancing across model instances, create fallback model chains, add response caching layer, support multi-region model deployments
+* Implement event-driven triggers - Add webhook receiver endpoints, integrate event source platforms, create trigger condition DSL, implement action execution pipeline
+* Add memory backend integration - Create Redis adapter for conversation history, Postgres adapter for structured data, S3 adapter for file storage, add backend configuration to LanguageAgent spec
+
+## Completed Requests ✅
+
+### Rebrand: langop CLI → aictl
 
 * ~~Rename CLI binary from `langop` to `aictl`~~ - Renamed sdk/ruby/bin/langop → sdk/ruby/bin/aictl, updated shebang and requires
 * ~~Rename gem from `langop` to `aictl`~~ - Renamed sdk/ruby/langop.gemspec → sdk/ruby/aictl.gemspec, updated gem name, version, dependencies
@@ -14,7 +38,7 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Update test files~~ - Updated spec files, module references in all tests
 * ~~Keep operator and images as langop~~ - Verified kubernetes/, components/ Docker images, CRDs still use langop.io and langop/* image names (no changes needed)
 
-#### MVP: Cluster Management (Foundation - Required First)
+### MVP: Cluster Management
 
 * ~~Implement `aictl cluster create <name>` command~~ - Created LanguageCluster resource creation with namespace, progress display, auto-switch to new cluster context, saves to ~/.aictl/config.yaml
 * ~~Implement `aictl cluster list` command~~ - Shows table of all clusters: NAME, NAMESPACE, AGENTS, TOOLS, MODELS, STATUS with cluster health indicators
@@ -25,7 +49,7 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Create config file management~~ - ~/.aictl/config.yaml storing current-cluster and cluster list with namespaces and kubeconfig paths
 * ~~Add cluster validation on agent commands~~ - Created ClusterValidator helper with helpful error messages, integrated into all agent commands, suggests `aictl cluster create` or `aictl use` when no cluster selected
 
-#### MVP: Beautiful CLI for Agent Lifecycle Management
+### MVP: Agent Lifecycle Management
 
 * ~~Implement `aictl agent create <description>` command~~ - Creates LanguageAgent from natural language description, applies to cluster, watches synthesis status with spinner, shows success confirmation and next steps
 * ~~Add `--create-cluster <name>` flag to agent create~~ - Inline cluster creation if user doesn't have one yet, creates cluster and sets context before creating agent
@@ -40,13 +64,13 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Implement `aictl agent pause <name>` command~~ - Pauses scheduled agent execution by setting CronJob suspend=true, validates agent is scheduled mode, provides resume instructions
 * ~~Implement `aictl agent resume <name>` command~~ - Resumes paused agent by setting CronJob suspend=false, validates agent is scheduled mode, shows next execution time info
 
-#### MVP: System Overview & Status
+### MVP: System Overview & Status
 
 * ~~Implement `aictl status` command~~ - Overview dashboard showing cluster connection, operator version, current context, agent/tool/model/persona counts by type and status, beautiful formatted output with colored status indicators
 * ~~Add multi-cluster view to status~~ - When multiple clusters exist, shows summary table across all clusters with breakdown per cluster, marks current cluster with *
 * ~~Implement `aictl version` command~~ - Shows aictl CLI version and operator version from current cluster, checks compatibility status, provides helpful messages if not connected
 
-#### MVP: Persona Management
+### MVP: Persona Management
 
 * ~~Create built-in persona library~~ - Ship 5+ personas as ConfigMaps in kubernetes/charts/language-operator/persona-library/: financial-analyst, devops-engineer, general-assistant, executive-assistant, customer-support with complete specs (systemPrompt, tone, capabilities, toolPreferences, responseFormat)
 * ~~Implement `aictl persona list` command~~ - Shows table of personas with NAME, TONE, USED BY count, DESCRIPTION; counts agent usage, provides helpful guidance if empty
@@ -56,7 +80,7 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Implement `aictl persona edit <name>` command~~ - Open editor to modify persona YAML, validate on save, trigger agent re-synthesis for agents using this persona
 * ~~Implement `aictl persona delete <name>` command~~ - Deletes persona with check for agents using it, requires confirmation if in use, shows list of affected agents
 
-#### MVP: Tool Discovery & Management
+### MVP: Tool Discovery & Management
 
 * ~~Implement `aictl tool list` command~~ - Show table of tools in current cluster: NAME, TYPE, STATUS, AGENTS USING with connection health indicators
 * ~~Implement `aictl tool install <name>` command~~ - Create LanguageTool resource from template, apply to current cluster, show installation progress, prompt for authentication if needed
@@ -66,55 +90,12 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Create tool installation templates~~ - Add tool YAML templates to sdk/ruby/lib/langop/cli/templates/tools/ for common MCP servers
 * ~~Implement `aictl tool delete <name>` command~~ - Delete tool with check for agents using it, require confirmation if in use
 
-#### MVP: CLI Foundation & Polish
+### MVP: CLI Enhancements
 
-* Add beautiful CLI output formatting - Integrate tty-spinner for progress, tty-table for tables, tty-prompt for interactive questions, pastel/colorize for highlighting, proper error messages with next steps
 * ~~Add `--dry-run` flag to agent create~~ - Preview what would be created: show generated YAML, detected tools, selected persona, schedule extraction without applying to cluster
-* Add kubeconfig detection and cluster validation - Check KUBECONFIG env var or ~/.kube/config, validate cluster connectivity, check operator installed, show helpful error with installation steps if missing
-* Add shell completions - Generate bash/zsh/fish completions for all commands, subcommands, and flags, package in gem
-* Create comprehensive CLI help text - Rich examples for each command with real-world scenarios, link to documentation, common workflows documented in --help output
-* Add debug mode - `--debug` flag for verbose logging, show API calls, synthesizer prompts/responses, useful for troubleshooting
-* Create getting started guide - Add GETTING_STARTED.md with: installation, first cluster creation, first agent creation, monitoring agents, common workflows
-
-### Foundation & Testing (Functional Dependencies)
-
-* ~~Add comprehensive test coverage for web tool~~ - Tests exist (65 examples across 4 tools) but have infrastructure issues preventing execution. Fixed curl→HTTP client mocks, added fixtures, added SimpleCov. **Next step**: Run tests in production Docker image where langop gem is pre-installed, or extract tool logic to standalone testable modules
-* E2E test: Create LanguageAgent with natural language instructions → verify synthesis succeeds → verify agent deploys and runs → update instructions → verify automatic re-synthesis and redeployment
-* Complete remaining 23 pending SDK tests (refine mocks for LLM/MCP calls to achieve 100% test pass rate)
-* Add comprehensive controller test coverage: LanguageAgent (synthesis, reconciliation), LanguageModel (proxy config), LanguageCluster (namespace management)
-* Create integration test suite with example manifests (packaging, verification procedures, multiple E2E scenarios)
-
-### Documentation & Production Readiness
-
-* Add synthesis troubleshooting guide: common errors, validation failures, LLM connection issues, debug procedures, status interpretation
-* Update sdk/ruby/README.md with agent DSL examples: schedule, objectives, workflows, constraints, personas
-* Add synthesis architecture documentation: flow diagram, LLM integration, ConfigMap management, hash-based change detection
-* Document synthesis environment variables: SYNTHESIS_MODEL, SYNTHESIS_ENDPOINT, defaults, override behavior
-* Document DNS resolution behavior in README.md network isolation section: snapshot-based resolution (refreshes on reconciliation), wildcard DNS limitations (*.example.com resolves base domain only), CIDR alternative recommendations
-* Package Helm chart for easy installation: configuration examples, value documentation, publish to chart repository, installation guide
-
-### Production Features
-
-* Complete LanguageClient controller implementation: ingress reconciliation, authentication mechanisms, session management, usage pattern documentation
-* Add monitoring and observability: Prometheus metrics (request counts, latencies, errors), structured logging best practices, health check endpoints
-* Implement LanguageCluster dashboard deployment: web UI showing cluster resources (tools, models, personas, agents), status overview, event stream, log aggregation
-
-### Advanced Features - Safety & Cost Management
-
-* Implement cost tracking: usage metrics in LanguageAgent status, token counting per request, cost estimation by model, aggregated cluster costs
-* Add safety guardrails: content filtering integration, per-agent rate limiting, blocked topics enforcement, configurable thresholds
-
-### Advanced Features - Scalability & Reliability
-
-* Add advanced tool features: Horizontal Pod Autoscaling (HPA) configuration, PodDisruptionBudget (PDB) for availability, custom health probes, resource limits tuning
-* Add advanced model features: load balancing across multiple model instances, fallback model chains, response caching layer, multi-region model support
-* Implement event-driven triggers: webhook receivers, event source integrations, trigger condition DSL, action execution
-
-### Advanced Features - Persistence & Integration
-
-* Memory backend integration: Redis adapter for conversation history, Postgres adapter for structured data, S3 adapter for file storage, backend configuration in LanguageAgent spec
-
-## Completed Requests ✅
+* ~~Integrate tty-* gems for beautiful CLI output~~ - Added TableFormatter.all_agents() for multi-cluster agent views, TableFormatter.status_dashboard() for status command, improved persona show with formatted output using Pastel, all commands now use consistent formatters (tty-spinner, tty-table, tty-prompt, pastel)
+* ~~Add kubeconfig detection with validation~~ - Created KubeconfigValidator helper with detection (KUBECONFIG env → ~/.kube/config), cluster connectivity validation, operator deployment check, helpful error messages with installation guide URLs; integrated into ClusterValidator.get_cluster_config() for automatic validation on all cluster commands
+* ~~Generate shell completions for all commands~~ - Created bash/zsh/fish completion scripts with dynamic resource name completion (clusters, agents, personas, tools), added `aictl completion` command for easy installation, supports --stdout flag for manual integration
 
 ### Core Infrastructure & Operators
 
@@ -215,19 +196,3 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Update STATUS.md (Ruby SDK, CI/CD, persona integration, Makefile standardization)~~
 * ~~Update README.md (DNS resolution timing, wildcard DNS behavior)~~
 * ~~Update CLAUDE.md (ruby_llm dependency findings, project conventions, DRY principles)~~
-
-### Known Limitations
-
-* **DNS resolution is snapshot-based** - IPs cached until next reconciliation; for frequently changing IPs, use CIDR ranges or accept refresh delays
-* **Wildcard DNS (*.example.com) resolves base domain only** - Does not resolve all subdomains individually
-* **Agent startup race condition (cosmetic)** - Agent logs one connection error on first startup before sidecar is ready; agent continues running normally after initial error
-
-### Incomplete Features (Spec Exists, Implementation Pending)
-
-* **LanguageClient controller** - Ingress, auth, session management not implemented
-* **Memory backends** - Redis, Postgres, S3 adapters (spec exists in CRD)
-* **Event-driven triggers** - Webhook/event source support (spec exists in CRD)
-* **Cost tracking** - Status fields exist but not populated
-* **Safety guardrails** - Content filtering, rate limits (spec exists in CRD)
-* **Advanced tool features** - HPA, PDB, custom probes (spec exists in CRD)
-* **Advanced model features** - Load balancing, fallback, caching, multi-region (spec exists in CRD)

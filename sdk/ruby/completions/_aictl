@@ -1,0 +1,232 @@
+#compdef aictl
+
+# zsh completion for aictl
+
+_aictl() {
+    local -a commands
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    commands=(
+        'cluster:Manage language clusters'
+        'use:Switch to a different cluster context'
+        'agent:Manage autonomous agents'
+        'persona:Manage agent personas'
+        'tool:Manage MCP tools'
+        'status:Show system status and overview'
+        'version:Show aictl and operator version'
+        'new:Generate a new tool or agent project'
+        'serve:Start an MCP server for tools'
+        'test:Test tool definitions'
+        'run:Run an agent'
+        'console:Start an interactive Ruby console'
+        'help:Show help'
+    )
+
+    _arguments -C \
+        '1: :->command' \
+        '*::arg:->args'
+
+    case $state in
+        command)
+            _describe 'aictl command' commands
+            ;;
+        args)
+            case $line[1] in
+                cluster)
+                    _aictl_cluster
+                    ;;
+                use)
+                    _aictl_use
+                    ;;
+                agent)
+                    _aictl_agent
+                    ;;
+                persona)
+                    _aictl_persona
+                    ;;
+                tool)
+                    _aictl_tool
+                    ;;
+                new)
+                    _aictl_new
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_aictl_cluster() {
+    local -a subcommands
+    subcommands=(
+        'create:Create a new language cluster'
+        'list:List all language clusters'
+        'current:Show current cluster context'
+        'inspect:Show detailed cluster information'
+        'delete:Delete a language cluster'
+    )
+
+    _arguments -C \
+        '1: :->subcommand' \
+        '*::arg:->args'
+
+    case $state in
+        subcommand)
+            _describe 'cluster subcommand' subcommands
+            ;;
+        args)
+            case $line[1] in
+                inspect|delete)
+                    _aictl_clusters
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_aictl_use() {
+    _aictl_clusters
+}
+
+_aictl_agent() {
+    local -a subcommands
+    subcommands=(
+        'create:Create a new autonomous agent'
+        'list:List agents in current cluster'
+        'inspect:Show detailed agent information'
+        'delete:Delete an agent'
+        'logs:View agent execution logs'
+        'code:Display synthesized agent code'
+        'edit:Edit agent instructions'
+        'pause:Pause scheduled agent execution'
+        'resume:Resume paused agent'
+    )
+
+    _arguments -C \
+        '1: :->subcommand' \
+        '*::arg:->args'
+
+    case $state in
+        subcommand)
+            _describe 'agent subcommand' subcommands
+            ;;
+        args)
+            case $line[1] in
+                create)
+                    _arguments \
+                        '--cluster=[Override current cluster context]:cluster:_aictl_clusters' \
+                        '--create-cluster=[Create cluster inline]:name:' \
+                        '--persona=[Use specific persona]:persona:_aictl_personas' \
+                        '--dry-run[Preview without creating]'
+                    ;;
+                list)
+                    _arguments \
+                        '--all-clusters[Show agents from all clusters]' \
+                        '--cluster=[Show agents from specific cluster]:cluster:_aictl_clusters'
+                    ;;
+                inspect|delete|logs|code|edit|pause|resume)
+                    _aictl_agents
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_aictl_persona() {
+    local -a subcommands
+    subcommands=(
+        'list:List available personas'
+        'show:Display full persona details'
+        'create:Create a new custom persona'
+        'edit:Edit an existing persona'
+        'delete:Delete a persona'
+    )
+
+    _arguments -C \
+        '1: :->subcommand' \
+        '*::arg:->args'
+
+    case $state in
+        subcommand)
+            _describe 'persona subcommand' subcommands
+            ;;
+        args)
+            case $line[1] in
+                create)
+                    _arguments \
+                        '--from=[Inherit from existing persona]:persona:_aictl_personas' \
+                        '--cluster=[Override current cluster]:cluster:_aictl_clusters'
+                    ;;
+                show|edit|delete)
+                    _aictl_personas
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_aictl_tool() {
+    local -a subcommands
+    subcommands=(
+        'list:List tools in current cluster'
+        'install:Install a new MCP tool'
+        'auth:Configure tool authentication'
+        'test:Test tool connectivity'
+        'delete:Delete a tool'
+    )
+
+    _arguments -C \
+        '1: :->subcommand' \
+        '*::arg:->args'
+
+    case $state in
+        subcommand)
+            _describe 'tool subcommand' subcommands
+            ;;
+        args)
+            case $line[1] in
+                auth|test|delete)
+                    _aictl_tools
+                    ;;
+                list)
+                    _arguments \
+                        '--cluster=[Override current cluster]:cluster:_aictl_clusters'
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_aictl_new() {
+    local -a types
+    types=('tool:Generate a new tool project' 'agent:Generate a new agent project')
+    _describe 'project type' types
+}
+
+# Helper functions for dynamic completion
+
+_aictl_clusters() {
+    local -a clusters
+    clusters=(${(f)"$(aictl cluster list 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -v '^─' | grep -v '^NAME')"})
+    _describe 'cluster' clusters
+}
+
+_aictl_agents() {
+    local -a agents
+    agents=(${(f)"$(aictl agent list 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -v '^─' | grep -v '^NAME')"})
+    _describe 'agent' agents
+}
+
+_aictl_personas() {
+    local -a personas
+    personas=(${(f)"$(aictl persona list 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -v '^─' | grep -v '^NAME')"})
+    _describe 'persona' personas
+}
+
+_aictl_tools() {
+    local -a tools
+    tools=(${(f)"$(aictl tool list 2>/dev/null | tail -n +2 | awk '{print $1}' | grep -v '^─' | grep -v '^NAME')"})
+    _describe 'tool' tools
+}
+
+_aictl "$@"

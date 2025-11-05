@@ -159,21 +159,7 @@ module Aictl
               end
             end
 
-            headers = ['CLUSTER', 'AGENTS', 'TOOLS', 'MODELS', 'STATUS']
-            rows = cluster_summary.map do |c|
-              name = c[:name]
-              name += ' *' if c[:name] == current_cluster
-              [name, c[:agents], c[:tools], c[:models], format_status(c[:status])]
-            end
-
-            require 'tty-table'
-            table = TTY::Table.new(headers, rows)
-            puts table.render(:unicode, padding: [0, 1])
-
-            if current_cluster
-              puts
-              puts "* = current cluster"
-            end
+            Formatters::TableFormatter.status_dashboard(cluster_summary, current_cluster: current_cluster)
           end
 
           puts
