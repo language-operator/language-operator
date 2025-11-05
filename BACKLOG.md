@@ -42,9 +42,9 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Implement `aictl agent inspect <name>` command~~ - Shows detailed agent information: status, configuration, instructions, tools, models, synthesis info, execution stats, conditions with colored status indicators
 * ~~Implement `aictl agent delete <name>` command~~ - Deletes agent with confirmation prompt (unless --force), shows agent details before deletion, verifies removal
 * ~~Implement `aictl agent code <name>` command~~ - Displays synthesized Ruby DSL code from ConfigMap, shows helpful error if synthesis not complete
-* Implement `aictl agent edit <name>` command - Open editor to modify agent instructions, trigger re-synthesis on save, show synthesis progress
-* Implement `aictl agent pause <name>` command - Pause scheduled agent execution, update status to Paused
-* Implement `aictl agent resume <name>` command - Resume paused agent, update status back to Running/Ready
+* ~~Implement `aictl agent edit <name>` command~~ - Opens $EDITOR to modify agent instructions, updates resource on save, triggers automatic re-synthesis by operator, shows helpful next steps
+* ~~Implement `aictl agent pause <name>` command~~ - Pauses scheduled agent execution by setting CronJob suspend=true, validates agent is scheduled mode, provides resume instructions
+* ~~Implement `aictl agent resume <name>` command~~ - Resumes paused agent by setting CronJob suspend=false, validates agent is scheduled mode, shows next execution time info
 
 #### MVP: System Overview & Status
 

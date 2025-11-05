@@ -382,9 +382,55 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement agent editing
-          Formatters::ProgressFormatter.warn('Agent editing not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get current agent
+          begin
+            agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
+            exit 1
+          end
+
+          current_instructions = agent.dig('spec', 'instructions')
+
+          # Create temp file with current instructions
+          require 'tempfile'
+          tmpfile = Tempfile.new(['agent-instructions-', '.txt'])
+          tmpfile.write(current_instructions)
+          tmpfile.close
+
+          # Open editor
+          editor = ENV['EDITOR'] || 'vi'
+          system("#{editor} #{tmpfile.path}")
+
+          # Read updated instructions
+          new_instructions = File.read(tmpfile.path).strip
+          tmpfile.unlink
+
+          # Check if changed
+          if new_instructions == current_instructions
+            Formatters::ProgressFormatter.info('No changes made')
+            return
+          end
+
+          # Update agent resource
+          agent['spec']['instructions'] = new_instructions
+
+          Formatters::ProgressFormatter.with_spinner('Updating agent instructions') do
+            k8s.apply_resource(agent)
+          end
+
+          Formatters::ProgressFormatter.success('Agent instructions updated')
+          puts
+          puts 'The operator will automatically re-synthesize the agent code.'
+          puts
+          puts 'Watch synthesis progress with:'
+          puts "  aictl agent inspect #{name}"
+
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to edit agent: #{e.message}")
           raise if ENV['DEBUG']
@@ -397,9 +443,49 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement agent pause
-          Formatters::ProgressFormatter.warn('Agent pause not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get agent
+          begin
+            agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
+            exit 1
+          end
+
+          mode = agent.dig('spec', 'mode') || 'autonomous'
+          unless mode == 'scheduled'
+            Formatters::ProgressFormatter.warn("Agent '#{name}' is not a scheduled agent (mode: #{mode})")
+            puts
+            puts 'Only scheduled agents can be paused.'
+            puts 'Autonomous agents can be stopped by deleting them.'
+            exit 1
+          end
+
+          # Suspend the CronJob by setting spec.suspend = true
+          # This is done by patching the underlying CronJob resource
+          cronjob_name = name
+          namespace = cluster_config[:namespace]
+
+          Formatters::ProgressFormatter.with_spinner("Pausing agent '#{name}'") do
+            # Use kubectl to patch the cronjob
+            kubeconfig_arg = cluster_config[:kubeconfig] ? "--kubeconfig=#{cluster_config[:kubeconfig]}" : ''
+            context_arg = cluster_config[:context] ? "--context=#{cluster_config[:context]}" : ''
+
+            cmd = "kubectl #{kubeconfig_arg} #{context_arg} -n #{namespace} patch cronjob #{cronjob_name} -p '{\"spec\":{\"suspend\":true}}'"
+            system(cmd)
+          end
+
+          Formatters::ProgressFormatter.success("Agent '#{name}' paused")
+          puts
+          puts 'The agent will not execute on its schedule until resumed.'
+          puts
+          puts 'Resume with:'
+          puts "  aictl agent resume #{name}"
+
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to pause agent: #{e.message}")
           raise if ENV['DEBUG']
@@ -412,9 +498,47 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement agent resume
-          Formatters::ProgressFormatter.warn('Agent resume not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get agent
+          begin
+            agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
+            exit 1
+          end
+
+          mode = agent.dig('spec', 'mode') || 'autonomous'
+          unless mode == 'scheduled'
+            Formatters::ProgressFormatter.warn("Agent '#{name}' is not a scheduled agent (mode: #{mode})")
+            puts
+            puts 'Only scheduled agents can be resumed.'
+            exit 1
+          end
+
+          # Resume the CronJob by setting spec.suspend = false
+          cronjob_name = name
+          namespace = cluster_config[:namespace]
+
+          Formatters::ProgressFormatter.with_spinner("Resuming agent '#{name}'") do
+            # Use kubectl to patch the cronjob
+            kubeconfig_arg = cluster_config[:kubeconfig] ? "--kubeconfig=#{cluster_config[:kubeconfig]}" : ''
+            context_arg = cluster_config[:context] ? "--context=#{cluster_config[:context]}" : ''
+
+            cmd = "kubectl #{kubeconfig_arg} #{context_arg} -n #{namespace} patch cronjob #{cronjob_name} -p '{\"spec\":{\"suspend\":false}}'"
+            system(cmd)
+          end
+
+          Formatters::ProgressFormatter.success("Agent '#{name}' resumed")
+          puts
+          puts 'The agent will now execute according to its schedule.'
+          puts
+          puts 'View next execution time with:'
+          puts "  aictl agent inspect #{name}"
+
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to resume agent: #{e.message}")
           raise if ENV['DEBUG']
