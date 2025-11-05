@@ -71,12 +71,16 @@ module Aictl
 
         def get_cluster(name)
           config = load
-          config['clusters']&.find { |c| c['name'] == name }
+          cluster = config['clusters']&.find { |c| c['name'] == name }
+          # Convert string keys to symbol keys for easier access
+          cluster&.transform_keys(&:to_sym)
         end
 
         def list_clusters
           config = load
-          config['clusters'] || []
+          clusters = config['clusters'] || []
+          # Convert string keys to symbol keys for easier access
+          clusters.map { |c| c.transform_keys(&:to_sym) }
         end
 
         def cluster_exists?(name)

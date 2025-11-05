@@ -13,12 +13,11 @@ module Aictl
       # Cluster management commands
       class Cluster < Thor
         desc 'create NAME', 'Create a new language cluster'
-        option :namespace, type: :string, desc: 'Kubernetes namespace (defaults to cluster name)'
+        option :namespace, type: :string, desc: 'Kubernetes namespace (defaults to current context namespace)'
         option :kubeconfig, type: :string, desc: 'Path to kubeconfig file'
         option :context, type: :string, desc: 'Kubernetes context to use'
         option :switch, type: :boolean, default: true, desc: 'Switch to new cluster context'
         def create(name)
-          namespace = options[:namespace] || name
           kubeconfig = options[:kubeconfig]
           context = options[:context]
 
@@ -32,6 +31,9 @@ module Aictl
           k8s = Formatters::ProgressFormatter.with_spinner('Connecting to Kubernetes cluster') do
             Kubernetes::Client.new(kubeconfig: kubeconfig, context: context)
           end
+
+          # Determine namespace: use --namespace flag, or current context namespace, or 'default'
+          namespace = options[:namespace] || k8s.current_namespace || 'default'
 
           # Check if operator is installed
           unless k8s.operator_installed?

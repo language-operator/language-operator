@@ -15,6 +15,13 @@ module Aictl
         @client = build_client
       end
 
+      # Get the current namespace from the context
+      def current_namespace
+        config = K8s::Config.load_file(@kubeconfig)
+        config = config.context(@context) if @context
+        config.context&.namespace
+      end
+
       # Create or update a Kubernetes resource
       def apply_resource(resource)
         namespace = resource.dig('metadata', 'namespace')
@@ -26,8 +33,18 @@ module Aictl
           # Try to get existing resource
           existing = get_resource(kind, name, namespace, api_version)
           if existing
+            # Merge existing metadata (especially resourceVersion) with new resource
+            merged_resource = if resource.is_a?(Hash)
+                                resource.dup
+                              else
+                                resource.to_h
+                              end
+            merged_resource['metadata'] ||= {}
+            merged_resource['metadata']['resourceVersion'] = existing.metadata.resourceVersion
+            merged_resource['metadata']['uid'] = existing.metadata.uid if existing.metadata.uid
+
             # Update existing resource
-            update_resource(kind, name, namespace, resource, api_version)
+            update_resource(kind, name, namespace, merged_resource, api_version)
           else
             # Create new resource
             create_resource(resource)
@@ -40,47 +57,39 @@ module Aictl
 
       # Create a resource
       def create_resource(resource)
-        api_client = api_for_resource(resource)
-        api_client.create_resource(resource)
+        resource_client = resource_client_for_resource(resource)
+        # Convert hash to K8s::Resource if needed
+        k8s_resource = resource.is_a?(K8s::Resource) ? resource : K8s::Resource.new(resource)
+        resource_client.create_resource(k8s_resource)
       end
 
       # Update a resource
       def update_resource(kind, name, namespace, resource, api_version)
-        api_client = api_for_version(api_version)
-        api_client.update_resource(resource)
+        resource_client = resource_client_for(kind, namespace, api_version)
+        # Convert hash to K8s::Resource if needed
+        k8s_resource = resource.is_a?(K8s::Resource) ? resource : K8s::Resource.new(resource)
+        resource_client.update_resource(k8s_resource)
       end
 
       # Get a resource
       def get_resource(kind, name, namespace = nil, api_version = nil)
-        api_client = api_for_version(api_version || default_api_version(kind))
-        if namespace
-          api_client.get_resource(kind, name, namespace)
-        else
-          api_client.get_resource(kind, name)
-        end
+        resource_client = resource_client_for(kind, namespace, api_version || default_api_version(kind))
+        resource_client.get(name)
       end
 
       # List resources
       def list_resources(kind, namespace: nil, api_version: nil, label_selector: nil)
-        api_client = api_for_version(api_version || default_api_version(kind))
+        resource_client = resource_client_for(kind, namespace, api_version || default_api_version(kind))
         opts = {}
         opts[:labelSelector] = label_selector if label_selector
 
-        if namespace
-          api_client.list_resources(kind, namespace, **opts)
-        else
-          api_client.list_resources(kind, **opts)
-        end
+        resource_client.list(**opts)
       end
 
       # Delete a resource
       def delete_resource(kind, name, namespace = nil, api_version = nil)
-        api_client = api_for_version(api_version || default_api_version(kind))
-        if namespace
-          api_client.delete_resource(kind, name, namespace)
-        else
-          api_client.delete_resource(kind, name)
-        end
+        resource_client = resource_client_for(kind, namespace, api_version || default_api_version(kind))
+        resource_client.delete(name)
       end
 
       # Check if namespace exists
@@ -108,7 +117,7 @@ module Aictl
       def operator_installed?
         # Check if LanguageCluster CRD exists
         @client.apis(prefetch_resources: true)
-                .find { |api| api.group_version == 'langop.io/v1alpha1' }
+                .find { |api| api.api_version == 'langop.io/v1alpha1' }
       rescue StandardError
         false
       end
@@ -128,12 +137,24 @@ module Aictl
       def build_client
         config = K8s::Config.load_file(@kubeconfig)
         config = config.context(@context) if @context
-        K8s::Client.new(config)
+        K8s::Client.config(config)
       end
 
-      def api_for_resource(resource)
+      def resource_client_for_resource(resource)
+        kind = resource['kind']
+        namespace = resource.dig('metadata', 'namespace')
         api_version = resource['apiVersion']
-        api_for_version(api_version)
+        resource_client_for(kind, namespace, api_version)
+      end
+
+      def resource_client_for(kind, namespace, api_version)
+        api_client = api_for_version(api_version)
+        resource_name = kind_to_resource_name(kind)
+        if namespace
+          api_client.resource(resource_name, namespace: namespace)
+        else
+          api_client.resource(resource_name)
+        end
       end
 
       def api_for_version(api_version)
@@ -142,6 +163,41 @@ module Aictl
           @client.api("#{group}/#{version}")
         else
           @client.api(api_version)
+        end
+      end
+
+      def kind_to_resource_name(kind)
+        # Convert Kind (singular, capitalized) to resource name (plural, lowercase)
+        case kind.downcase
+        when 'languagecluster'
+          'languageclusters'
+        when 'languageagent'
+          'languageagents'
+        when 'languagetool'
+          'languagetools'
+        when 'languagemodel'
+          'languagemodels'
+        when 'languageclient'
+          'languageclients'
+        when 'languagepersona'
+          'languagepersonas'
+        when 'namespace'
+          'namespaces'
+        when 'configmap'
+          'configmaps'
+        when 'secret'
+          'secrets'
+        when 'service'
+          'services'
+        when 'deployment'
+          'deployments'
+        when 'statefulset'
+          'statefulsets'
+        when 'cronjob'
+          'cronjobs'
+        else
+          # Generic pluralization - add 's'
+          "#{kind.downcase}s"
         end
       end
 
