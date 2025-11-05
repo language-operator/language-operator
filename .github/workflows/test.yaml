@@ -118,14 +118,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Ruby
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential
+
       - name: Set up Ruby environment
         run: |
           # Build and install SDK gem globally
           cd sdk/ruby
           gem build language-operator.gemspec
-          gem install language-operator-0.1.0.gem
+          sudo gem install language-operator-0.1.0.gem
 
-          # Create symlink to satisfy path-based Gemfile dependency
+          # Create directory and copy SDK to satisfy path-based Gemfile dependency
           sudo mkdir -p /language-operator
           sudo cp -r . /language-operator/
 
@@ -143,14 +148,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Ruby
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev build-essential
+
       - name: Set up Ruby environment
         run: |
           # Build and install SDK gem globally
           cd sdk/ruby
           gem build language-operator.gemspec
-          gem install language-operator-0.1.0.gem
+          sudo gem install language-operator-0.1.0.gem
 
-          # Create symlink to satisfy path-based Gemfile dependency
+          # Create directory and copy SDK to satisfy path-based Gemfile dependency
           sudo mkdir -p /language-operator
           sudo cp -r . /language-operator/
 
