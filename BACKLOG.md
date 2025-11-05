@@ -33,11 +33,11 @@ When asked to iterate, plan the top item on the backlog.
 
 #### MVP: Beautiful CLI for Agent Lifecycle Management
 
-* Implement `aictl agent create <description>` command - Parse natural language description, create LanguageAgent YAML with spec.instructions, apply to current cluster, watch synthesis status, show beautiful progress output with spinners and success confirmation
-* Add `--create-cluster <name>` flag to agent create - Inline cluster creation if user doesn't have one yet, creates cluster and sets context before creating agent
-* Add `--cluster <name>` flag to agent create - Override current cluster context for one-time agent creation in different cluster
-* Implement `aictl agent list` command - Show table of agents in current cluster: NAME, MODE, STATUS, NEXT RUN, EXECUTIONS with colored output and formatted timestamps
-* Add `--all-clusters` flag to agent list - Show agents across all clusters with CLUSTER column
+* ~~Implement `aictl agent create <description>` command~~ - Creates LanguageAgent from natural language description, applies to cluster, watches synthesis status with spinner, shows success confirmation and next steps
+* ~~Add `--create-cluster <name>` flag to agent create~~ - Inline cluster creation if user doesn't have one yet, creates cluster and sets context before creating agent
+* ~~Add `--cluster <name>` flag to agent create~~ - Override current cluster context for one-time agent creation in different cluster
+* ~~Implement `aictl agent list` command~~ - Shows table of agents in current cluster: NAME, MODE, STATUS, NEXT RUN, EXECUTIONS with colored output
+* ~~Add `--all-clusters` flag to agent list~~ - Shows agents across all clusters with CLUSTER column
 * Implement `aictl agent logs <name> [-f]` command - Stream agent execution logs in real-time with timestamps, tool calls highlighted, errors in red, follow mode support
 * Implement `aictl agent inspect <name>` command - Show detailed agent information: cluster, status, schedule, next run, execution history, tools, model, persona, synthesized code metadata, formatted as structured output
 * Implement `aictl agent delete <name>` command - Delete agent with confirmation prompt, show cleanup progress, verify removal from cluster

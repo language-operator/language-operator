@@ -56,18 +56,45 @@ module Aictl
           # Generate agent name from description if not provided
           agent_name = options[:name] || generate_agent_name(description)
 
-          # TODO: Implement agent creation
-          # This will be filled in when we implement the agent lifecycle management MVP
-          Formatters::ProgressFormatter.warn('Agent creation not yet implemented')
-          puts
-          puts 'Planned implementation:'
-          puts "  1. Generate agent name: #{agent_name}"
-          puts "  2. Create LanguageAgent resource with instructions: #{description}"
-          puts "  3. Apply to cluster: #{cluster} (namespace: #{cluster_config[:namespace]})"
-          puts '  4. Watch synthesis status'
-          puts '  5. Display success message with agent details'
+          # Connect to Kubernetes
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
 
-          exit 1
+          # Build LanguageAgent resource
+          agent_resource = Formatters::ProgressFormatter.with_spinner("Creating agent '#{agent_name}'") do
+            resource = Kubernetes::ResourceBuilder.language_agent(
+              agent_name,
+              instructions: description,
+              cluster: cluster_config[:namespace],
+              persona: options[:persona],
+              tools: options[:tools] || [],
+              models: options[:models] || []
+            )
+            k8s.apply_resource(resource)
+            resource
+          end
+
+          # Watch synthesis status
+          watch_synthesis_status(k8s, agent_name, cluster_config[:namespace])
+
+          # Display success
+          Formatters::ProgressFormatter.success("Agent '#{agent_name}' created successfully!")
+          puts
+          puts 'Agent Details:'
+          puts "  Name:         #{agent_name}"
+          puts "  Cluster:      #{cluster}"
+          puts "  Namespace:    #{cluster_config[:namespace]}"
+          puts "  Instructions: #{description}"
+          puts "  Persona:      #{options[:persona] || '(auto-selected)'}" if options[:persona]
+          puts "  Tools:        #{options[:tools].join(', ')}" if options[:tools] && !options[:tools].empty?
+          puts "  Models:       #{options[:models].join(', ')}" if options[:models] && !options[:models].empty?
+          puts
+          puts 'Next Steps:'
+          puts "  aictl agent inspect #{agent_name}    # View agent details"
+          puts "  aictl agent logs #{agent_name} -f    # Follow agent logs"
+          puts "  aictl agent code #{agent_name}       # View synthesized code"
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to create agent: #{e.message}")
           raise if ENV['DEBUG']
@@ -218,6 +245,63 @@ module Aictl
           name = words.join('-')
           # Add random suffix to avoid collisions
           "#{name}-#{Time.now.to_i.to_s[-4..]}"
+        end
+
+        def watch_synthesis_status(k8s, agent_name, namespace)
+          require 'tty-spinner'
+          require 'pastel'
+
+          pastel = Pastel.new
+          spinner = TTY::Spinner.new("[:spinner] Waiting for synthesis...", format: :dots)
+          spinner.auto_spin
+
+          max_wait = 60 # Wait up to 60 seconds
+          interval = 2  # Check every 2 seconds
+          elapsed = 0
+
+          loop do
+            agent = k8s.get_resource('LanguageAgent', agent_name, namespace)
+            conditions = agent.dig('status', 'conditions') || []
+
+            # Check for synthesis completion
+            synthesized = conditions.find { |c| c['type'] == 'Synthesized' }
+            if synthesized
+              if synthesized['status'] == 'True'
+                spinner.success("(#{pastel.green('✓')})")
+                return true
+              elsif synthesized['status'] == 'False'
+                spinner.error("(#{pastel.red('✗')})")
+                Formatters::ProgressFormatter.error("Synthesis failed: #{synthesized['message']}")
+                return false
+              end
+            end
+
+            # Timeout check
+            if elapsed >= max_wait
+              spinner.stop
+              Formatters::ProgressFormatter.warn('Synthesis taking longer than expected, continuing in background...')
+              puts
+              puts 'Check synthesis status with:'
+              puts "  aictl agent inspect #{agent_name}"
+              return true
+            end
+
+            sleep interval
+            elapsed += interval
+          end
+        rescue K8s::Error::NotFound
+          # Agent not found yet, keep waiting
+          sleep interval
+          elapsed += interval
+          retry if elapsed < max_wait
+
+          spinner.error("(#{pastel.red('✗')})")
+          Formatters::ProgressFormatter.error('Agent resource not found')
+          false
+        rescue StandardError => e
+          spinner.error("(#{pastel.red('✗')})")
+          Formatters::ProgressFormatter.warn("Could not watch synthesis: #{e.message}")
+          true # Continue anyway
         end
 
         def list_cluster_agents(cluster)
