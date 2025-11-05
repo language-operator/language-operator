@@ -1,0 +1,142 @@
+# Tool Registry Mapping
+# Maps tool keywords to container images and default configurations
+
+# Built-in tools (developed in this project)
+web:
+  image: git.theryans.io/langop/web-tool:latest
+  displayName: Web Tool
+  description: Search the web and fetch web pages using DuckDuckGo
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  egress:
+    - description: Allow HTTPS to DuckDuckGo
+      dns:
+        - "*.duckduckgo.com"
+        - "duckduckgo.com"
+      ports:
+        - port: 443
+          protocol: TCP
+    - description: Allow HTTPS to any web destination
+      dns:
+        - "*"
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 80
+          protocol: TCP
+
+email:
+  image: git.theryans.io/langop/email-tool:latest
+  displayName: Email Tool
+  description: Send and receive emails via SMTP/IMAP
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  authRequired: true
+  egress:
+    - description: Allow SMTP/IMAP connections
+      dns:
+        - "*"
+      ports:
+        - port: 587
+          protocol: TCP
+        - port: 465
+          protocol: TCP
+        - port: 993
+          protocol: TCP
+
+# Common MCP tools (community/third-party)
+filesystem:
+  image: git.theryans.io/langop/filesystem-tool:latest
+  displayName: Filesystem Tool
+  description: Read, write, and manage files in agent workspace
+  deploymentMode: sidecar
+  port: 8080
+  type: mcp
+  egress: []
+
+github:
+  image: git.theryans.io/langop/github-tool:latest
+  displayName: GitHub Tool
+  description: Interact with GitHub repositories, issues, and pull requests
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  authRequired: true
+  egress:
+    - description: Allow HTTPS to GitHub
+      dns:
+        - "*.github.com"
+        - "github.com"
+        - "api.github.com"
+      ports:
+        - port: 443
+          protocol: TCP
+
+slack:
+  image: git.theryans.io/langop/slack-tool:latest
+  displayName: Slack Tool
+  description: Send messages and interact with Slack workspace
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  authRequired: true
+  egress:
+    - description: Allow HTTPS to Slack
+      dns:
+        - "*.slack.com"
+        - "slack.com"
+      ports:
+        - port: 443
+          protocol: TCP
+
+gdrive:
+  image: git.theryans.io/langop/gdrive-tool:latest
+  displayName: Google Drive Tool
+  description: Access and manage Google Drive files
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  authRequired: true
+  egress:
+    - description: Allow HTTPS to Google Drive API
+      dns:
+        - "*.googleapis.com"
+        - "*.google.com"
+      ports:
+        - port: 443
+          protocol: TCP
+
+gmail:
+  image: git.theryans.io/langop/gmail-tool:latest
+  displayName: Gmail Tool
+  description: Send and receive Gmail messages
+  deploymentMode: service
+  port: 8080
+  type: mcp
+  authRequired: true
+  egress:
+    - description: Allow HTTPS to Gmail API
+      dns:
+        - "*.googleapis.com"
+        - "*.google.com"
+      ports:
+        - port: 443
+          protocol: TCP
+
+# Aliases for convenience
+web-search:
+  alias: web
+
+web-fetch:
+  alias: web
+
+http:
+  alias: web
+
+files:
+  alias: filesystem
+
+fs:
+  alias: filesystem

@@ -1,0 +1,41 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: <%= name %>
+  namespace: <%= namespace %>
+spec:
+  type: mcp
+  image: git.theryans.io/langop/email-tool:latest
+  imagePullPolicy: Always
+  imagePullSecrets:
+    - name: registry-credentials
+  deploymentMode: <%= deployment_mode || 'service' %>
+  port: 8080
+  replicas: <%= replicas || 1 %>
+
+  <% if auth_secret %>
+  envFrom:
+    - secretRef:
+        name: <%= auth_secret %>
+  <% end %>
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  egress:
+    - description: Allow SMTP/IMAP connections
+      to:
+        dns:
+          - "*"
+      ports:
+        - port: 587
+          protocol: TCP
+        - port: 465
+          protocol: TCP
+        - port: 993
+          protocol: TCP

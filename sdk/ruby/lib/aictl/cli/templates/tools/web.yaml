@@ -1,0 +1,42 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: <%= name %>
+  namespace: <%= namespace %>
+spec:
+  type: mcp
+  image: git.theryans.io/langop/web-tool:latest
+  imagePullPolicy: Always
+  imagePullSecrets:
+    - name: registry-credentials
+  deploymentMode: <%= deployment_mode || 'service' %>
+  port: 8080
+  replicas: <%= replicas || 1 %>
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  egress:
+    - description: Allow HTTPS to DuckDuckGo
+      to:
+        dns:
+          - "*.duckduckgo.com"
+          - "duckduckgo.com"
+      ports:
+        - port: 443
+          protocol: TCP
+
+    - description: Allow HTTPS to any web destination
+      to:
+        dns:
+          - "*"
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 80
+          protocol: TCP
