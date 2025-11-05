@@ -32,7 +32,7 @@ PROJECT_ROOT="$( cd "${SCRIPT_DIR}/.." && pwd )"
 
 cd "${PROJECT_ROOT}"
 
-echo "Building all based images..."
+echo "Building all langop images..."
 echo ""
 
 # Build order based on dependencies:
@@ -55,24 +55,24 @@ build_image() {
     echo ""
 }
 
-# Build components in fixed order
-COMPONENTS_ORDER=("base" "devel" "server" "client")
+# Build components in fixed order (based on actual component directories)
+COMPONENTS_ORDER=("base" "ruby" "agent" "client" "tool" "model")
 for component in "${COMPONENTS_ORDER[@]}"; do
-    build_image "based/${component}:latest" "components/${component}/"
+    build_image "git.theryans.io/langop/${component}:latest" "components/${component}/"
 done
 
 # Build all tool services by globbing the tools directory
 for tool_dir in tools/*/; do
     if [ -d "$tool_dir" ] && [ -f "${tool_dir}Dockerfile" ]; then
         tool_name=$(basename "$tool_dir")
-        build_image "based/tools/${tool_name}:latest" "$tool_dir"
+        build_image "git.theryans.io/langop/tool-${tool_name}:latest" "$tool_dir"
     fi
 done
 
-# Build agent services (depend on based/client)
+# Build agent services (depend on langop/agent)
 AGENTS_ORDER=("cli" "web" "headless")
 for agent in "${AGENTS_ORDER[@]}"; do
-    build_image "based/agent-${agent}:latest" "agents/${agent}/"
+    build_image "git.theryans.io/langop/${agent}:latest" "agents/${agent}/"
 done
 
 # Summary
@@ -83,18 +83,18 @@ echo "Built images:"
 
 # List component images
 for component in "${COMPONENTS_ORDER[@]}"; do
-    echo "  - based/${component}:latest"
+    echo "  - git.theryans.io/langop/${component}:latest"
 done
 
 # List tool images
 for tool_dir in tools/*/; do
     if [ -d "$tool_dir" ] && [ -f "${tool_dir}Dockerfile" ]; then
         tool_name=$(basename "$tool_dir")
-        echo "  - based/tools/${tool_name}:latest"
+        echo "  - git.theryans.io/langop/tool-${tool_name}:latest"
     fi
 done
 
 # List agent images
 for agent in "${AGENTS_ORDER[@]}"; do
-    echo "  - based/agent-${agent}:latest"
+    echo "  - git.theryans.io/langop/${agent}:latest"
 done

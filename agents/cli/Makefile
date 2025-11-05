@@ -13,17 +13,17 @@ help:
 .PHONY: build
 build:
 	@echo "Building CLI agent image..."
-	docker build -t based/agent-cli:latest .
+	docker build -t git.theryans.io/langop/cli:latest .
 
 .PHONY: scan
 scan:
 	@echo "Scanning CLI agent image with Trivy..."
-	trivy image based/agent-cli:latest
+	trivy image git.theryans.io/langop/cli:latest
 
 .PHONY: shell
 shell:
 	@echo "Running interactive shell in CLI agent container..."
-	docker run --rm -it based/agent-cli:latest /bin/sh
+	docker run --rm -it git.theryans.io/langop/cli:latest /bin/sh
 
 .PHONY: run
 run:
@@ -31,7 +31,7 @@ run:
 	docker run -it --rm \
 		-v $(PWD)/config:/app/agent/config \
 		-e CONFIG_PATH=/app/agent/config/config.yaml \
-		based/agent-cli:latest
+		git.theryans.io/langop/cli:latest
 
 .PHONY: test
 test: lint ## Run tests (linting)

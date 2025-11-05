@@ -1,0 +1,38 @@
+# Root RuboCop configuration for langop project
+# Component-specific configs can inherit from this with: inherit_from: ../../.rubocop.yml
+
+plugins:
+  - rubocop-performance
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.4
+  Exclude:
+    - 'vendor/**/*'
+    - 'doc/**/*'
+    - '**/.bundle/**/*'
+    - '**/vendor/bundle/**/*'
+
+Style/Documentation:
+  Enabled: false
+
+Metrics/MethodLength:
+  Max: 55
+
+Metrics/ClassLength:
+  Max: 300
+
+Metrics/AbcSize:
+  Max: 65
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+Metrics/PerceivedComplexity:
+  Max: 16
+
+Metrics/BlockLength:
+  Max: 30
+
+Layout/LineLength:
+  Max: 120

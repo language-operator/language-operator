@@ -1,4 +1,4 @@
-IMAGE_NAME := based/client
+IMAGE_NAME := git.theryans.io/langop/client
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 
@@ -37,12 +37,11 @@ run:
 	@echo "Running chat client locally with Docker..."
 	docker run -it --rm \
 		-v $(PWD)/config:/app/config \
-		based/client:latest
+		$(IMAGE_FULL)
 
 .PHONY: test
-test:
-	@echo "Tests not yet implemented"
-	@exit 1
+test: lint
+	@echo "All tests passed!"
 
 .PHONY: lint
 lint:

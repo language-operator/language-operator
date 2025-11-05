@@ -28,6 +28,29 @@
 - All Makefiles MUST have a `test` target (see requirements/makefile/MUST-have-test-target.md)
 - All Makefiles MUST have a `help` target as default (see requirements/makefile/MUST-have-help-target.md)
 
+## Version Standards
+- **Ruby**: 3.4 (components using 3.3 should be upgraded)
+- **RuboCop**: ~> 1.60
+- **RuboCop Performance**: ~> 1.20
+- **YARD**: ~> 0.9.37
+- **Langop SDK**: 0.1.x (managed in sdk/ruby/langop.gemspec)
+
+## DRY Tooling
+
+### Shared Makefile
+- **Location**: `Makefile.common` at repository root
+- **Usage**: Components include with `include ../../Makefile.common`
+- **Purpose**: Eliminates 300-400 lines of duplicated Makefile code
+- **Standard targets**: build, scan, shell, test, lint, lint-fix, doc, doc-serve, doc-clean, clean
+- **Override**: Components can override any target by redefining it after the include
+
+### Shared RuboCop Config
+- **Location**: `.rubocop.yml` at repository root
+- **Usage**: Components inherit with `inherit_from: ../../.rubocop.yml`
+- **Purpose**: Eliminates 150+ lines of duplicated configuration
+- **Standards**: Ruby 3.4, NewCops enabled, sensible metric limits
+- **Override**: Components can override specific rules for stricter or looser limits
+
 ## Ruby Dependencies
 
 ### ruby_llm Gem Resolution

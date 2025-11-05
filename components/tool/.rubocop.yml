@@ -1,23 +1,12 @@
-require:
-  - rubocop-performance
+inherit_from: ../../.rubocop.yml
 
-AllCops:
-  TargetRubyVersion: 3.3
-  NewCops: enable
-  Exclude:
-    - 'vendor/**/*'
-
-# Style preferences
-Style/Documentation:
-  Enabled: false
-
+# Component-specific overrides
 Style/FrozenStringLiteralComment:
   Enabled: false
 
 Style/StringLiterals:
   EnforcedStyle: single_quotes
 
-# Metrics
 Metrics/MethodLength:
   Max: 20
 
@@ -28,7 +17,3 @@ Metrics/BlockLength:
 
 Metrics/AbcSize:
   Max: 20
-
-# Layout
-Layout/LineLength:
-  Max: 120
