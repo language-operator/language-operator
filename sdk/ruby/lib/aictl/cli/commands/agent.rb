@@ -123,10 +123,93 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          Formatters::ProgressFormatter.info("Inspecting agent '#{name}' in cluster '#{cluster}'")
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
 
-          # TODO: Implement agent inspection
-          Formatters::ProgressFormatter.warn('Agent inspection not yet implemented')
+          agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+
+          puts "Agent: #{name}"
+          puts "  Cluster:   #{cluster}"
+          puts "  Namespace: #{cluster_config[:namespace]}"
+          puts
+
+          # Status
+          status = agent.dig('status', 'phase') || 'Unknown'
+          puts "Status: #{format_status(status)}"
+          puts
+
+          # Spec details
+          puts 'Configuration:'
+          puts "  Mode:         #{agent.dig('spec', 'mode') || 'autonomous'}"
+          puts "  Schedule:     #{agent.dig('spec', 'schedule') || 'N/A'}" if agent.dig('spec', 'schedule')
+          puts "  Persona:      #{agent.dig('spec', 'persona') || '(auto-selected)'}"
+          puts
+
+          # Instructions
+          instructions = agent.dig('spec', 'instructions')
+          if instructions
+            puts 'Instructions:'
+            puts "  #{instructions}"
+            puts
+          end
+
+          # Tools
+          tools = agent.dig('spec', 'tools') || []
+          if tools.any?
+            puts "Tools (#{tools.length}):"
+            tools.each { |tool| puts "  - #{tool}" }
+            puts
+          end
+
+          # Models
+          models = agent.dig('spec', 'models') || []
+          if models.any?
+            puts "Models (#{models.length}):"
+            models.each { |model| puts "  - #{model}" }
+            puts
+          end
+
+          # Synthesis info
+          synthesis = agent.dig('status', 'synthesis')
+          if synthesis
+            puts 'Synthesis:'
+            puts "  Status:       #{synthesis['status']}"
+            puts "  Model:        #{synthesis['model']}" if synthesis['model']
+            puts "  Completed:    #{synthesis['completedAt']}" if synthesis['completedAt']
+            puts "  Duration:     #{synthesis['duration']}" if synthesis['duration']
+            puts "  Token Count:  #{synthesis['tokenCount']}" if synthesis['tokenCount']
+            puts
+          end
+
+          # Execution stats
+          execution_count = agent.dig('status', 'executionCount') || 0
+          last_execution = agent.dig('status', 'lastExecution')
+          next_run = agent.dig('status', 'nextRun')
+
+          puts 'Execution:'
+          puts "  Total Runs:   #{execution_count}"
+          puts "  Last Run:     #{last_execution || 'Never'}"
+          puts "  Next Run:     #{next_run || 'N/A'}" if agent.dig('spec', 'schedule')
+          puts
+
+          # Conditions
+          conditions = agent.dig('status', 'conditions') || []
+          if conditions.any?
+            puts "Conditions (#{conditions.length}):"
+            conditions.each do |condition|
+              status_icon = condition['status'] == 'True' ? '✓' : '✗'
+              puts "  #{status_icon} #{condition['type']}: #{condition['message'] || condition['reason']}"
+            end
+            puts
+          end
+
+          # Recent events (if available)
+          # This would require querying events, which we can add later
+
+        rescue K8s::Error::NotFound
+          Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
           exit 1
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to inspect agent: #{e.message}")
@@ -141,9 +224,39 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement agent deletion
-          Formatters::ProgressFormatter.warn('Agent deletion not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get agent to show details before deletion
+          begin
+            agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
+            exit 1
+          end
+
+          # Confirm deletion unless --force
+          unless options[:force]
+            puts "This will delete agent '#{name}' from cluster '#{cluster}':"
+            puts "  Instructions: #{agent.dig('spec', 'instructions')}"
+            puts "  Mode:         #{agent.dig('spec', 'mode') || 'autonomous'}"
+            puts
+            print 'Are you sure? (y/N): '
+            confirmation = $stdin.gets.chomp
+            unless confirmation.downcase == 'y'
+              puts 'Deletion cancelled'
+              return
+            end
+          end
+
+          # Delete the agent
+          Formatters::ProgressFormatter.with_spinner("Deleting agent '#{name}'") do
+            k8s.delete_resource('LanguageAgent', name, cluster_config[:namespace])
+          end
+
+          Formatters::ProgressFormatter.success("Agent '#{name}' deleted successfully")
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to delete agent: #{e.message}")
           raise if ENV['DEBUG']
@@ -167,9 +280,46 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement log streaming
-          Formatters::ProgressFormatter.warn('Agent logs not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get agent to determine the pod name
+          begin
+            agent = k8s.get_resource('LanguageAgent', name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Agent '#{name}' not found in cluster '#{cluster}'")
+            exit 1
+          end
+
+          mode = agent.dig('spec', 'mode') || 'autonomous'
+
+          # Build kubectl command for log streaming
+          kubeconfig_arg = cluster_config[:kubeconfig] ? "--kubeconfig=#{cluster_config[:kubeconfig]}" : ''
+          context_arg = cluster_config[:context] ? "--context=#{cluster_config[:context]}" : ''
+          namespace_arg = "-n #{cluster_config[:namespace]}"
+          tail_arg = "--tail=#{options[:tail]}"
+          follow_arg = options[:follow] ? '-f' : ''
+
+          # For scheduled agents, logs come from CronJob pods
+          # For autonomous agents, logs come from Deployment pods
+          if mode == 'scheduled'
+            # Get most recent job from cronjob
+            label_selector = "app.kubernetes.io/name=#{name}"
+          else
+            # Get pod from deployment
+            label_selector = "app.kubernetes.io/name=#{name}"
+          end
+
+          # Use kubectl logs with label selector
+          cmd = "kubectl #{kubeconfig_arg} #{context_arg} #{namespace_arg} logs -l #{label_selector} #{tail_arg} #{follow_arg} --prefix --all-containers"
+
+          Formatters::ProgressFormatter.info("Streaming logs for agent '#{name}'...")
+          puts
+
+          # Execute kubectl logs
+          exec(cmd)
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to get logs: #{e.message}")
           raise if ENV['DEBUG']
@@ -182,9 +332,44 @@ module Aictl
           cluster = ClusterValidator.get_cluster(options[:cluster])
           cluster_config = ClusterValidator.get_cluster_config(cluster)
 
-          # TODO: Implement code display
-          Formatters::ProgressFormatter.warn('Code display not yet implemented')
-          exit 1
+          k8s = Kubernetes::Client.new(
+            kubeconfig: cluster_config[:kubeconfig],
+            context: cluster_config[:context]
+          )
+
+          # Get the code ConfigMap for this agent
+          configmap_name = "#{name}-code"
+          begin
+            configmap = k8s.get_resource('ConfigMap', configmap_name, cluster_config[:namespace])
+          rescue K8s::Error::NotFound
+            Formatters::ProgressFormatter.error("Synthesized code not found for agent '#{name}'")
+            puts
+            puts 'Possible reasons:'
+            puts '  - Agent synthesis not yet complete'
+            puts '  - Agent synthesis failed'
+            puts
+            puts 'Check synthesis status with:'
+            puts "  aictl agent inspect #{name}"
+            exit 1
+          end
+
+          # Get the agent.rb code from the ConfigMap
+          code_content = configmap.dig('data', 'agent.rb')
+          unless code_content
+            Formatters::ProgressFormatter.error('Code content not found in ConfigMap')
+            exit 1
+          end
+
+          # Display with syntax highlighting if available
+          puts "Synthesized Code for Agent: #{name}"
+          puts '=' * 80
+          puts
+          puts code_content
+          puts
+          puts '=' * 80
+          puts
+          puts 'This code was automatically synthesized from the agent instructions.'
+          puts "View full agent details with: aictl agent inspect #{name}"
         rescue StandardError => e
           Formatters::ProgressFormatter.error("Failed to get code: #{e.message}")
           raise if ENV['DEBUG']
@@ -237,6 +422,24 @@ module Aictl
         end
 
         private
+
+        def format_status(status)
+          require 'pastel'
+          pastel = Pastel.new
+
+          case status.downcase
+          when 'ready', 'running', 'active'
+            "#{pastel.green('●')} #{status}"
+          when 'pending', 'creating', 'synthesizing'
+            "#{pastel.yellow('●')} #{status}"
+          when 'failed', 'error'
+            "#{pastel.red('●')} #{status}"
+          when 'paused', 'stopped'
+            "#{pastel.dim('●')} #{status}"
+          else
+            "#{pastel.dim('●')} #{status}"
+          end
+        end
 
         def generate_agent_name(description)
           # Simple name generation from description

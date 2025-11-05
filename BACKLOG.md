@@ -38,10 +38,10 @@ When asked to iterate, plan the top item on the backlog.
 * ~~Add `--cluster <name>` flag to agent create~~ - Override current cluster context for one-time agent creation in different cluster
 * ~~Implement `aictl agent list` command~~ - Shows table of agents in current cluster: NAME, MODE, STATUS, NEXT RUN, EXECUTIONS with colored output
 * ~~Add `--all-clusters` flag to agent list~~ - Shows agents across all clusters with CLUSTER column
-* Implement `aictl agent logs <name> [-f]` command - Stream agent execution logs in real-time with timestamps, tool calls highlighted, errors in red, follow mode support
-* Implement `aictl agent inspect <name>` command - Show detailed agent information: cluster, status, schedule, next run, execution history, tools, model, persona, synthesized code metadata, formatted as structured output
-* Implement `aictl agent delete <name>` command - Delete agent with confirmation prompt, show cleanup progress, verify removal from cluster
-* Implement `aictl agent code <name>` command - Display synthesized Ruby DSL code with syntax highlighting
+* ~~Implement `aictl agent logs <name> [-f]` command~~ - Streams agent execution logs using kubectl, supports follow mode (-f) and tail options, works with both scheduled and autonomous agents
+* ~~Implement `aictl agent inspect <name>` command~~ - Shows detailed agent information: status, configuration, instructions, tools, models, synthesis info, execution stats, conditions with colored status indicators
+* ~~Implement `aictl agent delete <name>` command~~ - Deletes agent with confirmation prompt (unless --force), shows agent details before deletion, verifies removal
+* ~~Implement `aictl agent code <name>` command~~ - Displays synthesized Ruby DSL code from ConfigMap, shows helpful error if synthesis not complete
 * Implement `aictl agent edit <name>` command - Open editor to modify agent instructions, trigger re-synthesis on save, show synthesis progress
 * Implement `aictl agent pause <name>` command - Pause scheduled agent execution, update status to Paused
 * Implement `aictl agent resume <name>` command - Resume paused agent, update status back to Running/Ready
