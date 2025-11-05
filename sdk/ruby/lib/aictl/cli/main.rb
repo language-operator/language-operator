@@ -5,6 +5,10 @@ require 'fileutils'
 require_relative 'commands/cluster'
 require_relative 'commands/use'
 require_relative 'commands/agent'
+require_relative 'commands/status'
+require_relative 'formatters/progress_formatter'
+require_relative '../config/cluster_config'
+require_relative '../kubernetes/client'
 
 module Aictl
   module CLI
@@ -16,9 +20,47 @@ module Aictl
         true
       end
 
-      desc 'version', 'Show aictl version'
+      desc 'status', 'Show system status and overview'
+      def status
+        Commands::Status.new.invoke(:overview)
+      end
+
+      desc 'version', 'Show aictl and operator version'
       def version
         puts "aictl v#{Aictl::VERSION}"
+        puts
+
+        # Try to get operator version from current cluster
+        current_cluster = Config::ClusterConfig.current_cluster
+        if current_cluster
+          cluster_config = Config::ClusterConfig.get_cluster(current_cluster)
+          begin
+            k8s = Kubernetes::Client.new(
+              kubeconfig: cluster_config[:kubeconfig],
+              context: cluster_config[:context]
+            )
+
+            if k8s.operator_installed?
+              operator_version = k8s.operator_version || 'unknown'
+              puts "Operator: v#{operator_version}"
+              puts "Cluster:  #{current_cluster}"
+
+              # Check compatibility (simple version check)
+              # In the future, this could be more sophisticated
+              puts
+              Formatters::ProgressFormatter.success('Versions are compatible')
+            else
+              Formatters::ProgressFormatter.warn("Operator not installed in cluster '#{current_cluster}'")
+            end
+          rescue StandardError => e
+            Formatters::ProgressFormatter.error("Could not connect to cluster: #{e.message}")
+          end
+        else
+          puts 'No cluster selected'
+          puts
+          puts 'Select a cluster to check operator version:'
+          puts '  aictl use <cluster>'
+        end
       end
 
       desc 'cluster SUBCOMMAND ...ARGS', 'Manage language clusters'

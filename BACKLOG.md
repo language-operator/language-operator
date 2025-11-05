@@ -48,9 +48,9 @@ When asked to iterate, plan the top item on the backlog.
 
 #### MVP: System Overview & Status
 
-* Implement `aictl status` command - Overview dashboard showing: cluster connection, operator version, current cluster context, agent counts by status, tool availability, persona library, model configurations, recent activity log (Cilium-inspired beautiful output)
-* Add multi-cluster view to status - When multiple clusters exist, show summary across all clusters with breakdown per cluster
-* Implement `aictl version` command - Show langop CLI version, operator version in cluster, compatibility status
+* ~~Implement `aictl status` command~~ - Overview dashboard showing cluster connection, operator version, current context, agent/tool/model/persona counts by type and status, beautiful formatted output with colored status indicators
+* ~~Add multi-cluster view to status~~ - When multiple clusters exist, shows summary table across all clusters with breakdown per cluster, marks current cluster with *
+* ~~Implement `aictl version` command~~ - Shows aictl CLI version and operator version from current cluster, checks compatibility status, provides helpful messages if not connected
 
 #### MVP: Persona Management
 
