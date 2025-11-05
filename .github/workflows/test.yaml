@@ -103,8 +103,8 @@ jobs:
           docker exec ruby-test sh -c '
             cd /app &&
             apk add --no-cache build-base git &&
-            gem build langop.gemspec &&
-            gem install langop-*.gem &&
+            gem build language-operator.gemspec &&
+            gem install language-operator-*.gem &&
             bundle install &&
             bundle exec rspec
           '

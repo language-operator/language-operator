@@ -7,10 +7,10 @@ RUN apk add --no-cache \
     ruby-bundler \
     build-base
 
-# Copy and install the langop gem
+# Copy and install the language-operator gem
 # The gem file should be built beforehand and copied into this directory
-COPY langop-*.gem /tmp/
-RUN gem install /tmp/langop-*.gem && \
-    rm /tmp/langop-*.gem
+COPY language-operator-*.gem /tmp/
+RUN gem install /tmp/language-operator-*.gem && \
+    rm /tmp/language-operator-*.gem
 
 WORKDIR /app

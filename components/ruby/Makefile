@@ -8,7 +8,7 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 help:
 	@echo "Available targets:"
 	@echo "  build      - Build gem from SDK and then build Docker image"
-	@echo "  build-gem  - Build langop gem from SDK source"
+	@echo "  build-gem  - Build language-operator gem from SDK source"
 	@echo "  scan       - Scan the Docker image with Trivy"
 	@echo "  test       - Test the Docker image"
 	@echo "  shell      - Run interactive shell in container"
@@ -17,10 +17,10 @@ help:
 # Build the gem from SDK source
 .PHONY: build-gem
 build-gem:
-	@echo "Building langop gem from SDK..."
-	cd ../../sdk/ruby && gem build langop.gemspec
+	@echo "Building language-operator gem from SDK..."
+	cd ../../sdk/ruby && gem build language-operator.gemspec
 	@echo "Copying gem to components/ruby..."
-	cp ../../sdk/ruby/langop-*.gem .
+	cp ../../sdk/ruby/language-operator-*.gem .
 	@echo "Gem built successfully"
 
 # Build the Docker image (depends on gem being built)
@@ -36,8 +36,8 @@ scan:
 # Test the Docker image
 .PHONY: test
 test: ## Test the Docker image
-	@echo "Testing ruby image with Langop gem..."
-	docker run --rm $(IMAGE_FULL) ruby -e "require 'langop'; puts 'Langop gem loaded successfully'"
+	@echo "Testing ruby image with LanguageOperator gem..."
+	docker run --rm $(IMAGE_FULL) ruby -e "require 'language_operator'; puts 'LanguageOperator gem loaded successfully'"
 	@echo "All tests passed!"
 
 # Run interactive shell in container
