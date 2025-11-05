@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'langop/dsl/agent_definition'
-require 'langop/dsl/agent_context'
-require 'langop/dsl/workflow_definition'
+require 'aictl/dsl/agent_definition'
+require 'aictl/dsl/agent_context'
+require 'aictl/dsl/workflow_definition'
 
-RSpec.describe Langop::Dsl::AgentDefinition do
+RSpec.describe Aictl::Dsl::AgentDefinition do
   describe 'agent DSL' do
     it 'defines a basic agent' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'test-agent' do
         description 'A test agent'
@@ -27,8 +27,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'defines agent with persona' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'persona-agent' do
         persona 'You are a helpful assistant'
@@ -39,8 +39,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'defines agent with workflow' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'workflow-agent' do
         workflow do
@@ -56,8 +56,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'defines agent with constraints' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'constrained-agent' do
         constraints do
@@ -74,8 +74,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'defines agent with output configuration' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'output-agent' do
         output do
@@ -88,8 +88,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'supports adding objectives individually' do
-      registry = Langop::Dsl::AgentRegistry.new
-      context = Langop::Dsl::AgentContext.new(registry)
+      registry = Aictl::Dsl::AgentRegistry.new
+      context = Aictl::Dsl::AgentContext.new(registry)
 
       context.agent 'multi-objective' do
         objective 'First goal'
@@ -102,12 +102,12 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
   end
 
-  describe Langop::Dsl::AgentRegistry do
+  describe Aictl::Dsl::AgentRegistry do
     it 'manages multiple agents' do
-      registry = Langop::Dsl::AgentRegistry.new
+      registry = Aictl::Dsl::AgentRegistry.new
 
-      agent1 = Langop::Dsl::AgentDefinition.new('agent1')
-      agent2 = Langop::Dsl::AgentDefinition.new('agent2')
+      agent1 = Aictl::Dsl::AgentDefinition.new('agent1')
+      agent2 = Aictl::Dsl::AgentDefinition.new('agent2')
 
       registry.register(agent1)
       registry.register(agent2)
@@ -119,8 +119,8 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'clears all agents' do
-      registry = Langop::Dsl::AgentRegistry.new
-      registry.register(Langop::Dsl::AgentDefinition.new('agent1'))
+      registry = Aictl::Dsl::AgentRegistry.new
+      registry.register(Aictl::Dsl::AgentDefinition.new('agent1'))
 
       expect(registry.count).to eq(1)
 
@@ -130,9 +130,9 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
   end
 
-  describe Langop::Dsl::WorkflowDefinition do
+  describe Aictl::Dsl::WorkflowDefinition do
     it 'defines workflow steps' do
-      workflow = Langop::Dsl::WorkflowDefinition.new
+      workflow = Aictl::Dsl::WorkflowDefinition.new
 
       workflow.step :search, tool: 'web_search', params: { query: 'test' }
       workflow.step :analyze, depends_on: :search
@@ -143,7 +143,7 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'tracks step dependencies' do
-      workflow = Langop::Dsl::WorkflowDefinition.new
+      workflow = Aictl::Dsl::WorkflowDefinition.new
 
       workflow.step :step1 do
         tool 'tool1'
@@ -159,7 +159,7 @@ RSpec.describe Langop::Dsl::AgentDefinition do
     end
 
     it 'supports prompt-based steps' do
-      workflow = Langop::Dsl::WorkflowDefinition.new
+      workflow = Aictl::Dsl::WorkflowDefinition.new
 
       workflow.step :summarize do
         prompt 'Summarize: {previous.output}'

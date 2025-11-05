@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'langop/client/base'
+require 'aictl/client/base'
 
-RSpec.describe Langop::Client::Base do
+RSpec.describe Aictl::Client::Base do
   let(:config) do
     {
       'llm' => {

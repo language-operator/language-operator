@@ -1,29 +1,29 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'langop/dsl'
+require 'aictl/dsl'
 
-RSpec.describe Langop::Dsl do
+RSpec.describe Aictl::Dsl do
   # Clean registry before each test
   before do
-    Langop::Dsl.instance_variable_set(:@registry, nil)
+    Aictl::Dsl.instance_variable_set(:@registry, nil)
   end
 
   describe '.define' do
     it 'defines a basic tool' do
-      Langop::Dsl.define do
+      Aictl::Dsl.define do
         tool 'test_tool' do
           description 'A test tool'
         end
       end
 
-      registry = Langop::Dsl.registry
+      registry = Aictl::Dsl.registry
       expect(registry.all.length).to eq(1)
       expect(registry.get('test_tool')).not_to be_nil
     end
 
     xit 'defines tools with parameters' do
-      Langop::Dsl.define do
+      Aictl::Dsl.define do
         tool 'calculator' do
           description 'Simple calculator'
 
@@ -61,7 +61,7 @@ RSpec.describe Langop::Dsl do
         end
       end
 
-      registry = Langop::Dsl.registry
+      registry = Aictl::Dsl.registry
       tool_class = registry.get('calculator')
 
       expect(tool_class).not_to be_nil
@@ -72,7 +72,7 @@ RSpec.describe Langop::Dsl do
 
   describe 'tool execution' do
     before do
-      Langop::Dsl.define do
+      Aictl::Dsl.define do
         tool 'greeter' do
           description 'Greets a user'
 
@@ -89,7 +89,7 @@ RSpec.describe Langop::Dsl do
     end
 
     xit 'executes tool with valid parameters' do
-      tool_class = Langop::Dsl.registry.get('greeter')
+      tool_class = Aictl::Dsl.registry.get('greeter')
       tool_instance = tool_class.new
 
       result = tool_instance.call({ 'name' => 'Alice' })
@@ -97,7 +97,7 @@ RSpec.describe Langop::Dsl do
     end
 
     xit 'validates required parameters' do
-      tool_class = Langop::Dsl.registry.get('greeter')
+      tool_class = Aictl::Dsl.registry.get('greeter')
       tool_instance = tool_class.new
 
       expect { tool_instance.call({}) }.to raise_error(/required/i)
@@ -106,7 +106,7 @@ RSpec.describe Langop::Dsl do
 
   describe 'parameter types' do
     before do
-      Langop::Dsl.define do
+      Aictl::Dsl.define do
         tool 'type_tester' do
           description 'Test parameter types'
 
@@ -130,7 +130,7 @@ RSpec.describe Langop::Dsl do
     end
 
     xit 'accepts various parameter types' do
-      tool_class = Langop::Dsl.registry.get('type_tester')
+      tool_class = Aictl::Dsl.registry.get('type_tester')
       tool_instance = tool_class.new
 
       result = tool_instance.call({
@@ -146,7 +146,7 @@ RSpec.describe Langop::Dsl do
 
   describe 'error handling' do
     before do
-      Langop::Dsl.define do
+      Aictl::Dsl.define do
         tool 'error_tool' do
           description 'Tool that raises error'
 
@@ -158,7 +158,7 @@ RSpec.describe Langop::Dsl do
     end
 
     xit 'catches and formats errors' do
-      tool_class = Langop::Dsl.registry.get('error_tool')
+      tool_class = Aictl::Dsl.registry.get('error_tool')
       tool_instance = tool_class.new
 
       result = tool_instance.call({})
@@ -169,13 +169,13 @@ RSpec.describe Langop::Dsl do
 
   describe '.registry' do
     it 'returns global registry' do
-      registry = Langop::Dsl.registry
-      expect(registry).to be_a(Langop::Dsl::Registry)
+      registry = Aictl::Dsl.registry
+      expect(registry).to be_a(Aictl::Dsl::Registry)
     end
 
     it 'maintains state across calls' do
-      registry1 = Langop::Dsl.registry
-      registry2 = Langop::Dsl.registry
+      registry1 = Aictl::Dsl.registry
+      registry2 = Aictl::Dsl.registry
       expect(registry1).to be(registry2)
     end
   end

@@ -15,11 +15,11 @@ module Rack
   end
 end
 
-# Load Langop DSL wrapper (which loads langop gem including ToolLoader)
-require_relative 'lib/langop/dsl'
+# Load Aictl DSL wrapper (which loads langop gem including ToolLoader)
+require "aictl/dsl'
 
-# Langop MCP Server using official Ruby SDK
-module Langop
+# Aictl MCP Server using official Ruby SDK
+module Aictl
   class Server < Sinatra::Base
   helpers Sinatra::JSON
 
@@ -51,12 +51,12 @@ module Langop
   # Initialize registry and load tools
   configure do
     # Create our DSL registry and load tools
-    registry = Langop::Dsl::Registry.new
+    registry = Aictl::Dsl::Registry.new
     loader = ToolLoader.new(registry)
     loader.load_tools
 
     # Create MCP::Server from our registry
-    mcp_server = Langop::Dsl::Adapter.create_mcp_server(
+    mcp_server = Aictl::Dsl::Adapter.create_mcp_server(
       registry,
       server_name: 'based-mcp',
       server_context: {}
@@ -141,7 +141,7 @@ module Langop
     settings.loader.reload
 
     # Recreate MCP server with updated tools
-    mcp_server = Langop::Dsl::Adapter.create_mcp_server(
+    mcp_server = Aictl::Dsl::Adapter.create_mcp_server(
       settings.registry,
       server_name: 'based-mcp',
       server_context: {}

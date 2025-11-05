@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 # Use langop gem for DSL functionality
 # The gem is pre-installed in the langop/ruby base image
-# gem 'langop' is already available globally
+# gem 'aictl' is already available globally
 
 # Tool server dependencies
 gem 'sinatra', '~> 4.0'

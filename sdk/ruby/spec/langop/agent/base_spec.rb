@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'langop/agent/base'
+require 'aictl/agent/base'
 
-RSpec.describe Langop::Agent::Base do
+RSpec.describe Aictl::Agent::Base do
   let(:config) do
     {
       'llm' => {
@@ -69,8 +69,8 @@ RSpec.describe Langop::Agent::Base do
   describe '#execute_goal' do
     it 'creates executor and executes goal' do
       # Mock the executor
-      executor_double = instance_double(Langop::Agent::Executor)
-      allow(Langop::Agent::Executor).to receive(:new).and_return(executor_double)
+      executor_double = instance_double(Aictl::Agent::Executor)
+      allow(Aictl::Agent::Executor).to receive(:new).and_return(executor_double)
       allow(executor_double).to receive(:execute).and_return('Goal completed')
 
       result = agent.execute_goal('Test goal')

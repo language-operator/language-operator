@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'langop/dsl'
-require 'langop/tool_loader'
+require "aictl/dsl'
+require "aictl/tool_loader'
 
-# Convenience - export Langop classes at top level for tool definitions
+# Convenience - export Aictl classes at top level for tool definitions
 #
 # This allows tool files to use simplified syntax:
 #   tool "example" do
@@ -11,11 +11,11 @@ require 'langop/tool_loader'
 #   end
 #
 # Instead of:
-#   Langop::Dsl.define do
+#   Aictl::Dsl.define do
 #     tool "example" do
 #       ...
 #     end
 #   end
 
 # Alias ToolLoader at top level for convenience
-ToolLoader = ::Langop::ToolLoader
+ToolLoader = ::Aictl::ToolLoader

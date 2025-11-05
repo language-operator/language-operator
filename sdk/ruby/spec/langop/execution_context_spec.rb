@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'langop/dsl/execution_context'
+require 'aictl/dsl/execution_context'
 
-RSpec.describe Langop::Dsl::ExecutionContext do
+RSpec.describe Aictl::Dsl::ExecutionContext do
   let(:params) { { 'input' => 'test', 'email' => 'user@example.com' } }
   let(:context) { described_class.new(params) }
 

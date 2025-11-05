@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'langop'
+require "aictl'
 
-# Langop Client - convenience wrapper
+# Aictl Client - convenience wrapper
 #
-# This provides a simple interface to the Langop SDK for client functionality.
+# This provides a simple interface to the Aictl SDK for client functionality.
 # All logic is in the langop gem.
 #
 # @example Quick start
-#   require 'langop_client'
+#   require "aictl_client'
 #
-#   config = Langop::Client::Config.load('config.yaml')
-#   client = Langop::Client::Base.new(config)
+#   config = Aictl::Client::Config.load('config.yaml')
+#   client = Aictl::Client::Base.new(config)
 #   client.connect!
 #
 #   puts client.send_message("What tools are available?")
@@ -20,23 +20,23 @@ require 'langop'
 #   ENV['OPENAI_ENDPOINT'] = 'http://localhost:11434/v1'
 #   ENV['LLM_MODEL'] = 'llama3.2'
 #
-#   config = Langop::Client::Config.from_env
-#   client = Langop::Client::Base.new(config)
+#   config = Aictl::Client::Config.from_env
+#   client = Aictl::Client::Base.new(config)
 #   client.connect!
 
 # Convenience module for creating clients
-module LangopClient
+module AictlClient
   # Convenience method to create a client from config file or ENV
   #
   # @param config_path [String, nil] Path to config file, or nil for ENV
-  # @return [Langop::Client::Base] Configured client instance
+  # @return [Aictl::Client::Base] Configured client instance
   def self.create(config_path = nil)
     config = if config_path
-               Langop::Client::Config.load_with_fallback(config_path)
+               Aictl::Client::Config.load_with_fallback(config_path)
              else
-               Langop::Client::Config.from_env
+               Aictl::Client::Config.from_env
              end
 
-    Langop::Client::Base.new(config)
+    Aictl::Client::Base.new(config)
   end
 end
