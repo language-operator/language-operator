@@ -32,6 +32,7 @@ module Aictl
         option :persona, type: :string, desc: 'Persona to use for the agent'
         option :tools, type: :array, desc: 'Tools to make available to the agent'
         option :models, type: :array, desc: 'Models to make available to the agent'
+        option :dry_run, type: :boolean, default: false, desc: 'Preview what would be created without applying'
         def create(description)
           # Handle --create-cluster flag
           if options[:create_cluster]
@@ -56,24 +57,31 @@ module Aictl
           # Generate agent name from description if not provided
           agent_name = options[:name] || generate_agent_name(description)
 
+          # Build LanguageAgent resource
+          agent_resource = Kubernetes::ResourceBuilder.language_agent(
+            agent_name,
+            instructions: description,
+            cluster: cluster_config[:namespace],
+            persona: options[:persona],
+            tools: options[:tools] || [],
+            models: options[:models] || []
+          )
+
+          # Dry-run mode: preview without applying
+          if options[:dry_run]
+            display_dry_run_preview(agent_resource, cluster, description)
+            return
+          end
+
           # Connect to Kubernetes
           k8s = Kubernetes::Client.new(
             kubeconfig: cluster_config[:kubeconfig],
             context: cluster_config[:context]
           )
 
-          # Build LanguageAgent resource
-          agent_resource = Formatters::ProgressFormatter.with_spinner("Creating agent '#{agent_name}'") do
-            resource = Kubernetes::ResourceBuilder.language_agent(
-              agent_name,
-              instructions: description,
-              cluster: cluster_config[:namespace],
-              persona: options[:persona],
-              tools: options[:tools] || [],
-              models: options[:models] || []
-            )
-            k8s.apply_resource(resource)
-            resource
+          # Apply resource to cluster
+          Formatters::ProgressFormatter.with_spinner("Creating agent '#{agent_name}'") do
+            k8s.apply_resource(agent_resource)
           end
 
           # Watch synthesis status
@@ -546,6 +554,79 @@ module Aictl
         end
 
         private
+
+        def display_dry_run_preview(agent_resource, cluster, description)
+          require 'yaml'
+
+          puts
+          puts '=' * 80
+          puts '  DRY RUN: Agent Creation Preview'
+          puts '=' * 80
+          puts
+
+          # Extract key information
+          name = agent_resource.dig('metadata', 'name')
+          namespace = agent_resource.dig('metadata', 'namespace')
+          persona = agent_resource.dig('spec', 'persona')
+          tools = agent_resource.dig('spec', 'tools') || []
+          models = agent_resource.dig('spec', 'models') || []
+          mode = agent_resource.dig('spec', 'mode') || 'autonomous'
+          schedule = agent_resource.dig('spec', 'schedule')
+
+          # Display summary
+          puts 'Agent Summary:'
+          puts "  Name:         #{name}"
+          puts "  Cluster:      #{cluster}"
+          puts "  Namespace:    #{namespace}"
+          puts "  Mode:         #{mode}"
+          puts "  Schedule:     #{schedule || 'N/A'}" if schedule
+          puts "  Instructions: #{description}"
+          puts
+
+          # Show detected configuration
+          if persona
+            puts 'Detected Configuration:'
+            puts "  Persona:      #{persona}"
+          end
+
+          if tools.any?
+            puts "  Tools:        #{tools.join(', ')}"
+          end
+
+          if models.any?
+            puts "  Models:       #{models.join(', ')}"
+          end
+
+          if persona || tools.any? || models.any?
+            puts
+          end
+
+          # Show full YAML
+          puts 'Generated YAML:'
+          puts '─' * 80
+          puts YAML.dump(agent_resource)
+          puts '─' * 80
+          puts
+
+          # Show what would happen
+          puts 'What would happen:'
+          puts '  1. Agent resource would be created in the cluster'
+          puts '  2. Operator would synthesize Ruby code from instructions'
+          puts '  3. Agent would be deployed and start running'
+          puts
+
+          # Show how to actually create
+          Formatters::ProgressFormatter.info('No changes made (dry-run mode)')
+          puts
+          puts 'To create this agent for real, run:'
+          cmd_parts = ["aictl agent create \"#{description}\""]
+          cmd_parts << "--name #{name}" if options[:name]
+          cmd_parts << "--persona #{persona}" if persona
+          cmd_parts << "--tools #{tools.join(' ')}" if tools.any?
+          cmd_parts << "--models #{models.join(' ')}" if models.any?
+          cmd_parts << "--cluster #{cluster}" if options[:cluster]
+          puts "  #{cmd_parts.join(' ')}"
+        end
 
         def format_status(status)
           require 'pastel'

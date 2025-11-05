@@ -69,7 +69,7 @@ When asked to iterate, plan the top item on the backlog.
 #### MVP: CLI Foundation & Polish
 
 * Add beautiful CLI output formatting - Integrate tty-spinner for progress, tty-table for tables, tty-prompt for interactive questions, pastel/colorize for highlighting, proper error messages with next steps
-* Add `--dry-run` flag to agent create - Preview what would be created: show generated YAML, detected tools, selected persona, schedule extraction without applying to cluster
+* ~~Add `--dry-run` flag to agent create~~ - Preview what would be created: show generated YAML, detected tools, selected persona, schedule extraction without applying to cluster
 * Add kubeconfig detection and cluster validation - Check KUBECONFIG env var or ~/.kube/config, validate cluster connectivity, check operator installed, show helpful error with installation steps if missing
 * Add shell completions - Generate bash/zsh/fish completions for all commands, subcommands, and flags, package in gem
 * Create comprehensive CLI help text - Rich examples for each command with real-world scenarios, link to documentation, common workflows documented in --help output
