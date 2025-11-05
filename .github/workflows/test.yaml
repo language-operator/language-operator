@@ -125,9 +125,40 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
+      - name: Build SDK gem
+        run: |
+          docker rm -f gem-builder 2>/dev/null || true
+          cat > /tmp/build-gem.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          cd /build
+          apk add --no-cache git
+          gem build language-operator.gemspec
+          EOF
+          chmod +x /tmp/build-gem.sh
+          docker run -d --name gem-builder ruby:3.4-alpine sleep 300
+          docker cp sdk/ruby gem-builder:/build
+          docker cp /tmp/build-gem.sh gem-builder:/build-gem.sh
+          docker exec gem-builder /build-gem.sh
+          docker cp gem-builder:/build/language-operator-0.1.0.gem sdk/ruby/
+          docker rm -f gem-builder
+          cp sdk/ruby/language-operator-0.1.0.gem components/ruby/
+
+      - name: Build base image
+        working-directory: components/base
+        run: docker build -t git.theryans.io/langop/base:latest .
+
+      - name: Build ruby image
+        working-directory: components/ruby
+        run: docker build -t git.theryans.io/langop/ruby:latest .
+
+      - name: Build tool component image
+        working-directory: components/tool
+        run: docker build -t git.theryans.io/langop/tool:latest .
+
       - name: Build web tool image
         working-directory: tools/web
-        run: make build
+        run: docker build -t git.theryans.io/langop/web-tool:latest .
 
       - name: Run web tool unit tests
         working-directory: tools/web
@@ -155,9 +186,40 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
+      - name: Build SDK gem
+        run: |
+          docker rm -f gem-builder 2>/dev/null || true
+          cat > /tmp/build-gem.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          cd /build
+          apk add --no-cache git
+          gem build language-operator.gemspec
+          EOF
+          chmod +x /tmp/build-gem.sh
+          docker run -d --name gem-builder ruby:3.4-alpine sleep 300
+          docker cp sdk/ruby gem-builder:/build
+          docker cp /tmp/build-gem.sh gem-builder:/build-gem.sh
+          docker exec gem-builder /build-gem.sh
+          docker cp gem-builder:/build/language-operator-0.1.0.gem sdk/ruby/
+          docker rm -f gem-builder
+          cp sdk/ruby/language-operator-0.1.0.gem components/ruby/
+
+      - name: Build base image
+        working-directory: components/base
+        run: docker build -t git.theryans.io/langop/base:latest .
+
+      - name: Build ruby image
+        working-directory: components/ruby
+        run: docker build -t git.theryans.io/langop/ruby:latest .
+
+      - name: Build tool component image
+        working-directory: components/tool
+        run: docker build -t git.theryans.io/langop/tool:latest .
+
       - name: Build email tool image
         working-directory: tools/email
-        run: make build
+        run: docker build -t git.theryans.io/langop/email-tool:latest .
 
       - name: Run email tool unit tests
         working-directory: tools/email

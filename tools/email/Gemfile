@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
-# Language Operator SDK - pre-installed globally, but listed here for bundler
-gem 'language-operator', '= 0.1.0'
+# Language Operator SDK - installed in base image and available at /language-operator
+gem 'language-operator', '0.1.0', path: '/language-operator'
 
 group :development, :test do
   gem 'rspec', '~> 3.13'
