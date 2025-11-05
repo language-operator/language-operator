@@ -189,12 +189,14 @@ module Aictl
           aictl run
       DESC
       option :config, type: :string, desc: 'Path to configuration file'
-      def run
+      def run_agent
         config_path = options[:config] || 'config.yaml'
         Aictl::Agent.run(config_path: config_path)
       rescue Interrupt
         puts "\n\n👋 Agent stopped"
       end
+      # Map 'run' command to run_agent method to avoid Thor reserved word conflict
+      map 'run' => :run_agent
 
       desc 'console', 'Start an interactive Ruby console with aictl loaded'
       def console

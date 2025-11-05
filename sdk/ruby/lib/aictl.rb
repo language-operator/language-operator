@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require "aictl/version'
-require "aictl/dsl'
-require "aictl/client'
-require "aictl/tool_loader'
+require "aictl/version"
+require "aictl/dsl"
+require "aictl/client"
+require "aictl/tool_loader"
 
 # Agent module is optional - only load if dependencies are available
 # This allows the SDK to be used in environments without agent dependencies
 begin
-  require "aictl/agent'
+  require "aictl/agent"
 rescue LoadError => e
   # Agent dependencies not available, skip loading
   warn "Langop: Agent module not loaded (missing dependency: #{e.message})" if ENV['DEBUG']

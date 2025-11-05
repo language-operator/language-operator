@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'k8s-client'
+require 'k8s-ruby'
 require 'yaml'
 
 module Aictl
