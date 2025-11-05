@@ -1,13 +1,14 @@
 require_relative '../spec_helper'
 
 RSpec.describe 'web_fetch tool' do
-  let(:registry) { Langop::Dsl::Registry.new }
+  let(:registry) { LanguageOperator::Dsl::Registry.new }
   let(:tool_path) { File.expand_path('../../tools/web.rb', __dir__) }
   let(:example_html) { File.read(File.expand_path('../fixtures/example_page.html', __dir__)) }
 
   before do
-    load tool_path
-    Langop::Dsl.apply_to(registry)
+    context = LanguageOperator::Dsl::Context.new(registry)
+    code = File.read(tool_path)
+    context.instance_eval(code, tool_path)
   end
 
   describe 'fetching in text mode (default)' do

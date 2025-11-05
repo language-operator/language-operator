@@ -27,7 +27,7 @@ tool "web_search" do
     url = "https://html.duckduckgo.com/html/?q=#{encoded_query}"
 
     # Fetch results using SDK HTTP client
-    response = Langop::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
+    response = LanguageOperator::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
     unless response[:success]
       return "Error: Failed to fetch search results - #{response[:error] || response[:status]}"
@@ -83,7 +83,7 @@ tool "web_fetch" do
     end
 
     # Fetch the URL using SDK HTTP client
-    response = Langop::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
+    response = LanguageOperator::Dsl::HTTP.get(url, headers: { 'User-Agent' => 'Mozilla/5.0' }, follow_redirects: true)
 
     unless response[:success]
       return "Error: Failed to fetch URL: #{url} - #{response[:error] || response[:status]}"
@@ -128,7 +128,7 @@ tool "web_headers" do
     end
 
     # Fetch headers using SDK HTTP client
-    response = Langop::Dsl::HTTP.head(url)
+    response = LanguageOperator::Dsl::HTTP.head(url)
 
     unless response[:success]
       return "Error: Failed to fetch headers from: #{url} - #{response[:error] || response[:status]}"
@@ -157,7 +157,7 @@ tool "web_status" do
     end
 
     # Get status code using SDK HTTP client
-    response = Langop::Dsl::HTTP.get(url, follow_redirects: true)
+    response = LanguageOperator::Dsl::HTTP.get(url, follow_redirects: true)
 
     status = response[:status] || 0
 

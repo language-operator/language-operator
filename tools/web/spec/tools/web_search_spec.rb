@@ -1,14 +1,15 @@
 require_relative '../spec_helper'
 
 RSpec.describe 'web_search tool' do
-  let(:registry) { Langop::Dsl::Registry.new }
+  let(:registry) { LanguageOperator::Dsl::Registry.new }
   let(:tool_path) { File.expand_path('../../tools/web.rb', __dir__) }
   let(:ddg_search_html) { File.read(File.expand_path('../fixtures/ddg_search_ruby.html', __dir__)) }
   let(:ddg_no_results_html) { File.read(File.expand_path('../fixtures/ddg_no_results.html', __dir__)) }
 
   before do
-    load tool_path
-    Langop::Dsl.apply_to(registry)
+    context = LanguageOperator::Dsl::Context.new(registry)
+    code = File.read(tool_path)
+    context.instance_eval(code, tool_path)
   end
 
   describe 'successful search with results' do

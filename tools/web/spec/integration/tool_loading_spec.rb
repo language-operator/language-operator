@@ -1,12 +1,13 @@
 require_relative '../spec_helper'
 
 RSpec.describe 'Tool Loading Integration' do
-  let(:registry) { Langop::Dsl::Registry.new }
+  let(:registry) { LanguageOperator::Dsl::Registry.new }
   let(:tool_path) { File.expand_path('../../tools/web.rb', __dir__) }
 
   before do
-    load tool_path
-    Langop::Dsl.apply_to(registry)
+    context = LanguageOperator::Dsl::Context.new(registry)
+    code = File.read(tool_path)
+    context.instance_eval(code, tool_path)
   end
 
   describe 'tool registration' do

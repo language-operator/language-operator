@@ -1,5 +1,8 @@
 source 'https://rubygems.org'
 
+# Language Operator SDK - pre-installed globally, but listed here for bundler
+gem 'language-operator', '= 0.1.0'
+
 group :development, :test do
   gem 'rspec', '~> 3.13'
   gem 'webmock', '~> 3.23'
