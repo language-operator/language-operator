@@ -1,5 +1,5 @@
 require 'bundler/setup'
-require 'langop'
+require 'language_operator'
 require 'webmock/rspec'
 
 # Disable real network connections

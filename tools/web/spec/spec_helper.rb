@@ -12,7 +12,7 @@ require 'bundler/setup'
 #   minimum_coverage_by_file 70
 # end
 
-require 'langop'
+require 'language_operator'
 require 'webmock/rspec'
 
 # Disable real HTTP connections
