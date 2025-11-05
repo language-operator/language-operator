@@ -135,8 +135,8 @@ jobs:
           # Volume mounts don't work in CI, so copy files into container
           docker rm -f web-test 2>/dev/null || true
           docker run -d --name web-test git.theryans.io/langop/web-tool:latest sleep 300
-          docker cp . web-test:/workspace
-          docker exec -w /workspace web-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
+          docker cp . web-test:/tmp/workspace
+          docker exec -w /tmp/workspace web-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
           docker rm -f web-test
 
   # Test email tool
@@ -164,6 +164,6 @@ jobs:
           # Volume mounts don't work in CI, so copy files into container
           docker rm -f email-test 2>/dev/null || true
           docker run -d --name email-test git.theryans.io/langop/email-tool:latest sleep 300
-          docker cp . email-test:/workspace
-          docker exec -w /workspace email-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
+          docker cp . email-test:/tmp/workspace
+          docker exec -w /tmp/workspace email-test sh -c "bundle config set --local path 'vendor/bundle' && bundle install && bundle exec rspec --format documentation"
           docker rm -f email-test
