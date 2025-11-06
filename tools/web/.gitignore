@@ -1,9 +1,0 @@
-vendor/
-doc/
-.yardoc/
-Gemfile.lock
-.bundle/
-
-# Test coverage
-coverage/
-test_output.txt

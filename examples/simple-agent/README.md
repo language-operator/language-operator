@@ -6,6 +6,8 @@ This example demonstrates a complete working deployment of the language-operator
 - A LanguageModel (LiteLLM proxy for local LLM)
 - A LanguageAgent (autonomous agent with workspace)
 
+> **Note**: MCP tools (like web-tool and email-tool) are maintained in the [language-tools](https://github.com/language-operator/language-tools) repository.
+
 ## Prerequisites
 
 1. Kubernetes cluster (kind, k3s, or any cluster)
