@@ -36,7 +36,8 @@ build-all:
 # Build the Docker image
 .PHONY: build
 build:
-	docker build -t $(IMAGE_FULL) .
+	docker build \
+		-t $(IMAGE_FULL) .
 
 # Scan the Docker image with Trivy
 .PHONY: scan

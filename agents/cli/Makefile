@@ -13,7 +13,8 @@ help:
 .PHONY: build
 build:
 	@echo "Building CLI agent image..."
-	docker build -t git.theryans.io/langop/cli:latest .
+	docker build \
+		-t git.theryans.io/langop/cli:latest .
 
 .PHONY: scan
 scan:

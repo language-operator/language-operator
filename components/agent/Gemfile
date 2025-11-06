@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
-source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Language Operator SDK
-gem 'language-operator', '~> 0.1.0'
+# Private gem registry for language-operator SDK
+source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
+  gem 'language-operator', '~> 0.1.0'
+end
 
 # Agent-specific dependencies for autonomous execution
 gem 'rufus-scheduler', '~> 3.9'

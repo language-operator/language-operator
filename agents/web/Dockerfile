@@ -21,12 +21,8 @@ WORKDIR /app/web
 # Copy Gemfile first for better Docker caching
 COPY Gemfile Gemfile.lock* ./
 
-# Configure bundle credentials and install
-ARG REGISTRY_USERNAME
-ARG REGISTRY_PASSWORD
-RUN BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
-    bundle lock --add-platform x86_64-linux && \
-    BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
+# Install gems (credentials inherited from base image)
+RUN bundle lock --add-platform x86_64-linux && \
     bundle install --no-cache
 
 # Copy package files and install npm dependencies

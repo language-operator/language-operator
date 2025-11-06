@@ -13,9 +13,7 @@ WORKDIR /app
 COPY Gemfile /app/
 
 # Configure bundle credentials and install
-ARG REGISTRY_USERNAME
-ARG REGISTRY_PASSWORD
-RUN BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" bundle install --no-cache
+RUN bundle install --no-cache
 
 # Copy library files
 COPY lib/ /app/lib/

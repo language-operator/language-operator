@@ -156,9 +156,6 @@ jobs:
         with:
           context: ./components/${{ matrix.component }}
           file: ./components/${{ matrix.component }}/Dockerfile
-          build-args: |
-            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
-            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -208,9 +205,6 @@ jobs:
         with:
           context: ./tools/${{ matrix.tool }}
           file: ./tools/${{ matrix.tool }}/Dockerfile
-          build-args: |
-            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
-            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -262,9 +256,6 @@ jobs:
         with:
           context: ./agents/${{ matrix.agent }}
           file: ./agents/${{ matrix.agent }}/Dockerfile
-          build-args: |
-            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
-            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

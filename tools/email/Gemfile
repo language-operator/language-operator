@@ -1,8 +1,10 @@
 source 'https://rubygems.org'
-source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Language Operator SDK
-gem 'language-operator', '~> 0.1.0'
+# Private gem registry for language-operator SDK
+source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
+  gem 'language-operator', '~> 0.1.0'
+end
+
 # Email functionality
 gem 'mail', '~> 2.8'
 

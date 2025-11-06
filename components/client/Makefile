@@ -20,7 +20,8 @@ help:
 .PHONY: build
 build:
 	@echo "Building Docker image $(IMAGE_FULL)..."
-	docker build -t $(IMAGE_FULL) .
+	docker build \
+		-t $(IMAGE_FULL) .
 
 .PHONY: scan
 scan:
