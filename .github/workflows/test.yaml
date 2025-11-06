@@ -97,17 +97,14 @@ jobs:
         uses: https://github.com/ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
-          bundler-cache: true
-          working-directory: tools/web
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Configure gem credentials
-        run: |
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << EOF
-          ---
-          https://git.theryans.io/api/packages/language-operator/rubygems: Bearer ${{ secrets.REGISTRY_TOKEN }}
-          EOF
-          chmod 0600 ~/.gem/credentials
+      - name: Install dependencies
+        working-directory: tools/web
+        run: bundle install
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Run tests
         working-directory: tools/web
@@ -124,17 +121,14 @@ jobs:
         uses: https://github.com/ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
-          bundler-cache: true
-          working-directory: tools/email
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Configure gem credentials
-        run: |
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << EOF
-          ---
-          https://git.theryans.io/api/packages/language-operator/rubygems: Bearer ${{ secrets.REGISTRY_TOKEN }}
-          EOF
-          chmod 0600 ~/.gem/credentials
+      - name: Install dependencies
+        working-directory: tools/email
+        run: bundle install
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Run tests
         working-directory: tools/email
