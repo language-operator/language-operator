@@ -205,7 +205,7 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
 
 `+"```ruby"+`
-require 'langop'
+require 'language-operator'
 
 agent "%s" do
   description "Brief description extracted from instructions"
@@ -300,8 +300,8 @@ func (s *Synthesizer) validateDSL(code string) error {
 		return fmt.Errorf("code does not contain 'agent' definition")
 	}
 
-	if !strings.Contains(code, "require 'langop'") && !strings.Contains(code, `require "langop"`) {
-		return fmt.Errorf("code does not require langop")
+	if !strings.Contains(code, "require 'language-operator'") && !strings.Contains(code, `require "language-operator"`) {
+		return fmt.Errorf("code does not require language-operator")
 	}
 
 	// Check for basic Ruby syntax issues

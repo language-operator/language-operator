@@ -56,7 +56,7 @@ func (m *MockSynthesizer) SynthesizeAgent(ctx context.Context, req synthesis.Age
 	}
 	if m.Response == nil {
 		return &synthesis.AgentSynthesisResponse{
-			DSLCode:         "require 'langop'\n\nagent 'test' do\n  schedule every: '1h'\nend",
+			DSLCode:         "require 'language-operator'\n\nagent 'test' do\n  schedule every: '1h'\nend",
 			DurationSeconds: 1.5,
 		}, nil
 	}
@@ -217,7 +217,7 @@ func TestLanguageAgentController_SmartChangeDetection(t *testing.T) {
 			},
 		},
 		Data: map[string]string{
-			"agent.rb": "require 'langop'\n\nagent 'test' do\n  schedule every: '1h'\nend",
+			"agent.rb": "require 'language-operator'\n\nagent 'test' do\n  schedule every: '1h'\nend",
 		},
 	}
 
