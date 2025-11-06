@@ -16,7 +16,8 @@ COPY gem-credentials /root/.gem/credentials
 COPY gem-credentials /home/langop/.gem/credentials
 RUN chmod 600 /root/.gem/credentials /home/langop/.gem/credentials && \
     chown langop:langop /home/langop/.gem/credentials
-# Set token as environment variable (bundler uses BUNDLE_GIT__HOST format)
+
+    # Set token as environment variable (bundler uses BUNDLE_GIT__HOST format)
 ENV BUNDLE_GIT__THERYANS__IO="b579c250d4ac8223641f5f0178024c896b542812"
 
 # Copy entrypoint script

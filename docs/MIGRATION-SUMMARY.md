@@ -1,11 +1,14 @@
 # SDK Extraction & Base Image Removal - Migration Summary
 
+**Status: COMPLETED** - `components/ruby` has been removed as of the authentication simplification update.
+
 ## Overview
 
 Completed migration to simplify the build process by:
 1. Publishing Ruby SDK to private gem registry
 2. Removing intermediate layer images (`langop/ruby`, component layers)
 3. Having each component install gem directly via Gemfile
+4. Removed `components/ruby` directory (no longer needed)
 
 ## Changes Made
 
