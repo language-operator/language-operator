@@ -10,21 +10,26 @@ help:
 	@echo "  doc    - Generate YARD documentation"
 	@echo "  clean  - Clean generated files"
 
+# Image configuration
+IMAGE_NAME := git.theryans.io/language-operator/agent
+IMAGE_TAG := latest-cli
+IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
+
 .PHONY: build
 build:
 	@echo "Building CLI agent image..."
 	docker build \
-		-t git.theryans.io/langop/cli:latest .
+		-t $(IMAGE_FULL) .
 
 .PHONY: scan
 scan:
 	@echo "Scanning CLI agent image with Trivy..."
-	trivy image git.theryans.io/langop/cli:latest
+	trivy image $(IMAGE_FULL)
 
 .PHONY: shell
 shell:
 	@echo "Running interactive shell in CLI agent container..."
-	docker run --rm -it git.theryans.io/langop/cli:latest /bin/sh
+	docker run --rm -it git.theryans.io/language-operator/cli:latest /bin/sh
 
 .PHONY: run
 run:
@@ -32,7 +37,7 @@ run:
 	docker run -it --rm \
 		-v $(PWD)/config:/app/agent/config \
 		-e CONFIG_PATH=/app/agent/config/config.yaml \
-		git.theryans.io/langop/cli:latest
+		git.theryans.io/language-operator/cli:latest
 
 .PHONY: test
 test: lint ## Run tests (linting)

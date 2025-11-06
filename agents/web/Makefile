@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := git.theryans.io/langop/web
+IMAGE_NAME := git.theryans.io/language-operator/web
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

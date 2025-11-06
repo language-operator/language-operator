@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := git.theryans.io/langop/headless
+IMAGE_NAME := git.theryans.io/language-operator/headless
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

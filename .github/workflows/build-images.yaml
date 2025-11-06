@@ -19,7 +19,7 @@ on:
 
 env:
   REGISTRY: git.theryans.io
-  IMAGE_PREFIX: langop
+  IMAGE_PREFIX: language-operator
 
 jobs:
   # Build the operator image

@@ -1,4 +1,4 @@
-IMAGE_NAME := git.theryans.io/langop/client
+IMAGE_NAME := git.theryans.io/language-operator/client
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

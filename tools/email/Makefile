@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := git.theryans.io/langop/email-tool
+IMAGE_NAME := git.theryans.io/language-operator/email-tool
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 
