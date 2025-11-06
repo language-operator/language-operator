@@ -275,7 +275,7 @@ kubectl delete crd languageclients.langop.io
 ### Building from source
 
 ```bash
-cd kubernetes/language-operator
+cd src
 make docker-build docker-push IMG=myregistry/language-operator:latest
 ```
 

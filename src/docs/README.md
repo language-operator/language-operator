@@ -11,7 +11,7 @@ This directory contains auto-generated API reference documentation for the langu
 To regenerate the API documentation after making changes to the CRD types:
 
 ```bash
-# From the kubernetes/language-operator directory
+# From the src directory
 make docs
 
 # Or from the repository root

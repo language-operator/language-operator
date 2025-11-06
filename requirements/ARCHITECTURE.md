@@ -99,7 +99,7 @@ Instead of writing code, users write natural language instructions:
 ## Core Components
 
 ### 1. **Language Operator** (Go)
-**Location**: `kubernetes/language-operator/`
+**Location**: `src/`
 
 The operator is a Kubernetes controller that:
 - Watches CRD resources

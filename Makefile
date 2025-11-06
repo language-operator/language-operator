@@ -6,11 +6,11 @@ build:
 
 # Install the language operator to Kubernetes
 k8s-install:
-	@cd kubernetes/language-operator && $(MAKE) deploy
+	@cd src && $(MAKE) deploy
 
 # Uninstall the language operator from Kubernetes
 k8s-uninstall:
-	@cd kubernetes/language-operator && $(MAKE) undeploy
+	@cd src && $(MAKE) undeploy
 
 # Check Kubernetes resources status
 k8s-status:
@@ -22,18 +22,18 @@ k8s-status:
 
 # Build and install the operator
 operator:
-	@cd kubernetes/language-operator && $(MAKE) docker-build docker-push deploy
+	@cd src && $(MAKE) docker-build docker-push deploy
 
 # Generate CRD API documentation
 docs:
-	@cd kubernetes/language-operator && $(MAKE) docs
+	@cd src && $(MAKE) docs
 
 # Run tests
 test:
 	@echo "Running full test suite..."
 	@echo ""
 	@echo "==> Testing Language Operator (Go)"
-	@cd kubernetes/language-operator && $(MAKE) test
+	@cd src && $(MAKE) test
 	@echo ""
 	@echo "Note: Ruby SDK tests now run in separate repository (language-operator-gem)"
 	@echo ""
