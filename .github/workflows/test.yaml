@@ -20,11 +20,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'kubernetes/language-operator/go.mod'
-          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+          go-version-file: 'src/go.mod'
+          cache-dependency-path: 'src/go.sum'
 
       - name: Run go fmt
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: |
           if [ -n "$(gofmt -s -l .)" ]; then
             echo "Go code is not formatted:"
@@ -33,7 +33,7 @@ jobs:
           fi
 
       - name: Run go vet
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: go vet ./...
 
   # Run unit tests
@@ -46,16 +46,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'kubernetes/language-operator/go.mod'
-          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+          go-version-file: 'src/go.mod'
+          cache-dependency-path: 'src/go.sum'
 
       - name: Run tests
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: |
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Display coverage summary
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: |
           go tool cover -func=coverage.out | tail -1
 
@@ -69,16 +69,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: 'kubernetes/language-operator/go.mod'
-          cache-dependency-path: 'kubernetes/language-operator/go.sum'
+          go-version-file: 'src/go.mod'
+          cache-dependency-path: 'src/go.sum'
 
       - name: Install controller-gen
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: |
           go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
 
       - name: Generate manifests
-        working-directory: kubernetes/language-operator
+        working-directory: src
         run: |
           $(go env GOPATH)/bin/controller-gen rbac:roleName=manager-role crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
