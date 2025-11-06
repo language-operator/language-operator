@@ -93,18 +93,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run web tool tests in Docker
+      - name: Set up Ruby
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          working-directory: tools/web
+
+      - name: Configure gem credentials
         run: |
-          docker rm -f web-test 2>/dev/null || true
-          docker run -d --name web-test git.theryans.io/language-operator/base:latest sleep 300
-          docker cp tools/web web-test:/app
-          docker exec --user root web-test sh -c 'chown -R langop:langop /app'
-          docker exec --user langop web-test sh -c '
-            cd /app &&
-            bundle install &&
-            bundle exec rspec --format documentation
-          '
-          docker rm -f web-test
+          mkdir -p ~/.gem
+          cat > ~/.gem/credentials << EOF
+          ---
+          https://git.theryans.io/api/packages/language-operator/rubygems: Bearer ${{ secrets.REGISTRY_TOKEN }}
+          EOF
+          chmod 0600 ~/.gem/credentials
+
+      - name: Run tests
+        working-directory: tools/web
+        run: bundle exec rspec --format documentation
 
   # Test email tool
   email-tool-test:
@@ -113,16 +120,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run email tool tests in Docker
+      - name: Set up Ruby
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          working-directory: tools/email
+
+      - name: Configure gem credentials
         run: |
-          docker rm -f email-test 2>/dev/null || true
-          docker run -d --name email-test git.theryans.io/language-operator/base:latest sleep 300
-          docker cp tools/email email-test:/app
-          docker exec --user root email-test sh -c 'chown -R langop:langop /app'
-          docker exec --user langop email-test sh -c '
-            cd /app &&
-            bundle install &&
-            bundle exec rspec --format documentation
-          '
-          docker rm -f email-test
+          mkdir -p ~/.gem
+          cat > ~/.gem/credentials << EOF
+          ---
+          https://git.theryans.io/api/packages/language-operator/rubygems: Bearer ${{ secrets.REGISTRY_TOKEN }}
+          EOF
+          chmod 0600 ~/.gem/credentials
+
+      - name: Run tests
+        working-directory: tools/email
+        run: bundle exec rspec --format documentation
 
