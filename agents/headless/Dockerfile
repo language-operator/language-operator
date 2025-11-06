@@ -1,11 +1,27 @@
-FROM git.theryans.io/langop/agent:latest
+FROM git.theryans.io/langop/base:latest
 
-# Switch back to root for setup
-USER root
+# Install Ruby, build dependencies, and agent packages
+RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
+    jq \
+    curl \
+    ca-certificates \
+    tzdata
 
-# Copy headless-specific Gemfile (same as base, but explicit)
-COPY Gemfile /app/headless/
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
+
 WORKDIR /app/headless
+
+# Copy headless-specific Gemfile and install dependencies
+COPY Gemfile /app/headless/
 RUN bundle install --no-cache
 
 # Copy headless agent code
@@ -21,12 +37,13 @@ RUN chmod +x /app/headless/bin/langop-headless
 # Set ownership
 RUN chown -R langop:langop /app/headless
 
-# Switch back to langop user
+# Switch to langop user
 USER langop
 
 # Set environment defaults
 ENV CONFIG_PATH="/app/headless/config/config.yaml" \
-    GOALS_PATH="/app/headless/config/goals.yaml"
+    GOALS_PATH="/app/headless/config/goals.yaml" \
+    WORKSPACE_PATH="/workspace"
 
 # Default command
 CMD ["/app/headless/bin/langop-headless"]

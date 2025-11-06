@@ -1,14 +1,29 @@
-FROM git.theryans.io/langop/agent:latest
+FROM git.theryans.io/langop/base:latest
 
-# Switch back to root to install packages
-USER root
+# Install Ruby, build dependencies, readline, and agent packages
+RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
+    readline \
+    readline-dev \
+    jq \
+    curl \
+    ca-certificates \
+    tzdata
 
-# Install readline for Reline support
-RUN apk add --no-cache readline readline-dev
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
 
-# Copy CLI-specific Gemfile and install additional dependencies
-COPY Gemfile /app/cli/
 WORKDIR /app/cli
+
+# Copy CLI-specific Gemfile and install dependencies
+COPY Gemfile /app/cli/
 RUN bundle install --no-cache
 
 # Copy CLI interface code
@@ -24,11 +39,12 @@ RUN chmod +x /app/cli/bin/langop-cli
 # Set ownership
 RUN chown -R langop:langop /app/cli
 
-# Switch back to langop user
+# Switch to langop user
 USER langop
 
 # Set environment defaults
-ENV CONFIG_PATH="/app/cli/config/config.yaml"
+ENV CONFIG_PATH="/app/cli/config/config.yaml" \
+    WORKSPACE_PATH="/workspace"
 
 # Default command
 CMD ["/app/cli/bin/langop-cli"]

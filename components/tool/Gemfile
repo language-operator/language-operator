@@ -1,8 +1,8 @@
 source 'https://rubygems.org'
+source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Use langop gem for DSL functionality
-# The gem is pre-installed in the langop/ruby base image
-# gem 'aictl' is already available globally
+# Language Operator SDK
+gem 'language-operator', '~> 0.1.0'
 
 # Tool server dependencies
 gem 'sinatra', '~> 4.0'
@@ -15,6 +15,4 @@ group :development do
   gem 'rubocop', '~> 1.60'
   gem 'rubocop-performance', '~> 1.20'
   gem 'yard', '~> 0.9.37'
-  # rdoc omitted - causes build issues on NixOS due to psych native extension
-  # The warning about rdoc is harmless and only affects Ruby 3.5+
 end

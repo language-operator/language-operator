@@ -22,50 +22,8 @@ env:
   IMAGE_PREFIX: langop
 
 jobs:
-  # Build Ruby SDK gem first - if this fails, nothing else matters
-  build-gem:
-    runs-on: builder
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build gem
-        run: |
-          # Build gem using docker without volume mounts (which don't work in this CI environment)
-          # Clean up any leftover containers
-          docker rm -f gem-builder 2>/dev/null || true
-
-          cat > /tmp/build-gem.sh << 'EOF'
-          #!/bin/sh
-          set -e
-          cd /build
-          apk add --no-cache git
-          gem build language-operator.gemspec
-          # List the built gem for verification
-          ls -la language-operator-*.gem
-          EOF
-          chmod +x /tmp/build-gem.sh
-
-          docker run -d --name gem-builder ruby:3.4-alpine sleep 300
-          docker cp sdk/ruby gem-builder:/build
-          docker cp /tmp/build-gem.sh gem-builder:/build-gem.sh
-          docker exec gem-builder /build-gem.sh
-          docker cp gem-builder:/build/language-operator-0.1.0.gem sdk/ruby/
-          docker rm -f gem-builder
-          cp sdk/ruby/language-operator-0.1.0.gem components/ruby/
-
-      - name: Upload gem artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: language-operator-gem
-          path: sdk/ruby/language-operator-0.1.0.gem
-          retention-days: 1
-
   # Build the operator image
   build-operator:
-    needs: build-gem
     runs-on: builder
     permissions:
       contents: read
@@ -116,7 +74,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: build-gem
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,68 +113,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build ruby component (depends on base + gem)
-  build-ruby:
+  # Build component images (tool, client, agent) - all depend on base
+  build-components:
     runs-on: builder
     permissions:
       contents: read
       packages: write
-    needs: [build-base, build-gem]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download gem artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: language-operator-gem
-          path: components/ruby/
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/ruby
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push ruby image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./components/ruby
-          file: ./components/ruby/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Build Ruby-based components (tool, client) that depend on ruby image
-  build-ruby-components:
-    runs-on: builder
-    permissions:
-      contents: read
-      packages: write
-    needs: build-ruby
+    needs: build-base
     strategy:
       matrix:
-        component: [tool, client]
+        component: [tool, client, agent]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -251,52 +156,9 @@ jobs:
         with:
           context: ./components/${{ matrix.component }}
           file: ./components/${{ matrix.component }}/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Build agent component (depends on ruby)
-  build-agent:
-    runs-on: builder
-    permissions:
-      contents: read
-      packages: write
-    needs: build-ruby
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/agent
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push agent image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./components/agent
-          file: ./components/agent/Dockerfile
+          build-args: |
+            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -309,7 +171,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: build-ruby-components  # Tools depend on tool component (which inherits from ruby)
+    needs: build-base
     strategy:
       matrix:
         tool: [web, email]
@@ -346,6 +208,9 @@ jobs:
         with:
           context: ./tools/${{ matrix.tool }}
           file: ./tools/${{ matrix.tool }}/Dockerfile
+          build-args: |
+            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -358,7 +223,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: build-agent  # Agents depend on agent component
+    needs: build-base
     strategy:
       matrix:
         agent: [cli, web, headless]
@@ -397,60 +262,14 @@ jobs:
         with:
           context: ./agents/${{ matrix.agent }}
           file: ./agents/${{ matrix.agent }}/Dockerfile
+          build-args: |
+            REGISTRY_USERNAME=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # Publish Ruby gem to registry
-  publish-ruby-gem:
-    runs-on: builder
-    permissions:
-      contents: read
-      packages: write
-    needs: build-gem
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download gem artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: language-operator-gem
-          path: .
-
-      - name: Publish gem to registry
-        if: github.event_name != 'pull_request' && (github.event.inputs.push != 'false')
-        env:
-          GEM_HOST_API_KEY: ${{ secrets.REGISTRY_PASSWORD }}
-        run: |
-          # Clean up old container if exists
-          docker rm -f gem-publisher 2>/dev/null || true
-
-          # Create publish script
-          cat > /tmp/publish-gem.sh << 'SCRIPT'
-          #!/bin/sh
-          set -e
-          cd /gem
-
-          # Install curl for uploading
-          apk add --no-cache curl
-
-          # Push gem using basic auth via curl
-          # Forgejo/Gitea uses basic auth for gem push
-          curl -u "${{ secrets.REGISTRY_USERNAME }}:${GEM_HOST_API_KEY}" \
-               --upload-file "language-operator-0.1.0.gem" \
-               https://${{ env.REGISTRY }}/api/packages/langop/rubygems
-          SCRIPT
-          chmod +x /tmp/publish-gem.sh
-
-          docker run -d --name gem-publisher -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" ruby:3.4-alpine sleep 300
-          docker exec gem-publisher mkdir -p /gem
-          docker cp language-operator-0.1.0.gem gem-publisher:/gem/
-          docker cp /tmp/publish-gem.sh gem-publisher:/publish-gem.sh
-          docker exec -e GEM_HOST_API_KEY="${GEM_HOST_API_KEY}" gem-publisher /publish-gem.sh
-          docker rm -f gem-publisher
 
   # Build the model proxy image (LiteLLM)
   build-model:

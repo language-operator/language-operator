@@ -53,8 +53,9 @@ module LanguageOperator
 
         # Apply default values for missing optional parameters
         @parameters.each do |name, param_def|
-          if !params.key?(name) && !param_def.default.nil?
-            params[name] = param_def.default
+          default_value = param_def.instance_variable_get(:@default)
+          if !params.key?(name) && !default_value.nil?
+            params[name] = default_value
           end
         end
 

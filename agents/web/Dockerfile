@@ -1,21 +1,32 @@
-FROM git.theryans.io/langop/agent:latest
+FROM git.theryans.io/langop/base:latest
 
-# Switch back to root to install packages
-USER root
-
-# Install additional packages for Rails and Vite
+# Install Ruby, build dependencies, Rails packages, and Node.js
 RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
+    jq \
+    curl \
+    ca-certificates \
     nodejs \
     npm \
     tzdata \
     yaml-dev \
     sqlite-dev
 
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
+
 # Set working directory
 WORKDIR /app/web
 
 # Copy Gemfile first for better Docker caching
-COPY Gemfile ./
+COPY Gemfile Gemfile.lock* ./
 RUN bundle lock --add-platform x86_64-linux && bundle install --no-cache
 
 # Copy package files and install npm dependencies
@@ -40,7 +51,7 @@ RUN npm run build || echo "Vite build skipped - will run in development mode"
 # Set ownership
 RUN chown -R langop:langop /app/web
 
-# Switch back to langop user
+# Switch to langop user
 USER langop
 
 # Expose ports (3000 for Rails, 3036 for Vite dev server)
@@ -50,7 +61,8 @@ EXPOSE 3000 3036
 ENV RAILS_ENV=development \
     RAILS_LOG_TO_STDOUT=true \
     PORT=3000 \
-    VITE_RUBY_AUTO_BUILD=true
+    VITE_RUBY_AUTO_BUILD=true \
+    WORKSPACE_PATH="/workspace"
 
 # Start Rails server (Vite will auto-build assets in development)
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]

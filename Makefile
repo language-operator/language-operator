@@ -32,11 +32,10 @@ docs:
 test:
 	@echo "Running full test suite..."
 	@echo ""
-	@echo "==> Testing Ruby SDK"
-	@cd sdk/ruby && $(MAKE) test
-	@echo ""
 	@echo "==> Testing Language Operator (Go)"
 	@cd kubernetes/language-operator && $(MAKE) test
+	@echo ""
+	@echo "Note: Ruby SDK tests now run in separate repository (language-operator-gem)"
 	@echo ""
 	@echo "✓ All tests passed!"
 

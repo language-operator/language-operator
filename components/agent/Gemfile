@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
+source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Note: langop gem is pre-installed in the parent langop/ruby image
-# We don't declare it here because it's system-installed, not from rubygems.org
-# The ruby command will find it automatically via the system gem path
+# Language Operator SDK
+gem 'language-operator', '~> 0.1.0'
 
 # Agent-specific dependencies for autonomous execution
-gem 'rufus-scheduler', '~> 3.9'  # For scheduled/event-driven execution
-gem 'concurrent-ruby', '~> 1.3'  # For concurrent task execution
+gem 'rufus-scheduler', '~> 3.9'
+gem 'concurrent-ruby', '~> 1.3'
 
 group :development do
   gem 'rubocop', '~> 1.60'

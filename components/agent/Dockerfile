@@ -1,24 +1,30 @@
-FROM git.theryans.io/langop/ruby:latest
+FROM git.theryans.io/langop/base:latest
 
-# Switch back to root to install agent-specific packages
-USER root
-
-# Install packages needed for autonomous agent operation
+# Install Ruby, build dependencies, and agent-specific packages
 RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
     jq \
     curl \
     ca-certificates \
     tzdata
 
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
+
 WORKDIR /app/agent
 
 # Copy agent framework Gemfile and install dependencies
-# Use --system to allow bundler to use system-installed gems like langop
 COPY Gemfile /app/agent/
-RUN bundle install --no-cache --system
+RUN bundle install --no-cache
 
 # Copy default agent configuration
-# Note: Agent code is in the langop SDK gem, not copied here
 COPY config/ /app/agent/config/
 
 # Copy entrypoint script
@@ -28,7 +34,7 @@ RUN chmod +x /usr/local/bin/langop-agent
 # Set ownership
 RUN chown -R langop:langop /app/agent
 
-# Switch back to langop user
+# Switch to langop user
 USER langop
 
 # Set environment defaults

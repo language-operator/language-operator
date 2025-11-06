@@ -68,24 +68,35 @@
 ## Code Architecture
 
 ### DRY Principle: Don't Repeat Yourself
-- **Problem Solved**: Eliminated 1,313 lines of duplicate code between SDK and components
-- **Pattern**: SDK gem provides all core functionality, components are thin wrappers
-- **Namespace Aliasing**: Components can alias SDK classes for backwards compatibility
-- **Pre-installed Gem**: `language-operator` gem is installed in `langop/ruby` base image, available globally
+- **Problem Solved**: Eliminated duplicate code by publishing SDK as gem
+- **Pattern**: SDK gem provides all core functionality, components install via Gemfile
+- **Gem Source**: Private registry at `https://git.theryans.io/api/packages/language-operator/rubygems`
+- **No Layered Images**: Each component installs dependencies directly from base Alpine image
 
 ### Component Hierarchy
 ```
-langop/base       - Alpine + Ruby + Bundler
-  └─ langop/ruby  - base + language-operator gem pre-installed
-      ├─ langop/client  - ruby + client wrapper
-      ├─ langop/agent   - ruby + agent framework
-      ├─ langop/tool    - ruby + MCP server framework
-      └─ langop/model   - ruby + LiteLLM proxy
+langop/base - Alpine + tini + su-exec + langop user
+  ├─ langop/tool      - base + Ruby + language-operator gem + tool dependencies
+  ├─ langop/client    - base + Ruby + language-operator gem + client dependencies
+  ├─ langop/agent     - base + Ruby + language-operator gem + agent dependencies
+  ├─ langop/web-tool  - base + Ruby + language-operator gem + web tool code
+  ├─ langop/email-tool - base + Ruby + language-operator gem + email tool code
+  ├─ agent-cli        - base + Ruby + language-operator gem + CLI agent
+  ├─ agent-web        - base + Ruby + language-operator gem + Rails + web agent
+  ├─ agent-headless   - base + Ruby + language-operator gem + headless agent
+  └─ langop/model     - base + Python + LiteLLM proxy
 ```
 
+### Build Pattern
+- All Ruby components start from `langop/base:latest`
+- Install Ruby + bundler + build-base via apk
+- Configure bundle with registry credentials (build args)
+- Copy Gemfile and run `bundle install` to get `language-operator` gem
+- Each component is self-contained and explicit
+
 ### Inheritance Pattern
-- Agents inherit from `LanguageOperator::Client::Base` (not `Based::Client::Base`)
-- All core logic lives in SDK (`sdk/ruby/lib/language_operator/`)
+- Agents inherit from `LanguageOperator::Agent::Base`
+- All core logic lives in published SDK gem
 - Components provide deployment-specific wrappers and configurations
 
 ## Naming Conventions

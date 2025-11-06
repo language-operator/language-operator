@@ -5,21 +5,25 @@ RUN apk add --no-cache \
     ruby \
     ruby-dev \
     ruby-bundler \
-    build-base
+    build-base \
+    curl
 
-# Copy and install the language-operator gem
-# The gem file should be built beforehand and copied into this directory
-COPY language-operator-*.gem /tmp/
-RUN gem install /tmp/language-operator-*.gem
+# Configure gem source for private registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
+
+# Install the language-operator gem from registry
+# Falls back to RubyGems.org if credentials not provided
+RUN gem install language-operator --source https://git.theryans.io/api/packages/langop/rubygems || \
+    gem install language-operator
 
 # Extract gem contents to /language-operator for path-based Gemfile references
-RUN mkdir -p /language-operator && \
-    cd /language-operator && \
-    gem unpack /tmp/language-operator-*.gem && \
-    gem spec /tmp/language-operator-*.gem --ruby > language-operator.gemspec && \
-    mv language-operator-0.1.0/* . && \
-    mv language-operator-0.1.0/.* . 2>/dev/null || true && \
-    rm -rf language-operator-0.1.0 && \
-    rm /tmp/language-operator-*.gem
+RUN GEM_PATH=$(gem which language_operator) && \
+    GEM_DIR=$(dirname $(dirname "$GEM_PATH")) && \
+    mkdir -p /language-operator && \
+    cp -r "$GEM_DIR"/* /language-operator/
 
 WORKDIR /app

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
+source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Backend client library (shared)
-gem 'ruby_llm', '~> 1.8'
-gem 'ruby_llm-mcp', '~> 0.1'
+# Language Operator SDK (includes ruby_llm, ruby_llm-mcp, etc.)
+gem 'language-operator', '~> 0.1.0'
 
 # CLI-specific dependencies
 gem 'reline', '~> 0.5'

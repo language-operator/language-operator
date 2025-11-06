@@ -1,7 +1,8 @@
 source 'https://rubygems.org'
+source 'https://git.theryans.io/api/packages/language-operator/rubygems'
 
-# Language Operator SDK - installed in base image and available at /language-operator
-gem 'language-operator', '0.1.0', path: '/language-operator'
+# Language Operator SDK
+gem 'language-operator', '~> 0.1.0'
 
 group :development, :test do
   gem 'rspec', '~> 3.13'

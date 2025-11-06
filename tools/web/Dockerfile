@@ -1,20 +1,43 @@
-FROM git.theryans.io/langop/tool:latest
+FROM git.theryans.io/langop/base:latest
 
-# Switch to root to install packages
-USER root
-
-# Install curl for HTTP requests
+# Install Ruby, build dependencies, and HTTP tools
 RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
     curl \
     ca-certificates
+
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
+
+WORKDIR /app
+
+# Copy Gemfile and install dependencies
+COPY Gemfile /app/
+RUN bundle install --no-cache
 
 # Copy web tools to /mcp
 COPY tools/ /mcp/
 
-# Ensure /mcp is owned by langop user
-RUN chown -R langop:langop /mcp
+# Ensure directories are owned by langop user
+RUN chown -R langop:langop /mcp /app
 
 # Switch to langop user
 USER langop
 
-# The entrypoint and command are inherited from langop/tool
+# Expose default port
+EXPOSE 80
+
+# Set environment variables
+ENV PORT=80
+ENV RACK_ENV=production
+
+# Start the MCP server (assuming tool component has server.rb)
+# Adjust if web tool has a different entrypoint
+CMD ["ruby", "-r", "language_operator/tool_loader", "-e", "LanguageOperator::ToolLoader.start"]

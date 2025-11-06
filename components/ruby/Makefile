@@ -7,26 +7,19 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 .PHONY: help
 help:
 	@echo "Available targets:"
-	@echo "  build      - Build gem from SDK and then build Docker image"
-	@echo "  build-gem  - Build language-operator gem from SDK source"
+	@echo "  build      - Build Docker image (installs gem from registry)"
 	@echo "  scan       - Scan the Docker image with Trivy"
 	@echo "  test       - Test the Docker image"
 	@echo "  shell      - Run interactive shell in container"
 	@echo "  run        - Run the container"
 
-# Build the gem from SDK source
-.PHONY: build-gem
-build-gem:
-	@echo "Building language-operator gem from SDK..."
-	cd ../../sdk/ruby && gem build language-operator.gemspec
-	@echo "Copying gem to components/ruby..."
-	cp ../../sdk/ruby/language-operator-0.1.0.gem .
-	@echo "Gem built successfully"
-
-# Build the Docker image (depends on gem being built)
+# Build the Docker image (installs gem from registry)
 .PHONY: build
-build: build-gem
-	docker build -t $(IMAGE_FULL) .
+build:
+	docker build \
+		--build-arg REGISTRY_USERNAME="${REGISTRY_USERNAME}" \
+		--build-arg REGISTRY_PASSWORD="${REGISTRY_PASSWORD}" \
+		-t $(IMAGE_FULL) .
 
 # Scan the Docker image with Trivy
 .PHONY: scan

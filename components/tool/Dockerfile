@@ -1,4 +1,18 @@
-FROM git.theryans.io/langop/ruby:latest
+FROM git.theryans.io/langop/base:latest
+
+# Install Ruby and build dependencies
+RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base
+
+# Configure bundle to use private gem registry
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
+        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
+    fi
 
 # Create application directory
 WORKDIR /app
