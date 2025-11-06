@@ -22,7 +22,7 @@ Builds and pushes all Docker images:
 - `main-<sha>` - Branch with git SHA
 - `pr-123` - Pull request number
 
-**Registry**: `git.theryans.io/langop/*`
+**Registry**: `git.theryans.io/language-operator/*`
 
 ### 🧪 test.yaml
 **Triggers**: Push to main, PRs, manual dispatch

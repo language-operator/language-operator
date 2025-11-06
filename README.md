@@ -41,7 +41,7 @@ metadata:
   name: web-tool
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/web-tool:latest
+  image: git.theryans.io/language-operator/web-tool:latest
   deploymentMode: sidecar  # Runs as sidecar, gets workspace access
 ```
 
@@ -55,7 +55,7 @@ metadata:
   name: email-tool
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/email-tool:latest
+  image: git.theryans.io/language-operator/email-tool:latest
   deploymentMode: sidecar  # Runs as sidecar, gets workspace access
 ```
 
@@ -75,7 +75,7 @@ spec:
     endpoint: http://my-on-prem-model.com/v1
     api_key: magistral
   proxy:
-    image: git.theryans.io/langop/model:latest
+    image: git.theryans.io/language-operator/model:latest
 ```
 
 Finally, define the agent and dependencies:
@@ -88,7 +88,7 @@ metadata:
   name: retrieve-daily-headlines
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/agent:latest
+  image: git.theryans.io/language-operator/agent:latest
   toolRefs:
   - name: email-tool
   - name: web-tool
@@ -173,7 +173,7 @@ metadata:
   name: web-tool
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/web-tool:latest
+  image: git.theryans.io/language-operator/web-tool:latest
   deploymentMode: sidecar
   egress:
   # Allow HTTPS to specific news sites
@@ -197,7 +197,7 @@ metadata:
   name: email-tool
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/email-tool:latest
+  image: git.theryans.io/language-operator/email-tool:latest
   deploymentMode: sidecar
   egress:
   # Allow SMTP to mail server
@@ -243,7 +243,7 @@ metadata:
   name: internal-agent
 spec:
   cluster: personal-assistants
-  image: git.theryans.io/langop/agent:latest
+  image: git.theryans.io/language-operator/agent:latest
   # No egress defined - can only talk to tools/models within cluster
 ```
 
@@ -364,7 +364,7 @@ metadata:
   name: support-agent-1
 spec:
   cluster: customer-support-cluster
-  image: git.theryans.io/langop/agent:latest
+  image: git.theryans.io/language-operator/agent:latest
 
   # Reference the persona
   personaRef:
@@ -402,7 +402,7 @@ The project uses automated CI/CD pipelines to build and publish all container im
 **Automated Builds** (via GitHub Actions / Forgejo Actions):
 - Triggered on push to `main`, tags, or PRs
 - Builds operator, components, tools, agents, and model images
-- Publishes to `git.theryans.io/langop/*`
+- Publishes to `git.theryans.io/language-operator/*`
 - See [.github/workflows/README.md](.github/workflows/README.md) for details
 
 **Local Development**:
@@ -419,7 +419,7 @@ cd components/base && docker build -t based/base:latest .
 
 ### Image Registry
 
-All images are published to: `git.theryans.io/langop/`
+All images are published to: `git.theryans.io/language-operator/`
 
 **Available Images**:
 - `language-operator` - The Kubernetes operator

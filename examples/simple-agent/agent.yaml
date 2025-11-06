@@ -4,7 +4,7 @@ metadata:
   name: demo-agent
   namespace: demo
 spec:
-  image: git.theryans.io/langop/agent:latest
+  image: git.theryans.io/language-operator/agent:latest
   executionMode: autonomous
   toolRefs:
   - name: web-tool

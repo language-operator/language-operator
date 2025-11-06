@@ -27,7 +27,7 @@ Projects MAY include:
 ## Example Implementation
 
 ```makefile
-IMAGE_NAME := git.theryans.io/langop/component-name
+IMAGE_NAME := git.theryans.io/language-operator/component-name
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

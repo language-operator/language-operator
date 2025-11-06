@@ -7,8 +7,8 @@
 
 ## Registry
 - Private registry: git.theryans.io
-- Registry namespace: langop
-- Example image: git.theryans.io/langop/tool:latest
+- Registry namespace: language-operator
+- Example image: git.theryans.io/language-operator/tool:latest
 
 ## Infrastructure
 - Kubernetes cluster: k3s on 5 nodes (dl1-dl5)

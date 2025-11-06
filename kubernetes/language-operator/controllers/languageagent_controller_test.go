@@ -76,7 +76,7 @@ func TestLanguageAgentController_SynthesisNotCalledWithoutInstructions(t *testin
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image: "langop/agent:latest",
+			Image: "git.theryans.io/language-operator/agent:latest",
 			// No Instructions field - synthesis should not be called
 		},
 	}
@@ -123,7 +123,7 @@ func TestLanguageAgentController_SynthesisCalledWithInstructions(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:        "langop/agent:latest",
+			Image:        "git.theryans.io/language-operator/agent:latest",
 			Instructions: "Monitor workspace and report changes every hour",
 		},
 	}
@@ -199,7 +199,7 @@ func TestLanguageAgentController_SmartChangeDetection(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:        "langop/agent:latest",
+			Image:        "git.theryans.io/language-operator/agent:latest",
 			Instructions: instructions,
 		},
 	}

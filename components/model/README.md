@@ -347,7 +347,7 @@ Enable debug output:
 docker run -e DEBUG=true \
   -v $(pwd)/test-config/model.json:/etc/langop/model.json:ro \
   -p 4000:4000 \
-  git.theryans.io/langop/model:latest
+  git.theryans.io/language-operator/model:latest
 ```
 
 ## Architecture Details

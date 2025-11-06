@@ -229,7 +229,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 					Containers: []corev1.Container{
 						{
 							Name:  "proxy",
-							Image: "git.theryans.io/langop/model:latest",
+							Image: "git.theryans.io/language-operator/model:latest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
