@@ -2,7 +2,6 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: magistral-small-2509
-  namespace: demo
 spec:
   provider: openai-compatible
   modelName: mistralai/magistral-small-2509

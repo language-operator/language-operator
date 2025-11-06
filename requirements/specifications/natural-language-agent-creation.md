@@ -124,7 +124,7 @@ langop persona create my-accountant --from financial-analyst
 Pre-built personas ship with the operator as ConfigMaps:
 
 ```
-kubernetes/charts/language-operator/persona-library/
+chart/persona-library/
 ├── financial-analyst.yaml
 ├── legal-assistant.yaml
 ├── customer-support.yaml
@@ -426,4 +426,4 @@ langop feedback agent-name "this should run at 5pm not 4pm"
 
 - [requirements/tasks/optimize.md](../tasks/optimize.md) - Performance optimization requirements
 - [requirements/ARCHITECTURE.md](../ARCHITECTURE.md) - Overall system architecture
-- [kubernetes/charts/language-operator/crds/](../../kubernetes/charts/language-operator/crds/) - CRD specifications
+- [chart/crds/](../../chart/crds/) - CRD specifications

@@ -94,7 +94,7 @@ sdk/ruby/lib/langop/deployers/
 
 **Files to Create:**
 ```
-kubernetes/charts/language-operator/persona-library/
+chart/persona-library/
 ├── financial-analyst.yaml
 ├── general-assistant.yaml
 ├── devops-engineer.yaml

@@ -282,7 +282,7 @@ make docker-build docker-push IMG=myregistry/language-operator:latest
 ### Installing locally built chart
 
 ```bash
-helm install language-operator ./kubernetes/charts/language-operator \
+helm install language-operator ./chart \
   --namespace language-operator-system \
   --create-namespace \
   --set image.repository=myregistry/language-operator \

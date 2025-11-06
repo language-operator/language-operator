@@ -41,7 +41,7 @@ jobs:
       - name: Package Helm chart
         run: |
           mkdir -p .helm-packages
-          helm package kubernetes/charts/language-operator -d .helm-packages
+          helm package chart -d .helm-packages
 
       - name: Generate Helm index
         run: |
