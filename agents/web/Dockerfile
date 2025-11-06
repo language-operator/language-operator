@@ -15,19 +15,19 @@ RUN apk add --no-cache \
     yaml-dev \
     sqlite-dev
 
-# Configure bundle to use private gem registry
-ARG REGISTRY_USERNAME
-ARG REGISTRY_PASSWORD
-RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
-        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
-    fi
-
 # Set working directory
 WORKDIR /app/web
 
 # Copy Gemfile first for better Docker caching
 COPY Gemfile Gemfile.lock* ./
-RUN bundle lock --add-platform x86_64-linux && bundle install --no-cache
+
+# Configure bundle credentials and install
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
+    bundle lock --add-platform x86_64-linux && \
+    BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
+    bundle install --no-cache
 
 # Copy package files and install npm dependencies
 COPY package.json package-lock.json* ./

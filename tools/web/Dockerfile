@@ -9,18 +9,15 @@ RUN apk add --no-cache \
     curl \
     ca-certificates
 
-# Configure bundle to use private gem registry
-ARG REGISTRY_USERNAME
-ARG REGISTRY_PASSWORD
-RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
-        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
-    fi
-
 WORKDIR /app
 
 # Copy Gemfile and install dependencies
 COPY Gemfile /app/
-RUN bundle install --no-cache
+
+# Configure bundle credentials and install
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" bundle install --no-cache
 
 # Copy web tools to /mcp
 COPY tools/ /mcp/

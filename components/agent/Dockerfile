@@ -11,18 +11,15 @@ RUN apk add --no-cache \
     ca-certificates \
     tzdata
 
-# Configure bundle to use private gem registry
-ARG REGISTRY_USERNAME
-ARG REGISTRY_PASSWORD
-RUN if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_PASSWORD" ]; then \
-        bundle config set --global gem.theryans.io "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}"; \
-    fi
-
 WORKDIR /app/agent
 
-# Copy agent framework Gemfile and install dependencies
+# Copy Gemfile and install dependencies
 COPY Gemfile /app/agent/
-RUN bundle install --no-cache
+
+# Configure bundle credentials and install
+ARG REGISTRY_USERNAME
+ARG REGISTRY_PASSWORD
+RUN BUNDLE_GIT__THERYANS__IO="${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" bundle install --no-cache
 
 # Copy default agent configuration
 COPY config/ /app/agent/config/
