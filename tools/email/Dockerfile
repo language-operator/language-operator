@@ -1,4 +1,4 @@
-FROM git.theryans.io/langop/base:latest
+FROM git.theryans.io/language-operator/base:latest
 
 # Install Ruby and build dependencies
 RUN apk add --no-cache \
@@ -9,10 +9,10 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Copy Gemfile (includes mail gem) and install dependencies
+# Copy Gemfile and install dependencies
 COPY Gemfile /app/
 
-# Configure bundle credentials and install
+# Install gems (credentials inherited from base image)
 RUN bundle install --no-cache
 
 # Copy email tools to /mcp

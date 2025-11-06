@@ -1,4 +1,4 @@
-FROM git.theryans.io/langop/base:latest
+FROM git.theryans.io/language-operator/base:latest
 
 # Install Ruby, build dependencies, and HTTP tools
 RUN apk add --no-cache \
@@ -14,7 +14,7 @@ WORKDIR /app
 # Copy Gemfile and install dependencies
 COPY Gemfile /app/
 
-# Configure bundle credentials and install
+# Install gems (credentials inherited from base image)
 RUN bundle install --no-cache
 
 # Copy web tools to /mcp
@@ -33,6 +33,5 @@ EXPOSE 80
 ENV PORT=80
 ENV RACK_ENV=production
 
-# Start the MCP server (assuming tool component has server.rb)
-# Adjust if web tool has a different entrypoint
+# Start the MCP server
 CMD ["ruby", "-r", "language_operator/tool_loader", "-e", "LanguageOperator::ToolLoader.start"]
