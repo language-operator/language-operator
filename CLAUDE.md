@@ -33,7 +33,7 @@
 - **RuboCop**: ~> 1.60
 - **RuboCop Performance**: ~> 1.20
 - **YARD**: ~> 0.9.37
-- **Language Operator SDK**: 0.1.x (managed in sdk/ruby/language-operator.gemspec)
+- **Language Operator SDK**: 0.1.x (published to git.theryans.io private gem registry)
 
 ## DRY Tooling
 
@@ -60,10 +60,11 @@
 - **Impact**: All components use the SDK gem, so they inherit the correct dependency automatically
 
 ### Dependency Management Pattern
-- **Language Operator SDK gem** (`sdk/ruby/`) is the single source of truth for all Ruby dependencies
-- **Components** depend on the pre-installed `language-operator` gem from the base image
-- **No duplicate Gemfiles**: Components inherit dependencies from the SDK
-- **Version control**: Update versions in SDK only, components get updates automatically
+- **Language Operator SDK gem** is published to the private gem registry at `git.theryans.io`
+- **SDK Repository**: Separate repository manages versioning and gem publishing
+- **Components** install the `language-operator` gem via Gemfile with private source
+- **Authentication**: Base image contains read-only credentials for gem registry access
+- **Version control**: Components specify SDK version in Gemfile (e.g., `~> 0.1.0`)
 
 ## Code Architecture
 
