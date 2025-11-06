@@ -5,6 +5,16 @@ require 'webmock/rspec'
 # Disable real network connections
 WebMock.disable_net_connect!(allow_localhost: false)
 
+# Helper to load email tools
+def load_email_tools
+  registry = LanguageOperator::Dsl::Registry.new
+  context = LanguageOperator::Dsl::Context.new(registry)
+  tool_path = File.expand_path('../tools/email.rb', __dir__)
+  code = File.read(tool_path)
+  context.instance_eval(code, tool_path)
+  registry
+end
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true

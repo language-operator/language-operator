@@ -42,42 +42,42 @@ RSpec.describe 'Tool Loading Integration' do
       tool = registry.get('web_search')
       params = tool.parameters
 
-      query_param = params.find { |p| p.name == 'query' }
+      query_param = params['query']
       expect(query_param).not_to be_nil
-      expect(query_param.required).to be true
-      expect(query_param.type).to eq(:string)
+      expect(query_param.instance_variable_get(:@required)).to be true
+      expect(query_param.instance_variable_get(:@type)).to eq(:string)
     end
 
     it 'web_search has optional max_results parameter' do
       tool = registry.get('web_search')
       params = tool.parameters
 
-      max_param = params.find { |p| p.name == 'max_results' }
+      max_param = params['max_results']
       expect(max_param).not_to be_nil
-      expect(max_param.required).to be false
-      expect(max_param.type).to eq(:number)
-      expect(max_param.default).to eq(5)
+      expect(max_param.instance_variable_get(:@required)).to be false
+      expect(max_param.instance_variable_get(:@type)).to eq(:number)
+      expect(max_param.instance_variable_get(:@default)).to eq(5)
     end
 
     it 'web_fetch has required url parameter' do
       tool = registry.get('web_fetch')
       params = tool.parameters
 
-      url_param = params.find { |p| p.name == 'url' }
+      url_param = params['url']
       expect(url_param).not_to be_nil
-      expect(url_param.required).to be true
-      expect(url_param.type).to eq(:string)
+      expect(url_param.instance_variable_get(:@required)).to be true
+      expect(url_param.instance_variable_get(:@type)).to eq(:string)
     end
 
     it 'web_fetch has optional html parameter' do
       tool = registry.get('web_fetch')
       params = tool.parameters
 
-      html_param = params.find { |p| p.name == 'html' }
+      html_param = params['html']
       expect(html_param).not_to be_nil
-      expect(html_param.required).to be false
-      expect(html_param.type).to eq(:boolean)
-      expect(html_param.default).to be false
+      expect(html_param.instance_variable_get(:@required)).to be false
+      expect(html_param.instance_variable_get(:@type)).to eq(:boolean)
+      expect(html_param.instance_variable_get(:@default)).to be false
     end
   end
 end

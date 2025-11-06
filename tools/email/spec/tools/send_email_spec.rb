@@ -3,7 +3,7 @@ require 'net/smtp'
 
 RSpec.describe 'send_email tool' do
   let(:registry) do
-    Langop::ToolLoader.load_from_directory('/mcp')
+    load_email_tools
   end
 
   let(:tool) { registry.get('send_email') }

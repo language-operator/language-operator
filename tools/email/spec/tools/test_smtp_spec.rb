@@ -3,7 +3,7 @@ require 'net/smtp'
 
 RSpec.describe 'test_smtp tool' do
   let(:registry) do
-    Langop::ToolLoader.load_from_directory('/mcp')
+    load_email_tools
   end
 
   let(:tool) { registry.get('test_smtp') }

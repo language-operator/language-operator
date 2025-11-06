@@ -44,7 +44,6 @@ tool "send_email" do
 
   parameter "html" do
     type :boolean
-    required false
     description "Send as HTML email (default: false)"
     default false
   end
@@ -58,13 +57,14 @@ tool "send_email" do
     smtp_from = params['from'] || ENV['SMTP_FROM'] || smtp_user
     smtp_tls = ENV.fetch('SMTP_TLS', 'true') == 'true'
 
-    # Validate configuration
-    unless smtp_host && smtp_user && smtp_password
-      return "Error: SMTP configuration missing. Please set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables."
+    # Validate from address first (more specific error)
+    unless smtp_from
+      next "Error: No sender address specified. Set SMTP_FROM or provide 'from' parameter."
     end
 
-    unless smtp_from
-      return "Error: No sender address specified. Set SMTP_FROM or provide 'from' parameter."
+    # Validate general SMTP configuration
+    unless smtp_host && smtp_user && smtp_password
+      next "Error: SMTP configuration missing. Please set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables."
     end
 
     # Parse recipients
@@ -131,7 +131,7 @@ tool "test_smtp" do
     missing << 'SMTP_PASSWORD' unless smtp_password
 
     unless missing.empty?
-      return "Error: Missing SMTP configuration: #{missing.join(', ')}"
+      next "Error: Missing SMTP configuration: #{missing.join(', ')}"
     end
 
     # Test connection

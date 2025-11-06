@@ -2,7 +2,7 @@ require 'spec_helper'
 
 RSpec.describe 'email_config tool' do
   let(:registry) do
-    Langop::ToolLoader.load_from_directory('/mcp')
+    load_email_tools
   end
 
   let(:tool) { registry.get('email_config') }

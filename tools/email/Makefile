@@ -76,9 +76,8 @@ run:
 # Run RSpec unit tests
 .PHONY: spec
 spec:
-	@echo "Running RSpec unit tests in Docker..."
-	@echo "Note: Tests require rspec and webmock gems. Run 'gem install rspec webmock' if needed."
-	docker run --rm --user $$(id -u):$$(id -g) -v $$(pwd):/workspace -w /workspace $(IMAGE_FULL) sh -c "gem install rspec webmock --quiet --no-document && rspec --format documentation"
+	@echo "Running RSpec unit tests..."
+	bundle exec rspec --format documentation
 
 # Test the server endpoints using MCP JSON-RPC protocol
 .PHONY: test
