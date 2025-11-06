@@ -1,468 +1,480 @@
-# language-operator
+# Language Operator
 
-Kubernetes CRDs for spoken language automations.
+**Stop writing code to automate your work. Just describe what you want done.**
 
+Language Operator is a Kubernetes operator that turns natural language into autonomous agents. Describe your task in plain English, and the system synthesizes the code, deploys the agent, and executes it—autonomously, on schedule, forever.
 
-## Architecture
-
-The language operator will install the following CRDs:
-
-| CRD               | Purpose                                   |
-| ----------------- | ----------------------------------------- |
-| `LanguageCluster` | A network-isolated environment for agents and tools |
-| `LanguageAgent`   | Perform an arbitrary goal-directed task in perpetuity |
-| `LanguageModel`   | A model configuration and access policy |
-| `LanguageTool`    | MCP-compatible tool server (web search, etc.) |
-| `LanguagePersona` | Reusable personality/behavior templates for agents |
-| `LanguageClient`  | Connect and interact with a running agent |
-
-
-## Example
-
-Create a **personal-assistants** cluster:
-
-```yaml
-# cluster.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: personal-assistants
-spec:
-  namespace: personal-assistants
+```bash
+aictl agent create "review my spreadsheet at 4pm daily and email me any errors"
 ```
 
-Create a tool for searching the web:
+That's it. No YAML. No scripting. No infrastructure. Just tell it what you want.
 
-```yaml
-# web-tool.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: web-tool
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/web-tool:latest
-  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+---
+
+## Why This Exists
+
+Knowledge workers waste hours on repetitive tasks:
+- Accountants review the same spreadsheets every day
+- DevOps engineers check the same dashboards every hour
+- Lawyers scan inboxes for urgent client emails
+- Executives need meeting prep that never changes format
+
+**These tasks are repetitive, rule-based, and soul-crushing.**
+
+Language Operator frees you from this. Describe the task once, and an autonomous agent handles it forever.
+
+---
+
+## The Magic: Natural Language → Code → Execution
+
+Traditional automation requires you to be a programmer. Language Operator doesn't.
+
+**You write this:**
+```
+"Every morning at 9am, check my inbox and email me a list of urgent messages"
 ```
 
-Create a tool for email:
+**The operator synthesizes this:**
+```ruby
+agent "inbox-triage" do
+  schedule "0 9 * * *"
 
-```yaml
-# email-tool.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: email-tool
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/email-tool:latest
-  deploymentMode: sidecar  # Runs as sidecar, gets workspace access
+  workflow do
+    step :fetch_emails, tool: "gmail"
+    step :categorize, analyze: "urgency and importance"
+    step :notify, tool: "email", condition: "urgent_found"
+  end
+end
 ```
 
-Create a model configuration for the agent:
-
-```yaml
-# model.yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageModel
-metadata:
-  name: mistralai-magistral-small-2506
-spec:
-  cluster: personal-assistants
-  model:
-    provider: openai-compatible
-    model: mistralai/magistral-small-2506
-    endpoint: http://my-on-prem-model.com/v1
-    api_key: magistral
-  proxy:
-    image: git.theryans.io/language-operator/model:latest
+**The agent executes it:**
+```
+09:00:01 | Starting execution
+09:00:02 | Fetching unread emails (23 found)
+09:00:05 | Analyzing urgency... 3 urgent
+09:00:06 | Sending notification
+09:00:07 | Complete
 ```
 
-Finally, define the agent and dependencies:
+No code. No deploy pipeline. No debugging. **It just works.**
+
+---
+
+## Real Examples
+
+### Accountant: Daily Spreadsheet Review
+```bash
+aictl agent create "review my recent changes in https://docs.google.com/spreadsheets/d/xyz \
+  at 4pm every day and let me know if I've made any mistakes before I sign off"
+```
+
+**Result:** Agent runs daily at 4pm, analyzes spreadsheet changes, emails you if it finds errors.
+
+### DevOps: Health Monitoring
+```bash
+aictl agent create "check https://api.example.com/health every 5 minutes \
+  and page me if status isn't 200"
+```
+
+**Result:** Agent monitors your API, sends PagerDuty alert on failure.
+
+### Executive: Meeting Prep
+```bash
+aictl agent create "email me a summary of tomorrow's meetings every evening at 6pm"
+```
+
+**Result:** Agent fetches calendar, generates prep summary, emails you daily.
+
+### Lawyer: Client Intake
+```bash
+aictl agent create "when someone emails info@law.com, create a ticket in our CRM \
+  and send an auto-reply acknowledging receipt"
+```
+
+**Result:** Agent monitors inbox, auto-responds to clients, logs everything.
+
+---
+
+## How It Works
+
+### Three Layers of Intelligence
+
+```
+┌──────────────────────────────────────────────┐
+│  Natural Language Interface                 │
+│  "review my spreadsheet at 4pm daily..."    │
+└──────────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────────┐
+│  Synthesis Engine (LLM-Powered)             │
+│  Instructions → Ruby DSL Code                │
+└──────────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────────┐
+│  Autonomous Execution                        │
+│  Schedule → Execute → Report                 │
+└──────────────────────────────────────────────┘
+```
+
+**Layer 1: You speak, it understands**
+The CLI parses your natural language and creates a Kubernetes resource with your instructions.
+
+**Layer 2: The operator synthesizes behavior**
+An LLM reads your instructions, generates executable Ruby code, validates it, and deploys it.
+
+**Layer 3: The agent executes autonomously**
+Your agent runs on schedule, uses tools, makes decisions, and reports results.
+
+### The Innovation: Behavior Synthesis
+
+Traditional operators reconcile **configuration**.
+Language Operator reconciles **behavior**.
+
+When you change instructions, the operator:
+1. Calls an LLM with your new description
+2. Generates new executable code
+3. Validates and deploys it
+4. The agent immediately adopts the new behavior
+
+**Your agent's behavior is synthesized on-demand from natural language.**
+
+---
+
+## Core Concepts
+
+### Agents
+Autonomous programs that execute tasks based on natural language instructions.
 
 ```yaml
-# agent.yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: retrieve-daily-headlines
+  name: my-agent
 spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/agent:latest
-  toolRefs:
-  - name: email-tool
-  - name: web-tool
-  modelRefs:
-  - name: mistralai-magistral-small-2506
   instructions: |
-    You are a helpful assistant designed to summarize world current events.
-    Every morning at 6am US central, send a summary to james@theryans.io.
-    Include a paragraph summary no more than 5 sentences.
-    Include a bullet list of links with no more than 10 items.
-  workspace:
-    enabled: true
-    size: 10Gi
-    mountPath: /workspace
+    Check my inbox every hour and categorize emails by urgency
 ```
 
-## Workspace Storage
+That's all you write. The operator handles the rest.
 
-Each agent can have a persistent workspace volume that acts as a shared whiteboard between the agent and its tools.
-
-### How It Works
-
-When `workspace.enabled: true`:
-1. Operator creates a PersistentVolumeClaim for the agent
-2. Agent container mounts the workspace at `/workspace` (or custom `mountPath`)
-3. Sidecar tools (with `deploymentMode: sidecar`) also mount the same workspace
-4. Agent and tools can read/write files to coordinate and persist state
-
-### Use Cases
-
-**Data persistence:** Agent remembers what it did yesterday
-```bash
-# Agent writes state
-echo "2025-10-30: Sent headlines to user" >> /workspace/history.log
-
-# Next run, agent reads history
-cat /workspace/history.log
-```
-
-**Tool coordination:** Web tool scrapes, agent summarizes, email tool sends
-```bash
-# web-tool sidecar writes
-curl https://news.ycombinator.com > /workspace/articles.html
-
-# agent processes
-# (LLM reads /workspace/articles.html, generates summary)
-
-# agent writes summary for email-tool
-echo "Summary: ..." > /workspace/email-body.txt
-
-# email-tool sidecar reads and sends
-mail -s "Daily News" user@example.com < /workspace/email-body.txt
-```
-
-### Tool Deployment Modes
-
-**Sidecar mode** (workspace access):
-```yaml
-kind: LanguageTool
-spec:
-  deploymentMode: sidecar  # Deployed in agent pod, shares workspace
-```
-
-**Service mode** (shared, no workspace):
-```yaml
-kind: LanguageTool
-spec:
-  deploymentMode: service  # Deployed separately, called via HTTP
-  replicas: 3              # Can scale independently
-```
-
-## Network Isolation
-
-By default, all resources within a cluster can communicate with each other, but external access is denied. Individual agents, tools, and models can define egress rules to allow specific external endpoints.
-
-### Example: Web Tool with External Access
+### Tools (MCP Servers)
+Capabilities your agents can use: email, web search, spreadsheets, APIs, databases.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
-  name: web-tool
+  name: gmail
 spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/web-tool:latest
+  image: git.theryans.io/language-operator/gmail-tool:latest
   deploymentMode: sidecar
-  egress:
-  # Allow HTTPS to specific news sites
-  - description: Allow news websites
-    to:
-      dns:
-      - "news.ycombinator.com"
-      - "*.cnn.com"
-      - "*.bbc.com"
-    ports:
-    - port: 443
-      protocol: TCP
 ```
 
-### Example: Email Tool with SMTP Access
+Tools are MCP servers that agents call to interact with the world.
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: email-tool
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/email-tool:latest
-  deploymentMode: sidecar
-  egress:
-  # Allow SMTP to mail server
-  - description: Allow SMTP to corporate mail server
-    to:
-      dns:
-      - "smtp.company.com"
-    ports:
-    - port: 587
-      protocol: TCP
-```
-
-### Example: Model Proxy with API Access
+### Models
+LLM configurations that power agent intelligence.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt-4
+  name: claude
 spec:
-  cluster: personal-assistants
-  provider: openai
-  modelName: gpt-4
-  apiKeySecretRef:
-    name: openai-credentials
-  egress:
-  # Allow HTTPS to OpenAI API
-  - description: Allow OpenAI API access
-    to:
-      dns:
-      - "api.openai.com"
-    ports:
-    - port: 443
-      protocol: TCP
+  provider: anthropic
+  model: claude-3-5-sonnet-20241022
 ```
 
-### Example: Agent with No External Access
+Use any model: Claude, GPT-4, local LLMs, custom endpoints.
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: internal-agent
-spec:
-  cluster: personal-assistants
-  image: git.theryans.io/language-operator/agent:latest
-  # No egress defined - can only talk to tools/models within cluster
-```
-
-### How It Works
-
-The operator automatically creates Kubernetes NetworkPolicies:
-
-1. **Default policy**: Allow all traffic within the cluster namespace, deny all external egress
-2. **Per-resource policies**: For each resource with `egress` defined, create a NetworkPolicy allowing that specific external access
-3. **DNS support**: DNS-based rules (like `*.cnn.com`) require a DNS-aware CNI. Otherwise, use CIDR blocks for IP-based restrictions.
-
-### DNS Resolution Notes
-
-**Resolution Timing**: DNS hostnames in egress rules are resolved to IP addresses at policy creation and reconciliation time. This is a snapshot-based approach - the operator doesn't continuously monitor DNS changes. Policies will auto-refresh during reconciliation loops.
-
-**Wildcard Behavior**: Wildcard DNS patterns like `*.example.com` will resolve the base domain (`example.com`) and use that IP address. This works well for sites hosted on the same IP, but may not cover all subdomains if they're hosted separately. For comprehensive coverage, list specific subdomains explicitly:
-
-```yaml
-egress:
-  - description: Allow CNN sites
-    to:
-      dns:
-      - "cnn.com"           # Main site
-      - "www.cnn.com"       # WWW subdomain
-      - "edition.cnn.com"   # International edition
-    ports:
-    - port: 443
-      protocol: TCP
-```
-
-## Reusable Personas
-
-LanguagePersona allows you to define reusable personality templates that agents can reference. This promotes consistency across agents and makes it easy to update behavior across multiple agents at once.
-
-### Example: Customer Support Persona
+### Personas
+Reusable personality templates that define how agents behave.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguagePersona
 metadata:
-  name: customer-support
+  name: financial-analyst
 spec:
-  displayName: "Friendly Customer Support"
-  description: "Empathetic and helpful customer service representative"
-
   systemPrompt: |
-    You are a friendly and professional customer support representative.
-    Your goal is to help customers solve their problems efficiently while
-    maintaining a warm, empathetic tone.
-
-  tone: friendly
-
-  instructions:
-  - "Always greet customers warmly"
-  - "Listen carefully to understand the customer's issue"
-  - "Provide clear, step-by-step solutions"
-  - "Follow up to ensure the issue is resolved"
-  - "Thank the customer for their patience"
-
-  rules:
-  - name: escalate-angry-customer
-    condition: "when customer expresses frustration or anger"
-    action: "acknowledge their feelings, apologize for the inconvenience, and offer to escalate to a supervisor if needed"
-    priority: 10
-
-  - name: verify-account
-    condition: "when discussing account-specific information"
-    action: "verify customer identity before sharing sensitive information"
-    priority: 5
-
-  examples:
-  - input: "I've been waiting for my order for 3 weeks!"
-    output: "I sincerely apologize for the delay with your order. I understand how frustrating this must be. Let me look into this right away and find out what's happening with your shipment."
-    context: "Delayed order complaint"
-
-  - input: "How do I reset my password?"
-    output: "I'd be happy to help you reset your password! Here's what you need to do: 1) Go to the login page, 2) Click 'Forgot Password', 3) Enter your email address, 4) Check your email for the reset link. Let me know if you need any help with these steps!"
-    context: "Password reset request"
-
-  capabilities:
-  - "Order tracking"
-  - "Account management"
-  - "Product information"
-  - "Refund processing"
-
-  limitations:
-  - "Cannot modify orders already shipped"
-  - "Cannot access payment card details"
-  - "Cannot override company policies"
-
-  responseFormat:
-    type: markdown
-    maxLength: 500
-    includeSources: false
-
-  toolPreferences:
-    preferredTools:
-    - order-lookup-tool
-    - customer-db-tool
-    strategy: balanced
-    explainToolUse: true
-
-  constraints:
-    maxResponseTokens: 300
-    maxToolCalls: 5
-    responseTimeout: 30s
-    blockedTopics:
-    - "competitor comparisons"
-    - "medical advice"
+    You are a meticulous financial analyst who reviews data
+    for errors, inconsistencies, and anomalies...
 ```
 
-### Using a Persona in an Agent
+Encode professional expertise once, reuse across agents.
+
+### Clusters
+Network-isolated environments for organizing agents and tools.
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: finance-team
+spec:
+  namespace: finance-team
+```
+
+Each cluster gets its own namespace with automatic network policies.
+
+---
+
+## Beautiful CLI
+
+Inspired by Cilium's gorgeous UX.
+
+### Create an Agent
+```bash
+$ aictl agent create "scan my inbox every morning at 9am and categorize emails"
+
+Creating agent...
+✓ Agent 'inbox-scanner' created
+✓ Synthesizing code... (took 3.2s)
+✓ Agent deployed and ready
+
+Schedule: Daily at 9:00 AM (0 9 * * *)
+Next run: Tomorrow at 9:00 AM (in 14h 23m)
+Tools:    gmail, email
+Persona:  general-assistant
+
+View logs: aictl agent logs inbox-scanner -f
+```
+
+### Watch It Work
+```bash
+$ aictl agent logs inbox-scanner -f
+
+09:00:01 | Starting execution cycle 12
+09:00:02 | Loading persona: general-assistant
+09:00:03 | Connecting to tool: gmail
+09:00:05 | Fetching unread emails (47 found)
+09:00:08 | Categorizing by urgency...
+09:00:11 | Applied 47 labels (12 urgent, 25 normal, 10 low)
+09:00:12 | Sending summary email
+09:00:13 | Execution complete (success, 12.4s)
+```
+
+### See Everything
+```bash
+$ aictl status
+
+Language Operator Status
+========================
+
+Cluster:     Connected (k3s v1.28)
+Operator:    Running (v0.2.0)
+
+Agents:      8 running, 2 ready, 1 failed
+Tools:       12 installed, 11 connected
+Models:      3 configured, 2 in use
+Personas:    9 available (5 built-in, 4 custom)
+
+Recent Activity:
+  2m ago   inbox-scanner        Success (12.4s)
+  15m ago  error-monitor        Alert sent
+  1h ago   spreadsheet-reviewer Success (8.1s)
+```
+
+---
+
+## Workspace: Shared Memory
+
+Agents and tools share a persistent workspace for coordination and state.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: support-agent-1
+  name: news-summarizer
 spec:
-  cluster: customer-support-cluster
-  image: git.theryans.io/language-operator/agent:latest
-
-  # Reference the persona
-  personaRef:
-    name: customer-support
-
-  # Agent-specific instructions (merged with persona)
   instructions: |
-    You are assigned to the premium support queue.
-    Prioritize response time and white-glove service.
-
-  modelRefs:
-  - name: gpt-4
-
-  toolRefs:
-  - name: order-lookup-tool
-  - name: customer-db-tool
-  - name: email-tool
+    Fetch top Hacker News posts, summarize them, and email me
+  workspace:
+    enabled: true
+    size: 10Gi
 ```
 
-### Persona Benefits
-
-✅ **Consistency** - Same behavior across multiple agents
-✅ **Reusability** - Define once, use many times
-✅ **Centralized updates** - Update persona, all agents inherit changes
-✅ **Versioning** - Track persona versions and roll back if needed
-✅ **Inheritance** - Personas can inherit from parent personas
-✅ **Validation** - Built-in validation checks for persona quality
-
-## Development & CI/CD
-
-### Building Images
-
-The project uses automated CI/CD pipelines to build and publish all container images:
-
-**Automated Builds** (via GitHub Actions / Forgejo Actions):
-- Triggered on push to `main`, tags, or PRs
-- Builds operator, components, tools, agents, and model images
-- Publishes to `git.theryans.io/language-operator/*`
-- See [.github/workflows/README.md](.github/workflows/README.md) for details
-
-**Local Development**:
+**The agent writes:**
 ```bash
-# Build all images locally
-make build
-
-# Build and deploy operator
-make operator
-
-# Build specific component
-cd components/base && docker build -t based/base:latest .
+echo "2025-11-06: Sent summary" >> /workspace/history.log
 ```
 
-### Image Registry
+**The tool reads:**
+```bash
+cat /workspace/history.log
+```
 
-All images are published to: `git.theryans.io/language-operator/`
+**Next run, the agent remembers:**
+```bash
+# Check what we did yesterday
+last_run=$(tail -1 /workspace/history.log)
+```
 
-**Available Images**:
-- `language-operator` - The Kubernetes operator
-- `base`, `devel`, `server`, `client` - Base components
-- `web-tool`, `email-tool` - Tool servers
-- `agent-cli`, `agent-web`, `agent-headless` - Agent implementations
-- `model` - LiteLLM model proxy
+Workspaces enable agents to:
+- Remember past actions
+- Coordinate with tools
+- Build long-term knowledge
+- Debug execution history
 
-**Tags**:
-- `latest` - Latest build from main branch
-- `v1.2.3` - Semantic version releases
-- `main-<sha>` - Commit-specific builds
+---
 
-### Running Tests
+## Network Isolation by Default
+
+Every cluster is network-isolated. Resources can talk to each other but not the internet—unless you explicitly allow it.
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: web-search
+spec:
+  image: git.theryans.io/language-operator/web-tool:latest
+  egress:
+  - description: Allow DuckDuckGo search
+    to:
+      dns:
+      - "*.duckduckgo.com"
+    ports:
+    - port: 443
+      protocol: TCP
+```
+
+**Zero-trust by default. Explicit allowlist for everything.**
+
+---
+
+## Getting Started
+
+### 1. Install the Operator
 
 ```bash
-cd kubernetes/language-operator
-
-# Run all tests
-make test
-
-# Lint code
-make fmt
-make vet
-
-# Generate manifests and CRDs
-make manifests
-
-# Generate API documentation
-make docs
+helm install language-operator oci://git.theryans.io/helm/language-operator
 ```
 
-### Contributing
+### 2. Create Your First Agent
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Ensure tests pass: `make test`
-5. Ensure manifests are up-to-date: `make manifests`
-6. Submit a pull request
+```bash
+aictl agent create "send me a summary of my inbox every morning at 9am"
+```
 
-**Commit Message Format**: Follow [Conventional Commits](https://www.conventionalcommits.org/)
-- `feat: add new feature`
-- `fix: resolve bug`
-- `docs: update documentation`
-- `chore: update dependencies`
+### 3. Watch It Work
+
+```bash
+aictl agent logs inbox-summarizer -f
+```
+
+**That's it. You're automating.**
+
+---
+
+## Why Kubernetes?
+
+Because your automation should be:
+- **Durable**: Survives restarts, crashes, cluster failures
+- **Scalable**: Runs 1 agent or 10,000
+- **Observable**: Full logging, metrics, traces
+- **Declarative**: Version control your agents
+- **Production-ready**: Built on battle-tested infrastructure
+
+Kubernetes isn't overkill. It's **exactly what you need** when automation matters.
+
+---
+
+## Project Status
+
+**Current Version:** 0.2.0 (Alpha)
+
+✅ **Working:**
+- Natural language → code synthesis
+- Autonomous agent execution
+- MCP tool integration
+- Workspace sharing
+- Network isolation
+- Persona system
+
+🚧 **In Progress:**
+- CLI (`aictl`) - releasing soon
+- Agent marketplace
+- Multi-agent workflows
+- Voice interface
+
+📋 **Roadmap:**
+- Learning from feedback
+- Agent teams
+- Advanced scheduling
+- Metrics & observability dashboard
+
+---
+
+## Philosophy
+
+**1. Natural language is the interface**
+No one should need to learn YAML or DSLs. Describe what you want. Done.
+
+**2. Synthesis beats templates**
+Don't force users into predefined patterns. Generate the right code for their specific need.
+
+**3. Autonomous by default**
+Set it and forget it. Agents should run forever without babysitting.
+
+**4. Kubernetes-native**
+Don't fight the platform. Embrace CRDs, controllers, and declarative config.
+
+**5. Beautiful UX matters**
+If it's not delightful to use, we failed.
+
+---
+
+## Inspiration
+
+**Cilium** - showed us how beautiful Kubernetes UX can be
+**Temporal** - proved workflow-as-code works at scale
+**MCP** - gave us a standard for tool integration
+**Kubernetes Operators** - taught us how to reconcile desired state
+
+We combined the best ideas and made something new.
+
+---
+
+## Contributing
+
+We're building this in the open. Join us.
+
+**Build tools:**
+MCP servers that connect to your systems. See [language-tools](https://github.com/language-operator/language-tools).
+
+**Build personas:**
+Professional templates that encode expertise. See [examples/personas](examples/personas).
+
+**Improve synthesis:**
+Better prompts, better code generation, better validation.
+
+**Join the community:**
+- GitHub: [language-operator/language-operator](https://github.com/language-operator/language-operator)
+- Issues: [Report bugs, request features](https://github.com/language-operator/language-operator/issues)
+- Discussions: [Ask questions, share agents](https://github.com/language-operator/language-operator/discussions)
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE)
+
+---
+
+## The Future We're Building
+
+Imagine a world where:
+- Accountants review 1,000 spreadsheets with zero manual work
+- DevOps teams respond to incidents before humans notice
+- Lawyers never miss an urgent client email
+- Every professional has a team of tireless assistants
+
+**That's the future. And it starts with describing what you want done.**
+
+```bash
+aictl agent create "..."
+```
+
+**Welcome to automation without code.**
