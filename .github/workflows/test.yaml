@@ -86,34 +86,9 @@ jobs:
         run: |
           git diff --exit-code || (echo "Generated manifests are out of date. Run 'make manifests' and commit the changes." && exit 1)
 
-  # Test Ruby SDK
-  ruby-sdk-test:
-    runs-on: builder
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run SDK tests in Docker
-        run: |
-          # Volume mounts don't work in CI, so copy files into container
-          docker rm -f ruby-test 2>/dev/null || true
-
-          docker run -d --name ruby-test ruby:3.4-alpine sleep 300
-          docker cp sdk/ruby ruby-test:/app
-          docker exec ruby-test sh -c '
-            cd /app &&
-            apk add --no-cache build-base git &&
-            gem build language-operator.gemspec &&
-            gem install language-operator-0.1.0.gem &&
-            bundle install &&
-            bundle exec rspec
-          '
-          docker rm -f ruby-test
-
   # Test web tool
   web-tool-test:
     runs-on: builder
-    needs: [ruby-sdk-test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,16 +96,10 @@ jobs:
       - name: Run web tool tests in Docker
         run: |
           docker rm -f web-test 2>/dev/null || true
-          docker run -d --name web-test ruby:3.4-alpine sleep 300
-          docker cp sdk/ruby web-test:/sdk
+          docker run -d --name web-test git.theryans.io/language-operator/base:latest sleep 300
           docker cp tools/web web-test:/app
-          docker exec web-test sh -c '
-            cd /sdk &&
-            apk add --no-cache build-base git &&
-            gem build language-operator.gemspec &&
-            gem install language-operator-0.1.0.gem &&
-            mkdir -p /language-operator &&
-            cp -r . /language-operator/ &&
+          docker exec --user root web-test sh -c 'chown -R langop:langop /app'
+          docker exec --user langop web-test sh -c '
             cd /app &&
             bundle install &&
             bundle exec rspec --format documentation
@@ -140,7 +109,6 @@ jobs:
   # Test email tool
   email-tool-test:
     runs-on: builder
-    needs: [ruby-sdk-test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,18 +116,13 @@ jobs:
       - name: Run email tool tests in Docker
         run: |
           docker rm -f email-test 2>/dev/null || true
-          docker run -d --name email-test ruby:3.4-alpine sleep 300
-          docker cp sdk/ruby email-test:/sdk
+          docker run -d --name email-test git.theryans.io/language-operator/base:latest sleep 300
           docker cp tools/email email-test:/app
-          docker exec email-test sh -c '
-            cd /sdk &&
-            apk add --no-cache build-base git &&
-            gem build language-operator.gemspec &&
-            gem install language-operator-0.1.0.gem &&
-            mkdir -p /language-operator &&
-            cp -r . /language-operator/ &&
+          docker exec --user root email-test sh -c 'chown -R langop:langop /app'
+          docker exec --user langop email-test sh -c '
             cd /app &&
             bundle install &&
             bundle exec rspec --format documentation
           '
           docker rm -f email-test
+
