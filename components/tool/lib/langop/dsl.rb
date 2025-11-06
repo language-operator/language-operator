@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require "aictl/dsl'
-require "aictl/tool_loader'
+require "language_operator"
 
-# Convenience - export Aictl classes at top level for tool definitions
+# Convenience - export LanguageOperator classes at top level for tool definitions
 #
 # This allows tool files to use simplified syntax:
 #   tool "example" do
@@ -11,11 +10,11 @@ require "aictl/tool_loader'
 #   end
 #
 # Instead of:
-#   Aictl::Dsl.define do
+#   LanguageOperator::Dsl.define do
 #     tool "example" do
 #       ...
 #     end
 #   end
 
 # Alias ToolLoader at top level for convenience
-ToolLoader = ::Aictl::ToolLoader
+ToolLoader = ::LanguageOperator::ToolLoader
