@@ -11,6 +11,31 @@ import (
 	"github.com/go-logr/logr"
 )
 
+// TemporalIntent represents the detected execution pattern from user instructions
+type TemporalIntent int
+
+const (
+	// Continuous indicates agent should run indefinitely
+	Continuous TemporalIntent = iota
+	// Scheduled indicates agent should run on a schedule
+	Scheduled
+	// OneShot indicates agent should run once or a limited number of times
+	OneShot
+)
+
+func (t TemporalIntent) String() string {
+	switch t {
+	case OneShot:
+		return "One-shot"
+	case Scheduled:
+		return "Scheduled"
+	case Continuous:
+		return "Continuous"
+	default:
+		return "Unknown"
+	}
+}
+
 // AgentSynthesizer is the interface for synthesizing agent code
 type AgentSynthesizer interface {
 	SynthesizeAgent(ctx context.Context, req AgentSynthesisRequest) (*AgentSynthesisResponse, error)
@@ -188,6 +213,48 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 `, indentText(req.PersonaText, "    "))
 	}
 
+	// Detect temporal intent from instructions
+	intent := detectTemporalIntent(req.Instructions)
+
+	// Build constraints and schedule sections based on intent
+	constraintsSection := ""
+	scheduleSection := ""
+	scheduleRules := ""
+
+	switch intent {
+	case OneShot:
+		constraintsSection = `  # One-shot execution detected from instructions
+  constraints do
+    max_iterations 10
+    timeout "10m"
+  end`
+		scheduleRules = `2. One-shot execution detected - agent will run a limited number of times
+3. Do NOT include a schedule block for one-shot agents`
+
+	case Scheduled:
+		constraintsSection = `  # Scheduled execution - high iteration limit for continuous operation
+  constraints do
+    max_iterations 999999
+    timeout "10m"
+  end`
+		scheduleSection = `
+  # Extract schedule from instructions (e.g., "daily at noon" -> "0 12 * * *")
+  schedule "CRON_EXPRESSION"`
+		scheduleRules = `2. Schedule detected - extract cron expression from instructions
+3. Set schedule block with appropriate cron expression
+4. Use high max_iterations for continuous scheduled operation`
+
+	case Continuous:
+		constraintsSection = `  # Continuous execution - no specific schedule or one-shot indicator found
+  constraints do
+    max_iterations 999999
+    timeout "10m"
+  end`
+		scheduleRules = `2. No temporal intent detected - defaulting to continuous execution
+3. Do NOT include a schedule block unless explicitly mentioned
+4. Use high max_iterations for continuous operation`
+	}
+
 	// Use a heredoc-style string to avoid backtick issues
 	return fmt.Sprintf(`You are generating Ruby DSL code for an autonomous agent in a Kubernetes operator.
 
@@ -202,6 +269,8 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 
 **Agent Name:** %s
 
+**Detected Temporal Intent:** %s
+
 Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
 
 `+"```ruby"+`
@@ -209,11 +278,7 @@ require 'language_operator'
 
 agent "%s" do
   description "Brief description extracted from instructions"
-%s
-  # Extract schedule from instructions (e.g., "daily at noon" -> "0 12 * * *")
-  # Only include schedule if instructions mention timing/frequency
-  # schedule "CRON_EXPRESSION"
-
+%s%s
   # Extract objectives from instructions
   objectives [
     "First objective",
@@ -226,11 +291,7 @@ agent "%s" do
   #   step :another_step, depends_on: :step_name
   # end
 
-  # Infer reasonable constraints
-  constraints do
-    max_iterations 50
-    timeout "10m"
-  end
+%s
 
   # Output configuration (if workspace enabled)
   output do
@@ -241,12 +302,10 @@ end
 
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
-2. Extract schedule ONLY if timing is mentioned (daily, hourly, cron, etc.)
-3. If scheduled, set schedule and remove it from objectives
-4. Break down instructions into clear, actionable objectives
-5. Create workflow steps if instructions describe a process
-6. Use available tools in workflow steps
-7. Keep constraints reasonable (max_iterations: 50, timeout: "10m")
+%s
+5. Break down instructions into clear, actionable objectives
+6. Create workflow steps if instructions describe a process
+7. Use available tools in workflow steps
 8. Use the agent name: "%s"
 
 Generate the code now:`,
@@ -254,8 +313,12 @@ Generate the code now:`,
 		toolsList,
 		modelsList,
 		req.AgentName,
+		intent.String(),
 		req.AgentName,
 		personaSection,
+		scheduleSection,
+		constraintsSection,
+		scheduleRules,
 		req.AgentName)
 }
 
@@ -350,4 +413,53 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// detectTemporalIntent analyzes user instructions to determine execution pattern
+func detectTemporalIntent(instructions string) TemporalIntent {
+	lower := strings.ToLower(instructions)
+
+	// One-shot indicators (highest priority)
+	oneShotKeywords := []string{
+		"run once",
+		"one time",
+		"single time",
+		"execute once",
+		"just once",
+		"do once",
+		"perform once",
+	}
+	for _, keyword := range oneShotKeywords {
+		if strings.Contains(lower, keyword) {
+			return OneShot
+		}
+	}
+
+	// Schedule indicators (medium priority)
+	scheduleKeywords := []string{
+		"every",
+		"daily",
+		"hourly",
+		"weekly",
+		"monthly",
+		"cron",
+		"at midnight",
+		"at noon",
+		"schedule",
+		"periodically",
+		"regularly",
+		"each day",
+		"each hour",
+		"each week",
+		"each month",
+	}
+	for _, keyword := range scheduleKeywords {
+		if strings.Contains(lower, keyword) {
+			return Scheduled
+		}
+	}
+
+	// Default to continuous execution (lowest priority)
+	// This is for agents like "provides fun facts" that should run continuously
+	return Continuous
 }
