@@ -79,12 +79,9 @@
 langop/base - Alpine + tini + su-exec + langop user
   ├─ langop/tool      - base + Ruby + language-operator gem + tool dependencies
   ├─ langop/client    - base + Ruby + language-operator gem + client dependencies
-  ├─ langop/agent     - base + Ruby + language-operator gem + agent dependencies
+  ├─ langop/agent     - base + Ruby + language-operator gem + agent runtime (synthesis-driven)
   ├─ langop/web-tool  - base + Ruby + language-operator gem + web tool code
   ├─ langop/email-tool - base + Ruby + language-operator gem + email tool code
-  ├─ agent-cli        - base + Ruby + language-operator gem + CLI agent
-  ├─ agent-web        - base + Ruby + language-operator gem + Rails + web agent
-  ├─ agent-headless   - base + Ruby + language-operator gem + headless agent
   └─ langop/model     - base + Python + LiteLLM proxy
 ```
 

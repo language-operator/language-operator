@@ -1,0 +1,52 @@
+llm:
+  provider: openai_compatible
+  model: mistralai/magistral-small-2509
+  endpoint: http://192.168.68.54:1234/v1
+  # api_key: sk-...
+
+# MCP Servers Configuration
+mcp_servers:
+  # # Main based server
+  # - name: based-server
+  #   url: http://server:80/mcp
+  #   transport: streamable
+  #   enabled: true
+  #   description: "Main based MCP server with core tools"
+
+  # Documentation tools server
+  - name: doc-tools
+    url: http://doc:80/mcp
+    transport: streamable
+    enabled: true
+    description: "Documentation generation and man page tools"
+
+  # Email tools server
+  - name: email-tools
+    url: http://email:80/mcp
+    transport: streamable
+    enabled: true
+    description: "Email sending and management tools"
+
+  # SMS tools server
+  - name: sms-tools
+    url: http://sms:80/mcp
+    transport: streamable
+    enabled: true
+    description: "SMS sending tools (Twilio/Vonage)"
+
+  # Web tools server
+  - name: web-tools
+    url: http://web:80/mcp
+    transport: streamable
+    enabled: true
+    description: "Web scraping and HTTP request tools"
+
+  # Example: External MCP server
+  # - name: external-server
+  #   url: http://192.168.1.100:8080/mcp
+  #   transport: streamable
+  #   enabled: false
+  #   description: "External MCP server on local network"
+
+# Debug mode
+debug: true

@@ -819,13 +819,11 @@ Build order is critical due to dependencies:
 ```
 1. Build langop/base
    ↓
-2. Build langop/ruby (depends on base)
-   ↓
-3. Build langop/agent, langop/tool, langop/model (parallel, depend on ruby)
-   ↓
-4. Build specific agents (agents/cli, agents/headless, etc.)
-   ↓
-5. Build specific tools (tools/email, tools/web, etc.)
+2. Build components in parallel (all depend on base):
+   - langop/tool
+   - langop/client
+   - langop/agent (synthesis-driven runtime)
+   - langop/model (LiteLLM proxy)
 ```
 
 Managed by `.github/workflows/build-images.yaml`.
