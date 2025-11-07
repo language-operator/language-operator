@@ -10,4 +10,5 @@ coverage.out
 # Note: Ruby bin/ directories with entrypoints are tracked
 /bin/
 src/bin/manager
+src/bin/synthesize
 *.test
