@@ -1,7 +1,7 @@
 GEM
   remote: https://git.theryans.io/api/packages/language-operator/rubygems/
   specs:
-    language-operator (0.1.7)
+    language-operator (0.1.8)
       k8s-ruby (~> 0.17)
       mcp (~> 0.4)
       pastel (~> 0.8)
@@ -211,7 +211,7 @@ PLATFORMS
 
 DEPENDENCIES
   json (~> 2.7)
-  language-operator (~> 0.1.7)!
+  language-operator (~> 0.1.8)!
   puma (~> 6.4)
   rackup (~> 2.1)
   rubocop (~> 1.60)
