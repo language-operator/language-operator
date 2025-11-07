@@ -112,11 +112,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Update status
-	tool.Status.Phase = "Running"
-	SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
-
-	if err := r.Status().Update(ctx, tool); err != nil {
+	// Update status based on actual pod readiness
+	if err := r.updateToolStatus(ctx, tool); err != nil {
 		log.Error(err, "Failed to update LanguageTool status")
 		return ctrl.Result{}, err
 	}
@@ -321,6 +318,67 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 	}
 
 	return nil
+}
+
+func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	// For sidecar mode tools, just set as ready (no deployment to check)
+	if tool.Spec.DeploymentMode == "sidecar" {
+		tool.Status.Phase = "Running"
+		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
+		return r.Status().Update(ctx, tool)
+	}
+
+	// For service mode tools, check deployment status
+	deployment := &appsv1.Deployment{}
+	err := r.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Deployment doesn't exist yet
+			tool.Status.Phase = "Pending"
+			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentNotFound", "Deployment not found", tool.Generation)
+			return r.Status().Update(ctx, tool)
+		}
+		return err
+	}
+
+	// Update replica counts from deployment status
+	tool.Status.ReadyReplicas = deployment.Status.ReadyReplicas
+	tool.Status.AvailableReplicas = deployment.Status.AvailableReplicas
+	tool.Status.UpdatedReplicas = deployment.Status.UpdatedReplicas
+	tool.Status.UnavailableReplicas = deployment.Status.UnavailableReplicas
+
+	// Determine phase based on deployment status
+	desiredReplicas := int32(1)
+	if tool.Spec.Replicas != nil {
+		desiredReplicas = *tool.Spec.Replicas
+	}
+
+	// Check if deployment is updating
+	if deployment.Status.UpdatedReplicas < desiredReplicas {
+		tool.Status.Phase = "Updating"
+		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "Updating", "Deployment is updating", tool.Generation)
+		return r.Status().Update(ctx, tool)
+	}
+
+	// Check if any pods are ready
+	if deployment.Status.ReadyReplicas > 0 {
+		tool.Status.Phase = "Running"
+		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
+		return r.Status().Update(ctx, tool)
+	}
+
+	// No pods ready - check if deployment has been created recently
+	if deployment.Status.AvailableReplicas == 0 && deployment.Status.UnavailableReplicas > 0 {
+		// Pods exist but none are ready - likely CrashLoopBackOff or similar
+		tool.Status.Phase = "Failed"
+		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "PodsNotReady", "No pods are ready", tool.Generation)
+		return r.Status().Update(ctx, tool)
+	}
+
+	// Deployment exists but no replicas yet
+	tool.Status.Phase = "Pending"
+	SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "Pending", "Waiting for pods to be scheduled", tool.Generation)
+	return r.Status().Update(ctx, tool)
 }
 
 func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
