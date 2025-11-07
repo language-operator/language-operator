@@ -15,10 +15,11 @@ That's it. No YAML. No scripting. No infrastructure. Just tell it what you want.
 ## Why This Exists
 
 Knowledge workers waste hours on repetitive tasks:
-- Accountants review the same spreadsheets every day
-- DevOps engineers check the same dashboards every hour
-- Lawyers scan inboxes for urgent client emails
-- Executives need meeting prep that never changes format
+
+* Accountants review the same spreadsheets every day
+* DevOps engineers check the same dashboards every hour
+* Lawyers scan inboxes for urgent client emails
+* Executives need meeting prep that never changes format
 
 **These tasks are repetitive, rule-based, and soul-crushing.**
 
@@ -26,7 +27,7 @@ Language Operator frees you from this. Describe the task once, and an autonomous
 
 ---
 
-## The Magic: Natural Language → Code → Execution
+## Natural Language → Code → Execution
 
 Traditional automation requires you to be a programmer. Language Operator doesn't.
 
@@ -212,17 +213,15 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
   name: finance-team
-spec:
-  namespace: finance-team
+  namespace: production-agents
+spec: {}
 ```
-
-Each cluster gets its own namespace with automatic network policies.
 
 ---
 
-## Beautiful CLI
+## Powerful CLI
 
-Inspired by Cilium's gorgeous UX.
+Inspired by other modern, familiar command line tools:
 
 ### Create an Agent
 ```bash
