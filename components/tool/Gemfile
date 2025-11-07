@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 # Private gem registry for language-operator SDK
 source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
-  gem 'language-operator', '~> 0.1.8'
+  gem 'language-operator', '~> 0.1.9'
 end
 
 # Tool server dependencies

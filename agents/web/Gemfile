@@ -27,7 +27,7 @@ gem "rack-cors"
 # Private gem registry for language-operator SDK
 source "https://git.theryans.io/api/packages/language-operator/rubygems" do
   # Language Operator SDK (includes ruby_llm, ruby_llm-mcp, etc.)
-  gem "language-operator", "~> 0.1.0"
+  gem "language-operator", "~> 0.1.9"
 end
 
 # Vite for React frontend
