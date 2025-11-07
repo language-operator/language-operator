@@ -1,11 +1,6 @@
 FROM git.theryans.io/language-operator/base:latest
 
-# Install Ruby and build dependencies
-RUN apk add --no-cache \
-    ruby \
-    ruby-dev \
-    ruby-bundler \
-    build-base
+# Ruby dependencies inherited from base image
 
 # Create application directory
 WORKDIR /app

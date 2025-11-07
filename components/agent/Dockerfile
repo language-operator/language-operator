@@ -1,15 +1,7 @@
 FROM git.theryans.io/language-operator/base:latest
 
-# Install Ruby, build dependencies, and agent-specific packages
-RUN apk add --no-cache \
-    ruby \
-    ruby-dev \
-    ruby-bundler \
-    build-base \
-    jq \
-    curl \
-    ca-certificates \
-    tzdata
+# Install agent-specific packages (Ruby deps inherited from base)
+RUN apk add --no-cache jq
 
 WORKDIR /app/agent
 

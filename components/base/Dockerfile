@@ -6,6 +6,16 @@ ENV LANGOP_USER=langop
 # Install tini for proper init and su-exec for user switching
 RUN apk add --no-cache tini su-exec
 
+# Install common Ruby dependencies for all components
+RUN apk add --no-cache \
+    ruby \
+    ruby-dev \
+    ruby-bundler \
+    build-base \
+    curl \
+    ca-certificates \
+    tzdata
+
 # Create the langop user (but don't switch to it yet - let child images do their work first)
 RUN addgroup -S langop && adduser -S langop -G langop
 
