@@ -156,7 +156,7 @@ Install now? [Y/n]: y
 
 Installing google-sheets...
 ✓ google-sheets installed
-✓ Credentials required: Run 'langop tools auth google-sheets'
+✓ Credentials required: Run 'aictl tools auth google-sheets'
 ```
 
 ### Phase 4: Interactive Refinement

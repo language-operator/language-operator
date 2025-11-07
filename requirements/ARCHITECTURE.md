@@ -313,7 +313,7 @@ The synthesis pipeline is a **key differentiator** - users write natural languag
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │ Generated DSL code:                                     │   │
 │  │                                                         │   │
-│  │ require 'langop'                                        │   │
+│  │ require 'language_operator'                             │   │
 │  │                                                         │   │
 │  │ agent 'monitor-agent' do                               │   │
 │  │   schedule every: '5m'                                  │   │

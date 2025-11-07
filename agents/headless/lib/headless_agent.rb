@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'langop'
+require 'language_operator'
 require_relative 'goal_evaluator'
 
 # Autonomous headless agent
@@ -15,7 +15,7 @@ class HeadlessAgent
   def initialize(config, goals)
     @config = config
     @goals = goals
-    @client = Langop::Client::Base.new(config)
+    @client = LanguageOperator::Client::Base.new(config)
     @evaluator = GoalEvaluator.new(goals)
   end
 

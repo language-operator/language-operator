@@ -420,7 +420,7 @@ aictl agent create "when someone mentions 'incident' in #engineering, create a t
 
 3. Generates Ruby DSL:
 ```ruby
-require 'langop'
+require 'language_operator'
 
 agent "spreadsheet-reviewer" do
   description "Review Google Sheets for errors and email notifications"

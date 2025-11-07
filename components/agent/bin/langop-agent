@@ -13,7 +13,7 @@
 $stdout.sync = true
 $stderr.sync = true
 
-require 'langop'
+require 'language_operator'
 
 # Wait for tool sidecars to be ready
 def wait_for_tools(config)
@@ -66,13 +66,13 @@ if File.exist?(code_path)
   begin
     # Load the synthesized DSL code using the agent loader
     # This provides the DSL context with the 'agent' method
-    Langop::Dsl.load_agent_file(code_path)
+    LanguageOperator::Dsl.load_agent_file(code_path)
 
     # The synthesized code should define an agent
     puts "✅ Agent code loaded successfully"
 
     # Get the agent from the registry
-    agents = Langop::Dsl.agent_registry.all
+    agents = LanguageOperator::Dsl.agent_registry.all
     if agents.empty?
       puts "❌ No agent defined in code"
       exit 1
@@ -84,8 +84,8 @@ if File.exist?(code_path)
     # Execute the agent based on its definition
     # For now, create a basic executor with the environment config
     # TODO: Implement proper agent execution based on AgentDefinition workflows
-    config = Langop::Client::Config.from_env
-    agent = Langop::Agent::Base.new(config)
+    config = LanguageOperator::Client::Config.from_env
+    agent = LanguageOperator::Agent::Base.new(config)
 
     # Wait for tool sidecars to be ready before connecting
     # This prevents connection failures during pod startup
@@ -97,7 +97,7 @@ if File.exist?(code_path)
     instructions = agent_def.description || ENV['AGENT_INSTRUCTIONS']
     if instructions && !instructions.empty?
       puts "📋 Instructions: #{instructions[0..200]}..."
-      executor = Langop::Agent::Executor.new(agent)
+      executor = LanguageOperator::Agent::Executor.new(agent)
       executor.execute(instructions, agent_definition: agent_def)
     else
       puts "❌ No instructions provided"
@@ -141,8 +141,8 @@ end
 
 # Fallback implementations
 def fallback_to_autonomous
-  config = Langop::Client::Config.load_with_fallback
-  agent = Langop::Agent::Base.new(config)
+  config = LanguageOperator::Client::Config.load_with_fallback
+  agent = LanguageOperator::Agent::Base.new(config)
 
   # Get instructions from environment
   instructions = ENV['AGENT_INSTRUCTIONS']
@@ -152,7 +152,7 @@ def fallback_to_autonomous
     agent.connect!
 
     # Simple autonomous loop
-    executor = Langop::Agent::Executor.new(agent)
+    executor = LanguageOperator::Agent::Executor.new(agent)
     executor.execute(instructions)
   else
     puts "❌ No instructions provided in AGENT_INSTRUCTIONS"
