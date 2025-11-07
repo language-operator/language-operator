@@ -1,0 +1,53 @@
+You are generating Ruby DSL code for an autonomous agent in a Kubernetes operator.
+
+**User Instructions:**
+{{.Instructions}}
+
+**Available Tools:**
+{{.ToolsList}}
+
+**Available Models:**
+{{.ModelsList}}
+
+**Agent Name:** {{.AgentName}}
+
+**Detected Temporal Intent:** {{.TemporalIntent}}
+
+Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
+
+```ruby
+require 'language_operator'
+
+agent "{{.AgentName}}" do
+  description "Brief description extracted from instructions"
+{{.PersonaSection}}{{.ScheduleSection}}
+  # Extract objectives from instructions
+  objectives [
+    "First objective",
+    "Second objective"
+  ]
+
+  # Define workflow if instructions mention specific steps
+  # workflow do
+  #   step :step_name, tool: "tool_name", params: {key: "value"}
+  #   step :another_step, depends_on: :step_name
+  # end
+
+{{.ConstraintsSection}}
+
+  # Output configuration (if workspace enabled)
+  output do
+    workspace "results/output.txt"
+  end
+end
+```
+
+**Rules:**
+1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
+{{.ScheduleRules}}
+5. Break down instructions into clear, actionable objectives
+6. Create workflow steps if instructions describe a process
+7. Use available tools in workflow steps
+8. Use the agent name: "{{.AgentName}}"
+
+Generate the code now:

@@ -1,15 +1,24 @@
 package synthesis
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
 )
+
+//go:embed agent_synthesis.tmpl
+var agentSynthesisTemplate string
+
+//go:embed persona_distillation.tmpl
+var personaDistillationTemplate string
 
 // TemporalIntent represents the detected execution pattern from user instructions
 type TemporalIntent int
@@ -255,6 +264,37 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 4. Use high max_iterations for continuous operation`
 	}
 
+	// Execute template
+	tmpl, err := template.New("agent_synthesis").Parse(agentSynthesisTemplate)
+	if err != nil {
+		s.log.Error(err, "Failed to parse agent synthesis template")
+		// Fallback to inline template if parsing fails
+		return s.buildSynthesisPromptFallback(req, toolsList, modelsList, personaSection, intent, scheduleSection, constraintsSection, scheduleRules)
+	}
+
+	data := map[string]interface{}{
+		"Instructions":       req.Instructions,
+		"ToolsList":          toolsList,
+		"ModelsList":         modelsList,
+		"AgentName":          req.AgentName,
+		"TemporalIntent":     intent.String(),
+		"PersonaSection":     personaSection,
+		"ScheduleSection":    scheduleSection,
+		"ConstraintsSection": constraintsSection,
+		"ScheduleRules":      scheduleRules,
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		s.log.Error(err, "Failed to execute agent synthesis template")
+		return s.buildSynthesisPromptFallback(req, toolsList, modelsList, personaSection, intent, scheduleSection, constraintsSection, scheduleRules)
+	}
+
+	return buf.String()
+}
+
+// buildSynthesisPromptFallback provides a fallback when template loading fails
+func (s *Synthesizer) buildSynthesisPromptFallback(req AgentSynthesisRequest, toolsList, modelsList, personaSection string, intent TemporalIntent, scheduleSection, constraintsSection, scheduleRules string) string {
 	// Use a heredoc-style string to avoid backtick issues
 	return fmt.Sprintf(`You are generating Ruby DSL code for an autonomous agent in a Kubernetes operator.
 
@@ -324,6 +364,35 @@ Generate the code now:`,
 
 // buildPersonaDistillationPrompt creates the prompt for persona distillation
 func (s *Synthesizer) buildPersonaDistillationPrompt(persona PersonaInfo, agentCtx AgentContext) string {
+	// Execute template
+	tmpl, err := template.New("persona_distillation").Parse(personaDistillationTemplate)
+	if err != nil {
+		s.log.Error(err, "Failed to parse persona distillation template")
+		// Fallback to inline template if parsing fails
+		return s.buildPersonaDistillationPromptFallback(persona, agentCtx)
+	}
+
+	data := map[string]interface{}{
+		"PersonaName":         persona.Name,
+		"PersonaDescription":  persona.Description,
+		"PersonaSystemPrompt": persona.SystemPrompt,
+		"PersonaTone":         persona.Tone,
+		"PersonaLanguage":     persona.Language,
+		"AgentInstructions":   agentCtx.Instructions,
+		"AgentTools":          agentCtx.Tools,
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		s.log.Error(err, "Failed to execute persona distillation template")
+		return s.buildPersonaDistillationPromptFallback(persona, agentCtx)
+	}
+
+	return buf.String()
+}
+
+// buildPersonaDistillationPromptFallback provides a fallback when template loading fails
+func (s *Synthesizer) buildPersonaDistillationPromptFallback(persona PersonaInfo, agentCtx AgentContext) string {
 	return fmt.Sprintf(`Distill this persona into a single concise paragraph for an AI agent.
 
 **Persona Details:**
