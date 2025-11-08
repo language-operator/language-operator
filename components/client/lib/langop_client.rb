@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "aictl'
+require 'aictl'
 
 # Aictl Client - convenience wrapper
 #

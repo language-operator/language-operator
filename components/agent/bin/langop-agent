@@ -34,19 +34,17 @@ def wait_for_tools(config)
     puts "⏳ Waiting for tool at #{uri.host}:#{uri.port}..."
 
     max_attempts.times do |attempt|
-      begin
-        # Try to connect to the health endpoint or root
-        response = Net::HTTP.start(uri.host, uri.port, open_timeout: 1, read_timeout: 1) do |http|
-          http.head('/')
-        end
-        puts "✅ Tool ready at #{uri.host}:#{uri.port}"
-        break
-      rescue StandardError => e
-        if attempt < max_attempts - 1
-          sleep(delay)
-        else
-          puts "⚠️  Tool at #{uri.host}:#{uri.port} not ready after #{max_attempts} attempts"
-        end
+      # Try to connect to the health endpoint or root
+      Net::HTTP.start(uri.host, uri.port, open_timeout: 1, read_timeout: 1) do |http|
+        http.head('/')
+      end
+      puts "✅ Tool ready at #{uri.host}:#{uri.port}"
+      break
+    rescue StandardError
+      if attempt < max_attempts - 1
+        sleep(delay)
+      else
+        puts "⚠️  Tool at #{uri.host}:#{uri.port} not ready after #{max_attempts} attempts"
       end
     end
   end
@@ -56,12 +54,12 @@ end
 code_path = ENV.fetch('AGENT_CODE_PATH', '/etc/agent/code/agent.rb')
 fallback_mode = ENV.fetch('AGENT_FALLBACK_MODE', 'error') # error | autonomous | interactive
 
-puts "🤖 Langop Agent starting..."
+puts '🤖 Langop Agent starting...'
 puts "📁 Code path: #{code_path}"
 
 # Check if synthesized code exists
 if File.exist?(code_path)
-  puts "✅ Found synthesized agent code, loading..."
+  puts '✅ Found synthesized agent code, loading...'
 
   begin
     # Load the synthesized DSL code using the agent loader
@@ -69,12 +67,12 @@ if File.exist?(code_path)
     LanguageOperator::Dsl.load_agent_file(code_path)
 
     # The synthesized code should define an agent
-    puts "✅ Agent code loaded successfully"
+    puts '✅ Agent code loaded successfully'
 
     # Get the agent from the registry
     agents = LanguageOperator::Dsl.agent_registry.all
     if agents.empty?
-      puts "❌ No agent defined in code"
+      puts '❌ No agent defined in code'
       exit 1
     end
 
@@ -100,23 +98,22 @@ if File.exist?(code_path)
       executor = LanguageOperator::Agent::Executor.new(agent)
       executor.execute(instructions, agent_definition: agent_def)
     else
-      puts "❌ No instructions provided"
+      puts '❌ No instructions provided'
       exit 1
     end
-
   rescue StandardError => e
     puts "❌ Error loading agent code: #{e.message}"
     puts e.backtrace.take(5).join("\n")
 
     case fallback_mode
     when 'autonomous'
-      puts "⚠️  Falling back to autonomous mode with default config"
+      puts '⚠️  Falling back to autonomous mode with default config'
       fallback_to_autonomous
     when 'interactive'
-      puts "⚠️  Falling back to interactive mode"
+      puts '⚠️  Falling back to interactive mode'
       fallback_to_interactive
     else
-      puts "❌ No fallback configured, exiting"
+      puts '❌ No fallback configured, exiting'
       exit 1
     end
   end
@@ -126,15 +123,15 @@ else
 
   case fallback_mode
   when 'autonomous'
-    puts "📝 Starting in autonomous mode with default config"
+    puts '📝 Starting in autonomous mode with default config'
     fallback_to_autonomous
   when 'interactive'
-    puts "📝 Starting in interactive mode"
+    puts '📝 Starting in interactive mode'
     fallback_to_interactive
   else
-    puts "❌ No agent code provided and no fallback configured"
-    puts "💡 The operator should have created a ConfigMap with synthesized code"
-    puts "💡 Check LanguageAgent status for synthesis errors"
+    puts '❌ No agent code provided and no fallback configured'
+    puts '💡 The operator should have created a ConfigMap with synthesized code'
+    puts '💡 Check LanguageAgent status for synthesis errors'
     exit 1
   end
 end
@@ -155,12 +152,12 @@ def fallback_to_autonomous
     executor = LanguageOperator::Agent::Executor.new(agent)
     executor.execute(instructions)
   else
-    puts "❌ No instructions provided in AGENT_INSTRUCTIONS"
+    puts '❌ No instructions provided in AGENT_INSTRUCTIONS'
     exit 1
   end
 end
 
 def fallback_to_interactive
-  puts "Interactive mode not yet implemented"
+  puts 'Interactive mode not yet implemented'
   exit 1
 end
