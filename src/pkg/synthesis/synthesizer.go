@@ -421,7 +421,7 @@ Distilled persona:`,
 		agentCtx.Tools)
 }
 
-// validateDSL performs basic validation on the synthesized DSL code
+// validateDSL performs comprehensive validation on the synthesized DSL code
 func (s *Synthesizer) validateDSL(code string) error {
 	// Basic checks
 	if code == "" {
@@ -440,6 +440,147 @@ func (s *Synthesizer) validateDSL(code string) error {
 	if strings.Count(code, " do") != strings.Count(code, "end") {
 		s.log.Info("Warning: mismatched do/end blocks", "code", code[:min(200, len(code))])
 		// Don't fail on this, just warn
+	}
+
+	// Security validation: detect dangerous Ruby patterns
+	if err := s.validateSecurity(code); err != nil {
+		return fmt.Errorf("security validation failed: %w", err)
+	}
+
+	return nil
+}
+
+// validateSecurity checks for dangerous Ruby patterns that could be security risks
+func (s *Synthesizer) validateSecurity(code string) error {
+	// Dangerous method calls that allow arbitrary code execution
+	dangerousMethods := []string{
+		"system(",
+		"exec(",
+		"spawn(",
+		"eval(",
+		"instance_eval(",
+		"class_eval(",
+		"module_eval(",
+		"`",  // Backticks for shell execution
+		"%x", // Alternative shell execution syntax
+	}
+
+	for _, method := range dangerousMethods {
+		if strings.Contains(code, method) {
+			return fmt.Errorf("dangerous method call detected: %s", method)
+		}
+	}
+
+	// File system operations outside of DSL context
+	// Allow File.read and File.write in workflow context, but block others
+	dangerousFileOps := []string{
+		"File.delete",
+		"File.unlink",
+		"FileUtils.rm",
+		"FileUtils.rm_rf",
+		"Dir.delete",
+		"Dir.rmdir",
+	}
+
+	for _, op := range dangerousFileOps {
+		if strings.Contains(code, op) {
+			return fmt.Errorf("dangerous file operation detected: %s", op)
+		}
+	}
+
+	// Network operations outside of DSL (tools should handle this)
+	dangerousNetOps := []string{
+		"Net::HTTP",
+		"TCPSocket",
+		"UDPSocket",
+		"Socket.",
+	}
+
+	for _, op := range dangerousNetOps {
+		if strings.Contains(code, op) {
+			return fmt.Errorf("direct network operation detected: %s (use tools instead)", op)
+		}
+	}
+
+	// Process and environment manipulation
+	dangerousProcess := []string{
+		"Process.kill",
+		"Process.spawn",
+		"fork(",
+		"fork {",
+		"exit!",
+		"abort(",
+	}
+
+	for _, proc := range dangerousProcess {
+		if strings.Contains(code, proc) {
+			return fmt.Errorf("dangerous process operation detected: %s", proc)
+		}
+	}
+
+	// Kernel methods that can be dangerous
+	dangerousKernel := []string{
+		"Kernel.system",
+		"Kernel.exec",
+		"Kernel.spawn",
+		"Kernel.eval",
+		"Kernel.load",
+		"Kernel.require_relative", // Could load arbitrary code
+	}
+
+	for _, kern := range dangerousKernel {
+		if strings.Contains(code, kern) {
+			return fmt.Errorf("dangerous Kernel method detected: %s", kern)
+		}
+	}
+
+	// Load and require operations (except safe ones)
+	if strings.Contains(code, "load(") {
+		return fmt.Errorf("dangerous code loading detected: load()")
+	}
+
+	// Check for require statements that aren't language_operator
+	requirePattern := `require`
+	if strings.Contains(code, requirePattern) {
+		// Split by lines and check each require statement
+		lines := strings.Split(code, "\n")
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "require") {
+				// Allow only language_operator
+				if !strings.Contains(trimmed, "language_operator") {
+					return fmt.Errorf("unauthorized require statement detected: %s", trimmed)
+				}
+			}
+		}
+	}
+
+	// Check for send/public_send/__send__ which can bypass access controls
+	dangerousSend := []string{
+		".send(",
+		".public_send(",
+		".__send__(",
+		".method(",
+		".instance_method(",
+	}
+
+	for _, send := range dangerousSend {
+		if strings.Contains(code, send) {
+			return fmt.Errorf("dangerous reflective method detected: %s", send)
+		}
+	}
+
+	// Check for constant manipulation
+	dangerousConst := []string{
+		"const_set",
+		"remove_const",
+		"const_missing",
+	}
+
+	for _, const_op := range dangerousConst {
+		if strings.Contains(code, const_op) {
+			return fmt.Errorf("dangerous constant manipulation detected: %s", const_op)
+		}
 	}
 
 	return nil
