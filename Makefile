@@ -1,4 +1,4 @@
-.PHONY: build help k8s-install k8s-uninstall k8s-status operator
+.PHONY: build help k8s-install k8s-uninstall k8s-status operator test-e2e
 
 # Build all Docker images using the build script
 build:
@@ -39,6 +39,14 @@ test:
 	@echo ""
 	@echo "✓ All tests passed!"
 
+# Run end-to-end integration tests
+test-e2e:
+	@echo "Running end-to-end integration tests..."
+	@echo ""
+	@cd test/e2e && go test -v -timeout 10m ./...
+	@echo ""
+	@echo "✓ E2E tests passed!"
+
 # Show help
 help:
 	@echo "Hi :-)"
@@ -48,6 +56,7 @@ help:
 	@echo "  operator       - Build and deploy the language operator"
 	@echo "  docs           - Generate CRD API reference documentation"
 	@echo "  test           - Run all tests"
+	@echo "  test-e2e       - Run end-to-end integration tests"
 	@echo ""
 	@echo "Kubernetes Operations:"
 	@echo "  k8s-install    - Install the language operator to Kubernetes"
