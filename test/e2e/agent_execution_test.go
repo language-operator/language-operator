@@ -42,8 +42,8 @@ func TestAgentExecution(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Check the health of https://api.example.com every 5 minutes",
-			Mode:         "scheduled",
+			Instructions:  "Check the health of https://api.example.com every 5 minutes",
+			ExecutionMode: "scheduled",
 		},
 	}
 
@@ -133,9 +133,9 @@ func TestAgentWithWorkspace(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Process data and save results to workspace",
-			Mode:         "autonomous",
-			Workspace: &langopv1alpha1.WorkspaceConfig{
+			Instructions:  "Process data and save results to workspace",
+			ExecutionMode: "autonomous",
+			Workspace: &langopv1alpha1.WorkspaceSpec{
 				Enabled: true,
 				Size:    "1Gi",
 			},
@@ -208,8 +208,8 @@ func TestAgentScheduleModes(t *testing.T) {
 					Namespace: namespace,
 				},
 				Spec: langopv1alpha1.LanguageAgentSpec{
-					Instructions: tc.instructions,
-					Mode:         tc.mode,
+					Instructions:  tc.instructions,
+					ExecutionMode: tc.mode,
 				},
 			}
 
@@ -261,8 +261,8 @@ func TestAgentStatusUpdates(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Simple test agent",
-			Mode:         "autonomous",
+			Instructions:  "Simple test agent",
+			ExecutionMode: "autonomous",
 		},
 	}
 

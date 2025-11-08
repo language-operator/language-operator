@@ -37,7 +37,7 @@ func TestSynthesisFailure(t *testing.T) {
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Instructions: "This should fail to synthesize",
-			Mode:         "autonomous",
+			ExecutionMode:         "autonomous",
 		},
 	}
 
@@ -118,7 +118,7 @@ func TestInvalidInstructions(t *testing.T) {
 				},
 				Spec: langopv1alpha1.LanguageAgentSpec{
 					Instructions: tc.instructions,
-					Mode:         "autonomous",
+					ExecutionMode:         "autonomous",
 				},
 			}
 
@@ -176,9 +176,9 @@ func TestMissingToolReference(t *testing.T) {
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Use the non-existent-tool to process data",
-			Mode:         "autonomous",
-			Tools: []langopv1alpha1.ToolReference{
+			Instructions:  "Use the non-existent-tool to process data",
+			ExecutionMode: "autonomous",
+			ToolRefs: []langopv1alpha1.ToolReference{
 				{
 					Name: "non-existent-tool",
 				},
@@ -235,7 +235,7 @@ func TestReconciliationRetry(t *testing.T) {
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Instructions: "Test reconciliation retry",
-			Mode:         "autonomous",
+			ExecutionMode:         "autonomous",
 		},
 	}
 
@@ -293,7 +293,7 @@ func TestConcurrentAgentCreation(t *testing.T) {
 			},
 			Spec: langopv1alpha1.LanguageAgentSpec{
 				Instructions: "Concurrent agent test",
-				Mode:         "autonomous",
+				ExecutionMode:         "autonomous",
 			},
 		}
 		env.CreateLanguageAgent(t, agent)
