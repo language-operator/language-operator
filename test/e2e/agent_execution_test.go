@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -26,9 +25,9 @@ func TestAgentExecution(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	// Set environment variables
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-agent-execution"
@@ -112,8 +111,9 @@ func TestAgentWithWorkspace(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-agent-workspace"
@@ -159,8 +159,9 @@ func TestAgentScheduleModes(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	testCases := []struct {
 		name         string
@@ -228,8 +229,9 @@ func TestAgentStatusUpdates(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-status-updates"

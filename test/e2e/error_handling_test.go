@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -20,9 +19,13 @@ func TestSynthesisFailure(t *testing.T) {
 	env := SetupTestEnvironment(t)
 	defer env.Teardown(t)
 
-	// Use invalid endpoint to trigger failure
-	os.Setenv("SYNTHESIS_ENDPOINT", "http://invalid-endpoint-does-not-exist:9999")
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Start mock LLM service that returns errors
+	mockLLM := NewMockLLMServiceWithError(t, "synthesis error: model unavailable")
+	defer mockLLM.Close()
+
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-synthesis-failure"
@@ -59,9 +62,9 @@ func TestSynthesisFailure(t *testing.T) {
 	// Note: Depending on implementation, the error might not be reflected immediately
 	// In a production system, we would expect hasError to be true
 	if hasError {
-		t.Log("✓ Synthesis failure was properly recorded in status")
+		t.Log("Synthesis failure was properly recorded in status")
 	} else {
-		t.Log("⚠ Synthesis failure may not be reflected yet (async reconciliation)")
+		t.Log("Synthesis failure may not be reflected yet (async reconciliation)")
 	}
 }
 
@@ -149,8 +152,9 @@ func TestMissingToolReference(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-missing-tool"
@@ -197,12 +201,11 @@ func TestReconciliationRetry(t *testing.T) {
 	env := SetupTestEnvironment(t)
 	defer env.Teardown(t)
 
-	// Start mock LLM service (will succeed)
-	mockLLM := NewMockLLMService(t)
-	defer mockLLM.Close()
-
-	// First set invalid endpoint
-	os.Setenv("SYNTHESIS_ENDPOINT", "http://invalid:9999")
+	// Start with an error mock, then switch to working mock
+	// First create failing mock
+	mockLLMFail := NewMockLLMServiceWithError(t, "temporary failure")
+	mockChatModelFail := NewMockChatModel(mockLLMFail)
+	env.SetSynthesizer(t, mockChatModelFail)
 
 	// Create test namespace
 	namespace := "test-retry"
@@ -220,9 +223,14 @@ func TestReconciliationRetry(t *testing.T) {
 	// Wait for first (failed) attempt
 	time.Sleep(3 * time.Second)
 
-	// Now fix the endpoint
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Clean up failing mock
+	mockLLMFail.Close()
+
+	// Now create working mock and update synthesizer
+	mockLLM := NewMockLLMService(t)
+	defer mockLLM.Close()
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Note: In a real operator with retry logic, this should eventually succeed
 	// The controller should requeue and retry
@@ -251,8 +259,9 @@ func TestConcurrentAgentCreation(t *testing.T) {
 	mockLLM := NewMockLLMService(t)
 	defer mockLLM.Close()
 
-	os.Setenv("SYNTHESIS_ENDPOINT", mockLLM.URL())
-	defer os.Unsetenv("SYNTHESIS_ENDPOINT")
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
 
 	// Create test namespace
 	namespace := "test-concurrent"

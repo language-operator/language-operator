@@ -7,6 +7,8 @@ import (
 	"time"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers"
+	"github.com/based/language-operator/pkg/synthesis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,8 +17,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const (
@@ -28,17 +34,23 @@ const (
 
 // TestEnvironment encapsulates the test environment
 type TestEnvironment struct {
-	cfg       *rest.Config
-	k8sClient client.Client
-	clientset *kubernetes.Clientset
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg         *rest.Config
+	k8sClient   client.Client
+	clientset   *kubernetes.Clientset
+	testEnv     *envtest.Environment
+	mgr         manager.Manager
+	reconciler  *controllers.LanguageAgentReconciler
+	ctx         context.Context
+	cancel      context.CancelFunc
+	mgrStarted  bool
 }
 
 // SetupTestEnvironment creates a new test environment with envtest
 func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Set up logger for controller-runtime
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	// Register our custom types
 	err := langopv1alpha1.AddToScheme(scheme.Scheme)
@@ -56,10 +68,33 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 		t.Fatalf("Failed to start test environment: %v", err)
 	}
 
-	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	// Create controller manager
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0", // Disable metrics server in tests
+		},
+		HealthProbeBindAddress: "0", // Disable health probe in tests
+	})
 	if err != nil {
-		t.Fatalf("Failed to create k8s client: %v", err)
+		t.Fatalf("Failed to create manager: %v", err)
 	}
+
+	// Setup LanguageAgent controller (without synthesizer initially)
+	// The synthesizer will be set later by SetSynthesizer() method
+	agentReconciler := &controllers.LanguageAgentReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder: mgr.GetEventRecorderFor("languageagent-controller"),
+		// Synthesizer will be set by test via SetSynthesizer()
+	}
+
+	if err = agentReconciler.SetupWithManager(mgr, 1); err != nil {
+		t.Fatalf("Failed to setup LanguageAgent controller: %v", err)
+	}
+
+	k8sClient := mgr.GetClient()
 
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -67,12 +102,41 @@ func SetupTestEnvironment(t *testing.T) *TestEnvironment {
 	}
 
 	return &TestEnvironment{
-		cfg:       cfg,
-		k8sClient: k8sClient,
-		clientset: clientset,
-		testEnv:   testEnv,
-		ctx:       ctx,
-		cancel:    cancel,
+		cfg:        cfg,
+		k8sClient:  k8sClient,
+		clientset:  clientset,
+		testEnv:    testEnv,
+		mgr:        mgr,
+		reconciler: agentReconciler,
+		ctx:        ctx,
+		cancel:     cancel,
+		mgrStarted: false,
+	}
+}
+
+// SetSynthesizer sets the synthesizer on the controller and starts the manager
+func (e *TestEnvironment) SetSynthesizer(t *testing.T, mockChatModel *MockChatModel) {
+	// Create synthesizer from mock chat model
+	synthesizer := synthesis.NewSynthesizer(mockChatModel, ctrl.Log.WithName("synthesis"))
+
+	// Set it on the reconciler
+	e.reconciler.Synthesizer = synthesizer
+	e.reconciler.SynthesisModel = "test-model"
+
+	// Start the manager if not already started
+	if !e.mgrStarted {
+		go func() {
+			if err := e.mgr.Start(e.ctx); err != nil {
+				t.Logf("Manager exited with error: %v", err)
+			}
+		}()
+
+		// Wait for manager to be ready
+		if !e.mgr.GetCache().WaitForCacheSync(e.ctx) {
+			t.Fatalf("Failed to sync manager cache")
+		}
+
+		e.mgrStarted = true
 	}
 }
 

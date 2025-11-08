@@ -11,8 +11,10 @@ import (
 
 // MockLLMService provides a mock LLM API for testing
 type MockLLMService struct {
-	server   *httptest.Server
-	requests []string
+	server      *httptest.Server
+	requests    []string
+	shouldError bool
+	errorMsg    string
 }
 
 // LLMRequest represents an incoming LLM request
@@ -46,7 +48,23 @@ type Choice struct {
 // NewMockLLMService creates a new mock LLM service
 func NewMockLLMService(t *testing.T) *MockLLMService {
 	m := &MockLLMService{
-		requests: make([]string, 0),
+		requests:    make([]string, 0),
+		shouldError: false,
+	}
+
+	m.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m.handleRequest(w, r, t)
+	}))
+
+	return m
+}
+
+// NewMockLLMServiceWithError creates a new mock LLM service that returns errors
+func NewMockLLMServiceWithError(t *testing.T, errorMsg string) *MockLLMService {
+	m := &MockLLMService{
+		requests:    make([]string, 0),
+		shouldError: true,
+		errorMsg:    errorMsg,
 	}
 
 	m.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +93,12 @@ func (m *MockLLMService) Requests() []string {
 func (m *MockLLMService) handleRequest(w http.ResponseWriter, r *http.Request, t *testing.T) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// If configured to return errors, return error
+	if m.shouldError {
+		http.Error(w, m.errorMsg, http.StatusInternalServerError)
 		return
 	}
 
