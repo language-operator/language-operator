@@ -11,6 +11,7 @@ import (
 	"github.com/based/language-operator/pkg/synthesis"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -231,6 +232,11 @@ func (e *TestEnvironment) WaitForCondition(t *testing.T, namespace, name string,
 		}, agent)
 
 		if err != nil {
+			// Ignore not found errors and keep polling
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			// Return other errors
 			return false, err
 		}
 
