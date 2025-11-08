@@ -34,6 +34,9 @@ func TestAgentExecution(t *testing.T) {
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
 
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
+
 	// Create LanguageAgent
 	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
 		Instructions:  "Check the health of https://api.example.com every 5 minutes",
@@ -120,6 +123,9 @@ func TestAgentWithWorkspace(t *testing.T) {
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
 
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
+
 	// Create LanguageAgent with workspace
 	agent := NewTestLanguageAgent(namespace, "test-agent-ws", langopv1alpha1.LanguageAgentSpec{
 		Instructions:  "Process data and save results to workspace",
@@ -190,6 +196,9 @@ func TestAgentScheduleModes(t *testing.T) {
 			env.CreateNamespace(t, namespace)
 			defer env.DeleteNamespace(t, namespace)
 
+			// Create test model (required by agent)
+			env.CreateTestModel(t, namespace, "test-model")
+
 			// Create agent
 			agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
 				Instructions:  tc.instructions,
@@ -237,6 +246,9 @@ func TestAgentStatusUpdates(t *testing.T) {
 	namespace := "test-status-updates"
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
+
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
 
 	// Create agent
 	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{

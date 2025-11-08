@@ -32,6 +32,9 @@ func TestSynthesisFailure(t *testing.T) {
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
 
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
+
 	// Create agent with instructions
 	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
 		Instructions:  "This should fail to synthesize",
@@ -107,6 +110,9 @@ func TestInvalidInstructions(t *testing.T) {
 			env.CreateNamespace(t, namespace)
 			defer env.DeleteNamespace(t, namespace)
 
+			// Create test model (required by agent)
+			env.CreateTestModel(t, namespace, "test-model")
+
 			// Create agent
 			agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
 				Instructions:  tc.instructions,
@@ -161,6 +167,9 @@ func TestMissingToolReference(t *testing.T) {
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
 
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
+
 	// Create agent that references a non-existent tool
 	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
 		Instructions:  "Use the non-existent-tool to process data",
@@ -211,6 +220,9 @@ func TestReconciliationRetry(t *testing.T) {
 	namespace := "test-retry"
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
+
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
 
 	// Create agent
 	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
@@ -267,6 +279,9 @@ func TestConcurrentAgentCreation(t *testing.T) {
 	namespace := "test-concurrent"
 	env.CreateNamespace(t, namespace)
 	defer env.DeleteNamespace(t, namespace)
+
+	// Create test model (required by agent)
+	env.CreateTestModel(t, namespace, "test-model")
 
 	// Create multiple agents concurrently
 	numAgents := 5

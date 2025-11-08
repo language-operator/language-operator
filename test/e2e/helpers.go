@@ -140,6 +140,26 @@ func (e *TestEnvironment) SetSynthesizer(t *testing.T, mockChatModel *MockChatMo
 	}
 }
 
+// CreateTestModel creates a LanguageModel resource for testing
+func (e *TestEnvironment) CreateTestModel(t *testing.T, namespace, name string) {
+	model := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "test-provider",
+			ModelName: "test-model",
+			Endpoint:  "http://test-endpoint",
+		},
+	}
+
+	err := e.k8sClient.Create(e.ctx, model)
+	if err != nil {
+		t.Fatalf("Failed to create test model %s/%s: %v", namespace, name, err)
+	}
+}
+
 // Teardown cleans up the test environment
 func (e *TestEnvironment) Teardown(t *testing.T) {
 	e.cancel()
