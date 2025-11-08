@@ -85,3 +85,27 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           git diff --exit-code || (echo "Generated manifests are out of date. Run 'make manifests' and commit the changes." && exit 1)
+
+  # Run end-to-end integration tests
+  e2e-test:
+    runs-on: builder
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'src/go.mod'
+          cache-dependency-path: 'src/go.sum'
+
+      - name: Install envtest assets
+        working-directory: test/e2e
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          $(go env GOPATH)/bin/setup-envtest use
+
+      - name: Run e2e tests
+        working-directory: test/e2e
+        run: |
+          go test -v -timeout 10m ./...
