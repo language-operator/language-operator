@@ -148,7 +148,7 @@ func (e *TestEnvironment) CreateTestModel(t *testing.T, namespace, name string) 
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "test-provider",
+			Provider:  "openai-compatible", // Use a valid provider
 			ModelName: "test-model",
 			Endpoint:  "http://test-endpoint",
 		},
