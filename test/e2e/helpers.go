@@ -257,3 +257,24 @@ func (e *TestEnvironment) WaitForConfigMap(t *testing.T, namespace, name string)
 		return true, nil
 	})
 }
+
+// NewTestLanguageAgent creates a LanguageAgent with required fields populated for testing
+func NewTestLanguageAgent(namespace, name string, spec langopv1alpha1.LanguageAgentSpec) *langopv1alpha1.LanguageAgent {
+	// Set required fields if not provided
+	if spec.Image == "" {
+		spec.Image = "git.theryans.io/language-operator/agent:latest"
+	}
+	if len(spec.ModelRefs) == 0 {
+		spec.ModelRefs = []langopv1alpha1.ModelReference{
+			{Name: "test-model"},
+		}
+	}
+
+	return &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: spec,
+	}
+}

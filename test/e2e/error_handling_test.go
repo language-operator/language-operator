@@ -30,16 +30,10 @@ func TestSynthesisFailure(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create agent with instructions
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: namespace,
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "This should fail to synthesize",
-			ExecutionMode:         "autonomous",
-		},
-	}
+	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "This should fail to synthesize",
+		ExecutionMode: "autonomous",
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
@@ -111,16 +105,10 @@ func TestInvalidInstructions(t *testing.T) {
 			defer env.DeleteNamespace(t, namespace)
 
 			// Create agent
-			agent := &langopv1alpha1.LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: namespace,
-				},
-				Spec: langopv1alpha1.LanguageAgentSpec{
-					Instructions: tc.instructions,
-					ExecutionMode:         "autonomous",
-				},
-			}
+			agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+				Instructions:  tc.instructions,
+				ExecutionMode: "autonomous",
+			})
 
 			env.CreateLanguageAgent(t, agent)
 
@@ -170,21 +158,15 @@ func TestMissingToolReference(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create agent that references a non-existent tool
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: namespace,
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions:  "Use the non-existent-tool to process data",
-			ExecutionMode: "autonomous",
-			ToolRefs: []langopv1alpha1.ToolReference{
-				{
-					Name: "non-existent-tool",
-				},
+	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "Use the non-existent-tool to process data",
+		ExecutionMode: "autonomous",
+		ToolRefs: []langopv1alpha1.ToolReference{
+			{
+				Name: "non-existent-tool",
 			},
 		},
-	}
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
@@ -228,16 +210,10 @@ func TestReconciliationRetry(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create agent
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: namespace,
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Test reconciliation retry",
-			ExecutionMode:         "autonomous",
-		},
-	}
+	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "Test reconciliation retry",
+		ExecutionMode: "autonomous",
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
@@ -286,16 +262,10 @@ func TestConcurrentAgentCreation(t *testing.T) {
 	// Create multiple agents concurrently
 	numAgents := 5
 	for i := 0; i < numAgents; i++ {
-		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-agent-" + string(rune('a'+i)),
-				Namespace: namespace,
-			},
-			Spec: langopv1alpha1.LanguageAgentSpec{
-				Instructions: "Concurrent agent test",
-				ExecutionMode:         "autonomous",
-			},
-		}
+		agent := NewTestLanguageAgent(namespace, "test-agent-"+string(rune('a'+i)), langopv1alpha1.LanguageAgentSpec{
+			Instructions:  "Concurrent agent test",
+			ExecutionMode: "autonomous",
+		})
 		env.CreateLanguageAgent(t, agent)
 	}
 

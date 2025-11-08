@@ -36,16 +36,10 @@ func TestAgentExecution(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create LanguageAgent
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: namespace,
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions:  "Check the health of https://api.example.com every 5 minutes",
-			ExecutionMode: "scheduled",
-		},
-	}
+	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "Check the health of https://api.example.com every 5 minutes",
+		ExecutionMode: "scheduled",
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
@@ -127,20 +121,14 @@ func TestAgentWithWorkspace(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create LanguageAgent with workspace
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent-ws",
-			Namespace: namespace,
+	agent := NewTestLanguageAgent(namespace, "test-agent-ws", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "Process data and save results to workspace",
+		ExecutionMode: "autonomous",
+		Workspace: &langopv1alpha1.WorkspaceSpec{
+			Enabled: true,
+			Size:    "1Gi",
 		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions:  "Process data and save results to workspace",
-			ExecutionMode: "autonomous",
-			Workspace: &langopv1alpha1.WorkspaceSpec{
-				Enabled: true,
-				Size:    "1Gi",
-			},
-		},
-	}
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
@@ -202,16 +190,10 @@ func TestAgentScheduleModes(t *testing.T) {
 			defer env.DeleteNamespace(t, namespace)
 
 			// Create agent
-			agent := &langopv1alpha1.LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: namespace,
-				},
-				Spec: langopv1alpha1.LanguageAgentSpec{
-					Instructions:  tc.instructions,
-					ExecutionMode: tc.mode,
-				},
-			}
+			agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+				Instructions:  tc.instructions,
+				ExecutionMode: tc.mode,
+			})
 
 			env.CreateLanguageAgent(t, agent)
 
@@ -255,16 +237,10 @@ func TestAgentStatusUpdates(t *testing.T) {
 	defer env.DeleteNamespace(t, namespace)
 
 	// Create agent
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: namespace,
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions:  "Simple test agent",
-			ExecutionMode: "autonomous",
-		},
-	}
+	agent := NewTestLanguageAgent(namespace, "test-agent", langopv1alpha1.LanguageAgentSpec{
+		Instructions:  "Simple test agent",
+		ExecutionMode: "autonomous",
+	})
 
 	env.CreateLanguageAgent(t, agent)
 
