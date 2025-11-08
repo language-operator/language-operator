@@ -103,7 +103,7 @@ jobs:
         working-directory: test/e2e
         run: |
           go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-          $(go env GOPATH)/bin/setup-envtest use
+          echo "KUBEBUILDER_ASSETS=$($(go env GOPATH)/bin/setup-envtest use -p path)" >> $GITHUB_ENV
 
       - name: Run e2e tests
         working-directory: test/e2e
