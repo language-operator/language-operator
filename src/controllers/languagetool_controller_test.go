@@ -327,3 +327,40 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguageToolController_NotFoundHandling(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("Failed to add langop scheme: %v", err)
+	}
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("Failed to add core scheme: %v", err)
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+	}
+
+	ctx := context.Background()
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      "non-existent-tool",
+			Namespace: "default",
+		},
+	})
+
+	// Should not return error for not found
+	if err != nil {
+		t.Errorf("Expected no error for not found tool, got: %v", err)
+	}
+
+	// Should not requeue
+	if result.Requeue {
+		t.Error("Expected no requeue for not found tool")
+	}
+}
