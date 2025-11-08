@@ -168,6 +168,19 @@ end
 
 // extractSchedule extracts cron schedule from instructions
 func (m *MockLLMService) extractSchedule(instructions string) string {
+	// Check for minute intervals first (more specific)
+	if strings.Contains(instructions, "5 minute") {
+		return "*/5 * * * *"
+	}
+	if strings.Contains(instructions, "15 minute") {
+		return "*/15 * * * *"
+	}
+
+	// Hourly patterns
+	if strings.Contains(instructions, "hour") {
+		return "0 * * * *"
+	}
+
 	// Daily patterns
 	if strings.Contains(instructions, "daily") || strings.Contains(instructions, "every day") {
 		if strings.Contains(instructions, "4pm") || strings.Contains(instructions, "16:00") {
@@ -177,20 +190,6 @@ func (m *MockLLMService) extractSchedule(instructions string) string {
 			return "0 9 * * *"
 		}
 		return "0 0 * * *" // midnight by default
-	}
-
-	// Hourly patterns
-	if strings.Contains(instructions, "hourly") || strings.Contains(instructions, "every hour") {
-		return "0 * * * *"
-	}
-
-	// Every X minutes
-	if strings.Contains(instructions, "5 minutes") || strings.Contains(instructions, "every 5 minutes") {
-		return "*/5 * * * *"
-	}
-
-	if strings.Contains(instructions, "15 minutes") || strings.Contains(instructions, "every 15 minutes") {
-		return "*/15 * * * *"
 	}
 
 	// Weekly patterns
