@@ -1,0 +1,13 @@
+---
+category: communication
+persona: executive-assistant
+execution_mode: scheduled
+expected_schedule: "0 17 * * 1-5"
+expected_tools: ["slack", "email"]
+difficulty: easy
+description: Daily digest of important Slack messages
+---
+
+At 5pm every weekday, scan through #engineering, #sales, and #support channels.
+Find any @mentions of me or threads I'm participating in. Send me an email
+summary of what I need to respond to before tomorrow morning.

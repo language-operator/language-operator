@@ -1,0 +1,12 @@
+---
+category: synthesis-challenges
+persona: executive-assistant
+execution_mode: scheduled
+expected_schedule: "0 9 * * *"
+expected_tools: ["email", "slack"]
+difficulty: hard
+description: Contradictory instructions that need resolution
+---
+
+Every morning at 9am, email me a summary of yesterday's Slack messages.
+But don't bother me with notifications before 10am.

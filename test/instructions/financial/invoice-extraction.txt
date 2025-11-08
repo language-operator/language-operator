@@ -1,0 +1,12 @@
+---
+category: financial
+persona: accountant
+execution_mode: event
+expected_tools: ["email", "google-sheets", "filesystem"]
+difficulty: medium
+description: Extract invoice data from email attachments and log to spreadsheet
+---
+
+When I receive emails with invoices attached, extract the vendor name, amount,
+date, and invoice number. Add each one as a row in my Accounts Payable
+spreadsheet. Save a copy of the PDF to the invoices folder organized by month.

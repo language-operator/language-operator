@@ -1,0 +1,13 @@
+---
+category: temporal-patterns
+persona: data-analyst
+execution_mode: scheduled
+expected_schedule: "0 * * * *"
+expected_tools: ["postgres", "google-sheets"]
+difficulty: easy
+description: Testing hourly schedule detection
+---
+
+Every hour on the hour, pull the latest sales data from the analytics database
+and update the Sales Dashboard spreadsheet. Just refresh the numbers, don't
+send any notifications.

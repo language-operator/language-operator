@@ -1,0 +1,13 @@
+---
+category: support
+persona: support-agent
+execution_mode: event
+expected_tools: ["zendesk", "slack"]
+difficulty: medium
+description: Automatic ticket triage and priority assignment
+---
+
+When new support tickets come in, read the description and classify the
+severity based on our SLA policy. If it mentions "down", "error", "broken",
+or "urgent", tag it as P1 and immediately notify #support-urgent. Otherwise
+tag as P2 and assign to the next available agent in the rotation.

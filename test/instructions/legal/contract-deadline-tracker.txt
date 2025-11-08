@@ -1,0 +1,13 @@
+---
+category: legal
+persona: legal-assistant
+execution_mode: scheduled
+expected_schedule: "0 9 * * 1"
+expected_tools: ["google-sheets", "slack"]
+difficulty: easy
+description: Weekly reminder of upcoming contract deadlines
+---
+
+Every Monday morning, check my Contract Deadlines spreadsheet for any
+contracts expiring in the next 30 days. Send me a Slack DM with the list
+so I can prioritize renewals for the week.

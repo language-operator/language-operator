@@ -1,0 +1,13 @@
+---
+category: edge-cases
+persona: sre
+execution_mode: autonomous
+expected_tools: ["kubernetes", "slack"]
+difficulty: hard
+description: Self-healing with retry logic and escalation
+---
+
+Monitor the payment-processor pod. If it crashes, try to restart it.
+If it crashes again within 5 minutes, check the logs for the error message.
+Post the error to #engineering and tag @oncall. If it crashes a third time,
+page the oncall engineer. Keep trying every 10 minutes until someone fixes it.

@@ -1,0 +1,13 @@
+---
+category: financial
+persona: financial-analyst
+execution_mode: scheduled
+expected_schedule: "0 16 * * 1-5"
+expected_tools: ["google-sheets", "email"]
+difficulty: easy
+description: Daily spreadsheet error checking before end of business day
+---
+
+Review my recent changes in the Q4 Budget spreadsheet at 4pm every weekday,
+and let me know if I've made any mistakes before I sign off for the day.
+Send me an email if you find anything that looks wrong.

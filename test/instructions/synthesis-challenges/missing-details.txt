@@ -1,0 +1,10 @@
+---
+category: synthesis-challenges
+persona: support-agent
+execution_mode: event
+expected_tools: ["zendesk", "email"]
+difficulty: hard
+description: Underspecified task requiring reasonable defaults
+---
+
+When customers email support, help them out.

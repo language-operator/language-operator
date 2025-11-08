@@ -123,7 +123,7 @@ func run() error {
 	}
 
 	// Synthesize
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	resp, err := synth.SynthesizeAgent(ctx, req)

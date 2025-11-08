@@ -1,0 +1,14 @@
+---
+category: executive
+persona: data-analyst
+execution_mode: scheduled
+expected_schedule: "0 8 * * 1"
+expected_tools: ["google-sheets", "email"]
+difficulty: medium
+description: Weekly metrics report compilation and distribution
+---
+
+Every Monday at 8am, pull the latest numbers from our Metrics Dashboard
+spreadsheet - revenue, active users, churn rate, and support tickets.
+Create a brief executive summary comparing to last week and email it to
+the leadership team before their 9am standup.

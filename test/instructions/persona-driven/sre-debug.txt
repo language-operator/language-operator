@@ -1,0 +1,13 @@
+---
+category: persona-driven
+persona: sre
+execution_mode: event
+expected_tools: ["kubernetes", "slack"]
+difficulty: hard
+description: Test SRE persona with debugging and root cause analysis
+---
+
+When the database pod crashes, don't just restart it. Investigate the logs,
+check memory usage, look at recent config changes, and try to figure out
+the root cause. Post your findings to #engineering with a hypothesis and
+recommended fix. If you're confident, try to implement the fix yourself.

@@ -1,0 +1,12 @@
+---
+category: temporal-patterns
+persona: executive-assistant
+execution_mode: scheduled
+expected_schedule: "0 9 * * *"
+expected_tools: ["google-calendar", "slack"]
+difficulty: easy
+description: Testing daily at specific time detection
+---
+
+At 9am every day, check my calendar and send me a Slack message with
+today's meeting schedule and any prep materials I need to review.

@@ -1,0 +1,14 @@
+---
+category: edge-cases
+persona: executive-assistant
+execution_mode: event
+expected_tools: ["email", "slack", "google-sheets"]
+difficulty: hard
+description: Complex multi-step workflow with human approval gates
+---
+
+When I forward you an expense report email, extract the total amount and
+category. If it's under $500, approve it automatically and log to the
+Expenses spreadsheet. If it's over $500, send a Slack message to my manager
+asking for approval. Wait for their thumbs-up reply, then approve and log it.
+If they say no, email the submitter explaining it was denied.

@@ -1,0 +1,14 @@
+---
+category: persona-driven
+persona: financial-analyst
+execution_mode: scheduled
+expected_schedule: "0 10 * * 1"
+expected_tools: ["google-sheets", "email"]
+difficulty: hard
+description: Test financial analyst persona with complex analysis
+---
+
+Every Monday at 10am, analyze our Revenue Trends spreadsheet. Calculate
+week-over-week growth, identify any anomalies or unexpected drops, and
+compare against our quarterly targets. Write an executive summary with
+insights about what's driving the numbers and email it to the CFO.

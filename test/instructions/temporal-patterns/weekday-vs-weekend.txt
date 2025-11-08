@@ -1,0 +1,12 @@
+---
+category: temporal-patterns
+persona: sre
+execution_mode: scheduled
+expected_schedule: "0 9 * * 1-5"
+expected_tools: ["slack"]
+difficulty: easy
+description: Testing weekday-only schedule detection
+---
+
+Every weekday morning at 9am, post a "Good morning team!" message to
+#general. Don't do this on weekends - we all need a break.

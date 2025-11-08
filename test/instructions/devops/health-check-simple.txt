@@ -1,0 +1,12 @@
+---
+category: devops
+persona: sre
+execution_mode: scheduled
+expected_schedule: "*/5 * * * *"
+expected_tools: ["http", "slack"]
+difficulty: easy
+description: Simple HTTP health check with Slack notification
+---
+
+Check if https://api.example.com/health is responding every 5 minutes.
+If it returns anything other than 200 OK, send me a Slack message immediately.

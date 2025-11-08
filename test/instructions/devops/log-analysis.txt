@@ -1,0 +1,13 @@
+---
+category: devops
+persona: sre
+execution_mode: scheduled
+expected_schedule: "0 9 * * *"
+expected_tools: ["kubernetes", "slack"]
+difficulty: medium
+description: Daily analysis of pod errors and crashes
+---
+
+Every morning at 9am, check the logs from all pods in the production namespace
+for errors or crashes that happened overnight. Summarize any issues you find
+and post a report to #incidents channel. Include pod names and error counts.

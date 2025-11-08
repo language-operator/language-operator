@@ -1,0 +1,13 @@
+---
+category: research
+persona: researcher
+execution_mode: scheduled
+expected_schedule: "0 7 * * 1-5"
+expected_tools: ["http", "email"]
+difficulty: medium
+description: Daily curated tech news summary
+---
+
+Every morning at 7am, scan Hacker News, TechCrunch, and The Verge for articles
+about AI, Kubernetes, or Ruby. Pick the 3-5 most interesting ones and send me
+a brief summary of each with links. Focus on technical depth over hype.

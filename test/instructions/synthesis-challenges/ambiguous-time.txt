@@ -1,0 +1,11 @@
+---
+category: synthesis-challenges
+persona: executive-assistant
+execution_mode: scheduled
+expected_schedule: "0 9 * * *"
+expected_tools: ["email"]
+difficulty: medium
+description: Ambiguous temporal reference that needs inference
+---
+
+Every morning, send me an email with my tasks for the day.

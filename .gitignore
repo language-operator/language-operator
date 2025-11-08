@@ -12,3 +12,7 @@ coverage.out
 src/bin/manager
 src/bin/synthesize
 *.test
+
+# Test synthesis output
+test/instructions/**/*.rb
+test/synthesis_results.json

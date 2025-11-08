@@ -1,0 +1,12 @@
+---
+category: communication
+persona: executive-assistant
+execution_mode: event
+expected_tools: ["google-calendar", "email", "google-docs"]
+difficulty: medium
+description: Create and share meeting notes after calendar events
+---
+
+After each meeting on my calendar ends, create a notes document with the
+meeting title, attendees, and date. Email the link to all attendees asking
+them to fill in their notes and action items within 24 hours.
