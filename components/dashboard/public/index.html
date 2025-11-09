@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LanguageCluster Dashboard</title>
+
+    <!-- HTMX for declarative AJAX -->
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+
+    <!-- Alpine.js for reactive components -->
+    <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Custom animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Status indicator pulse */
+        .status-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen" x-data="{
+    modal: null,
+    activeTab: 'agents',
+    agentDetail: null,
+    showSidebar: true
+}">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo and Title -->
+                <div class="flex items-center space-x-4">
+                    <button @click="showSidebar = !showSidebar" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        <span class="text-blue-600">Language</span>Cluster
+                    </h1>
+                    <span class="px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full" id="cluster-name">
+                        Loading...
+                    </span>
+                </div>
+
+                <!-- Cluster Metrics (Auto-refresh every 5s) -->
+                <div class="flex items-center space-x-6 text-sm"
+                     hx-get="/api/cluster/metrics"
+                     hx-trigger="load, every 5s"
+                     hx-swap="innerHTML">
+                    <div class="text-gray-500">Loading metrics...</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="flex max-w-7xl mx-auto">
+
+        <!-- Sidebar (Collapsible) -->
+        <aside x-show="showSidebar"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="-translate-x-full"
+               x-transition:enter-end="translate-x-0"
+               x-transition:leave="transition ease-in duration-150"
+               x-transition:leave-start="translate-x-0"
+               x-transition:leave-end="-translate-x-full"
+               class="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
+
+            <nav class="space-y-2">
+                <button @click="activeTab = 'agents'"
+                        :class="activeTab === 'agents' ? 'bg-blue-50 text-blue-700 border-blue-500' : 'text-gray-700 hover:bg-gray-50'"
+                        class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg border-l-4 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                    </svg>
+                    <span class="font-medium">Agents</span>
+                </button>
+
+                <button @click="activeTab = 'metrics'"
+                        :class="activeTab === 'metrics' ? 'bg-blue-50 text-blue-700 border-blue-500' : 'text-gray-700 hover:bg-gray-50'"
+                        class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg border-l-4 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="font-medium">Metrics</span>
+                </button>
+
+                <button @click="activeTab = 'synthesis'"
+                        :class="activeTab === 'synthesis' ? 'bg-blue-50 text-blue-700 border-blue-500' : 'text-gray-700 hover:bg-gray-50'"
+                        class="w-full flex items-center space-x-3 px-4 py-2 rounded-lg border-l-4 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="font-medium">Synthesis</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-6">
+
+            <!-- Agents Tab -->
+            <div x-show="activeTab === 'agents'" x-transition class="space-y-6">
+
+                <!-- Actions Bar -->
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Agents</h2>
+                    <button @click="modal = 'create'"
+                            class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span class="font-medium">Create Agent</span>
+                    </button>
+                </div>
+
+                <!-- Agent List (Auto-refresh every 2s) -->
+                <div id="agent-list"
+                     hx-get="/components/agents"
+                     hx-trigger="load, every 2s"
+                     hx-swap="innerHTML"
+                     class="bg-white rounded-lg shadow">
+                    <!-- Loading placeholder -->
+                    <div class="p-8 text-center text-gray-500">
+                        <svg class="animate-spin h-8 w-8 mx-auto mb-2 text-blue-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p>Loading agents...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Tab -->
+            <div x-show="activeTab === 'metrics'" x-transition class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-900">Cluster Metrics</h2>
+
+                <div id="metrics-panel"
+                     hx-get="/components/metrics"
+                     hx-trigger="load, every 5s"
+                     hx-swap="innerHTML">
+                    <div class="p-8 text-center text-gray-500">Loading metrics...</div>
+                </div>
+            </div>
+
+            <!-- Synthesis Tab -->
+            <div x-show="activeTab === 'synthesis'" x-transition class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-900">Synthesis Monitor</h2>
+
+                <div id="synthesis-panel"
+                     hx-get="/components/synthesis"
+                     hx-trigger="load, every 3s"
+                     hx-swap="innerHTML">
+                    <div class="p-8 text-center text-gray-500">Loading synthesis status...</div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div x-show="modal === 'create'"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         style="display: none;">
+
+        <div @click.away="modal = null"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4">
+
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900">Create New Agent</h3>
+                <button @click="modal = null" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <form hx-post="/api/agents"
+                  hx-target="#agent-list"
+                  hx-swap="innerHTML"
+                  @htmx:after-request="modal = null; activeTab = 'agents'"
+                  class="space-y-4">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        What should this agent do?
+                    </label>
+                    <textarea name="instructions"
+                              class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              rows="6"
+                              placeholder="Example: Review my spreadsheet at 4pm daily and email me any errors found"
+                              required></textarea>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Describe the agent's task in natural language. The system will synthesize the code automatically.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Execution Mode
+                    </label>
+                    <select name="mode"
+                            class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="autonomous">Autonomous (runs on schedule)</option>
+                        <option value="manual">Manual (triggered manually)</option>
+                        <option value="event-driven">Event-Driven (triggered by events)</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button"
+                            @click="modal = null"
+                            class="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                        Create Agent
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Agent Detail Modal -->
+    <div x-show="agentDetail !== null"
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         style="display: none;">
+
+        <div @click.away="agentDetail = null"
+             class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+
+            <div class="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900" x-text="agentDetail"></h3>
+                <button @click="agentDetail = null" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="agent-detail-content"
+                 :hx-get="`/components/agent/${agentDetail}`"
+                 hx-trigger="load"
+                 hx-swap="innerHTML"
+                 class="p-6">
+                Loading agent details...
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
+    <!-- HTMX Config -->
+    <script>
+        // Configure HTMX
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            // Add fade-in animation to swapped content
+            event.detail.target.classList.add('fade-in');
+        });
+
+        // Load cluster name on page load
+        htmx.ajax('GET', '/api/cluster/info', {
+            target: '#cluster-name',
+            swap: 'innerHTML'
+        });
+
+        // Show toast notifications on errors
+        document.body.addEventListener('htmx:responseError', function(event) {
+            showToast('Error: ' + event.detail.error, 'error');
+        });
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg shadow-lg text-white ${
+                type === 'error' ? 'bg-red-500' :
+                type === 'success' ? 'bg-green-500' :
+                'bg-blue-500'
+            } fade-in`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -12,6 +12,6 @@ Follow these directions closely:
 6. Run existing tests, and add new ones if necessary.
 7. **CRITICAL: Test the actual functionality manually before committing.** If it's a CLI command, run it. If it's library code, test it in the appropriate context. Never commit untested code.
 8. Commit the change and push to origin.
-9. Wait for the user to confirm CI passes, and until all errors are resolved.
+9. **CRITICAL:** Wait for the user to confirm CI passes, and until all errors are resolved.
 12. Comment on your solution in the ForgeJo issue.
 13. Resolve the issue.

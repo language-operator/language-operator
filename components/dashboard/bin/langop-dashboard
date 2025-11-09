@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative '../lib/dashboard_server'
+
+# Get configuration from environment
+cluster_name = ENV.fetch('CLUSTER_NAME', 'default')
+namespace = ENV.fetch('NAMESPACE', 'default')
+port = ENV.fetch('PORT', '8080').to_i
+
+# Start the dashboard server
+server = LanguageOperator::Dashboard::Server.new(
+  cluster_name: cluster_name,
+  namespace: namespace,
+  port: port
+)
+
+server.start

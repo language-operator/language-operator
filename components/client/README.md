@@ -102,25 +102,7 @@ DEBUG=true
 
 ### Using Kubernetes (Recommended)
 
-Deploy the client as a LanguageClient resource:
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageClient
-metadata:
-  name: chat-client
-spec:
-  image: based/client:latest
-  llmConfig:
-    provider: openai_compatible
-    model: llama3.2
-    endpoint: http://llm-service:8080/v1
-  mcpServers:
-    - name: tools-server
-      url: http://tools-server:80/mcp
-EOF
-```
+Note: The LanguageClient CRD has been removed. Deploy the client manually as a standard Kubernetes Deployment and Service.
 
 ### Using Docker Locally
 

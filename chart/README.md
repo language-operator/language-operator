@@ -10,7 +10,6 @@ The Language Operator provides production-grade Kubernetes Custom Resources for 
 - **LanguageModel** - Configure LLM providers with load balancing, failover, and cost tracking
 - **LanguageAgent** - Deploy autonomous goal-driven agents with safety guardrails
 - **LanguagePersona** - Define role-specific behaviors and knowledge sources
-- **LanguageClient** - Deploy user-facing chat interfaces with authentication and rate limiting
 
 ## Prerequisites
 
@@ -207,39 +206,6 @@ spec:
     requireApproval:
     - email-sender
     - payment-processor
-```
-
-### Deploy a Client Interface
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageClient
-metadata:
-  name: web-chat
-spec:
-  image: ghcr.io/based/language-client-web:latest
-  type: web
-  replicas: 3
-  modelRefs:
-  - name: gpt4
-    role: primary
-  toolRefs:
-  - name: web-search
-  sessionConfig:
-    backend: redis
-    ttl: 24h
-  authentication:
-    enabled: true
-    providers:
-    - name: google
-      type: oauth2
-  rateLimiting:
-    requestsPerMinute: 20
-    tokensPerDay: 100000
-  ingress:
-    enabled: true
-    hosts:
-    - chat.example.com
 ```
 
 ## Upgrading

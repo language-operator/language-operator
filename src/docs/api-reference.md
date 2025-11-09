@@ -10,7 +10,6 @@ Package v1alpha1 contains API Schema definitions for the language v1alpha1 API g
 
 ### Resource Types
 - [LanguageAgent](#languageagent)
-- [LanguageClient](#languageclient)
 - [LanguageCluster](#languagecluster)
 - [LanguageModel](#languagemodel)
 - [LanguagePersona](#languagepersona)
@@ -112,107 +111,6 @@ _Appears in:_
 | `toolCallsPerMinute` _integer_ | ToolCallsPerMinute limits tool invocations per minute |  |  |
 
 
-#### AgentReference
-
-
-
-AgentReference references a LanguageAgent
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the LanguageAgent name |  | Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the LanguageAgent namespace |  |  |
-| `enabled` _boolean_ | Enabled indicates if this agent reference is active | true |  |
-| `displayName` _string_ | DisplayName is shown in the UI |  |  |
-| `description` _string_ | Description is shown in the UI |  |  |
-| `icon` _string_ | Icon is shown in the UI |  |  |
-
-
-#### AuthProviderSpec
-
-
-
-AuthProviderSpec defines an authentication provider
-
-
-
-_Appears in:_
-- [AuthenticationSpec](#authenticationspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the provider identifier |  | Required: \{\} <br /> |
-| `type` _string_ | Type specifies the provider type |  | Enum: [oauth2 oidc saml ldap basic api-key] <br />Required: \{\} <br /> |
-| `config` _object (keys:string, values:string)_ | Config contains provider-specific configuration |  |  |
-| `secretRef` _[SecretReference](#secretreference)_ | SecretRef references credentials for this provider |  |  |
-| `enabled` _boolean_ | Enabled indicates if this provider is active | true |  |
-
-
-#### AuthenticationSpec
-
-
-
-AuthenticationSpec defines authentication configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables authentication | false |  |
-| `providers` _[AuthProviderSpec](#authproviderspec) array_ | Providers lists authentication providers |  |  |
-| `requireAuthentication` _boolean_ | RequireAuthentication blocks unauthenticated access | false |  |
-| `allowAnonymous` _boolean_ | AllowAnonymous allows anonymous usage | true |  |
-| `rbac` _[RBACSpec](#rbacspec)_ | RBAC defines role-based access control |  |  |
-
-
-#### BackendConfigSpec
-
-
-
-BackendConfigSpec contains session backend configuration
-
-
-
-_Appears in:_
-- [SessionConfigSpec](#sessionconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `endpoint` _string_ | Endpoint is the backend service endpoint |  |  |
-| `secretRef` _[SecretReference](#secretreference)_ | SecretRef references credentials for the backend |  |  |
-| `database` _string_ | Database specifies the database name (for SQL backends) |  |  |
-| `keyPrefix` _string_ | KeyPrefix is prepended to all session keys |  |  |
-
-
-#### CORSSpec
-
-
-
-CORSSpec defines CORS configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables CORS | false |  |
-| `allowedOrigins` _string array_ | AllowedOrigins lists allowed origins |  |  |
-| `allowedMethods` _string array_ | AllowedMethods lists allowed HTTP methods |  |  |
-| `allowedHeaders` _string array_ | AllowedHeaders lists allowed headers |  |  |
-| `allowCredentials` _boolean_ | AllowCredentials allows credentials | false |  |
-| `maxAge` _integer_ | MaxAge is preflight cache duration in seconds |  |  |
-
-
 #### CachingSpec
 
 
@@ -232,142 +130,22 @@ _Appears in:_
 | `backend` _string_ | Backend specifies the caching backend (memory, redis, etc.) | memory | Enum: [memory redis memcached] <br /> |
 
 
-#### ClientMetrics
+#### CertIssuerReference
 
 
 
-ClientMetrics contains client usage metrics
-
-
-
-_Appears in:_
-- [LanguageClientStatus](#languageclientstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `totalRequests` _integer_ | TotalRequests is the total number of requests |  |  |
-| `totalSessions` _integer_ | TotalSessions is the total number of sessions created |  |  |
-| `totalMessages` _integer_ | TotalMessages is the total number of messages processed |  |  |
-| `totalTokens` _integer_ | TotalTokens is the total number of tokens processed |  |  |
-| `totalCost` _integer_ | TotalCost is the total cost in USD cents |  |  |
-| `averageResponseTime` _integer_ | AverageResponseTime is the average response time in milliseconds |  |  |
-| `p50ResponseTime` _integer_ | P50ResponseTime is the 50th percentile response time in milliseconds |  |  |
-| `p95ResponseTime` _integer_ | P95ResponseTime is the 95th percentile response time in milliseconds |  |  |
-| `p99ResponseTime` _integer_ | P99ResponseTime is the 99th percentile response time in milliseconds |  |  |
-| `errorRate` _float_ | ErrorRate is the percentage of failed requests |  |  |
-| `topModels` _[ModelUsageMetric](#modelusagemetric) array_ | TopModels lists most frequently used models |  |  |
-| `topTools` _[ToolFrequency](#toolfrequency) array_ | TopTools lists most frequently used tools |  |  |
-| `topPersonas` _[PersonaUsageMetric](#personausagemetric) array_ | TopPersonas lists most frequently used personas |  |  |
-| `userRetention` _float_ | UserRetention is the percentage of returning users |  |  |
-| `averageSessionLength` _integer_ | AverageSessionLength is the average session duration in seconds |  |  |
-| `rateLimitHits` _integer_ | RateLimitHits is the number of rate limit hits |  |  |
-| `contentModerationFlags` _integer_ | ContentModerationFlags is the number of content moderation flags |  |  |
-
-
-#### ClientRateLimitSpec
-
-
-
-ClientRateLimitSpec defines client-side rate limiting
+CertIssuerReference references a cert-manager issuer
 
 
 
 _Appears in:_
-- [LanguageClientSpec](#languageclientspec)
+- [IngressTLSConfig](#ingresstlsconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `requestsPerMinute` _integer_ | RequestsPerMinute limits requests per user per minute |  |  |
-| `requestsPerHour` _integer_ | RequestsPerHour limits requests per user per hour |  |  |
-| `requestsPerDay` _integer_ | RequestsPerDay limits requests per user per day |  |  |
-| `tokensPerMinute` _integer_ | TokensPerMinute limits tokens per user per minute |  |  |
-| `tokensPerDay` _integer_ | TokensPerDay limits tokens per user per day |  |  |
-| `costPerDay` _integer_ | CostPerDay limits cost per user per day (in USD cents) |  |  |
-| `concurrentSessions` _integer_ | ConcurrentSessions limits concurrent sessions per user |  |  |
-| `strategy` _string_ | Strategy defines rate limiting strategy | sliding-window | Enum: [fixed-window sliding-window token-bucket] <br /> |
-
-
-#### ClientRegionSpec
-
-
-
-ClientRegionSpec defines region-specific configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the region identifier |  | Required: \{\} <br /> |
-| `enabled` _boolean_ | Enabled indicates if this region is active | true |  |
-| `replicas` _integer_ | Replicas overrides the default replica count for this region |  |  |
-| `modelRefs` _[ModelReference](#modelreference) array_ | ModelRefs overrides model references for this region |  |  |
-| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector overrides node selector for this region |  |  |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core)_ | Affinity overrides affinity for this region |  |  |
-| `ingress` _[IngressSpec](#ingressspec)_ | Ingress overrides ingress configuration for this region |  |  |
-
-
-#### ContentFilterSpec
-
-
-
-ContentFilterSpec defines a custom content filter
-
-
-
-_Appears in:_
-- [ContentModerationSpec](#contentmoderationspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the filter identifier |  | Required: \{\} <br /> |
-| `pattern` _string_ | Pattern is a regex pattern to match |  | Required: \{\} <br /> |
-| `action` _string_ | Action overrides the default action for this filter |  | Enum: [block warn log] <br /> |
-| `message` _string_ | Message is shown when content matches |  |  |
-
-
-#### ContentModerationSpec
-
-
-
-ContentModerationSpec defines content filtering
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables content moderation | false |  |
-| `filterProfanity` _boolean_ | FilterProfanity filters profane content | false |  |
-| `filterPII` _boolean_ | FilterPII filters personally identifiable information | false |  |
-| `filterToxic` _boolean_ | FilterToxic filters toxic content | false |  |
-| `customFilters` _[ContentFilterSpec](#contentfilterspec) array_ | CustomFilters are custom content filters |  |  |
-| `action` _string_ | Action defines what to do when content is flagged | warn | Enum: [block warn log] <br /> |
-
-
-#### CookieConfigSpec
-
-
-
-CookieConfigSpec defines session cookie configuration
-
-
-
-_Appears in:_
-- [SessionConfigSpec](#sessionconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the cookie name | session_id |  |
-| `secure` _boolean_ | Secure requires HTTPS | true |  |
-| `httpOnly` _boolean_ | HttpOnly prevents JavaScript access | true |  |
-| `sameSite` _string_ | SameSite controls cross-site cookie behavior | Lax | Enum: [Strict Lax None] <br /> |
-| `domain` _string_ | Domain for the cookie |  |  |
-| `path` _string_ | Path for the cookie | / |  |
+| `name` _string_ | Name of the Issuer or ClusterIssuer |  | Required: \{\} <br /> |
+| `kind` _string_ | Kind is either "Issuer" or "ClusterIssuer" | ClusterIssuer | Enum: [Issuer ClusterIssuer] <br /> |
+| `group` _string_ | Group is the API group of the issuer | cert-manager.io |  |
 
 
 #### CostMetrics
@@ -407,24 +185,6 @@ _Appears in:_
 | `currency` _string_ | Currency is the currency for cost tracking (e.g., "USD") | USD |  |
 | `inputTokenCost` _float_ | InputTokenCost is the cost per 1000 input tokens |  |  |
 | `outputTokenCost` _float_ | OutputTokenCost is the cost per 1000 output tokens |  |  |
-
-
-#### CustomMetricSpec
-
-
-
-CustomMetricSpec defines a custom autoscaling metric
-
-
-
-_Appears in:_
-- [HPASpec](#hpaspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the metric name |  | Required: \{\} <br /> |
-| `type` _string_ | Type is the metric type |  | Enum: [Pods Object External] <br />Required: \{\} <br /> |
-| `target` _string_ | Target is the target value |  | Required: \{\} <br /> |
 
 
 #### EndpointSpec
@@ -484,27 +244,6 @@ _Appears in:_
 | `filter` _object (keys:string, values:string)_ | Filter defines filtering criteria for events |  |  |
 
 
-#### HPASpec
-
-
-
-HPASpec defines HorizontalPodAutoscaler configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled creates an HPA resource | false |  |
-| `minReplicas` _integer_ | MinReplicas is the minimum number of replicas | 2 | Minimum: 1 <br /> |
-| `maxReplicas` _integer_ | MaxReplicas is the maximum number of replicas | 10 | Minimum: 1 <br /> |
-| `targetCPUUtilizationPercentage` _integer_ | TargetCPUUtilizationPercentage is the target CPU utilization |  |  |
-| `targetMemoryUtilizationPercentage` _integer_ | TargetMemoryUtilizationPercentage is the target memory utilization |  |  |
-| `customMetrics` _[CustomMetricSpec](#custommetricspec) array_ | CustomMetrics are custom metrics for scaling |  |  |
-
-
 #### HealthCheckSpec
 
 
@@ -525,27 +264,40 @@ _Appears in:_
 | `healthyThreshold` _integer_ | HealthyThreshold is the number of successes before marking healthy | 2 | Minimum: 1 <br /> |
 
 
-#### IngressSpec
+#### IngressConfig
 
 
 
-IngressSpec defines ingress configuration
+IngressConfig defines ingress/gateway configuration
 
 
 
 _Appears in:_
-- [ClientRegionSpec](#clientregionspec)
-- [LanguageClientSpec](#languageclientspec)
+- [LanguageClusterSpec](#languageclusterspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled creates an Ingress resource | false |  |
-| `className` _string_ | ClassName specifies the IngressClass to use |  |  |
-| `hosts` _string array_ | Hosts lists the hostnames for this ingress |  | MinItems: 1 <br /> |
-| `annotations` _object (keys:string, values:string)_ | Annotations are annotations to add to the Ingress |  |  |
-| `tls` _[IngressTLS](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#ingresstls-v1-networking) array_ | TLS defines TLS configuration for ingress |  |  |
-| `path` _string_ | Path is the URL path for the ingress | / |  |
-| `pathType` _string_ | PathType specifies the path matching type | Prefix | Enum: [Exact Prefix ImplementationSpecific] <br /> |
+| `tls` _[IngressTLSConfig](#ingresstlsconfig)_ | TLS configuration for agent webhooks |  |  |
+| `gatewayClassName` _string_ | GatewayClassName specifies the Gateway API GatewayClass to use<br />If empty, will attempt auto-detection or fall back to Ingress |  |  |
+| `ingressClassName` _string_ | IngressClassName specifies the Ingress class to use for fallback<br />Only used when Gateway API is not available |  |  |
+
+
+#### IngressTLSConfig
+
+
+
+IngressTLSConfig defines TLS configuration
+
+
+
+_Appears in:_
+- [IngressConfig](#ingressconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled controls whether TLS is enabled for webhooks | true |  |
+| `secretName` _string_ | SecretName is the name of the TLS secret (for manual cert management)<br />If empty, cert-manager will be used if available |  |  |
+| `issuerRef` _[CertIssuerReference](#certissuerreference)_ | IssuerRef references a cert-manager Issuer or ClusterIssuer |  |  |
 
 
 #### KnowledgeSourceSpec
@@ -672,117 +424,15 @@ _Appears in:_
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
 | `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
-
-
-#### LanguageClient
-
-
-
-LanguageClient is the Schema for the languageclients API
-
-
-
-
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `apiVersion` _string_ | `langop.io/v1alpha1` | | |
-| `kind` _string_ | `LanguageClient` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LanguageClientSpec](#languageclientspec)_ |  |  |  |
-| `status` _[LanguageClientStatus](#languageclientstatus)_ |  |  |  |
-
-
-#### LanguageClientSpec
-
-
-
-LanguageClientSpec defines the desired state of LanguageClient
-
-
-
-_Appears in:_
-- [LanguageClient](#languageclient)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this client into |  |  |
-| `image` _string_ | Image is the container image to run for this client interface |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
-| `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
-| `type` _string_ | Type specifies the client interface type | web | Enum: [web api cli widget slack discord teams] <br /> |
-| `port` _integer_ | Port is the port the client interface listens on | 8080 | Maximum: 65535 <br />Minimum: 1 <br /> |
-| `replicas` _integer_ | Replicas is the number of pod replicas to run | 2 | Minimum: 0 <br /> |
-| `modelRefs` _[ModelReference](#modelreference) array_ | ModelRefs references the LanguageModel resources this client can use |  | MinItems: 1 <br /> |
-| `toolRefs` _[ToolReference](#toolreference) array_ | ToolRefs references the LanguageTool resources available to this client |  |  |
-| `personaRef` _[PersonaReference](#personareference)_ | PersonaRef references a LanguagePersona to apply by default |  |  |
-| `agentRefs` _[AgentReference](#agentreference) array_ | AgentRefs references LanguageAgent resources this client can invoke |  |  |
-| `allowModelSelection` _boolean_ | AllowModelSelection allows users to choose which model to use | true |  |
-| `allowPersonaSelection` _boolean_ | AllowPersonaSelection allows users to choose which persona to use | false |  |
-| `sessionConfig` _[SessionConfigSpec](#sessionconfigspec)_ | SessionConfig defines session management configuration |  |  |
-| `authentication` _[AuthenticationSpec](#authenticationspec)_ | Authentication defines authentication and authorization configuration |  |  |
-| `rateLimiting` _[ClientRateLimitSpec](#clientratelimitspec)_ | RateLimiting defines rate limiting per user/session |  |  |
-| `contentModeration` _[ContentModerationSpec](#contentmoderationspec)_ | ContentModeration defines content filtering rules |  |  |
-| `uiConfig` _[UIConfigSpec](#uiconfigspec)_ | UIConfig defines UI customization options |  |  |
-| `ingress` _[IngressSpec](#ingressspec)_ | Ingress defines ingress configuration for external access |  |  |
-| `tls` _[TLSSpec](#tlsspec)_ | TLS defines TLS configuration |  |  |
-| `cors` _[CORSSpec](#corsspec)_ | CORS defines Cross-Origin Resource Sharing configuration |  |  |
-| `monitoring` _[MonitoringSpec](#monitoringspec)_ | Monitoring defines monitoring and observability configuration |  |  |
-| `logging` _[LoggingSpec](#loggingspec)_ | Logging defines logging configuration |  |  |
-| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core) array_ | Env contains environment variables for the client container |  |  |
-| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envfromsource-v1-core) array_ | EnvFrom sources to populate environment variables |  |  |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core)_ | Resources defines compute resource requirements |  |  |
-| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector is a selector which must match a node's labels for the pod to be scheduled |  |  |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core)_ | Affinity defines pod affinity and anti-affinity rules |  |  |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core) array_ | Tolerations allow pods to schedule onto nodes with matching taints |  |  |
-| `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#topologyspreadconstraint-v1-core) array_ | TopologySpreadConstraints describes how pods should spread across topology domains |  |  |
-| `serviceAccountName` _string_ | ServiceAccountName is the name of the ServiceAccount to use for this client |  |  |
-| `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes |  |  |
-| `containerSecurityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#securitycontext-v1-core)_ | ContainerSecurityContext holds container-level security attributes |  |  |
-| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volumemount-v1-core) array_ | VolumeMounts to mount into the client container |  |  |
-| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volume-v1-core) array_ | Volumes to attach to the pod |  |  |
-| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | LivenessProbe defines the liveness probe for the client container |  |  |
-| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | ReadinessProbe defines the readiness probe for the client container |  |  |
-| `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | StartupProbe defines the startup probe for the client container |  |  |
-| `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#servicetype-v1-core)_ | ServiceType specifies the type of Service to create | ClusterIP | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
-| `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are annotations to add to the Service |  |  |
-| `podAnnotations` _object (keys:string, values:string)_ | PodAnnotations are annotations to add to the Pods |  |  |
-| `podLabels` _object (keys:string, values:string)_ | PodLabels are additional labels to add to the Pods |  |  |
-| `podDisruptionBudget` _[PodDisruptionBudgetSpec](#poddisruptionbudgetspec)_ | PodDisruptionBudget defines the PDB for this client |  |  |
-| `updateStrategy` _[UpdateStrategySpec](#updatestrategyspec)_ | UpdateStrategy defines the update strategy for the Deployment |  |  |
-| `horizontalPodAutoscaler` _[HPASpec](#hpaspec)_ | HorizontalPodAutoscaler defines HPA configuration |  |  |
-| `regions` _[ClientRegionSpec](#clientregionspec) array_ | Regions defines multi-region deployment configuration |  |  |
-
-
-#### LanguageClientStatus
-
-
-
-LanguageClientStatus defines the observed state of LanguageClient
-
-
-
-_Appears in:_
-- [LanguageClient](#languageclient)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguageClient |  |  |
-| `phase` _string_ | Phase represents the current phase (Pending, Running, Failed, Unknown) |  | Enum: [Pending Running Failed Unknown Updating] <br /> |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the client's state |  |  |
-| `url` _string_ | URL is the primary access URL for this client |  |  |
-| `regionalURLs` _object (keys:string, values:string)_ | RegionalURLs lists URLs per region |  |  |
-| `readyReplicas` _integer_ | ReadyReplicas is the number of pods ready and passing health checks |  |  |
-| `availableReplicas` _integer_ | AvailableReplicas is the number of pods with at least one available condition |  |  |
-| `updatedReplicas` _integer_ | UpdatedReplicas is the number of pods with the desired spec |  |  |
-| `unavailableReplicas` _integer_ | UnavailableReplicas is the number of unavailable pods |  |  |
-| `activeSessions` _integer_ | ActiveSessions is the current number of active sessions |  |  |
-| `totalUsers` _integer_ | TotalUsers is the total number of users who have used this client |  |  |
-| `metrics` _[ClientMetrics](#clientmetrics)_ | Metrics contains usage metrics |  |  |
-| `regionStatus` _[RegionStatus](#regionstatus) array_ | RegionStatus tracks status per region |  |  |
-| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
-| `message` _string_ | Message provides human-readable details about the current state |  |  |
-| `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
+| `synthesisInfo` _[SynthesisInfo](#synthesisinfo)_ | SynthesisInfo contains information about code synthesis |  |  |
+| `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.agents.domain.com) |  |  |
+| `webhookURLs` _string array_ | WebhookURLs contains the URLs where this agent can receive webhooks |  |  |
+| `runtimeErrors` _[RuntimeError](#runtimeerror) array_ | RuntimeErrors contains recent runtime errors for self-healing |  |  |
+| `lastCrashLog` _string_ | LastCrashLog contains the last 100 lines of logs before crash |  |  |
+| `consecutiveFailures` _integer_ | ConsecutiveFailures tracks consecutive pod failures |  |  |
+| `failureReason` _string_ | FailureReason categorizes the failure type (Synthesis\|Runtime\|Infrastructure) |  |  |
+| `selfHealingAttempts` _integer_ | SelfHealingAttempts tracks how many self-healing synthesis attempts have been made |  |  |
+| `lastSuccessfulCode` _string_ | LastSuccessfulCode stores the last known working code for rollback |  |  |
 
 
 #### LanguageCluster
@@ -817,7 +467,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `namespace` _string_ | Namespace to create/use for this cluster<br />If empty, auto-generates: <cluster-name>-ns |  |  |
+| `domain` _string_ | Domain is the base domain for webhook routing<br />Agent webhooks will be accessible at <uuid>.agents.<domain><br />Example: "example.com" results in webhooks like "abc123.agents.example.com" |  |  |
+| `ingressConfig` _[IngressConfig](#ingressconfig)_ | IngressConfig defines ingress/gateway configuration for the cluster |  |  |
 
 
 #### LanguageClusterStatus
@@ -834,7 +485,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `phase` _string_ | Phase of the cluster (Pending, Ready, Failed) |  |  |
-| `namespace` _string_ | Namespace created/used by this cluster |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
 
 
@@ -1099,26 +749,6 @@ _Appears in:_
 | `healthCheck` _[HealthCheckSpec](#healthcheckspec)_ | HealthCheck defines health checking for endpoints |  |  |
 
 
-#### LoggingSpec
-
-
-
-LoggingSpec defines logging configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `level` _string_ | Level sets the log level | info | Enum: [debug info warn error] <br /> |
-| `format` _string_ | Format sets the log format | json | Enum: [json text] <br /> |
-| `logRequests` _boolean_ | LogRequests enables request logging | true |  |
-| `logResponses` _boolean_ | LogResponses enables response logging | false |  |
-| `sanitizeSecrets` _boolean_ | SanitizeSecrets removes secrets from logs | true |  |
-
-
 #### MemoryStoreSpec
 
 
@@ -1223,9 +853,7 @@ ModelReference references a LanguageModel
 
 
 _Appears in:_
-- [ClientRegionSpec](#clientregionspec)
 - [LanguageAgentSpec](#languageagentspec)
-- [LanguageClientSpec](#languageclientspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1233,26 +861,6 @@ _Appears in:_
 | `namespace` _string_ | Namespace is the namespace of the LanguageModel (defaults to same namespace) |  |  |
 | `role` _string_ | Role defines the purpose of this model (primary, fallback, specialized) | primary | Enum: [primary fallback reasoning tool-calling summarization] <br /> |
 | `priority` _integer_ | Priority for model selection (lower is higher priority) |  |  |
-
-
-#### ModelUsageMetric
-
-
-
-ModelUsageMetric tracks model usage frequency
-
-
-
-_Appears in:_
-- [ClientMetrics](#clientmetrics)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `modelName` _string_ | ModelName is the name of the model |  |  |
-| `count` _integer_ | Count is the number of times this model was used |  |  |
-| `percentage` _float_ | Percentage is the percentage of total usage |  |  |
-| `totalTokens` _integer_ | TotalTokens is tokens used with this model |  |  |
-| `totalCost` _integer_ | TotalCost is cost incurred with this model (USD cents) |  |  |
 
 
 #### ModelUsageSpec
@@ -1273,26 +881,6 @@ _Appears in:_
 | `totalTokens` _integer_ | TotalTokens is the total tokens consumed by this model |  |  |
 | `inputTokens` _integer_ | InputTokens is the total input tokens |  |  |
 | `outputTokens` _integer_ | OutputTokens is the total output tokens |  |  |
-
-
-#### MonitoringSpec
-
-
-
-MonitoringSpec defines monitoring configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables monitoring | true |  |
-| `prometheus` _boolean_ | Prometheus enables Prometheus metrics | true |  |
-| `metricsPath` _string_ | MetricsPath is the metrics endpoint path | /metrics |  |
-| `serviceMonitor` _boolean_ | ServiceMonitor creates a ServiceMonitor resource | false |  |
-| `additionalLabels` _object (keys:string, values:string)_ | AdditionalLabels are labels for the ServiceMonitor |  |  |
 
 
 #### NetworkPeer
@@ -1445,7 +1033,6 @@ PersonaReference references a LanguagePersona
 
 _Appears in:_
 - [LanguageAgentSpec](#languageagentspec)
-- [LanguageClientSpec](#languageclientspec)
 - [LanguagePersonaSpec](#languagepersonaspec)
 
 | Field | Description | Default | Validation |
@@ -1473,24 +1060,6 @@ _Appears in:_
 | `action` _string_ | Action defines what to do when condition matches |  | Required: \{\} <br /> |
 | `priority` _integer_ | Priority determines rule evaluation order (lower is higher priority) | 100 |  |
 | `enabled` _boolean_ | Enabled indicates if this rule is active | true |  |
-
-
-#### PersonaUsageMetric
-
-
-
-PersonaUsageMetric tracks persona usage frequency
-
-
-
-_Appears in:_
-- [ClientMetrics](#clientmetrics)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `personaName` _string_ | PersonaName is the name of the persona |  |  |
-| `count` _integer_ | Count is the number of times this persona was used |  |  |
-| `percentage` _float_ | Percentage is the percentage of total usage |  |  |
 
 
 #### PersonaValidation
@@ -1522,7 +1091,6 @@ PodDisruptionBudgetSpec defines PDB configuration
 
 
 _Appears in:_
-- [LanguageClientSpec](#languageclientspec)
 - [LanguageToolSpec](#languagetoolspec)
 
 | Field | Description | Default | Validation |
@@ -1551,24 +1119,6 @@ _Appears in:_
 | `presencePenalty` _float_ | PresencePenalty penalizes tokens based on presence (-2.0 to 2.0) |  |  |
 | `stopSequences` _string array_ | StopSequences are sequences that stop generation |  |  |
 | `additionalParameters` _object (keys:string, values:string)_ | AdditionalParameters for provider-specific options |  |  |
-
-
-#### RBACSpec
-
-
-
-RBACSpec defines role-based access control
-
-
-
-_Appears in:_
-- [AuthenticationSpec](#authenticationspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables RBAC | false |  |
-| `roles` _[RoleSpec](#rolespec) array_ | Roles defines available roles and their permissions |  |  |
-| `defaultRole` _string_ | DefaultRole is assigned to new users | user |  |
 
 
 #### RateLimitSpec
@@ -1606,27 +1156,6 @@ _Appears in:_
 | `endpoint` _string_ | Endpoint is the region-specific endpoint URL |  |  |
 | `priority` _integer_ | Priority for region routing (lower is higher priority) |  |  |
 | `enabled` _boolean_ | Enabled indicates if this region is enabled | true |  |
-
-
-#### RegionStatus
-
-
-
-RegionStatus tracks status for a specific region
-
-
-
-_Appears in:_
-- [LanguageClientStatus](#languageclientstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the region identifier |  |  |
-| `phase` _string_ | Phase is the current phase for this region |  |  |
-| `readyReplicas` _integer_ | ReadyReplicas is ready replicas in this region |  |  |
-| `url` _string_ | URL is the access URL for this region |  |  |
-| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last update for this region |  |  |
-| `message` _string_ | Message provides region-specific status details |  |  |
 
 
 #### RegionStatusSpec
@@ -1706,27 +1235,6 @@ _Appears in:_
 | `retryableStatusCodes` _integer array_ | RetryableStatusCodes are HTTP status codes that trigger retry |  |  |
 
 
-#### RoleSpec
-
-
-
-RoleSpec defines a role and its permissions
-
-
-
-_Appears in:_
-- [RBACSpec](#rbacspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name is the role identifier |  | Required: \{\} <br /> |
-| `permissions` _string array_ | Permissions lists what this role can do |  |  |
-| `modelAccess` _string array_ | ModelAccess lists models this role can use |  |  |
-| `toolAccess` _string array_ | ToolAccess lists tools this role can use |  |  |
-| `personaAccess` _string array_ | PersonaAccess lists personas this role can use |  |  |
-| `agentAccess` _string array_ | AgentAccess lists agents this role can invoke |  |  |
-
-
 #### RollingUpdateSpec
 
 
@@ -1742,6 +1250,27 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `maxUnavailable` _integer_ | MaxUnavailable is the maximum number of pods that can be unavailable during update |  |  |
 | `maxSurge` _integer_ | MaxSurge is the maximum number of pods that can be created above desired replicas |  |  |
+
+
+#### RuntimeError
+
+
+
+RuntimeError captures runtime failure information for self-healing
+
+
+
+_Appears in:_
+- [LanguageAgentStatus](#languageagentstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `timestamp` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | Timestamp is when the error occurred |  |  |
+| `errorType` _string_ | ErrorType is the exception class or error type |  |  |
+| `errorMessage` _string_ | ErrorMessage is the error message |  |  |
+| `stackTrace` _string array_ | StackTrace contains the error stack trace |  |  |
+| `exitCode` _integer_ | ContainerExitCode is the container exit code |  |  |
+| `synthesisAttempt` _integer_ | SynthesisAttempt indicates which synthesis iteration this error occurred in |  |  |
 
 
 #### SafetyConfigSpec
@@ -1773,12 +1302,9 @@ SecretReference references a Kubernetes Secret
 
 
 _Appears in:_
-- [AuthProviderSpec](#authproviderspec)
-- [BackendConfigSpec](#backendconfigspec)
 - [KnowledgeSourceSpec](#knowledgesourcespec)
 - [LanguageModelSpec](#languagemodelspec)
 - [MemoryStoreSpec](#memorystorespec)
-- [TLSSpec](#tlsspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1804,44 +1330,26 @@ _Appears in:_
 | `namespace` _string_ | Service namespace (defaults to same namespace if omitted) |  |  |
 
 
-#### SessionConfigSpec
+#### SynthesisInfo
 
 
 
-SessionConfigSpec defines session management configuration
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `backend` _string_ | Backend specifies the session storage backend | memory | Enum: [memory redis postgres dynamodb] <br /> |
-| `backendConfig` _[BackendConfigSpec](#backendconfigspec)_ | BackendConfig contains backend-specific configuration |  |  |
-| `ttl` _string_ | TTL is the session time-to-live | 24h | Pattern: `^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$` <br /> |
-| `maxMessagesPerSession` _integer_ | MaxMessagesPerSession limits conversation history length | 100 |  |
-| `enablePersistence` _boolean_ | EnablePersistence enables saving conversations beyond session TTL | false |  |
-| `cookieConfig` _[CookieConfigSpec](#cookieconfigspec)_ | CookieConfig defines session cookie configuration |  |  |
-
-
-#### TLSSpec
-
-
-
-TLSSpec defines TLS configuration
+SynthesisInfo contains metadata about agent code synthesis
 
 
 
 _Appears in:_
-- [LanguageClientSpec](#languageclientspec)
+- [LanguageAgentStatus](#languageagentstatus)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled enables TLS | false |  |
-| `secretRef` _[SecretReference](#secretreference)_ | SecretRef references the TLS certificate secret |  |  |
-| `certManager` _boolean_ | CertManager enables cert-manager integration | false |  |
-| `certManagerIssuer` _string_ | CertManagerIssuer specifies the cert-manager issuer |  |  |
+| `lastSynthesisTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastSynthesisTime is when the code was last synthesized |  |  |
+| `synthesisModel` _string_ | SynthesisModel is the LLM model used for synthesis |  |  |
+| `synthesisDuration` _float_ | SynthesisDuration is how long synthesis took (in seconds) |  |  |
+| `codeHash` _string_ | CodeHash is the SHA256 hash of the current synthesized code |  |  |
+| `instructionsHash` _string_ | InstructionsHash is the SHA256 hash of the instructions that generated the code |  |  |
+| `validationErrors` _string array_ | ValidationErrors contains any validation errors from the last synthesis |  |  |
+| `synthesisAttempts` _integer_ | SynthesisAttempts is the number of synthesis attempts for current instructions |  |  |
 
 
 #### ToolFrequency
@@ -1853,7 +1361,6 @@ ToolFrequency tracks tool usage frequency
 
 
 _Appears in:_
-- [ClientMetrics](#clientmetrics)
 - [PersonaMetrics](#personametrics)
 
 | Field | Description | Default | Validation |
@@ -1893,7 +1400,6 @@ ToolReference references a LanguageTool
 
 _Appears in:_
 - [LanguageAgentSpec](#languageagentspec)
-- [LanguageClientSpec](#languageclientspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1941,58 +1447,6 @@ _Appears in:_
 | `percentage` _float_ | Percentage is the percentage of total interactions |  |  |
 
 
-#### UIConfigSpec
-
-
-
-UIConfigSpec defines UI customization
-
-
-
-_Appears in:_
-- [LanguageClientSpec](#languageclientspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `title` _string_ | Title is the application title |  |  |
-| `description` _string_ | Description is the application description |  |  |
-| `logo` _string_ | Logo is a URL to the application logo |  |  |
-| `theme` _string_ | Theme defines the UI theme | auto | Enum: [light dark auto] <br /> |
-| `primaryColor` _string_ | PrimaryColor is the primary brand color |  |  |
-| `secondaryColor` _string_ | SecondaryColor is the secondary brand color |  |  |
-| `customCSS` _string_ | CustomCSS is a URL to custom CSS |  |  |
-| `customJS` _string_ | CustomJS is a URL to custom JavaScript |  |  |
-| `features` _[UIFeaturesSpec](#uifeaturesspec)_ | Features defines enabled UI features |  |  |
-| `footer` _string_ | Footer defines footer content |  |  |
-| `privacyPolicyURL` _string_ | PrivacyPolicyURL is a link to the privacy policy |  |  |
-| `termsOfServiceURL` _string_ | TermsOfServiceURL is a link to terms of service |  |  |
-
-
-#### UIFeaturesSpec
-
-
-
-UIFeaturesSpec defines enabled UI features
-
-
-
-_Appears in:_
-- [UIConfigSpec](#uiconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `showModelSelector` _boolean_ | ShowModelSelector shows model selection dropdown | true |  |
-| `showPersonaSelector` _boolean_ | ShowPersonaSelector shows persona selection dropdown | false |  |
-| `showToolUsage` _boolean_ | ShowToolUsage shows when tools are being used | true |  |
-| `showThinkingProcess` _boolean_ | ShowThinkingProcess shows model reasoning | false |  |
-| `enableFileUpload` _boolean_ | EnableFileUpload enables file uploads | false |  |
-| `enableVoiceInput` _boolean_ | EnableVoiceInput enables voice input | false |  |
-| `enableExport` _boolean_ | EnableExport enables conversation export | true |  |
-| `enableSharing` _boolean_ | EnableSharing enables conversation sharing | false |  |
-| `showTimestamps` _boolean_ | ShowTimestamps shows message timestamps | true |  |
-| `showCosts` _boolean_ | ShowCosts shows token/cost usage | false |  |
-
-
 #### UpdateStrategySpec
 
 
@@ -2002,7 +1456,6 @@ UpdateStrategySpec defines deployment update strategy
 
 
 _Appears in:_
-- [LanguageClientSpec](#languageclientspec)
 - [LanguageToolSpec](#languagetoolspec)
 
 | Field | Description | Default | Validation |

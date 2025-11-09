@@ -28,7 +28,6 @@ The documentation covers the following Custom Resource Definitions:
 - **LanguageAgent** - Goal-oriented autonomous agents
 - **LanguageTool** - MCP-compatible tool servers (web search, email, etc.)
 - **LanguageModel** - Model configurations with LiteLLM proxy
-- **LanguageClient** - User interfaces for interacting with agents
 - **LanguagePersona** - Reusable personality/instruction templates
 
 ## Configuration

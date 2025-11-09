@@ -233,16 +233,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup LanguageClient controller
-	if err = (&controllers.LanguageClientReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguageClient"),
-	}).SetupWithManager(mgr, concurrency); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LanguageClient")
-		os.Exit(1)
-	}
-
 	// Setup LanguageCluster controller
 	if err = (&controllers.LanguageClusterReconciler{
 		Client: mgr.GetClient(),
