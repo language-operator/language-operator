@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,6 +55,7 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1334,13 +1336,97 @@ func (r *LanguageAgentReconciler) hasGatewayAPI(ctx context.Context) (bool, erro
 // reconcileHTTPRoute creates or updates a Gateway API HTTPRoute for the agent
 func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
 	log := log.FromContext(ctx)
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// For now, we'll create an unstructured HTTPRoute
-	// TODO: Import Gateway API types and create strongly-typed resources
-	log.Info("HTTPRoute reconciliation not yet implemented", "hostname", hostname)
+	// Get cluster config for Gateway configuration
+	var gatewayName, gatewayNamespace string
+	if agent.Spec.ClusterRef != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
+			if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.GatewayClassName != "" {
+				// Use specified gateway
+				gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+				gatewayNamespace = agent.Namespace
+			}
+		}
+	}
 
-	// Comment for gem team handoff
-	return fmt.Errorf("HTTPRoute creation requires Gateway API types - gem team to implement agent Service resource")
+	// Default to "default" gateway if not specified
+	if gatewayName == "" {
+		gatewayName = "default"
+		gatewayNamespace = "default"
+	}
+
+	// Create HTTPRoute using unstructured to avoid Gateway API dependency
+	httpRoute := &unstructured.Unstructured{}
+	httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1",
+		Kind:    "HTTPRoute",
+	})
+	httpRoute.SetName(agent.Name)
+	httpRoute.SetNamespace(agent.Namespace)
+	httpRoute.SetLabels(labels)
+
+	// Build HTTPRoute spec
+	spec := map[string]interface{}{
+		"parentRefs": []map[string]interface{}{
+			{
+				"name":      gatewayName,
+				"namespace": gatewayNamespace,
+			},
+		},
+		"hostnames": []string{hostname},
+		"rules": []map[string]interface{}{
+			{
+				"matches": []map[string]interface{}{
+					{
+						"path": map[string]interface{}{
+							"type":  "PathPrefix",
+							"value": "/",
+						},
+					},
+				},
+				"backendRefs": []map[string]interface{}{
+					{
+						"name": agent.Name,
+						"port": int64(80),
+					},
+				},
+			},
+		},
+	}
+
+	// Check if HTTPRoute already exists
+	existing := &unstructured.Unstructured{}
+	existing.SetGroupVersionKind(httpRoute.GroupVersionKind())
+	err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existing)
+
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		// Create new HTTPRoute
+		httpRoute.Object["spec"] = spec
+		// Set owner reference for automatic cleanup
+		if err := controllerutil.SetControllerReference(agent, httpRoute, r.Scheme); err != nil {
+			return err
+		}
+		log.Info("Creating HTTPRoute", "hostname", hostname, "gateway", gatewayName+"/"+gatewayNamespace)
+		if err := r.Create(ctx, httpRoute); err != nil {
+			return err
+		}
+	} else {
+		// Update existing HTTPRoute
+		existing.Object["spec"] = spec
+		existing.SetLabels(labels)
+		log.Info("Updating HTTPRoute", "hostname", hostname, "gateway", gatewayName+"/"+gatewayNamespace)
+		if err := r.Update(ctx, existing); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // reconcileIngress creates or updates an Ingress for the agent (fallback when Gateway API unavailable)
