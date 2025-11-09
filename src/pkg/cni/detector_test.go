@@ -412,6 +412,72 @@ func TestDetectCNIFromConfigMap(t *testing.T) {
 			},
 			want: "",
 		},
+		{
+			name: "weave from name",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "weave-net-config",
+				},
+			},
+			want: "weave",
+		},
+		{
+			name: "antrea from name",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "antrea-config",
+				},
+			},
+			want: "antrea",
+		},
+		{
+			name: "calico from data content",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cni-config",
+				},
+				Data: map[string]string{
+					"cni-conf": `{"name": "calico-network"}`,
+				},
+			},
+			want: "calico",
+		},
+		{
+			name: "cilium from data content",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cni-config",
+				},
+				Data: map[string]string{
+					"cni-conf": `{"type": "cilium-cni"}`,
+				},
+			},
+			want: "cilium",
+		},
+		{
+			name: "weave from data content",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cni-config",
+				},
+				Data: map[string]string{
+					"cni-conf": `{"type": "weave-net"}`,
+				},
+			},
+			want: "weave",
+		},
+		{
+			name: "antrea from data content",
+			cm: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cni-config",
+				},
+				Data: map[string]string{
+					"cni-conf": `{"type": "antrea"}`,
+				},
+			},
+			want: "antrea",
+		},
 	}
 
 	for _, tt := range tests {
