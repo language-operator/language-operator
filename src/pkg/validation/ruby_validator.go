@@ -36,19 +36,14 @@ func findValidatorScript() string {
 	for _, path := range locations {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUG: path %s failed to resolve: %v\n", path, err)
 			continue
 		}
-		_, statErr := os.Stat(absPath)
-		if statErr == nil {
-			fmt.Fprintf(os.Stderr, "DEBUG: Found validator script at %s\n", absPath)
+		if _, err := os.Stat(absPath); err == nil {
 			return absPath
 		}
-		fmt.Fprintf(os.Stderr, "DEBUG: path %s -> %s (not found: %v)\n", path, absPath, statErr)
 	}
 
 	// Default to container location
-	fmt.Fprintf(os.Stderr, "DEBUG: No script found, defaulting to /usr/local/bin/validate-ruby-code.rb\n")
 	return "/usr/local/bin/validate-ruby-code.rb"
 }
 

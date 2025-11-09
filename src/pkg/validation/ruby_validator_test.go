@@ -391,6 +391,11 @@ eval("puts 1")`,
 }
 
 func TestValidateRubyCode_Timeout(t *testing.T) {
+	// Skip if Ruby is not available
+	if _, err := exec.LookPath("ruby"); err != nil {
+		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
+	}
+
 	// Create extremely large code that might take >1s to parse
 	var hugeCode strings.Builder
 	for i := 0; i < 100000; i++ {
@@ -406,6 +411,11 @@ func TestValidateRubyCode_Timeout(t *testing.T) {
 }
 
 func TestValidateRubyCode_Performance(t *testing.T) {
+	// Skip if Ruby is not available
+	if _, err := exec.LookPath("ruby"); err != nil {
+		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
+	}
+
 	// Test performance with 10KB of typical agent code
 	code := `require 'language_operator'
 
