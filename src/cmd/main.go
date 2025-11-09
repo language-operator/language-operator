@@ -28,6 +28,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -39,6 +40,7 @@ import (
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 	"github.com/based/language-operator/controllers"
+	"github.com/based/language-operator/pkg/cni"
 	"github.com/based/language-operator/pkg/synthesis"
 	//+kubebuilder:scaffold:imports
 )
@@ -65,12 +67,16 @@ func main() {
 	var syncPeriod time.Duration
 	var watchNamespaces string
 	var concurrency int
+	var requireNetworkPolicy bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&requireNetworkPolicy, "require-network-policy", false,
+		"Fail operator startup if CNI does not support NetworkPolicy enforcement. "+
+			"Default is false to allow operation on local/development clusters.")
 	flag.DurationVar(&leaseDuration, "leader-elect-lease-duration", 15*time.Second,
 		"The duration that non-leader candidates will wait after observing a leadership renewal.")
 	flag.DurationVar(&renewDeadline, "leader-elect-renew-deadline", 10*time.Second,
@@ -91,6 +97,53 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Detect CNI capabilities before starting manager
+	config := ctrl.GetConfigOrDie()
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		setupLog.Error(err, "unable to create kubernetes clientset for CNI detection")
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	cniCaps, cniErr := cni.DetectNetworkPolicySupport(ctx, clientset)
+
+	if cniErr != nil {
+		setupLog.Info("CNI detection failed", "error", cniErr.Error())
+		if requireNetworkPolicy {
+			setupLog.Error(cniErr, "CNI detection is required but failed")
+			os.Exit(1)
+		}
+	}
+
+	if cniCaps != nil {
+		if cniCaps.SupportsNetworkPolicy {
+			setupLog.Info("CNI detected with NetworkPolicy support",
+				"cni", cniCaps.Name,
+				"version", cniCaps.Version,
+				"networkPolicy", "supported")
+			setupLog.Info("Network isolation will be enforced for LanguageAgent pods")
+		} else {
+			setupLog.Info("WARNING: CNI does not support NetworkPolicy enforcement",
+				"cni", cniCaps.Name,
+				"version", cniCaps.Version,
+				"networkPolicy", "not supported")
+			setupLog.Info("Impact: Network isolation for LanguageAgent pods will NOT be enforced")
+			setupLog.Info("Agents will be able to make unrestricted network connections")
+			setupLog.Info("For production use, consider installing a NetworkPolicy-capable CNI:")
+			setupLog.Info("  - Cilium (recommended): kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/v1.18/install/kubernetes/quick-install.yaml")
+			setupLog.Info("  - Calico: https://docs.tigera.io/calico/latest/getting-started/kubernetes/quickstart")
+			setupLog.Info("  - Weave Net: kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml")
+			setupLog.Info("  - Antrea: https://antrea.io/docs/main/docs/getting-started/")
+
+			if requireNetworkPolicy {
+				setupLog.Error(nil, "NetworkPolicy support is required but CNI does not support it",
+					"cni", cniCaps.Name)
+				os.Exit(1)
+			}
+		}
+	}
 
 	// Parse watch namespaces
 	var namespaces map[string]struct{}
