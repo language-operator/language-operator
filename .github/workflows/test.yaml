@@ -49,6 +49,16 @@ jobs:
           go-version-file: 'src/go.mod'
           cache-dependency-path: 'src/go.sum'
 
+      - name: Set up Ruby
+        uses: https://github.com/ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+
+      - name: Install language-operator gem
+        run: |
+          gem install language_operator --source https://git.theryans.io/api/packages/language-operator/rubygems
+
       - name: Run tests
         working-directory: src
         run: |

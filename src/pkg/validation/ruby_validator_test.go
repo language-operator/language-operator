@@ -1,12 +1,17 @@
 package validation
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestValidateRubyCode(t *testing.T) {
+	// Skip if Ruby is not available (tests run in Docker container with Ruby)
+	if _, err := exec.LookPath("ruby"); err != nil {
+		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
+	}
 	tests := []struct {
 		name      string
 		code      string
