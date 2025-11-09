@@ -65,6 +65,11 @@ jobs:
           chmod 0600 ~/.gem/credentials
           gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems
 
+      - name: Verify gem installation
+        run: |
+          gem list language-operator
+          ruby -e "require 'language_operator/agent/safety/ast_validator'; puts 'Gem loaded successfully'"
+
       - name: Run tests
         working-directory: src
         run: |
