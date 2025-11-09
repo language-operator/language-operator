@@ -156,6 +156,18 @@ func main() {
 		Recorder: mgr.GetEventRecorderFor("languageagent-controller"),
 	}
 
+	// Initialize rate limiter and quota manager for synthesis cost controls
+	maxSynthesisPerHour := 10 // Default: 10 synthesis per namespace per hour
+	rateLimiter := synthesis.NewRateLimiter(maxSynthesisPerHour, ctrl.Log.WithName("rate-limiter"))
+	agentReconciler.RateLimiter = rateLimiter
+	setupLog.Info("Synthesis rate limiter initialized", "maxPerHour", maxSynthesisPerHour)
+
+	maxCostPerDay := 10.0    // Default: $10 per namespace per day
+	maxAttemptsPerDay := 100 // Default: 100 attempts per namespace per day
+	quotaManager := synthesis.NewQuotaManager(maxCostPerDay, maxAttemptsPerDay, "USD", ctrl.Log.WithName("quota-manager"))
+	agentReconciler.QuotaManager = quotaManager
+	setupLog.Info("Synthesis quota manager initialized", "maxCostPerDay", maxCostPerDay, "maxAttemptsPerDay", maxAttemptsPerDay)
+
 	// Initialize synthesizer if LLM configuration is provided
 	synthesisModel := os.Getenv("SYNTHESIS_MODEL")
 	synthesisAPIKey := os.Getenv("SYNTHESIS_API_KEY")
@@ -246,6 +258,13 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")
 		os.Exit(1)
 	}
+
+	// Setup LanguageAgent webhook for synthesis cost controls
+	if err = (&langopv1alpha1.LanguageAgent{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgent")
+		os.Exit(1)
+	}
+	setupLog.Info("LanguageAgent validation webhook registered")
 	//+kubebuilder:scaffold:builder
 
 	// Add health and readiness checks

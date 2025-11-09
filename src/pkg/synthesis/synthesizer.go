@@ -58,8 +58,10 @@ type ChatModel interface {
 
 // Synthesizer generates agent DSL code from natural language instructions
 type Synthesizer struct {
-	chatModel ChatModel
-	log       logr.Logger
+	chatModel   ChatModel
+	log         logr.Logger
+	costTracker *CostTracker
+	modelName   string
 }
 
 // AgentSynthesisRequest contains all information needed to synthesize an agent
@@ -84,6 +86,7 @@ type AgentSynthesisResponse struct {
 	Error            string
 	DurationSeconds  float64
 	ValidationErrors []string
+	Cost             *SynthesisCost // Cost tracking for this synthesis
 }
 
 // PersonaInfo contains persona details for distillation
@@ -124,9 +127,17 @@ type RuntimeError struct {
 // NewSynthesizer creates a new synthesizer instance using eino ChatModel
 func NewSynthesizer(chatModel ChatModel, log logr.Logger) *Synthesizer {
 	return &Synthesizer{
-		chatModel: chatModel,
-		log:       log,
+		chatModel:   chatModel,
+		log:         log,
+		costTracker: nil, // Will be set via SetCostTracker
+		modelName:   "unknown",
 	}
+}
+
+// SetCostTracker sets the cost tracker for this synthesizer
+func (s *Synthesizer) SetCostTracker(tracker *CostTracker, modelName string) {
+	s.costTracker = tracker
+	s.modelName = modelName
 }
 
 // SynthesizeAgent generates Ruby DSL code from natural language instructions
@@ -150,7 +161,8 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 		},
 	}
 
-	response, err := s.chatModel.Generate(ctx, messages)
+	// Call the chat model (returns *schema.Message, not *schema.ChatCompletionResponse)
+	responseMsg, err := s.chatModel.Generate(ctx, messages)
 	if err != nil {
 		duration := time.Since(startTime).Seconds()
 		return &AgentSynthesisResponse{
@@ -159,7 +171,25 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 		}, err
 	}
 
-	dslCode := response.Content
+	dslCode := responseMsg.Content
+
+	// Track cost if cost tracker is configured
+	var synthesisCost *SynthesisCost
+	if s.costTracker != nil {
+		// Note: eino's Generate returns *schema.Message, not *schema.ChatCompletionResponse
+		// We need to access the response metadata to get token usage
+		// For now, estimate tokens as we don't have direct access to usage data
+		inputTokens := EstimateTokens(prompt)
+		outputTokens := EstimateTokens(dslCode)
+		synthesisCost = s.costTracker.CalculateCost(inputTokens, outputTokens, s.modelName)
+
+		s.log.Info("Synthesis cost tracked",
+			"agent", req.AgentName,
+			"inputTokens", synthesisCost.InputTokens,
+			"outputTokens", synthesisCost.OutputTokens,
+			"totalCost", synthesisCost.TotalCost,
+			"currency", synthesisCost.Currency)
+	}
 
 	// Extract code from markdown blocks if present
 	dslCode = extractCodeFromMarkdown(dslCode)
@@ -187,6 +217,7 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	return &AgentSynthesisResponse{
 		DSLCode:         dslCode,
 		DurationSeconds: duration,
+		Cost:            synthesisCost,
 	}, nil
 }
 

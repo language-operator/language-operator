@@ -44,6 +44,8 @@ type LanguageAgentReconciler struct {
 	Recorder               record.EventRecorder
 	MaxSelfHealingAttempts int32
 	SelfHealingEnabled     bool
+	RateLimiter            *synthesis.RateLimiter
+	QuotaManager           *synthesis.QuotaManager
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -419,6 +421,34 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			Namespace:    agent.Namespace,
 		}
 
+		// Check rate limit before synthesis
+		if r.RateLimiter != nil {
+			if err := r.RateLimiter.CheckAndConsume(ctx, agent.Namespace); err != nil {
+				if r.Recorder != nil {
+					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RateLimitExceeded", "Synthesis rate limit exceeded: %v", err)
+				}
+				log.Info("Synthesis rate limit exceeded", "agent", agent.Name, "namespace", agent.Namespace)
+				// Record rate limit metric
+				synthesis.RecordSynthesisRateLimitExceeded(agent.Namespace)
+				// Return error to retry later
+				return fmt.Errorf("synthesis rate limit exceeded: %w", err)
+			}
+		}
+
+		// Check quota before synthesis
+		if r.QuotaManager != nil {
+			// Check attempt quota
+			if err := r.QuotaManager.CheckAttemptQuota(ctx, agent.Namespace); err != nil {
+				if r.Recorder != nil {
+					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "QuotaExceeded", "Synthesis attempt quota exceeded: %v", err)
+				}
+				log.Info("Synthesis attempt quota exceeded", "agent", agent.Name, "namespace", agent.Namespace)
+				// Record quota exceeded metric
+				synthesis.RecordSynthesisQuotaExceeded(agent.Namespace, "attempts")
+				return fmt.Errorf("synthesis attempt quota exceeded: %w", err)
+			}
+		}
+
 		// Synthesize code
 		log.Info("Synthesizing agent code", "agent", agent.Name)
 		if r.Recorder != nil {
@@ -426,10 +456,25 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		}
 
 		resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
+
+		// Record synthesis attempt
+		if r.QuotaManager != nil {
+			success := err == nil && resp.Error == ""
+			errorMsg := ""
+			if err != nil {
+				errorMsg = err.Error()
+			} else if resp.Error != "" {
+				errorMsg = resp.Error
+			}
+			r.QuotaManager.RecordAttempt(ctx, agent.Namespace, agent.Name, success, errorMsg)
+		}
 		if err != nil {
 			if r.Recorder != nil {
 				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SynthesisFailed", "Code synthesis failed: %v", err)
 			}
+			// Record failure metrics
+			synthesis.RecordSynthesisRequest(agent.Namespace, "failed")
+			synthesis.RecordSynthesisDuration(agent.Namespace, "failed", time.Since(time.Now()).Seconds())
 			return fmt.Errorf("synthesis failed: %w", err)
 		}
 
@@ -437,6 +482,9 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			if r.Recorder != nil {
 				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "ValidationFailed", "Synthesized code validation failed: %s", resp.Error)
 			}
+			// Record validation failure metrics
+			synthesis.RecordSynthesisRequest(agent.Namespace, "validation_failed")
+			synthesis.RecordSynthesisDuration(agent.Namespace, "validation_failed", resp.DurationSeconds)
 			return fmt.Errorf("synthesis validation failed: %s", resp.Error)
 		}
 
@@ -448,6 +496,35 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SynthesisSucceeded", "Code synthesized successfully in %.2fs", resp.DurationSeconds)
+		}
+
+		// Record synthesis cost if available
+		if r.QuotaManager != nil && resp.Cost != nil {
+			if err := r.QuotaManager.RecordCost(ctx, agent.Namespace, agent.Name, resp.Cost); err != nil {
+				log.Error(err, "Failed to record synthesis cost")
+			} else {
+				log.Info("Synthesis cost recorded",
+					"agent", agent.Name,
+					"cost", resp.Cost.TotalCost,
+					"currency", resp.Cost.Currency,
+					"inputTokens", resp.Cost.InputTokens,
+					"outputTokens", resp.Cost.OutputTokens)
+			}
+
+			// Record metrics
+			synthesis.RecordSynthesisTokens(agent.Namespace, resp.Cost.InputTokens, resp.Cost.OutputTokens)
+			synthesis.RecordSynthesisCost(agent.Namespace, resp.Cost.TotalCost)
+		}
+
+		// Record synthesis success metric
+		synthesis.RecordSynthesisRequest(agent.Namespace, "success")
+		synthesis.RecordSynthesisDuration(agent.Namespace, "success", resp.DurationSeconds)
+
+		// Update remaining quota metrics
+		if r.QuotaManager != nil {
+			remainingCost, remainingAttempts := r.QuotaManager.GetRemainingQuota(agent.Namespace)
+			synthesis.UpdateNamespaceQuotaRemaining(agent.Namespace, "cost", remainingCost)
+			synthesis.UpdateNamespaceQuotaRemaining(agent.Namespace, "attempts", float64(remainingAttempts))
 		}
 
 		// Update synthesis info in status
@@ -463,6 +540,11 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		agent.Status.SynthesisInfo.ValidationErrors = resp.ValidationErrors
 		if agent.Status.SynthesisInfo.SynthesisAttempts == 0 || needsSynthesis {
 			agent.Status.SynthesisInfo.SynthesisAttempts++
+		}
+
+		// Update cost metrics in status if available
+		if resp.Cost != nil {
+			agent.Status.CostMetrics = resp.Cost.ToAgentCostMetrics()
 		}
 
 		// Update agent status
