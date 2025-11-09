@@ -25,22 +25,30 @@ type Violation struct {
 func findValidatorScript() string {
 	// Try locations in order of preference
 	locations := []string{
-		"/usr/local/bin/validate-ruby-code.rb",                     // Docker container
-		"scripts/validate-ruby-code.rb",                            // CI from src/ directory
-		"../../scripts/validate-ruby-code.rb",                      // Test from src/pkg/validation (up 2 levels)
-		filepath.Join("..", "..", "scripts", "validate-ruby-code.rb"), // Alternative from pkg/validation
-		filepath.Join("src", "scripts", "validate-ruby-code.rb"),   // From repo root
+		"/usr/local/bin/validate-ruby-code.rb",                        // Docker container
+		"scripts/validate-ruby-code.rb",                               // CI from src/ directory
+		"../../scripts/validate-ruby-code.rb",                         // Test from src/pkg/validation
+		filepath.Join("..", "..", "scripts", "validate-ruby-code.rb"), // Alternative path
+		"../scripts/validate-ruby-code.rb",                            // From pkg/validation
+		filepath.Join("src", "scripts", "validate-ruby-code.rb"),      // From repo root
 	}
 
 	for _, path := range locations {
-		if absPath, err := filepath.Abs(path); err == nil {
-			if _, err := os.Stat(absPath); err == nil {
-				return absPath
-			}
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUG: path %s failed to resolve: %v\n", path, err)
+			continue
 		}
+		_, statErr := os.Stat(absPath)
+		if statErr == nil {
+			fmt.Fprintf(os.Stderr, "DEBUG: Found validator script at %s\n", absPath)
+			return absPath
+		}
+		fmt.Fprintf(os.Stderr, "DEBUG: path %s -> %s (not found: %v)\n", path, absPath, statErr)
 	}
 
 	// Default to container location
+	fmt.Fprintf(os.Stderr, "DEBUG: No script found, defaulting to /usr/local/bin/validate-ruby-code.rb\n")
 	return "/usr/local/bin/validate-ruby-code.rb"
 }
 
