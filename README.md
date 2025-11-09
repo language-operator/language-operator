@@ -384,27 +384,31 @@ Kubernetes isn't overkill. It's **exactly what you need** when automation matter
 
 ## Project Status
 
-**Current Version:** 0.2.0 (Alpha)
+**Current Version:** 0.2.0 (Alpha / v1alpha1 CRDs)
 
-✅ **Working:**
-- Natural language → code synthesis
-- Autonomous agent execution
-- MCP tool integration
-- Workspace sharing
-- Network isolation
-- Persona system
+### Current Features (v0.2 / v1alpha1)
 
-🚧 **In Progress:**
-- CLI (`aictl`) - releasing soon
-- Agent marketplace
-- Multi-agent workflows
-- Voice interface
+Production-ready features available now:
 
-📋 **Roadmap:**
-- Learning from feedback
-- Agent teams
-- Advanced scheduling
-- Metrics & observability dashboard
+- ✅ **Natural language agent synthesis** - Describe tasks in plain English, operator generates executable code
+- ✅ **Autonomous agent execution** - Agents run on schedules, use tools, make decisions independently
+- ✅ **MCP tool integration** - Standard tool protocol for extensibility
+- ✅ **CLI (`aictl`)** - Command-line interface for agent management (via language-operator gem)
+- ✅ **AST-based security validation** - CVE-001 mitigated via Ruby AST parsing (see [ADR 001](docs/adr/001-ast-based-ruby-validation.md))
+- ✅ **NetworkPolicy enforcement with CNI detection** - CVE-002 mitigated via Cilium/Calico/Weave/Antrea validation
+- ✅ **Container registry whitelist** - CVE-003 mitigated via configurable allowed registries
+- ✅ **Resource limits and security contexts** - Non-root execution, read-only filesystems, resource quotas
+- ✅ **Workspace sharing** - Persistent storage for agent state and coordination
+- ✅ **Persona system** - Reusable personality templates for agents
+- ✅ **Five CRDs**: LanguageAgent, LanguageTool, LanguageModel, LanguagePersona, LanguageCluster
+
+### Planned Features (Roadmap)
+
+Features under development:
+
+- ⏳ **Multi-agent workflows** - Coordinate multiple agents on complex tasks
+- ⏳ **Advanced scheduling** - Conditional triggers, event-driven execution
+- ⏳ **Dashboard** - Web UI for viewing cluster state
 
 ---
 
