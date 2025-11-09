@@ -37,18 +37,18 @@ The system:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Layer 1: Natural Language Interface (CLI)         │
-│  "review my spreadsheet at 4pm daily..."           │
+│  Layer 1: Natural Language Interface (CLI)          │
+│  "review my spreadsheet at 4pm daily..."            │
 └─────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────┐
-│  Layer 2: Kubernetes Operator (Synthesis Engine)   │
-│  Instructions → Ruby DSL Code → ConfigMap          │
+│  Layer 2: Kubernetes Operator (Synthesis Engine)    │
+│  Instructions → Ruby DSL Code → ConfigMap           │
 └─────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────┐
 │  Layer 3: Agent Runtime (Execution)                 │
-│  Load DSL → Connect Tools → Execute Workflow       │
+│  Load DSL → Connect Tools → Execute Workflow        │
 └─────────────────────────────────────────────────────┘
 ```
 
