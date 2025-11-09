@@ -149,6 +149,25 @@ config:
     # Sync period for controller
     syncPeriod: 10m
 
+  # Self-healing synthesis configuration
+  selfHealing:
+    # Enable self-healing synthesis for failed agents
+    enabled: true
+    # Maximum self-healing attempts before marking agent as failed
+    maxAttempts: 5
+    # Minimum backoff between self-healing attempts
+    minBackoff: 1m
+    # Maximum backoff between self-healing attempts
+    maxBackoff: 16m
+    # Number of consecutive failures required to trigger self-healing
+    failureThreshold: 2
+    # Sanitize logs before passing to LLM (redact secrets)
+    sanitizeLogs: true
+    # Maximum log lines to extract from crashed containers
+    maxLogLines: 100
+    # Timeout for log extraction
+    logFetchTimeout: 5s
+
   # Watch configuration
   watch:
     # Namespaces to watch (empty means all namespaces)
@@ -394,6 +413,12 @@ env:
     value: "mistralai/magistral-small-2509"
   - name: SYNTHESIS_ENDPOINT
     value: "http://192.168.68.54:1234/v1"
+  - name: SELF_HEALING_ENABLED
+    value: "{{ .Values.config.selfHealing.enabled }}"
+  - name: SELF_HEALING_MAX_ATTEMPTS
+    value: "{{ .Values.config.selfHealing.maxAttempts }}"
+  - name: SELF_HEALING_FAILURE_THRESHOLD
+    value: "{{ .Values.config.selfHealing.failureThreshold }}"
 
 # Extra environment variables from ConfigMap or Secret
 envFrom: []
