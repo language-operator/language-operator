@@ -55,6 +55,9 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: false
 
+      - name: Clear gem cache
+        run: gem cleanup language-operator || true
+
       - name: Install language-operator gem
         run: |
           set -e
@@ -65,7 +68,7 @@ jobs:
           EOF
           chmod 0600 ~/.gem/credentials
           echo "Installing language-operator gem..."
-          gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems -V
+          gem install language-operator --version '>= 0.1.27' --source https://git.theryans.io/api/packages/language-operator/rubygems -V
           echo "Gem installation completed"
 
       - name: Verify gem installation
