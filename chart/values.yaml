@@ -212,6 +212,14 @@ rbac:
       - update
       - patch
       - delete
+    - apiGroups:
+      - apps
+      resources:
+      - daemonsets
+      verbs:
+      - get
+      - list
+      - watch
     # Networking resources
     - apiGroups:
       - networking.k8s.io

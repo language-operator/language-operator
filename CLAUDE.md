@@ -15,6 +15,14 @@
 - SSH access: james@dl1, james@dl2, james@dl3, james@dl4, james@dl5
 - Master node: dl1 (runs k3s service)
 - Agent nodes: dl2-dl5 (run k3s service, not k3s-agent)
+- CNI: Cilium v1.18+ (supports NetworkPolicy enforcement)
+
+### Network Isolation
+- NetworkPolicy enforcement requires a compatible CNI plugin
+- Current cluster uses Cilium (fully supports NetworkPolicy)
+- Alternative compatible CNIs: Calico, Weave Net, Antrea
+- Default k3s CNI (Flannel) does NOT enforce NetworkPolicy
+- Operator creates NetworkPolicy resources but enforcement depends on CNI capability
 
 ## Operator
 - Operator namespace: kube-system

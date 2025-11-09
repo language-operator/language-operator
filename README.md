@@ -341,6 +341,8 @@ spec:
 
 **Zero-trust by default. Explicit allowlist for everything.**
 
+> **Note:** Network isolation uses Kubernetes NetworkPolicy. Enforcement requires a compatible CNI plugin (Cilium, Calico, Weave Net, or Antrea). The default k3s CNI (Flannel) does not enforce NetworkPolicy. The operator will create NetworkPolicy resources, but they may be silently ignored if your CNI doesn't support them. Check your agent status for `NetworkPolicyEnforced` condition.
+
 ---
 
 ## Getting Started

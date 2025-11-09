@@ -49,6 +49,7 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch
 //+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
@@ -126,6 +127,20 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
 		r.Status().Update(ctx, agent)
 		return ctrl.Result{}, err
+	}
+
+	// Detect if NetworkPolicy enforcement is supported
+	if supported, cni := r.detectNetworkPolicySupport(ctx); !supported {
+		message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cni)
+		SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyUnsupported", "CNI '%s' does not enforce NetworkPolicy", cni)
+		}
+		log.Info("NetworkPolicy enforcement not supported", "cni", cni)
+	} else {
+		message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cni)
+		SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionTrue, "Enforced", message, agent.Generation)
+		log.V(1).Info("NetworkPolicy enforcement supported", "cni", cni)
 	}
 
 	// Ensure agent has a UUID for webhook routing
@@ -1288,6 +1303,45 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 	}
 
 	return nil
+}
+
+// detectNetworkPolicySupport detects if the cluster CNI supports NetworkPolicy enforcement
+func (r *LanguageAgentReconciler) detectNetworkPolicySupport(ctx context.Context) (bool, string) {
+	// Check for known CNI plugins that support NetworkPolicy
+	// We detect by looking for DaemonSets or pods in kube-system namespace
+
+	// Check for Cilium
+	ciliumDS := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "cilium", Namespace: "kube-system"}, ciliumDS); err == nil {
+		return true, "cilium"
+	}
+
+	// Check for Calico
+	calicoDS := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "calico-node", Namespace: "kube-system"}, calicoDS); err == nil {
+		return true, "calico"
+	}
+
+	// Check for Weave Net
+	weaveDS := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "weave-net", Namespace: "kube-system"}, weaveDS); err == nil {
+		return true, "weave-net"
+	}
+
+	// Check for Antrea
+	antreaDS := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "antrea-agent", Namespace: "kube-system"}, antreaDS); err == nil {
+		return true, "antrea"
+	}
+
+	// Check for Flannel (does NOT support NetworkPolicy)
+	flannelDS := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "kube-flannel-ds", Namespace: "kube-system"}, flannelDS); err == nil {
+		return false, "flannel"
+	}
+
+	// Unknown CNI - assume not supported and warn
+	return false, "unknown"
 }
 
 // hasGatewayAPI checks if Gateway API CRDs are available in the cluster
