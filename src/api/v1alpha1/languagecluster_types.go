@@ -25,6 +25,68 @@ type LanguageClusterSpec struct {
 	// LanguageCluster is now a namespaced resource.
 	// All resources referencing this cluster must be in the same namespace.
 	// No configuration needed - cluster provides logical grouping for resources.
+
+	// Domain is the base domain for webhook routing
+	// Agent webhooks will be accessible at <uuid>.agents.<domain>
+	// Example: "example.com" results in webhooks like "abc123.agents.example.com"
+	// +optional
+	Domain string `json:"domain,omitempty"`
+
+	// IngressConfig defines ingress/gateway configuration for the cluster
+	// +optional
+	IngressConfig *IngressConfig `json:"ingressConfig,omitempty"`
+}
+
+// IngressConfig defines ingress/gateway configuration
+type IngressConfig struct {
+	// TLS configuration for agent webhooks
+	// +optional
+	TLS *IngressTLSConfig `json:"tls,omitempty"`
+
+	// GatewayClassName specifies the Gateway API GatewayClass to use
+	// If empty, will attempt auto-detection or fall back to Ingress
+	// +optional
+	GatewayClassName string `json:"gatewayClassName,omitempty"`
+
+	// IngressClassName specifies the Ingress class to use for fallback
+	// Only used when Gateway API is not available
+	// +optional
+	IngressClassName string `json:"ingressClassName,omitempty"`
+}
+
+// IngressTLSConfig defines TLS configuration
+type IngressTLSConfig struct {
+	// Enabled controls whether TLS is enabled for webhooks
+	// +kubebuilder:default=true
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// SecretName is the name of the TLS secret (for manual cert management)
+	// If empty, cert-manager will be used if available
+	// +optional
+	SecretName string `json:"secretName,omitempty"`
+
+	// IssuerRef references a cert-manager Issuer or ClusterIssuer
+	// +optional
+	IssuerRef *CertIssuerReference `json:"issuerRef,omitempty"`
+}
+
+// CertIssuerReference references a cert-manager issuer
+type CertIssuerReference struct {
+	// Name of the Issuer or ClusterIssuer
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Kind is either "Issuer" or "ClusterIssuer"
+	// +kubebuilder:validation:Enum=Issuer;ClusterIssuer
+	// +kubebuilder:default=ClusterIssuer
+	// +optional
+	Kind string `json:"kind,omitempty"`
+
+	// Group is the API group of the issuer
+	// +kubebuilder:default=cert-manager.io
+	// +optional
+	Group string `json:"group,omitempty"`
 }
 
 // NetworkRule defines a single network policy rule

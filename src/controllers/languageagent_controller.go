@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,8 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,6 +121,26 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
 		r.Status().Update(ctx, agent)
 		return ctrl.Result{}, err
+	}
+
+	// Ensure agent has a UUID for webhook routing
+	if agent.Status.UUID == "" {
+		agent.Status.UUID = uuid.New().String()
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update agent UUID")
+			return ctrl.Result{}, err
+		}
+		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
+	}
+
+	// Reconcile webhooks (HTTPRoute/Ingress for webhook access)
+	if err := r.reconcileWebhooks(ctx, agent); err != nil {
+		// Log webhook errors but don't fail reconciliation
+		// Webhooks are optional and require Service resource from gem team
+		log.Info("Webhook reconciliation pending", "reason", err.Error())
+		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionFalse, "Pending", err.Error(), agent.Generation)
+	} else {
+		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionTrue, "Configured", "Webhook routing configured", agent.Generation)
 	}
 
 	// Reconcile workload based on execution mode
@@ -1155,6 +1178,134 @@ func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *lango
 func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	// Resources will be cleaned up automatically via owner references
 	return nil
+}
+
+// reconcileWebhooks creates HTTPRoute or Ingress for webhook access
+func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Get the cluster to check for domain configuration
+	var domain string
+	if agent.Spec.ClusterRef != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
+			if errors.IsNotFound(err) {
+				log.Info("Cluster not found, skipping webhook reconciliation", "cluster", agent.Spec.ClusterRef)
+				return nil
+			}
+			return err
+		}
+		domain = cluster.Spec.Domain
+	}
+
+	// Skip webhook reconciliation if no domain is configured
+	if domain == "" {
+		log.Info("No domain configured, skipping webhook reconciliation")
+		return nil
+	}
+
+	// Build webhook hostname: <uuid>.agents.<domain>
+	hostname := fmt.Sprintf("%s.agents.%s", agent.Status.UUID, domain)
+
+	// Check if Gateway API is available
+	hasGateway, err := r.hasGatewayAPI(ctx)
+	if err != nil {
+		log.Error(err, "Failed to detect Gateway API availability")
+		// Fall back to Ingress on detection error
+		hasGateway = false
+	}
+
+	if hasGateway {
+		log.Info("Gateway API detected, creating HTTPRoute", "hostname", hostname)
+		if err := r.reconcileHTTPRoute(ctx, agent, hostname); err != nil {
+			return fmt.Errorf("failed to reconcile HTTPRoute: %w", err)
+		}
+	} else {
+		log.Info("Gateway API not available, creating Ingress fallback", "hostname", hostname)
+		if err := r.reconcileIngress(ctx, agent, hostname); err != nil {
+			return fmt.Errorf("failed to reconcile Ingress: %w", err)
+		}
+	}
+
+	// Update agent status with webhook URL
+	webhookURL := fmt.Sprintf("https://%s", hostname)
+	if agent.Status.WebhookURLs == nil || len(agent.Status.WebhookURLs) == 0 || agent.Status.WebhookURLs[0] != webhookURL {
+		agent.Status.WebhookURLs = []string{webhookURL}
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update webhook URLs in status")
+			return err
+		}
+		log.Info("Updated webhook URL in status", "url", webhookURL)
+	}
+
+	return nil
+}
+
+// hasGatewayAPI checks if Gateway API CRDs are available in the cluster
+func (r *LanguageAgentReconciler) hasGatewayAPI(ctx context.Context) (bool, error) {
+	// Create a discovery client from the existing client
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return false, err
+	}
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if HTTPRoute CRD exists (gateway.networking.k8s.io/v1)
+	gvr := schema.GroupVersionResource{
+		Group:    "gateway.networking.k8s.io",
+		Version:  "v1",
+		Resource: "httproutes",
+	}
+
+	_, apiResourcesList, err := discoveryClient.ServerGroupsAndResources()
+	if err != nil {
+		// Partial errors are acceptable - some API groups might be unavailable
+		if discovery.IsGroupDiscoveryFailedError(err) {
+			// Continue with partial results
+		} else {
+			return false, err
+		}
+	}
+
+	for _, apiResources := range apiResourcesList {
+		if apiResources.GroupVersion == gvr.Group+"/"+gvr.Version {
+			for _, resource := range apiResources.APIResources {
+				if resource.Name == gvr.Resource {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// reconcileHTTPRoute creates or updates a Gateway API HTTPRoute for the agent
+func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
+	log := log.FromContext(ctx)
+
+	// For now, we'll create an unstructured HTTPRoute
+	// TODO: Import Gateway API types and create strongly-typed resources
+	log.Info("HTTPRoute reconciliation not yet implemented", "hostname", hostname)
+
+	// Comment for gem team handoff
+	return fmt.Errorf("HTTPRoute creation requires Gateway API types - gem team to implement agent Service resource")
+}
+
+// reconcileIngress creates or updates an Ingress for the agent (fallback when Gateway API unavailable)
+func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
+	log := log.FromContext(ctx)
+
+	// For now, we'll skip Ingress creation
+	// TODO: Create Ingress resource for agents
+	log.Info("Ingress reconciliation not yet implemented", "hostname", hostname)
+
+	// Comment for gem team handoff
+	return fmt.Errorf("Ingress creation requires agent Service resource - gem team to implement")
 }
 
 // SetupWithManager sets up the controller with the Manager.

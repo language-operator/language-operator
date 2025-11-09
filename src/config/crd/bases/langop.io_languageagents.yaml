@@ -4052,6 +4052,17 @@ spec:
                   - toolName
                   type: object
                 type: array
+              uuid:
+                description: |-
+                  UUID is a unique identifier for this agent instance
+                  Used for webhook routing (e.g., <uuid>.agents.domain.com)
+                type: string
+              webhookURLs:
+                description: WebhookURLs contains the URLs where this agent can receive
+                  webhooks
+                items:
+                  type: string
+                type: array
             type: object
         type: object
     served: true
