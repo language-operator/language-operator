@@ -49,33 +49,6 @@ jobs:
           go-version-file: 'src/go.mod'
           cache-dependency-path: 'src/go.sum'
 
-      - name: Set up Ruby
-        uses: https://github.com/ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.4'
-          bundler-cache: false
-
-      - name: Clear gem cache
-        run: gem cleanup language-operator || true
-
-      - name: Install language-operator gem
-        run: |
-          set -e
-          mkdir -p ~/.gem
-          cat > ~/.gem/credentials << EOF
-          ---
-          https://git.theryans.io/api/packages/language-operator/rubygems: Bearer b579c250d4ac8223641f5f0178024c896b542812
-          EOF
-          chmod 0600 ~/.gem/credentials
-          echo "Installing language-operator gem..."
-          gem install language-operator --version '>= 0.1.27' --source https://git.theryans.io/api/packages/language-operator/rubygems -V
-          echo "Gem installation completed"
-
-      - name: Verify gem installation
-        run: |
-          gem list language-operator
-          ruby -e "require 'language_operator/agent/safety/ast_validator'; puts 'Gem loaded successfully'"
-
       - name: Run tests
         working-directory: src
         run: |
