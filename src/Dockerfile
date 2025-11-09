@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --from=builder /workspace/manager .
 
 # Install language-operator gem for AST validation
-RUN gem install language_operator --source https://git.theryans.io/api/packages/language-operator/rubygems
+RUN gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems
 
 # Copy AST validator wrapper script
 COPY --from=builder /workspace/scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
