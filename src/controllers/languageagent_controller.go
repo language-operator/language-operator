@@ -32,6 +32,7 @@ import (
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 	"github.com/based/language-operator/pkg/synthesis"
+	"github.com/based/language-operator/pkg/validation"
 )
 
 // LanguageAgentReconciler reconciles a LanguageAgent object
@@ -46,6 +47,7 @@ type LanguageAgentReconciler struct {
 	SelfHealingEnabled     bool
 	RateLimiter            *synthesis.RateLimiter
 	QuotaManager           *synthesis.QuotaManager
+	AllowedRegistries      []string
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -100,6 +102,20 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 	}
+
+	// Validate image registry against whitelist
+	if err := r.validateImageRegistry(agent); err != nil {
+		log.Error(err, "Image registry validation failed", "image", agent.Spec.Image)
+		SetCondition(&agent.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), agent.Generation)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RegistryValidationFailed", "Image registry not in whitelist: %s", agent.Spec.Image)
+		}
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after registry validation failure")
+		}
+		return ctrl.Result{}, err
+	}
+	SetCondition(&agent.Status.Conditions, "RegistryValidated", metav1.ConditionTrue, "Validated", "Image registry is in whitelist", agent.Generation)
 
 	// Detect pod failures for self-healing (if enabled)
 	if r.SelfHealingEnabled {
@@ -2142,6 +2158,16 @@ func (r *LanguageAgentReconciler) extractPodErrorInfo(ctx context.Context, pod *
 	}
 
 	return runtimeError, crashLog, nil
+}
+
+// validateImageRegistry validates that the agent's container image registry is in the whitelist
+func (r *LanguageAgentReconciler) validateImageRegistry(agent *langopv1alpha1.LanguageAgent) error {
+	// Skip validation if no whitelist configured
+	if len(r.AllowedRegistries) == 0 {
+		return nil
+	}
+
+	return validation.ValidateImageRegistry(agent.Spec.Image, r.AllowedRegistries)
 }
 
 // SetupWithManager sets up the controller with the Manager.

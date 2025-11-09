@@ -1,0 +1,33 @@
+# ConfigMap containing allowed container registries for the language-operator
+#
+# The operator validates that all LanguageAgent and LanguageTool images come from
+# registries in this whitelist, mitigating CVE-003 (arbitrary image execution).
+#
+# To customize this list:
+# 1. Edit the allowed-registries list below
+# 2. Apply changes: kubectl apply -f config/manager/registry-whitelist.yaml
+# 3. Restart the operator pod to reload the configuration
+#
+# Supported patterns:
+# - Exact domain: docker.io
+# - Wildcard subdomain: *.gcr.io (matches gcr.io, us.gcr.io, eu.gcr.io, etc.)
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: operator-config
+  namespace: system  # kustomize replaces with actual namespace
+data:
+  # List of allowed container registries (one per line)
+  # Common registries are included by default
+  allowed-registries: |
+    docker.io
+    gcr.io
+    *.gcr.io
+    quay.io
+    ghcr.io
+    registry.k8s.io
+    codeberg.org
+    gitlab.com
+    *.amazonaws.com
+    *.azurecr.io

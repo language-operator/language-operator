@@ -20,13 +20,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/pkg/validation"
 )
 
 // LanguageToolReconciler reconciles a LanguageTool object
 type LanguageToolReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme            *runtime.Scheme
+	Log               logr.Logger
+	AllowedRegistries []string
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch;create;update;patch;delete
@@ -75,6 +77,17 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 	}
+
+	// Validate image registry against whitelist
+	if err := r.validateImageRegistry(tool); err != nil {
+		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
+		SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), tool.Generation)
+		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after registry validation failure")
+		}
+		return ctrl.Result{}, err
+	}
+	SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionTrue, "Validated", "Image registry is in whitelist", tool.Generation)
 
 	// Reconcile ConfigMap
 	if err := r.reconcileConfigMap(ctx, tool); err != nil {
@@ -384,6 +397,16 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
 	// Resources will be cleaned up automatically via owner references
 	return nil
+}
+
+// validateImageRegistry validates that the tool's container image registry is in the whitelist
+func (r *LanguageToolReconciler) validateImageRegistry(tool *langopv1alpha1.LanguageTool) error {
+	// Skip validation if no whitelist configured
+	if len(r.AllowedRegistries) == 0 {
+		return nil
+	}
+
+	return validation.ValidateImageRegistry(tool.Spec.Image, r.AllowedRegistries)
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -98,7 +100,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	// Detect CNI capabilities before starting manager
+	// Detect CNI capabilities and load registry whitelist before starting manager
 	config := ctrl.GetConfigOrDie()
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -108,6 +110,27 @@ func main() {
 
 	ctx := context.Background()
 	cniCaps, cniErr := cni.DetectNetworkPolicySupport(ctx, clientset)
+
+	// Load allowed registries from ConfigMap
+	allowedRegistries, err := loadAllowedRegistries(ctx, clientset)
+	if err != nil {
+		setupLog.Error(err, "unable to load allowed registries from ConfigMap")
+		setupLog.Info("Using default registry whitelist")
+		// Fallback to default registries
+		allowedRegistries = []string{
+			"docker.io",
+			"gcr.io",
+			"*.gcr.io",
+			"quay.io",
+			"ghcr.io",
+			"registry.k8s.io",
+			"codeberg.org",
+			"gitlab.com",
+			"*.amazonaws.com",
+			"*.azurecr.io",
+		}
+	}
+	setupLog.Info("Registry whitelist loaded", "registries", allowedRegistries)
 
 	if cniErr != nil {
 		setupLog.Info("CNI detection failed", "error", cniErr.Error())
@@ -183,9 +206,10 @@ func main() {
 
 	// Setup LanguageTool controller
 	if err = (&controllers.LanguageToolReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguageTool"),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Log:               ctrl.Log.WithName("controllers").WithName("LanguageTool"),
+		AllowedRegistries: allowedRegistries,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
 		os.Exit(1)
@@ -203,10 +227,11 @@ func main() {
 
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Log:      ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
-		Recorder: mgr.GetEventRecorderFor("languageagent-controller"),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Log:               ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder:          mgr.GetEventRecorderFor("languageagent-controller"),
+		AllowedRegistries: allowedRegistries,
 	}
 
 	// Initialize rate limiter and quota manager for synthesis cost controls
@@ -373,4 +398,45 @@ func trimSpace(s string) string {
 		end--
 	}
 	return s[start:end]
+}
+
+// loadAllowedRegistries loads the allowed container registries from the operator-config ConfigMap
+func loadAllowedRegistries(ctx context.Context, clientset *kubernetes.Clientset) ([]string, error) {
+	// Get operator namespace from environment (set by k8s downward API or default to kube-system)
+	operatorNamespace := os.Getenv("OPERATOR_NAMESPACE")
+	if operatorNamespace == "" {
+		operatorNamespace = "kube-system" // Default namespace for the operator
+	}
+
+	// Get the ConfigMap
+	configMap, err := clientset.CoreV1().ConfigMaps(operatorNamespace).Get(ctx, "operator-config", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get operator-config ConfigMap: %w", err)
+	}
+
+	// Parse the allowed-registries data
+	registriesData, ok := configMap.Data["allowed-registries"]
+	if !ok {
+		return nil, fmt.Errorf("allowed-registries key not found in ConfigMap")
+	}
+
+	// Split by newlines and filter empty lines
+	var registries []string
+	for _, line := range splitAndTrim(registriesData, "\n") {
+		line = trimSpace(line)
+		// Skip empty lines and comments
+		if line != "" && !hasPrefix(line, "#") {
+			registries = append(registries, line)
+		}
+	}
+
+	if len(registries) == 0 {
+		return nil, fmt.Errorf("no registries found in ConfigMap")
+	}
+
+	return registries, nil
+}
+
+func hasPrefix(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }

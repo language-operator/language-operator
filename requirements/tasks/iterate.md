@@ -5,7 +5,7 @@ Background: this is a early-phase project that works exclusively in main, and ea
 Follow these directions closely:
 
 1. Use the ForgeJo tool to find the top issue for this repository.
-2. Investigate if it's valid, or a mis-use of the intended feature.
+2. Investigate if it's valid, partially implemented, or a misunderstanding.
 3. Plan your course of action and propose it before making changes.
 4. Add your implementation plan as a comment on the issue.
 5. Implement the changes.
