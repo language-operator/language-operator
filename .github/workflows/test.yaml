@@ -57,13 +57,16 @@ jobs:
 
       - name: Install language-operator gem
         run: |
+          set -e
           mkdir -p ~/.gem
           cat > ~/.gem/credentials << EOF
           ---
           https://git.theryans.io/api/packages/language-operator/rubygems: Bearer ${{ secrets.REGISTRY_TOKEN }}
           EOF
           chmod 0600 ~/.gem/credentials
-          gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems
+          echo "Installing language-operator gem..."
+          gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems -V
+          echo "Gem installation completed"
 
       - name: Verify gem installation
         run: |
