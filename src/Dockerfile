@@ -16,6 +16,7 @@ COPY cmd/ cmd/
 COPY api/ api/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
+COPY scripts/ scripts/
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -36,7 +37,7 @@ COPY --from=builder /workspace/manager .
 RUN gem install language_operator --source https://git.theryans.io/api/packages/language-operator/rubygems
 
 # Copy AST validator wrapper script
-COPY ../scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
+COPY --from=builder /workspace/scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
 RUN chmod +x /usr/local/bin/validate-ruby-code.rb
 
 # Switch to langop user (created in base image)
