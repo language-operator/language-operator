@@ -347,25 +347,124 @@ spec:
 
 ## Getting Started
 
-### 1. Install the Operator
+**Estimated time:** 10-15 minutes for first-time setup
+
+### Prerequisites
+
+Before installing the Language Operator, ensure you have:
+
+- **Kubernetes cluster** (k3s, managed Kubernetes, or any CNCF-certified distribution)
+- **kubectl** installed and configured to access your cluster
+- **Helm 3.x** installed
+- **Compatible CNI plugin** for NetworkPolicy enforcement:
+  - Recommended: Cilium, Calico, Weave Net, or Antrea
+  - Not compatible: Flannel (default k3s CNI)
+  - See [CNI Requirements](docs/security/cni-requirements.md) for installation guides
+
+> **Important:** NetworkPolicy enforcement is critical for security isolation. Without a compatible CNI, policies will be created but not enforced. Check the [security documentation](docs/security/README.md) for details.
+
+### 1. Verify CNI Compatibility
+
+Check if your cluster has a compatible CNI installed:
+
+```bash
+kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
+```
+
+If no compatible CNI is found, install one before proceeding. See [CNI Requirements](docs/security/cni-requirements.md) for step-by-step guides.
+
+**Time:** 1-2 minutes (or 5-10 minutes if CNI installation needed)
+
+### 2. Install the Operator
 
 ```bash
 helm install language-operator oci://git.theryans.io/helm/language-operator
 ```
 
-### 2. Create Your First Agent
+> **Note:** If you're using a private registry or need to configure registry whitelists, see [Registry Whitelist Configuration](docs/security/registry-whitelist.md).
+
+Verify the installation:
+
+```bash
+kubectl get deployment -n kube-system language-operator
+```
+
+Expected output:
+```
+NAME                READY   UP-TO-DATE   AVAILABLE   AGE
+language-operator   1/1     1            1           30s
+```
+
+**Time:** 2-3 minutes
+
+### 3. Create Your First Agent
 
 ```bash
 aictl agent create "send me a summary of my inbox every morning at 9am"
 ```
 
-### 3. Watch It Work
+The operator will synthesize a custom agent based on your natural language description. You'll see output like:
+
+```
+Agent 'inbox-summarizer' created successfully
+Synthesis: In Progress
+Status: Pending
+```
+
+**Time:** 2-3 minutes (including synthesis and deployment)
+
+### 4. Watch It Work
 
 ```bash
 aictl agent logs inbox-summarizer -f
 ```
 
+You'll see logs showing:
+- Agent initialization
+- Tool loading (email-tool in this case)
+- Scheduled task execution
+- Token usage and cost tracking
+
 **That's it. You're automating.**
+
+### Troubleshooting
+
+**Helm chart pull fails:**
+```
+Error: failed to download "oci://git.theryans.io/helm/language-operator"
+```
+- Ensure you have access to the private registry
+- Check Helm authentication: `helm registry login git.theryans.io`
+
+**Image pull errors:**
+```
+Failed to pull image "git.theryans.io/language-operator/agent:latest"
+```
+- Verify registry credentials are configured in the cluster
+- Check the [Registry Whitelist Configuration](docs/security/registry-whitelist.md) guide
+
+**Warning: CNI not detected:**
+```
+Warning: NetworkPolicy resources created but CNI may not enforce them
+```
+- Your cluster is using Flannel or another non-compatible CNI
+- Install Cilium, Calico, Weave Net, or Antrea for proper NetworkPolicy enforcement
+- See [CNI Requirements](docs/security/cni-requirements.md)
+
+**Agent synthesis fails:**
+```
+Error: Agent synthesis failed - invalid tool reference
+```
+- Check that required tools are installed (e.g., email-tool for email tasks)
+- Verify your natural language description is clear and specific
+- Review agent status: `aictl agent get inbox-summarizer -o yaml`
+
+### Next Steps
+
+- **Security:** Review [security documentation](docs/security/README.md) for hardening guidelines and CVE mitigations
+- **Cost Tracking:** Monitor token usage and costs with `aictl agent get <name>` - shows real-time cost metrics
+- **Dashboard:** Web UI for agent management coming soon (Issue #16)
+- **Advanced Features:** Explore custom agent configurations with LanguageAgent CRDs
 
 ---
 
