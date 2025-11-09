@@ -24,11 +24,22 @@ COPY pkg/ pkg/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
-WORKDIR /
-COPY --from=builder /workspace/manager .
-USER 65532:65532
+# Use base image with Ruby support for AST validation
+FROM git.theryans.io/language-operator/base:latest
 
-ENTRYPOINT ["/manager"]
+WORKDIR /app
+
+# Copy manager binary from builder
+COPY --from=builder /workspace/manager .
+
+# Install language-operator gem for AST validation
+RUN gem install language_operator --source https://git.theryans.io/api/packages/language-operator/rubygems
+
+# Copy AST validator wrapper script
+COPY ../scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
+RUN chmod +x /usr/local/bin/validate-ruby-code.rb
+
+# Switch to langop user (created in base image)
+USER langop:langop
+
+ENTRYPOINT ["/app/manager"]
