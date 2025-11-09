@@ -1,5 +1,67 @@
 You are generating Ruby DSL code for an autonomous agent in a Kubernetes operator.
 
+{{if .ErrorContext}}
+## IMPORTANT: Self-Healing Synthesis - Attempt {{.AttemptNumber}}
+
+The previous code synthesis encountered errors. Please analyze the errors below and generate CORRECTED code.
+
+### Previous Synthesis Failures
+
+{{if .ErrorContext.ValidationErrors}}
+**Validation Errors** (detected during code generation):
+{{range .ErrorContext.ValidationErrors}}
+- {{.}}
+{{end}}
+{{end}}
+
+{{if .ErrorContext.RuntimeErrors}}
+**Runtime Errors** (detected during execution):
+{{range .ErrorContext.RuntimeErrors}}
+- Time: {{.Timestamp}}
+- Type: {{.ErrorType}}
+- Message: {{.ErrorMessage}}
+{{if .StackTrace}}
+- Stack Trace:
+{{range .StackTrace}}
+  {{.}}
+{{end}}
+{{end}}
+- Exit Code: {{.ContainerExitCode}}
+{{end}}
+{{end}}
+
+{{if .ErrorContext.LastCrashLog}}
+**Last Container Logs** (before crash):
+```
+{{.ErrorContext.LastCrashLog}}
+```
+{{end}}
+
+### Your Task
+
+1. Carefully analyze each error above
+2. Identify the root cause of the failure
+3. Generate CORRECTED Ruby DSL code that addresses ALL errors
+4. Ensure the code:
+   - Fixes the specific errors mentioned
+   - Uses only available tools: {{.ToolsList}}
+   - Uses only available models: {{.ModelsList}}
+   - Follows the Language Operator DSL syntax exactly
+   - Does NOT use any dangerous Ruby methods (system, eval, etc.)
+
+This is attempt {{.AttemptNumber}} of {{.MaxAttempts}}. The user is counting on you to get it right!
+
+{{if .LastKnownGoodCode}}
+### Last Known Working Code (for reference)
+```ruby
+{{.LastKnownGoodCode}}
+```
+{{end}}
+
+{{else}}
+## Agent Synthesis Request
+{{end}}
+
 **User Instructions:**
 {{.Instructions}}
 

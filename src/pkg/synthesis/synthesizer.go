@@ -70,6 +70,12 @@ type AgentSynthesisRequest struct {
 	PersonaText  string // Distilled persona
 	AgentName    string
 	Namespace    string
+
+	// Self-Healing Context (NEW)
+	ErrorContext      *ErrorContext `json:"errorContext,omitempty"`
+	IsRetry           bool          `json:"isRetry"`
+	AttemptNumber     int32         `json:"attemptNumber"`
+	LastKnownGoodCode string        `json:"lastKnownGoodCode,omitempty"`
 }
 
 // AgentSynthesisResponse contains the synthesized DSL code
@@ -94,6 +100,25 @@ type AgentContext struct {
 	AgentName    string
 	Instructions string
 	Tools        string
+}
+
+// ErrorContext provides error information for self-healing synthesis
+type ErrorContext struct {
+	RuntimeErrors       []RuntimeError `json:"runtimeErrors"`
+	ValidationErrors    []string       `json:"validationErrors"`
+	LastCrashLog        string         `json:"lastCrashLog"`
+	ConsecutiveFailures int32          `json:"consecutiveFailures"`
+	PreviousAttempts    int32          `json:"previousAttempts"`
+}
+
+// RuntimeError captures runtime failure information
+type RuntimeError struct {
+	Timestamp         string   `json:"timestamp"`
+	ErrorType         string   `json:"errorType"`
+	ErrorMessage      string   `json:"errorMessage"`
+	StackTrace        []string `json:"stackTrace"`
+	ContainerExitCode int32    `json:"exitCode"`
+	SynthesisAttempt  int32    `json:"synthesisAttempt"`
 }
 
 // NewSynthesizer creates a new synthesizer instance using eino ChatModel
@@ -282,6 +307,10 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 		"ScheduleSection":    scheduleSection,
 		"ConstraintsSection": constraintsSection,
 		"ScheduleRules":      scheduleRules,
+		"ErrorContext":       req.ErrorContext,
+		"AttemptNumber":      req.AttemptNumber,
+		"MaxAttempts":        5, // TODO: Make this configurable
+		"LastKnownGoodCode":  req.LastKnownGoodCode,
 	}
 
 	var buf bytes.Buffer

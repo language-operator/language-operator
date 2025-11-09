@@ -470,6 +470,30 @@ type LanguageAgentStatus struct {
 	// WebhookURLs contains the URLs where this agent can receive webhooks
 	// +optional
 	WebhookURLs []string `json:"webhookURLs,omitempty"`
+
+	// RuntimeErrors contains recent runtime errors for self-healing
+	// +optional
+	RuntimeErrors []RuntimeError `json:"runtimeErrors,omitempty"`
+
+	// LastCrashLog contains the last 100 lines of logs before crash
+	// +optional
+	LastCrashLog string `json:"lastCrashLog,omitempty"`
+
+	// ConsecutiveFailures tracks consecutive pod failures
+	// +optional
+	ConsecutiveFailures int32 `json:"consecutiveFailures,omitempty"`
+
+	// FailureReason categorizes the failure type (Synthesis|Runtime|Infrastructure)
+	// +optional
+	FailureReason string `json:"failureReason,omitempty"`
+
+	// SelfHealingAttempts tracks how many self-healing synthesis attempts have been made
+	// +optional
+	SelfHealingAttempts int32 `json:"selfHealingAttempts,omitempty"`
+
+	// LastSuccessfulCode stores the last known working code for rollback
+	// +optional
+	LastSuccessfulCode string `json:"lastSuccessfulCode,omitempty"`
 }
 
 // SynthesisInfo contains metadata about agent code synthesis
@@ -501,6 +525,33 @@ type SynthesisInfo struct {
 	// SynthesisAttempts is the number of synthesis attempts for current instructions
 	// +optional
 	SynthesisAttempts int32 `json:"synthesisAttempts,omitempty"`
+}
+
+// RuntimeError captures runtime failure information for self-healing
+type RuntimeError struct {
+	// Timestamp is when the error occurred
+	// +optional
+	Timestamp metav1.Time `json:"timestamp"`
+
+	// ErrorType is the exception class or error type
+	// +optional
+	ErrorType string `json:"errorType,omitempty"`
+
+	// ErrorMessage is the error message
+	// +optional
+	ErrorMessage string `json:"errorMessage,omitempty"`
+
+	// StackTrace contains the error stack trace
+	// +optional
+	StackTrace []string `json:"stackTrace,omitempty"`
+
+	// ContainerExitCode is the container exit code
+	// +optional
+	ContainerExitCode int32 `json:"exitCode,omitempty"`
+
+	// SynthesisAttempt indicates which synthesis iteration this error occurred in
+	// +optional
+	SynthesisAttempt int32 `json:"synthesisAttempt,omitempty"`
 }
 
 // AgentMetrics contains agent execution metrics

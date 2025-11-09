@@ -3840,6 +3840,10 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              consecutiveFailures:
+                description: ConsecutiveFailures tracks consecutive pod failures
+                format: int32
+                type: integer
               costMetrics:
                 description: CostMetrics contains cost tracking data
                 properties:
@@ -3882,11 +3886,18 @@ spec:
                 description: FailedExecutions is the number of failed executions
                 format: int64
                 type: integer
+              failureReason:
+                description: FailureReason categorizes the failure type (Synthesis|Runtime|Infrastructure)
+                type: string
               iterationCount:
                 description: IterationCount is the current iteration in the reasoning
                   loop
                 format: int32
                 type: integer
+              lastCrashLog:
+                description: LastCrashLog contains the last 100 lines of logs before
+                  crash
+                type: string
               lastExecutionResult:
                 description: LastExecutionResult describes the result of the last
                   execution
@@ -3894,6 +3905,10 @@ spec:
               lastExecutionTime:
                 description: LastExecutionTime is the timestamp of the last execution
                 format: date-time
+                type: string
+              lastSuccessfulCode:
+                description: LastSuccessfulCode stores the last known working code
+                  for rollback
                 type: string
               lastUpdateTime:
                 description: LastUpdateTime is the last time the status was updated
@@ -3982,6 +3997,43 @@ spec:
                 description: Reason provides a machine-readable reason for the current
                   state
                 type: string
+              runtimeErrors:
+                description: RuntimeErrors contains recent runtime errors for self-healing
+                items:
+                  description: RuntimeError captures runtime failure information for
+                    self-healing
+                  properties:
+                    errorMessage:
+                      description: ErrorMessage is the error message
+                      type: string
+                    errorType:
+                      description: ErrorType is the exception class or error type
+                      type: string
+                    exitCode:
+                      description: ContainerExitCode is the container exit code
+                      format: int32
+                      type: integer
+                    stackTrace:
+                      description: StackTrace contains the error stack trace
+                      items:
+                        type: string
+                      type: array
+                    synthesisAttempt:
+                      description: SynthesisAttempt indicates which synthesis iteration
+                        this error occurred in
+                      format: int32
+                      type: integer
+                    timestamp:
+                      description: Timestamp is when the error occurred
+                      format: date-time
+                      type: string
+                  type: object
+                type: array
+              selfHealingAttempts:
+                description: SelfHealingAttempts tracks how many self-healing synthesis
+                  attempts have been made
+                format: int32
+                type: integer
               successfulExecutions:
                 description: SuccessfulExecutions is the number of successful executions
                 format: int64

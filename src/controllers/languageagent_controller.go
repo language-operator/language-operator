@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -36,11 +37,13 @@ import (
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme         *runtime.Scheme
-	Log            logr.Logger
-	Synthesizer    synthesis.AgentSynthesizer
-	SynthesisModel string
-	Recorder       record.EventRecorder
+	Scheme                 *runtime.Scheme
+	Log                    logr.Logger
+	Synthesizer            synthesis.AgentSynthesizer
+	SynthesisModel         string
+	Recorder               record.EventRecorder
+	MaxSelfHealingAttempts int32
+	SelfHealingEnabled     bool
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -54,6 +57,8 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
@@ -91,6 +96,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		controllerutil.AddFinalizer(agent, FinalizerName)
 		if err := r.Update(ctx, agent); err != nil {
 			return ctrl.Result{}, err
+		}
+	}
+
+	// Detect pod failures for self-healing (if enabled)
+	if r.SelfHealingEnabled {
+		if err := r.detectPodFailures(ctx, agent); err != nil {
+			log.Error(err, "Failed to detect pod failures")
+			// Don't fail reconciliation, just log the error
 		}
 	}
 
@@ -272,6 +285,56 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	// ConfigMap name for synthesized code
 	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
 
+	// Check if agent is in failure state requiring self-healing
+	if r.shouldAttemptSelfHealing(agent) {
+		log.Info("Agent in failure state, checking self-healing eligibility",
+			"consecutiveFailures", agent.Status.ConsecutiveFailures,
+			"selfHealingAttempts", agent.Status.SelfHealingAttempts)
+
+		// Check if we've exceeded max self-healing attempts
+		if agent.Status.SelfHealingAttempts >= r.MaxSelfHealingAttempts {
+			log.Info("Max self-healing attempts reached, marking agent as failed")
+			SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionFalse,
+				"MaxAttemptsExceeded",
+				fmt.Sprintf("Self-healing failed after %d attempts", r.MaxSelfHealingAttempts),
+				agent.Generation)
+			agent.Status.Phase = "Failed"
+			if err := r.Status().Update(ctx, agent); err != nil {
+				return err
+			}
+			if r.Recorder != nil {
+				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingMaxAttempts",
+					"Self-healing max attempts (%d) reached, agent marked as failed", r.MaxSelfHealingAttempts)
+			}
+			return fmt.Errorf("max self-healing attempts exceeded")
+		}
+
+		// Implement exponential backoff
+		if agent.Status.SynthesisInfo != nil && agent.Status.SynthesisInfo.LastSynthesisTime != nil {
+			backoffDuration := calculateBackoff(agent.Status.SelfHealingAttempts)
+			timeSinceLastSynthesis := time.Since(agent.Status.SynthesisInfo.LastSynthesisTime.Time)
+			if timeSinceLastSynthesis < backoffDuration {
+				log.V(1).Info("In backoff period, skipping synthesis",
+					"backoffRemaining", backoffDuration-timeSinceLastSynthesis)
+				return nil
+			}
+		}
+
+		// Trigger self-healing synthesis
+		log.Info("Triggering self-healing synthesis",
+			"attempt", agent.Status.SelfHealingAttempts+1,
+			"maxAttempts", r.MaxSelfHealingAttempts)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingTriggered",
+				"Self-healing synthesis triggered after %d consecutive failures (attempt %d/%d)",
+				agent.Status.ConsecutiveFailures, agent.Status.SelfHealingAttempts+1, r.MaxSelfHealingAttempts)
+		}
+
+		agent.Status.SelfHealingAttempts++
+		return r.performSelfHealingSynthesis(ctx, agent)
+	}
+
+	// Normal synthesis flow
 	// Check if we need to synthesize
 	// Smart change detection:
 	// 1. ConfigMap doesn't exist → full synthesis
@@ -1569,8 +1632,325 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 	return err
 }
 
+// performSelfHealingSynthesis performs synthesis with error context for self-healing
+func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Fetch persona if referenced
+	persona, err := r.fetchPersona(ctx, agent)
+	if err != nil {
+		log.Error(err, "Failed to fetch persona, continuing without it")
+	}
+
+	// Distill persona if available
+	var distilledPersona string
+	if persona != nil {
+		distilledPersona, err = r.distillPersona(ctx, persona, agent)
+		if err != nil {
+			log.Error(err, "Failed to distill persona, continuing without it")
+			distilledPersona = ""
+		}
+	}
+
+	// Build error context for self-healing
+	errorContext := r.buildErrorContext(agent)
+
+	// Get last known good code for reference
+	lastKnownGoodCode := ""
+	if agent.Status.LastSuccessfulCode != "" {
+		lastKnownGoodCode = agent.Status.LastSuccessfulCode
+	}
+
+	// Build synthesis request with error context
+	synthReq := synthesis.AgentSynthesisRequest{
+		Instructions:      agent.Spec.Instructions,
+		Tools:             r.getToolNames(agent),
+		Models:            r.getModelNames(agent),
+		PersonaText:       distilledPersona,
+		AgentName:         agent.Name,
+		Namespace:         agent.Namespace,
+		ErrorContext:      errorContext,
+		IsRetry:           true,
+		AttemptNumber:     agent.Status.SelfHealingAttempts,
+		LastKnownGoodCode: lastKnownGoodCode,
+	}
+
+	// Synthesize code with error context
+	log.Info("Performing self-healing synthesis with error context",
+		"agent", agent.Name,
+		"attempt", agent.Status.SelfHealingAttempts,
+		"runtimeErrors", len(errorContext.RuntimeErrors),
+		"validationErrors", len(errorContext.ValidationErrors))
+
+	if r.Recorder != nil {
+		r.Recorder.Event(agent, corev1.EventTypeNormal, "SelfHealingSynthesisStarted",
+			"Starting self-healing code synthesis with error context")
+	}
+
+	resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
+	if err != nil {
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingSynthesisFailed",
+				"Self-healing synthesis failed: %v", err)
+		}
+		return fmt.Errorf("self-healing synthesis failed: %w", err)
+	}
+
+	if resp.Error != "" {
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingValidationFailed",
+				"Self-healing validation failed: %s", resp.Error)
+		}
+		return fmt.Errorf("self-healing validation failed: %s", resp.Error)
+	}
+
+	// Store synthesized code in ConfigMap
+	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+	data := map[string]string{
+		"agent.rb": resp.DSLCode,
+	}
+
+	// Store all hashes for smart change detection
+	personaRef := ""
+	if agent.Spec.PersonaRef != nil {
+		personaRef = agent.Spec.PersonaRef.Name
+	}
+
+	annotations := map[string]string{
+		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
+		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
+		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
+		"langop.io/persona-hash":      hashString(personaRef),
+		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
+		"langop.io/self-healing":      "true",
+	}
+
+	if err := CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations); err != nil {
+		return err
+	}
+
+	// Update synthesis info in status
+	now := metav1.Now()
+	if agent.Status.SynthesisInfo == nil {
+		agent.Status.SynthesisInfo = &langopv1alpha1.SynthesisInfo{}
+	}
+	agent.Status.SynthesisInfo.LastSynthesisTime = &now
+	agent.Status.SynthesisInfo.SynthesisModel = r.SynthesisModel
+	agent.Status.SynthesisInfo.SynthesisDuration = resp.DurationSeconds
+	agent.Status.SynthesisInfo.CodeHash = hashString(resp.DSLCode)
+	agent.Status.SynthesisInfo.InstructionsHash = hashString(agent.Spec.Instructions)
+	agent.Status.SynthesisInfo.ValidationErrors = resp.ValidationErrors
+
+	// Update agent status
+	if err := r.Status().Update(ctx, agent); err != nil {
+		log.Error(err, "Failed to update synthesis info in status")
+		return err
+	}
+
+	log.Info("Self-healing synthesis completed successfully",
+		"agent", agent.Name,
+		"codeLength", len(resp.DSLCode),
+		"duration", resp.DurationSeconds,
+		"attempt", agent.Status.SelfHealingAttempts)
+
+	if r.Recorder != nil {
+		r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingSynthesisSucceeded",
+			"Self-healing synthesis succeeded in %.2fs (attempt %d)", resp.DurationSeconds, agent.Status.SelfHealingAttempts)
+	}
+
+	return nil
+}
+
+// shouldAttemptSelfHealing determines if self-healing should be triggered
+func (r *LanguageAgentReconciler) shouldAttemptSelfHealing(agent *langopv1alpha1.LanguageAgent) bool {
+	// Self-healing must be enabled
+	if !r.SelfHealingEnabled {
+		return false
+	}
+
+	// Agent has consecutive runtime failures
+	if agent.Status.ConsecutiveFailures >= 2 {
+		return true
+	}
+
+	// Agent has validation errors and hasn't exceeded max attempts
+	if len(agent.Status.SynthesisInfo.ValidationErrors) > 0 &&
+		agent.Status.SelfHealingAttempts < r.MaxSelfHealingAttempts {
+		return true
+	}
+
+	return false
+}
+
+// buildErrorContext constructs error context for self-healing synthesis
+func (r *LanguageAgentReconciler) buildErrorContext(agent *langopv1alpha1.LanguageAgent) *synthesis.ErrorContext {
+	// Convert langopv1alpha1.RuntimeError to synthesis.RuntimeError
+	var runtimeErrors []synthesis.RuntimeError
+	for _, re := range agent.Status.RuntimeErrors {
+		runtimeErrors = append(runtimeErrors, synthesis.RuntimeError{
+			Timestamp:         re.Timestamp.Format("2006-01-02 15:04:05"),
+			ErrorType:         re.ErrorType,
+			ErrorMessage:      re.ErrorMessage,
+			StackTrace:        re.StackTrace,
+			ContainerExitCode: re.ContainerExitCode,
+			SynthesisAttempt:  re.SynthesisAttempt,
+		})
+	}
+
+	var validationErrors []string
+	if agent.Status.SynthesisInfo != nil {
+		validationErrors = agent.Status.SynthesisInfo.ValidationErrors
+	}
+
+	return &synthesis.ErrorContext{
+		RuntimeErrors:       runtimeErrors,
+		ValidationErrors:    validationErrors,
+		LastCrashLog:        agent.Status.LastCrashLog,
+		ConsecutiveFailures: agent.Status.ConsecutiveFailures,
+		PreviousAttempts:    agent.Status.SelfHealingAttempts,
+	}
+}
+
+// calculateBackoff returns exponential backoff duration based on attempt count
+func calculateBackoff(attempts int32) time.Duration {
+	// Exponential backoff: 1m, 2m, 4m, 8m, 16m (max)
+	backoff := time.Minute * time.Duration(1<<attempts)
+	maxBackoff := 16 * time.Minute
+	if backoff > maxBackoff {
+		return maxBackoff
+	}
+	return backoff
+}
+
+// detectPodFailures checks for pod failures and updates agent status
+func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// List pods owned by this agent
+	podList := &corev1.PodList{}
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	if err := r.List(ctx, podList, client.InNamespace(agent.Namespace), client.MatchingLabels(labels)); err != nil {
+		return err
+	}
+
+	// Check each pod for failures
+	for _, pod := range podList.Items {
+		// Detect failure states
+		if r.isPodFailed(&pod) {
+			log.Info("Pod failure detected", "pod", pod.Name, "status", pod.Status.Phase)
+
+			// Extract error information
+			runtimeError, crashLog, err := r.extractPodErrorInfo(ctx, &pod, agent)
+			if err != nil {
+				log.Error(err, "Failed to extract pod error info")
+				continue
+			}
+
+			// Update agent status with runtime error
+			if runtimeError != nil {
+				// Append to runtime errors (keep last 10)
+				agent.Status.RuntimeErrors = append(agent.Status.RuntimeErrors, *runtimeError)
+				if len(agent.Status.RuntimeErrors) > 10 {
+					agent.Status.RuntimeErrors = agent.Status.RuntimeErrors[len(agent.Status.RuntimeErrors)-10:]
+				}
+
+				agent.Status.LastCrashLog = crashLog
+				agent.Status.ConsecutiveFailures++
+				agent.Status.FailureReason = "Runtime"
+
+				// Update status
+				if err := r.Status().Update(ctx, agent); err != nil {
+					log.Error(err, "Failed to update agent status with runtime error")
+					return err
+				}
+
+				// Record event
+				if r.Recorder != nil {
+					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RuntimeError",
+						"Pod %s failed: %s", pod.Name, runtimeError.ErrorMessage)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// isPodFailed checks if a pod is in a failed state
+func (r *LanguageAgentReconciler) isPodFailed(pod *corev1.Pod) bool {
+	// Check pod phase
+	if pod.Status.Phase == corev1.PodFailed {
+		return true
+	}
+
+	// Check for CrashLoopBackOff and other failure states
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.State.Waiting != nil {
+			reason := containerStatus.State.Waiting.Reason
+			if reason == "CrashLoopBackOff" || reason == "Error" ||
+				reason == "RunContainerError" || reason == "ImagePullBackOff" {
+				return true
+			}
+		}
+
+		// Check terminated state with non-zero exit code
+		if containerStatus.State.Terminated != nil {
+			if containerStatus.State.Terminated.ExitCode != 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// extractPodErrorInfo extracts error details and logs from a failed pod
+func (r *LanguageAgentReconciler) extractPodErrorInfo(ctx context.Context, pod *corev1.Pod, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.RuntimeError, string, error) {
+	runtimeError := &langopv1alpha1.RuntimeError{
+		Timestamp:        metav1.Now(),
+		SynthesisAttempt: agent.Status.SelfHealingAttempts,
+	}
+
+	// Extract exit code and error message from container status
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.Name == "agent" {
+			if containerStatus.State.Waiting != nil {
+				runtimeError.ErrorType = containerStatus.State.Waiting.Reason
+				runtimeError.ErrorMessage = containerStatus.State.Waiting.Message
+			}
+
+			if containerStatus.State.Terminated != nil {
+				runtimeError.ContainerExitCode = containerStatus.State.Terminated.ExitCode
+				if runtimeError.ErrorMessage == "" {
+					runtimeError.ErrorMessage = containerStatus.State.Terminated.Message
+				}
+				if containerStatus.State.Terminated.Reason != "" {
+					runtimeError.ErrorType = containerStatus.State.Terminated.Reason
+				}
+			}
+		}
+	}
+
+	// Extract last 100 lines of logs from the agent container
+	// TODO: Implement proper log extraction using Kubernetes client-go
+	// For now, we'll use the error message from the container status
+	crashLog := fmt.Sprintf("Pod %s failed. Container status: %+v", pod.Name, pod.Status.ContainerStatuses)
+
+	// If we still don't have an error message, use a generic one
+	if runtimeError.ErrorMessage == "" {
+		runtimeError.ErrorMessage = fmt.Sprintf("Pod %s failed with status %s", pod.Name, pod.Status.Phase)
+	}
+
+	return runtimeError, crashLog, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
+	// Set defaults for self-healing
+	if r.MaxSelfHealingAttempts == 0 {
+		r.MaxSelfHealingAttempts = 5
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&appsv1.Deployment{}).
@@ -1579,5 +1959,6 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
+		Owns(&corev1.Pod{}).
 		Complete(r)
 }
