@@ -81,6 +81,14 @@ func TestInvalidInstructions(t *testing.T) {
 	env := SetupTestEnvironment(t)
 	defer env.Teardown(t)
 
+	// Start mock LLM service
+	mockLLM := NewMockLLMService(t)
+	defer mockLLM.Close()
+
+	// Create mock chat model and set synthesizer
+	mockChatModel := NewMockChatModel(mockLLM)
+	env.SetSynthesizer(t, mockChatModel)
+
 	testCases := []struct {
 		name         string
 		instructions string
