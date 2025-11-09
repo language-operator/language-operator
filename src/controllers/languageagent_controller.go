@@ -46,11 +46,14 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/finalizers,verbs=update
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch
+//+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -133,11 +136,18 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
 	}
 
+	// Reconcile Service for agent webhook server (all agents expose port 8080)
+	if err := r.reconcileService(ctx, agent); err != nil {
+		log.Error(err, "Failed to reconcile Service")
+		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), agent.Generation)
+		r.Status().Update(ctx, agent)
+		return ctrl.Result{}, err
+	}
+
 	// Reconcile webhooks (HTTPRoute/Ingress for webhook access)
 	if err := r.reconcileWebhooks(ctx, agent); err != nil {
-		// Log webhook errors but don't fail reconciliation
-		// Webhooks are optional and require Service resource from gem team
-		log.Info("Webhook reconciliation pending", "reason", err.Error())
+		// Log webhook errors but don't fail reconciliation if domain not configured
+		log.Info("Webhook reconciliation skipped or pending", "reason", err.Error())
 		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionFalse, "Pending", err.Error(), agent.Generation)
 	} else {
 		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionTrue, "Configured", "Webhook routing configured", agent.Generation)
@@ -1180,6 +1190,43 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 	return nil
 }
 
+// reconcileService creates a Service for the agent's webhook server
+func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+			Labels:    labels,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
+		if err := controllerutil.SetControllerReference(agent, service, r.Scheme); err != nil {
+			return err
+		}
+
+		// All agents expose webhook server on port 8080
+		service.Spec = corev1.ServiceSpec{
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(8080),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+			Type: corev1.ServiceTypeClusterIP,
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 // reconcileWebhooks creates HTTPRoute or Ingress for webhook access
 func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
@@ -1298,14 +1345,88 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 
 // reconcileIngress creates or updates an Ingress for the agent (fallback when Gateway API unavailable)
 func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
-	log := log.FromContext(ctx)
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// For now, we'll skip Ingress creation
-	// TODO: Create Ingress resource for agents
-	log.Info("Ingress reconciliation not yet implemented", "hostname", hostname)
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+			Labels:    labels,
+		},
+	}
 
-	// Comment for gem team handoff
-	return fmt.Errorf("Ingress creation requires agent Service resource - gem team to implement")
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
+		if err := controllerutil.SetControllerReference(agent, ingress, r.Scheme); err != nil {
+			return err
+		}
+
+		pathType := networkingv1.PathTypePrefix
+		ingress.Spec = networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: hostname,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: agent.Name,
+											Port: networkingv1.ServiceBackendPort{
+												Number: 80,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Add TLS configuration if cluster has TLS enabled
+		if agent.Spec.ClusterRef != "" {
+			cluster := &langopv1alpha1.LanguageCluster{}
+			if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
+				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
+					secretName := cluster.Spec.IngressConfig.TLS.SecretName
+					if secretName == "" {
+						// Use cert-manager annotation for automatic certificate provisioning
+						if ingress.Annotations == nil {
+							ingress.Annotations = make(map[string]string)
+						}
+						if cluster.Spec.IngressConfig.TLS.IssuerRef != nil {
+							kind := cluster.Spec.IngressConfig.TLS.IssuerRef.Kind
+							if kind == "" {
+								kind = "ClusterIssuer"
+							}
+							ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.IngressConfig.TLS.IssuerRef.Name
+						}
+						secretName = agent.Name + "-tls"
+					}
+
+					ingress.Spec.TLS = []networkingv1.IngressTLS{
+						{
+							Hosts:      []string{hostname},
+							SecretName: secretName,
+						},
+					}
+				}
+
+				// Add IngressClassName if specified
+				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.IngressClassName != "" {
+					ingress.Spec.IngressClassName = &cluster.Spec.IngressConfig.IngressClassName
+				}
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -1315,6 +1436,8 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.CronJob{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).
 		Owns(&networkingv1.NetworkPolicy{}).
+		Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }
