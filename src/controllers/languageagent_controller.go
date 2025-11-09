@@ -716,9 +716,25 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				Spec: corev1.PodSpec{
 					Containers: containers,
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptr.To[int64](101), // langop group
+						RunAsNonRoot: ptr.To(true),
+						RunAsUser:    ptr.To[int64](1000), // langop user (matches Dockerfile)
+						FSGroup:      ptr.To[int64](101),  // langop group
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
 					},
 				},
+			},
+		}
+
+		// Add container security context for agent container
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:             ptr.To(true),
+			RunAsUser:                ptr.To[int64](1000), // langop user (matches Dockerfile)
+			ReadOnlyRootFilesystem:   ptr.To(true),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
 			},
 		}
 
@@ -728,6 +744,49 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Initialize volumes and volume mounts
 		volumes := []corev1.Volume{}
 		volumeMounts := []corev1.VolumeMount{}
+
+		// Add tmpfs volumes for read-only root filesystem
+		// /tmp - general temporary files
+		volumes = append(volumes, corev1.Volume{
+			Name: "tmp",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "tmp",
+			MountPath: "/tmp",
+		})
+
+		// /home/langop/.bundle - Ruby bundler cache
+		volumes = append(volumes, corev1.Volume{
+			Name: "ruby-bundle",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "ruby-bundle",
+			MountPath: "/home/langop/.bundle",
+		})
+
+		// /home/langop/.gem - Ruby gem installation directory
+		volumes = append(volumes, corev1.Volume{
+			Name: "ruby-gem",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "ruby-gem",
+			MountPath: "/home/langop/.gem",
+		})
 
 		// Add code ConfigMap volume if synthesizer is configured and instructions exist
 		if r.Synthesizer != nil && agent.Spec.Instructions != "" {
@@ -875,11 +934,27 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 							RestartPolicy: corev1.RestartPolicyOnFailure,
 							Containers:    containers,
 							SecurityContext: &corev1.PodSecurityContext{
-								FSGroup: ptr.To[int64](101), // langop group
+								RunAsNonRoot: ptr.To(true),
+								RunAsUser:    ptr.To[int64](1000), // langop user (matches Dockerfile)
+								FSGroup:      ptr.To[int64](101),  // langop group
+								SeccompProfile: &corev1.SeccompProfile{
+									Type: corev1.SeccompProfileTypeRuntimeDefault,
+								},
 							},
 						},
 					},
 				},
+			},
+		}
+
+		// Add container security context for agent container
+		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+			AllowPrivilegeEscalation: ptr.To(false),
+			RunAsNonRoot:             ptr.To(true),
+			RunAsUser:                ptr.To[int64](1000), // langop user (matches Dockerfile)
+			ReadOnlyRootFilesystem:   ptr.To(true),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
 			},
 		}
 
@@ -889,6 +964,49 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		// Initialize volumes and volume mounts
 		volumes := []corev1.Volume{}
 		volumeMounts := []corev1.VolumeMount{}
+
+		// Add tmpfs volumes for read-only root filesystem
+		// /tmp - general temporary files
+		volumes = append(volumes, corev1.Volume{
+			Name: "tmp",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "tmp",
+			MountPath: "/tmp",
+		})
+
+		// /home/langop/.bundle - Ruby bundler cache
+		volumes = append(volumes, corev1.Volume{
+			Name: "ruby-bundle",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "ruby-bundle",
+			MountPath: "/home/langop/.bundle",
+		})
+
+		// /home/langop/.gem - Ruby gem installation directory
+		volumes = append(volumes, corev1.Volume{
+			Name: "ruby-gem",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{
+					Medium: corev1.StorageMediumMemory, // Use tmpfs
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "ruby-gem",
+			MountPath: "/home/langop/.gem",
+		})
 
 		// Add code ConfigMap volume if synthesizer is configured and instructions exist
 		if r.Synthesizer != nil && agent.Spec.Instructions != "" {

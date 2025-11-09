@@ -168,6 +168,44 @@ config:
     # Timeout for log extraction
     logFetchTimeout: 5s
 
+  # Agent runtime security configuration
+  # These settings apply to LanguageAgent pods created by the operator
+  agentSecurity:
+    # Pod security context for agent containers
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000  # langop user (matches agent Dockerfile)
+      fsGroup: 101     # langop group
+      seccompProfile:
+        type: RuntimeDefault
+
+    # Container security context for agent containers
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 1000  # langop user (matches agent Dockerfile)
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+
+    # Enable tmpfs volumes for read-only filesystem compatibility
+    # These volumes allow writes to specific directories while keeping root filesystem read-only
+    tmpfsVolumes:
+      enabled: true
+      # Use memory-backed tmpfs (fast but uses pod memory limit)
+      useMemory: true
+      volumes:
+        # General temporary directory
+        - name: tmp
+          mountPath: /tmp
+        # Ruby bundler cache
+        - name: ruby-bundle
+          mountPath: /home/langop/.bundle
+        # Ruby gem installation directory
+        - name: ruby-gem
+          mountPath: /home/langop/.gem
+
   # Watch configuration
   watch:
     # Namespaces to watch (empty means all namespaces)

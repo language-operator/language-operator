@@ -616,3 +616,336 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		t.Fatalf("Expected Deployment to exist for default execution mode, but got error: %v", err)
 	}
 }
+
+func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
+	scheme := setupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-security-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "git.theryans.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify Deployment was created
+	deployment := &appsv1.Deployment{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
+	}
+
+	// Verify Pod security context
+	podSec := deployment.Spec.Template.Spec.SecurityContext
+	if podSec == nil {
+		t.Fatal("Pod SecurityContext is nil")
+	}
+
+	if podSec.RunAsNonRoot == nil || !*podSec.RunAsNonRoot {
+		t.Error("Expected RunAsNonRoot to be true")
+	}
+
+	if podSec.RunAsUser == nil || *podSec.RunAsUser != 1000 {
+		t.Errorf("Expected RunAsUser to be 1000, got %v", podSec.RunAsUser)
+	}
+
+	if podSec.FSGroup == nil || *podSec.FSGroup != 101 {
+		t.Errorf("Expected FSGroup to be 101, got %v", podSec.FSGroup)
+	}
+
+	if podSec.SeccompProfile == nil || podSec.SeccompProfile.Type != corev1.SeccompProfileTypeRuntimeDefault {
+		t.Error("Expected SeccompProfile type to be RuntimeDefault")
+	}
+}
+
+func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
+	scheme := setupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-container-security-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "git.theryans.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify Deployment was created
+	deployment := &appsv1.Deployment{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
+	}
+
+	// Verify container security context
+	if len(deployment.Spec.Template.Spec.Containers) == 0 {
+		t.Fatal("No containers found in deployment")
+	}
+
+	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
+	if containerSec == nil {
+		t.Fatal("Container SecurityContext is nil")
+	}
+
+	if containerSec.AllowPrivilegeEscalation == nil || *containerSec.AllowPrivilegeEscalation {
+		t.Error("Expected AllowPrivilegeEscalation to be false")
+	}
+
+	if containerSec.RunAsNonRoot == nil || !*containerSec.RunAsNonRoot {
+		t.Error("Expected RunAsNonRoot to be true")
+	}
+
+	if containerSec.RunAsUser == nil || *containerSec.RunAsUser != 1000 {
+		t.Errorf("Expected RunAsUser to be 1000, got %v", containerSec.RunAsUser)
+	}
+
+	if containerSec.ReadOnlyRootFilesystem == nil || !*containerSec.ReadOnlyRootFilesystem {
+		t.Error("Expected ReadOnlyRootFilesystem to be true")
+	}
+
+	if containerSec.Capabilities == nil {
+		t.Fatal("Capabilities is nil")
+	}
+
+	if len(containerSec.Capabilities.Drop) != 1 || containerSec.Capabilities.Drop[0] != "ALL" {
+		t.Errorf("Expected capabilities to drop ALL, got %v", containerSec.Capabilities.Drop)
+	}
+}
+
+func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
+	scheme := setupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-tmpfs-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "git.theryans.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify Deployment was created
+	deployment := &appsv1.Deployment{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
+	}
+
+	// Check for tmpfs volumes
+	expectedVolumes := map[string]string{
+		"tmp":         "/tmp",
+		"ruby-bundle": "/home/langop/.bundle",
+		"ruby-gem":    "/home/langop/.gem",
+	}
+
+	volumes := deployment.Spec.Template.Spec.Volumes
+	volumeNames := make(map[string]bool)
+	for _, vol := range volumes {
+		volumeNames[vol.Name] = true
+		// Verify it's an EmptyDir with Memory medium
+		if vol.EmptyDir != nil && vol.EmptyDir.Medium == corev1.StorageMediumMemory {
+			// Good - it's a tmpfs volume
+		} else if _, ok := expectedVolumes[vol.Name]; ok {
+			t.Errorf("Volume %s should be EmptyDir with Memory medium", vol.Name)
+		}
+	}
+
+	// Check all expected volumes exist
+	for volName := range expectedVolumes {
+		if !volumeNames[volName] {
+			t.Errorf("Expected volume %s to exist", volName)
+		}
+	}
+
+	// Check volume mounts on container
+	if len(deployment.Spec.Template.Spec.Containers) == 0 {
+		t.Fatal("No containers found in deployment")
+	}
+
+	volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+	mountPaths := make(map[string]string)
+	for _, mount := range volumeMounts {
+		mountPaths[mount.Name] = mount.MountPath
+	}
+
+	// Verify all expected mounts
+	for volName, expectedPath := range expectedVolumes {
+		if actualPath, ok := mountPaths[volName]; ok {
+			if actualPath != expectedPath {
+				t.Errorf("Volume %s expected to be mounted at %s, got %s", volName, expectedPath, actualPath)
+			}
+		} else {
+			t.Errorf("Expected volume mount for %s at %s", volName, expectedPath)
+		}
+	}
+}
+
+func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
+	scheme := setupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cronjob-security",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "git.theryans.io/language-operator/agent:latest",
+			ExecutionMode: "scheduled",
+			Schedule:      "0 * * * *",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify CronJob was created
+	cronJob := &batchv1.CronJob{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, cronJob)
+	if err != nil {
+		t.Fatalf("Expected CronJob to exist, but got error: %v", err)
+	}
+
+	// Verify Pod security context
+	podSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.SecurityContext
+	if podSec == nil {
+		t.Fatal("Pod SecurityContext is nil")
+	}
+
+	if podSec.RunAsNonRoot == nil || !*podSec.RunAsNonRoot {
+		t.Error("Expected RunAsNonRoot to be true")
+	}
+
+	if podSec.RunAsUser == nil || *podSec.RunAsUser != 1000 {
+		t.Errorf("Expected RunAsUser to be 1000, got %v", podSec.RunAsUser)
+	}
+
+	// Verify container security context
+	if len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers) == 0 {
+		t.Fatal("No containers found in cronjob")
+	}
+
+	containerSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext
+	if containerSec == nil {
+		t.Fatal("Container SecurityContext is nil")
+	}
+
+	if containerSec.ReadOnlyRootFilesystem == nil || !*containerSec.ReadOnlyRootFilesystem {
+		t.Error("Expected ReadOnlyRootFilesystem to be true")
+	}
+
+	if containerSec.Capabilities == nil || len(containerSec.Capabilities.Drop) != 1 || containerSec.Capabilities.Drop[0] != "ALL" {
+		t.Error("Expected capabilities to drop ALL")
+	}
+}
