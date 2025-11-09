@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -19,14 +21,37 @@ type Violation struct {
 	Message  string `json:"message"`
 }
 
+// findValidatorScript looks for the validator script in common locations
+func findValidatorScript() string {
+	// Try locations in order of preference
+	locations := []string{
+		"/usr/local/bin/validate-ruby-code.rb",                   // Docker container
+		"scripts/validate-ruby-code.rb",                          // CI from src/ directory
+		"../scripts/validate-ruby-code.rb",                       // Test from src/pkg/validation
+		filepath.Join("src", "scripts", "validate-ruby-code.rb"), // From repo root
+	}
+
+	for _, path := range locations {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	// Default to container location
+	return "/usr/local/bin/validate-ruby-code.rb"
+}
+
 // ValidateRubyCode validates Ruby code using AST-based analysis
 // It shells out to the Ruby gem's AST validator for accurate parsing
 func ValidateRubyCode(code string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
+	// Find the validator script
+	scriptPath := findValidatorScript()
+
 	// Execute Ruby wrapper script that calls the gem's AST validator
-	cmd := exec.CommandContext(ctx, "ruby", "/usr/local/bin/validate-ruby-code.rb")
+	cmd := exec.CommandContext(ctx, "ruby", scriptPath)
 	cmd.Stdin = strings.NewReader(code)
 
 	output, err := cmd.CombinedOutput()
