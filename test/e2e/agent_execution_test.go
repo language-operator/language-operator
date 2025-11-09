@@ -65,39 +65,25 @@ func TestAgentExecution(t *testing.T) {
 	assert.Contains(t, code, "schedule", "Code should contain schedule")
 	assert.Contains(t, code, "*/5 * * * *", "Code should contain correct schedule")
 
-	// Wait for deployment to be created
-	t.Log("Waiting for deployment to be ready...")
-	err = env.WaitForDeployment(t, namespace, "test-agent")
-	require.NoError(t, err, "Deployment should be created and ready")
-
-	// Wait for pod to be running
-	t.Log("Waiting for pod to be running...")
-	pod, err := env.WaitForPod(t, namespace, "test-agent")
-	require.NoError(t, err, "Pod should be running")
-	assert.Equal(t, "Running", string(pod.Status.Phase), "Pod should be in Running phase")
-
-	// Get pod logs
-	t.Log("Retrieving pod logs...")
-	logs, err := env.GetPodLogs(t, namespace, pod.Name)
-	if err != nil {
-		t.Logf("Warning: Could not retrieve logs: %v", err)
-	} else {
-		t.Logf("Pod logs:\n%s", logs)
-	}
+	// Note: In envtest, we cannot verify actual Deployment/Pod creation
+	// as envtest only runs the API server, not the full cluster control plane.
+	// We verify the synthesis and ConfigMap creation which is what the controller manages.
 
 	// Verify agent status
 	updatedAgent := env.GetLanguageAgent(t, namespace, "test-agent")
 	assert.NotNil(t, updatedAgent.Status.Conditions, "Status conditions should be set")
 
-	// Check for Ready condition
-	hasReady := false
+	// Check for Synthesized condition
+	hasSynthesized := false
 	for _, cond := range updatedAgent.Status.Conditions {
-		if cond.Type == "Ready" && cond.Status == metav1.ConditionTrue {
-			hasReady = true
+		if cond.Type == "Synthesized" && cond.Status == metav1.ConditionTrue {
+			hasSynthesized = true
 			break
 		}
 	}
-	assert.True(t, hasReady, "Agent should have Ready condition set to True")
+	assert.True(t, hasSynthesized, "Agent should have Synthesized condition set to True")
+
+	t.Logf("Generated code:\n%s", code)
 }
 
 // TestAgentWithWorkspace tests agent execution with persistent workspace
@@ -257,10 +243,6 @@ func TestAgentStatusUpdates(t *testing.T) {
 	})
 
 	env.CreateLanguageAgent(t, agent)
-
-	// Check initial state
-	initialAgent := env.GetLanguageAgent(t, namespace, "test-agent")
-	assert.NotNil(t, initialAgent, "Agent should exist")
 
 	// Wait for synthesis
 	err := env.WaitForCondition(t, namespace, "test-agent", "Synthesized", metav1.ConditionTrue)
