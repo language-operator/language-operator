@@ -412,6 +412,25 @@ Features under development:
 
 ---
 
+## Security
+
+Language Operator implements defense-in-depth security with multiple layers of protection:
+
+- **AST-based code validation** - Blocks dangerous Ruby code patterns at synthesis and runtime
+- **NetworkPolicy enforcement** - Zero-trust networking with CNI compatibility detection
+- **Registry whitelist** - Only approved container registries allowed
+- **Non-root execution** - All containers run as unprivileged user
+- **Read-only filesystems** - Root filesystem is read-only by default
+- **Resource limits** - CPU and memory quotas enforced
+
+**For detailed security documentation, see:**
+- [Security Overview](docs/security/README.md) - Security model and features
+- [CVE Mitigations](docs/security/cve-mitigations.md) - Attack scenarios and defenses
+- [CNI Requirements](docs/security/cni-requirements.md) - NetworkPolicy enforcement setup
+- [Registry Whitelist](docs/security/registry-whitelist.md) - Container registry configuration
+
+---
+
 ## Philosophy
 
 **1. Natural language is the interface**
