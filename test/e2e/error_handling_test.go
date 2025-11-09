@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,8 +115,8 @@ func TestInvalidInstructions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create test namespace
-			namespace := "test-invalid-instructions"
+			// Create test namespace (unique per test case)
+			namespace := fmt.Sprintf("test-%s", strings.ReplaceAll(tc.name, " ", "-"))
 			env.CreateNamespace(t, namespace)
 			defer env.DeleteNamespace(t, namespace)
 
