@@ -16,7 +16,7 @@ COPY cmd/ cmd/
 COPY api/ api/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
-COPY scripts/ scripts/
+COPY ../scripts/validate-ruby-code.rb scripts/validate-ruby-code.rb
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
