@@ -1,20 +1,29 @@
-package e2e
+package integration
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/cloudwego/eino/components/model"
+	"github.com/cloudwego/eino/schema"
 )
 
-// MockLLMService provides a mock LLM API for testing
+// MockLLMService provides a mock LLM API server for testing
 type MockLLMService struct {
 	server      *httptest.Server
 	requests    []string
 	shouldError bool
 	errorMsg    string
+}
+
+// MockChatModel implements the ChatModel interface for testing
+type MockChatModel struct {
+	mockLLM *MockLLMService
 }
 
 // LLMRequest represents an incoming LLM request
@@ -45,7 +54,7 @@ type Choice struct {
 	FinishReason string  `json:"finish_reason"`
 }
 
-// NewMockLLMService creates a new mock LLM service
+// NewMockLLMService creates a new mock LLM HTTP service
 func NewMockLLMService(t *testing.T) *MockLLMService {
 	m := &MockLLMService{
 		requests:    make([]string, 0),
@@ -59,7 +68,7 @@ func NewMockLLMService(t *testing.T) *MockLLMService {
 	return m
 }
 
-// NewMockLLMServiceWithError creates a new mock LLM service that returns errors
+// NewMockLLMServiceWithError creates a mock that returns errors
 func NewMockLLMServiceWithError(t *testing.T, errorMsg string) *MockLLMService {
 	m := &MockLLMService{
 		requests:    make([]string, 0),
@@ -72,6 +81,73 @@ func NewMockLLMServiceWithError(t *testing.T, errorMsg string) *MockLLMService {
 	}))
 
 	return m
+}
+
+// NewMockChatModel creates a ChatModel that uses the mock LLM service
+func NewMockChatModel(mockLLM *MockLLMService) *MockChatModel {
+	return &MockChatModel{
+		mockLLM: mockLLM,
+	}
+}
+
+// Generate implements the ChatModel interface (eino)
+func (m *MockChatModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	// Extract the last user message content (full synthesis prompt)
+	var promptContent string
+	for i := len(input) - 1; i >= 0; i-- {
+		if input[i].Role == schema.User && input[i].Content != "" {
+			promptContent = input[i].Content
+			break
+		}
+	}
+
+	// Extract just the user instructions from the synthesis prompt
+	// The synthesizer wraps instructions in a section like:
+	// **User Instructions:**
+	// <instructions>
+	instructions := extractUserInstructions(promptContent)
+
+	// Generate mock synthesis
+	code := m.mockLLM.generateMockSynthesis(instructions)
+
+	if m.mockLLM.shouldError {
+		return nil, fmt.Errorf(m.mockLLM.errorMsg)
+	}
+
+	return &schema.Message{
+		Role:    schema.Assistant,
+		Content: code,
+	}, nil
+}
+
+// extractUserInstructions extracts just the user instructions from the synthesis prompt
+func extractUserInstructions(prompt string) string {
+	// Look for "**User Instructions:**" section
+	lines := strings.Split(prompt, "\n")
+	var instructions strings.Builder
+	inInstructionsSection := false
+
+	for _, line := range lines {
+		if strings.Contains(line, "**User Instructions:**") {
+			inInstructionsSection = true
+			continue
+		}
+		if inInstructionsSection {
+			// Stop at next section marker
+			if strings.HasPrefix(line, "**") {
+				break
+			}
+			// Collect instruction lines
+			if len(strings.TrimSpace(line)) > 0 {
+				if instructions.Len() > 0 {
+					instructions.WriteString("\n")
+				}
+				instructions.WriteString(line)
+			}
+		}
+	}
+
+	return instructions.String()
 }
 
 // URL returns the mock service URL
@@ -96,25 +172,23 @@ func (m *MockLLMService) handleRequest(w http.ResponseWriter, r *http.Request, t
 		return
 	}
 
-	// If configured to return errors, return error
 	if m.shouldError {
 		http.Error(w, m.errorMsg, http.StatusInternalServerError)
 		return
 	}
 
-	// Parse request
 	var req LLMRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Store request for inspection
+	// Store request
 	for _, msg := range req.Messages {
 		m.requests = append(m.requests, msg.Content)
 	}
 
-	// Extract instructions from the last user message
+	// Extract instructions
 	var instructions string
 	for i := len(req.Messages) - 1; i >= 0; i-- {
 		if req.Messages[i].Role == "user" {
@@ -123,7 +197,7 @@ func (m *MockLLMService) handleRequest(w http.ResponseWriter, r *http.Request, t
 		}
 	}
 
-	// Generate mock synthesis based on instructions
+	// Generate code
 	code := m.generateMockSynthesis(instructions)
 
 	// Send response
@@ -148,33 +222,34 @@ func (m *MockLLMService) handleRequest(w http.ResponseWriter, r *http.Request, t
 	json.NewEncoder(w).Encode(response)
 }
 
-// generateMockSynthesis generates predictable Ruby code based on instructions
+// generateMockSynthesis generates predictable Ruby DSL code
 func (m *MockLLMService) generateMockSynthesis(instructions string) string {
 	lower := strings.ToLower(instructions)
 
-	// Extract schedule pattern
-	schedule := m.extractSchedule(lower)
+	// Don't generate code for empty/whitespace instructions
+	if strings.TrimSpace(instructions) == "" {
+		return ""
+	}
 
-	// Extract tools
+	schedule := m.extractSchedule(lower)
 	tools := m.extractTools(lower)
 
-	// Generate agent code
+	// Generate agent code with require statement
+	// The synthesizer validates this is present, and the validator wrapper
+	// strips it before security validation (see issue #41 in language-operator-gem)
 	code := `require 'language_operator'
 
 agent "test-agent" do
 `
 
-	// Add schedule if found
 	if schedule != "" {
 		code += fmt.Sprintf(`  schedule "%s"
 `, schedule)
 	}
 
-	// Add workflow
 	code += `  workflow do
 `
 
-	// Add tool usage steps
 	for i, tool := range tools {
 		code += fmt.Sprintf(`    step :step_%d, execute: -> {
       use_tool "%s"
@@ -182,7 +257,6 @@ agent "test-agent" do
 `, i+1, tool)
 	}
 
-	// Close workflow
 	code += `  end
 end
 `
@@ -192,20 +266,15 @@ end
 
 // extractSchedule extracts cron schedule from instructions
 func (m *MockLLMService) extractSchedule(instructions string) string {
-	// Check for minute intervals first (more specific)
 	if strings.Contains(instructions, "5 minute") {
 		return "*/5 * * * *"
 	}
 	if strings.Contains(instructions, "15 minute") {
 		return "*/15 * * * *"
 	}
-
-	// Hourly patterns
 	if strings.Contains(instructions, "hour") {
 		return "0 * * * *"
 	}
-
-	// Daily patterns
 	if strings.Contains(instructions, "daily") || strings.Contains(instructions, "every day") {
 		if strings.Contains(instructions, "4pm") || strings.Contains(instructions, "16:00") {
 			return "0 16 * * *"
@@ -213,14 +282,11 @@ func (m *MockLLMService) extractSchedule(instructions string) string {
 		if strings.Contains(instructions, "9am") || strings.Contains(instructions, "09:00") {
 			return "0 9 * * *"
 		}
-		return "0 0 * * *" // midnight by default
+		return "0 0 * * *"
 	}
-
-	// Weekly patterns
 	if strings.Contains(instructions, "weekly") || strings.Contains(instructions, "every week") {
-		return "0 0 * * 0" // Sunday midnight
+		return "0 0 * * 0"
 	}
-
 	return ""
 }
 
@@ -228,18 +294,25 @@ func (m *MockLLMService) extractSchedule(instructions string) string {
 func (m *MockLLMService) extractTools(instructions string) []string {
 	tools := []string{}
 
+	// Don't add default tools for empty instructions
+	if strings.TrimSpace(instructions) == "" {
+		return tools
+	}
+
 	toolKeywords := map[string]string{
-		"spreadsheet": "google-sheets",
+		"spreadsheet":   "google-sheets",
 		"google sheets": "google-sheets",
-		"email": "email",
-		"send email": "email",
-		"web": "web-fetch",
-		"http": "web-fetch",
-		"https": "web-fetch",
-		"api": "web-fetch",
-		"slack": "slack",
-		"jira": "jira",
-		"github": "github",
+		"email":         "email",
+		"send email":    "email",
+		"send me":       "email",
+		"report":        "email",
+		"web":           "web-fetch",
+		"http":          "web-fetch",
+		"https":         "web-fetch",
+		"api":           "web-fetch",
+		"slack":         "slack",
+		"jira":          "jira",
+		"github":        "github",
 	}
 
 	for keyword, tool := range toolKeywords {
@@ -258,7 +331,6 @@ func (m *MockLLMService) extractTools(instructions string) []string {
 		}
 	}
 
-	// Default to at least one tool if none detected
 	if len(tools) == 0 {
 		tools = append(tools, "web-fetch")
 	}

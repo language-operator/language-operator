@@ -86,8 +86,8 @@ jobs:
         run: |
           git diff --exit-code || (echo "Generated manifests are out of date. Run 'make manifests' and commit the changes." && exit 1)
 
-  # Run end-to-end integration tests
-  e2e-test:
+  # Run integration tests (fast, no K8s required)
+  integration-test:
     runs-on: builder
     steps:
       - name: Checkout code
@@ -99,13 +99,14 @@ jobs:
           go-version-file: 'src/go.mod'
           cache-dependency-path: 'src/go.sum'
 
-      - name: Install envtest assets
-        working-directory: test/e2e
-        run: |
-          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-          echo "KUBEBUILDER_ASSETS=$($(go env GOPATH)/bin/setup-envtest use -p path)" >> $GITHUB_ENV
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
 
-      - name: Run e2e tests
-        working-directory: test/e2e
-        run: |
-          go test -v -timeout 10m ./...
+      - name: Install Ruby dependencies
+        run: bundle install
+
+      - name: Run integration tests
+        run: make test-integration

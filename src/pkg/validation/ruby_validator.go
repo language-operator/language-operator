@@ -69,14 +69,16 @@ func ValidateRubyCode(code string) error {
 	cmd := exec.CommandContext(ctx, "ruby", scriptPath)
 	cmd.Stdin = strings.NewReader(code)
 
-	output, err := cmd.CombinedOutput()
+	// Capture STDOUT and STDERR separately
+	// STDERR may contain parser warnings that should not interfere with JSON parsing
+	output, err := cmd.Output()
 
 	// Check for timeout
 	if ctx.Err() == context.DeadlineExceeded {
 		return fmt.Errorf("validation timeout: code too large or complex (>1s)")
 	}
 
-	// Parse JSON output from validator
+	// Parse JSON output from validator (STDOUT only)
 	var violations []Violation
 	if jsonErr := json.Unmarshal(output, &violations); jsonErr != nil {
 		// If JSON parsing fails, the output might be an error message

@@ -1,4 +1,4 @@
-.PHONY: build help k8s-install k8s-uninstall k8s-status operator test-e2e
+.PHONY: build help k8s-install k8s-uninstall k8s-status operator test test-unit test-integration
 
 # Build all Docker images using the build script
 build:
@@ -39,29 +39,41 @@ test:
 	@echo ""
 	@echo "✓ All tests passed!"
 
-# Run end-to-end integration tests
-test-e2e:
-	@echo "Running end-to-end integration tests..."
+# Run fast unit tests (no Kubernetes required)
+test-unit:
+	@echo "Running fast unit tests..."
 	@echo ""
-	@cd test/e2e && go test -v -timeout 10m ./...
+	@bundle exec sh -c 'cd test/integration && go test -v -short -timeout 2m ./...'
 	@echo ""
-	@echo "✓ E2E tests passed!"
+	@echo "✓ Unit tests passed!"
+
+# Run integration tests (uses fake Kubernetes client)
+test-integration:
+	@echo "Running integration tests..."
+	@echo ""
+	@bundle exec sh -c 'cd test/integration && go test -v -timeout 5m ./...'
+	@echo ""
+	@echo "✓ Integration tests passed!"
+
 
 # Show help
 help:
 	@echo "Hi :-)"
 	@echo ""
 	@echo "Build & Management:"
-	@echo "  build          - Build all Docker images"
-	@echo "  operator       - Build and deploy the language operator"
-	@echo "  docs           - Generate CRD API reference documentation"
-	@echo "  test           - Run all tests"
-	@echo "  test-e2e       - Run end-to-end integration tests"
+	@echo "  build             - Build all Docker images"
+	@echo "  operator          - Build and deploy the language operator"
+	@echo "  docs              - Generate CRD API reference documentation"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test              - Run all tests"
+	@echo "  test-unit         - Run fast unit tests (no K8s required)"
+	@echo "  test-integration  - Run integration tests (fake K8s client)"
 	@echo ""
 	@echo "Kubernetes Operations:"
-	@echo "  k8s-install    - Install the language operator to Kubernetes"
-	@echo "  k8s-uninstall  - Uninstall the language operator from Kubernetes"
-	@echo "  k8s-status     - Check status of all language resources"
+	@echo "  k8s-install       - Install the language operator to Kubernetes"
+	@echo "  k8s-uninstall     - Uninstall the language operator from Kubernetes"
+	@echo "  k8s-status        - Check status of all language resources"
 	@echo ""
 	@echo "Quick Start:"
 	@echo "  1. Ensure you have a Kubernetes cluster (kind, minikube, etc.)"
