@@ -63,7 +63,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG} -f Dockerfile ..
 
 .PHONY: scan
 scan: ## Scan docker image with Trivy.
