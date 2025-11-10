@@ -35,6 +35,10 @@ type LanguageClusterSpec struct {
 	// IngressConfig defines ingress/gateway configuration for the cluster
 	// +optional
 	IngressConfig *IngressConfig `json:"ingressConfig,omitempty"`
+
+	// Dashboard configuration
+	// +optional
+	Dashboard *DashboardSpec `json:"dashboard,omitempty"`
 }
 
 // IngressConfig defines ingress/gateway configuration
@@ -87,6 +91,30 @@ type CertIssuerReference struct {
 	// +kubebuilder:default=cert-manager.io
 	// +optional
 	Group string `json:"group,omitempty"`
+}
+
+// DashboardSpec defines dashboard configuration
+type DashboardSpec struct {
+	// Enabled controls whether the dashboard is deployed
+	// +kubebuilder:default=false
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// Image is the dashboard container image
+	// +kubebuilder:default="git.theryans.io/language-operator/dashboard:latest"
+	// +optional
+	Image string `json:"image,omitempty"`
+
+	// Port is the dashboard HTTP port
+	// +kubebuilder:default=8080
+	// +optional
+	Port int32 `json:"port,omitempty"`
+
+	// ServiceType is the type of Kubernetes service (ClusterIP, NodePort, LoadBalancer)
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	// +kubebuilder:default=ClusterIP
+	// +optional
+	ServiceType string `json:"serviceType,omitempty"`
 }
 
 // NetworkRule defines a single network policy rule
