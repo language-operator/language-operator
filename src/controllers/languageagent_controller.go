@@ -467,6 +467,28 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 
 	var dslCode string
 	if needsSynthesis {
+		// Start synthesis span
+		ctx, span := tracer.Start(ctx, "agent.synthesize")
+		defer span.End()
+
+		// Add synthesis span attributes
+		tools := r.getToolNames(agent)
+		models := r.getModelNames(agent)
+		span.SetAttributes(
+			attribute.String("synthesis.agent_name", agent.Name),
+			attribute.String("synthesis.namespace", agent.Namespace),
+			attribute.Int("synthesis.tools_count", len(tools)),
+			attribute.Int("synthesis.models_count", len(models)),
+			attribute.Bool("synthesis.is_retry", needsSynthesis),
+		)
+
+		// Add attempt number if available
+		if agent.Status.SynthesisInfo != nil {
+			span.SetAttributes(
+				attribute.Int("synthesis.attempt", int(agent.Status.SynthesisInfo.SynthesisAttempts)+1),
+			)
+		}
+
 		// Fetch persona for distillation
 		persona, err := r.fetchPersona(ctx, agent)
 		if err != nil {
@@ -486,8 +508,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		// Build synthesis request
 		synthReq := synthesis.AgentSynthesisRequest{
 			Instructions: agent.Spec.Instructions,
-			Tools:        r.getToolNames(agent),
-			Models:       r.getModelNames(agent),
+			Tools:        tools,
+			Models:       models,
 			PersonaText:  distilledPersona,
 			AgentName:    agent.Name,
 			Namespace:    agent.Namespace,
@@ -502,6 +524,9 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 				log.Info("Synthesis rate limit exceeded", "agent", agent.Name, "namespace", agent.Namespace)
 				// Record rate limit metric
 				synthesis.RecordSynthesisRateLimitExceeded(agent.Namespace)
+				// Record error in span
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Rate limit exceeded")
 				// Return error to retry later
 				return fmt.Errorf("synthesis rate limit exceeded: %w", err)
 			}
@@ -517,6 +542,9 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 				log.Info("Synthesis attempt quota exceeded", "agent", agent.Name, "namespace", agent.Namespace)
 				// Record quota exceeded metric
 				synthesis.RecordSynthesisQuotaExceeded(agent.Namespace, "attempts")
+				// Record error in span
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Quota exceeded")
 				return fmt.Errorf("synthesis attempt quota exceeded: %w", err)
 			}
 		}
@@ -547,6 +575,9 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			// Record failure metrics
 			synthesis.RecordSynthesisRequest(agent.Namespace, "failed")
 			synthesis.RecordSynthesisDuration(agent.Namespace, "failed", time.Since(time.Now()).Seconds())
+			// Record error in span
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Synthesis failed")
 			return fmt.Errorf("synthesis failed: %w", err)
 		}
 
@@ -557,6 +588,10 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			// Record validation failure metrics
 			synthesis.RecordSynthesisRequest(agent.Namespace, "validation_failed")
 			synthesis.RecordSynthesisDuration(agent.Namespace, "validation_failed", resp.DurationSeconds)
+			// Record error in span
+			validationErr := fmt.Errorf("validation failed: %s", resp.Error)
+			span.RecordError(validationErr)
+			span.SetStatus(codes.Error, "Validation failed")
 			return fmt.Errorf("synthesis validation failed: %s", resp.Error)
 		}
 
@@ -565,6 +600,13 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			"agent", agent.Name,
 			"codeLength", len(dslCode),
 			"duration", resp.DurationSeconds)
+
+		// Add success metrics to span
+		span.SetAttributes(
+			attribute.Int("synthesis.code_length", len(dslCode)),
+			attribute.Float64("synthesis.duration_seconds", resp.DurationSeconds),
+		)
+		span.SetStatus(codes.Ok, "Synthesis successful")
 
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SynthesisSucceeded", "Code synthesized successfully in %.2fs", resp.DurationSeconds)
