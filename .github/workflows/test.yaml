@@ -104,9 +104,13 @@ jobs:
         with:
           ruby-version: '3.4'
           bundler-cache: true
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.GEM_REGISTRY_TOKEN }}
 
       - name: Install Ruby dependencies
         run: bundle install
+        env:
+          BUNDLE_GIT__THERYANS__IO: ${{ secrets.GEM_REGISTRY_TOKEN }}
 
       - name: Run integration tests
         run: make test-integration
