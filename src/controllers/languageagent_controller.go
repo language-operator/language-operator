@@ -3,8 +3,10 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -893,7 +896,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, modelNames, toolURLs, persona),
+				Env:   r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs, persona),
 			},
 		}
 
@@ -1111,7 +1114,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(agent, modelURLs, modelNames, toolURLs, persona),
+				Env:   r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs, persona),
 			},
 		}
 
@@ -1449,7 +1452,7 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	return toolURLs, nil
 }
 
-func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
+func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "CONFIG_PATH",
@@ -1468,6 +1471,42 @@ func (r *LanguageAgentReconciler) buildAgentEnv(agent *langopv1alpha1.LanguageAg
 			Value: agent.Spec.ExecutionMode,
 		},
 	}
+
+	// Extract trace context from current span and inject into agent pod
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		sc := span.SpanContext()
+
+		// Serialize to W3C Trace Context format: version-traceID-spanID-traceFlags
+		traceID := sc.TraceID()
+		spanID := sc.SpanID()
+		traceFlags := sc.TraceFlags()
+
+		// Format: 00-{32 hex chars}-{16 hex chars}-{2 hex chars}
+		traceparent := fmt.Sprintf("00-%s-%s-%02x",
+			hex.EncodeToString(traceID[:]),
+			hex.EncodeToString(spanID[:]),
+			traceFlags)
+
+		env = append(env, corev1.EnvVar{
+			Name:  "TRACEPARENT",
+			Value: traceparent,
+		})
+	}
+
+	// Inject OpenTelemetry configuration from operator environment
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
+			Value: endpoint,
+		})
+	}
+
+	// Set unique service name for agent
+	env = append(env, corev1.EnvVar{
+		Name:  "OTEL_SERVICE_NAME",
+		Value: fmt.Sprintf("language-operator-agent-%s", agent.Name),
+	})
 
 	if agent.Spec.Goal != "" {
 		env = append(env, corev1.EnvVar{
