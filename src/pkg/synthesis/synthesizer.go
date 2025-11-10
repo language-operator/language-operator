@@ -13,6 +13,10 @@ import (
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //go:embed agent_synthesis.tmpl
@@ -20,6 +24,9 @@ var agentSynthesisTemplate string
 
 //go:embed persona_distillation.tmpl
 var personaDistillationTemplate string
+
+// Package-level tracer for OpenTelemetry instrumentation
+var tracer trace.Tracer = otel.Tracer("language-operator/synthesizer")
 
 // TemporalIntent represents the detected execution pattern from user instructions
 type TemporalIntent int
@@ -143,6 +150,20 @@ func (s *Synthesizer) SetCostTracker(tracker *CostTracker, modelName string) {
 
 // SynthesizeAgent generates Ruby DSL code from natural language instructions
 func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisRequest) (*AgentSynthesisResponse, error) {
+	// Start synthesis span
+	ctx, span := tracer.Start(ctx, "synthesis.agent.generate")
+	defer span.End()
+
+	// Add initial span attributes
+	span.SetAttributes(
+		attribute.String("synthesis.agent_name", req.AgentName),
+		attribute.String("synthesis.namespace", req.Namespace),
+		attribute.Int("synthesis.tools_count", len(req.Tools)),
+		attribute.Int("synthesis.models_count", len(req.Models)),
+		attribute.Bool("synthesis.is_retry", req.IsRetry),
+		attribute.Int("synthesis.attempt_number", int(req.AttemptNumber)),
+	)
+
 	startTime := time.Now()
 
 	s.log.Info("Synthesizing agent code",
@@ -166,6 +187,9 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	responseMsg, err := s.chatModel.Generate(ctx, messages)
 	if err != nil {
 		duration := time.Since(startTime).Seconds()
+		// Record error in span
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "LLM call failed")
 		return &AgentSynthesisResponse{
 			Error:           err.Error(),
 			DurationSeconds: duration,
@@ -184,6 +208,14 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 		outputTokens := EstimateTokens(dslCode)
 		synthesisCost = s.costTracker.CalculateCost(inputTokens, outputTokens, s.modelName)
 
+		// Add token/cost attributes to span
+		span.SetAttributes(
+			attribute.Int64("synthesis.input_tokens", synthesisCost.InputTokens),
+			attribute.Int64("synthesis.output_tokens", synthesisCost.OutputTokens),
+			attribute.Float64("synthesis.cost_usd", synthesisCost.TotalCost),
+			attribute.String("synthesis.model", s.modelName),
+		)
+
 		s.log.Info("Synthesis cost tracked",
 			"agent", req.AgentName,
 			"inputTokens", synthesisCost.InputTokens,
@@ -197,9 +229,12 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 
 	// Validate the synthesized code (basic syntax check)
 	validationErrors := []string{}
-	if err := s.validateDSL(dslCode); err != nil {
+	if err := s.validateDSL(ctx, dslCode); err != nil {
 		validationErrors = append(validationErrors, err.Error())
 		duration := time.Since(startTime).Seconds()
+		// Record error in span
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Validation failed")
 		return &AgentSynthesisResponse{
 			DSLCode:          dslCode,
 			Error:            fmt.Sprintf("Validation failed: %v", err),
@@ -209,6 +244,13 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	}
 
 	duration := time.Since(startTime).Seconds()
+
+	// Add success attributes to span
+	span.SetAttributes(
+		attribute.Int("synthesis.code_length", len(dslCode)),
+		attribute.Float64("synthesis.duration_seconds", duration),
+	)
+	span.SetStatus(codes.Ok, "Synthesis successful")
 
 	s.log.Info("Agent code synthesized successfully",
 		"agent", req.AgentName,
@@ -483,18 +525,39 @@ Distilled persona:`,
 }
 
 // validateDSL performs comprehensive validation on the synthesized DSL code
-func (s *Synthesizer) validateDSL(code string) error {
+func (s *Synthesizer) validateDSL(ctx context.Context, code string) error {
+	// Start validation span
+	ctx, span := tracer.Start(ctx, "synthesis.validate")
+	defer span.End()
+
+	// Add span attributes
+	span.SetAttributes(
+		attribute.String("validation.language", "ruby"),
+		attribute.Int("validation.code_length", len(code)),
+	)
+
 	// Basic checks
 	if code == "" {
+		span.SetAttributes(attribute.String("validation.error_type", "empty_code"))
+		span.RecordError(fmt.Errorf("empty code generated"))
+		span.SetStatus(codes.Error, "Validation failed: empty code")
 		return fmt.Errorf("empty code generated")
 	}
 
 	if !strings.Contains(code, "agent ") {
-		return fmt.Errorf("code does not contain 'agent' definition")
+		span.SetAttributes(attribute.String("validation.error_type", "missing_agent"))
+		err := fmt.Errorf("code does not contain 'agent' definition")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Validation failed: missing agent definition")
+		return err
 	}
 
 	if !strings.Contains(code, "require 'language_operator'") && !strings.Contains(code, `require "language_operator"`) {
-		return fmt.Errorf("code does not require language_operator")
+		span.SetAttributes(attribute.String("validation.error_type", "missing_require"))
+		err := fmt.Errorf("code does not require language_operator")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Validation failed: missing require")
+		return err
 	}
 
 	// Check for basic Ruby syntax issues
@@ -505,8 +568,15 @@ func (s *Synthesizer) validateDSL(code string) error {
 
 	// Security validation: use AST-based validator
 	if err := validation.ValidateRubyCode(code); err != nil {
+		span.SetAttributes(attribute.String("validation.error_type", "security_violation"))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Validation failed: security violation")
 		return fmt.Errorf("security validation failed: %w", err)
 	}
+
+	// Validation successful
+	span.SetAttributes(attribute.String("validation.result", "success"))
+	span.SetStatus(codes.Ok, "Validation successful")
 
 	return nil
 }
