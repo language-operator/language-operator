@@ -426,6 +426,58 @@ monitoring:
     # Timeout for scraping
     scrapeTimeout: 10s
 
+# OpenTelemetry configuration
+# Enables distributed tracing for operator and agents
+opentelemetry:
+  # Enable OpenTelemetry tracing (default: false for opt-in behavior)
+  enabled: false
+
+  # OTLP gRPC endpoint for exporting traces
+  # Examples:
+  #   - "otel-collector.observability.svc.cluster.local:4317" (in-cluster collector)
+  #   - "otel-collector:4317" (same namespace)
+  #   - "jaeger-collector.observability.svc.cluster.local:4317" (Jaeger with OTLP)
+  endpoint: ""
+
+  # Sampling configuration
+  sampling:
+    # Trace sampling rate (0.0 to 1.0)
+    # 1.0 = sample 100% of traces (recommended for development)
+    # 0.1 = sample 10% of traces (recommended for production)
+    # 0.01 = sample 1% of traces (high-volume production)
+    rate: 1.0
+
+  # Resource attributes for trace identification
+  # These attributes help identify and filter traces in your observability platform
+  resourceAttributes:
+    # Environment identifier (e.g., production, staging, development)
+    environment: "production"
+
+    # Kubernetes cluster name (helps when aggregating traces from multiple clusters)
+    cluster: "main"
+
+    # Custom resource attributes (key-value pairs)
+    # Example:
+    #   region: "us-east-1"
+    #   team: "platform"
+    #   cost_center: "engineering"
+    custom: {}
+
+# Agent-specific telemetry configuration
+# Allows agents to use different telemetry settings than the operator
+agentTelemetry:
+  # OTLP endpoint override for agents
+  # If empty, agents inherit the operator's opentelemetry.endpoint
+  # Useful for routing agent traces to a different collector or backend
+  # Example: "otel-collector-agents.observability.svc.cluster.local:4317"
+  endpoint: ""
+
+  # Sampling rate override for agents
+  # If null, agents inherit the operator's opentelemetry.sampling.rate
+  # Set to a lower rate (e.g., 0.1) to reduce agent trace volume
+  # while keeping operator traces at 100% sampling
+  samplingRate: null
+
 # CRD installation
 crds:
   # Install CRDs as part of the Helm chart
