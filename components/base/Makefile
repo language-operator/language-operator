@@ -3,6 +3,9 @@ IMAGE_NAME := git.theryans.io/language-operator/base
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 
+# Include shared targets
+include ../../Makefile.common
+
 # Default target
 .PHONY: help
 help:
@@ -15,33 +18,18 @@ help:
 	@echo "  run   - Run the container"
 	@echo "  env   - Display sorted list of environment variables in the image"
 
-# Build the Docker image
-.PHONY: build
-build:
-	docker build -t $(IMAGE_FULL) .
-
 # Push the Docker image to the registry
 .PHONY: push
 push:
 	docker push $(IMAGE_FULL)
 
-# Scan the Docker image with Trivy
-.PHONY: scan
-scan:
-	trivy image $(IMAGE_FULL)
-
-# Test the Docker image
+# Override test to include base-specific tests
 .PHONY: test
-test: ## Test the Docker image
+test:
 	@echo "Testing base image..."
 	docker run --rm $(IMAGE_FULL) ruby --version
 	docker run --rm $(IMAGE_FULL) bundle --version
 	@echo "All tests passed!"
-
-# Run the image and exec into it with an interactive shell
-.PHONY: shell
-shell:
-	docker run --rm -it $(IMAGE_FULL) /bin/sh
 
 # Run the container
 .PHONY: run

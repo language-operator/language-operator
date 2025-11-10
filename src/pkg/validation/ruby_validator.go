@@ -30,7 +30,6 @@ func findValidatorScript() string {
 		"../../scripts/validate-ruby-code.rb",                         // Test from src/pkg/validation
 		filepath.Join("..", "..", "scripts", "validate-ruby-code.rb"), // Alternative path
 		"../scripts/validate-ruby-code.rb",                            // From pkg/validation
-		filepath.Join("src", "scripts", "validate-ruby-code.rb"),      // From repo root
 	}
 
 	for _, path := range locations {
