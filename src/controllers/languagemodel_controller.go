@@ -22,6 +22,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -44,6 +47,9 @@ type LanguageModelReconciler struct {
 	Log    logr.Logger
 }
 
+// tracer is the OpenTelemetry tracer for the LanguageModel controller
+var modelTracer = otel.Tracer("language-operator/model-controller")
+
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels/finalizers,verbs=update
@@ -55,6 +61,16 @@ type LanguageModelReconciler struct {
 
 // Reconcile reconciles a LanguageModel resource
 func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Start OpenTelemetry span for reconciliation
+	ctx, span := modelTracer.Start(ctx, "model.reconcile")
+	defer span.End()
+
+	// Add basic span attributes from request
+	span.SetAttributes(
+		attribute.String("model.name", req.Name),
+		attribute.String("model.namespace", req.Namespace),
+	)
+
 	log := r.Log.WithValues("languagemodel", req.NamespacedName)
 
 	// Fetch the LanguageModel instance
@@ -62,11 +78,20 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.Get(ctx, req.NamespacedName, model); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("LanguageModel resource not found. Ignoring since object must be deleted")
+			span.SetStatus(codes.Ok, "Resource not found (deleted)")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get LanguageModel")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get LanguageModel")
 		return ctrl.Result{}, err
 	}
+
+	// Add model-specific attributes to span
+	span.SetAttributes(
+		attribute.String("model.provider", model.Spec.Provider),
+		attribute.Int64("model.generation", model.Generation),
+	)
 
 	// Handle deletion
 	if !model.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -86,6 +111,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconcile the ConfigMap
 	if err := r.reconcileConfigMap(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -97,6 +124,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconcile the Deployment
 	if err := r.reconcileDeployment(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile Deployment")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile Deployment")
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -108,6 +137,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconcile the Service
 	if err := r.reconcileService(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile Service")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile Service")
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -119,6 +150,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconcile NetworkPolicy for network isolation
 	if err := r.reconcileNetworkPolicy(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile NetworkPolicy")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -135,10 +168,13 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	if err := r.Status().Update(ctx, model); err != nil {
 		log.Error(err, "Failed to update status")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to update status")
 		return ctrl.Result{}, err
 	}
 
 	log.Info("Successfully reconciled LanguageModel")
+	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
 }
 
@@ -198,6 +234,15 @@ func (r *LanguageModelReconciler) reconcileConfigMap(ctx context.Context, model 
 
 // reconcileDeployment creates or updates the LiteLLM proxy Deployment
 func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
+	// Start child span for deployment creation
+	ctx, span := modelTracer.Start(ctx, "model.deployment.create")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("model.name", model.Name),
+		attribute.String("model.namespace", model.Namespace),
+	)
+
 	labels := GetCommonLabels(model.Name, "LanguageModel")
 	configMapName := GenerateConfigMapName(model.Name, "model")
 
@@ -322,7 +367,14 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 		return nil
 	})
 
-	return err
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to create/update deployment")
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "Deployment reconciled successfully")
+	return nil
 }
 
 // reconcileService creates or updates the Service for the LiteLLM proxy

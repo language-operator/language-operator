@@ -1,0 +1,239 @@
+---
+# OpenTelemetry Collector Deployment for Language Operator
+#
+# This example deploys an OpenTelemetry Collector to receive traces from the
+# language-operator and forward them to Jaeger for visualization.
+#
+# To use this example:
+# 1. Deploy Jaeger (optional - can use other backends):
+#    kubectl create namespace observability
+#    kubectl create -f https://github.com/jaegertracing/jaeger-operator/releases/download/v1.51.0/jaeger-operator.yaml -n observability
+#    kubectl apply -f - <<EOF
+#    apiVersion: jaegertracing.io/v1
+#    kind: Jaeger
+#    metadata:
+#      name: jaeger
+#      namespace: observability
+#    EOF
+#
+# 2. Deploy this OTel Collector:
+#    kubectl apply -f examples/otel-collector.yaml
+#
+# 3. Configure language-operator to use the collector:
+#    Set OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector.kube-system.svc.cluster.local:4317
+#    in the operator deployment environment variables
+#
+# 4. Access Jaeger UI:
+#    kubectl port-forward -n observability svc/jaeger-query 16686:16686
+#    Open http://localhost:16686 in your browser
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    # Receivers collect telemetry data
+    receivers:
+      # OTLP receiver accepts traces via gRPC and HTTP
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    # Processors transform telemetry data
+    processors:
+      # Batch processor batches spans to reduce network calls
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+      # Memory limiter prevents OOM by dropping data when memory is high
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+
+    # Exporters send telemetry data to backends
+    exporters:
+      # Jaeger exporter sends traces to Jaeger
+      # Adjust the endpoint if Jaeger is in a different namespace/cluster
+      otlp/jaeger:
+        endpoint: jaeger-collector.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+      # Logging exporter outputs to stdout (useful for debugging)
+      logging:
+        loglevel: info
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+      # Prometheus exporter exposes metrics
+      # Uncomment if you want to scrape metrics
+      # prometheus:
+      #   endpoint: "0.0.0.0:8889"
+
+    # Service defines the telemetry pipelines
+    service:
+      pipelines:
+        # Traces pipeline
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/jaeger, logging]
+
+        # Metrics pipeline (if needed)
+        # metrics:
+        #   receivers: [otlp]
+        #   processors: [memory_limiter, batch]
+        #   exporters: [prometheus, logging]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: kube-system
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        # Use the official OpenTelemetry Collector image
+        image: otel/opentelemetry-collector:0.91.0
+        args:
+          - "--config=/etc/otel/config.yaml"
+        ports:
+        # OTLP gRPC receiver
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        # OTLP HTTP receiver
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+        # Prometheus metrics endpoint (if enabled)
+        - name: metrics
+          containerPort: 8889
+          protocol: TCP
+        # Health check endpoint
+        - name: health
+          containerPort: 13133
+          protocol: TCP
+        volumeMounts:
+        - name: config
+          mountPath: /etc/otel
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 13133
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: otel-collector-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: kube-system
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    app: otel-collector
+  ports:
+  # OTLP gRPC endpoint (primary for language-operator)
+  - name: otlp-grpc
+    port: 4317
+    targetPort: 4317
+    protocol: TCP
+  # OTLP HTTP endpoint (alternative)
+  - name: otlp-http
+    port: 4318
+    targetPort: 4318
+    protocol: TCP
+  # Prometheus metrics (if enabled)
+  - name: metrics
+    port: 8889
+    targetPort: 8889
+    protocol: TCP
+  type: ClusterIP
+
+---
+# Alternative: Using OpenTelemetry Operator (recommended for production)
+#
+# If you have the OpenTelemetry Operator installed, you can use the
+# OpenTelemetryCollector CRD instead of raw Kubernetes resources.
+#
+# Install the operator:
+#   kubectl apply -f https://github.com/open-telemetry/opentelemetry-operator/releases/latest/download/opentelemetry-operator.yaml
+#
+# Then deploy the collector:
+#
+# apiVersion: opentelemetry.io/v1alpha1
+# kind: OpenTelemetryCollector
+# metadata:
+#   name: otel-collector
+#   namespace: kube-system
+# spec:
+#   mode: deployment
+#   config: |
+#     receivers:
+#       otlp:
+#         protocols:
+#           grpc:
+#             endpoint: 0.0.0.0:4317
+#           http:
+#             endpoint: 0.0.0.0:4318
+#
+#     processors:
+#       batch:
+#         timeout: 10s
+#         send_batch_size: 1024
+#       memory_limiter:
+#         check_interval: 1s
+#         limit_mib: 512
+#
+#     exporters:
+#       otlp/jaeger:
+#         endpoint: jaeger-collector.observability.svc.cluster.local:4317
+#         tls:
+#           insecure: true
+#       logging:
+#         loglevel: info
+#
+#     service:
+#       pipelines:
+#         traces:
+#           receivers: [otlp]
+#           processors: [memory_limiter, batch]
+#           exporters: [otlp/jaeger, logging]

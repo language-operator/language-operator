@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -31,6 +34,9 @@ type LanguageToolReconciler struct {
 	AllowedRegistries []string
 }
 
+// tracer is the OpenTelemetry tracer for the LanguageTool controller
+var toolTracer = otel.Tracer("language-operator/tool-controller")
+
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/finalizers,verbs=update
@@ -41,6 +47,16 @@ type LanguageToolReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Start OpenTelemetry span for reconciliation
+	ctx, span := toolTracer.Start(ctx, "tool.reconcile")
+	defer span.End()
+
+	// Add basic span attributes from request
+	span.SetAttributes(
+		attribute.String("tool.name", req.Name),
+		attribute.String("tool.namespace", req.Namespace),
+	)
+
 	log := log.FromContext(ctx)
 
 	// Fetch the LanguageTool instance
@@ -48,25 +64,41 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := r.Get(ctx, req.NamespacedName, tool); err != nil {
 		if errors.IsNotFound(err) {
 			// Object not found, could have been deleted after reconcile request
+			span.SetStatus(codes.Ok, "Resource not found (deleted)")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get LanguageTool")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get LanguageTool")
 		return ctrl.Result{}, err
 	}
 
+	// Add tool-specific attributes to span
+	span.SetAttributes(
+		attribute.String("tool.type", tool.Spec.Type),
+		attribute.String("tool.deployment_mode", tool.Spec.DeploymentMode),
+		attribute.Int64("tool.generation", tool.Generation),
+	)
+
 	// Handle deletion
 	if !tool.DeletionTimestamp.IsZero() {
+		span.AddEvent("Deleting tool")
 		if controllerutil.ContainsFinalizer(tool, FinalizerName) {
 			// Perform cleanup
 			if err := r.cleanupResources(ctx, tool); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Failed to cleanup resources")
 				return ctrl.Result{}, err
 			}
 			// Remove finalizer
 			controllerutil.RemoveFinalizer(tool, FinalizerName)
 			if err := r.Update(ctx, tool); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Failed to remove finalizer")
 				return ctrl.Result{}, err
 			}
 		}
+		span.SetStatus(codes.Ok, "Tool deleted successfully")
 		return ctrl.Result{}, nil
 	}
 
@@ -81,6 +113,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Validate image registry against whitelist
 	if err := r.validateImageRegistry(tool); err != nil {
 		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Image registry validation failed")
 		SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), tool.Generation)
 		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after registry validation failure")
@@ -92,6 +126,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Reconcile ConfigMap
 	if err := r.reconcileConfigMap(ctx, tool); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
 		return ctrl.Result{}, err
@@ -103,6 +139,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Reconcile Deployment
 		if err := r.reconcileDeployment(ctx, tool); err != nil {
 			log.Error(err, "Failed to reconcile Deployment")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile Deployment")
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
 			return ctrl.Result{}, err
@@ -111,6 +149,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Reconcile Service
 		if err := r.reconcileService(ctx, tool); err != nil {
 			log.Error(err, "Failed to reconcile Service")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile Service")
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
 			return ctrl.Result{}, err
@@ -120,6 +160,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Reconcile NetworkPolicy for network isolation
 	if err := r.reconcileNetworkPolicy(ctx, tool); err != nil {
 		log.Error(err, "Failed to reconcile NetworkPolicy")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
 		return ctrl.Result{}, err
@@ -128,9 +170,12 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Update status based on actual pod readiness
 	if err := r.updateToolStatus(ctx, tool); err != nil {
 		log.Error(err, "Failed to update LanguageTool status")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to update LanguageTool status")
 		return ctrl.Result{}, err
 	}
 
+	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
 }
 

@@ -21,6 +21,9 @@ import (
 	"encoding/json"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +40,9 @@ type LanguagePersonaReconciler struct {
 	Log    logr.Logger
 }
 
+// tracer is the OpenTelemetry tracer for the LanguagePersona controller
+var personaTracer = otel.Tracer("language-operator/persona-controller")
+
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/finalizers,verbs=update
@@ -44,6 +50,16 @@ type LanguagePersonaReconciler struct {
 
 // Reconcile reconciles a LanguagePersona resource
 func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Start OpenTelemetry span for reconciliation
+	ctx, span := personaTracer.Start(ctx, "persona.reconcile")
+	defer span.End()
+
+	// Add basic span attributes from request
+	span.SetAttributes(
+		attribute.String("persona.name", req.Name),
+		attribute.String("persona.namespace", req.Namespace),
+	)
+
 	log := r.Log.WithValues("languagepersona", req.NamespacedName)
 
 	// Fetch the LanguagePersona instance
@@ -51,11 +67,19 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.Get(ctx, req.NamespacedName, persona); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("LanguagePersona resource not found. Ignoring since object must be deleted")
+			span.SetStatus(codes.Ok, "Resource not found (deleted)")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get LanguagePersona")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to get LanguagePersona")
 		return ctrl.Result{}, err
 	}
+
+	// Add persona-specific attributes to span
+	span.SetAttributes(
+		attribute.Int64("persona.generation", persona.Generation),
+	)
 
 	// Handle deletion
 	if !persona.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -75,6 +99,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Reconcile the ConfigMap
 	if err := r.reconcileConfigMap(ctx, persona); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
 		persona.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, persona); statusErr != nil {
@@ -91,10 +117,13 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if err := r.Status().Update(ctx, persona); err != nil {
 		log.Error(err, "Failed to update status")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to update status")
 		return ctrl.Result{}, err
 	}
 
 	log.Info("Successfully reconciled LanguagePersona")
+	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
 }
 
