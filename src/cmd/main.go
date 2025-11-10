@@ -44,6 +44,7 @@ import (
 	"github.com/based/language-operator/controllers"
 	"github.com/based/language-operator/pkg/cni"
 	"github.com/based/language-operator/pkg/synthesis"
+	"github.com/based/language-operator/pkg/telemetry"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -100,6 +101,25 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Initialize OpenTelemetry tracing
+	ctx := context.Background()
+	tracerProvider, err := telemetry.InitTracer(ctx)
+	if err != nil {
+		setupLog.Error(err, "failed to initialize OpenTelemetry, tracing disabled")
+	} else if tracerProvider != nil {
+		setupLog.Info("OpenTelemetry tracing enabled")
+		// Defer shutdown with timeout
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := telemetry.Shutdown(shutdownCtx, tracerProvider); err != nil {
+				setupLog.Error(err, "failed to shutdown OpenTelemetry TracerProvider")
+			}
+		}()
+	} else {
+		setupLog.Info("OpenTelemetry tracing disabled (OTEL_EXPORTER_OTLP_ENDPOINT not set)")
+	}
+
 	// Detect CNI capabilities and load registry whitelist before starting manager
 	config := ctrl.GetConfigOrDie()
 	clientset, err := kubernetes.NewForConfig(config)
@@ -108,7 +128,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
 	cniCaps, cniErr := cni.DetectNetworkPolicySupport(ctx, clientset)
 
 	// Load allowed registries from ConfigMap
