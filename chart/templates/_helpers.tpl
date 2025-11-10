@@ -86,3 +86,22 @@ ServiceMonitor namespace
 {{- .Release.Namespace }}
 {{- end }}
 {{- end }}
+
+{{/*
+OpenTelemetry resource attributes
+Builds a comma-separated list of key=value pairs for OTEL_RESOURCE_ATTRIBUTES
+*/}}
+{{- define "language-operator.otelResourceAttributes" -}}
+{{- $attrs := list -}}
+{{- if .Values.opentelemetry.resourceAttributes.environment -}}
+{{- $attrs = append $attrs (printf "environment=%s" .Values.opentelemetry.resourceAttributes.environment) -}}
+{{- end -}}
+{{- if .Values.opentelemetry.resourceAttributes.cluster -}}
+{{- $attrs = append $attrs (printf "k8s.cluster.name=%s" .Values.opentelemetry.resourceAttributes.cluster) -}}
+{{- end -}}
+{{- $attrs = append $attrs (printf "k8s.namespace.name=%s" .Release.Namespace) -}}
+{{- range $key, $value := .Values.opentelemetry.resourceAttributes.custom -}}
+{{- $attrs = append $attrs (printf "%s=%s" $key $value) -}}
+{{- end -}}
+{{- join "," $attrs -}}
+{{- end }}

@@ -103,6 +103,18 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        {{- if .Values.opentelemetry.enabled }}
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ .Values.opentelemetry.endpoint | quote }}
+        - name: OTEL_SERVICE_NAME
+          value: "language-operator"
+        - name: OTEL_TRACES_SAMPLER
+          value: "traceidratio"
+        - name: OTEL_TRACES_SAMPLER_ARG
+          value: {{ .Values.opentelemetry.sampling.rate | quote }}
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: {{ include "language-operator.otelResourceAttributes" . | quote }}
+        {{- end }}
         {{- with .Values.env }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
