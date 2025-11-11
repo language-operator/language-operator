@@ -8,12 +8,9 @@ on:
     types: [published]
   workflow_dispatch:
 
-env:
-  REGISTRY: git.theryans.io
-
 jobs:
   release:
-    runs-on: builder
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
@@ -45,22 +42,16 @@ jobs:
 
       - name: Generate Helm index
         run: |
-          helm repo index .helm-packages --url https://${{ env.REGISTRY }}/helm-charts
+          helm repo index .helm-packages --url https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
 
-      - name: Upload Helm chart to Forgejo
-        if: github.event_name != 'pull_request'
+      - name: Upload Helm chart as release asset
+        if: github.event_name == 'release'
         env:
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-          HELM_OWNER: langop
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Upload chart to Forgejo Helm registry using HTTP API
           for chart in .helm-packages/*.tgz; do
             if [ -f "$chart" ]; then
-              echo "Uploading $chart to https://${{ env.REGISTRY }}/api/packages/${HELM_OWNER}/helm/api/charts"
-              curl --user "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" \
-                -X POST \
-                --upload-file "$chart" \
-                "https://${{ env.REGISTRY }}/api/packages/${HELM_OWNER}/helm/api/charts"
+              echo "Uploading $chart as release asset"
+              gh release upload ${{ github.ref_name }} "$chart"
             fi
           done

@@ -12,7 +12,7 @@ on:
 jobs:
   # Lint and validate code
   lint:
-    runs-on: builder
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
 
   # Run unit tests
   unit-test:
-    runs-on: builder
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
 
   # Validate CRD manifests
   validate-manifests:
-    runs-on: builder
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
 
   # Run integration tests (fast, no K8s required)
   integration-test:
-    runs-on: builder
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,17 +100,13 @@ jobs:
           cache-dependency-path: 'src/go.sum'
 
       - name: Set up Ruby
-        uses: https://github.com/ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
           bundler-cache: true
-        env:
-          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Install Ruby dependencies
         run: bundle install
-        env:
-          BUNDLE_GIT__THERYANS__IO: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Run integration tests
         run: make test-integration
