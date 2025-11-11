@@ -1987,6 +1987,10 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 
 // performSelfHealingSynthesis performs synthesis with error context for self-healing
 func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	// Start OpenTelemetry span for self-healing synthesis
+	ctx, span := tracer.Start(ctx, "agent.self_healing.synthesize")
+	defer span.End()
+
 	log := log.FromContext(ctx)
 
 	// Fetch persona if referenced
@@ -2028,6 +2032,26 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		LastKnownGoodCode: lastKnownGoodCode,
 	}
 
+	// Build error context string for span attribute
+	errorContextStr := ""
+	if len(errorContext.RuntimeErrors) > 0 {
+		// Include first runtime error message
+		errorContextStr = errorContext.RuntimeErrors[0].ErrorMessage
+	} else if len(errorContext.ValidationErrors) > 0 {
+		// Or first validation error if no runtime errors
+		errorContextStr = errorContext.ValidationErrors[0]
+	}
+
+	// Add span attributes
+	span.SetAttributes(
+		attribute.String("agent.name", agent.Name),
+		attribute.String("agent.namespace", agent.Namespace),
+		attribute.Int("self_healing.attempt_number", int(agent.Status.SelfHealingAttempts)),
+		attribute.String("self_healing.error_context", errorContextStr),
+		attribute.Int("self_healing.runtime_errors_count", len(errorContext.RuntimeErrors)),
+		attribute.Int("self_healing.validation_errors_count", len(errorContext.ValidationErrors)),
+	)
+
 	// Synthesize code with error context
 	log.Info("Performing self-healing synthesis with error context",
 		"agent", agent.Name,
@@ -2042,6 +2066,8 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 
 	resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Self-healing synthesis failed")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingSynthesisFailed",
 				"Self-healing synthesis failed: %v", err)
@@ -2050,6 +2076,9 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 	}
 
 	if resp.Error != "" {
+		synthesisErr := fmt.Errorf("validation failed: %s", resp.Error)
+		span.RecordError(synthesisErr)
+		span.SetStatus(codes.Error, "Self-healing validation failed")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingValidationFailed",
 				"Self-healing validation failed: %s", resp.Error)
@@ -2110,6 +2139,13 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingSynthesisSucceeded",
 			"Self-healing synthesis succeeded in %.2fs (attempt %d)", resp.DurationSeconds, agent.Status.SelfHealingAttempts)
 	}
+
+	// Mark span as successful
+	span.SetStatus(codes.Ok, "Self-healing synthesis succeeded")
+	span.SetAttributes(
+		attribute.Float64("synthesis.duration_seconds", resp.DurationSeconds),
+		attribute.Int("synthesis.code_length", len(resp.DSLCode)),
+	)
 
 	return nil
 }
@@ -2177,19 +2213,36 @@ func calculateBackoff(attempts int32) time.Duration {
 
 // detectPodFailures checks for pod failures and updates agent status
 func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	// Start OpenTelemetry span for failure detection
+	ctx, span := tracer.Start(ctx, "agent.self_healing.detect")
+	defer span.End()
+
+	// Add span attributes
+	span.SetAttributes(
+		attribute.String("agent.name", agent.Name),
+		attribute.String("agent.namespace", agent.Namespace),
+	)
+
 	log := log.FromContext(ctx)
 
 	// List pods owned by this agent
 	podList := &corev1.PodList{}
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	if err := r.List(ctx, podList, client.InNamespace(agent.Namespace), client.MatchingLabels(labels)); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to list pods")
 		return err
 	}
+
+	// Track failure detection metrics
+	podFailureCount := 0
+	errorPatterns := []string{}
 
 	// Check each pod for failures
 	for _, pod := range podList.Items {
 		// Detect failure states
 		if r.isPodFailed(&pod) {
+			podFailureCount++
 			log.Info("Pod failure detected", "pod", pod.Name, "status", pod.Status.Phase)
 
 			// Extract error information
@@ -2201,6 +2254,11 @@ func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *
 
 			// Update agent status with runtime error
 			if runtimeError != nil {
+				// Collect error pattern for span
+				if runtimeError.ErrorMessage != "" {
+					errorPatterns = append(errorPatterns, runtimeError.ErrorMessage)
+				}
+
 				// Append to runtime errors (keep last 10)
 				agent.Status.RuntimeErrors = append(agent.Status.RuntimeErrors, *runtimeError)
 				if len(agent.Status.RuntimeErrors) > 10 {
@@ -2214,6 +2272,8 @@ func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *
 				// Update status
 				if err := r.Status().Update(ctx, agent); err != nil {
 					log.Error(err, "Failed to update agent status with runtime error")
+					span.RecordError(err)
+					span.SetStatus(codes.Error, "Failed to update agent status")
 					return err
 				}
 
@@ -2224,6 +2284,19 @@ func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *
 				}
 			}
 		}
+	}
+
+	// Add failure detection metrics to span
+	span.SetAttributes(
+		attribute.Int("agent.pod_failures", podFailureCount),
+		attribute.StringSlice("agent.error_patterns", errorPatterns),
+	)
+
+	// Set span status based on detection results
+	if podFailureCount > 0 {
+		span.SetStatus(codes.Ok, fmt.Sprintf("Detected %d pod failures", podFailureCount))
+	} else {
+		span.SetStatus(codes.Ok, "No pod failures detected")
 	}
 
 	return nil
