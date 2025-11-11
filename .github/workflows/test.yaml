@@ -49,6 +49,15 @@ jobs:
           go-version-file: 'src/go.mod'
           cache-dependency-path: 'src/go.sum'
 
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Install Ruby dependencies
+        run: bundle install
+
       - name: Run tests
         working-directory: src
         run: |
