@@ -2,10 +2,7 @@
 
 source 'https://rubygems.org'
 
-# Private gem registry for language-operator SDK
-source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
-  gem 'language-operator', '~> 0.1.15'
-end
+gem 'language-operator', '~> 0.1.30'
 
 # Tool server dependencies
 gem 'sinatra', '~> 4.0'

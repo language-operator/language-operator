@@ -2,10 +2,7 @@
 
 source 'https://rubygems.org'
 
-# Private gem registry for language-operator SDK
-source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
-  gem 'language-operator', '~> 0.1.15'
-end
+gem 'language-operator', '~> 0.1.30'
 
 # Agent-specific dependencies for autonomous execution
 gem 'concurrent-ruby', '~> 1.3'

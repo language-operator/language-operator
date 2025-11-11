@@ -168,7 +168,7 @@ kind: LanguageTool
 metadata:
   name: gmail
 spec:
-  image: git.theryans.io/language-operator/gmail-tool:latest
+  image: ghcr.io/language-operator/gmail-tool:latest
   deploymentMode: sidecar
 ```
 
@@ -328,7 +328,7 @@ kind: LanguageTool
 metadata:
   name: web-search
 spec:
-  image: git.theryans.io/language-operator/web-tool:latest
+  image: ghcr.io/language-operator/web-tool:latest
   egress:
   - description: Allow DuckDuckGo search
     to:
@@ -378,10 +378,11 @@ If no compatible CNI is found, install one before proceeding. See [CNI Requireme
 ### 2. Install the Operator
 
 ```bash
-helm install language-operator oci://git.theryans.io/helm/language-operator
+helm repo add language-operator https://language-operator.github.io/charts
+helm install language-operator language-operator/language-operator
 ```
 
-> **Note:** If you're using a private registry or need to configure registry whitelists, see [Registry Whitelist Configuration](docs/security/registry-whitelist.md).
+> **Note:** You can also install from OCI registry: `helm install language-operator oci://ghcr.io/language-operator/charts/language-operator`
 
 Verify the installation:
 
@@ -429,19 +430,20 @@ You'll see logs showing:
 
 ### Troubleshooting
 
-**Helm chart pull fails:**
+**Helm chart not found:**
 ```
-Error: failed to download "oci://git.theryans.io/helm/language-operator"
+Error: failed to download chart
 ```
-- Ensure you have access to the private registry
-- Check Helm authentication: `helm registry login git.theryans.io`
+- Ensure you've added the Helm repo: `helm repo add language-operator https://language-operator.github.io/charts`
+- Update the repo: `helm repo update`
 
 **Image pull errors:**
 ```
-Failed to pull image "git.theryans.io/language-operator/agent:latest"
+Failed to pull image "ghcr.io/language-operator/agent:latest"
 ```
-- Verify registry credentials are configured in the cluster
-- Check the [Registry Whitelist Configuration](docs/security/registry-whitelist.md) guide
+- Images are public and should pull without authentication
+- Check your cluster's internet connectivity
+- Verify the image tag exists: https://github.com/orgs/language-operator/packages
 
 **Warning: CNI not detected:**
 ```

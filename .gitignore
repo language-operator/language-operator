@@ -1,5 +1,6 @@
 .env
 language-operator-*.gem
+components/base/gem-credentials
 
 # Go test coverage
 *.out

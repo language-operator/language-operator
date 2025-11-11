@@ -1,4 +1,4 @@
-FROM git.theryans.io/language-operator/base:latest
+FROM ghcr.io/language-operator/base:latest
 
 # Install agent-specific packages (Ruby deps inherited from base)
 RUN apk add --no-cache jq

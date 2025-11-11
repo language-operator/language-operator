@@ -20,6 +20,7 @@ Language Operator is a Kubernetes operator that transforms natural language desc
 - **Multi-LLM Support**: Integration with Anthropic Claude and other language models via LiteLLM
 - **Network Isolation**: NetworkPolicy enforcement for secure agent execution (requires compatible CNI like Cilium)
 - **Private Registry Support**: Container image whitelist and authentication for air-gapped deployments
+- **Observability**: OpenTelemetry instrumentation for all controllers with W3C trace context propagation to agent pods
 
 ### Architecture
 

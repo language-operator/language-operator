@@ -3,8 +3,8 @@
 
 # Default variables (can be overridden in component Makefiles)
 IMAGE_TAG ?= latest
-REGISTRY ?= git.theryans.io/language-operator
-IMAGE_FULL ?= $(IMAGE_NAME):$(IMAGE_TAG)
+REGISTRY ?= ghcr.io/language-operator
+IMAGE_FULL ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 # Common PHONY declarations
 .PHONY: build scan shell test lint lint-fix doc doc-clean clean

@@ -2,11 +2,8 @@
 
 source 'https://rubygems.org'
 
-# Private gem registry for language-operator SDK
-source 'https://git.theryans.io/api/packages/language-operator/rubygems' do
-  # Language Operator SDK (includes ruby_llm, ruby_llm-mcp, etc.)
-  gem 'language-operator', '~> 0.1.15'
-end
+# Language Operator SDK (includes ruby_llm, ruby_llm-mcp, etc.)
+gem 'language-operator', '~> 0.1.30'
 
 group :development do
   gem 'rubocop', '~> 1.60'

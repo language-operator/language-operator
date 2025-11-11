@@ -5,13 +5,12 @@
 replicaCount: 2
 
 image:
-  repository: git.theryans.io/language-operator/language-operator
-  pullPolicy: Always
+  repository: ghcr.io/language-operator/language-operator
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
-imagePullSecrets:
-  - name: registry-credentials
+imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
@@ -403,6 +402,20 @@ rbac:
       - ""
       resources:
       - namespaces
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    # RBAC resources for LanguageCluster
+    - apiGroups:
+      - rbac.authorization.k8s.io
+      resources:
+      - roles
+      - rolebindings
       verbs:
       - get
       - list

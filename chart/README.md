@@ -22,7 +22,7 @@ The Language Operator provides production-grade Kubernetes Custom Resources for 
 ### Add the Helm repository
 
 ```bash
-helm repo add language-operator https://github.com/based/language-operator
+helm repo add language-operator https://language-operator.github.io/charts
 helm repo update
 ```
 
@@ -52,7 +52,7 @@ The following table lists the configurable parameters of the Language Operator c
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Number of operator replicas | `2` |
-| `image.repository` | Operator image repository | `ghcr.io/based/language-operator` |
+| `image.repository` | Operator image repository | `ghcr.io/language-operator/language-operator` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.tag` | Operator image tag | `""` (uses appVersion) |
 
@@ -169,7 +169,7 @@ kind: LanguageTool
 metadata:
   name: web-search
 spec:
-  image: ghcr.io/based/mcp-web-search:latest
+  image: ghcr.io/language-operator/mcp-web-search:latest
   type: http
   port: 8080
   replicas: 3
@@ -190,7 +190,7 @@ kind: LanguageAgent
 metadata:
   name: customer-support
 spec:
-  image: ghcr.io/based/language-agent:latest
+  image: ghcr.io/language-operator/language-agent:latest
   modelRefs:
   - name: gpt4
     role: primary

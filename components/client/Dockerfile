@@ -1,4 +1,4 @@
-FROM git.theryans.io/language-operator/base:latest
+FROM ghcr.io/language-operator/base:latest
 
 # Ruby dependencies inherited from base image
 

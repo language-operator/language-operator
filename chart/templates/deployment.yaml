@@ -42,7 +42,7 @@ spec:
         image: {{ include "language-operator.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
-        - /manager
+        - /app/manager
         args:
         {{- if .Values.config.leaderElection.enabled }}
         - --leader-elect

@@ -26,7 +26,7 @@ COPY scripts/validate-ruby-code.rb scripts/validate-ruby-code.rb
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
 
 # Use base image with Ruby support for AST validation
-FROM git.theryans.io/language-operator/base:latest
+FROM ghcr.io/language-operator/base:latest
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ WORKDIR /app
 COPY --from=builder /workspace/manager .
 
 # Install language-operator gem for AST validation
-RUN gem install language-operator --source https://git.theryans.io/api/packages/language-operator/rubygems
+RUN gem install language-operator
 
 # Copy AST validator wrapper script
 COPY --from=builder /workspace/scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
