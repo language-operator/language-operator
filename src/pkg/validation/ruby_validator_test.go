@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -12,10 +11,6 @@ func TestValidateRubyCode(t *testing.T) {
 	// Skip if Ruby is not available (tests run in Docker container with Ruby)
 	if _, err := exec.LookPath("ruby"); err != nil {
 		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
-	}
-	// TODO: Re-enable once language-operator gem v0.1.30+ has proper validator support
-	if os.Getenv("CI") == "true" {
-		t.Skip("Temporarily skipping Ruby validation tests in CI")
 	}
 	tests := []struct {
 		name      string
@@ -400,10 +395,6 @@ func TestValidateRubyCode_Timeout(t *testing.T) {
 	if _, err := exec.LookPath("ruby"); err != nil {
 		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
 	}
-	// TODO: Re-enable once language-operator gem v0.1.30+ has proper validator support
-	if os.Getenv("CI") == "true" {
-		t.Skip("Temporarily skipping Ruby validation tests in CI")
-	}
 
 	// Create extremely large code that might take >1s to parse
 	var hugeCode strings.Builder
@@ -423,10 +414,6 @@ func TestValidateRubyCode_Performance(t *testing.T) {
 	// Skip if Ruby is not available
 	if _, err := exec.LookPath("ruby"); err != nil {
 		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
-	}
-	// TODO: Re-enable once language-operator gem v0.1.30+ has proper validator support
-	if os.Getenv("CI") == "true" {
-		t.Skip("Temporarily skipping Ruby validation tests in CI")
 	}
 
 	// Test performance with 10KB of typical agent code

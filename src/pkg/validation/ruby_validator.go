@@ -25,11 +25,12 @@ type Violation struct {
 func findValidatorScript() string {
 	// Try locations in order of preference
 	locations := []string{
-		"/usr/local/bin/validate-ruby-code.rb",                        // Docker container
-		"scripts/validate-ruby-code.rb",                               // CI from src/ directory
-		"../../scripts/validate-ruby-code.rb",                         // Test from src/pkg/validation
-		filepath.Join("..", "..", "scripts", "validate-ruby-code.rb"), // Alternative path
-		"../scripts/validate-ruby-code.rb",                            // From pkg/validation
+		"/usr/local/bin/validate-ruby-code.rb",                              // Docker container
+		"scripts/validate-ruby-code.rb",                                     // CI from src/ directory
+		"../../../scripts/validate-ruby-code.rb",                            // Test from src/pkg/validation
+		filepath.Join("..", "..", "..", "scripts", "validate-ruby-code.rb"), // Alternative path
+		"../../scripts/validate-ruby-code.rb",                               // From src subdirectory
+		"../scripts/validate-ruby-code.rb",                                  // From pkg/validation
 	}
 
 	for _, path := range locations {
