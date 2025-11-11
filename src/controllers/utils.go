@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -309,12 +311,108 @@ func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 	return cidrs, nil
 }
 
+// providerDefaultEndpoints maps well-known provider types to their default API endpoints
+// These endpoints are automatically added to NetworkPolicy egress rules so users don't need
+// to manually configure network access for standard provider APIs
+var providerDefaultEndpoints = map[string][]string{
+	"openai":    {"https://api.openai.com"},
+	"anthropic": {"https://api.anthropic.com"},
+	// Note: bedrock and vertex use cloud provider endpoints that vary by region
+	// and are typically accessible via VPC endpoints or default cloud egress
+}
+
+// generateEgressFromEndpoint parses an endpoint URL and generates a NetworkPolicy egress rule
+// Returns nil if the URL cannot be parsed or is invalid
+func generateEgressFromEndpoint(endpoint string) *networkingv1.NetworkPolicyEgressRule {
+	// Parse the endpoint URL
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		// Invalid URL, skip auto-generation
+		return nil
+	}
+
+	// Extract host and port
+	host := parsedURL.Hostname()
+	if host == "" {
+		// No host in URL, skip auto-generation
+		return nil
+	}
+
+	port := parsedURL.Port()
+	if port == "" {
+		// Use default ports based on scheme
+		switch parsedURL.Scheme {
+		case "https":
+			port = "443"
+		case "http":
+			port = "80"
+		default:
+			// Unknown scheme, skip port specification
+			port = ""
+		}
+	}
+
+	rule := &networkingv1.NetworkPolicyEgressRule{}
+
+	// Determine if host is an IP address or hostname
+	if ip := net.ParseIP(host); ip != nil {
+		// Host is an IP address - create CIDR-based rule
+		cidr := host + "/32"
+		if ip.To4() == nil {
+			// IPv6 address
+			cidr = host + "/128"
+		}
+		rule.To = append(rule.To, networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR: cidr,
+			},
+		})
+	} else {
+		// Host is a hostname - resolve to IPs using existing DNS resolution
+		resolvedCIDRs, err := resolveDNSToCIDRs([]string{host})
+		if err == nil && len(resolvedCIDRs) > 0 {
+			for _, cidr := range resolvedCIDRs {
+				rule.To = append(rule.To, networkingv1.NetworkPolicyPeer{
+					IPBlock: &networkingv1.IPBlock{
+						CIDR: cidr,
+					},
+				})
+			}
+		} else {
+			// DNS resolution failed, skip auto-generation
+			return nil
+		}
+	}
+
+	// Add port if specified
+	if port != "" {
+		portInt, err := strconv.Atoi(port)
+		if err == nil {
+			protocol := corev1.ProtocolTCP
+			rule.Ports = append(rule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: &protocol,
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: int32(portInt)},
+			})
+		}
+	}
+
+	// Only return rule if it has destinations
+	if len(rule.To) == 0 {
+		return nil
+	}
+
+	return rule
+}
+
 // BuildEgressNetworkPolicy creates a NetworkPolicy for egress rules
 // Default policy: deny all external egress, allow internal cluster + DNS
 // DNS-based rules are resolved to IP addresses at policy creation time
+// If provider uses custom endpoints (openai-compatible, azure, custom) and endpoint is set,
+// an egress rule is automatically generated for that endpoint
 func BuildEgressNetworkPolicy(
 	name, namespace string,
 	labels map[string]string,
+	provider, endpoint string,
 	egressRules []langopv1alpha1.NetworkRule,
 ) *networkingv1.NetworkPolicy {
 
@@ -358,6 +456,24 @@ func BuildEgressNetworkPolicy(
 				},
 			},
 		},
+	}
+
+	// Auto-generate egress rules for well-known providers
+	if defaultEndpoints, ok := providerDefaultEndpoints[provider]; ok {
+		for _, defaultEndpoint := range defaultEndpoints {
+			if autoRule := generateEgressFromEndpoint(defaultEndpoint); autoRule != nil {
+				egress = append(egress, *autoRule)
+			}
+		}
+	}
+
+	// Auto-generate egress rule from custom endpoint (if specified)
+	// This handles custom endpoints for openai-compatible/azure/custom providers,
+	// as well as proxy scenarios where users override default provider endpoints
+	if endpoint != "" {
+		if autoRule := generateEgressFromEndpoint(endpoint); autoRule != nil {
+			egress = append(egress, *autoRule)
+		}
 	}
 
 	// Add user-defined egress rules

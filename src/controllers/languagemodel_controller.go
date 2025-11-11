@@ -423,6 +423,8 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 		model.Name,
 		model.Namespace,
 		labels,
+		model.Spec.Provider,
+		model.Spec.Endpoint,
 		model.Spec.Egress,
 	)
 

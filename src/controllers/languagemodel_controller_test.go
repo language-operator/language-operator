@@ -483,6 +483,337 @@ func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
 	}
 }
 
+func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.T) {
+	scheme := setupLanguageModelTestScheme(t)
+
+	// Test with IP address endpoint
+	modelWithIP := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-model-ip-endpoint",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "openai-compatible",
+			ModelName: "mistralai/magistral-small-2509",
+			Endpoint:  "http://192.168.68.54:1234",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(modelWithIP).
+		WithStatusSubresource(modelWithIP).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      modelWithIP.Name,
+			Namespace: modelWithIP.Namespace,
+		},
+	}
+
+	// First reconcile adds finalizer, second creates resources
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Verify NetworkPolicy was created
+	netpol := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      modelWithIP.Name,
+		Namespace: modelWithIP.Namespace,
+	}, netpol)
+	if err != nil {
+		t.Fatalf("Expected NetworkPolicy to exist, but got error: %v", err)
+	}
+
+	// Verify auto-generated egress rule for endpoint
+	foundAutoEgress := false
+	for _, egressRule := range netpol.Spec.Egress {
+		for _, peer := range egressRule.To {
+			if peer.IPBlock != nil && peer.IPBlock.CIDR == "192.168.68.54/32" {
+				foundAutoEgress = true
+				// Verify port is also included
+				foundPort := false
+				for _, port := range egressRule.Ports {
+					if port.Port != nil && port.Port.IntVal == 1234 {
+						foundPort = true
+						break
+					}
+				}
+				if !foundPort {
+					t.Error("Expected auto-generated egress rule to include port 1234")
+				}
+				break
+			}
+		}
+		if foundAutoEgress {
+			break
+		}
+	}
+	if !foundAutoEgress {
+		t.Error("Expected NetworkPolicy to have auto-generated egress rule for endpoint IP 192.168.68.54/32")
+	}
+
+	// Test with HTTPS endpoint (default port 443)
+	modelWithHTTPS := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-model-https",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "azure",
+			ModelName: "gpt-4",
+			Endpoint:  "https://my-azure.openai.azure.com",
+		},
+	}
+
+	fakeClient2 := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(modelWithHTTPS).
+		WithStatusSubresource(modelWithHTTPS).
+		Build()
+
+	reconciler2 := &LanguageModelReconciler{
+		Client: fakeClient2,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	req2 := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      modelWithHTTPS.Name,
+			Namespace: modelWithHTTPS.Namespace,
+		},
+	}
+
+	// Reconcile twice
+	_, err = reconciler2.Reconcile(ctx, req2)
+	if err != nil {
+		t.Fatalf("First reconcile failed for HTTPS model: %v", err)
+	}
+	_, err = reconciler2.Reconcile(ctx, req2)
+	if err != nil {
+		t.Fatalf("Second reconcile failed for HTTPS model: %v", err)
+	}
+
+	// Verify NetworkPolicy was created with auto-egress for DNS-resolved endpoint
+	netpol2 := &networkingv1.NetworkPolicy{}
+	err = fakeClient2.Get(ctx, types.NamespacedName{
+		Name:      modelWithHTTPS.Name,
+		Namespace: modelWithHTTPS.Namespace,
+	}, netpol2)
+	if err != nil {
+		t.Fatalf("Expected NetworkPolicy for HTTPS model to exist, but got error: %v", err)
+	}
+
+	// Verify that some egress rule was created (DNS resolution will happen at runtime)
+	// We expect at least 3 rules: internal cluster, DNS, and auto-generated (if DNS resolves)
+	if len(netpol2.Spec.Egress) < 2 {
+		t.Errorf("Expected at least 2 egress rules (internal + DNS), got %d", len(netpol2.Spec.Egress))
+	}
+
+	// Test that non-compatible providers don't get auto-egress
+	modelOpenAI := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-model-openai",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "openai",
+			ModelName: "gpt-4",
+			// No endpoint - should not get auto-egress
+		},
+	}
+
+	fakeClient3 := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(modelOpenAI).
+		WithStatusSubresource(modelOpenAI).
+		Build()
+
+	reconciler3 := &LanguageModelReconciler{
+		Client: fakeClient3,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	req3 := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      modelOpenAI.Name,
+			Namespace: modelOpenAI.Namespace,
+		},
+	}
+
+	_, err = reconciler3.Reconcile(ctx, req3)
+	if err != nil {
+		t.Fatalf("First reconcile failed for OpenAI model: %v", err)
+	}
+	_, err = reconciler3.Reconcile(ctx, req3)
+	if err != nil {
+		t.Fatalf("Second reconcile failed for OpenAI model: %v", err)
+	}
+
+	netpol3 := &networkingv1.NetworkPolicy{}
+	err = fakeClient3.Get(ctx, types.NamespacedName{
+		Name:      modelOpenAI.Name,
+		Namespace: modelOpenAI.Namespace,
+	}, netpol3)
+	if err != nil {
+		t.Fatalf("Expected NetworkPolicy for OpenAI model to exist, but got error: %v", err)
+	}
+
+	// Should have 3 rules: internal cluster + DNS + auto-generated for api.openai.com
+	if len(netpol3.Spec.Egress) < 3 {
+		t.Errorf("Expected at least 3 egress rules (internal + DNS + api.openai.com), got %d", len(netpol3.Spec.Egress))
+	}
+}
+
+func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
+	scheme := setupLanguageModelTestScheme(t)
+
+	// Test OpenAI provider gets auto-egress for api.openai.com
+	modelOpenAI := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-openai-auto",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "openai",
+			ModelName: "gpt-4",
+			// No endpoint specified - should use default
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(modelOpenAI).
+		WithStatusSubresource(modelOpenAI).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      modelOpenAI.Name,
+			Namespace: modelOpenAI.Namespace,
+		},
+	}
+
+	// Reconcile twice
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Verify NetworkPolicy was created
+	netpol := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      modelOpenAI.Name,
+		Namespace: modelOpenAI.Namespace,
+	}, netpol)
+	if err != nil {
+		t.Fatalf("Expected NetworkPolicy to exist, but got error: %v", err)
+	}
+
+	// Should have at least 3 rules: internal cluster + DNS + api.openai.com
+	if len(netpol.Spec.Egress) < 3 {
+		t.Errorf("Expected at least 3 egress rules, got %d", len(netpol.Spec.Egress))
+	}
+
+	// Verify there's an egress rule with port 443 (for api.openai.com)
+	foundHTTPSPort := false
+	for _, egressRule := range netpol.Spec.Egress {
+		for _, port := range egressRule.Ports {
+			if port.Port != nil && port.Port.IntVal == 443 && *port.Protocol == corev1.ProtocolTCP {
+				foundHTTPSPort = true
+				break
+			}
+		}
+		if foundHTTPSPort {
+			break
+		}
+	}
+	if !foundHTTPSPort {
+		t.Error("Expected NetworkPolicy to have egress rule with TCP port 443 for api.openai.com")
+	}
+
+	// Test Anthropic provider gets auto-egress for api.anthropic.com
+	modelAnthropic := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-anthropic-auto",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "anthropic",
+			ModelName: "claude-3-5-sonnet-20241022",
+		},
+	}
+
+	fakeClient2 := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(modelAnthropic).
+		WithStatusSubresource(modelAnthropic).
+		Build()
+
+	reconciler2 := &LanguageModelReconciler{
+		Client: fakeClient2,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	req2 := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      modelAnthropic.Name,
+			Namespace: modelAnthropic.Namespace,
+		},
+	}
+
+	_, err = reconciler2.Reconcile(ctx, req2)
+	if err != nil {
+		t.Fatalf("First reconcile failed for Anthropic: %v", err)
+	}
+	_, err = reconciler2.Reconcile(ctx, req2)
+	if err != nil {
+		t.Fatalf("Second reconcile failed for Anthropic: %v", err)
+	}
+
+	netpol2 := &networkingv1.NetworkPolicy{}
+	err = fakeClient2.Get(ctx, types.NamespacedName{
+		Name:      modelAnthropic.Name,
+		Namespace: modelAnthropic.Namespace,
+	}, netpol2)
+	if err != nil {
+		t.Fatalf("Expected NetworkPolicy for Anthropic to exist, but got error: %v", err)
+	}
+
+	// Should have at least 3 rules: internal cluster + DNS + api.anthropic.com
+	if len(netpol2.Spec.Egress) < 3 {
+		t.Errorf("Expected at least 3 egress rules for Anthropic, got %d", len(netpol2.Spec.Egress))
+	}
+}
+
 func TestLanguageModelController_Finalizer(t *testing.T) {
 	scheme := setupLanguageModelTestScheme(t)
 
