@@ -121,3 +121,6 @@ langop/base - Alpine + tini + su-exec + langop user
 - **Agent code**: `LanguageOperator::Agent`
 - **DSL code**: `LanguageOperator::Dsl`
 - **Tool code**: `LanguageOperator::ToolLoader`
+
+# Notes
+- DO NOT use the `gh` command to find issues, this project used ForgeJo

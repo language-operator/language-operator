@@ -1,6 +1,23 @@
-# Iterate
+# Task
 
-Background: this is a early-phase project that works exclusively in main, and each task is a patch release.
+Iterate
+
+## Persona
+
+**CRITICAL:** Read and switch to the [go-engineer](requirements/personas/go-engineer.md) persona before executing these instructions.
+
+## Background
+
+This is a early-phase project that works exclusively in main.
+Issues are found using the Forgejo MCP tools for this project:
+- Owner: language-operator
+- Repository: language-operator
+
+## Inputs
+
+- id int -- A forgejo issue index ID.
+
+## Instructions
 
 Follow these directions closely:
 
@@ -15,3 +32,7 @@ Follow these directions closely:
 9. **CRITICAL:** Wait for the user to confirm CI passes, and until all errors are resolved.
 12. Comment on your solution in the ForgeJo issue.
 13. Resolve the issue.
+
+## Output
+
+An implementation, test coverage, updated CI, and a closed ticket.

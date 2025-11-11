@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rack'
+require 'webrick'
 require 'json'
 require 'securerandom'
 require 'time'
@@ -29,11 +30,12 @@ module LanguageOperator
         puts "Access at: http://localhost:#{port}"
         puts
 
-        Rack::Handler::WEBrick.run(
-          method(:call),
+        require 'rackup/handler/webrick'
+        Rackup::Handler::WEBrick.run(
+          self,
           Port: port,
           Host: '0.0.0.0',
-          Logger: WEBrick::Log.new(File::NULL),
+          Logger: WEBrick::Log.new($stderr, WEBrick::Log::INFO),
           AccessLog: []
         )
       end

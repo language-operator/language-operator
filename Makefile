@@ -55,7 +55,6 @@ test-integration:
 	@echo ""
 	@echo "✓ Integration tests passed!"
 
-
 # Show help
 help:
 	@echo "Hi :-)"

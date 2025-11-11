@@ -1,9 +1,9 @@
-# Makefile.common - Shared targets for all langop components
+# Makefile.common - Shared targets for all language-operator components
 # Include this file in component Makefiles with: include ../../Makefile.common
 
 # Default variables (can be overridden in component Makefiles)
 IMAGE_TAG ?= latest
-REGISTRY ?= git.theryans.io/langop
+REGISTRY ?= git.theryans.io/language-operator
 IMAGE_FULL ?= $(IMAGE_NAME):$(IMAGE_TAG)
 
 # Common PHONY declarations

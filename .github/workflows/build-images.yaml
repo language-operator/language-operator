@@ -113,7 +113,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build component images (tool, client, agent) - all depend on base
+  # Build component images (tool, agent) - all depend on base
   build-components:
     runs-on: builder
     permissions:
@@ -122,7 +122,7 @@ jobs:
     needs: build-base
     strategy:
       matrix:
-        component: [tool, client, agent]
+        component: [tool, agent]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

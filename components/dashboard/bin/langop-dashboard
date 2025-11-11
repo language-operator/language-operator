@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative '../lib/dashboard_server'
+# Load from the application directory
+$LOAD_PATH.unshift('/app/dashboard/lib')
+require 'dashboard_server'
 
 # Get configuration from environment
 cluster_name = ENV.fetch('CLUSTER_NAME', 'default')
