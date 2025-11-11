@@ -101,7 +101,21 @@ status:
 
 **Learn more:** [CNI Requirements](cni-requirements.md)
 
-#### 4. Registry Whitelist
+#### 4. Operator NetworkPolicy
+
+**What it does:** Configures NetworkPolicy for the operator deployment to allow access to synthesis endpoints while maintaining security.
+
+**Required for:**
+- Agent code synthesis operations
+- Self-healing functionality
+- Kubernetes API access
+
+**Post-install configuration:**
+If your cluster enforces NetworkPolicy rules, you may need to manually create a NetworkPolicy for the operator deployment to reach the synthesis endpoint.
+
+**Learn more:** [Operator NetworkPolicy](operator-networkpolicy.md)
+
+#### 5. Registry Whitelist
 
 **What it does:** Validates that all LanguageAgent and LanguageTool images come from approved container registries.
 
@@ -121,7 +135,7 @@ kubectl edit configmap operator-config -n kube-system
 
 **Learn more:** [Registry Whitelist](registry-whitelist.md)
 
-#### 5. Resource Limits and Security Contexts
+#### 6. Resource Limits and Security Contexts
 
 **What it does:** Enforces resource quotas and secure execution contexts for all agent and tool pods.
 
@@ -148,7 +162,7 @@ resources:
     memory: "512Mi"
 ```
 
-#### 6. Workspace Isolation
+#### 7. Workspace Isolation
 
 **What it does:** Provides persistent storage for agent state while maintaining isolation between agents.
 
@@ -167,6 +181,7 @@ resources:
    - Install Cilium, Calico, Weave, or Antrea
    - Verify enforcement: `kubectl get networkpolicies -A`
    - Check agent status for `NetworkPolicyEnforced` condition
+   - Configure operator NetworkPolicy: [Operator NetworkPolicy](operator-networkpolicy.md)
 
 2. **Restrict registry whitelist**
    - Remove public registries if using only private registry
@@ -248,6 +263,7 @@ We will respond within 48 hours.
 
 - [CVE Mitigations](cve-mitigations.md) - Detailed attack scenarios and mitigations
 - [CNI Requirements](cni-requirements.md) - CNI installation and troubleshooting
+- [Operator NetworkPolicy](operator-networkpolicy.md) - Post-install NetworkPolicy configuration
 - [Registry Whitelist](registry-whitelist.md) - Registry configuration guide
 - [ADR 001: AST-Based Validation](../adr/001-ast-based-ruby-validation.md) - Technical deep dive
 - [Main README](../../README.md) - Project overview
