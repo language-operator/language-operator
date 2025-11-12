@@ -1,0 +1,27 @@
+apiVersion: v1
+entries:
+  language-operator:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2025-11-12T01:02:35.033190853Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 7c82b5e1d5414bfacc0be218e079dbc368d0d6341823304e9d8780f5c68f5f50
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: team@langop.dev
+      name: Langop Team
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-11-12T01:02:35.027848657Z"
