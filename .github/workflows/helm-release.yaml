@@ -68,7 +68,7 @@ jobs:
           for chart in .helm-packages/*.tgz; do
             if [ -f "$chart" ]; then
               echo "Uploading $chart as release asset"
-              gh release upload ${{ github.ref_name }} "$chart"
+              gh release upload ${{ github.ref_name }} "$chart" --clobber
             fi
           done
 
