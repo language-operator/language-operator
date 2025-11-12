@@ -5,9 +5,10 @@ Language Operator is a Kubernetes operator that turns natural language into auto
 It is under active development and incomplete.
 
 ```bash
-# Install aictl tool
-gem install language-operator
+# Add repository:
+helm repo add language-operator https://language-operator.github.io/language-operator
+helm repo update
 
-# Quick start
-aictl quickstart
+# Install in kube-system:
+helm install language-operator language-operator/language-operator
 ```
