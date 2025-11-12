@@ -10,9 +10,9 @@ keywords:
   - language-models
   - agents
   - mcp
-home: https://github.com/langop/language-operator
+home: https://github.com/language-operator/language-operator
 sources:
-  - https://github.com/langop/language-operator
+  - https://github.com/language-operator/language-operator
 maintainers:
   - name: Langop Team
     email: team@langop.dev
