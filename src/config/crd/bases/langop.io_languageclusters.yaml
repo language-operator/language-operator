@@ -46,32 +46,6 @@ spec:
           spec:
             description: LanguageClusterSpec defines the desired state of LanguageCluster
             properties:
-              dashboard:
-                description: Dashboard configuration
-                properties:
-                  enabled:
-                    default: false
-                    description: Enabled controls whether the dashboard is deployed
-                    type: boolean
-                  image:
-                    default: git.theryans.io/language-operator/dashboard:latest
-                    description: Image is the dashboard container image
-                    type: string
-                  port:
-                    default: 8080
-                    description: Port is the dashboard HTTP port
-                    format: int32
-                    type: integer
-                  serviceType:
-                    default: ClusterIP
-                    description: ServiceType is the type of Kubernetes service (ClusterIP,
-                      NodePort, LoadBalancer)
-                    enum:
-                    - ClusterIP
-                    - NodePort
-                    - LoadBalancer
-                    type: string
-                type: object
               domain:
                 description: |-
                   Domain is the base domain for webhook routing

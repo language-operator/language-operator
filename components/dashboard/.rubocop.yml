@@ -1,8 +1,0 @@
-inherit_from: ../../.rubocop.yml
-
-AllCops:
-  TargetRubyVersion: 3.4
-  NewCops: enable
-  Exclude:
-    - 'vendor/**/*'
-    - 'bin/**/*'
