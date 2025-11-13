@@ -1,6 +1,7 @@
 package synthesis
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -104,11 +105,18 @@ func GetSchemaVersion(ctx context.Context) (string, error) {
 
 // executeCommand executes a command with the given context and returns its output.
 // It handles timeouts, errors, and provides detailed error messages for debugging.
+// Returns only stdout (not stderr) to avoid parser warnings interfering with JSON parsing.
 func executeCommand(ctx context.Context, command string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, command, args...)
 
-	// Capture both stdout and stderr
-	output, err := cmd.CombinedOutput()
+	// Capture stdout and stderr separately
+	// This is important because Ruby may emit warnings to stderr that should not
+	// be included in the JSON output we're parsing from stdout
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
 		return nil, fmt.Errorf("command timed out: %s %v", command, args)
@@ -121,8 +129,8 @@ func executeCommand(ctx context.Context, command string, args ...string) ([]byte
 	if err != nil {
 		// Check if it's an exec.ExitError to get the exit code
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("command failed with exit code %d: %s %v (output: %s)",
-				exitErr.ExitCode(), command, args, string(output))
+			return nil, fmt.Errorf("command failed with exit code %d: %s %v (stderr: %s)",
+				exitErr.ExitCode(), command, args, stderr.String())
 		}
 
 		// Check if command was not found
@@ -130,11 +138,12 @@ func executeCommand(ctx context.Context, command string, args ...string) ([]byte
 			return nil, fmt.Errorf("command not found: %s (is language-operator gem installed?)", command)
 		}
 
-		return nil, fmt.Errorf("command execution failed: %s %v: %w (output: %s)",
-			command, args, err, string(output))
+		return nil, fmt.Errorf("command execution failed: %s %v: %w (stderr: %s)",
+			command, args, err, stderr.String())
 	}
 
-	return output, nil
+	// Return only stdout (JSON data), ignoring stderr (Ruby warnings)
+	return stdout.Bytes(), nil
 }
 
 // SchemaViolation represents a schema validation error from the Ruby validator
