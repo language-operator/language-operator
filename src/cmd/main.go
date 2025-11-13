@@ -151,6 +151,10 @@ func main() {
 	}
 	setupLog.Info("Registry whitelist loaded", "registries", allowedRegistries)
 
+	// Validate schema compatibility between operator and gem
+	setupLog.Info("Checking schema compatibility with language_operator gem")
+	synthesis.ValidateSchemaCompatibility(ctx, setupLog)
+
 	if cniErr != nil {
 		setupLog.Info("CNI detection failed", "error", cniErr.Error())
 		if requireNetworkPolicy {

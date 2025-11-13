@@ -7,8 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-logr/logr"
 )
 
 // DSLSchema represents the JSON Schema for the Agent DSL
@@ -44,9 +47,9 @@ func FetchDSLSchema(ctx context.Context) (*DSLSchema, error) {
 	}
 
 	// Execute the command to fetch schema
-	output, err := executeCommand(ctx, "language_operator", "schema", "--format=json")
+	output, err := executeCommand(ctx, "aictl", "system", "schema", "--format=json")
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute language_operator schema command: %w", err)
+		return nil, fmt.Errorf("failed to execute aictl system schema command: %w", err)
 	}
 
 	// Parse JSON output
@@ -85,9 +88,9 @@ func GetSchemaVersion(ctx context.Context) (string, error) {
 	}
 
 	// Execute the command to fetch version
-	output, err := executeCommand(ctx, "language_operator", "schema", "--version")
+	output, err := executeCommand(ctx, "aictl", "system", "schema", "--version")
 	if err != nil {
-		return "", fmt.Errorf("failed to execute language_operator schema --version command: %w", err)
+		return "", fmt.Errorf("failed to execute aictl system schema --version command: %w", err)
 	}
 
 	// Trim whitespace and return version
@@ -124,7 +127,7 @@ func executeCommand(ctx context.Context, command string, args ...string) ([]byte
 
 		// Check if command was not found
 		if err == exec.ErrNotFound || strings.Contains(err.Error(), "executable file not found") {
-			return nil, fmt.Errorf("command not found: %s (is language_operator gem installed?)", command)
+			return nil, fmt.Errorf("command not found: %s (is language-operator gem installed?)", command)
 		}
 
 		return nil, fmt.Errorf("command execution failed: %s %v: %w (output: %s)",
@@ -250,4 +253,167 @@ func ValidateGeneratedCodeAgainstSchema(ctx context.Context, code string) ([]Sch
 	}
 
 	return violations, nil
+}
+
+// ExpectedSchemaVersion is the schema version the operator expects.
+// This should match the language_operator gem version used during development.
+const ExpectedSchemaVersion = "0.1.31"
+
+// SemanticVersion represents a parsed semantic version (major.minor.patch)
+type SemanticVersion struct {
+	Major int
+	Minor int
+	Patch int
+}
+
+// ParseSemanticVersion parses a semantic version string like "1.2.3" or "0.1.31"
+// It handles versions with or without patch numbers, and ignores pre-release/build metadata.
+func ParseSemanticVersion(version string) (*SemanticVersion, error) {
+	// Remove leading 'v' if present
+	version = strings.TrimPrefix(version, "v")
+
+	// Split on '-' or '+' to remove pre-release and build metadata
+	if idx := strings.IndexAny(version, "-+"); idx >= 0 {
+		version = version[:idx]
+	}
+
+	// Split version into parts
+	parts := strings.Split(version, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid semantic version format: %s (expected major.minor or major.minor.patch)", version)
+	}
+
+	// Parse major version
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid major version: %s", parts[0])
+	}
+
+	// Parse minor version
+	minor, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("invalid minor version: %s", parts[1])
+	}
+
+	// Parse patch version (optional, defaults to 0)
+	patch := 0
+	if len(parts) >= 3 {
+		patch, err = strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid patch version: %s", parts[2])
+		}
+	}
+
+	return &SemanticVersion{
+		Major: major,
+		Minor: minor,
+		Patch: patch,
+	}, nil
+}
+
+// String returns the semantic version as a string
+func (v *SemanticVersion) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
+// CompatibilityLevel represents the level of compatibility between two versions
+type CompatibilityLevel int
+
+const (
+	// Compatible indicates versions are fully compatible
+	Compatible CompatibilityLevel = iota
+	// MinorMismatch indicates minor version differs (new features, should be compatible)
+	MinorMismatch
+	// MajorMismatch indicates major version differs (breaking changes, incompatible)
+	MajorMismatch
+)
+
+// CompareVersions compares two semantic versions and returns the compatibility level
+func CompareVersions(expected, actual *SemanticVersion) CompatibilityLevel {
+	if expected.Major != actual.Major {
+		return MajorMismatch
+	}
+	if expected.Minor != actual.Minor {
+		return MinorMismatch
+	}
+	return Compatible
+}
+
+// ValidateSchemaCompatibility checks version compatibility between the operator
+// and the language_operator gem schema. It is called during operator startup.
+//
+// Behavior:
+// - Major version mismatch: Logs ERROR (incompatible)
+// - Minor version mismatch: Logs WARNING (new features)
+// - Patch version mismatch: Logs INFO (bug fixes)
+// - Schema fetch failure: Logs WARNING and continues (non-blocking)
+//
+// Example usage:
+//
+//	ctx := context.Background()
+//	log := ctrl.Log.WithName("setup")
+//	ValidateSchemaCompatibility(ctx, log)
+func ValidateSchemaCompatibility(ctx context.Context, log logr.Logger) {
+	// Fetch the actual schema version from the gem
+	actualVersion, err := GetSchemaVersion(ctx)
+	if err != nil {
+		// Don't block operator startup if we can't fetch the version
+		// This could happen if the gem isn't installed or the command fails
+		log.Info("WARNING: Could not fetch schema version from language-operator gem",
+			"error", err.Error(),
+			"impact", "Schema compatibility cannot be verified")
+		return
+	}
+
+	// Parse expected version
+	expected, err := ParseSemanticVersion(ExpectedSchemaVersion)
+	if err != nil {
+		log.Error(err, "Failed to parse expected schema version",
+			"version", ExpectedSchemaVersion)
+		return
+	}
+
+	// Parse actual version
+	actual, err := ParseSemanticVersion(actualVersion)
+	if err != nil {
+		log.Error(err, "Failed to parse actual schema version from gem",
+			"version", actualVersion)
+		return
+	}
+
+	// Compare versions
+	compatibility := CompareVersions(expected, actual)
+
+	switch compatibility {
+	case MajorMismatch:
+		log.Error(nil, "ERROR: Schema major version mismatch - INCOMPATIBLE",
+			"expectedVersion", expected.String(),
+			"actualVersion", actual.String(),
+			"expectedMajor", expected.Major,
+			"actualMajor", actual.Major,
+			"impact", "The operator may not work correctly with this gem version",
+			"recommendation", fmt.Sprintf("Update language_operator gem to version %d.x.x or update operator to match gem version %d.x.x",
+				expected.Major, actual.Major))
+
+	case MinorMismatch:
+		log.Info("WARNING: Schema minor version mismatch",
+			"expectedVersion", expected.String(),
+			"actualVersion", actual.String(),
+			"expectedMinor", expected.Minor,
+			"actualMinor", actual.Minor,
+			"impact", "New features may be available in the gem that the operator doesn't use",
+			"recommendation", "Consider updating to matching versions for full compatibility")
+
+	case Compatible:
+		if expected.Patch != actual.Patch {
+			log.Info("Schema versions compatible (patch difference)",
+				"expectedVersion", expected.String(),
+				"actualVersion", actual.String(),
+				"status", "Compatible - patch versions may differ")
+		} else {
+			log.Info("Schema versions match exactly",
+				"version", expected.String(),
+				"status", "Fully compatible")
+		}
+	}
 }
