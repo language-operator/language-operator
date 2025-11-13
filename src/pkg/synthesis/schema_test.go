@@ -735,10 +735,10 @@ func TestValidateGeneratedCodeAgainstSchema_WithRuby(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		code         string
-		expectError  bool
-		skipCheck    bool
+		name        string
+		code        string
+		expectError bool
+		skipCheck   bool
 	}{
 		{
 			name: "valid DSL code",
