@@ -66,10 +66,11 @@ type ChatModel interface {
 
 // Synthesizer generates agent DSL code from natural language instructions
 type Synthesizer struct {
-	chatModel   ChatModel
-	log         logr.Logger
-	costTracker *CostTracker
-	modelName   string
+	chatModel     ChatModel
+	log           logr.Logger
+	costTracker   *CostTracker
+	modelName     string
+	schemaVersion string // DSL schema version for telemetry tracking
 }
 
 // AgentSynthesisRequest contains all information needed to synthesize an agent
@@ -134,11 +135,28 @@ type RuntimeError struct {
 
 // NewSynthesizer creates a new synthesizer instance using eino ChatModel
 func NewSynthesizer(chatModel ChatModel, log logr.Logger) *Synthesizer {
+	// Fetch DSL schema version for telemetry tracking
+	// Use context with timeout to avoid blocking on schema fetch
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	schemaVersion, err := GetSchemaVersion(ctx)
+	if err != nil {
+		// Log warning but continue - don't block synthesizer creation
+		log.Info("Warning: Failed to fetch DSL schema version, continuing without it",
+			"error", err.Error())
+		schemaVersion = "" // Empty string indicates version unavailable
+	} else {
+		// Log schema version at INFO level during initialization
+		log.Info("DSL schema version loaded", "version", schemaVersion)
+	}
+
 	return &Synthesizer{
-		chatModel:   chatModel,
-		log:         log,
-		costTracker: nil, // Will be set via SetCostTracker
-		modelName:   "unknown",
+		chatModel:     chatModel,
+		log:           log,
+		costTracker:   nil, // Will be set via SetCostTracker
+		modelName:     "unknown",
+		schemaVersion: schemaVersion,
 	}
 }
 
@@ -155,14 +173,21 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	defer span.End()
 
 	// Add initial span attributes
-	span.SetAttributes(
+	spanAttrs := []attribute.KeyValue{
 		attribute.String("synthesis.agent_name", req.AgentName),
 		attribute.String("synthesis.namespace", req.Namespace),
 		attribute.Int("synthesis.tools_count", len(req.Tools)),
 		attribute.Int("synthesis.models_count", len(req.Models)),
 		attribute.Bool("synthesis.is_retry", req.IsRetry),
 		attribute.Int("synthesis.attempt_number", int(req.AttemptNumber)),
-	)
+	}
+
+	// Add DSL schema version if available
+	if s.schemaVersion != "" {
+		spanAttrs = append(spanAttrs, attribute.String("dsl.schema.version", s.schemaVersion))
+	}
+
+	span.SetAttributes(spanAttrs...)
 
 	startTime := time.Now()
 
