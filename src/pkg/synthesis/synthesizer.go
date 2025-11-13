@@ -252,8 +252,52 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	// Extract code from markdown blocks if present
 	dslCode = extractCodeFromMarkdown(dslCode)
 
-	// Validate the synthesized code (basic syntax check)
+	// Validate against DSL schema first
 	validationErrors := []string{}
+	schemaViolations, err := ValidateGeneratedCodeAgainstSchema(ctx, dslCode)
+	if err != nil {
+		s.log.Error(err, "Schema validation execution failed", "agent", req.AgentName)
+		// Don't fail synthesis if validation execution fails - continue with other validation
+		span.AddEvent("schema_validation_execution_failed", trace.WithAttributes(
+			attribute.String("error", err.Error()),
+		))
+	} else if len(schemaViolations) > 0 {
+		// Convert violations to error messages
+		for _, violation := range schemaViolations {
+			errMsg := fmt.Sprintf("Line %d: %s (%s)", violation.Location, violation.Message, violation.Type)
+			validationErrors = append(validationErrors, errMsg)
+		}
+
+		// Add telemetry event for schema validation failure
+		span.AddEvent("schema_validation_failed", trace.WithAttributes(
+			attribute.Int("violation_count", len(schemaViolations)),
+			attribute.String("schema_version", s.schemaVersion),
+		))
+
+		s.log.Info("Schema validation failed",
+			"agent", req.AgentName,
+			"violations", len(schemaViolations),
+			"schemaVersion", s.schemaVersion)
+
+		duration := time.Since(startTime).Seconds()
+		span.RecordError(fmt.Errorf("schema validation failed with %d violations", len(schemaViolations)))
+		span.SetStatus(codes.Error, "Schema validation failed")
+
+		return &AgentSynthesisResponse{
+			DSLCode:          dslCode,
+			Error:            fmt.Sprintf("Schema validation failed: %d violations found", len(schemaViolations)),
+			DurationSeconds:  duration,
+			ValidationErrors: validationErrors,
+			Cost:             synthesisCost,
+		}, fmt.Errorf("schema validation failed with %d violations", len(schemaViolations))
+	} else {
+		// Schema validation passed - add telemetry event
+		span.AddEvent("schema_validation_passed", trace.WithAttributes(
+			attribute.String("schema_version", s.schemaVersion),
+		))
+	}
+
+	// Validate the synthesized code (basic syntax and security checks)
 	if err := s.validateDSL(ctx, dslCode); err != nil {
 		validationErrors = append(validationErrors, err.Error())
 		duration := time.Since(startTime).Seconds()
