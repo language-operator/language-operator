@@ -1,7 +1,0 @@
---markup markdown
---readme README.md
---output-dir doc
---protected
---private
-chat.rb
-config/**/*.yaml
