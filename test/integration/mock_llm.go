@@ -251,9 +251,7 @@ agent "test-agent" do
 `
 
 	for i, tool := range tools {
-		code += fmt.Sprintf(`    step :step_%d, execute: -> {
-      use_tool "%s"
-    }
+		code += fmt.Sprintf(`    step :step_%d, tool: "%s", params: {}
 `, i+1, tool)
 	}
 
