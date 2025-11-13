@@ -2,7 +2,7 @@ apiVersion: v2
 name: language-operator
 description: A Kubernetes operator for managing language models, tools, agents, personas, and clients
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "latest"
 keywords:
   - ai
@@ -14,5 +14,5 @@ home: https://github.com/language-operator/language-operator
 sources:
   - https://github.com/language-operator/language-operator
 maintainers:
-  - name: Langop Team
-    email: team@langop.dev
+  - name: James Ryan
+    email: james@theryans.io

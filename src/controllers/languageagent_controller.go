@@ -59,6 +59,13 @@ type LanguageAgentReconciler struct {
 // agentTracer is the OpenTelemetry tracer for the LanguageAgent controller
 var agentTracer = otel.Tracer("language-operator/agent-controller")
 
+const (
+	// LangopUserID is the user ID for the langop user (matches Dockerfile)
+	LangopUserID = 1000
+	// LangopGroupID is the group ID for the langop group
+	LangopGroupID = 101
+)
+
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/finalizers,verbs=update
@@ -818,6 +825,124 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 	return err
 }
 
+// buildPodSecurityContext creates the pod-level security context for agent pods
+func (r *LanguageAgentReconciler) buildPodSecurityContext() *corev1.PodSecurityContext {
+	return &corev1.PodSecurityContext{
+		RunAsNonRoot: ptr.To(true),
+		RunAsUser:    ptr.To[int64](LangopUserID),
+		FSGroup:      ptr.To[int64](LangopGroupID),
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+}
+
+// buildContainerSecurityContext creates the container-level security context for agent containers
+func (r *LanguageAgentReconciler) buildContainerSecurityContext() *corev1.SecurityContext {
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: ptr.To(false),
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To[int64](LangopUserID),
+		ReadOnlyRootFilesystem:   ptr.To(true),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+}
+
+// buildVolumes creates the volumes and volume mounts for agent pods
+func (r *LanguageAgentReconciler) buildVolumes(agent *langopv1alpha1.LanguageAgent) ([]corev1.Volume, []corev1.VolumeMount) {
+	volumes := []corev1.Volume{}
+	volumeMounts := []corev1.VolumeMount{}
+
+	// Add tmpfs volumes for read-only root filesystem
+	// /tmp - general temporary files
+	volumes = append(volumes, corev1.Volume{
+		Name: "tmp",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory, // Use tmpfs
+			},
+		},
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "tmp",
+		MountPath: "/tmp",
+	})
+
+	// /home/langop/.bundle - Ruby bundler cache
+	volumes = append(volumes, corev1.Volume{
+		Name: "ruby-bundle",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory, // Use tmpfs
+			},
+		},
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "ruby-bundle",
+		MountPath: "/home/langop/.bundle",
+	})
+
+	// /home/langop/.gem - Ruby gem installation directory
+	volumes = append(volumes, corev1.Volume{
+		Name: "ruby-gem",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				Medium: corev1.StorageMediumMemory, // Use tmpfs
+			},
+		},
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "ruby-gem",
+		MountPath: "/home/langop/.gem",
+	})
+
+	// Add code ConfigMap volume if synthesizer is configured and instructions exist
+	if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+		codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+		volumes = append(volumes, corev1.Volume{
+			Name: "agent-code",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: codeConfigMapName,
+					},
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "agent-code",
+			MountPath: "/etc/agent/code",
+			ReadOnly:  true,
+		})
+	}
+
+	// Add workspace volume if enabled
+	if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
+		mountPath := agent.Spec.Workspace.MountPath
+		if mountPath == "" {
+			mountPath = "/workspace"
+		}
+
+		volumes = append(volumes, corev1.Volume{
+			Name: "workspace",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: agent.Name + "-workspace",
+				},
+			},
+		})
+
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "workspace",
+			MountPath: mountPath,
+		})
+	}
+
+	return volumes, volumeMounts
+}
+
 func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
 
@@ -900,123 +1025,20 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Containers: containers,
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    ptr.To[int64](1000), // langop user (matches Dockerfile)
-						FSGroup:      ptr.To[int64](101),  // langop group
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
+					Containers:      containers,
+					SecurityContext: r.buildPodSecurityContext(),
 				},
 			},
 		}
 
 		// Add container security context for agent container
-		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			RunAsNonRoot:             ptr.To(true),
-			RunAsUser:                ptr.To[int64](1000), // langop user (matches Dockerfile)
-			ReadOnlyRootFilesystem:   ptr.To(true),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"ALL"},
-			},
-		}
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = r.buildContainerSecurityContext()
 
 		// Add resource requirements if specified
 		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
-		// Initialize volumes and volume mounts
-		volumes := []corev1.Volume{}
-		volumeMounts := []corev1.VolumeMount{}
-
-		// Add tmpfs volumes for read-only root filesystem
-		// /tmp - general temporary files
-		volumes = append(volumes, corev1.Volume{
-			Name: "tmp",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "tmp",
-			MountPath: "/tmp",
-		})
-
-		// /home/langop/.bundle - Ruby bundler cache
-		volumes = append(volumes, corev1.Volume{
-			Name: "ruby-bundle",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "ruby-bundle",
-			MountPath: "/home/langop/.bundle",
-		})
-
-		// /home/langop/.gem - Ruby gem installation directory
-		volumes = append(volumes, corev1.Volume{
-			Name: "ruby-gem",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "ruby-gem",
-			MountPath: "/home/langop/.gem",
-		})
-
-		// Add code ConfigMap volume if synthesizer is configured and instructions exist
-		if r.Synthesizer != nil && agent.Spec.Instructions != "" {
-			codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
-			volumes = append(volumes, corev1.Volume{
-				Name: "agent-code",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: codeConfigMapName,
-						},
-					},
-				},
-			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      "agent-code",
-				MountPath: "/etc/agent/code",
-				ReadOnly:  true,
-			})
-		}
-
-		// Add workspace volume if enabled
-		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
-			mountPath := agent.Spec.Workspace.MountPath
-			if mountPath == "" {
-				mountPath = "/workspace"
-			}
-
-			volumes = append(volumes, corev1.Volume{
-				Name: "workspace",
-				VolumeSource: corev1.VolumeSource{
-					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: agent.Name + "-workspace",
-					},
-				},
-			})
-
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      "workspace",
-				MountPath: mountPath,
-			})
-		}
-
-		// Apply volumes and volume mounts to deployment
+		// Build and apply volumes and volume mounts
+		volumes, volumeMounts := r.buildVolumes(agent)
 		if len(volumes) > 0 {
 			deployment.Spec.Template.Spec.Volumes = volumes
 		}
@@ -1111,16 +1133,9 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 							Labels: labels,
 						},
 						Spec: corev1.PodSpec{
-							RestartPolicy: corev1.RestartPolicyOnFailure,
-							Containers:    containers,
-							SecurityContext: &corev1.PodSecurityContext{
-								RunAsNonRoot: ptr.To(true),
-								RunAsUser:    ptr.To[int64](1000), // langop user (matches Dockerfile)
-								FSGroup:      ptr.To[int64](101),  // langop group
-								SeccompProfile: &corev1.SeccompProfile{
-									Type: corev1.SeccompProfileTypeRuntimeDefault,
-								},
-							},
+							RestartPolicy:   corev1.RestartPolicyOnFailure,
+							Containers:      containers,
+							SecurityContext: r.buildPodSecurityContext(),
 						},
 					},
 				},
@@ -1128,109 +1143,13 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		}
 
 		// Add container security context for agent container
-		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
-			AllowPrivilegeEscalation: ptr.To(false),
-			RunAsNonRoot:             ptr.To(true),
-			RunAsUser:                ptr.To[int64](1000), // langop user (matches Dockerfile)
-			ReadOnlyRootFilesystem:   ptr.To(true),
-			Capabilities: &corev1.Capabilities{
-				Drop: []corev1.Capability{"ALL"},
-			},
-		}
+		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext = r.buildContainerSecurityContext()
 
 		// Add resource requirements if specified
 		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
-		// Initialize volumes and volume mounts
-		volumes := []corev1.Volume{}
-		volumeMounts := []corev1.VolumeMount{}
-
-		// Add tmpfs volumes for read-only root filesystem
-		// /tmp - general temporary files
-		volumes = append(volumes, corev1.Volume{
-			Name: "tmp",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "tmp",
-			MountPath: "/tmp",
-		})
-
-		// /home/langop/.bundle - Ruby bundler cache
-		volumes = append(volumes, corev1.Volume{
-			Name: "ruby-bundle",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "ruby-bundle",
-			MountPath: "/home/langop/.bundle",
-		})
-
-		// /home/langop/.gem - Ruby gem installation directory
-		volumes = append(volumes, corev1.Volume{
-			Name: "ruby-gem",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					Medium: corev1.StorageMediumMemory, // Use tmpfs
-				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "ruby-gem",
-			MountPath: "/home/langop/.gem",
-		})
-
-		// Add code ConfigMap volume if synthesizer is configured and instructions exist
-		if r.Synthesizer != nil && agent.Spec.Instructions != "" {
-			codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
-			volumes = append(volumes, corev1.Volume{
-				Name: "agent-code",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: codeConfigMapName,
-						},
-					},
-				},
-			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      "agent-code",
-				MountPath: "/etc/agent/code",
-				ReadOnly:  true,
-			})
-		}
-
-		// Add workspace volume if enabled
-		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
-			mountPath := agent.Spec.Workspace.MountPath
-			if mountPath == "" {
-				mountPath = "/workspace"
-			}
-
-			volumes = append(volumes, corev1.Volume{
-				Name: "workspace",
-				VolumeSource: corev1.VolumeSource{
-					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: agent.Name + "-workspace",
-					},
-				},
-			})
-
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      "workspace",
-				MountPath: mountPath,
-			})
-		}
-
-		// Apply volumes and volume mounts to cronjob
+		// Build and apply volumes and volume mounts
+		volumes, volumeMounts := r.buildVolumes(agent)
 		if len(volumes) > 0 {
 			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes = volumes
 		}

@@ -1,35 +1,28 @@
 # Language Operator Helm Chart
 
-A Kubernetes operator for managing language models, tools, agents, personas, and clients.
+A Kubernetes operator that turns natural language into autonomous agents.
 
 ## Overview
 
-The Language Operator provides production-grade Kubernetes Custom Resources for deploying and managing AI infrastructure:
+The Language Operator provides Custom Resources for deploying and managing AI infrastructure:
 
-- **LanguageTool** - Deploy MCP (Model Context Protocol) tool services
-- **LanguageModel** - Configure LLM providers with load balancing, failover, and cost tracking
 - **LanguageAgent** - Deploy autonomous goal-driven agents with safety guardrails
+- **LanguageModel** - Configure LLM providers with load balancing and failover
+- **LanguageTool** - Deploy MCP (Model Context Protocol) tool services
 - **LanguagePersona** - Define role-specific behaviors and knowledge sources
+- **LanguageCluster** - Orchestrate multi-agent systems with networking and RBAC
 
 ## Prerequisites
 
 - Kubernetes 1.24+
 - Helm 3.8+
-- (Optional) Prometheus Operator for metrics collection
 
 ## Installation
 
-### Add the Helm repository
+### Quick Start
 
 ```bash
-helm repo add language-operator https://language-operator.github.io/charts
-helm repo update
-```
-
-### Install the operator
-
-```bash
-helm install language-operator language-operator/language-operator \
+helm install language-operator ./chart \
   --namespace language-operator-system \
   --create-namespace
 ```
@@ -37,7 +30,7 @@ helm install language-operator language-operator/language-operator \
 ### Install with custom values
 
 ```bash
-helm install language-operator language-operator/language-operator \
+helm install language-operator ./chart \
   --namespace language-operator-system \
   --create-namespace \
   --values my-values.yaml
@@ -45,9 +38,7 @@ helm install language-operator language-operator/language-operator \
 
 ## Configuration
 
-The following table lists the configurable parameters of the Language Operator chart and their default values.
-
-### Basic Configuration
+### Core Settings
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
@@ -55,20 +46,6 @@ The following table lists the configurable parameters of the Language Operator c
 | `image.repository` | Operator image repository | `ghcr.io/language-operator/language-operator` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.tag` | Operator image tag | `""` (uses appVersion) |
-
-### Service Account
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `serviceAccount.create` | Create service account | `true` |
-| `serviceAccount.annotations` | Service account annotations | `{}` |
-| `serviceAccount.name` | Service account name | `""` (generated) |
-
-### RBAC
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `rbac.create` | Create RBAC resources | `true` |
 
 ### Resources
 
@@ -86,16 +63,9 @@ The following table lists the configurable parameters of the Language Operator c
 | `affinity` | Pod affinity rules | Anti-affinity preferred |
 | `podDisruptionBudget.enabled` | Enable PDB | `true` |
 | `podDisruptionBudget.minAvailable` | Minimum available pods | `1` |
-
-### Autoscaling
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
 | `autoscaling.enabled` | Enable HPA | `false` |
 | `autoscaling.minReplicas` | Minimum replicas | `2` |
 | `autoscaling.maxReplicas` | Maximum replicas | `10` |
-| `autoscaling.targetCPUUtilizationPercentage` | Target CPU % | `80` |
-| `autoscaling.targetMemoryUtilizationPercentage` | Target memory % | `80` |
 
 ### Leader Election
 
@@ -105,6 +75,34 @@ The following table lists the configurable parameters of the Language Operator c
 | `config.leaderElection.leaseDuration` | Lease duration | `15s` |
 | `config.leaderElection.renewDeadline` | Renew deadline | `10s` |
 | `config.leaderElection.retryPeriod` | Retry period | `2s` |
+
+### Controller Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `config.controller.concurrency` | Concurrent reconcilers | `5` |
+| `config.controller.syncPeriod` | Sync period | `10m` |
+
+### Self-Healing Synthesis
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `config.selfHealing.enabled` | Enable self-healing for failed agents | `true` |
+| `config.selfHealing.maxAttempts` | Maximum self-healing attempts | `5` |
+| `config.selfHealing.minBackoff` | Minimum backoff between attempts | `1m` |
+| `config.selfHealing.maxBackoff` | Maximum backoff between attempts | `16m` |
+| `config.selfHealing.failureThreshold` | Failures required to trigger healing | `2` |
+| `config.selfHealing.sanitizeLogs` | Redact secrets from logs | `true` |
+| `config.selfHealing.maxLogLines` | Max log lines to extract | `100` |
+
+### Agent Security
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `config.agentSecurity.podSecurityContext.runAsUser` | Agent pod user ID | `1000` |
+| `config.agentSecurity.podSecurityContext.fsGroup` | Agent pod group ID | `101` |
+| `config.agentSecurity.containerSecurityContext.readOnlyRootFilesystem` | Read-only root filesystem | `true` |
+| `config.agentSecurity.tmpfsVolumes.enabled` | Enable tmpfs volumes for writable paths | `true` |
 
 ### Logging
 
@@ -122,21 +120,72 @@ The following table lists the configurable parameters of the Language Operator c
 | `monitoring.serviceMonitor.interval` | Scrape interval | `30s` |
 | `monitoring.serviceMonitor.scrapeTimeout` | Scrape timeout | `10s` |
 
-### Controller
+### OpenTelemetry
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `config.controller.concurrency` | Concurrent reconcilers | `5` |
-| `config.controller.syncPeriod` | Sync period | `10m` |
+| `opentelemetry.enabled` | Enable distributed tracing | `false` |
+| `opentelemetry.endpoint` | OTLP gRPC endpoint | `""` |
+| `opentelemetry.sampling.rate` | Trace sampling rate (0.0-1.0) | `1.0` |
+| `opentelemetry.resourceAttributes.environment` | Environment name | `production` |
+| `opentelemetry.resourceAttributes.cluster` | Cluster name | `main` |
 
-### Webhook (Future)
+### Agent Telemetry
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `config.webhook.enabled` | Enable webhooks | `false` |
-| `config.webhook.port` | Webhook port | `9443` |
+| `agentTelemetry.endpoint` | OTLP endpoint override for agents | `""` (inherits from operator) |
+| `agentTelemetry.samplingRate` | Sampling rate override for agents | `null` (inherits from operator) |
+
+### Persona Library
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `personaLibrary.enabled` | Install built-in persona ConfigMaps | `true` |
+| `personaLibrary.personas` | List of personas to install | See values.yaml |
+
+### Webhook
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `config.webhook.enabled` | Enable validation/mutation webhooks | `true` |
+| `config.webhook.port` | Webhook server port | `9443` |
+
+### RBAC
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `rbac.create` | Create RBAC resources | `true` |
+| `serviceAccount.create` | Create service account | `true` |
+| `serviceAccount.name` | Service account name | `""` (generated) |
+
+### CRD Management
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `crds.install` | Install CRDs with chart | `true` |
+| `crds.keep` | Keep CRDs on uninstall | `true` |
 
 ## Usage Examples
+
+### Deploy a Language Agent
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: example-agent
+  namespace: default
+spec:
+  image: ghcr.io/language-operator/language-agent:latest
+  goal: "Answer questions about Kubernetes"
+  modelRefs:
+  - name: claude-sonnet
+    role: primary
+  toolRefs:
+  - name: kubectl-tool
+  executionMode: interactive
+```
 
 ### Deploy a Language Model
 
@@ -144,21 +193,15 @@ The following table lists the configurable parameters of the Language Operator c
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt4
+  name: claude-sonnet
 spec:
-  provider: openai
-  modelName: gpt-4-turbo
+  provider: anthropic
+  modelName: claude-sonnet-4-5-20250929
   apiKeySecretRef:
-    name: openai-credentials
+    name: anthropic-credentials
     key: api-key
   rateLimits:
-    requestsPerMinute: 100
-    tokensPerMinute: 150000
-  fallbacks:
-  - modelName: gpt-3.5-turbo
-    conditions:
-    - type: rate-limit
-    - type: unavailable
+    requestsPerMinute: 50
 ```
 
 ### Deploy an MCP Tool
@@ -167,58 +210,41 @@ spec:
 apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
-  name: web-search
+  name: kubectl-tool
 spec:
-  image: ghcr.io/language-operator/mcp-web-search:latest
-  type: http
+  image: ghcr.io/language-operator/mcp-kubectl:latest
+  type: mcp
   port: 8080
-  replicas: 3
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+  replicas: 2
 ```
 
-### Deploy an Agent
+### Deploy a Language Cluster
 
 ```yaml
 apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
+kind: LanguageCluster
 metadata:
-  name: customer-support
+  name: dev-cluster
+  namespace: default
 spec:
-  image: ghcr.io/language-operator/language-agent:latest
-  modelRefs:
-  - name: gpt4
-    role: primary
-  toolRefs:
-  - name: web-search
-  - name: knowledge-base
-  personaRef:
-    name: friendly-support
-  goal: "Provide helpful customer support"
-  executionMode: interactive
-  safetyConfig:
-    maxToolCallsPerIteration: 10
-    requireApproval:
-    - email-sender
-    - payment-processor
+  domain: example.com
+  ingressConfig:
+    tls:
+      enabled: true
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
 ```
 
 ## Upgrading
 
-### From 0.1.x to 0.2.x
-
-Check the [CHANGELOG](../../CHANGELOG.md) for breaking changes.
-
 ```bash
-helm upgrade language-operator language-operator/language-operator \
+helm upgrade language-operator ./chart \
   --namespace language-operator-system \
   --values my-values.yaml
 ```
+
+Check the [CHANGELOG](../CHANGELOG.md) for breaking changes between versions.
 
 ## Uninstalling
 
@@ -226,39 +252,105 @@ helm upgrade language-operator language-operator/language-operator \
 helm uninstall language-operator --namespace language-operator-system
 ```
 
-**Note:** CRDs are not removed by default. To remove them:
+**Note:** CRDs are kept by default. To remove them:
 
 ```bash
-kubectl delete crd languagetools.langop.io
-kubectl delete crd languagemodels.langop.io
 kubectl delete crd languageagents.langop.io
+kubectl delete crd languagemodels.langop.io
+kubectl delete crd languagetools.langop.io
 kubectl delete crd languagepersonas.langop.io
-kubectl delete crd languageclients.langop.io
+kubectl delete crd languageclusters.langop.io
 ```
 
 ## Development
 
-### Building from source
+### Local Installation
 
 ```bash
+# Build and load image locally
 cd src
-make docker-build docker-push IMG=myregistry/language-operator:latest
-```
+make docker-build IMG=localhost:5000/language-operator:dev
 
-### Installing locally built chart
-
-```bash
+# Install chart with local image
 helm install language-operator ./chart \
   --namespace language-operator-system \
   --create-namespace \
-  --set image.repository=myregistry/language-operator \
-  --set image.tag=latest
+  --set image.repository=localhost:5000/language-operator \
+  --set image.tag=dev \
+  --set image.pullPolicy=Always
+```
+
+### Debugging
+
+```bash
+# View operator logs
+kubectl logs -n language-operator-system -l app.kubernetes.io/name=language-operator -f
+
+# Check operator status
+kubectl get pods -n language-operator-system
+
+# Verify CRDs are installed
+kubectl get crds | grep langop.io
+```
+
+## Architecture
+
+The operator manages five Custom Resource Definitions:
+
+- **LanguageAgent** - Creates Deployments for autonomous agents
+- **LanguageModel** - Manages LLM provider configurations
+- **LanguageTool** - Creates Services and Deployments for MCP tools
+- **LanguagePersona** - Stores persona definitions in ConfigMaps
+- **LanguageCluster** - Orchestrates multiple agents with isolation
+
+Each controller reconciles its resources independently with leader election for high availability.
+
+## Security
+
+### Operator Security
+
+- Runs as non-root user (65532)
+- Read-only root filesystem
+- Drops all capabilities
+- Seccomp profile enabled
+
+### Agent Security
+
+- Runs as non-root user (1000)
+- Read-only root filesystem with tmpfs mounts
+- Network policies for cluster isolation
+- RBAC with least privilege
+- Secret redaction in logs
+
+## Troubleshooting
+
+### Operator not starting
+
+Check events and logs:
+```bash
+kubectl describe pod -n language-operator-system -l app.kubernetes.io/name=language-operator
+kubectl logs -n language-operator-system -l app.kubernetes.io/name=language-operator
+```
+
+### CRDs not installing
+
+Ensure `crds.install: true` in values and check for conflicts:
+```bash
+kubectl get crds | grep langop.io
+```
+
+### Webhook certificate issues
+
+The operator generates self-signed certificates. Check webhook configuration:
+```bash
+kubectl get validatingwebhookconfigurations
+kubectl get mutatingwebhookconfigurations
 ```
 
 ## Contributing
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for development guidelines.
 
 ## License
 
-See [LICENSE](../../LICENSE) for details.
+See [LICENSE](../LICENSE) for details.
