@@ -142,7 +142,7 @@ func CreateOrUpdateConfigMap(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
 		// Set owner reference
 		if err := controllerutil.SetControllerReference(owner, configMap, scheme); err != nil {
 			return err
@@ -154,16 +154,7 @@ func CreateOrUpdateConfigMap(
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	if op != controllerutil.OperationResultNone {
-		// Log or track the operation if needed
-		_ = op
-	}
-
-	return nil
+	return err
 }
 
 // CreateOrUpdateConfigMapWithAnnotations creates or updates a ConfigMap with custom annotations
@@ -183,7 +174,7 @@ func CreateOrUpdateConfigMapWithAnnotations(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
 		// Set owner reference
 		if err := controllerutil.SetControllerReference(owner, configMap, scheme); err != nil {
 			return err
@@ -203,16 +194,7 @@ func CreateOrUpdateConfigMapWithAnnotations(
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	if op != controllerutil.OperationResultNone {
-		// Log or track the operation if needed
-		_ = op
-	}
-
-	return nil
+	return err
 }
 
 // DeleteConfigMap deletes a ConfigMap if it exists
@@ -232,59 +214,9 @@ func DeleteConfigMap(ctx context.Context, c client.Client, name, namespace strin
 	return nil
 }
 
-// AddFinalizer adds a finalizer to the object
-func AddFinalizer(obj client.Object) bool {
-	finalizers := obj.GetFinalizers()
-	for _, f := range finalizers {
-		if f == FinalizerName {
-			return false
-		}
-	}
-	obj.SetFinalizers(append(finalizers, FinalizerName))
-	return true
-}
-
-// RemoveFinalizer removes a finalizer from the object
-func RemoveFinalizer(obj client.Object) bool {
-	finalizers := obj.GetFinalizers()
-	for i, f := range finalizers {
-		if f == FinalizerName {
-			obj.SetFinalizers(append(finalizers[:i], finalizers[i+1:]...))
-			return true
-		}
-	}
-	return false
-}
-
-// HasFinalizer checks if the object has the finalizer
-func HasFinalizer(obj client.Object) bool {
-	finalizers := obj.GetFinalizers()
-	for _, f := range finalizers {
-		if f == FinalizerName {
-			return true
-		}
-	}
-	return false
-}
-
 // GenerateConfigMapName generates a ConfigMap name for a resource
 func GenerateConfigMapName(resourceName, suffix string) string {
 	return fmt.Sprintf("%s-%s", resourceName, suffix)
-}
-
-// GenerateServiceName generates a Service name for a resource
-func GenerateServiceName(resourceName string) string {
-	return resourceName
-}
-
-// GenerateDeploymentName generates a Deployment name for a resource
-func GenerateDeploymentName(resourceName string) string {
-	return resourceName
-}
-
-// GenerateIngressName generates an Ingress name for a resource
-func GenerateIngressName(resourceName string) string {
-	return resourceName
 }
 
 // GetCommonLabels returns common labels for resources

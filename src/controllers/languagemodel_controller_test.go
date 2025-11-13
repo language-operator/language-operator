@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
@@ -852,7 +853,7 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 	}
 
 	// Verify finalizer was added
-	if !HasFinalizer(updatedModel) {
+	if !controllerutil.ContainsFinalizer(updatedModel, FinalizerName) {
 		t.Error("Expected finalizer to be added after first reconcile")
 	}
 }

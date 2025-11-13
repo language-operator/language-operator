@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 )
@@ -60,7 +62,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		attribute.String("persona.namespace", req.Namespace),
 	)
 
-	log := r.Log.WithValues("languagepersona", req.NamespacedName)
+	log := log.FromContext(ctx)
 
 	// Fetch the LanguagePersona instance
 	persona := &langopv1alpha1.LanguagePersona{}
@@ -87,8 +89,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Add finalizer if it doesn't exist
-	if !HasFinalizer(persona) {
-		AddFinalizer(persona)
+	if !controllerutil.ContainsFinalizer(persona, FinalizerName) {
+		controllerutil.AddFinalizer(persona, FinalizerName)
 		if err := r.Update(ctx, persona); err != nil {
 			log.Error(err, "Failed to add finalizer")
 			return ctrl.Result{}, err
@@ -166,9 +168,9 @@ func (r *LanguagePersonaReconciler) reconcileConfigMap(ctx context.Context, pers
 
 // handleDeletion handles the deletion of the LanguagePersona
 func (r *LanguagePersonaReconciler) handleDeletion(ctx context.Context, persona *langopv1alpha1.LanguagePersona) (ctrl.Result, error) {
-	log := r.Log.WithValues("languagepersona", client.ObjectKeyFromObject(persona))
+	log := log.FromContext(ctx)
 
-	if HasFinalizer(persona) {
+	if controllerutil.ContainsFinalizer(persona, FinalizerName) {
 		// Delete the ConfigMap
 		configMapName := GenerateConfigMapName(persona.Name, "persona")
 		if err := DeleteConfigMap(ctx, r.Client, configMapName, persona.Namespace); err != nil {
@@ -177,7 +179,7 @@ func (r *LanguagePersonaReconciler) handleDeletion(ctx context.Context, persona 
 		}
 
 		// Remove finalizer
-		RemoveFinalizer(persona)
+		controllerutil.RemoveFinalizer(persona, FinalizerName)
 		if err := r.Update(ctx, persona); err != nil {
 			log.Error(err, "Failed to remove finalizer")
 			return ctrl.Result{}, err

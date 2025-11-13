@@ -35,6 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
 )
@@ -70,7 +71,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		attribute.String("model.namespace", req.Namespace),
 	)
 
-	log := r.Log.WithValues("languagemodel", req.NamespacedName)
+	log := log.FromContext(ctx)
 
 	// Fetch the LanguageModel instance
 	model := &langopv1alpha1.LanguageModel{}
@@ -98,8 +99,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Add finalizer if it doesn't exist
-	if !HasFinalizer(model) {
-		AddFinalizer(model)
+	if !controllerutil.ContainsFinalizer(model, FinalizerName) {
+		controllerutil.AddFinalizer(model, FinalizerName)
 		if err := r.Update(ctx, model); err != nil {
 			log.Error(err, "Failed to add finalizer")
 			return ctrl.Result{}, err
@@ -451,9 +452,9 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 
 // handleDeletion handles the deletion of the LanguageModel
 func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *langopv1alpha1.LanguageModel) (ctrl.Result, error) {
-	log := r.Log.WithValues("languagemodel", client.ObjectKeyFromObject(model))
+	log := log.FromContext(ctx)
 
-	if HasFinalizer(model) {
+	if controllerutil.ContainsFinalizer(model, FinalizerName) {
 		// Delete the ConfigMap
 		configMapName := GenerateConfigMapName(model.Name, "model")
 		if err := DeleteConfigMap(ctx, r.Client, configMapName, model.Namespace); err != nil {
@@ -462,7 +463,7 @@ func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *lan
 		}
 
 		// Remove finalizer
-		RemoveFinalizer(model)
+		controllerutil.RemoveFinalizer(model, FinalizerName)
 		if err := r.Update(ctx, model); err != nil {
 			log.Error(err, "Failed to remove finalizer")
 			return ctrl.Result{}, err
