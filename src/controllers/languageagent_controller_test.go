@@ -5,40 +5,18 @@ import (
 	"testing"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers/testutil"
 	"github.com/based/language-operator/pkg/synthesis"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-// setupTestScheme creates a scheme with all required types registered
-func setupTestScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add apps scheme: %v", err)
-	}
-	if err := networkingv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add networking scheme: %v", err)
-	}
-	if err := batchv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add batch scheme: %v", err)
-	}
-	return scheme
-}
 
 // MockSynthesizer implements a mock synthesizer for testing
 type MockSynthesizer struct {
@@ -68,7 +46,7 @@ func (m *MockSynthesizer) DistillPersona(ctx context.Context, persona synthesis.
 }
 
 func TestLanguageAgentController_SynthesisNotCalledWithoutInstructions(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -115,7 +93,7 @@ func TestLanguageAgentController_SynthesisNotCalledWithoutInstructions(t *testin
 }
 
 func TestLanguageAgentController_SynthesisCalledWithInstructions(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -190,7 +168,7 @@ func TestLanguageAgentController_SynthesisCalledWithInstructions(t *testing.T) {
 }
 
 func TestLanguageAgentController_SmartChangeDetection(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	instructions := "Monitor workspace for changes"
 	agent := &langopv1alpha1.LanguageAgent{
@@ -282,7 +260,7 @@ func TestLanguageAgentController_SmartChangeDetection(t *testing.T) {
 }
 
 func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -339,7 +317,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 }
 
 func TestLanguageAgentController_CronJobCreation(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -402,7 +380,7 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 }
 
 func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -462,7 +440,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 }
 
 func TestLanguageAgentController_StatusConditions(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -535,7 +513,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 }
 
 func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -568,7 +546,7 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 }
 
 func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	// Test with empty ExecutionMode (should default to autonomous/Deployment)
 	agent := &langopv1alpha1.LanguageAgent{
@@ -618,7 +596,7 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 }
 
 func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -689,7 +667,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 }
 
 func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -772,7 +750,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 }
 
 func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -869,7 +847,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 }
 
 func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
-	scheme := setupTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{

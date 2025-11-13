@@ -56,8 +56,8 @@ type LanguageAgentReconciler struct {
 	AllowedRegistries      []string
 }
 
-// tracer is the OpenTelemetry tracer for the LanguageAgent controller
-var tracer = otel.Tracer("language-operator/agent-controller")
+// agentTracer is the OpenTelemetry tracer for the LanguageAgent controller
+var agentTracer = otel.Tracer("language-operator/agent-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
@@ -79,7 +79,7 @@ var tracer = otel.Tracer("language-operator/agent-controller")
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Start OpenTelemetry span for reconciliation
-	ctx, span := tracer.Start(ctx, "agent.reconcile")
+	ctx, span := agentTracer.Start(ctx, "agent.reconcile")
 	defer span.End()
 
 	// Add basic span attributes from request
@@ -471,7 +471,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	var dslCode string
 	if needsSynthesis {
 		// Start synthesis span
-		ctx, span := tracer.Start(ctx, "agent.synthesize")
+		ctx, span := agentTracer.Start(ctx, "agent.synthesize")
 		defer span.End()
 
 		// Add synthesis span attributes
@@ -768,15 +768,8 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 	// Determine target namespace - always use agent's namespace
 	// If cluster ref is set, verify cluster exists in same namespace
 	targetNamespace := agent.Namespace
-	if agent.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			return err
-		}
-		if cluster.Status.Phase != "Ready" {
-			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
-		}
-		// Cluster is in same namespace - agent.Namespace is correct
+	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+		return err
 	}
 
 	// Set defaults from WorkspaceSpec
@@ -857,19 +850,13 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// If cluster ref is set, verify cluster exists in same namespace
+	// If cluster ref is set, verify cluster exists and is ready
+	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+		return err
+	}
+
+	// Add cluster label if cluster ref is set
 	if agent.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			return err
-		}
-
-		// Wait for cluster to be ready
-		if cluster.Status.Phase != "Ready" {
-			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
-		}
-
-		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef
 	}
 
@@ -1075,19 +1062,13 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// If cluster ref is set, verify cluster exists in same namespace
+	// If cluster ref is set, verify cluster exists and is ready
+	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+		return err
+	}
+
+	// Add cluster label if cluster ref is set
 	if agent.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			return err
-		}
-
-		// Wait for cluster to be ready
-		if cluster.Status.Phase != "Ready" {
-			return fmt.Errorf("cluster %s is not ready yet", agent.Spec.ClusterRef)
-		}
-
-		// Add cluster label
 		labels["langop.io/cluster"] = agent.Spec.ClusterRef
 	}
 
@@ -1276,34 +1257,8 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.Egress,
 	)
 
-	// Set owner reference so NetworkPolicy is cleaned up with agent
-	if err := controllerutil.SetControllerReference(agent, networkPolicy, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Create or update the NetworkPolicy
-	existingPolicy := &networkingv1.NetworkPolicy{}
-	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Create new NetworkPolicy
-			if err := r.Create(ctx, networkPolicy); err != nil {
-				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
-	}
-
-	// Update existing NetworkPolicy
-	existingPolicy.Spec = networkPolicy.Spec
-	existingPolicy.Labels = networkPolicy.Labels
-	if err := r.Update(ctx, existingPolicy); err != nil {
-		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
-	}
-
-	return nil
+	// Create or update the NetworkPolicy with owner reference
+	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, agent, networkPolicy)
 }
 
 func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, []string, error) {
@@ -1990,7 +1945,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 // performSelfHealingSynthesis performs synthesis with error context for self-healing
 func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	// Start OpenTelemetry span for self-healing synthesis
-	ctx, span := tracer.Start(ctx, "agent.self_healing.synthesize")
+	ctx, span := agentTracer.Start(ctx, "agent.self_healing.synthesize")
 	defer span.End()
 
 	log := log.FromContext(ctx)
@@ -2216,7 +2171,7 @@ func calculateBackoff(attempts int32) time.Duration {
 // detectPodFailures checks for pod failures and updates agent status
 func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	// Start OpenTelemetry span for failure detection
-	ctx, span := tracer.Start(ctx, "agent.self_healing.detect")
+	ctx, span := agentTracer.Start(ctx, "agent.self_healing.detect")
 	defer span.End()
 
 	// Add span attributes

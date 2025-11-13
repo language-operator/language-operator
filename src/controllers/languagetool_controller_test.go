@@ -5,31 +5,18 @@ import (
 	"testing"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestLanguageToolController_SidecarMode(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add apps scheme: %v", err)
-	}
-	if err := networkingv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add networking scheme: %v", err)
-	}
+	scheme := testutil.SetupTestScheme(t)
 
 	tool := &langopv1alpha1.LanguageTool{
 		ObjectMeta: metav1.ObjectMeta{
@@ -88,19 +75,7 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 }
 
 func TestLanguageToolController_ServiceMode(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add apps scheme: %v", err)
-	}
-	if err := networkingv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add networking scheme: %v", err)
-	}
+	scheme := testutil.SetupTestScheme(t)
 
 	tool := &langopv1alpha1.LanguageTool{
 		ObjectMeta: metav1.ObjectMeta{
@@ -165,19 +140,7 @@ func TestLanguageToolController_ServiceMode(t *testing.T) {
 }
 
 func TestLanguageToolController_StatusPhases(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add apps scheme: %v", err)
-	}
-	if err := networkingv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add networking scheme: %v", err)
-	}
+	scheme := testutil.SetupTestScheme(t)
 
 	tests := []struct {
 		name              string
@@ -329,13 +292,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 }
 
 func TestLanguageToolController_NotFoundHandling(t *testing.T) {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
+	scheme := testutil.SetupTestScheme(t)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).

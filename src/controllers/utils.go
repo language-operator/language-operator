@@ -70,6 +70,62 @@ func SetCondition(conditions *[]metav1.Condition, conditionType string, status m
 	*conditions = append(*conditions, condition)
 }
 
+// ValidateClusterReference validates that a cluster exists and is ready
+func ValidateClusterReference(ctx context.Context, c client.Client, clusterRef, namespace string) error {
+	if clusterRef == "" {
+		return nil // No cluster reference to validate
+	}
+
+	cluster := &langopv1alpha1.LanguageCluster{}
+	if err := c.Get(ctx, client.ObjectKey{Name: clusterRef, Namespace: namespace}, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster %s: %w", clusterRef, err)
+	}
+
+	if cluster.Status.Phase != "Ready" {
+		return fmt.Errorf("cluster %s is not ready yet (phase: %s)", clusterRef, cluster.Status.Phase)
+	}
+
+	return nil
+}
+
+// CreateOrUpdateNetworkPolicy creates or updates a NetworkPolicy with owner reference
+func CreateOrUpdateNetworkPolicy(
+	ctx context.Context,
+	c client.Client,
+	scheme *runtime.Scheme,
+	owner client.Object,
+	networkPolicy *networkingv1.NetworkPolicy,
+) error {
+	// Set owner reference so NetworkPolicy is cleaned up with owner
+	if err := controllerutil.SetControllerReference(owner, networkPolicy, scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %w", err)
+	}
+
+	// Try to get existing NetworkPolicy
+	existingPolicy := &networkingv1.NetworkPolicy{}
+	err := c.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existingPolicy)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Create new NetworkPolicy
+			if err := c.Create(ctx, networkPolicy); err != nil {
+				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
+	}
+
+	// Update existing NetworkPolicy
+	existingPolicy.Spec = networkPolicy.Spec
+	existingPolicy.Labels = networkPolicy.Labels
+	if err := c.Update(ctx, existingPolicy); err != nil {
+		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
+	}
+
+	return nil
+}
+
 // CreateOrUpdateConfigMap creates or updates a ConfigMap with owner reference
 func CreateOrUpdateConfigMap(
 	ctx context.Context,
@@ -251,21 +307,6 @@ func MergeLabels(base, override map[string]string) map[string]string {
 		result[k] = v
 	}
 	return result
-}
-
-// Int32Ptr returns a pointer to an int32 value
-func Int32Ptr(i int32) *int32 {
-	return &i
-}
-
-// StringPtr returns a pointer to a string value
-func StringPtr(s string) *string {
-	return &s
-}
-
-// BoolPtr returns a pointer to a bool value
-func BoolPtr(b bool) *bool {
-	return &b
 }
 
 // resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks

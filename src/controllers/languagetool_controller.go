@@ -203,20 +203,13 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 	targetNamespace := tool.Namespace
 	labels := GetCommonLabels(tool.Name, "LanguageTool")
 
-	// If cluster ref is set, verify cluster exists in same namespace
+	// If cluster ref is set, verify cluster exists and is ready
+	if err := ValidateClusterReference(ctx, r.Client, tool.Spec.ClusterRef, tool.Namespace); err != nil {
+		return err
+	}
+
+	// Add cluster label if cluster ref is set
 	if tool.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef, Namespace: tool.Namespace}, cluster); err != nil {
-			return err
-		}
-
-		// Wait for cluster to be ready
-		if cluster.Status.Phase != "Ready" {
-			// Return error to trigger requeue
-			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
-		}
-
-		// Add cluster label
 		labels["langop.io/cluster"] = tool.Spec.ClusterRef
 	}
 
@@ -350,34 +343,8 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 		tool.Spec.Egress,
 	)
 
-	// Set owner reference so NetworkPolicy is cleaned up with tool
-	if err := controllerutil.SetControllerReference(tool, networkPolicy, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Create or update the NetworkPolicy
-	existingPolicy := &networkingv1.NetworkPolicy{}
-	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Create new NetworkPolicy
-			if err := r.Create(ctx, networkPolicy); err != nil {
-				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
-	}
-
-	// Update existing NetworkPolicy
-	existingPolicy.Spec = networkPolicy.Spec
-	existingPolicy.Labels = networkPolicy.Labels
-	if err := r.Update(ctx, existingPolicy); err != nil {
-		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
-	}
-
-	return nil
+	// Create or update the NetworkPolicy with owner reference
+	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, tool, networkPolicy)
 }
 
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {

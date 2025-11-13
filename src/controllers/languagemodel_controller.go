@@ -31,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -446,34 +445,8 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 		},
 	}
 
-	// Set owner reference so NetworkPolicy is cleaned up with model
-	if err := controllerutil.SetControllerReference(model, networkPolicy, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Create or update the NetworkPolicy
-	existingPolicy := &networkingv1.NetworkPolicy{}
-	err := r.Get(ctx, types.NamespacedName{Name: networkPolicy.Name, Namespace: networkPolicy.Namespace}, existingPolicy)
-
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Create new NetworkPolicy
-			if err := r.Create(ctx, networkPolicy); err != nil {
-				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to get NetworkPolicy: %w", err)
-	}
-
-	// Update existing NetworkPolicy
-	existingPolicy.Spec = networkPolicy.Spec
-	existingPolicy.Labels = networkPolicy.Labels
-	if err := r.Update(ctx, existingPolicy); err != nil {
-		return fmt.Errorf("failed to update NetworkPolicy: %w", err)
-	}
-
-	return nil
+	// Create or update the NetworkPolicy with owner reference
+	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, model, networkPolicy)
 }
 
 // handleDeletion handles the deletion of the LanguageModel

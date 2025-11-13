@@ -1,0 +1,39 @@
+FROM ghcr.io/language-operator/base:latest
+
+# Ruby dependencies inherited from base image
+
+# Create application directory
+WORKDIR /app
+
+# Copy the local gem file
+COPY language-operator-*.gem /tmp/
+
+# Copy Gemfile and install dependencies
+COPY Gemfile /app/
+
+# Install the local gem directly then install other dependencies
+RUN gem install /tmp/language-operator-*.gem && \
+    bundle install --no-cache
+
+# Copy application files
+COPY server.rb /app/
+COPY lib/ /app/lib/
+
+# Create /mcp directory for tool definitions
+RUN mkdir -p /mcp && chown -R langop:langop /mcp
+
+# Ensure app directory is owned by langop user
+RUN chown -R langop:langop /app
+
+# Expose default port
+EXPOSE 80
+
+# Set environment variables
+ENV PORT=80
+ENV RACK_ENV=production
+
+# Switch to langop user
+USER langop
+
+# Start the server
+CMD ["ruby", "server.rb"]

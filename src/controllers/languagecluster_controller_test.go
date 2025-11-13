@@ -5,28 +5,16 @@ import (
 	"testing"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers/testutil"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func setupLanguageClusterTestScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	return scheme
-}
-
 func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
-	scheme := setupLanguageClusterTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	cluster := &langopv1alpha1.LanguageCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +69,7 @@ func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
 }
 
 func TestLanguageClusterController_ReadyCondition(t *testing.T) {
-	scheme := setupLanguageClusterTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	cluster := &langopv1alpha1.LanguageCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -159,7 +147,7 @@ func TestLanguageClusterController_ReadyCondition(t *testing.T) {
 }
 
 func TestLanguageClusterController_NotFoundHandling(t *testing.T) {
-	scheme := setupLanguageClusterTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -191,7 +179,7 @@ func TestLanguageClusterController_NotFoundHandling(t *testing.T) {
 }
 
 func TestLanguageClusterController_MultipleReconciles(t *testing.T) {
-	scheme := setupLanguageClusterTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	cluster := &langopv1alpha1.LanguageCluster{
 		ObjectMeta: metav1.ObjectMeta{

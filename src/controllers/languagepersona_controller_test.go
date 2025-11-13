@@ -5,28 +5,17 @@ import (
 	"testing"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers/testutil"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func setupLanguagePersonaTestScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	return scheme
-}
-
 func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
-	scheme := setupLanguagePersonaTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	persona := &langopv1alpha1.LanguagePersona{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +76,7 @@ func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
 }
 
 func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
-	scheme := setupLanguagePersonaTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	persona := &langopv1alpha1.LanguagePersona{
 		ObjectMeta: metav1.ObjectMeta{
@@ -170,7 +159,7 @@ func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
 }
 
 func TestLanguagePersonaController_NotFoundHandling(t *testing.T) {
-	scheme := setupLanguagePersonaTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).

@@ -5,36 +5,19 @@ import (
 	"testing"
 
 	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
+	"github.com/based/language-operator/controllers/testutil"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func setupLanguageModelTestScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	if err := langopv1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add langop scheme: %v", err)
-	}
-	if err := corev1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add core scheme: %v", err)
-	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add apps scheme: %v", err)
-	}
-	if err := networkingv1.AddToScheme(scheme); err != nil {
-		t.Fatalf("Failed to add networking scheme: %v", err)
-	}
-	return scheme
-}
-
 func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +85,7 @@ func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
 }
 
 func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -187,7 +170,7 @@ func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 }
 
 func TestLanguageModelController_StatusUpdates(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -271,7 +254,7 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 }
 
 func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -365,7 +348,7 @@ func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
 }
 
 func TestLanguageModelController_NotFoundHandling(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -397,7 +380,7 @@ func TestLanguageModelController_NotFoundHandling(t *testing.T) {
 }
 
 func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
@@ -484,7 +467,7 @@ func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
 }
 
 func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	// Test with IP address endpoint
 	modelWithIP := &langopv1alpha1.LanguageModel{
@@ -682,7 +665,7 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 }
 
 func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	// Test OpenAI provider gets auto-egress for api.openai.com
 	modelOpenAI := &langopv1alpha1.LanguageModel{
@@ -815,7 +798,7 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 }
 
 func TestLanguageModelController_Finalizer(t *testing.T) {
-	scheme := setupLanguageModelTestScheme(t)
+	scheme := testutil.SetupTestScheme(t)
 
 	model := &langopv1alpha1.LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{
