@@ -16,10 +16,6 @@ agent 'test-agent' do
   description 'A test agent for validation'
 
   schedule '0 8 * * *'
-
-  workflow do
-    step :test_step, tool: 'shell', params: {command: 'echo hello'}
-  end
 end
 `
 
@@ -43,10 +39,6 @@ agent 'test-agent' do
   description 'A test agent'
 
   invalid_property 'this should fail'
-
-  workflow do
-    step :test_step, tool: 'shell', params: {command: 'echo hello'}
-  end
 end
 `
 
@@ -80,10 +72,6 @@ func TestValidateGeneratedCodeAgainstSchema_SyntaxError(t *testing.T) {
 
 agent 'test-agent' do
   description 'Missing end
-
-  workflow do
-    step :test_step, tool: 'shell', params: {command: 'echo hello'}
-  end
 `
 
 	violations, err := ValidateGeneratedCodeAgainstSchema(ctx, syntaxErrorCode)

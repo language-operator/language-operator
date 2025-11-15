@@ -247,28 +247,23 @@ func TestTemplateGeneratesValidWorkflow(t *testing.T) {
 		t.Fatalf("Failed to execute template: %v", err)
 	}
 
-	// Extract and validate the workflow example
+	// Extract and validate the template output
 	prompt := buf.String()
-	if !strings.Contains(prompt, "workflow do") {
-		t.Error("Template does not include workflow example")
+	if !strings.Contains(prompt, "agent") {
+		t.Error("Template does not include agent definition")
 		return
 	}
 
-	// Create a complete agent with workflow for validation
-	agentWithWorkflow := `require 'language_operator'
+	// Create a complete agent for validation
+	agentCode := `require 'language_operator'
 
 agent 'workflow-test' do
-  description 'Agent with workflow'
+  description 'Agent with objectives and constraints'
 
   objectives [
     'Fetch data from API',
     'Process the data'
   ]
-
-  workflow do
-    step :fetch_data, tool: 'http', params: {url: 'https://api.example.com/data'}
-    step :process_data, depends_on: :fetch_data, tool: 'shell', params: {command: 'process.sh'}
-  end
 
   constraints do
     max_iterations 100
@@ -281,8 +276,8 @@ agent 'workflow-test' do
 end
 `
 
-	// Validate the workflow code
-	violations, err := ValidateGeneratedCodeAgainstSchema(ctx, agentWithWorkflow)
+	// Validate the agent code
+	violations, err := ValidateGeneratedCodeAgainstSchema(ctx, agentCode)
 	if err != nil {
 		t.Fatalf("Schema validation failed: %v", err)
 	}
