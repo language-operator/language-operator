@@ -1577,19 +1577,24 @@ spec:
                     description: Tracing enables distributed tracing
                     type: boolean
                 type: object
-              personaRef:
-                description: PersonaRef is an optional reference to a LanguagePersona
-                properties:
-                  name:
-                    description: Name is the name of the LanguagePersona
-                    type: string
-                  namespace:
-                    description: Namespace is the namespace of the LanguagePersona
-                      (defaults to same namespace)
-                    type: string
-                required:
-                - name
-                type: object
+              personaRefs:
+                description: |-
+                  PersonaRefs is a list of LanguagePersona references that compose in order of importance
+                  Personas are merged with later personas taking precedence over earlier ones
+                items:
+                  description: PersonaReference references a LanguagePersona
+                  properties:
+                    name:
+                      description: Name is the name of the LanguagePersona
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the LanguagePersona
+                        (defaults to same namespace)
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               podAnnotations:
                 additionalProperties:
                   type: string

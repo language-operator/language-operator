@@ -1,5 +1,5 @@
 # Image configuration
-IMAGE_NAME := git.theryans.io/language-operator/model
+IMAGE_NAME := ghcr.io/language-operator/model
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 

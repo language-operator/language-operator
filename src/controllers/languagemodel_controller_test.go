@@ -147,8 +147,8 @@ func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 	if container.Name != "proxy" {
 		t.Errorf("Expected container name 'proxy', got '%s'", container.Name)
 	}
-	if container.Image != "git.theryans.io/language-operator/model:latest" {
-		t.Errorf("Expected image 'git.theryans.io/language-operator/model:latest', got '%s'", container.Image)
+	if container.Image != "ghcr.io/language-operator/model:latest" {
+		t.Errorf("Expected image 'ghcr.io/language-operator/model:latest', got '%s'", container.Image)
 	}
 
 	// Verify Service was created

@@ -447,11 +447,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		currentModelsHash := hashString(strings.Join(r.getModelNames(agent), ","))
 		previousModelsHash := existingCM.Annotations["langop.io/models-hash"]
 
-		personaRef := ""
-		if agent.Spec.PersonaRef != nil {
-			personaRef = agent.Spec.PersonaRef.Name
-		}
-		currentPersonaHash := hashString(personaRef)
+		personaRefs := r.getPersonaNames(agent)
+		currentPersonaHash := hashString(strings.Join(personaRefs, ","))
 		previousPersonaHash := existingCM.Annotations["langop.io/persona-hash"]
 
 		// Instructions changed → full re-synthesis
@@ -706,16 +703,11 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	}
 
 	// Store all hashes for smart change detection
-	personaRef := ""
-	if agent.Spec.PersonaRef != nil {
-		personaRef = agent.Spec.PersonaRef.Name
-	}
-
 	annotations := map[string]string{
 		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
 		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
 		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
-		"langop.io/persona-hash":      hashString(personaRef),
+		"langop.io/persona-hash":      hashString(strings.Join(r.getPersonaNames(agent), ",")),
 		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
 	}
 
@@ -754,6 +746,15 @@ func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAge
 func (r *LanguageAgentReconciler) getModelNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
 	for _, ref := range agent.Spec.ModelRefs {
+		names = append(names, ref.Name)
+	}
+	return names
+}
+
+// getPersonaNames extracts persona names from agent's personaRefs
+func (r *LanguageAgentReconciler) getPersonaNames(agent *langopv1alpha1.LanguageAgent) []string {
+	var names []string
+	for _, ref := range agent.Spec.PersonaRefs {
 		names = append(names, ref.Name)
 	}
 	return names
@@ -1466,32 +1467,131 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 }
 
 func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguagePersona, error) {
-	// Return nil if no persona is referenced
-	if agent.Spec.PersonaRef == nil {
+	// Return nil if no personas are referenced
+	if len(agent.Spec.PersonaRefs) == 0 {
 		return nil, nil
 	}
 
-	// Determine namespace
-	namespace := agent.Spec.PersonaRef.Namespace
-	if namespace == "" {
-		namespace = agent.Namespace
-	}
-
-	// Fetch the LanguagePersona
-	persona := &langopv1alpha1.LanguagePersona{}
-	if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.PersonaRef.Name, Namespace: namespace}, persona); err != nil {
-		if errors.IsNotFound(err) {
-			return nil, fmt.Errorf("persona %s/%s not found", namespace, agent.Spec.PersonaRef.Name)
+	// Fetch all personas
+	var personas []*langopv1alpha1.LanguagePersona
+	for _, ref := range agent.Spec.PersonaRefs {
+		// Determine namespace
+		namespace := ref.Namespace
+		if namespace == "" {
+			namespace = agent.Namespace
 		}
-		return nil, fmt.Errorf("failed to get persona %s/%s: %w", namespace, agent.Spec.PersonaRef.Name, err)
+
+		// Fetch the LanguagePersona
+		persona := &langopv1alpha1.LanguagePersona{}
+		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: namespace}, persona); err != nil {
+			if errors.IsNotFound(err) {
+				return nil, fmt.Errorf("persona %s/%s not found", namespace, ref.Name)
+			}
+			return nil, fmt.Errorf("failed to get persona %s/%s: %w", namespace, ref.Name, err)
+		}
+
+		// Check if persona is ready
+		if persona.Status.Phase != "Ready" {
+			return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", namespace, ref.Name, persona.Status.Phase)
+		}
+
+		personas = append(personas, persona)
 	}
 
-	// Check if persona is ready
-	if persona.Status.Phase != "Ready" {
-		return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", namespace, agent.Spec.PersonaRef.Name, persona.Status.Phase)
+	// Compose personas in order of importance (later personas override earlier ones)
+	return r.composePersonas(personas), nil
+}
+
+// composePersonas merges multiple personas with later personas taking precedence
+func (r *LanguageAgentReconciler) composePersonas(personas []*langopv1alpha1.LanguagePersona) *langopv1alpha1.LanguagePersona {
+	if len(personas) == 0 {
+		return nil
+	}
+	if len(personas) == 1 {
+		return personas[0]
 	}
 
-	return persona, nil
+	// Start with a copy of the first persona
+	composed := personas[0].DeepCopy()
+
+	// Merge each subsequent persona, with later ones taking precedence
+	for i := 1; i < len(personas); i++ {
+		p := personas[i]
+
+		// Override scalar fields if non-empty
+		if p.Spec.DisplayName != "" {
+			composed.Spec.DisplayName = p.Spec.DisplayName
+		}
+		if p.Spec.Description != "" {
+			composed.Spec.Description = p.Spec.Description
+		}
+		if p.Spec.SystemPrompt != "" {
+			composed.Spec.SystemPrompt = p.Spec.SystemPrompt
+		}
+		if p.Spec.Tone != "" {
+			composed.Spec.Tone = p.Spec.Tone
+		}
+		if p.Spec.Language != "" {
+			composed.Spec.Language = p.Spec.Language
+		}
+		if p.Spec.ResponseFormat != nil {
+			composed.Spec.ResponseFormat = p.Spec.ResponseFormat
+		}
+
+		// Append array fields (capabilities, limitations, etc.)
+		composed.Spec.Capabilities = append(composed.Spec.Capabilities, p.Spec.Capabilities...)
+		composed.Spec.Limitations = append(composed.Spec.Limitations, p.Spec.Limitations...)
+		composed.Spec.Examples = append(composed.Spec.Examples, p.Spec.Examples...)
+		composed.Spec.Rules = append(composed.Spec.Rules, p.Spec.Rules...)
+		composed.Spec.Instructions = append(composed.Spec.Instructions, p.Spec.Instructions...)
+		composed.Spec.KnowledgeSources = append(composed.Spec.KnowledgeSources, p.Spec.KnowledgeSources...)
+
+		// Merge tool preferences
+		if p.Spec.ToolPreferences != nil {
+			if composed.Spec.ToolPreferences == nil {
+				composed.Spec.ToolPreferences = &langopv1alpha1.ToolPreferencesSpec{}
+			}
+			composed.Spec.ToolPreferences.PreferredTools = append(composed.Spec.ToolPreferences.PreferredTools, p.Spec.ToolPreferences.PreferredTools...)
+			composed.Spec.ToolPreferences.AvoidTools = append(composed.Spec.ToolPreferences.AvoidTools, p.Spec.ToolPreferences.AvoidTools...)
+			if p.Spec.ToolPreferences.Strategy != "" {
+				composed.Spec.ToolPreferences.Strategy = p.Spec.ToolPreferences.Strategy
+			}
+			if p.Spec.ToolPreferences.AlwaysConfirm {
+				composed.Spec.ToolPreferences.AlwaysConfirm = p.Spec.ToolPreferences.AlwaysConfirm
+			}
+			if p.Spec.ToolPreferences.ExplainToolUse {
+				composed.Spec.ToolPreferences.ExplainToolUse = p.Spec.ToolPreferences.ExplainToolUse
+			}
+		}
+
+		// Merge constraints
+		if p.Spec.Constraints != nil {
+			if composed.Spec.Constraints == nil {
+				composed.Spec.Constraints = &langopv1alpha1.PersonaConstraints{}
+			}
+			if p.Spec.Constraints.MaxResponseTokens != nil {
+				composed.Spec.Constraints.MaxResponseTokens = p.Spec.Constraints.MaxResponseTokens
+			}
+			if p.Spec.Constraints.MaxToolCalls != nil {
+				composed.Spec.Constraints.MaxToolCalls = p.Spec.Constraints.MaxToolCalls
+			}
+			if p.Spec.Constraints.MaxKnowledgeQueries != nil {
+				composed.Spec.Constraints.MaxKnowledgeQueries = p.Spec.Constraints.MaxKnowledgeQueries
+			}
+			if p.Spec.Constraints.ResponseTimeout != "" {
+				composed.Spec.Constraints.ResponseTimeout = p.Spec.Constraints.ResponseTimeout
+			}
+			if p.Spec.Constraints.RequireDocumentation {
+				composed.Spec.Constraints.RequireDocumentation = p.Spec.Constraints.RequireDocumentation
+			}
+			if len(p.Spec.Constraints.AllowedDomains) > 0 {
+				composed.Spec.Constraints.AllowedDomains = p.Spec.Constraints.AllowedDomains
+			}
+			composed.Spec.Constraints.BlockedTopics = append(composed.Spec.Constraints.BlockedTopics, p.Spec.Constraints.BlockedTopics...)
+		}
+	}
+
+	return composed
 }
 
 func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
@@ -1969,16 +2069,11 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 	}
 
 	// Store all hashes for smart change detection
-	personaRef := ""
-	if agent.Spec.PersonaRef != nil {
-		personaRef = agent.Spec.PersonaRef.Name
-	}
-
 	annotations := map[string]string{
 		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
 		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
 		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
-		"langop.io/persona-hash":      hashString(personaRef),
+		"langop.io/persona-hash":      hashString(strings.Join(r.getPersonaNames(agent), ",")),
 		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
 		"langop.io/self-healing":      "true",
 	}

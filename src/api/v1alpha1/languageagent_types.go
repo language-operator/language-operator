@@ -35,9 +35,10 @@ type LanguageAgentSpec struct {
 	// +optional
 	ToolRefs []ToolReference `json:"toolRefs,omitempty"`
 
-	// PersonaRef is an optional reference to a LanguagePersona
+	// PersonaRefs is a list of LanguagePersona references that compose in order of importance
+	// Personas are merged with later personas taking precedence over earlier ones
 	// +optional
-	PersonaRef *PersonaReference `json:"personaRef,omitempty"`
+	PersonaRefs []PersonaReference `json:"personaRefs,omitempty"`
 
 	// Goal defines the agent's objective (for autonomous agents)
 	// +optional

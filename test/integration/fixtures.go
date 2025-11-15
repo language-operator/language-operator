@@ -72,7 +72,7 @@ var TestScenarios = []TestScenario{
 func NewTestAgent(namespace, name string, spec langopv1alpha1.LanguageAgentSpec) *langopv1alpha1.LanguageAgent {
 	// Set defaults if not provided
 	if spec.Image == "" {
-		spec.Image = "git.theryans.io/language-operator/agent:latest"
+		spec.Image = "ghcr.io/language-operator/agent:latest"
 	}
 	if len(spec.ModelRefs) == 0 {
 		spec.ModelRefs = []langopv1alpha1.ModelReference{

@@ -109,15 +109,12 @@ kind: LanguageAgent
 metadata:
   name: customer-support-bot
 spec:
-  image: your-registry/agent:latest
-  executionMode: interactive
   modelRefs:
     - name: gpt-4-turbo
-      role: primary
   toolRefs:
     - name: web-search
-  personaRef:
-    name: helpful-assistant
+  personaRefs:
+    - name: helpful-assistant
   instructions: |
     You are a customer support agent. Answer customer questions
     using the available tools and escalate complex issues.

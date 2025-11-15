@@ -65,7 +65,7 @@ def map_provider_to_litellm(provider: str, model_name: str, endpoint: Optional[s
         "azure": f"azure/{model_name}",
         "bedrock": f"bedrock/{model_name}",
         "vertex": f"vertex_ai/{model_name}",
-        "openai-compatible": f"openai/{model_name}",
+        "openai-compatible": f"lm_studio/{model_name}",  # Use lm_studio for OpenAI-compatible endpoints
         "custom": model_name,
     }
 
@@ -198,6 +198,13 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
     """Build litellm_settings for retries, fallbacks, etc."""
     settings: Dict[str, Any] = {}
 
+    # For openai-compatible providers, disable strict response validation
+    provider = spec.get("provider")
+    if provider in ["openai-compatible", "custom"]:
+        # Disable strict validation for non-standard OpenAI-compatible responses
+        settings["drop_params"] = True
+        settings["disable_strict_validation"] = True
+
     # Retry policy
     retry_policy = spec.get("retryPolicy", {})
     if retry_policy:
@@ -232,7 +239,8 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
                 ttl = 300
             settings["cache_kwargs"] = {"ttl": ttl}
 
-    return settings if settings else None
+    # Always return settings dict (even if mostly empty) for openai-compatible providers
+    return settings
 
 
 def generate_litellm_config(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[str, Any]:

@@ -45,6 +45,62 @@ spec:
             type: object
           spec:
             description: LanguageClusterSpec defines the desired state of LanguageCluster
+            properties:
+              domain:
+                description: |-
+                  Domain is the base domain for webhook routing
+                  Agent webhooks will be accessible at <uuid>.agents.<domain>
+                  Example: "example.com" results in webhooks like "abc123.agents.example.com"
+                type: string
+              ingressConfig:
+                description: IngressConfig defines ingress/gateway configuration for
+                  the cluster
+                properties:
+                  gatewayClassName:
+                    description: |-
+                      GatewayClassName specifies the Gateway API GatewayClass to use
+                      If empty, will attempt auto-detection or fall back to Ingress
+                    type: string
+                  ingressClassName:
+                    description: |-
+                      IngressClassName specifies the Ingress class to use for fallback
+                      Only used when Gateway API is not available
+                    type: string
+                  tls:
+                    description: TLS configuration for agent webhooks
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled controls whether TLS is enabled for webhooks
+                        type: boolean
+                      issuerRef:
+                        description: IssuerRef references a cert-manager Issuer or
+                          ClusterIssuer
+                        properties:
+                          group:
+                            default: cert-manager.io
+                            description: Group is the API group of the issuer
+                            type: string
+                          kind:
+                            default: ClusterIssuer
+                            description: Kind is either "Issuer" or "ClusterIssuer"
+                            enum:
+                            - Issuer
+                            - ClusterIssuer
+                            type: string
+                          name:
+                            description: Name of the Issuer or ClusterIssuer
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      secretName:
+                        description: |-
+                          SecretName is the name of the TLS secret (for manual cert management)
+                          If empty, cert-manager will be used if available
+                        type: string
+                    type: object
+                type: object
             type: object
           status:
             description: LanguageClusterStatus defines the observed state

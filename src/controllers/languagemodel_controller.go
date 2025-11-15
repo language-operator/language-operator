@@ -274,7 +274,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 					Containers: []corev1.Container{
 						{
 							Name:  "proxy",
-							Image: "git.theryans.io/language-operator/model:latest",
+							Image: "ghcr.io/language-operator/model:latest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -327,6 +327,17 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 					},
 				},
 			},
+		}
+
+		// Add environment variables for openai-compatible providers (like LM Studio)
+		// to enable lenient response parsing
+		if model.Spec.Provider == "openai-compatible" || model.Spec.Provider == "custom" {
+			deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
+				{
+					Name:  "LITELLM_DROP_PARAMS",
+					Value: "true",
+				},
+			}
 		}
 
 		// Mount API key secret if specified

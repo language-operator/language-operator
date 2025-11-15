@@ -4,14 +4,14 @@ metadata:
   name: demo-agent
   namespace: demo
 spec:
-  image: git.theryans.io/language-operator/agent:latest
+  image: ghcr.io/language-operator/agent:latest
   executionMode: autonomous
   toolRefs:
   - name: web-tool
   modelRefs:
   - name: magistral-small-2509
-  personaRef:
-    name: helpful-assistant
+  personaRefs:
+  - name: helpful-assistant
   instructions: |
     Your goal is to search for and summarize recent news about Kubernetes.
     Use the web_search tool to find information, then provide a concise summary.

@@ -54,7 +54,7 @@ func TestLanguageAgentController_SynthesisNotCalledWithoutInstructions(t *testin
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image: "git.theryans.io/language-operator/agent:latest",
+			Image: "ghcr.io/language-operator/agent:latest",
 			// No Instructions field - synthesis should not be called
 		},
 	}
@@ -101,7 +101,7 @@ func TestLanguageAgentController_SynthesisCalledWithInstructions(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:        "git.theryans.io/language-operator/agent:latest",
+			Image:        "ghcr.io/language-operator/agent:latest",
 			Instructions: "Monitor workspace and report changes every hour",
 		},
 	}
@@ -177,7 +177,7 @@ func TestLanguageAgentController_SmartChangeDetection(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:        "git.theryans.io/language-operator/agent:latest",
+			Image:        "ghcr.io/language-operator/agent:latest",
 			Instructions: instructions,
 		},
 	}
@@ -268,7 +268,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 		},
 	}
@@ -325,7 +325,7 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "scheduled",
 			Schedule:      "0 * * * *",
 		},
@@ -388,7 +388,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 			Workspace: &langopv1alpha1.WorkspaceSpec{
 				Enabled: true,
@@ -449,7 +449,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 		},
 	}
@@ -555,7 +555,7 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image: "git.theryans.io/language-operator/agent:latest",
+			Image: "ghcr.io/language-operator/agent:latest",
 			// ExecutionMode not specified - should create Deployment
 		},
 	}
@@ -604,7 +604,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 		},
 	}
@@ -675,7 +675,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 		},
 	}
@@ -758,7 +758,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "autonomous",
 		},
 	}
@@ -855,7 +855,7 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "git.theryans.io/language-operator/agent:latest",
+			Image:         "ghcr.io/language-operator/agent:latest",
 			ExecutionMode: "scheduled",
 			Schedule:      "0 * * * *",
 		},

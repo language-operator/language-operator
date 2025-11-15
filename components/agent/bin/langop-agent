@@ -31,20 +31,20 @@ def wait_for_tools(config)
     max_attempts = 30
     delay = 1
 
-    puts "⏳ Waiting for tool at #{uri.host}:#{uri.port}..."
+    puts "Waiting for tool at #{uri.host}:#{uri.port}..."
 
     max_attempts.times do |attempt|
       # Try to connect to the health endpoint or root
       Net::HTTP.start(uri.host, uri.port, open_timeout: 1, read_timeout: 1) do |http|
         http.head('/')
       end
-      puts "✅ Tool ready at #{uri.host}:#{uri.port}"
+      puts "Tool ready at #{uri.host}:#{uri.port}"
       break
     rescue StandardError
       if attempt < max_attempts - 1
         sleep(delay)
       else
-        puts "⚠️  Tool at #{uri.host}:#{uri.port} not ready after #{max_attempts} attempts"
+        puts "Tool at #{uri.host}:#{uri.port} not ready after #{max_attempts} attempts"
       end
     end
   end
@@ -54,30 +54,23 @@ end
 code_path = ENV.fetch('AGENT_CODE_PATH', '/etc/agent/code/agent.rb')
 fallback_mode = ENV.fetch('AGENT_FALLBACK_MODE', 'error') # error | autonomous | interactive
 
-puts '🤖 Langop Agent starting...'
-puts "📁 Code path: #{code_path}"
+puts "📁 #{code_path}"
 
 # Check if synthesized code exists
 if File.exist?(code_path)
-  puts '✅ Found synthesized agent code, loading...'
-
   begin
     # Load the synthesized DSL code using the agent loader
     # This provides the DSL context with the 'agent' method
     LanguageOperator::Dsl.load_agent_file(code_path)
 
-    # The synthesized code should define an agent
-    puts '✅ Agent code loaded successfully'
-
     # Get the agent from the registry
     agents = LanguageOperator::Dsl.agent_registry.all
     if agents.empty?
-      puts '❌ No agent defined in code'
+      puts 'No agent defined in code'
       exit 1
     end
 
     agent_def = agents.first
-    puts "🚀 Running agent: #{agent_def.name}"
 
     # Execute the agent based on its definition
     # For now, create a basic executor with the environment config
@@ -94,44 +87,43 @@ if File.exist?(code_path)
     # Get instructions from agent definition or environment
     instructions = agent_def.description || ENV['AGENT_INSTRUCTIONS']
     if instructions && !instructions.empty?
-      puts "📋 Instructions: #{instructions[0..200]}..."
       executor = LanguageOperator::Agent::Executor.new(agent)
       executor.execute(instructions, agent_definition: agent_def)
     else
-      puts '❌ No instructions provided'
+      puts 'No instructions provided'
       exit 1
     end
   rescue StandardError => e
-    puts "❌ Error loading agent code: #{e.message}"
+    puts "Error loading agent code: #{e.message}"
     puts e.backtrace.take(5).join("\n")
 
     case fallback_mode
     when 'autonomous'
-      puts '⚠️  Falling back to autonomous mode with default config'
+      puts 'Falling back to autonomous mode with default config'
       fallback_to_autonomous
     when 'interactive'
-      puts '⚠️  Falling back to interactive mode'
+      puts 'Falling back to interactive mode'
       fallback_to_interactive
     else
-      puts '❌ No fallback configured, exiting'
+      puts 'No fallback configured, exiting'
       exit 1
     end
   end
 
 else
-  puts "⚠️  No synthesized code found at #{code_path}"
+  puts "No synthesized code found at #{code_path}"
 
   case fallback_mode
   when 'autonomous'
-    puts '📝 Starting in autonomous mode with default config'
+    puts 'Starting in autonomous mode with default config'
     fallback_to_autonomous
   when 'interactive'
-    puts '📝 Starting in interactive mode'
+    puts 'Starting in interactive mode'
     fallback_to_interactive
   else
-    puts '❌ No agent code provided and no fallback configured'
-    puts '💡 The operator should have created a ConfigMap with synthesized code'
-    puts '💡 Check LanguageAgent status for synthesis errors'
+    puts 'No agent code provided and no fallback configured'
+    puts 'The operator should have created a ConfigMap with synthesized code'
+    puts 'Check LanguageAgent status for synthesis errors'
     exit 1
   end
 end
@@ -145,14 +137,13 @@ def fallback_to_autonomous
   instructions = ENV['AGENT_INSTRUCTIONS']
 
   if instructions && !instructions.empty?
-    puts "📋 Instructions: #{instructions[0..200]}..."
     agent.connect!
 
     # Simple autonomous loop
     executor = LanguageOperator::Agent::Executor.new(agent)
     executor.execute(instructions)
   else
-    puts '❌ No instructions provided in AGENT_INSTRUCTIONS'
+    puts 'No instructions provided in AGENT_INSTRUCTIONS'
     exit 1
   end
 end

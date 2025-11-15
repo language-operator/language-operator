@@ -4,7 +4,7 @@ metadata:
   name: web-tool
   namespace: demo
 spec:
-  image: git.theryans.io/language-operator/web-tool:latest
+  image: ghcr.io/language-operator/tool:latest
   deploymentMode: sidecar
   port: 80
   egress:
