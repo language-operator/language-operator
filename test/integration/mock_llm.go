@@ -232,7 +232,6 @@ func (m *MockLLMService) generateMockSynthesis(instructions string) string {
 	}
 
 	schedule := m.extractSchedule(lower)
-	tools := m.extractTools(lower)
 
 	// Generate agent code with require statement
 	// The synthesizer validates this is present, and the validator wrapper
@@ -247,16 +246,7 @@ agent "test-agent" do
 `, schedule)
 	}
 
-	code += `  workflow do
-`
-
-	for i, tool := range tools {
-		code += fmt.Sprintf(`    step :step_%d, tool: "%s", params: {}
-`, i+1, tool)
-	}
-
-	code += `  end
-end
+	code += `end
 `
 
 	return code

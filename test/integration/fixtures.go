@@ -24,7 +24,7 @@ var TestScenarios = []TestScenario{
 		ExecutionMode:    "scheduled",
 		ExpectedSchedule: "0 16 * * *",
 		ExpectedTools:    []string{"google-sheets", "email"},
-		ShouldContain:    []string{"schedule", "workflow", "step"},
+		ShouldContain:    []string{"schedule", "agent"},
 	},
 	{
 		Name:             "health check every 5 minutes",
@@ -32,7 +32,7 @@ var TestScenarios = []TestScenario{
 		ExecutionMode:    "scheduled",
 		ExpectedSchedule: "*/5 * * * *",
 		ExpectedTools:    []string{"web-fetch"},
-		ShouldContain:    []string{"schedule", "workflow", "web-fetch"},
+		ShouldContain:    []string{"schedule", "agent"},
 	},
 	{
 		Name:             "hourly data sync",
@@ -40,7 +40,7 @@ var TestScenarios = []TestScenario{
 		ExecutionMode:    "scheduled",
 		ExpectedSchedule: "0 * * * *",
 		ExpectedTools:    []string{"web-fetch"},
-		ShouldContain:    []string{"schedule", "workflow"},
+		ShouldContain:    []string{"schedule", "agent"},
 	},
 	{
 		Name:             "daily morning report",
@@ -48,13 +48,13 @@ var TestScenarios = []TestScenario{
 		ExecutionMode:    "scheduled",
 		ExpectedSchedule: "0 9 * * *",
 		ExpectedTools:    []string{"email"},
-		ShouldContain:    []string{"schedule", "workflow", "email"},
+		ShouldContain:    []string{"schedule", "agent"},
 	},
 	{
 		Name:          "autonomous processing",
 		Instructions:  "process tasks autonomously",
 		ExecutionMode: "autonomous",
-		ShouldContain: []string{"agent", "workflow"},
+		ShouldContain: []string{"agent"},
 	},
 	{
 		Name:         "empty instructions",

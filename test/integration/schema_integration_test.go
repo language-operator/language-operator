@@ -150,10 +150,6 @@ agent 'test-agent' do
   description 'An end-to-end integration test agent'
 
   schedule '0 8 * * *'
-
-  workflow do
-    step :test_step, tool: 'shell', params: {command: 'echo hello'}
-  end
 end
 `
 
@@ -170,10 +166,6 @@ agent 'test-agent' do
   description 'Test'
 
   invalid_property 'this should fail'
-
-  workflow do
-    step :test_step, tool: 'shell', params: {command: 'echo hello'}
-  end
 end
 `
 

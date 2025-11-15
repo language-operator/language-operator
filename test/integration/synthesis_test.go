@@ -62,14 +62,9 @@ func TestSynthesisQuality(t *testing.T) {
 					"Code should contain '%s'", expected)
 			}
 
-			// Verify tool references
-			for _, tool := range scenario.ExpectedTools {
-				normalized := strings.ReplaceAll(tool, "-", "_")
-				hasHyphen := strings.Contains(code, tool)
-				hasUnderscore := strings.Contains(code, normalized)
-				assert.True(t, hasHyphen || hasUnderscore,
-					"Code should reference tool: %s", tool)
-			}
+			// Note: Tool verification removed because the workflow feature was removed in v0.1.36
+			// Agents now receive tools via the controller's environment/configuration,
+			// not through explicit workflow/step definitions in the DSL
 
 			t.Logf("✓ Generated valid code for: %s", scenario.Name)
 		})
