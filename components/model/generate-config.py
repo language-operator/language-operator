@@ -65,7 +65,7 @@ def map_provider_to_litellm(provider: str, model_name: str, endpoint: Optional[s
         "azure": f"azure/{model_name}",
         "bedrock": f"bedrock/{model_name}",
         "vertex": f"vertex_ai/{model_name}",
-        "openai-compatible": f"lm_studio/{model_name}",  # Use lm_studio for OpenAI-compatible endpoints
+        "openai-compatible": f"openai/{model_name}",  # Use openai/ for generic OpenAI-compatible endpoints
         "custom": model_name,
     }
 
@@ -85,7 +85,15 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[s
 
     # Set API base/endpoint
     if endpoint:
-        params["api_base"] = endpoint
+        # For openai-compatible providers, ensure endpoint ends with /v1
+        if provider in ["openai-compatible", "custom"] and not endpoint.endswith("/v1"):
+            params["api_base"] = f"{endpoint.rstrip('/')}/v1"
+        else:
+            params["api_base"] = endpoint
+
+    # For openai-compatible providers, explicitly set custom_llm_provider to avoid strict validation
+    if provider in ["openai-compatible", "custom"]:
+        params["custom_llm_provider"] = "openai"
 
     # Set API key - use dummy for local/compatible endpoints without auth
     if api_key:
@@ -204,6 +212,9 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
         # Disable strict validation for non-standard OpenAI-compatible responses
         settings["drop_params"] = True
         settings["disable_strict_validation"] = True
+        # Allow non-standard response fields
+        settings["allowed_fails"] = 3
+        settings["enable_json_schema_validation"] = False
 
     # Retry policy
     retry_policy = spec.get("retryPolicy", {})
