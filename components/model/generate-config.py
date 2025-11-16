@@ -215,6 +215,8 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
         # Allow non-standard response fields
         settings["allowed_fails"] = 3
         settings["enable_json_schema_validation"] = False
+        # Disable internal health checks for local models to prevent request buildup
+        settings["health_check_interval"] = 0
 
     # Retry policy
     retry_policy = spec.get("retryPolicy", {})
