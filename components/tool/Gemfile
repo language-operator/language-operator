@@ -2,7 +2,7 @@
 
 source 'https://rubygems.org'
 
-gem 'language-operator', '~> 0.1.37'
+gem 'language-operator', '~> 0.1.38'
 
 # Tool server dependencies
 gem 'sinatra', '~> 4.0'
