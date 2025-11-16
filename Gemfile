@@ -2,7 +2,7 @@
 
 source 'https://rubygems.org'
 
-gem 'language-operator', '~> 0.1.45'
+gem 'language-operator', '~> 0.1.46'
 
 # Development dependencies for testing and linting
 group :development, :test do
