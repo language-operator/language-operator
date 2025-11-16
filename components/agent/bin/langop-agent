@@ -72,27 +72,15 @@ if File.exist?(code_path)
 
     agent_def = agents.first
 
-    # Execute the agent based on its definition
-    # For now, create a basic executor with the environment config
-    # TODO: Implement proper agent execution based on AgentDefinition workflows
+    # Execute the agent based on its definition using DSL v1 flow
     config = LanguageOperator::Client::Config.from_env
     agent = LanguageOperator::Agent::Base.new(config)
 
     # Wait for tool sidecars to be ready before connecting
-    # This prevents connection failures during pod startup
     wait_for_tools(config)
 
-    agent.connect!
-
-    # Get instructions from agent definition or environment
-    instructions = agent_def.description || ENV['AGENT_INSTRUCTIONS']
-    if instructions && !instructions.empty?
-      executor = LanguageOperator::Agent::Executor.new(agent)
-      executor.execute(instructions, agent_definition: agent_def)
-    else
-      puts 'No instructions provided'
-      exit 1
-    end
+    # Use the proper agent execution flow that handles DSL v1 main blocks, tasks, and output handlers
+    LanguageOperator::Agent.run_with_definition(agent, agent_def)
   rescue StandardError => e
     puts "Error loading agent code: #{e.message}"
     puts e.backtrace.take(5).join("\n")
