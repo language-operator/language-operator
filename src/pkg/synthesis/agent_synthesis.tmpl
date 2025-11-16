@@ -75,7 +75,109 @@ This is attempt {{.AttemptNumber}} of {{.MaxAttempts}}. The user is counting on 
 
 **Detected Temporal Intent:** {{.TemporalIntent}}
 
-Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
+**Runtime Context:**
+- All agent messages and output are automatically logged to stdout
+- Agents have access to a workspace directory for file operations
+- LLM responses are captured and available in agent execution context
+
+## DSL v1 Reference Examples
+
+Study these examples to understand the task/main model with organic functions:
+
+### Example 1: Simple Scheduled Agent (Fully Neural)
+```ruby
+agent "daily-report" do
+  description "Generate daily sales report"
+  mode :scheduled
+  schedule "0 9 * * *"
+
+  task :fetch_sales,
+    instructions: "fetch yesterday's sales data from database",
+    inputs: {},
+    outputs: { sales: 'array', total: 'number' }
+
+  task :generate_report,
+    instructions: "create a markdown report summarizing the sales",
+    inputs: { sales: 'array', total: 'number' },
+    outputs: { report: 'string' }
+
+  main do |inputs|
+    sales_data = execute_task(:fetch_sales)
+    report = execute_task(:generate_report, inputs: sales_data)
+    report
+  end
+
+  output do |outputs|
+    puts outputs[:report]
+  end
+end
+```
+
+### Example 2: Hybrid Neural-Symbolic Agent
+```ruby
+agent "code-reviewer" do
+  description "Review pull requests"
+
+  # Symbolic task - deterministic tool call
+  task :fetch_pr_diff do |inputs|
+    {
+      diff: execute_tool('github', 'get_pr_diff', pr_number: inputs[:pr_number])
+    }
+  end
+
+  # Neural task - creative analysis
+  task :analyze_code,
+    instructions: "review code changes for bugs and improvements",
+    inputs: { diff: 'string' },
+    outputs: { issues: 'array', severity: 'string' }
+
+  # Symbolic task - deterministic logic
+  task :should_approve do |inputs|
+    critical = inputs[:issues].select { |i| i['severity'] == 'critical' }
+    { approve: critical.empty? }
+  end
+
+  main do |inputs|
+    pr_data = execute_task(:fetch_pr_diff, inputs: inputs)
+    analysis = execute_task(:analyze_code, inputs: pr_data)
+    decision = execute_task(:should_approve, inputs: analysis)
+    analysis.merge(decision)
+  end
+end
+```
+
+### Example 3: Multi-Step Agent with Tools
+```ruby
+agent "data-pipeline" do
+  description "ETL pipeline"
+
+  task :extract_data,
+    instructions: "extract data from the source database",
+    inputs: { source: 'string' },
+    outputs: { records: 'array', count: 'integer' }
+
+  task :transform_data,
+    instructions: "clean and normalize the records",
+    inputs: { records: 'array' },
+    outputs: { cleaned_records: 'array' }
+
+  task :load_data,
+    instructions: "load cleaned records into warehouse",
+    inputs: { cleaned_records: 'array' },
+    outputs: { success: 'boolean', loaded_count: 'integer' }
+
+  main do |inputs|
+    extracted = execute_task(:extract_data, inputs: inputs)
+    transformed = execute_task(:transform_data, inputs: extracted)
+    result = execute_task(:load_data, inputs: transformed)
+    result
+  end
+end
+```
+
+## Your Task: Generate DSL v1 Agent
+
+Using the examples above as reference, generate Ruby DSL code in this format:
 
 ```ruby
 require 'language_operator'
@@ -83,33 +185,59 @@ require 'language_operator'
 agent "{{.AgentName}}" do
   description "Brief description extracted from instructions"
 {{.PersonaSection}}{{.ScheduleSection}}
-  # Extract objectives from instructions
-  objectives [
-    "First objective",
-    "Second objective"
-  ]
+  # Break down instructions into tasks
+  # Each task needs:
+  # - instructions: what to do (for neural tasks)
+  # - inputs: hash with parameter types
+  # - outputs: hash with result types
 
-  # Define workflow if instructions mention specific steps
-  # workflow do
-  #   step :step_name, tool: "tool_name", params: {key: "value"}
-  #   step :another_step, depends_on: :step_name
+  task :task_name,
+    instructions: "clear description of what this task does",
+    inputs: { param_name: 'type' },
+    outputs: { result_name: 'type' }
+
+  # For symbolic tasks (when logic is simple/deterministic), use code blocks:
+  # task :task_name do |inputs|
+  #   { result: inputs[:param] * 2 }
   # end
+
+  # REQUIRED: main block defines execution flow
+  main do |inputs|
+    result1 = execute_task(:task_name, inputs: { param_name: value })
+    # Chain tasks by passing outputs as inputs
+    result2 = execute_task(:another_task, inputs: result1)
+    result2  # Return final result
+  end
 
 {{.ConstraintsSection}}
 
-  # Output configuration (if workspace enabled)
-  output do
-    workspace "results/output.txt"
+  # Output handling
+  output do |outputs|
+    # Save results, send notifications, etc.
+    puts "Agent completed: #{outputs.inspect}"
   end
 end
 ```
 
+**Type System:**
+- `'string'` - text values
+- `'integer'` - whole numbers
+- `'number'` - decimal numbers
+- `'boolean'` - true/false
+- `'array'` - lists
+- `'hash'` - key-value objects
+- `'any'` - any type
+
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
 {{.ScheduleRules}}
-5. Break down instructions into clear, actionable objectives
-6. Create workflow steps if instructions describe a process
-7. Use available tools in workflow steps
-8. Use the agent name: "{{.AgentName}}"
+3. Break down instructions into clear tasks with type-safe contracts
+4. REQUIRED: Always include a `main` block that calls tasks via `execute_task()`
+5. For simple deterministic tasks, use symbolic code blocks (do |inputs| ... end)
+6. For complex/creative tasks, use neural tasks with instructions
+7. Chain tasks by passing outputs as inputs
+8. Use available tools: {{.ToolsList}}
+9. Type schemas are REQUIRED for all tasks (inputs/outputs hashes)
+10. Use the agent name: "{{.AgentName}}"
 
 Generate the code now:

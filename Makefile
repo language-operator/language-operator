@@ -79,3 +79,9 @@ help:
 	@echo "  2. Run 'make operator' to build and deploy the operator"
 	@echo "  3. Apply LanguageCluster, LanguageAgent, and LanguageTool CRDs"
 	@echo "  4. Check status with 'make k8s-status'"
+
+fetch-synthesis-templates:
+	@echo "Fetching synthesis templates from language-operator-gem..."
+	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/agent_synthesis.tmpl -o src/pkg/synthesis/agent_synthesis.tmpl
+	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/persona_distillation.tmpl -o src/pkg/synthesis/persona_distillation.tmpl
+	@echo "✓ Synthesis templates updated successfully!"
