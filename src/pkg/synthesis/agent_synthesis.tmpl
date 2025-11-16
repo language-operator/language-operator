@@ -177,44 +177,42 @@ end
 
 ## Your Task: Generate DSL v1 Agent
 
-Using the examples above as reference, generate Ruby DSL code in this format:
+Using the THREE CONCRETE EXAMPLES above (daily-report, code-reviewer, data-pipeline) as reference patterns, generate WORKING Ruby DSL code for the agent described in the user instructions.
 
-```ruby
+**CRITICAL REQUIREMENTS:**
+- DO NOT output placeholder text like "Brief description extracted from instructions" or "CRON_EXPRESSION"
+- DO NOT output generic names like `:task_name` or `param_name`
+- DO NOT copy the template structure below - USE THE WORKING EXAMPLES ABOVE
+- Generate ACTUAL, FUNCTIONAL code that implements the user's request
+- Use SPECIFIC task names, descriptions, and logic based on the user instructions
+
+The code structure should follow this pattern (with ACTUAL content, not placeholders):
+
+```
 require 'language_operator'
 
 agent "{{.AgentName}}" do
-  description "Brief description extracted from instructions"
+  description "<ACTUAL description based on user instructions>"
 {{.PersonaSection}}{{.ScheduleSection}}
-  # Break down instructions into tasks
-  # Each task needs:
-  # - instructions: what to do (for neural tasks)
-  # - inputs: hash with parameter types
-  # - outputs: hash with result types
+  # Define specific tasks needed for this agent
+  task :<ACTUAL_task_name>,
+    instructions: "<ACTUAL description of what this specific task does>",
+    inputs: { <actual_param>: '<actual_type>' },
+    outputs: { <actual_result>: '<actual_type>' }
 
-  task :task_name,
-    instructions: "clear description of what this task does",
-    inputs: { param_name: 'type' },
-    outputs: { result_name: 'type' }
+  # Add more tasks as needed based on user instructions
 
-  # For symbolic tasks (when logic is simple/deterministic), use code blocks:
-  # task :task_name do |inputs|
-  #   { result: inputs[:param] * 2 }
-  # end
-
-  # REQUIRED: main block defines execution flow
   main do |inputs|
-    result1 = execute_task(:task_name, inputs: { param_name: value })
-    # Chain tasks by passing outputs as inputs
-    result2 = execute_task(:another_task, inputs: result1)
-    result2  # Return final result
+    # ACTUAL execution flow implementing the user's request
+    result = execute_task(:<ACTUAL_task_name>, inputs: { <actual_param>: <actual_value> })
+    result
   end
 
 {{.ConstraintsSection}}
 
-  # Output handling
   output do |outputs|
-    # Save results, send notifications, etc.
-    puts "Agent completed: #{outputs.inspect}"
+    # ACTUAL output handling for this specific agent
+    puts outputs.inspect
   end
 end
 ```
@@ -231,7 +229,7 @@ end
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
 {{.ScheduleRules}}
-3. Break down instructions into clear tasks with type-safe contracts
+3. Break down the user's instructions into SPECIFIC tasks with type-safe contracts
 4. REQUIRED: Always include a `main` block that calls tasks via `execute_task()`
 5. For simple deterministic tasks, use symbolic code blocks (do |inputs| ... end)
 6. For complex/creative tasks, use neural tasks with instructions
@@ -239,5 +237,14 @@ end
 8. Use available tools: {{.ToolsList}}
 9. Type schemas are REQUIRED for all tasks (inputs/outputs hashes)
 10. Use the agent name: "{{.AgentName}}"
+
+**CRITICAL - VERIFY BEFORE OUTPUTTING:**
+- ✓ Did you read and understand the USER INSTRUCTIONS above?
+- ✓ Does your code IMPLEMENT those specific instructions?
+- ✓ Are all task names, descriptions, and logic SPECIFIC to the user's request?
+- ✓ Did you AVOID outputting placeholders like "task_name" or "CRON_EXPRESSION"?
+- ✓ Does the code actually DO what the user asked for?
+
+If you cannot answer YES to all of the above, re-read the user instructions and generate FUNCTIONAL code.
 
 Generate the code now:
