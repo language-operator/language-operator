@@ -261,8 +261,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Reconcile workload based on execution mode
+	// If executionMode is empty, skip workload reconciliation until synthesis completes and detects the mode
 	switch agent.Spec.ExecutionMode {
-	case "autonomous", "interactive", "event-driven", "":
+	case "autonomous", "interactive", "event-driven":
 		if err := r.reconcileDeployment(ctx, agent); err != nil {
 			log.Error(err, "Failed to reconcile Deployment")
 			span.RecordError(err)
@@ -280,6 +281,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.Status().Update(ctx, agent)
 			return ctrl.Result{}, err
 		}
+	case "":
+		// ExecutionMode not yet set - wait for synthesis to complete and detect the mode
+		log.V(1).Info("ExecutionMode not set, skipping workload reconciliation until synthesis completes")
 	}
 
 	// Update status only if something changed

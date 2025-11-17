@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -548,7 +549,7 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	// Test with empty ExecutionMode (should default to autonomous/Deployment)
+	// Test with empty ExecutionMode (should skip workload creation until synthesis detects mode)
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-default-mode",
@@ -556,7 +557,7 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image: "ghcr.io/language-operator/agent:latest",
-			// ExecutionMode not specified - should create Deployment
+			// ExecutionMode not specified - should NOT create any workload yet
 		},
 	}
 
@@ -584,14 +585,30 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify Deployment was created (default behavior for empty ExecutionMode)
+	// Verify NO Deployment was created (should wait for synthesis to detect mode)
 	deployment := &appsv1.Deployment{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
 		Name:      agent.Name,
 		Namespace: agent.Namespace,
 	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist for default execution mode, but got error: %v", err)
+	if err == nil {
+		t.Fatal("Expected no Deployment to exist when ExecutionMode is empty")
+	}
+	if !errors.IsNotFound(err) {
+		t.Fatalf("Expected NotFound error, got: %v", err)
+	}
+
+	// Verify NO CronJob was created either
+	cronjob := &batchv1.CronJob{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, cronjob)
+	if err == nil {
+		t.Fatal("Expected no CronJob to exist when ExecutionMode is empty")
+	}
+	if !errors.IsNotFound(err) {
+		t.Fatalf("Expected NotFound error, got: %v", err)
 	}
 }
 
