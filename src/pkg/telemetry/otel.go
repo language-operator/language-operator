@@ -20,9 +20,12 @@ import (
 	"context"
 	"os"
 	"runtime/debug"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -83,7 +86,10 @@ func InitTracer(ctx context.Context) (trace.TracerProvider, error) {
 	// Parse additional attributes from OTEL_RESOURCE_ATTRIBUTES
 	// This allows setting k8s.cluster.name and other custom attributes
 	if resAttrs := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resAttrs != "" {
-		resourceAttrs = append(resourceAttrs, resource.WithAttributes())
+		attrs := parseResourceAttributes(resAttrs)
+		if len(attrs) > 0 {
+			resourceAttrs = append(resourceAttrs, resource.WithAttributes(attrs...))
+		}
 	}
 
 	// Create resource
@@ -92,10 +98,14 @@ func InitTracer(ctx context.Context) (trace.TracerProvider, error) {
 		return nil, err
 	}
 
-	// Create TracerProvider with batch span processor
+	// Configure sampler based on OTEL_TRACES_SAMPLER environment variable
+	sampler := configureSampler()
+
+	// Create TracerProvider with batch span processor and sampler
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sampler),
 	)
 
 	// Set as global TracerProvider
@@ -116,4 +126,68 @@ func Shutdown(ctx context.Context, tp trace.TracerProvider) error {
 	}
 
 	return nil
+}
+
+// parseResourceAttributes parses OTEL_RESOURCE_ATTRIBUTES env var format
+// Expected format: "key1=value1,key2=value2"
+func parseResourceAttributes(resAttrs string) []attribute.KeyValue {
+	var attrs []attribute.KeyValue
+
+	// Split by comma
+	pairs := strings.Split(resAttrs, ",")
+	for _, pair := range pairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+
+		// Split by equals sign
+		parts := strings.SplitN(pair, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		if key != "" && value != "" {
+			attrs = append(attrs, attribute.String(key, value))
+		}
+	}
+
+	return attrs
+}
+
+// configureSampler creates a sampler based on OTEL_TRACES_SAMPLER env var
+func configureSampler() sdktrace.Sampler {
+	samplerType := os.Getenv("OTEL_TRACES_SAMPLER")
+	samplerArg := os.Getenv("OTEL_TRACES_SAMPLER_ARG")
+
+	switch samplerType {
+	case "traceidratio":
+		// Parse sampling ratio from OTEL_TRACES_SAMPLER_ARG
+		if samplerArg != "" {
+			if ratio, err := strconv.ParseFloat(samplerArg, 64); err == nil {
+				// Clamp ratio between 0.0 and 1.0
+				if ratio < 0.0 {
+					ratio = 0.0
+				} else if ratio > 1.0 {
+					ratio = 1.0
+				}
+				return sdktrace.TraceIDRatioBased(ratio)
+			}
+		}
+		// Default to 1.0 (100%) if parsing fails
+		return sdktrace.TraceIDRatioBased(1.0)
+
+	case "always_on":
+		return sdktrace.AlwaysSample()
+
+	case "always_off":
+		return sdktrace.NeverSample()
+
+	default:
+		// Default to AlwaysSample if no sampler specified
+		return sdktrace.AlwaysSample()
+	}
 }
