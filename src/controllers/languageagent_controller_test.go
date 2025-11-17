@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
-	"github.com/based/language-operator/controllers/testutil"
-	"github.com/based/language-operator/pkg/synthesis"
 	"github.com/go-logr/logr"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/pkg/synthesis"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

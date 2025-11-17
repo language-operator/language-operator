@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
-	"github.com/based/language-operator/controllers/testutil"
 	"github.com/go-logr/logr"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/controllers/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"

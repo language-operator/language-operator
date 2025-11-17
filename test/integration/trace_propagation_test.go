@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
-	"github.com/based/language-operator/pkg/synthesis"
+	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/go-logr/logr"
 )
 

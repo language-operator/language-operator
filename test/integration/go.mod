@@ -1,13 +1,13 @@
-module github.com/based/language-operator/test/integration
+module github.com/language-operator/language-operator/test/integration
 
 go 1.23.0
 
 toolchain go1.24.6
 
 require (
-	github.com/based/language-operator v0.0.0
 	github.com/cloudwego/eino v0.5.11
 	github.com/go-logr/logr v1.4.1
+	github.com/language-operator/language-operator v0.0.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
@@ -99,4 +99,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/based/language-operator => ../../src
+replace github.com/language-operator/language-operator => ../../src

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
-	"github.com/based/language-operator/controllers/testutil"
 	"github.com/go-logr/logr"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/controllers/testutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"

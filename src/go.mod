@@ -1,4 +1,4 @@
-module github.com/based/language-operator
+module github.com/language-operator/language-operator
 
 go 1.23.0
 

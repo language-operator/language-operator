@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/based/language-operator/pkg/synthesis"
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/language-operator/language-operator/pkg/synthesis"
 	"go.uber.org/zap"
 )
 

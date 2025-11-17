@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -36,9 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
-	"github.com/based/language-operator/pkg/synthesis"
-	"github.com/based/language-operator/pkg/validation"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/synthesis"
+	"github.com/language-operator/language-operator/pkg/validation"
 )
 
 // LanguageAgentReconciler reconciles a LanguageAgent object
@@ -711,7 +712,51 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
 	}
 
-	return CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations)
+	if err := CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations); err != nil {
+		return err
+	}
+
+	// Parse DSL to extract mode and schedule, then update spec if needed
+	detectedMode, detectedSchedule := parseDSLMode(dslCode)
+	specNeedsUpdate := false
+
+	// Check if executionMode needs to be updated
+	if agent.Spec.ExecutionMode == "" || agent.Spec.ExecutionMode != detectedMode {
+		log.Info("Auto-detected executionMode from synthesized DSL",
+			"agent", agent.Name,
+			"previousMode", agent.Spec.ExecutionMode,
+			"detectedMode", detectedMode)
+		agent.Spec.ExecutionMode = detectedMode
+		specNeedsUpdate = true
+	}
+
+	// Check if schedule needs to be updated (only for scheduled mode)
+	if detectedMode == "scheduled" && detectedSchedule != "" && agent.Spec.Schedule != detectedSchedule {
+		log.Info("Auto-detected schedule from synthesized DSL",
+			"agent", agent.Name,
+			"previousSchedule", agent.Spec.Schedule,
+			"detectedSchedule", detectedSchedule)
+		agent.Spec.Schedule = detectedSchedule
+		specNeedsUpdate = true
+	}
+
+	// Update the agent spec if changes were detected
+	if specNeedsUpdate {
+		if err := r.Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update agent spec with auto-detected mode and schedule")
+			return err
+		}
+		log.Info("Agent spec updated with auto-detected execution mode and schedule",
+			"agent", agent.Name,
+			"executionMode", agent.Spec.ExecutionMode,
+			"schedule", agent.Spec.Schedule)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "ExecutionModeDetected",
+				"Auto-detected executionMode: %s", detectedMode)
+		}
+	}
+
+	return nil
 }
 
 // distillPersona calls the synthesizer to distill a persona into a system message
@@ -765,6 +810,37 @@ func hashString(s string) string {
 	h := sha256.New()
 	h.Write([]byte(s))
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// parseDSLMode extracts the mode and schedule from synthesized DSL code
+func parseDSLMode(dslCode string) (mode string, schedule string) {
+	// Default to autonomous if no mode directive found
+	mode = "autonomous"
+	schedule = ""
+
+	// Match "mode :scheduled" or "mode :autonomous"
+	modeRegex := regexp.MustCompile(`(?m)^\s*mode\s+:(\w+)`)
+	if matches := modeRegex.FindStringSubmatch(dslCode); len(matches) > 1 {
+		dslMode := matches[1]
+		switch dslMode {
+		case "scheduled":
+			mode = "scheduled"
+		case "autonomous":
+			mode = "autonomous"
+		case "interactive":
+			mode = "interactive"
+		case "event_driven":
+			mode = "event-driven"
+		}
+	}
+
+	// Match schedule "*/10 * * * *" or schedule '*/10 * * * *'
+	scheduleRegex := regexp.MustCompile(`(?m)^\s*schedule\s+["']([^"']+)["']`)
+	if matches := scheduleRegex.FindStringSubmatch(dslCode); len(matches) > 1 {
+		schedule = matches[1]
+	}
+
+	return mode, schedule
 }
 
 func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {

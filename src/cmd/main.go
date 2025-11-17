@@ -40,11 +40,11 @@ import (
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 
-	langopv1alpha1 "github.com/based/language-operator/api/v1alpha1"
-	"github.com/based/language-operator/controllers"
-	"github.com/based/language-operator/pkg/cni"
-	"github.com/based/language-operator/pkg/synthesis"
-	"github.com/based/language-operator/pkg/telemetry"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/controllers"
+	"github.com/language-operator/language-operator/pkg/cni"
+	"github.com/language-operator/language-operator/pkg/synthesis"
+	"github.com/language-operator/language-operator/pkg/telemetry"
 	//+kubebuilder:scaffold:imports
 )
 

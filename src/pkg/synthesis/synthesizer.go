@@ -9,10 +9,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/based/language-operator/pkg/validation"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
+	"github.com/language-operator/language-operator/pkg/validation"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

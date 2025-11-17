@@ -86,6 +86,8 @@ Study these examples to understand the task/main model with organic functions:
 
 ### Example 1: Simple Scheduled Agent (Fully Neural)
 ```ruby
+require 'language_operator'
+
 agent "daily-report" do
   description "Generate daily sales report"
   mode :scheduled
@@ -115,6 +117,8 @@ end
 
 ### Example 2: Hybrid Neural-Symbolic Agent
 ```ruby
+require 'language_operator'
+
 agent "code-reviewer" do
   description "Review pull requests"
 
@@ -148,6 +152,8 @@ end
 
 ### Example 3: Multi-Step Agent with Tools
 ```ruby
+require 'language_operator'
+
 agent "data-pipeline" do
   description "ETL pipeline"
 
