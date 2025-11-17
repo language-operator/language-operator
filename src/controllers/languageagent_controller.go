@@ -859,6 +859,8 @@ func parseDSLMode(dslCode string) (mode string, schedule string) {
 	scheduleRegex := regexp.MustCompile(`(?m)^\s*schedule\s+["']([^"']+)["']`)
 	if matches := scheduleRegex.FindStringSubmatch(dslCode); len(matches) > 1 {
 		schedule = matches[1]
+		// If a schedule is present, the mode should be "scheduled"
+		mode = "scheduled"
 	}
 
 	return mode, schedule
