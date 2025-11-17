@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1448,27 +1446,9 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		},
 	}
 
-	// Extract trace context from current span and inject into agent pod
-	span := trace.SpanFromContext(ctx)
-	if span.SpanContext().IsValid() {
-		sc := span.SpanContext()
-
-		// Serialize to W3C Trace Context format: version-traceID-spanID-traceFlags
-		traceID := sc.TraceID()
-		spanID := sc.SpanID()
-		traceFlags := sc.TraceFlags()
-
-		// Format: 00-{32 hex chars}-{16 hex chars}-{2 hex chars}
-		traceparent := fmt.Sprintf("00-%s-%s-%02x",
-			hex.EncodeToString(traceID[:]),
-			hex.EncodeToString(spanID[:]),
-			traceFlags)
-
-		env = append(env, corev1.EnvVar{
-			Name:  "TRACEPARENT",
-			Value: traceparent,
-		})
-	}
+	// Note: We don't inject TRACEPARENT here because it changes on every reconciliation
+	// (new span ID each time), which would cause unnecessary CronJob/Deployment updates
+	// and trigger reconciliation loops. The agent pod will create its own traces.
 
 	// Inject OpenTelemetry configuration from operator environment
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
