@@ -709,7 +709,16 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
 		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
 		"langop.io/persona-hash":      hashString(strings.Join(r.getPersonaNames(agent), ",")),
-		"langop.io/synthesized-at":    metav1.Now().Format("2006-01-02T15:04:05Z"),
+	}
+
+	// Only update synthesized-at timestamp when we actually synthesized new code
+	if needsSynthesis || needsPersonaUpdate {
+		annotations["langop.io/synthesized-at"] = metav1.Now().Format("2006-01-02T15:04:05Z")
+	} else if existingCM != nil && existingCM.Annotations != nil {
+		// Preserve existing timestamp when reusing code
+		if existingTimestamp, ok := existingCM.Annotations["langop.io/synthesized-at"]; ok {
+			annotations["langop.io/synthesized-at"] = existingTimestamp
+		}
 	}
 
 	if err := CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations); err != nil {
