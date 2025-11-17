@@ -258,7 +258,7 @@ func main() {
 	}
 
 	// Initialize rate limiter and quota manager for synthesis cost controls
-	maxSynthesisPerHour := 10 // Default: 10 synthesis per namespace per hour
+	maxSynthesisPerHour := 500 // Default: 500 synthesis per namespace per hour
 	rateLimiter := synthesis.NewRateLimiter(maxSynthesisPerHour, ctrl.Log.WithName("rate-limiter"))
 	agentReconciler.RateLimiter = rateLimiter
 	setupLog.Info("Synthesis rate limiter initialized", "maxPerHour", maxSynthesisPerHour)
