@@ -90,8 +90,8 @@ require 'language_operator'
 
 agent "daily-report" do
   description "Generate daily sales report"
-  mode :scheduled
   schedule "0 9 * * *"
+  mode :scheduled
 
   task :fetch_sales,
     instructions: "fetch yesterday's sales data from database",
