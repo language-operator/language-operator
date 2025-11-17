@@ -282,15 +282,23 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
-	// Update status
-	agent.Status.Phase = "Running"
-	SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation)
+	// Update status only if something changed
+	statusChanged := false
+	if agent.Status.Phase != "Running" {
+		agent.Status.Phase = "Running"
+		statusChanged = true
+	}
+	if SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation) {
+		statusChanged = true
+	}
 
-	if err := r.Status().Update(ctx, agent); err != nil {
-		log.Error(err, "Failed to update LanguageAgent status")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to update status")
-		return ctrl.Result{}, err
+	if statusChanged {
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update LanguageAgent status")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to update status")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Reconciliation successful

@@ -41,7 +41,8 @@ const (
 )
 
 // SetCondition updates or adds a condition to the conditions slice
-func SetCondition(conditions *[]metav1.Condition, conditionType string, status metav1.ConditionStatus, reason, message string, generation int64) {
+// Returns true if the condition was actually changed
+func SetCondition(conditions *[]metav1.Condition, conditionType string, status metav1.ConditionStatus, reason, message string, generation int64) bool {
 	now := metav1.Now()
 	condition := metav1.Condition{
 		Type:               conditionType,
@@ -55,6 +56,15 @@ func SetCondition(conditions *[]metav1.Condition, conditionType string, status m
 	// Find existing condition
 	for i, existing := range *conditions {
 		if existing.Type == conditionType {
+			// Check if anything actually changed
+			if existing.Status == status &&
+				existing.Reason == reason &&
+				existing.Message == message &&
+				existing.ObservedGeneration == generation {
+				// Nothing changed, don't update
+				return false
+			}
+
 			// Only update LastTransitionTime if status changed
 			if existing.Status != status {
 				(*conditions)[i] = condition
@@ -62,12 +72,13 @@ func SetCondition(conditions *[]metav1.Condition, conditionType string, status m
 				condition.LastTransitionTime = existing.LastTransitionTime
 				(*conditions)[i] = condition
 			}
-			return
+			return true
 		}
 	}
 
 	// Add new condition
 	*conditions = append(*conditions, condition)
+	return true
 }
 
 // ValidateClusterReference validates that a cluster exists and is ready
