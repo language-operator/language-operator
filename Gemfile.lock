@@ -80,7 +80,7 @@ GEM
       recursive-open-struct (~> 1.1, >= 1.1.3)
       yajl-ruby (~> 1.4)
       yaml-safe_load_stream3
-    language-operator (0.1.51)
+    language-operator (0.1.52)
       faraday (~> 2.0)
       k8s-ruby (~> 0.17)
       mcp (~> 0.4)
@@ -237,7 +237,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  language-operator (~> 0.1.51)
+  language-operator (~> 0.1.52)
   rubocop (~> 1.60)
   rubocop-performance (~> 1.20)
   yard (~> 0.9.37)
