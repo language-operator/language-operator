@@ -44,6 +44,11 @@ func InitTracer(ctx context.Context) (trace.TracerProvider, error) {
 		return nil, nil
 	}
 
+	// Strip http:// or https:// prefix if present
+	// WithEndpoint expects just "host:port", not a full URL
+	endpoint = strings.TrimPrefix(endpoint, "http://")
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+
 	// Create context with timeout for initialization
 	initCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
