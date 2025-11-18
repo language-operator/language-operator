@@ -273,6 +273,11 @@ def generate_litellm_config(spec: Dict[str, Any], api_key: Optional[str]) -> Dic
     if litellm_settings:
         config["litellm_settings"] = litellm_settings
 
+    # Add general settings
+    config["general_settings"] = {
+        "background_health_checks": False
+    }
+
     # Add observability settings
     observability = spec.get("observability", {})
     if observability:
