@@ -77,8 +77,8 @@ This is attempt {{.AttemptNumber}} of {{.MaxAttempts}}. The user is counting on 
 
 **Runtime Context:**
 - All agent messages and output are automatically logged to stdout
-- Agents have access to a workspace directory for file operations
 - LLM responses are captured and available in agent execution context
+- File operations should use neural tasks that delegate to the workspace tool (see examples below)
 
 ## DSL v1 Reference Examples
 
@@ -90,8 +90,8 @@ require 'language_operator'
 
 agent "daily-report" do
   description "Generate daily sales report"
-  schedule "0 9 * * *"
   mode :scheduled
+  schedule "0 9 * * *"
 
   task :fetch_sales,
     instructions: "fetch yesterday's sales data from database",
@@ -174,16 +174,72 @@ agent "data-pipeline" do
 
   main do |inputs|
     extracted = execute_task(:extract_data, inputs: inputs)
-    transformed = execute_task(:transform_data, inputs: extracted)
+    transformed = execute_task(:transform_data, inputs: transformed)
     result = execute_task(:load_data, inputs: transformed)
     result
   end
 end
 ```
 
+### Example 4: Stateful Agent with Workspace File Operations
+```ruby
+require 'language_operator'
+
+agent "story-builder" do
+  description "Build a story one sentence at a time"
+  mode :scheduled
+  schedule "0 * * * *"
+
+  # Neural task - LLM reads file using workspace tool
+  task :read_existing_story,
+    instructions: "Read the story.txt file from workspace. If it doesn't exist, return empty string. Return the content and count of sentences.",
+    inputs: {},
+    outputs: { content: 'string', sentence_count: 'integer' }
+
+  # Neural task - LLM generates creative continuation
+  task :generate_next_sentence,
+    instructions: "Generate exactly one new sentence to continue this story. Maintain consistent tone and style. Only output the new sentence.",
+    inputs: { existing_content: 'string' },
+    outputs: { sentence: 'string' }
+
+  # Neural task - LLM writes file using workspace tool
+  task :append_to_story,
+    instructions: "Append the new sentence to story.txt in workspace. If the file has existing content, add a newline first.",
+    inputs: { sentence: 'string' },
+    outputs: { success: 'boolean', total_sentences: 'integer' }
+
+  main do |inputs|
+    # Read current state from workspace
+    story_data = execute_task(:read_existing_story)
+
+    # Generate new content based on what exists
+    new_sentence = execute_task(:generate_next_sentence,
+                                inputs: { existing_content: story_data[:content] })
+
+    # Persist to workspace for next run
+    result = execute_task(:append_to_story,
+                         inputs: { sentence: new_sentence[:sentence] })
+
+    { sentence: new_sentence[:sentence], total: result[:total_sentences] }
+  end
+
+  output do |outputs|
+    puts "Added sentence: #{outputs[:sentence]}"
+    puts "Story now has #{outputs[:total]} sentences"
+  end
+end
+```
+
+**File Operations Best Practices:**
+- **NEVER** use direct Ruby file operations (`File.read`, `File.write`, `File.open`, `Dir.pwd`, etc.) in agent code
+- **ALWAYS** delegate file operations to neural tasks with clear natural language instructions
+- File operations require the LLM to reason about paths, content, and state - use the workspace tool via neural tasks
+- The workspace tool provides: `read_file`, `write_file`, `list_directory`, `create_directory`, `get_file_info`, `search_files`
+- Example pattern: `task :read_data, instructions: "read data.json from workspace and parse it", inputs: {}, outputs: { data: 'hash' }`
+
 ## Your Task: Generate DSL v1 Agent
 
-Using the THREE CONCRETE EXAMPLES above (daily-report, code-reviewer, data-pipeline) as reference patterns, generate WORKING Ruby DSL code for the agent described in the user instructions.
+Using the FOUR CONCRETE EXAMPLES above (daily-report, code-reviewer, data-pipeline, story-builder) as reference patterns, generate WORKING Ruby DSL code for the agent described in the user instructions.
 
 **CRITICAL REQUIREMENTS:**
 - DO NOT output placeholder text like "Brief description extracted from instructions" or "CRON_EXPRESSION"
@@ -250,6 +306,9 @@ end
 - ✓ Are all task names, descriptions, and logic SPECIFIC to the user's request?
 - ✓ Did you AVOID outputting placeholders like "task_name" or "CRON_EXPRESSION"?
 - ✓ Does the code actually DO what the user asked for?
+- ✓ Did you use NEURAL TASKS (not symbolic code blocks) for all file operations?
+- ✓ Did you NEVER use File.read, File.write, Dir.pwd, or other direct file APIs?
+- ✓ For workspace operations, did you write clear instructions for the LLM to use the workspace tool?
 
 If you cannot answer YES to all of the above, re-read the user instructions and generate FUNCTIONAL code.
 
