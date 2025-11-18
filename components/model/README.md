@@ -246,7 +246,9 @@ rateLimits:
 
 The proxy exposes health check endpoints:
 
-- `GET /health` - Overall health status
+- `GET /health/liveliness` - Liveness check (proxy is alive)
+- `GET /health/readiness` - Readiness check (proxy is ready)
+- `GET /health` - Overall health status (makes LLM API calls - disabled by default)
 - `GET /metrics` - Prometheus metrics (if enabled)
 
 Health check configuration in Kubernetes:
@@ -254,17 +256,17 @@ Health check configuration in Kubernetes:
 ```yaml
 livenessProbe:
   httpGet:
-    path: /health
+    path: /health/liveliness
     port: 4000
-  initialDelaySeconds: 10
-  periodSeconds: 30
+  initialDelaySeconds: 30
+  periodSeconds: 300
 
 readinessProbe:
   httpGet:
-    path: /health
+    path: /health/readiness
     port: 4000
-  initialDelaySeconds: 5
-  periodSeconds: 10
+  initialDelaySeconds: 30
+  periodSeconds: 300
 ```
 
 ## Observability

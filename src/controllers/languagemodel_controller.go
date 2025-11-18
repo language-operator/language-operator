@@ -292,7 +292,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health",
+										Path: "/health/liveliness",
 										Port: intstr.FromInt(4000),
 									},
 								},
@@ -303,7 +303,7 @@ func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health",
+										Path: "/health/readiness",
 										Port: intstr.FromInt(4000),
 									},
 								},
