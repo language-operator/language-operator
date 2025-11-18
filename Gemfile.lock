@@ -32,8 +32,6 @@ GEM
       dry-inflector (~> 1.0)
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
-    et-orbi (1.4.0)
-      tzinfo
     event_stream_parser (1.0.0)
     excon (0.112.0)
     faraday (2.14.0)
@@ -46,9 +44,6 @@ GEM
       net-http (~> 0.5)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
-    fugit (1.12.1)
-      et-orbi (~> 1.4)
-      raabro (~> 1.4)
     google-protobuf (4.33.1)
       bigdecimal
       rake (>= 13)
@@ -80,7 +75,7 @@ GEM
       recursive-open-struct (~> 1.1, >= 1.1.3)
       yajl-ruby (~> 1.4)
       yaml-safe_load_stream3
-    language-operator (0.1.52)
+    language-operator (0.1.54)
       faraday (~> 2.0)
       k8s-ruby (~> 0.17)
       mcp (~> 0.4)
@@ -96,7 +91,6 @@ GEM
       rouge (~> 4.0)
       ruby_llm (~> 1.8)
       ruby_llm-mcp (~> 0.1)
-      rufus-scheduler (~> 3.9)
       thor (~> 1.3)
       tty-prompt (~> 0.23)
       tty-spinner (~> 0.9)
@@ -151,7 +145,6 @@ GEM
     public_suffix (6.0.2)
     puma (6.6.1)
       nio4r (~> 2.0)
-    raabro (1.4.0)
     racc (1.8.1)
     rack (3.2.4)
     rackup (2.2.1)
@@ -197,8 +190,6 @@ GEM
       ruby_llm (~> 1.9)
       zeitwerk (~> 2)
     ruby_llm-schema (0.2.5)
-    rufus-scheduler (3.9.2)
-      fugit (~> 1.1, >= 1.11.1)
     strings (0.2.1)
       strings-ansi (~> 0.2)
       unicode-display_width (>= 1.5, < 3.0)
@@ -221,8 +212,6 @@ GEM
       pastel (~> 0.8)
       strings (~> 0.2.0)
       tty-screen (~> 0.8)
-    tzinfo (2.0.6)
-      concurrent-ruby (~> 1.0)
     unicode-display_width (2.6.0)
     unicode_utils (1.4.0)
     uri (1.1.1)
@@ -237,7 +226,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  language-operator (~> 0.1.52)
+  language-operator (~> 0.1.54)
   rubocop (~> 1.60)
   rubocop-performance (~> 1.20)
   yard (~> 0.9.37)
