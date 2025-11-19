@@ -1339,9 +1339,11 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 			port = 8080 // Default MCP port
 		}
 
+		restartPolicy := corev1.ContainerRestartPolicyAlways
 		container := corev1.Container{
-			Name:  fmt.Sprintf("tool-%s", tool.Name),
-			Image: tool.Spec.Image,
+			Name:          fmt.Sprintf("tool-%s", tool.Name),
+			Image:         tool.Spec.Image,
+			RestartPolicy: &restartPolicy,
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          "mcp",
