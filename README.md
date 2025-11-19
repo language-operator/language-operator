@@ -52,10 +52,8 @@ metadata:
   name: web-search
 spec:
   image: gchr.io/language-operator/web-tool:latest
-  deploymentMode: service  # or 'sidecar' for workspace access
+  deploymentMode: service  # or 'sidecar' for shared workspace access
   type: mcp
-  port: 8080
-  replicas: 2
 ```
 
 ### LanguageCluster
@@ -67,12 +65,8 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
   name: production
-  namespace: langop-system
 spec:
   domain: agents.example.com
-  ingressConfig:
-    tls:
-      enabled: true
 ```
 
 ### LanguagePersona

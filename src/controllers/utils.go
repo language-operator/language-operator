@@ -254,11 +254,17 @@ func MergeLabels(base, override map[string]string) map[string]string {
 
 // resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
 // Supports wildcards: *.example.com will resolve example.com and cache the result
+// Special case: "*" means allow all destinations (0.0.0.0/0)
 func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 	var cidrs []string
 	seenIPs := make(map[string]bool)
 
 	for _, hostname := range dnsNames {
+		// Special case: "*" means any destination
+		if hostname == "*" {
+			return []string{"0.0.0.0/0"}, nil
+		}
+
 		// Handle wildcard domains by stripping the *. prefix
 		// Note: This is an approximation - we can't know all subdomains
 		// so we resolve the base domain
