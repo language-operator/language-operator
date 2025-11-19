@@ -1231,9 +1231,10 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 							Labels: labels,
 						},
 						Spec: corev1.PodSpec{
-							RestartPolicy:   corev1.RestartPolicyOnFailure,
-							Containers:      containers,
-							SecurityContext: r.buildPodSecurityContext(),
+							RestartPolicy:         corev1.RestartPolicyOnFailure,
+							ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
+							Containers:            containers,
+							SecurityContext:       r.buildPodSecurityContext(),
 						},
 					},
 				},
