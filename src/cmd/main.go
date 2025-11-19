@@ -299,7 +299,7 @@ func main() {
 		config.Temperature = &temp
 
 		// Set max tokens
-		maxTokens := 4096
+		maxTokens := 8192
 		config.MaxTokens = &maxTokens
 
 		// Create ChatModel
