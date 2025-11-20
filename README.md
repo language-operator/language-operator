@@ -15,7 +15,16 @@ helm install language-operator language-operator/language-operator
 
 ## Vision
 
-Wouldn't it be neat if you could do this in Kubernetes?  We think so!
+Modify Kubernetes to promote AI tools, models and agents as first-class resources.
+
+| CRD             | Purpose                                     |
+| --------------- | ------------------------------------------- |
+| LanguageCluster | A group of related models, tools and agents |
+| LanguageModel   | An on-prem model or cloud provider with rate limiting and cost controls |
+| LanguageTool    | An MCP tool for agents; runs as sidecar or deployment |
+| LanguageAgent   | A goal-directed task that uses models, personas and tools |
+| LanguagePersona | A free-form description of a role, job, or preferences |
+
 
 ### LanguageModel
 

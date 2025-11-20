@@ -1455,9 +1455,13 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 
 	// Inject OpenTelemetry configuration from operator environment
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		// Ruby OpenTelemetry exporter uses HTTP (port 4318) not gRPC (port 4317)
+		// Replace :4317 with :4318 for Ruby agents
+		agentEndpoint := strings.Replace(endpoint, ":4317", ":4318", 1)
+
 		env = append(env, corev1.EnvVar{
 			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
-			Value: endpoint,
+			Value: agentEndpoint,
 		})
 	}
 
