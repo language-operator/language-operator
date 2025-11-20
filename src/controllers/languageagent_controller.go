@@ -1464,9 +1464,22 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			agentEndpoint = "http://" + agentEndpoint
 		}
 
+		// Configure Ruby OpenTelemetry auto-instrumentation via standard env vars
 		env = append(env, corev1.EnvVar{
 			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
 			Value: agentEndpoint,
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_TRACES_EXPORTER",
+			Value: "otlp",
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_EXPORTER_OTLP_PROTOCOL",
+			Value: "http/protobuf",
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_LOGS_EXPORTER",
+			Value: "otlp",
 		})
 	}
 
