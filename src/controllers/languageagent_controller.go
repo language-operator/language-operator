@@ -1262,6 +1262,10 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
+	// Get OTEL endpoint from operator environment
+	// This ensures agents can send traces to the collector
+	otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
 	// Build NetworkPolicy using helper from utils.go
 	networkPolicy := BuildEgressNetworkPolicy(
 		agent.Name,
@@ -1269,6 +1273,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		labels,
 		"", // provider - not applicable for agents
 		"", // endpoint - not applicable for agents
+		otelEndpoint,
 		agent.Spec.Egress,
 	)
 

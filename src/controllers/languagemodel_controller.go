@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
@@ -429,6 +430,10 @@ func (r *LanguageModelReconciler) reconcileService(ctx context.Context, model *l
 func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
 	labels := GetCommonLabels(model.Name, "LanguageModel")
 
+	// Get OTEL endpoint from operator environment
+	// This ensures models can send traces to the collector
+	otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+
 	// Build NetworkPolicy using helper from utils.go
 	networkPolicy := BuildEgressNetworkPolicy(
 		model.Name,
@@ -436,6 +441,7 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 		labels,
 		model.Spec.Provider,
 		model.Spec.Endpoint,
+		otelEndpoint,
 		model.Spec.Egress,
 	)
 

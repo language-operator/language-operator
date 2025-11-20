@@ -399,10 +399,12 @@ func generateEgressFromEndpoint(endpoint string) *networkingv1.NetworkPolicyEgre
 // DNS-based rules are resolved to IP addresses at policy creation time
 // If provider uses custom endpoints (openai-compatible, azure, custom) and endpoint is set,
 // an egress rule is automatically generated for that endpoint
+// If otelEndpoint is set, an egress rule is automatically generated for the OpenTelemetry collector
 func BuildEgressNetworkPolicy(
 	name, namespace string,
 	labels map[string]string,
 	provider, endpoint string,
+	otelEndpoint string,
 	egressRules []langopv1alpha1.NetworkRule,
 ) *networkingv1.NetworkPolicy {
 
@@ -463,6 +465,27 @@ func BuildEgressNetworkPolicy(
 	if endpoint != "" {
 		if autoRule := generateEgressFromEndpoint(endpoint); autoRule != nil {
 			egress = append(egress, *autoRule)
+		}
+	}
+
+	// Auto-generate egress rule for OpenTelemetry collector (if specified)
+	// This allows agents and models to send traces to the OTEL collector
+	// Note: Ruby agents use HTTP port 4318, but we need to allow the gRPC port 4317
+	// as well for future compatibility and Go-based agents
+	if otelEndpoint != "" {
+		// Generate rule for the gRPC endpoint (port 4317)
+		if autoRule := generateEgressFromEndpoint(otelEndpoint); autoRule != nil {
+			egress = append(egress, *autoRule)
+		}
+
+		// Also generate rule for HTTP endpoint (port 4318) for Ruby agents
+		// Replace :4317 with :4318 if present
+		httpEndpoint := strings.Replace(otelEndpoint, ":4317", ":4318", 1)
+		if httpEndpoint != otelEndpoint {
+			// Only add if the replacement happened (i.e., port 4317 was in the endpoint)
+			if autoRule := generateEgressFromEndpoint(httpEndpoint); autoRule != nil {
+				egress = append(egress, *autoRule)
+			}
 		}
 	}
 
