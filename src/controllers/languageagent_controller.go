@@ -1110,9 +1110,6 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			},
 		}
 
-		// Append sidecar tool containers
-		containers = append(containers, sidecarContainers...)
-
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -1124,6 +1121,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				},
 				Spec: corev1.PodSpec{
 					ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
+					InitContainers:        sidecarContainers, // Sidecars as init containers with restartPolicy: Always
 					Containers:            containers,
 					SecurityContext:       r.buildPodSecurityContext(),
 				},
@@ -1220,9 +1218,6 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			},
 		}
 
-		// Append sidecar tool containers
-		containers = append(containers, sidecarContainers...)
-
 		cronJob.Spec = batchv1.CronJobSpec{
 			Schedule: schedule,
 			JobTemplate: batchv1.JobTemplateSpec{
@@ -1234,6 +1229,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 						Spec: corev1.PodSpec{
 							RestartPolicy:         corev1.RestartPolicyOnFailure,
 							ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
+							InitContainers:        sidecarContainers, // Sidecars as init containers with restartPolicy: Always
 							Containers:            containers,
 							SecurityContext:       r.buildPodSecurityContext(),
 						},
