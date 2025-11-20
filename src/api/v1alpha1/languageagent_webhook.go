@@ -25,9 +25,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+//+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languageagent,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languageagents,verbs=create;update,versions=v1alpha1,name=mlanguageagent.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languageagent,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languageagents,verbs=create;update,versions=v1alpha1,name=vlanguageagent.kb.io,admissionReviewVersions=v1
 
+var _ webhook.Defaulter = &LanguageAgent{}
 var _ webhook.Validator = &LanguageAgent{}
+
+// Default implements webhook.Defaulter
+func (a *LanguageAgent) Default() {
+	// Default workspace to enabled if not specified
+	if a.Spec.Workspace == nil {
+		a.Spec.Workspace = &WorkspaceSpec{
+			Enabled:     true,
+			Size:        "10Gi",
+			AccessMode:  "ReadWriteOnce",
+			MountPath:   "/workspace",
+		}
+	}
+}
 
 // ValidateCreate implements webhook.Validator
 func (a *LanguageAgent) ValidateCreate() (admission.Warnings, error) {
