@@ -473,41 +473,48 @@ func BuildEgressNetworkPolicy(
 	// Note: Ruby agents use HTTP port 4318, but we need to allow the gRPC port 4317
 	// as well for future compatibility and Go-based agents
 	if otelEndpoint != "" {
-		// Parse the OTEL endpoint to extract namespace if it's a Kubernetes service
-		// Format: service.namespace:port or service.namespace.svc.cluster.local:port
-		// First, strip any port number
-		hostPort := strings.Split(otelEndpoint, ":")
-		host := hostPort[0]
+		// Ensure endpoint has a scheme for proper URL parsing
+		normalizedEndpoint := otelEndpoint
+		if !strings.HasPrefix(otelEndpoint, "http://") && !strings.HasPrefix(otelEndpoint, "https://") {
+			normalizedEndpoint = "http://" + otelEndpoint
+		}
 
-		// Now split by dots to extract namespace
-		parts := strings.Split(host, ".")
-		if len(parts) >= 2 {
-			// Likely a Kubernetes service (service.namespace or service.namespace.svc.cluster.local)
-			otelNamespace := parts[1]
+		// Parse the endpoint URL
+		parsedURL, err := url.Parse(normalizedEndpoint)
+		if err == nil {
+			hostname := parsedURL.Hostname()
+			if hostname != "" {
+				// Extract namespace from Kubernetes service DNS name
+				// Format: service.namespace or service.namespace.svc.cluster.local
+				parts := strings.Split(hostname, ".")
+				if len(parts) >= 2 {
+					otelNamespace := parts[1]
 
-			// Create namespace-based egress rule for both gRPC and HTTP ports
-			// This works with Kubernetes services (unlike ipBlock which only works with pod IPs)
-			egress = append(egress, networkingv1.NetworkPolicyEgressRule{
-				To: []networkingv1.NetworkPolicyPeer{
-					{
-						NamespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"kubernetes.io/metadata.name": otelNamespace,
+					// Create namespace-based egress rule for both gRPC and HTTP ports
+					// This works with Kubernetes services (unlike ipBlock which only works with pod IPs)
+					egress = append(egress, networkingv1.NetworkPolicyEgressRule{
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"kubernetes.io/metadata.name": otelNamespace,
+									},
+								},
 							},
 						},
-					},
-				},
-				Ports: []networkingv1.NetworkPolicyPort{
-					{
-						Protocol: protocolPtr(corev1.ProtocolTCP),
-						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4317},
-					},
-					{
-						Protocol: protocolPtr(corev1.ProtocolTCP),
-						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4318},
-					},
-				},
-			})
+						Ports: []networkingv1.NetworkPolicyPort{
+							{
+								Protocol: protocolPtr(corev1.ProtocolTCP),
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4317},
+							},
+							{
+								Protocol: protocolPtr(corev1.ProtocolTCP),
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4318},
+							},
+						},
+					})
+				}
+			}
 		}
 	}
 
