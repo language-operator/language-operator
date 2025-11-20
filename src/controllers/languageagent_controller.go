@@ -1459,6 +1459,11 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		// Replace :4317 with :4318 for Ruby agents
 		agentEndpoint := strings.Replace(endpoint, ":4317", ":4318", 1)
 
+		// Ensure http:// protocol is present (required by Ruby OTLP exporter)
+		if !strings.HasPrefix(agentEndpoint, "http://") && !strings.HasPrefix(agentEndpoint, "https://") {
+			agentEndpoint = "http://" + agentEndpoint
+		}
+
 		env = append(env, corev1.EnvVar{
 			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
 			Value: agentEndpoint,
