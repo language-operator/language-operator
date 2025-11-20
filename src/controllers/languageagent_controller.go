@@ -1123,8 +1123,9 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Containers:      containers,
-					SecurityContext: r.buildPodSecurityContext(),
+					ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
+					Containers:            containers,
+					SecurityContext:       r.buildPodSecurityContext(),
 				},
 			},
 		}
@@ -1340,9 +1341,14 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 			port = 8080 // Default MCP port
 		}
 
+		// Use native sidecar support (Kubernetes 1.28+)
+		// Sidecars with restartPolicy: Always will terminate automatically
+		// when the main container completes
+		restartPolicy := corev1.ContainerRestartPolicyAlways
 		container := corev1.Container{
-			Name:  fmt.Sprintf("tool-%s", tool.Name),
-			Image: tool.Spec.Image,
+			Name:          fmt.Sprintf("tool-%s", tool.Name),
+			Image:         tool.Spec.Image,
+			RestartPolicy: &restartPolicy,
 			Ports: []corev1.ContainerPort{
 				{
 					Name:          "mcp",
