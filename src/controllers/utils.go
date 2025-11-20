@@ -473,15 +473,22 @@ func BuildEgressNetworkPolicy(
 	// Note: Ruby agents use HTTP port 4318, but we need to allow the gRPC port 4317
 	// as well for future compatibility and Go-based agents
 	if otelEndpoint != "" {
+		// Ensure endpoint has a scheme for URL parsing
+		// OTEL endpoints are often specified without scheme (e.g., "host:port")
+		normalizedEndpoint := otelEndpoint
+		if !strings.HasPrefix(otelEndpoint, "http://") && !strings.HasPrefix(otelEndpoint, "https://") {
+			normalizedEndpoint = "http://" + otelEndpoint
+		}
+
 		// Generate rule for the gRPC endpoint (port 4317)
-		if autoRule := generateEgressFromEndpoint(otelEndpoint); autoRule != nil {
+		if autoRule := generateEgressFromEndpoint(normalizedEndpoint); autoRule != nil {
 			egress = append(egress, *autoRule)
 		}
 
 		// Also generate rule for HTTP endpoint (port 4318) for Ruby agents
 		// Replace :4317 with :4318 if present
-		httpEndpoint := strings.Replace(otelEndpoint, ":4317", ":4318", 1)
-		if httpEndpoint != otelEndpoint {
+		httpEndpoint := strings.Replace(normalizedEndpoint, ":4317", ":4318", 1)
+		if httpEndpoint != normalizedEndpoint {
 			// Only add if the replacement happened (i.e., port 4317 was in the endpoint)
 			if autoRule := generateEgressFromEndpoint(httpEndpoint); autoRule != nil {
 				egress = append(egress, *autoRule)
