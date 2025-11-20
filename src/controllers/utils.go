@@ -473,26 +473,36 @@ func BuildEgressNetworkPolicy(
 	// Note: Ruby agents use HTTP port 4318, but we need to allow the gRPC port 4317
 	// as well for future compatibility and Go-based agents
 	if otelEndpoint != "" {
-		// Ensure endpoint has a scheme for URL parsing
-		// OTEL endpoints are often specified without scheme (e.g., "host:port")
-		normalizedEndpoint := otelEndpoint
-		if !strings.HasPrefix(otelEndpoint, "http://") && !strings.HasPrefix(otelEndpoint, "https://") {
-			normalizedEndpoint = "http://" + otelEndpoint
-		}
+		// Parse the OTEL endpoint to extract namespace if it's a Kubernetes service
+		// Format: service.namespace or service.namespace.svc.cluster.local
+		parts := strings.Split(otelEndpoint, ".")
+		if len(parts) >= 2 {
+			// Likely a Kubernetes service (service.namespace or service.namespace.svc.cluster.local)
+			otelNamespace := parts[1]
 
-		// Generate rule for the gRPC endpoint (port 4317)
-		if autoRule := generateEgressFromEndpoint(normalizedEndpoint); autoRule != nil {
-			egress = append(egress, *autoRule)
-		}
-
-		// Also generate rule for HTTP endpoint (port 4318) for Ruby agents
-		// Replace :4317 with :4318 if present
-		httpEndpoint := strings.Replace(normalizedEndpoint, ":4317", ":4318", 1)
-		if httpEndpoint != normalizedEndpoint {
-			// Only add if the replacement happened (i.e., port 4317 was in the endpoint)
-			if autoRule := generateEgressFromEndpoint(httpEndpoint); autoRule != nil {
-				egress = append(egress, *autoRule)
-			}
+			// Create namespace-based egress rule for both gRPC and HTTP ports
+			// This works with Kubernetes services (unlike ipBlock which only works with pod IPs)
+			egress = append(egress, networkingv1.NetworkPolicyEgressRule{
+				To: []networkingv1.NetworkPolicyPeer{
+					{
+						NamespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"kubernetes.io/metadata.name": otelNamespace,
+							},
+						},
+					},
+				},
+				Ports: []networkingv1.NetworkPolicyPort{
+					{
+						Protocol: protocolPtr(corev1.ProtocolTCP),
+						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4317},
+					},
+					{
+						Protocol: protocolPtr(corev1.ProtocolTCP),
+						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4318},
+					},
+				},
+			})
 		}
 	}
 
