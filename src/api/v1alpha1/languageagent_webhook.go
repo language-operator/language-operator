@@ -36,10 +36,10 @@ func (a *LanguageAgent) Default() {
 	// Default workspace to enabled if not specified
 	if a.Spec.Workspace == nil {
 		a.Spec.Workspace = &WorkspaceSpec{
-			Enabled:     true,
-			Size:        "10Gi",
-			AccessMode:  "ReadWriteOnce",
-			MountPath:   "/workspace",
+			Enabled:    true,
+			Size:       "10Gi",
+			AccessMode: "ReadWriteOnce",
+			MountPath:  "/workspace",
 		}
 	}
 }
