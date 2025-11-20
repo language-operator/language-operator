@@ -474,8 +474,13 @@ func BuildEgressNetworkPolicy(
 	// as well for future compatibility and Go-based agents
 	if otelEndpoint != "" {
 		// Parse the OTEL endpoint to extract namespace if it's a Kubernetes service
-		// Format: service.namespace or service.namespace.svc.cluster.local
-		parts := strings.Split(otelEndpoint, ".")
+		// Format: service.namespace:port or service.namespace.svc.cluster.local:port
+		// First, strip any port number
+		hostPort := strings.Split(otelEndpoint, ":")
+		host := hostPort[0]
+
+		// Now split by dots to extract namespace
+		parts := strings.Split(host, ".")
 		if len(parts) >= 2 {
 			// Likely a Kubernetes service (service.namespace or service.namespace.svc.cluster.local)
 			otelNamespace := parts[1]
