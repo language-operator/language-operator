@@ -838,4 +838,20 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 	if cm.Data["agent.rb"] != "# Optimized code that should not be overwritten" {
 		t.Errorf("Expected optimized code to be preserved, got: %s", cm.Data["agent.rb"])
 	}
+
+	// Owner reference should be set for proper garbage collection
+	if len(cm.OwnerReferences) == 0 {
+		t.Error("Expected owner reference to be set on optimized ConfigMap")
+	} else {
+		ownerRef := cm.OwnerReferences[0]
+		if ownerRef.Name != agent.Name {
+			t.Errorf("Expected owner reference name to be %s, got %s", agent.Name, ownerRef.Name)
+		}
+		if ownerRef.Kind != "LanguageAgent" {
+			t.Errorf("Expected owner reference kind to be LanguageAgent, got %s", ownerRef.Kind)
+		}
+		if !*ownerRef.Controller {
+			t.Error("Expected owner reference to have controller=true")
+		}
+	}
 }

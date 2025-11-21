@@ -446,11 +446,20 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	} else if err != nil {
 		return err
 	} else {
-		// Check if ConfigMap has been optimized by CLI - skip synthesis if so
+		// Check if ConfigMap has been optimized by CLI - skip synthesis but ensure owner reference
 		if existingCM.Annotations["langop.io/optimized"] == "true" {
 			log.Info("ConfigMap has langop.io/optimized annotation, skipping synthesis",
 				"optimizedAt", existingCM.Annotations["langop.io/optimized-at"],
 				"optimizedTask", existingCM.Annotations["langop.io/optimized-task"])
+
+			// Ensure owner reference is set for proper garbage collection
+			if err := controllerutil.SetControllerReference(agent, existingCM, r.Scheme); err != nil {
+				return fmt.Errorf("failed to set owner reference on optimized ConfigMap: %w", err)
+			}
+			if err := r.Update(ctx, existingCM); err != nil {
+				return fmt.Errorf("failed to update optimized ConfigMap with owner reference: %w", err)
+			}
+
 			return nil
 		}
 
