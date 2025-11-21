@@ -446,6 +446,14 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	} else if err != nil {
 		return err
 	} else {
+		// Check if ConfigMap has been optimized by CLI - skip synthesis if so
+		if existingCM.Annotations["langop.io/optimized"] == "true" {
+			log.Info("ConfigMap has langop.io/optimized annotation, skipping synthesis",
+				"optimizedAt", existingCM.Annotations["langop.io/optimized-at"],
+				"optimizedTask", existingCM.Annotations["langop.io/optimized-task"])
+			return nil
+		}
+
 		// Compare current vs previous hashes for smart change detection
 		currentInstructionsHash := hashString(agent.Spec.Instructions)
 		previousInstructionsHash := existingCM.Annotations["langop.io/instructions-hash"]

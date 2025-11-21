@@ -760,3 +760,82 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 		t.Error("Expected capabilities to drop ALL")
 	}
 }
+
+func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:        "ghcr.io/language-operator/agent:latest",
+			Instructions: "Do something",
+			ModelRefs: []langopv1alpha1.ModelReference{
+				{Name: "test-model"},
+			},
+		},
+	}
+
+	// Create a code ConfigMap with the optimized annotation
+	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+	optimizedConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      codeConfigMapName,
+			Namespace: agent.Namespace,
+			Annotations: map[string]string{
+				"langop.io/optimized":      "true",
+				"langop.io/optimized-at":   "2025-11-21T16:50:00Z",
+				"langop.io/optimized-task": "read_existing_story",
+			},
+		},
+		Data: map[string]string{
+			"agent.rb": "# Optimized code that should not be overwritten",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, optimizedConfigMap).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify the ConfigMap still has the optimized code (not overwritten)
+	cm := &corev1.ConfigMap{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      codeConfigMapName,
+		Namespace: agent.Namespace,
+	}, cm)
+	if err != nil {
+		t.Fatalf("Expected code ConfigMap to exist, but got error: %v", err)
+	}
+
+	// The optimized annotation should still be present
+	if cm.Annotations["langop.io/optimized"] != "true" {
+		t.Error("Expected langop.io/optimized annotation to be preserved")
+	}
+
+	// The original data should be preserved
+	if cm.Data["agent.rb"] != "# Optimized code that should not be overwritten" {
+		t.Errorf("Expected optimized code to be preserved, got: %s", cm.Data["agent.rb"])
+	}
+}
