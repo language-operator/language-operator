@@ -174,7 +174,12 @@ func NewSynthesizerFromLanguageModel(ctx context.Context, k8sClient client.Clien
 
 	// Set endpoint for openai-compatible providers
 	if model.Spec.Endpoint != "" {
-		config.BaseURL = model.Spec.Endpoint
+		endpoint := model.Spec.Endpoint
+		// Normalize endpoint: add /v1 suffix if not present (required for OpenAI-compatible APIs)
+		if !strings.HasSuffix(endpoint, "/v1") && !strings.HasSuffix(endpoint, "/v1/") {
+			endpoint = strings.TrimSuffix(endpoint, "/") + "/v1"
+		}
+		config.BaseURL = endpoint
 	}
 
 	// Apply configuration options
