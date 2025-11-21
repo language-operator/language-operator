@@ -45,8 +45,6 @@ type LanguageAgentReconciler struct {
 	client.Client
 	Scheme                 *runtime.Scheme
 	Log                    logr.Logger
-	Synthesizer            synthesis.AgentSynthesizer
-	SynthesisModel         string
 	Recorder               record.EventRecorder
 	MaxSelfHealingAttempts int32
 	SelfHealingEnabled     bool
@@ -170,8 +168,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
-	// Synthesize agent code from instructions (if synthesizer is configured)
-	if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+	// Synthesize agent code from instructions (if agent has modelRefs and instructions)
+	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
 		if err := r.reconcileCodeConfigMap(ctx, agent); err != nil {
 			log.Error(err, "Failed to synthesize/reconcile agent code")
 			span.RecordError(err)
@@ -573,7 +571,13 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			r.Recorder.Event(agent, corev1.EventTypeNormal, "SynthesisStarted", "Starting code synthesis from natural language instructions")
 		}
 
-		resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
+		// Create synthesizer from agent's model
+		synthesizer, synthesisModelName, err := r.createSynthesizer(ctx, agent)
+		if err != nil {
+			return fmt.Errorf("failed to create synthesizer: %w", err)
+		}
+
+		resp, err := synthesizer.SynthesizeAgent(ctx, synthReq)
 
 		// Record synthesis attempt
 		if r.QuotaManager != nil {
@@ -665,7 +669,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			agent.Status.SynthesisInfo = &langopv1alpha1.SynthesisInfo{}
 		}
 		agent.Status.SynthesisInfo.LastSynthesisTime = &now
-		agent.Status.SynthesisInfo.SynthesisModel = r.SynthesisModel
+		agent.Status.SynthesisInfo.SynthesisModel = synthesisModelName
 		agent.Status.SynthesisInfo.SynthesisDuration = resp.DurationSeconds
 		agent.Status.SynthesisInfo.CodeHash = hashString(dslCode)
 		agent.Status.SynthesisInfo.InstructionsHash = hashString(agent.Spec.Instructions)
@@ -794,7 +798,13 @@ func (r *LanguageAgentReconciler) distillPersona(ctx context.Context, persona *l
 		Tools:        strings.Join(r.getToolNames(agent), ", "),
 	}
 
-	return r.Synthesizer.DistillPersona(ctx, personaInfo, agentCtx)
+	// Create synthesizer from agent's model for persona distillation
+	synthesizer, _, err := r.createSynthesizer(ctx, agent)
+	if err != nil {
+		return "", fmt.Errorf("failed to create synthesizer for persona distillation: %w", err)
+	}
+
+	return synthesizer.DistillPersona(ctx, personaInfo, agentCtx)
 }
 
 // getToolNames extracts tool names from agent's toolRefs
@@ -813,6 +823,55 @@ func (r *LanguageAgentReconciler) getModelNames(agent *langopv1alpha1.LanguageAg
 		names = append(names, ref.Name)
 	}
 	return names
+}
+
+// getSynthesisModel returns the LanguageModel to use for synthesis
+// Prefers model with role "primary", otherwise uses the first model
+func (r *LanguageAgentReconciler) getSynthesisModel(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguageModel, error) {
+	if len(agent.Spec.ModelRefs) == 0 {
+		return nil, fmt.Errorf("agent has no modelRefs configured")
+	}
+
+	// Find primary model or use first one
+	var modelRef *langopv1alpha1.ModelReference
+	for i := range agent.Spec.ModelRefs {
+		ref := &agent.Spec.ModelRefs[i]
+		if ref.Role == "primary" || ref.Role == "" {
+			modelRef = ref
+			break
+		}
+	}
+	if modelRef == nil {
+		modelRef = &agent.Spec.ModelRefs[0]
+	}
+
+	// Fetch the LanguageModel
+	namespace := modelRef.Namespace
+	if namespace == "" {
+		namespace = agent.Namespace
+	}
+
+	model := &langopv1alpha1.LanguageModel{}
+	if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: namespace}, model); err != nil {
+		return nil, fmt.Errorf("failed to get synthesis model %s/%s: %w", namespace, modelRef.Name, err)
+	}
+
+	return model, nil
+}
+
+// createSynthesizer creates a synthesizer from the agent's model
+func (r *LanguageAgentReconciler) createSynthesizer(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (synthesis.AgentSynthesizer, string, error) {
+	model, err := r.getSynthesisModel(ctx, agent)
+	if err != nil {
+		return nil, "", err
+	}
+
+	synth, err := synthesis.NewSynthesizerFromLanguageModel(ctx, r.Client, model, r.Log.WithName("synthesis"))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create synthesizer: %w", err)
+	}
+
+	return synth, model.Spec.ModelName, nil
 }
 
 // getPersonaNames extracts persona names from agent's personaRefs
@@ -996,8 +1055,8 @@ func (r *LanguageAgentReconciler) buildVolumes(agent *langopv1alpha1.LanguageAge
 		MountPath: "/home/langop/.gem",
 	})
 
-	// Add code ConfigMap volume if synthesizer is configured and instructions exist
-	if r.Synthesizer != nil && agent.Spec.Instructions != "" {
+	// Add code ConfigMap volume if agent has modelRefs and instructions (synthesis enabled)
+	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
 		codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
 		volumes = append(volumes, corev1.Volume{
 			Name: "agent-code",
@@ -2149,7 +2208,13 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 			"Starting self-healing code synthesis with error context")
 	}
 
-	resp, err := r.Synthesizer.SynthesizeAgent(ctx, synthReq)
+	// Create synthesizer from agent's model
+	synthesizer, synthesisModelName, err := r.createSynthesizer(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("failed to create synthesizer for self-healing: %w", err)
+	}
+
+	resp, err := synthesizer.SynthesizeAgent(ctx, synthReq)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Self-healing synthesis failed")
@@ -2197,7 +2262,7 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		agent.Status.SynthesisInfo = &langopv1alpha1.SynthesisInfo{}
 	}
 	agent.Status.SynthesisInfo.LastSynthesisTime = &now
-	agent.Status.SynthesisInfo.SynthesisModel = r.SynthesisModel
+	agent.Status.SynthesisInfo.SynthesisModel = synthesisModelName
 	agent.Status.SynthesisInfo.SynthesisDuration = resp.DurationSeconds
 	agent.Status.SynthesisInfo.CodeHash = hashString(resp.DSLCode)
 	agent.Status.SynthesisInfo.InstructionsHash = hashString(agent.Spec.Instructions)

@@ -9,14 +9,19 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/go-logr/logr"
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/validation"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 //go:embed agent_synthesis.tmpl
@@ -131,6 +136,74 @@ type RuntimeError struct {
 	StackTrace        []string `json:"stackTrace"`
 	ContainerExitCode int32    `json:"exitCode"`
 	SynthesisAttempt  int32    `json:"synthesisAttempt"`
+}
+
+// NewSynthesizerFromLanguageModel creates a synthesizer from a LanguageModel CRD
+func NewSynthesizerFromLanguageModel(ctx context.Context, k8sClient client.Client, model *langopv1alpha1.LanguageModel, log logr.Logger) (*Synthesizer, error) {
+	// Get API key from secret
+	apiKey := ""
+	if model.Spec.APIKeySecretRef != nil {
+		secret := &corev1.Secret{}
+		secretNamespace := model.Spec.APIKeySecretRef.Namespace
+		if secretNamespace == "" {
+			secretNamespace = model.Namespace
+		}
+		secretKey := model.Spec.APIKeySecretRef.Key
+		if secretKey == "" {
+			secretKey = "api-key"
+		}
+
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name:      model.Spec.APIKeySecretRef.Name,
+			Namespace: secretNamespace,
+		}, secret); err != nil {
+			return nil, fmt.Errorf("failed to get API key secret: %w", err)
+		}
+
+		apiKey = string(secret.Data[secretKey])
+		if apiKey == "" {
+			return nil, fmt.Errorf("API key not found in secret %s/%s at key %s", secretNamespace, model.Spec.APIKeySecretRef.Name, secretKey)
+		}
+	}
+
+	// Build eino OpenAI ChatModel config
+	config := &openai.ChatModelConfig{
+		Model:  model.Spec.ModelName,
+		APIKey: apiKey,
+	}
+
+	// Set endpoint for openai-compatible providers
+	if model.Spec.Endpoint != "" {
+		config.BaseURL = model.Spec.Endpoint
+	}
+
+	// Apply configuration options
+	if model.Spec.Configuration != nil {
+		if model.Spec.Configuration.Temperature != nil {
+			temp := float32(*model.Spec.Configuration.Temperature)
+			config.Temperature = &temp
+		}
+		if model.Spec.Configuration.MaxTokens != nil {
+			maxTokens := int(*model.Spec.Configuration.MaxTokens)
+			config.MaxTokens = &maxTokens
+		}
+	} else {
+		// Default settings for synthesis
+		temp := float32(0.3)
+		config.Temperature = &temp
+		maxTokens := 8192
+		config.MaxTokens = &maxTokens
+	}
+
+	// Create ChatModel
+	chatModel, err := openai.NewChatModel(ctx, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ChatModel: %w", err)
+	}
+
+	synth := NewSynthesizer(chatModel, log)
+	synth.modelName = model.Spec.ModelName
+	return synth, nil
 }
 
 // NewSynthesizer creates a new synthesizer instance using eino ChatModel

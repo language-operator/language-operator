@@ -511,11 +511,8 @@ volumeMounts: []
 #   mountPath: /tmp
 
 # Extra environment variables
+# Note: Synthesis is now configured per-agent via ModelRefs in LanguageAgent CRDs
 env:
-  - name: SYNTHESIS_MODEL
-    value: "mistralai/magistral-small-2509"
-  - name: SYNTHESIS_ENDPOINT
-    value: "http://192.168.68.54:1234/v1"
   - name: SELF_HEALING_ENABLED
     value: "{{ .Values.config.selfHealing.enabled }}"
   - name: SELF_HEALING_MAX_ATTEMPTS

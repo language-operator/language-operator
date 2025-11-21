@@ -77,34 +77,15 @@ shell: ## Run interactive shell in container.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-##@ Deployment
-
-ifndef ignore-not-found
-  ignore-not-found = false
-endif
-
-.PHONY: install
-install: manifests ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	kubectl apply -f config/crd/bases
-
-.PHONY: uninstall
-uninstall: manifests ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	kubectl delete --ignore-not-found=$(ignore-not-found) -f config/crd/bases
-
-.PHONY: deploy
-deploy: manifests ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && kubectl apply -k .
-
-.PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	cd config/manager && kubectl delete --ignore-not-found=$(ignore-not-found) -k .
+##@ Helm Chart Support
+# NOTE: To deploy the operator, use the Helm chart in ../chart/
 
 .PHONY: helm-crds
-helm-crds: manifests ## Generate and copy CRDs to Helm chart.
+helm-crds: manifests ## Generate and copy CRDs to Helm chart in ../chart/
 	cp config/crd/bases/*.yaml ../chart/crds/
 
 .PHONY: helm-crds-copy
-helm-crds-copy: ## Copy existing CRDs to Helm chart (no generation, for CI).
+helm-crds-copy: ## Copy existing CRDs to Helm chart in ../chart/ (no generation, for CI).
 	cp config/crd/bases/*.yaml ../chart/crds/
 
 ##@ Build Dependencies

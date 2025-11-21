@@ -38,8 +38,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
-
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers"
 	"github.com/language-operator/language-operator/pkg/cni"
@@ -269,55 +267,8 @@ func main() {
 	agentReconciler.QuotaManager = quotaManager
 	setupLog.Info("Synthesis quota manager initialized", "maxCostPerDay", maxCostPerDay, "maxAttemptsPerDay", maxAttemptsPerDay)
 
-	// Initialize synthesizer if LLM configuration is provided
-	synthesisModel := os.Getenv("SYNTHESIS_MODEL")
-	synthesisAPIKey := os.Getenv("SYNTHESIS_API_KEY")
-	synthesisEndpoint := os.Getenv("SYNTHESIS_ENDPOINT") // For custom OpenAI-compatible endpoints
-
-	if synthesisModel != "" {
-		setupLog.Info("Initializing synthesis engine", "model", synthesisModel, "endpoint", synthesisEndpoint)
-
-		// Default API key for local endpoints that don't validate it
-		if synthesisAPIKey == "" {
-			synthesisAPIKey = "sk-local-not-needed"
-		}
-
-		// Create eino OpenAI ChatModel config
-		config := &openai.ChatModelConfig{
-			Model:  synthesisModel,
-			APIKey: synthesisAPIKey,
-		}
-
-		// Set custom BaseURL if provided (for LM Studio, Ollama with OpenAI compat, etc.)
-		if synthesisEndpoint != "" {
-			config.BaseURL = synthesisEndpoint
-			setupLog.Info("Using custom OpenAI-compatible endpoint", "baseURL", synthesisEndpoint)
-		}
-
-		// Set temperature for consistent code generation
-		temp := float32(0.3)
-		config.Temperature = &temp
-
-		// Set max tokens
-		maxTokens := 8192
-		config.MaxTokens = &maxTokens
-
-		// Create ChatModel
-		ctx := context.Background()
-		chatModel, err := openai.NewChatModel(ctx, config)
-		if err != nil {
-			setupLog.Error(err, "failed to create synthesis ChatModel")
-			os.Exit(1)
-		}
-
-		// Create synthesizer
-		synthesizer := synthesis.NewSynthesizer(chatModel, ctrl.Log.WithName("synthesis"))
-		agentReconciler.Synthesizer = synthesizer
-		agentReconciler.SynthesisModel = synthesisModel
-		setupLog.Info("Synthesis engine initialized successfully")
-	} else {
-		setupLog.Info("Synthesis engine disabled (SYNTHESIS_MODEL not set)")
-	}
+	// Synthesis is now configured per-agent via ModelRefs - no global setup needed
+	setupLog.Info("Synthesis engine uses per-agent ModelRefs configuration")
 
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgent")

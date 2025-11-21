@@ -1,8 +1,10 @@
 # Language Operator
 
-Language Operator is a Kubernetes operator that turns natural language into autonomous agents.  
+Language Operator is a Kubernetes operator that turns natural language into autonomous agents that self-optimize over time to reduce spend on model compute. 
 
-It is under active development and incomplete.
+As part of that vision, Language Operator is optimized for OpenAI-compatible on-prem quantized models that may hot have the full reasoning capabilities as their SOTA counterparts.
+
+This project is under active development, but feel free to try it out.
 
 ```bash
 # Add repository:
@@ -15,7 +17,7 @@ helm install language-operator language-operator/language-operator
 
 ## Vision
 
-Modify Kubernetes to promote AI tools, models and agents as first-class resources.
+Kubernetes should provide CRDs and managed deployments for common gen AI workloads:
 
 | CRD             | Purpose                                     |
 | --------------- | ------------------------------------------- |
@@ -62,7 +64,18 @@ metadata:
 spec:
   image: gchr.io/language-operator/web-tool:latest
   deploymentMode: service  # or 'sidecar' for shared workspace access
-  type: mcp
+```
+
+Access to workspace folder:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: web-search
+spec:
+  image: gchr.io/language-operator/workspace-tool:latest
+  deploymentMode: sidecar
 ```
 
 ### LanguageCluster
@@ -126,5 +139,8 @@ spec:
     size: 10Gi
 ```
 
+Agents send rich OpenTelemetry traces, which are used to optimize future executions.  For example, if a task being handled by a model can be replicated with in-code tool calls, the agent will be re-synthesized after learning this.
+
 <sup>1</sup> requires CNI like Cilium (recommended)
+
 <sup>2</sup> quality of synthesis is model dependent
