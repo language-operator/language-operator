@@ -139,7 +139,3 @@ What's implemented:
 [FSL 1.1](LICENSE) - Converts to Apache 2.0 on 2028-01-01
 
 **Use Limitation**: Cannot offer Language Operator as a commercial managed service until 2028. Internal use, consulting, and custom deployments are permitted.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
