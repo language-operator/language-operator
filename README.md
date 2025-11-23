@@ -1,146 +1,154 @@
 # Language Operator
 
-Language Operator is a Kubernetes operator that turns natural language into autonomous agents that self-optimize over time to reduce spend on model compute. 
+A Kubernetes operator that synthesizes autonomous agents from natural language descriptions.
 
-As part of that vision, Language Operator is optimized for OpenAI-compatible on-prem quantized models that may hot have the full reasoning capabilities as their SOTA counterparts.
+## What It Does
 
-This project is under active development, but feel free to try it out.
+Language Operator converts natural language goals into executable agents that run in your Kubernetes cluster:
 
 ```bash
-# Add repository:
-helm repo add language-operator https://language-operator.github.io/language-operator
-helm repo update
+aictl agent create "monitor our API error rates and alert on spikes"
+```
 
-# Install in kube-system:
+This creates a complete agent with:
+- Code synthesized from your description
+- Kubernetes deployment (pod, service, network policies)
+- Observability integration (OpenTelemetry traces)
+- Security isolation (AST validation, network policies)
+
+## How It Works
+
+**1. Natural Language → Code**
+
+The operator calls an LLM to generate Ruby code from your instructions. You can use cloud models (GPT-4, Claude) or local quantized models (Llama, Mistral).
+
+**2. Organic Functions**
+
+Agents are composed of tasks with stable input/output contracts. Tasks can be:
+- **Neural**: LLM decides implementation at runtime
+- **Symbolic**: Explicit Ruby code
+
+The caller doesn't know which type it's calling - the contract is the interface.
+
+**3. Progressive Optimization**
+
+After execution, the system analyzes OpenTelemetry traces to detect patterns. Deterministic neural tasks are automatically converted to symbolic code, reducing cost and latency while preserving the contract.
+
+## Example
+
+**Initial (fully neural):**
+```ruby
+task :check_api,
+  instructions: "Check API health",
+  outputs: { status: 'string' }
+
+task :send_alert,
+  instructions: "Send alert if unhealthy",
+  inputs: { status: 'string' },
+  outputs: { sent: 'boolean' }
+
+main do
+  result = execute_task(:check_api)
+  execute_task(:send_alert, inputs: result)
+end
+```
+
+**After learning (hybrid):**
+```ruby
+task :check_api,
+  outputs: { status: 'string' }
+do |inputs|
+  execute_tool('http', 'get', url: 'https://api.example.com/health')
+end
+
+task :send_alert,  # Kept neural - decision logic varies
+  instructions: "Send alert if unhealthy",
+  inputs: { status: 'string' },
+  outputs: { sent: 'boolean' }
+
+main do  # Unchanged
+  result = execute_task(:check_api)
+  execute_task(:send_alert, inputs: result)
+end
+```
+
+The `main` block never changes. Implementations evolve without breaking callers.
+
+## Features
+
+**Synthesis**
+- Natural language → Ruby DSL
+- Cloud or local LLM support
+- AST-based security validation
+- Self-healing (re-synthesizes on errors)
+
+**Execution**
+- Three modes: autonomous, scheduled, reactive
+- MCP tool integration
+- Multiple LLM providers
+- Type-safe task execution
+
+**Security**
+- AST validation blocks dangerous operations
+- Kubernetes NetworkPolicies (CNI-validated)
+- Container registry whitelist
+- Non-root execution, read-only filesystem
+
+**Observability**
+- OpenTelemetry distributed tracing
+- Prometheus metrics
+- Cost tracking
+- Trace-based learning
+
+## Installation
+
+```bash
+# Add Helm repository
+helm repo add language-operator https://charts.langop.io
+
+# Install operator
 helm install language-operator language-operator/language-operator
+
+# Install aictl
+gem install language-operator
+
+# Set up your first cluster
+aictl quickstart
 ```
 
-## Vision
+## Requirements
 
-Kubernetes should provide CRDs and managed deployments for common gen AI workloads:
+- Kubernetes 1.26+
+- NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
+- Optional: GPU nodes for local model inference
 
-| CRD             | Purpose                                     |
-| --------------- | ------------------------------------------- |
-| LanguageCluster | A group of related models, tools and agents |
-| LanguageModel   | An on-prem model or cloud provider with rate limiting and cost controls |
-| LanguageTool    | An MCP tool for agents; runs as sidecar or deployment |
-| LanguageAgent   | A goal-directed task that uses models, personas and tools |
-| LanguagePersona | A free-form description of a role, job, or preferences |
+## Status
 
+**Alpha** - Core functionality works but not yet recommended for production use.
 
-### LanguageModel
+What's implemented:
+- ✅ Natural language synthesis
+- ✅ Neural and symbolic task execution
+- ✅ Progressive optimization via trace analysis
+- ✅ Security validation (AST, NetworkPolicy, registry)
+- ✅ OpenTelemetry integration
+- ✅ ConfigMap versioning and rollback
 
-Deploy a [litellm](https://docs.litellm.ai/docs/simple_proxy) proxy with rate limiting and cost control:
+The core features are unlikely to change
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageModel
-metadata:
-  name: gpt-4-turbo
-spec:
-  provider: openai
-  modelName: gpt-4-turbo-preview
-  apiKeySecretRef:
-    name: openai-credentials
-    key: api-key
-  rateLimits:
-    requestsPerMinute: 100
-    tokensPerMinute: 100000
-  costTracking:
-    enabled: true
-    inputTokenCost: 0.01
-    outputTokenCost: 0.03
-```
+## Documentation
 
-### LanguageTool
+- [Architecture](docs/ARCHITECTURE.md)
+- [DSL Reference](docs/DSL.md)
+- [Examples](examples/)
+- [Security Model](docs/SECURITY.md)
 
-Deploy an MCP tool as a standalone service or sidecar for shared workspaces:
+## License
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: web-search
-spec:
-  image: gchr.io/language-operator/web-tool:latest
-  deploymentMode: service  # or 'sidecar' for shared workspace access
-```
+[FSL 1.1](LICENSE) - Converts to Apache 2.0 on 2028-01-01
 
-Access to workspace folder:
+**Use Limitation**: Cannot offer Language Operator as a commercial managed service until 2028. Internal use, consulting, and custom deployments are permitted.
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: web-search
-spec:
-  image: gchr.io/language-operator/workspace-tool:latest
-  deploymentMode: sidecar
-```
+## Contributing
 
-### LanguageCluster
-
-A network-isolated <sup>1</sup> environment for agents and tools:
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: production
-spec:
-  domain: agents.example.com
-```
-
-### LanguagePersona
-
-A free-form description of a person, role, or behavior.
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguagePersona
-metadata:
-  name: helpful-assistant
-spec:
-  displayName: "Helpful Assistant"
-  description: "A friendly AI assistant for customer support"
-  systemPrompt: "You are a helpful, patient customer support agent."
-  tone: friendly
-  language: en
-  capabilities:
-    - "Answer questions"
-    - "Provide guidance"
-    - "Escalate to human when needed"
-  limitations:
-    - "Cannot access customer payment information"
-    - "Cannot make refunds without approval"
-```
-
-### LanguageAgent
-
-Self-synthesizing agents <sup>2</sup> from natural language instructions:
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: customer-support-bot
-spec:
-  modelRefs:
-    - name: gpt-4-turbo
-  toolRefs:
-    - name: web-search
-  personaRefs:
-    - name: helpful-assistant
-  instructions: |
-    You are a customer support agent. Answer customer questions
-    using the available tools and escalate complex issues.
-  workspace:
-    enabled: true
-    size: 10Gi
-```
-
-Agents send rich OpenTelemetry traces, which are used to optimize future executions.  For example, if a task being handled by a model can be replicated with in-code tool calls, the agent will be re-synthesized after learning this.
-
-<sup>1</sup> requires CNI like Cilium (recommended)
-
-<sup>2</sup> quality of synthesis is model dependent
+See [CONTRIBUTING.md](CONTRIBUTING.md)
