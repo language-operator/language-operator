@@ -136,13 +136,6 @@ What's implemented:
 
 The core features are unlikely to change
 
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [DSL Reference](docs/DSL.md)
-- [Examples](examples/)
-- [Security Model](docs/SECURITY.md)
-
 ## License
 
 [FSL 1.1](LICENSE) - Converts to Apache 2.0 on 2028-01-01
