@@ -134,8 +134,6 @@ What's implemented:
 - ✅ OpenTelemetry integration
 - ✅ ConfigMap versioning and rollback
 
-The core features are unlikely to change
-
 ## License
 
 [FSL 1.1](LICENSE) - Converts to Apache 2.0 on 2028-01-01
