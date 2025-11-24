@@ -298,7 +298,7 @@ func (m *MockLLMService) extractSchedule(instructions string) string {
 // extractTaskName generates a task name from instructions
 func (m *MockLLMService) extractTaskName(instructions string) string {
 	lower := strings.ToLower(instructions)
-	
+
 	// Generate task name based on keywords in instructions
 	if strings.Contains(lower, "review") || strings.Contains(lower, "check") {
 		return "review_task"
@@ -312,7 +312,7 @@ func (m *MockLLMService) extractTaskName(instructions string) string {
 	if strings.Contains(lower, "process") || strings.Contains(lower, "tasks") {
 		return "process_task"
 	}
-	
+
 	// Default task name
 	return "main_task"
 }

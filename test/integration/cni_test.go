@@ -18,13 +18,13 @@ import (
 // This is a fast unit test using fake Kubernetes client - no real cluster needed
 func TestCNIDetection(t *testing.T) {
 	tests := []struct {
-		name                     string
-		daemonSets               []*appsv1.DaemonSet
-		configMaps               []*corev1.ConfigMap
-		expectedCNI              string
-		expectedNetworkPolicy    bool
-		expectedVersion          string
-		expectError              bool
+		name                  string
+		daemonSets            []*appsv1.DaemonSet
+		configMaps            []*corev1.ConfigMap
+		expectedCNI           string
+		expectedNetworkPolicy bool
+		expectedVersion       string
+		expectError           bool
 	}{
 		{
 			name: "Cilium detected",

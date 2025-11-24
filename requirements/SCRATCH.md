@@ -19,12 +19,20 @@
 ## Next Actions After #18
 1. ✅ Issue #18 - COMPLETED: All synthesis paths now generate task/main DSL v1
 2. ✅ Issue #19 - RESOLVED: agent_synthesis.tmpl already correct
-3. 🚀 Issues #20-21 - READY: Foundation work (validation, testing)
-4. Issues #22-26 - Build learning pipeline (task_synthesis.tmpl integration)
-5. Gateway API issues (#32-38) - Can run in parallel with learning work
+3. ✅ Issue #37 - COMPLETED: Fixed confusing GatewayClassName field naming
+4. 🚀 Issues #20-21 - READY: Foundation work (validation, testing)
+5. Issues #22-26 - Build learning pipeline (task_synthesis.tmpl integration)
+6. Gateway API issues (#32-38) - Can run in parallel with learning work
 
 ## Recent Accomplishments (Nov 24, 2025)
 - **Issue #18 Resolution**: Fixed synthesis template inconsistency
   - Updated fallback logic to generate task/main instead of workflow/steps
   - Enhanced test coverage with DSL v1 validation
   - All synthesis paths now generate organic function model consistently
+
+- **Issue #37 Resolution**: Fixed Gateway API field naming confusion
+  - Added proper `gatewayName` and `gatewayNamespace` fields to IngressConfig
+  - Deprecated misleading `gatewayClassName` field with backward compatibility
+  - Updated controller logic to prefer new fields while maintaining compatibility
+  - Added comprehensive unit tests for field precedence and defaults
+  - Regenerated CRD manifests with improved Gateway API terminology

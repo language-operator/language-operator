@@ -365,7 +365,7 @@ func TestLearningReconciler_generatePatternBasedCode(t *testing.T) {
 	}
 }
 
-func TestLearningReconciler_createVersionedConfigMap(t *testing.T) {
+func TestLearningReconciler_ConfigMapManagerIntegration(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
@@ -386,10 +386,17 @@ func TestLearningReconciler_createVersionedConfigMap(t *testing.T) {
 		WithObjects(agent).
 		Build()
 
-	reconciler := &LearningReconciler{
+	configMapManager := &synthesis.ConfigMapManager{
 		Client: fakeClient,
 		Scheme: scheme,
 		Log:    logr.Discard(),
+	}
+
+	reconciler := &LearningReconciler{
+		Client:           fakeClient,
+		Scheme:           scheme,
+		Log:              logr.Discard(),
+		ConfigMapManager: configMapManager,
 	}
 
 	ctx := context.Background()
@@ -397,7 +404,16 @@ func TestLearningReconciler_createVersionedConfigMap(t *testing.T) {
 	learnedCode := "mock learned code"
 	version := int32(2)
 
-	err := reconciler.createVersionedConfigMap(ctx, agent, taskName, learnedCode, version)
+	// Test using ConfigMapManager directly
+	options := &synthesis.ConfigMapOptions{
+		Code:          learnedCode,
+		Version:       version,
+		SynthesisType: "learned",
+		LearnedTask:   taskName,
+		LearningSource: "pattern-detection",
+	}
+	
+	_, err := reconciler.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, options)
 	require.NoError(t, err)
 
 	// Verify ConfigMap was created
@@ -539,6 +555,12 @@ func TestLearningReconciler_ProcessLearningTrigger_Integration(t *testing.T) {
 		WithObjects(agent).
 		Build()
 
+	configMapManager := &synthesis.ConfigMapManager{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
 	reconciler := &LearningReconciler{
 		Client:               fakeClient,
 		Scheme:               scheme,
@@ -547,6 +569,7 @@ func TestLearningReconciler_ProcessLearningTrigger_Integration(t *testing.T) {
 		LearningInterval:     time.Minute,
 		PatternConfidenceMin: 0.7,
 		Synthesizer:          &MockSynthesizer{GeneratedCode: "mock learned code"},
+		ConfigMapManager:     configMapManager,
 	}
 
 	ctx := context.Background()

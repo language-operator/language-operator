@@ -32,6 +32,7 @@ type LearningReconciler struct {
 	Log                  logr.Logger
 	Recorder             record.EventRecorder
 	Synthesizer          synthesis.AgentSynthesizer // For re-synthesis with task_synthesis.tmpl
+	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
 	LearningInterval     time.Duration // Minimum interval between learning attempts
@@ -413,11 +414,39 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 		return fmt.Errorf("failed to generate learned code: %w", err)
 	}
 
-	// Create new versioned ConfigMap
+	// Create new versioned ConfigMap using ConfigMapManager
 	newVersion := taskStatus.CurrentVersion + 1
-	if err := r.createVersionedConfigMap(ctx, agent, trigger.TaskName, learnedCode, newVersion); err != nil {
+	
+	// Get previous version for tracking
+	var previousVersion *int32
+	if taskStatus.CurrentVersion > 0 {
+		previousVersion = &taskStatus.CurrentVersion
+	}
+
+	configMapOptions := &synthesis.ConfigMapOptions{
+		Code:            learnedCode,
+		Version:         newVersion,
+		SynthesisType:   "learned",
+		PreviousVersion: previousVersion,
+		LearnedTask:     trigger.TaskName,
+		LearningSource:  trigger.EventType, // pattern-detection, error-recovery, etc.
+	}
+
+	if _, err := r.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, configMapOptions); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("failed to create versioned ConfigMap: %w", err)
+	}
+
+	// Apply retention policy if configured
+	if r.MaxVersions > 0 {
+		retentionPolicy := &synthesis.RetentionPolicy{
+			KeepLastN:         r.MaxVersions,
+			AlwaysKeepInitial: true, // Always preserve v1 as specified in DSL v1 proposal
+		}
+		if err := r.ConfigMapManager.ApplyRetentionPolicy(ctx, agent, retentionPolicy); err != nil {
+			// Log error but don't fail the learning process
+			r.Log.Error(err, "Failed to apply retention policy", "agent", agent.Name)
+		}
 	}
 
 	// Update deployment
@@ -539,56 +568,7 @@ func (r *LearningReconciler) generatePatternBasedCode(taskName string, analysis 
 	return codeBuilder.String()
 }
 
-// createVersionedConfigMap creates a new versioned ConfigMap with learned code
-func (r *LearningReconciler) createVersionedConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName, learnedCode string, version int32) error {
-	ctx, span := learningTracer.Start(ctx, "learning.create_configmap")
-	defer span.End()
-
-	configMapName := fmt.Sprintf("%s-v%d", agent.Name, version)
-
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configMapName,
-			Namespace: agent.Namespace,
-			Labels: map[string]string{
-				"langop.io/agent":          agent.Name,
-				"langop.io/version":        fmt.Sprintf("%d", version),
-				"langop.io/synthesis-type": "learned",
-				"langop.io/learned-task":   taskName,
-			},
-			Annotations: map[string]string{
-				"langop.io/learning-timestamp": time.Now().Format(time.RFC3339),
-				"langop.io/learned-from":       "pattern-detection",
-			},
-		},
-		Data: map[string]string{
-			"agent.rb": learnedCode,
-		},
-	}
-
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(agent, configMap, r.Scheme); err != nil {
-		span.RecordError(err)
-		return fmt.Errorf("failed to set controller reference: %w", err)
-	}
-
-	if err := r.Create(ctx, configMap); err != nil {
-		span.RecordError(err)
-		return fmt.Errorf("failed to create versioned ConfigMap: %w", err)
-	}
-
-	span.SetAttributes(
-		attribute.String("learning.configmap_name", configMapName),
-		attribute.Int("learning.version", int(version)),
-	)
-
-	r.Log.Info("Created versioned ConfigMap",
-		"configmap", configMapName,
-		"task", taskName,
-		"version", version)
-
-	return nil
-}
+// Note: createVersionedConfigMap method removed - now using ConfigMapManager
 
 // updateDeployment updates the deployment to use the new versioned ConfigMap
 func (r *LearningReconciler) updateDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, version int32) error {
