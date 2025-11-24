@@ -158,7 +158,7 @@ func (a *LanguageAgent) validateSchedule() error {
 	if a.Spec.Schedule != "" {
 		// Use cron parser to validate the schedule
 		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-		
+
 		if _, err := parser.Parse(a.Spec.Schedule); err != nil {
 			return fmt.Errorf("invalid cron expression %q: %w", a.Spec.Schedule, err)
 		}
