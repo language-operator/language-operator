@@ -364,3 +364,311 @@ func (m *MockLLMService) extractTools(instructions string) []string {
 
 	return tools
 }
+
+// ===================== SPECIALIZED MOCK MODELS FOR TASK-BASED TESTING =====================
+
+// NewMockChatModelForSymbolic creates a mock that generates symbolic tasks
+func NewMockChatModelForSymbolic(mockLLM *MockLLMService) *SymbolicMockChatModel {
+	return &SymbolicMockChatModel{MockChatModel: MockChatModel{mockLLM: mockLLM}}
+}
+
+// NewMockChatModelForHybrid creates a mock that generates hybrid agents
+func NewMockChatModelForHybrid(mockLLM *MockLLMService) *HybridMockChatModel {
+	return &HybridMockChatModel{MockChatModel: MockChatModel{mockLLM: mockLLM}}
+}
+
+// NewMockChatModelForErrors creates a mock that generates validation errors
+func NewMockChatModelForErrors(mockLLM *MockLLMService) *ErrorMockChatModel {
+	return &ErrorMockChatModel{MockChatModel: MockChatModel{mockLLM: mockLLM}}
+}
+
+// SymbolicMockChatModel generates symbolic (code-based) tasks
+type SymbolicMockChatModel struct {
+	MockChatModel
+}
+
+// Generate generates symbolic task code
+func (m *SymbolicMockChatModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	var promptContent string
+	for i := len(input) - 1; i >= 0; i-- {
+		if input[i].Role == schema.User && input[i].Content != "" {
+			promptContent = input[i].Content
+			break
+		}
+	}
+
+	instructions := extractUserInstructions(promptContent)
+	code := m.generateSymbolicCode(instructions)
+
+	return &schema.Message{
+		Role:    schema.Assistant,
+		Content: code,
+	}, nil
+}
+
+func (m *SymbolicMockChatModel) generateSymbolicCode(instructions string) string {
+	lower := strings.ToLower(instructions)
+
+	code := `require 'language_operator'
+
+agent "symbolic-test-agent" do
+  description "Test agent with symbolic tasks"`
+
+	if strings.Contains(lower, "sum") || strings.Contains(lower, "add") {
+		code += `
+
+  task :add_numbers do |inputs|
+    result = inputs[:a] + inputs[:b] 
+    { sum: result }
+  end
+
+  main do |inputs|
+    result = execute_task(:add_numbers, inputs: inputs)
+    result
+  end`
+	} else if strings.Contains(lower, "transform") || strings.Contains(lower, "hash") {
+		code += `
+
+  task :transform_data do |inputs|
+    result = inputs[:data].map { |item| { key: item } }
+    { hash: result }
+  end
+
+  main do |inputs|
+    result = execute_task(:transform_data, inputs: inputs)
+    result
+  end`
+	} else if strings.Contains(lower, "condition") || strings.Contains(lower, "greater") {
+		code += `
+
+  task :check_condition do |inputs|
+    result = inputs[:value] > inputs[:threshold]
+    { result: result }
+  end
+
+  main do |inputs|
+    result = execute_task(:check_condition, inputs: inputs)
+    result
+  end`
+	} else {
+		code += `
+
+  task :process_data do |inputs|
+    result = inputs[:data].to_s.upcase
+    { result: result }
+  end
+
+  main do |inputs|
+    result = execute_task(:process_data, inputs: inputs)
+    result
+  end`
+	}
+
+	code += `
+
+  output do |outputs|
+    puts outputs.inspect
+  end
+end`
+
+	return code
+}
+
+// HybridMockChatModel generates agents with both neural and symbolic tasks
+type HybridMockChatModel struct {
+	MockChatModel
+}
+
+// Generate generates hybrid agent code
+func (m *HybridMockChatModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	var promptContent string
+	for i := len(input) - 1; i >= 0; i-- {
+		if input[i].Role == schema.User && input[i].Content != "" {
+			promptContent = input[i].Content
+			break
+		}
+	}
+
+	instructions := extractUserInstructions(promptContent)
+	code := m.generateHybridCode(instructions)
+
+	return &schema.Message{
+		Role:    schema.Assistant,
+		Content: code,
+	}, nil
+}
+
+func (m *HybridMockChatModel) generateHybridCode(instructions string) string {
+	lower := strings.ToLower(instructions)
+
+	code := `require 'language_operator'
+
+agent "hybrid-test-agent" do
+  description "Test agent with both neural and symbolic tasks"`
+
+	if strings.Contains(lower, "pipeline") || strings.Contains(lower, "average") {
+		code += `
+
+  task :fetch_data,
+    instructions: "fetch data from the API endpoint",
+    inputs: { url: 'string' },
+    outputs: { data: 'array', count: 'integer' }
+
+  task :calculate_avg do |inputs|
+    total = inputs[:data].sum
+    average = total / inputs[:data].length.to_f
+    { average: average, total: total }
+  end
+
+  task :send_report,
+    instructions: "format and send the report via email",
+    inputs: { average: 'number', total: 'number' },
+    outputs: { sent: 'boolean' }
+
+  main do |inputs|
+    data = execute_task(:fetch_data, inputs: { url: inputs[:url] })
+    stats = execute_task(:calculate_avg, inputs: { data: data[:data] })
+    result = execute_task(:send_report, inputs: stats)
+    result
+  end`
+	} else if strings.Contains(lower, "file") || strings.Contains(lower, "lines") {
+		code += `
+
+  task :read_file,
+    instructions: "read the file from workspace using workspace tool",
+    inputs: { path: 'string' },
+    outputs: { content: 'string', lines: 'array' }
+
+  task :count_lines do |inputs|
+    line_count = inputs[:lines].length
+    { count: line_count, empty_lines: inputs[:lines].select(&:empty?).length }
+  end
+
+  task :log_result,
+    instructions: "log the result with formatting",
+    inputs: { count: 'integer', empty_lines: 'integer' },
+    outputs: { logged: 'boolean' }
+
+  main do |inputs|
+    file_data = execute_task(:read_file, inputs: { path: inputs[:file_path] })
+    counts = execute_task(:count_lines, inputs: { lines: file_data[:lines] })
+    result = execute_task(:log_result, inputs: counts)
+    result
+  end`
+	}
+
+	code += `
+
+  output do |outputs|
+    puts outputs.inspect
+  end
+end`
+
+	return code
+}
+
+// ErrorMockChatModel generates code with validation errors
+type ErrorMockChatModel struct {
+	MockChatModel
+}
+
+// Generate generates code with intentional validation errors
+func (m *ErrorMockChatModel) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	var promptContent string
+	for i := len(input) - 1; i >= 0; i-- {
+		if input[i].Role == schema.User && input[i].Content != "" {
+			promptContent = input[i].Content
+			break
+		}
+	}
+
+	instructions := extractUserInstructions(promptContent)
+	code := m.generateErrorCode(instructions)
+
+	return &schema.Message{
+		Role:    schema.Assistant,
+		Content: code,
+	}, nil
+}
+
+func (m *ErrorMockChatModel) generateErrorCode(instructions string) string {
+	lower := strings.ToLower(instructions)
+
+	if strings.Contains(lower, "missing main") {
+		return `require 'language_operator'
+
+agent "error-test-agent" do
+  description "Agent missing main block"
+  
+  task :some_task,
+    instructions: "do something",
+    inputs: {},
+    outputs: { result: 'string' }
+end`
+	} else if strings.Contains(lower, "invalid type") {
+		return `require 'language_operator'
+
+agent "error-test-agent" do
+  description "Agent with invalid types"
+  
+  task :bad_task,
+    instructions: "task with bad types",
+    inputs: { data: 'invalid_type' },
+    outputs: { result: 'bad_type' }
+  
+  main do |inputs|
+    result = execute_task(:bad_task, inputs: inputs)
+    result
+  end
+end`
+	} else if strings.Contains(lower, "non-existent") || strings.Contains(lower, "undefined") {
+		return `require 'language_operator'
+
+agent "error-test-agent" do
+  description "Agent calling undefined task"
+  
+  task :good_task,
+    instructions: "this task exists",
+    inputs: {},
+    outputs: { result: 'string' }
+  
+  main do |inputs|
+    result = execute_task(:missing_task, inputs: inputs)
+    result
+  end
+end`
+	} else if strings.Contains(lower, "system call") || strings.Contains(lower, "dangerous") {
+		return `require 'language_operator'
+
+agent "error-test-agent" do
+  description "Agent with dangerous symbolic task"
+  
+  task :dangerous_task do |inputs|
+    system("rm -rf /")
+    { result: "dangerous" }
+  end
+  
+  main do |inputs|
+    result = execute_task(:dangerous_task, inputs: inputs)
+    result
+  end
+end`
+	}
+
+	// Default error case
+	return `require 'language_operator'
+
+agent "error-test-agent" do
+  description "Agent with generic error"
+  
+  task :error_task,
+    instructions: "task that will cause validation error",
+    inputs: { bad: 'invalid' },
+    outputs: {}
+  
+  main do |inputs|
+    result = execute_task(:nonexistent, inputs: inputs)
+    result
+  end
+end`
+}

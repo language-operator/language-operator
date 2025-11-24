@@ -723,6 +723,52 @@ func (s *Synthesizer) validateDSL(ctx context.Context, code string) error {
 		return fmt.Errorf("security validation failed: %w", err)
 	}
 
+	// Task validation: validate DSL v1 task/main structure
+	taskValidator := NewTaskValidator(s.log)
+	taskErrors, err := taskValidator.ValidateTaskAgent(ctx, code)
+	if err != nil {
+		span.SetAttributes(attribute.String("validation.error_type", "task_validation_execution_failed"))
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Task validation execution failed")
+		s.log.Info("Task validation execution failed", "error", err.Error())
+		// Don't fail synthesis if validation execution fails - continue
+	} else if len(taskErrors) > 0 {
+		// Filter out warnings and count only errors
+		errorCount := 0
+		var errorMessages []string
+		for _, taskErr := range taskErrors {
+			if taskErr.Severity == "error" {
+				errorCount++
+				if taskErr.Task != "" {
+					errorMessages = append(errorMessages, fmt.Sprintf("Task '%s': %s", taskErr.Task, taskErr.Message))
+				} else {
+					errorMessages = append(errorMessages, taskErr.Message)
+				}
+			}
+		}
+
+		if errorCount > 0 {
+			span.SetAttributes(
+				attribute.String("validation.error_type", "task_validation_failed"),
+				attribute.Int("validation.task_error_count", errorCount),
+			)
+			err := fmt.Errorf("task validation failed: %s", strings.Join(errorMessages, "; "))
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Task validation failed")
+			return err
+		}
+
+		// Log warnings but don't fail
+		warningCount := len(taskErrors) - errorCount
+		if warningCount > 0 {
+			span.SetAttributes(attribute.Int("validation.task_warning_count", warningCount))
+			s.log.Info("Task validation warnings", "warningCount", warningCount)
+		}
+	} else {
+		// Task validation passed
+		span.AddEvent("task_validation_passed")
+	}
+
 	// Validation successful
 	span.SetAttributes(attribute.String("validation.result", "success"))
 	span.SetStatus(codes.Ok, "Validation successful")
