@@ -2066,17 +2066,128 @@ func (r *LanguageAgentReconciler) reconcileReferenceGrant(ctx context.Context, a
 	return nil
 }
 
+// validateGatewayTLS validates that the Gateway has appropriate TLS configuration
+// Returns the protocol that should be used for webhook URLs (http or https)
+func (r *LanguageAgentReconciler) validateGatewayTLS(ctx context.Context, gatewayName, gatewayNamespace string, tlsEnabled bool) (string, error) {
+	log := log.FromContext(ctx)
+
+	// Query the Gateway to check its listeners
+	gateway := &unstructured.Unstructured{}
+	gateway.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1",
+		Kind:    "Gateway",
+	})
+
+	err := r.Get(ctx, types.NamespacedName{Name: gatewayName, Namespace: gatewayNamespace}, gateway)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if tlsEnabled {
+				return "", fmt.Errorf("Gateway %s/%s not found, but TLS is enabled in cluster config", gatewayNamespace, gatewayName)
+			}
+			// Gateway doesn't exist, but TLS not required - assume HTTP
+			log.Info("Gateway not found, assuming HTTP protocol", "gateway", gatewayName+"/"+gatewayNamespace)
+			return "http", nil
+		}
+		return "", fmt.Errorf("failed to get Gateway %s/%s: %w", gatewayNamespace, gatewayName, err)
+	}
+
+	// Extract listeners from Gateway spec
+	spec, exists := gateway.Object["spec"].(map[string]interface{})
+	if !exists {
+		return "", fmt.Errorf("Gateway %s/%s has invalid spec", gatewayNamespace, gatewayName)
+	}
+
+	listeners, exists := spec["listeners"].([]interface{})
+	if !exists || len(listeners) == 0 {
+		if tlsEnabled {
+			return "", fmt.Errorf("Gateway %s/%s has no listeners, but TLS is enabled in cluster config", gatewayNamespace, gatewayName)
+		}
+		return "http", nil
+	}
+
+	// Check listeners for TLS configuration
+	hasHTTPS := false
+	hasHTTP := false
+
+	for _, listenerInterface := range listeners {
+		listener, ok := listenerInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Check port and protocol
+		port, portExists := listener["port"]
+		protocol, protocolExists := listener["protocol"]
+
+		if portExists && protocolExists {
+			portNum := int64(0)
+			switch p := port.(type) {
+			case int64:
+				portNum = p
+			case float64:
+				portNum = int64(p)
+			case int:
+				portNum = int64(p)
+			}
+
+			protocolStr, _ := protocol.(string)
+
+			// Check for HTTPS (port 443 or TLS in protocol/listener config)
+			if portNum == 443 || protocolStr == "HTTPS" {
+				hasHTTPS = true
+			}
+			// Check for TLS configuration in listener
+			if tls, tlsExists := listener["tls"]; tlsExists && tls != nil {
+				hasHTTPS = true
+			}
+
+			// Check for HTTP
+			if portNum == 80 || protocolStr == "HTTP" {
+				hasHTTP = true
+			}
+		}
+	}
+
+	// Determine protocol and validate against TLS requirements
+	if tlsEnabled {
+		if !hasHTTPS {
+			return "", fmt.Errorf("TLS is enabled in cluster config, but Gateway %s/%s has no HTTPS listeners (port 443 or TLS configuration)", gatewayNamespace, gatewayName)
+		}
+		log.Info("Gateway has HTTPS listeners, using HTTPS protocol", "gateway", gatewayName+"/"+gatewayNamespace)
+		return "https", nil
+	} else {
+		// TLS not required, prefer HTTPS if available, otherwise HTTP
+		if hasHTTPS {
+			log.Info("Gateway has HTTPS listeners, using HTTPS protocol", "gateway", gatewayName+"/"+gatewayNamespace)
+			return "https", nil
+		} else if hasHTTP {
+			log.Info("Gateway has HTTP listeners, using HTTP protocol", "gateway", gatewayName+"/"+gatewayNamespace)
+			return "http", nil
+		} else {
+			log.Info("Gateway has no recognized HTTP/HTTPS listeners, defaulting to HTTP", "gateway", gatewayName+"/"+gatewayNamespace)
+			return "http", nil
+		}
+	}
+}
+
 // reconcileHTTPRoute creates or updates a Gateway API HTTPRoute for the agent
 func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
 	log := log.FromContext(ctx)
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// Get cluster config for Gateway configuration
+	// Get cluster config for Gateway configuration and TLS settings
 	var gatewayName, gatewayNamespace string
+	var tlsEnabled bool
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
 		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
 			if cluster.Spec.IngressConfig != nil {
+				// Extract TLS configuration
+				if cluster.Spec.IngressConfig.TLS != nil {
+					tlsEnabled = cluster.Spec.IngressConfig.TLS.Enabled
+				}
+
 				// Prefer new GatewayName field, fall back to deprecated GatewayClassName for backward compatibility
 				if cluster.Spec.IngressConfig.GatewayName != "" {
 					gatewayName = cluster.Spec.IngressConfig.GatewayName
@@ -2099,6 +2210,12 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	if gatewayName == "" {
 		gatewayName = "default"
 		gatewayNamespace = "default"
+	}
+
+	// Validate Gateway TLS configuration and determine protocol
+	_, err := r.validateGatewayTLS(ctx, gatewayName, gatewayNamespace, tlsEnabled)
+	if err != nil {
+		return fmt.Errorf("Gateway TLS validation failed: %w", err)
 	}
 
 	// Create ReferenceGrant if cross-namespace Gateway reference is needed
@@ -2149,7 +2266,7 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	// Check if HTTPRoute already exists
 	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(httpRoute.GroupVersionKind())
-	err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existing)
+	err = r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existing)
 
 	if err != nil {
 		if !errors.IsNotFound(err) {
