@@ -48,6 +48,7 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -102,6 +103,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -160,6 +162,7 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -226,6 +229,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -283,6 +287,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -342,6 +347,7 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	result, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -389,6 +395,7 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -454,6 +461,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -525,6 +533,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -608,6 +617,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -706,6 +716,7 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -807,6 +818,7 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -900,6 +912,7 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 
@@ -984,6 +997,7 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		Log:      logr.Discard(),
 		Recorder: &record.FakeRecorder{},
 	}
+	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 

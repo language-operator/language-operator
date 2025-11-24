@@ -7,10 +7,12 @@
 - **✅ COMPLETED**: Issues #20, #21 - Foundation (validation & testing)
 - **✅ COMPLETED**: Issue #27 - Remove old workflow synthesis templates
 - **✅ COMPLETED**: Issue #39 - Include complete MCP tool schemas in synthesis (quality improvement)
+- **✅ COMPLETED**: Issue #32 - HTTPRoute cross-namespace Gateway ReferenceGrant (production fix)
+- **✅ COMPLETED**: Issue #34 - Webhook URL timing fix with route readiness conditions
+- **✅ COMPLETED**: Issue #38 - HTTPRoute/Ingress cleanup verification on agent deletion
 - **🚀 READY**: Issue #24 - Deployment update for learned ConfigMaps (critical path)
-- **🚀 READY**: Issue #32 - HTTPRoute cross-namespace Gateway ReferenceGrant (production fix)
 - **Critical Path**: #24 → #25-26 (advanced learning) → #29 (release)
-- **Parallel Work**: Gateway API issues (#32-38) can proceed independently
+- **Parallel Work**: Gateway API issues (#33-37) can proceed independently
 
 ## Key Project Dependencies
 - ✅ Issue #18: Synthesis template consistency (COMPLETED)
@@ -19,7 +21,7 @@
 - Issues #20-21: Validation & testing foundation 
 - Issues #22-24: Learning controller pipeline (core learning infrastructure)
 - Issues #25-26: Advanced learning features (error-triggered, metrics)
-- Gateway API issues (#32-38): Infrastructure improvements (can run in parallel)
+- Gateway API issues (#32-37): Infrastructure improvements (can run in parallel)
 - Issue #29: DSL v1 release (final milestone)
 
 ## Next Actions After #18
@@ -61,3 +63,24 @@
   - Critical for learning-based synthesis quality: LLM gets complete tool context
   - Comprehensive test coverage for MCP discovery and schema formatting
   - Maintains backward compatibility with existing Tools field
+
+- **Issue #32 Resolution**: Implemented automatic ReferenceGrant support for cross-namespace Gateway references
+  - Added `reconcileReferenceGrant()` method to handle Gateway API v1 compliance
+  - Automatically creates ReferenceGrant in gateway namespace when HTTPRoute references cross-namespace Gateway
+  - Uses proper naming convention: `{agent-name}-{agent-namespace}-referencegrant`
+  - Added RBAC permissions for `gateway.networking.k8s.io/referencegrants` resource
+  - Integrated with HTTPRoute reconciliation - creates ReferenceGrant before HTTPRoute
+  - Comprehensive test coverage for same-namespace vs cross-namespace scenarios
+  - Fixes silent failures of HTTPRoutes with cross-namespace Gateway references
+  - Commit `79b8913` with full CI validation and test coverage
+
+- **Issue #34 Resolution**: Fixed webhook URL timing with proper route readiness conditions
+  - Added WebhookRouteCreated and WebhookRouteReady condition types to LanguageAgent CRD
+  - Enhanced webhook reconciliation to check actual route readiness before populating URLs
+  - HTTPRoute readiness: Check Accepted and Programmed conditions on parent Gateways
+  - Ingress readiness: Check load balancer status for IP/hostname assignment  
+  - Only populate webhook URLs when routes are confirmed ready and serving traffic
+  - Clear webhook URLs when routes become unavailable
+  - Added comprehensive unit tests for route readiness checking logic
+  - Eliminates silent failures where status shows ready but webhooks fail
+  - Commits `df2d2aa` and `25157dd` with full CI validation and test coverage

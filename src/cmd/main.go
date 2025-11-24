@@ -255,6 +255,9 @@ func main() {
 		Recorder:          mgr.GetEventRecorderFor("languageagent-controller"),
 		AllowedRegistries: allowedRegistries,
 	}
+	
+	// Initialize Gateway API cache
+	agentReconciler.InitializeGatewayCache()
 
 	// Initialize rate limiter and quota manager for synthesis cost controls
 	maxSynthesisPerHour := 500 // Default: 500 synthesis per namespace per hour

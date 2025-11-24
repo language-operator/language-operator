@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -40,6 +41,18 @@ import (
 	"github.com/language-operator/language-operator/pkg/validation"
 )
 
+// gatewayAPICache holds cached Gateway API availability information
+type gatewayAPICache struct {
+	available bool
+	lastCheck time.Time
+	mutex     sync.RWMutex
+}
+
+const (
+	// Gateway API cache TTL - how long to cache the availability result
+	gatewayAPICacheTTL = 5 * time.Minute
+)
+
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
@@ -51,6 +64,7 @@ type LanguageAgentReconciler struct {
 	RateLimiter            *synthesis.RateLimiter
 	QuotaManager           *synthesis.QuotaManager
 	AllowedRegistries      []string
+	gatewayCache           *gatewayAPICache
 }
 
 // agentTracer is the OpenTelemetry tracer for the LanguageAgent controller
@@ -62,6 +76,11 @@ const (
 	// LangopGroupID is the group ID for the langop group
 	LangopGroupID = 101
 )
+
+// InitializeGatewayCache initializes the Gateway API cache
+func (r *LanguageAgentReconciler) InitializeGatewayCache() {
+	r.gatewayCache = &gatewayAPICache{}
+}
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
@@ -2218,8 +2237,44 @@ func (r *LanguageAgentReconciler) detectNetworkPolicySupport(ctx context.Context
 	return false, "unknown"
 }
 
-// hasGatewayAPI checks if Gateway API CRDs are available in the cluster
+// hasGatewayAPI checks if Gateway API CRDs are available in the cluster with caching
 func (r *LanguageAgentReconciler) hasGatewayAPI(ctx context.Context) (bool, error) {
+	// Quick read lock check for cached result
+	r.gatewayCache.mutex.RLock()
+	if time.Since(r.gatewayCache.lastCheck) < gatewayAPICacheTTL {
+		available := r.gatewayCache.available
+		r.gatewayCache.mutex.RUnlock()
+		return available, nil
+	}
+	r.gatewayCache.mutex.RUnlock()
+
+	// Cache is stale, acquire write lock and refresh
+	r.gatewayCache.mutex.Lock()
+	defer r.gatewayCache.mutex.Unlock()
+
+	// Check again in case another goroutine already refreshed
+	if time.Since(r.gatewayCache.lastCheck) < gatewayAPICacheTTL {
+		return r.gatewayCache.available, nil
+	}
+
+	// Perform expensive discovery
+	available, err := r.discoverGatewayAPI(ctx)
+	if err != nil {
+		// Don't update cache on error, return stale data if available
+		if !r.gatewayCache.lastCheck.IsZero() {
+			return r.gatewayCache.available, nil
+		}
+		return false, err
+	}
+
+	// Update cache with fresh result
+	r.gatewayCache.available = available
+	r.gatewayCache.lastCheck = time.Now()
+	return available, nil
+}
+
+// discoverGatewayAPI performs the actual API discovery without caching
+func (r *LanguageAgentReconciler) discoverGatewayAPI(ctx context.Context) (bool, error) {
 	// Create a discovery client from the existing client
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
