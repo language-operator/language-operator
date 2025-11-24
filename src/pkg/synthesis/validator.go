@@ -362,7 +362,8 @@ func (v *TaskValidator) parseMainBlock(code string, lines []string, agent *Agent
 // parseTaskCalls extracts task calls from a code block
 func (v *TaskValidator) parseTaskCalls(codeBlock string, mainBlock *MainBlock) {
 	// Find execute_task calls
-	taskCallRegex := regexp.MustCompile(`(\w+)\s*=\s*execute_task\(\s*:(\w+)(?:,\s*inputs:\s*\{([^}]*)\})?\s*\)`)
+	// Support both hash literals {key: value} and variable references
+	taskCallRegex := regexp.MustCompile(`(\w+)\s*=\s*execute_task\(\s*:(\w+)(?:,\s*inputs:\s*([^)]+))?\s*\)`)
 	matches := taskCallRegex.FindAllStringSubmatch(codeBlock, -1)
 
 	for _, match := range matches {
@@ -400,10 +401,23 @@ func parseTypeHash(str string) map[string]string {
 	return result
 }
 
-// parseInputs parses input assignments like "name: variable, count: 42"
+// parseInputs parses input assignments like "name: variable, count: 42" or just "variable_name"
 func parseInputs(str string) map[string]string {
 	result := make(map[string]string)
 	if str == "" {
+		return result
+	}
+
+	// Remove surrounding braces if they exist
+	str = strings.TrimSpace(str)
+	if strings.HasPrefix(str, "{") && strings.HasSuffix(str, "}") {
+		str = strings.Trim(str, "{}")
+		str = strings.TrimSpace(str)
+	}
+
+	// If it's just a variable name (no colons), treat it as a direct input
+	if !strings.Contains(str, ":") {
+		result["_variable"] = str
 		return result
 	}
 
@@ -525,6 +539,11 @@ func (v *TaskValidator) validateTypeConsistency(agent *AgentStructure) []TaskVal
 
 		// Validate input types match expected
 		for inputName, inputValue := range taskCall.Inputs {
+			// Skip validation for symbolic tasks when using variable inputs
+			if task.IsSymbolic && inputName == "_variable" {
+				continue
+			}
+			
 			_, exists := task.Inputs[inputName]
 			if !exists {
 				errors = append(errors, TaskValidationError{
