@@ -561,7 +561,7 @@ func (s *Synthesizer) buildSynthesisPromptFallback(req AgentSynthesisRequest, to
 
 **Detected Temporal Intent:** %s
 
-Generate Ruby DSL code using this exact format (wrapped in triple-backticks with ruby):
+Generate Ruby DSL v1 code using the task/main model (wrapped in triple-backticks with ruby):
 
 `+"```ruby"+`
 require 'language_operator'
@@ -569,23 +569,25 @@ require 'language_operator'
 agent "%s" do
   description "Brief description extracted from instructions"
 %s%s
-  # Extract objectives from instructions
-  objectives [
-    "First objective",
-    "Second objective"
-  ]
+  # Define tasks with type schemas (organic functions)
+  task :example_task,
+    instructions: "specific task description from instructions",
+    inputs: { param: 'string' },
+    outputs: { result: 'string' }
 
-  # Define workflow if instructions mention specific steps
-  # workflow do
-  #   step :step_name, tool: "tool_name", params: {key: "value"}
-  #   step :another_step, depends_on: :step_name
-  # end
+  # Add more tasks as needed based on instructions
+
+  # Main execution flow
+  main do |inputs|
+    result = execute_task(:example_task, inputs: { param: "value" })
+    result
+  end
 
 %s
 
-  # Output configuration (if workspace enabled)
-  output do
-    workspace "results/output.txt"
+  # Output configuration
+  output do |outputs|
+    puts outputs.inspect
   end
 end
 `+"```"+`
@@ -593,9 +595,9 @@ end
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after
 %s
-5. Break down instructions into clear, actionable objectives
-6. Create workflow steps if instructions describe a process
-7. Use available tools in workflow steps
+5. Break down instructions into specific tasks with type schemas
+6. Use task/main model, not workflow/steps
+7. Each task must have inputs/outputs type contracts
 8. Use the agent name: "%s"
 
 Generate the code now:`,

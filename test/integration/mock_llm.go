@@ -233,21 +233,38 @@ func (m *MockLLMService) generateMockSynthesis(instructions string) string {
 
 	schedule := m.extractSchedule(lower)
 
-	// Generate agent code with require statement
+	// Generate agent code with require statement using DSL v1 task/main model
 	// The synthesizer validates this is present, and the validator wrapper
 	// strips it before security validation (see issue #41 in language-operator-gem)
 	code := `require 'language_operator'
 
 agent "test-agent" do
-`
+  description "Generated agent for testing"`
 
 	if schedule != "" {
-		code += fmt.Sprintf(`  schedule "%s"
-`, schedule)
+		code += fmt.Sprintf(`
+  schedule "%s"`, schedule)
 	}
 
-	code += `end
-`
+	// Add task definition based on instructions
+	taskName := m.extractTaskName(instructions)
+	code += fmt.Sprintf(`
+
+  task :%s,
+    instructions: "%s",
+    inputs: {},
+    outputs: { result: 'string' }
+
+  main do |inputs|
+    result = execute_task(:%s)
+    result
+  end
+
+  output do |outputs|
+    puts outputs.inspect
+  end
+end
+`, taskName, instructions, taskName)
 
 	return code
 }
@@ -276,6 +293,28 @@ func (m *MockLLMService) extractSchedule(instructions string) string {
 		return "0 0 * * 0"
 	}
 	return ""
+}
+
+// extractTaskName generates a task name from instructions
+func (m *MockLLMService) extractTaskName(instructions string) string {
+	lower := strings.ToLower(instructions)
+	
+	// Generate task name based on keywords in instructions
+	if strings.Contains(lower, "review") || strings.Contains(lower, "check") {
+		return "review_task"
+	}
+	if strings.Contains(lower, "sync") || strings.Contains(lower, "data") {
+		return "sync_task"
+	}
+	if strings.Contains(lower, "report") || strings.Contains(lower, "send") {
+		return "report_task"
+	}
+	if strings.Contains(lower, "process") || strings.Contains(lower, "tasks") {
+		return "process_task"
+	}
+	
+	// Default task name
+	return "main_task"
 }
 
 // extractTools identifies tools from instructions

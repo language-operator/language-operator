@@ -49,6 +49,13 @@ func TestSynthesisQuality(t *testing.T) {
 				strings.HasPrefix(strings.TrimSpace(code), "require"),
 				"Code should start with require statement")
 			assert.Contains(t, code, "agent", "Code should contain agent definition")
+			
+			// Verify DSL v1 task/main model
+			assert.Contains(t, code, "task :", "Code should contain task definition")
+			assert.Contains(t, code, "main do", "Code should contain main block")
+			assert.Contains(t, code, "execute_task", "Code should use execute_task")
+			assert.Contains(t, code, "inputs:", "Code should have task inputs schema")
+			assert.Contains(t, code, "outputs:", "Code should have task outputs schema")
 
 			// Verify expected schedule
 			if scenario.ExpectedSchedule != "" {
