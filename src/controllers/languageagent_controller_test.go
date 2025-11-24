@@ -855,3 +855,178 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 		}
 	}
 }
+
+func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+			DeletionTimestamp: &metav1.Time{
+				Time: metav1.Now().Time,
+			},
+			Finalizers: []string{FinalizerName},
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "Test agent for cleanup",
+		},
+	}
+
+	// Create resources that should be cleaned up
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	// Service to cleanup
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, service).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+
+	// Run reconcile - should trigger cleanup since agent has DeletionTimestamp
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify the service was deleted
+	svc := &corev1.Service{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, svc)
+	if !errors.IsNotFound(err) {
+		t.Errorf("Expected service to be deleted, but it still exists or got different error: %v", err)
+	}
+
+	// Verify the agent was either deleted or finalizer was removed
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, updatedAgent)
+
+	if errors.IsNotFound(err) {
+		// Agent was fully deleted - this is expected and good
+		t.Log("Agent was successfully deleted after cleanup")
+	} else if err != nil {
+		t.Fatalf("Unexpected error getting updated agent: %v", err)
+	} else {
+		// Agent still exists, check that finalizer was removed
+		for _, finalizer := range updatedAgent.Finalizers {
+			if finalizer == FinalizerName {
+				t.Error("Expected finalizer to be removed after successful cleanup")
+			}
+		}
+	}
+}
+
+func TestLanguageAgentController_CleanupMethods(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "Test agent for cleanup methods",
+		},
+	}
+
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	// Create a service that should be cleaned up
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service",
+			Namespace: agent.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 80}},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, service).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+
+	ctx := context.Background()
+
+	t.Run("cleanupServices", func(t *testing.T) {
+		// Test service cleanup
+		err := reconciler.cleanupServices(ctx, agent)
+		if err != nil {
+			t.Fatalf("cleanupServices failed: %v", err)
+		}
+
+		// Verify service was deleted
+		svc := &corev1.Service{}
+		err = fakeClient.Get(ctx, types.NamespacedName{
+			Name:      "test-service",
+			Namespace: agent.Namespace,
+		}, svc)
+		if !errors.IsNotFound(err) {
+			t.Errorf("Expected service to be deleted, but it still exists or got different error: %v", err)
+		}
+	})
+
+	t.Run("cleanupHTTPRoutes_no_gateway_api", func(t *testing.T) {
+		// Test HTTPRoute cleanup when Gateway API is not available
+		// This should not error even if Gateway API CRDs don't exist
+		err := reconciler.cleanupHTTPRoutes(ctx, agent)
+		if err != nil {
+			t.Errorf("cleanupHTTPRoutes should handle missing Gateway API gracefully, got error: %v", err)
+		}
+	})
+
+	t.Run("cleanupIngresses_empty_list", func(t *testing.T) {
+		// Test Ingress cleanup with no ingresses present
+		err := reconciler.cleanupIngresses(ctx, agent)
+		if err != nil {
+			t.Errorf("cleanupIngresses should handle empty list gracefully, got error: %v", err)
+		}
+	})
+
+	t.Run("cleanupReferenceGrants_no_gateway_api", func(t *testing.T) {
+		// Test ReferenceGrant cleanup when Gateway API is not available
+		err := reconciler.cleanupReferenceGrants(ctx, agent)
+		if err != nil {
+			t.Errorf("cleanupReferenceGrants should handle missing Gateway API gracefully, got error: %v", err)
+		}
+	})
+}

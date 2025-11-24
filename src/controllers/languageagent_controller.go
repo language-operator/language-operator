@@ -1813,8 +1813,222 @@ func (r *LanguageAgentReconciler) composePersonas(personas []*langopv1alpha1.Lan
 }
 
 func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	// Resources will be cleaned up automatically via owner references
+	log := log.FromContext(ctx)
+	log.Info("Starting explicit resource cleanup", "agent", agent.Name, "namespace", agent.Namespace)
+
+	// Set cleanup timeout
+	cleanupTimeout := 30 * time.Second
+	cleanupCtx, cancel := context.WithTimeout(ctx, cleanupTimeout)
+	defer cancel()
+
+	var cleanupErrors []error
+
+	// 1. Cleanup HTTPRoutes
+	if err := r.cleanupHTTPRoutes(cleanupCtx, agent); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("HTTPRoute cleanup failed: %w", err))
+		log.Error(err, "Failed to cleanup HTTPRoutes", "agent", agent.Name)
+	}
+
+	// 2. Cleanup Ingresses
+	if err := r.cleanupIngresses(cleanupCtx, agent); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("Ingress cleanup failed: %w", err))
+		log.Error(err, "Failed to cleanup Ingresses", "agent", agent.Name)
+	}
+
+	// 3. Cleanup Services
+	if err := r.cleanupServices(cleanupCtx, agent); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("Service cleanup failed: %w", err))
+		log.Error(err, "Failed to cleanup Services", "agent", agent.Name)
+	}
+
+	// 4. Cleanup cross-namespace ReferenceGrants
+	if err := r.cleanupReferenceGrants(cleanupCtx, agent); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("ReferenceGrant cleanup failed: %w", err))
+		log.Error(err, "Failed to cleanup ReferenceGrants", "agent", agent.Name)
+	}
+
+	// Log summary
+	if len(cleanupErrors) == 0 {
+		log.Info("Resource cleanup completed successfully", "agent", agent.Name)
+		return nil
+	}
+
+	// Return combined error for critical failures, but don't block deletion indefinitely
+	log.Info("Resource cleanup completed with errors", "agent", agent.Name, "errorCount", len(cleanupErrors))
+	for _, err := range cleanupErrors {
+		log.Error(err, "Cleanup error details")
+	}
+
+	// Don't block agent deletion for cleanup failures - log and continue
 	return nil
+}
+
+// cleanupHTTPRoutes deletes HTTPRoutes owned by the agent and verifies deletion
+func (r *LanguageAgentReconciler) cleanupHTTPRoutes(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// List HTTPRoutes owned by this agent
+	httpRouteList := &unstructured.UnstructuredList{}
+	httpRouteList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1",
+		Kind:    "HTTPRouteList",
+	})
+
+	// Use label selector to find resources owned by this agent
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labelSelector := client.MatchingLabels(labels)
+
+	if err := r.List(ctx, httpRouteList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to list HTTPRoutes: %w", err)
+	}
+
+	// Delete each HTTPRoute and verify deletion
+	for _, route := range httpRouteList.Items {
+		if err := r.deleteAndVerifyResource(ctx, &route, "HTTPRoute"); err != nil {
+			return fmt.Errorf("failed to delete HTTPRoute %s: %w", route.GetName(), err)
+		}
+		log.Info("Successfully deleted HTTPRoute", "name", route.GetName(), "namespace", route.GetNamespace())
+	}
+
+	return nil
+}
+
+// cleanupIngresses deletes Ingresses owned by the agent and verifies deletion
+func (r *LanguageAgentReconciler) cleanupIngresses(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	ingressList := &networkingv1.IngressList{}
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labelSelector := client.MatchingLabels(labels)
+
+	if err := r.List(ctx, ingressList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to list Ingresses: %w", err)
+	}
+
+	// Delete each Ingress and verify deletion
+	for _, ingress := range ingressList.Items {
+		ingressObj := ingress // Create a copy to avoid pointer issues
+		if err := r.deleteAndVerifyResource(ctx, &ingressObj, "Ingress"); err != nil {
+			return fmt.Errorf("failed to delete Ingress %s: %w", ingress.Name, err)
+		}
+		log.Info("Successfully deleted Ingress", "name", ingress.Name, "namespace", ingress.Namespace)
+	}
+
+	return nil
+}
+
+// cleanupServices deletes Services owned by the agent and verifies deletion
+func (r *LanguageAgentReconciler) cleanupServices(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	serviceList := &corev1.ServiceList{}
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labelSelector := client.MatchingLabels(labels)
+
+	if err := r.List(ctx, serviceList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to list Services: %w", err)
+	}
+
+	// Delete each Service and verify deletion
+	for _, service := range serviceList.Items {
+		serviceObj := service // Create a copy to avoid pointer issues
+		if err := r.deleteAndVerifyResource(ctx, &serviceObj, "Service"); err != nil {
+			return fmt.Errorf("failed to delete Service %s: %w", service.Name, err)
+		}
+		log.Info("Successfully deleted Service", "name", service.Name, "namespace", service.Namespace)
+	}
+
+	return nil
+}
+
+// cleanupReferenceGrants deletes ReferenceGrants created for cross-namespace Gateway access
+func (r *LanguageAgentReconciler) cleanupReferenceGrants(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// ReferenceGrants are created with specific naming pattern: {agent-name}-{agent-namespace}-referencegrant
+	// They could be in different namespaces (gateway namespaces), so we need to search across namespaces
+
+	referenceGrantList := &unstructured.UnstructuredList{}
+	referenceGrantList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1beta1",
+		Kind:    "ReferenceGrantList",
+	})
+
+	// List all ReferenceGrants across all namespaces to find ones created for this agent
+	if err := r.List(ctx, referenceGrantList); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to list ReferenceGrants: %w", err)
+	}
+
+	expectedName := fmt.Sprintf("%s-%s-referencegrant", agent.Name, agent.Namespace)
+
+	// Delete ReferenceGrants with matching name pattern
+	for _, refGrant := range referenceGrantList.Items {
+		if refGrant.GetName() == expectedName {
+			if err := r.deleteAndVerifyResource(ctx, &refGrant, "ReferenceGrant"); err != nil {
+				return fmt.Errorf("failed to delete ReferenceGrant %s in namespace %s: %w",
+					refGrant.GetName(), refGrant.GetNamespace(), err)
+			}
+			log.Info("Successfully deleted ReferenceGrant", "name", refGrant.GetName(),
+				"namespace", refGrant.GetNamespace())
+		}
+	}
+
+	return nil
+}
+
+// deleteAndVerifyResource deletes a resource and waits for deletion to be confirmed
+func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, obj client.Object, resourceType string) error {
+	log := log.FromContext(ctx)
+
+	// Delete the resource
+	if err := r.Delete(ctx, obj); err != nil {
+		if errors.IsNotFound(err) {
+			// Already deleted
+			return nil
+		}
+		return fmt.Errorf("failed to delete %s: %w", resourceType, err)
+	}
+
+	// Wait for deletion to be confirmed with polling
+	name := obj.GetName()
+	namespace := obj.GetNamespace()
+
+	// Poll for deletion with timeout
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %s %s/%s deletion: %w", resourceType, namespace, name, ctx.Err())
+		case <-ticker.C:
+			// Check if resource still exists
+			err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, obj)
+			if errors.IsNotFound(err) {
+				// Resource has been deleted successfully
+				log.V(1).Info("Verified resource deletion", "type", resourceType, "name", name, "namespace", namespace)
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("error checking %s deletion status: %w", resourceType, err)
+			}
+			// Resource still exists, continue polling
+		}
+	}
 }
 
 // reconcileService creates a Service for the agent's webhook server
