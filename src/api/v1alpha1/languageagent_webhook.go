@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/robfig/cron/v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -115,6 +116,11 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
+	// Validate schedule configuration for scheduled agents
+	if err := a.validateSchedule(); err != nil {
+		return fmt.Errorf("spec.schedule: %w", err)
+	}
+
 	return nil
 }
 
@@ -134,6 +140,28 @@ func (a *LanguageAgent) validateWorkspaceSize(size string) error {
 	// Ensure size is positive (negative quantities don't make sense for storage)
 	if quantity.Sign() < 0 {
 		return fmt.Errorf("cannot be negative, got: %s", size)
+	}
+
+	return nil
+}
+
+// validateSchedule validates the cron schedule format and constraints
+func (a *LanguageAgent) validateSchedule() error {
+	// If execution mode is scheduled, schedule is required
+	if a.Spec.ExecutionMode == "scheduled" {
+		if a.Spec.Schedule == "" {
+			return fmt.Errorf("schedule is required when executionMode is 'scheduled'")
+		}
+	}
+
+	// If schedule is provided, validate the cron syntax
+	if a.Spec.Schedule != "" {
+		// Use cron parser to validate the schedule
+		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+		
+		if _, err := parser.Parse(a.Spec.Schedule); err != nil {
+			return fmt.Errorf("invalid cron expression %q: %w", a.Spec.Schedule, err)
+		}
 	}
 
 	return nil

@@ -454,3 +454,309 @@ func contains(s, substr string) bool {
 func intPtr(i int32) *int32 {
 	return &i
 }
+
+func TestLanguageAgentValidateSchedule(t *testing.T) {
+	tests := []struct {
+		name          string
+		executionMode string
+		schedule      string
+		expectErr     bool
+		errMsg        string
+	}{
+		// Valid standard cron expressions
+		{
+			name:          "valid hourly cron",
+			executionMode: "scheduled",
+			schedule:      "0 * * * *",
+			expectErr:     false,
+		},
+		{
+			name:          "valid daily cron",
+			executionMode: "scheduled",
+			schedule:      "0 9 * * *",
+			expectErr:     false,
+		},
+		{
+			name:          "valid weekly cron",
+			executionMode: "scheduled",
+			schedule:      "0 9 * * 1",
+			expectErr:     false,
+		},
+		{
+			name:          "valid complex cron",
+			executionMode: "scheduled",
+			schedule:      "*/15 8-17 * * 1-5",
+			expectErr:     false,
+		},
+		// Valid special cron expressions
+		{
+			name:          "valid @hourly",
+			executionMode: "scheduled",
+			schedule:      "@hourly",
+			expectErr:     false,
+		},
+		{
+			name:          "valid @daily",
+			executionMode: "scheduled",
+			schedule:      "@daily",
+			expectErr:     false,
+		},
+		{
+			name:          "valid @weekly",
+			executionMode: "scheduled",
+			schedule:      "@weekly",
+			expectErr:     false,
+		},
+		{
+			name:          "valid @monthly",
+			executionMode: "scheduled",
+			schedule:      "@monthly",
+			expectErr:     false,
+		},
+		{
+			name:          "valid @yearly",
+			executionMode: "scheduled",
+			schedule:      "@yearly",
+			expectErr:     false,
+		},
+		// Invalid cron expressions
+		{
+			name:          "invalid minute - too high",
+			executionMode: "scheduled",
+			schedule:      "60 * * * *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid hour - too high",
+			executionMode: "scheduled",
+			schedule:      "0 25 * * *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid day - too high",
+			executionMode: "scheduled",
+			schedule:      "0 0 32 * *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid month - too high",
+			executionMode: "scheduled",
+			schedule:      "0 0 1 13 *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid weekday - too high",
+			executionMode: "scheduled",
+			schedule:      "0 0 * * 8",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid format - wrong number of fields",
+			executionMode: "scheduled",
+			schedule:      "0 * *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid format - random text",
+			executionMode: "scheduled",
+			schedule:      "invalid cron syntax",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		{
+			name:          "invalid format - division by zero",
+			executionMode: "scheduled",
+			schedule:      "*/0 * * * *",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+		// Schedule requirements based on execution mode
+		{
+			name:          "scheduled mode requires schedule",
+			executionMode: "scheduled",
+			schedule:      "",
+			expectErr:     true,
+			errMsg:        "schedule is required when executionMode is 'scheduled'",
+		},
+		{
+			name:          "autonomous mode allows empty schedule",
+			executionMode: "autonomous",
+			schedule:      "",
+			expectErr:     false,
+		},
+		{
+			name:          "autonomous mode allows valid schedule",
+			executionMode: "autonomous",
+			schedule:      "0 9 * * *",
+			expectErr:     false,
+		},
+		{
+			name:          "autonomous mode rejects invalid schedule",
+			executionMode: "autonomous",
+			schedule:      "invalid",
+			expectErr:     true,
+			errMsg:        "invalid cron expression",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent := &LanguageAgent{
+				Spec: LanguageAgentSpec{
+					ExecutionMode: tt.executionMode,
+					Schedule:      tt.schedule,
+				},
+			}
+
+			err := agent.validateSchedule()
+
+			if (err != nil) != tt.expectErr {
+				t.Errorf("validateSchedule() error = %v, expectErr %v", err, tt.expectErr)
+				return
+			}
+
+			if tt.expectErr && err != nil && tt.errMsg != "" {
+				if !contains(err.Error(), tt.errMsg) {
+					t.Errorf("validateSchedule() error = %v, expected to contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
+	tests := []struct {
+		name      string
+		agent     *LanguageAgent
+		expectErr bool
+		errMsg    string
+	}{
+		{
+			name: "scheduled agent with valid schedule",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "scheduled",
+					Schedule:      "0 9 * * *",
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "scheduled agent with @daily syntax",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "scheduled",
+					Schedule:      "@daily",
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "scheduled agent missing schedule",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "scheduled",
+					Schedule:      "",
+				},
+			},
+			expectErr: true,
+			errMsg:    "schedule is required when executionMode is 'scheduled'",
+		},
+		{
+			name: "scheduled agent with invalid schedule",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "scheduled",
+					Schedule:      "60 * * * *",
+				},
+			},
+			expectErr: true,
+			errMsg:    "spec.schedule",
+		},
+		{
+			name: "autonomous agent without schedule",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "autonomous",
+					Schedule:      "",
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "autonomous agent with valid schedule",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:         "test:latest",
+					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Instructions:  "test instructions",
+					ExecutionMode: "autonomous",
+					Schedule:      "0 9 * * *",
+				},
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.agent.ValidateCreate()
+
+			if (err != nil) != tt.expectErr {
+				t.Errorf("ValidateCreate() error = %v, expectErr %v", err, tt.expectErr)
+				return
+			}
+
+			if tt.expectErr && err != nil && tt.errMsg != "" {
+				if !contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateCreate() error = %v, expected to contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
