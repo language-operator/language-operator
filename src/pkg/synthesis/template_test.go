@@ -225,7 +225,6 @@ func TestTemplateGeneratesValidTaskMain(t *testing.T) {
 
 agent 'task-main-test' do
   description 'Agent using DSL v1 task/main model'
-  instructions 'Fetch data from API and process it'
 
   task :fetch_data,
     instructions: 'Get data from the API',

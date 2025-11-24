@@ -746,7 +746,6 @@ func TestValidateGeneratedCodeAgainstSchema_WithRuby(t *testing.T) {
 
 agent "test" do
   description "Test agent"
-  instructions "Process test data"
   
   task :test_task,
     instructions: "Run a test",
