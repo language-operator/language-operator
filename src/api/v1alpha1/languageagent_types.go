@@ -664,6 +664,8 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageAgent is the Schema for the languageagents API
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 type LanguageAgent struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

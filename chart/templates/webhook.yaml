@@ -18,6 +18,36 @@ spec:
     {{- include "language-operator.selectorLabels" . | nindent 4 }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "language-operator.fullname" . }}-mutating-webhook
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "language-operator.fullname" . }}-webhook-cert
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-langop-io-v1alpha1-languageagent
+  failurePolicy: Fail
+  name: mlanguageagent.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languageagents
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ include "language-operator.fullname" . }}-validating-webhook
@@ -26,6 +56,26 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "language-operator.fullname" . }}-webhook-cert
 webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /validate-langop-io-v1alpha1-languageagent
+  failurePolicy: Fail
+  name: vlanguageagent.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languageagents
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   clientConfig:
