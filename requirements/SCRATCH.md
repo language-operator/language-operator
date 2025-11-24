@@ -11,9 +11,12 @@
 - **✅ COMPLETED**: Issue #34 - Webhook URL timing fix with route readiness conditions
 - **✅ COMPLETED**: Issue #38 - HTTPRoute/Ingress cleanup verification on agent deletion
 - **✅ COMPLETED**: Issue #35 - Gateway API detection caching (performance optimization)
+- **🚀 READY**: Issue #43 - Helm chart missing webhook configurations (CRITICAL: blocks Helm validation)
+- **🚀 READY**: Issue #45 - Controller panics on invalid workspace size (CRITICAL: crashes operator)
+- **🚀 READY**: Issue #44 - Schedule field lacks cron validation (validation layer)
 - **🚀 READY**: Issue #24 - Deployment update for learned ConfigMaps (critical path)
-- **Critical Path**: #24 → #25-26 (advanced learning) → #29 (release)
-- **Parallel Work**: Gateway API issues (#33-37) can proceed independently
+- **Critical Infrastructure**: #43, #45 (operator stability) → #44 (validation) → #24 (learning)
+- **Parallel Work**: Issues #41, #42, #40, #36 (UX improvements, edge cases)
 
 ## Key Project Dependencies
 - ✅ Issue #18: Synthesis template consistency (COMPLETED)

@@ -255,7 +255,7 @@ func main() {
 		Recorder:          mgr.GetEventRecorderFor("languageagent-controller"),
 		AllowedRegistries: allowedRegistries,
 	}
-	
+
 	// Initialize Gateway API cache
 	agentReconciler.InitializeGatewayCache()
 
