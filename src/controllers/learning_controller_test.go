@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -60,6 +61,7 @@ func TestLearningReconciler_Reconcile(t *testing.T) {
 	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, batchv1.AddToScheme(scheme))
 
 	tests := []struct {
 		name           string
@@ -538,6 +540,7 @@ func TestLearningReconciler_ProcessLearningTrigger_Integration(t *testing.T) {
 	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, batchv1.AddToScheme(scheme))
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
@@ -680,6 +683,204 @@ func TestLearningReconciler_generateLearnedCode(t *testing.T) {
 					assert.Contains(t, code, expected)
 				}
 			}
+		})
+	}
+}
+
+func TestLearningReconciler_updateAlternativeWorkload(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, batchv1.AddToScheme(scheme))
+
+	tests := []struct {
+		name           string
+		agent          *langopv1alpha1.LanguageAgent
+		workload       client.Object
+		taskName       string
+		version        int32
+		expectUpdate   bool
+		expectError    bool
+		validateResult func(t *testing.T, client client.Client, workload client.Object)
+	}{
+		{
+			name: "update CronJob ConfigMap reference",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+			},
+			workload: &batchv1.CronJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+					Labels: map[string]string{
+						"langop.io/agent": "test-agent",
+					},
+				},
+				Spec: batchv1.CronJobSpec{
+					Schedule: "0 * * * *",
+					JobTemplate: batchv1.JobTemplateSpec{
+						Spec: batchv1.JobSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Volumes: []corev1.Volume{
+										{
+											Name: "agent-code",
+											VolumeSource: corev1.VolumeSource{
+												ConfigMap: &corev1.ConfigMapVolumeSource{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "test-agent-v1",
+													},
+												},
+											},
+										},
+									},
+									Containers: []corev1.Container{
+										{
+											Name:  "agent",
+											Image: "test-image",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			taskName:     "test_task",
+			version:      2,
+			expectUpdate: true,
+			expectError:  false,
+			validateResult: func(t *testing.T, client client.Client, workload client.Object) {
+				var cronJob batchv1.CronJob
+				err := client.Get(context.Background(), types.NamespacedName{
+					Name:      "test-agent",
+					Namespace: "default",
+				}, &cronJob)
+				require.NoError(t, err)
+
+				// Verify ConfigMap reference was updated
+				assert.Equal(t, "test-agent-v2", cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes[0].ConfigMap.Name)
+				
+				// Verify learning annotations were added
+				assert.Contains(t, cronJob.Spec.JobTemplate.Spec.Template.Annotations, "langop.io/learning-update")
+				assert.Equal(t, "test-agent-v2", cronJob.Spec.JobTemplate.Spec.Template.Annotations["langop.io/learned-configmap"])
+			},
+		},
+		{
+			name: "no workload found",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+			},
+			workload:     nil, // No workload objects
+			taskName:     "test_task",
+			version:      2,
+			expectUpdate: false,
+			expectError:  false,
+			validateResult: func(t *testing.T, client client.Client, workload client.Object) {
+				// Should not create any new objects
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{tt.agent}
+			if tt.workload != nil {
+				objects = append(objects, tt.workload)
+			}
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			reconciler := &LearningReconciler{
+				Client:   fakeClient,
+				Log:      logr.Discard(),
+				Recorder: &record.FakeRecorder{},
+			}
+
+			ctx := context.Background()
+			err := reconciler.updateAlternativeWorkload(ctx, tt.agent, tt.taskName, tt.version)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			if tt.validateResult != nil {
+				tt.validateResult(t, fakeClient, tt.workload)
+			}
+		})
+	}
+}
+
+func TestLearningReconciler_extractCronJobConfigMapReference(t *testing.T) {
+	tests := []struct {
+		name           string
+		configMapName  string
+		expectedResult string
+	}{
+		{
+			name:           "extract from CronJob volume",
+			configMapName:  "test-agent-v3",
+			expectedResult: "test-agent-v3",
+		},
+		{
+			name:           "fallback when no ConfigMap found",
+			configMapName:  "", // No ConfigMap configured
+			expectedResult: "test-agent-v1", // Should fallback to v1
+		},
+	}
+
+	reconciler := &LearningReconciler{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cronJob := &batchv1.CronJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"langop.io/agent": "test-agent",
+					},
+				},
+				Spec: batchv1.CronJobSpec{
+					JobTemplate: batchv1.JobTemplateSpec{
+						Spec: batchv1.JobSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{Name: "test"}},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			if tt.configMapName != "" {
+				cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes = []corev1.Volume{
+					{
+						Name: "agent-code",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: tt.configMapName,
+								},
+							},
+						},
+					},
+				}
+			}
+
+			result := reconciler.extractCronJobConfigMapReference(cronJob)
+			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
 }

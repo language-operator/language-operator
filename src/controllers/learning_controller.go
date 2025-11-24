@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,6 +108,9 @@ var learningTracer = otel.Tracer("language-operator/learning")
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;update;patch
 
 // Reconcile handles learning events and triggers re-synthesis when appropriate
 func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -689,12 +693,366 @@ func (r *LearningReconciler) findAgentDeployment(ctx context.Context, agent *lan
 
 // updateAlternativeWorkload handles non-deployment workloads (CronJob, Job, etc.)
 func (r *LearningReconciler) updateAlternativeWorkload(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, version int32) error {
-	// TODO: Implement updates for CronJob and other workload types
-	// For now, just log that we would update alternative workloads
-	r.Log.Info("Alternative workload update not yet implemented",
-		"agent", agent.Name, "task", taskName, "version", version)
+	ctx, span := learningTracer.Start(ctx, "learning.update_alternative_workload")
+	defer span.End()
 
+	span.SetAttributes(
+		attribute.String("learning.task_name", taskName),
+		attribute.Int("learning.new_version", int(version)),
+	)
+
+	log := r.Log.WithValues("agent", agent.Name, "task", taskName, "version", version)
+
+	// Try to update CronJob first (most common scheduled workload)
+	cronJobUpdated, err := r.updateCronJobConfigMap(ctx, agent, taskName, version)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update CronJob ConfigMap: %w", err)
+	}
+
+	if cronJobUpdated {
+		log.Info("Successfully updated CronJob for learned task")
+		r.Recorder.Event(agent, corev1.EventTypeNormal, "LearningCronJobUpdated",
+			fmt.Sprintf("Updated CronJob to use learned task %s (v%d)", taskName, version))
+		return nil
+	}
+
+	// Try to update Job (less common but possible)
+	jobUpdated, err := r.updateJobConfigMap(ctx, agent, taskName, version)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update Job ConfigMap: %w", err)
+	}
+
+	if jobUpdated {
+		log.Info("Successfully updated Job for learned task")
+		r.Recorder.Event(agent, corev1.EventTypeNormal, "LearningJobUpdated",
+			fmt.Sprintf("Updated Job to use learned task %s (v%d)", taskName, version))
+		return nil
+	}
+
+	// Try to update DaemonSet (rare but possible)
+	daemonSetUpdated, err := r.updateDaemonSetConfigMap(ctx, agent, taskName, version)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update DaemonSet ConfigMap: %w", err)
+	}
+
+	if daemonSetUpdated {
+		log.Info("Successfully updated DaemonSet for learned task")
+		r.Recorder.Event(agent, corev1.EventTypeNormal, "LearningDaemonSetUpdated",
+			fmt.Sprintf("Updated DaemonSet to use learned task %s (v%d)", taskName, version))
+		return nil
+	}
+
+	// No alternative workload found
+	log.V(1).Info("No alternative workloads found for agent")
 	return nil
+}
+
+// updateCronJobConfigMap updates CronJob to use new versioned ConfigMap
+func (r *LearningReconciler) updateCronJobConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, version int32) (bool, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.update_cronjob_configmap")
+	defer span.End()
+
+	// Find CronJob for this agent
+	cronJobList := &batchv1.CronJobList{}
+	labelSelector := client.MatchingLabels{
+		"langop.io/agent": agent.Name,
+	}
+
+	err := r.List(ctx, cronJobList,
+		client.InNamespace(agent.Namespace),
+		labelSelector)
+	if err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to list CronJobs: %w", err)
+	}
+
+	if len(cronJobList.Items) == 0 {
+		return false, nil // No CronJob found
+	}
+
+	cronJob := &cronJobList.Items[0]
+	originalConfigMap := r.extractCronJobConfigMapReference(cronJob)
+	newConfigMapName := fmt.Sprintf("%s-v%d", agent.Name, version)
+
+	// Update CronJob template
+	updated := r.patchCronJobConfigMap(cronJob, newConfigMapName)
+	if !updated {
+		return false, nil // No ConfigMap references found to update
+	}
+
+	// Apply the update
+	if err := r.Update(ctx, cronJob); err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to update CronJob: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("learning.cronjob_name", cronJob.Name),
+		attribute.String("learning.original_configmap", originalConfigMap),
+		attribute.String("learning.new_configmap", newConfigMapName),
+	)
+
+	return true, nil
+}
+
+// updateJobConfigMap updates Job to use new versioned ConfigMap
+func (r *LearningReconciler) updateJobConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, version int32) (bool, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.update_job_configmap")
+	defer span.End()
+
+	// Find Job for this agent
+	jobList := &batchv1.JobList{}
+	labelSelector := client.MatchingLabels{
+		"langop.io/agent": agent.Name,
+	}
+
+	err := r.List(ctx, jobList,
+		client.InNamespace(agent.Namespace),
+		labelSelector)
+	if err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to list Jobs: %w", err)
+	}
+
+	if len(jobList.Items) == 0 {
+		return false, nil // No Job found
+	}
+
+	job := &jobList.Items[0]
+	originalConfigMap := r.extractJobConfigMapReference(job)
+	newConfigMapName := fmt.Sprintf("%s-v%d", agent.Name, version)
+
+	// Update Job template
+	updated := r.patchJobConfigMap(job, newConfigMapName)
+	if !updated {
+		return false, nil // No ConfigMap references found to update
+	}
+
+	// Apply the update
+	if err := r.Update(ctx, job); err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to update Job: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("learning.job_name", job.Name),
+		attribute.String("learning.original_configmap", originalConfigMap),
+		attribute.String("learning.new_configmap", newConfigMapName),
+	)
+
+	return true, nil
+}
+
+// updateDaemonSetConfigMap updates DaemonSet to use new versioned ConfigMap
+func (r *LearningReconciler) updateDaemonSetConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, version int32) (bool, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.update_daemonset_configmap")
+	defer span.End()
+
+	// Find DaemonSet for this agent
+	daemonSetList := &appsv1.DaemonSetList{}
+	labelSelector := client.MatchingLabels{
+		"langop.io/agent": agent.Name,
+	}
+
+	err := r.List(ctx, daemonSetList,
+		client.InNamespace(agent.Namespace),
+		labelSelector)
+	if err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to list DaemonSets: %w", err)
+	}
+
+	if len(daemonSetList.Items) == 0 {
+		return false, nil // No DaemonSet found
+	}
+
+	daemonSet := &daemonSetList.Items[0]
+	originalConfigMap := r.extractDaemonSetConfigMapReference(daemonSet)
+	newConfigMapName := fmt.Sprintf("%s-v%d", agent.Name, version)
+
+	// Update DaemonSet template
+	updated := r.patchDaemonSetConfigMap(daemonSet, newConfigMapName)
+	if !updated {
+		return false, nil // No ConfigMap references found to update
+	}
+
+	// Apply the update
+	if err := r.Update(ctx, daemonSet); err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("failed to update DaemonSet: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.String("learning.daemonset_name", daemonSet.Name),
+		attribute.String("learning.original_configmap", originalConfigMap),
+		attribute.String("learning.new_configmap", newConfigMapName),
+	)
+
+	return true, nil
+}
+
+// Helper methods for extracting and patching ConfigMap references in different workload types
+
+// extractCronJobConfigMapReference extracts ConfigMap reference from CronJob
+func (r *LearningReconciler) extractCronJobConfigMapReference(cronJob *batchv1.CronJob) string {
+	// Check volumes
+	for _, volume := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["langop.io/agent"]) {
+			return volume.ConfigMap.Name
+		}
+	}
+
+	// Check environment variables
+	for _, container := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers {
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["langop.io/agent"]) {
+				return envFrom.ConfigMapRef.Name
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s-v1", cronJob.Labels["langop.io/agent"])
+}
+
+// patchCronJobConfigMap updates ConfigMap references in CronJob
+func (r *LearningReconciler) patchCronJobConfigMap(cronJob *batchv1.CronJob, newConfigMapName string) bool {
+	updated := false
+
+	// Update volumes
+	for i, volume := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["langop.io/agent"]) {
+			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
+			updated = true
+		}
+	}
+
+	// Update environment variables
+	for containerIdx, container := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers {
+		for envIdx, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["langop.io/agent"]) {
+				cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
+				updated = true
+			}
+		}
+	}
+
+	// Add annotation to track learning update
+	if cronJob.Spec.JobTemplate.Spec.Template.Annotations == nil {
+		cronJob.Spec.JobTemplate.Spec.Template.Annotations = make(map[string]string)
+	}
+	cronJob.Spec.JobTemplate.Spec.Template.Annotations["langop.io/learning-update"] = time.Now().Format(time.RFC3339)
+	cronJob.Spec.JobTemplate.Spec.Template.Annotations["langop.io/learned-configmap"] = newConfigMapName
+
+	return updated
+}
+
+// extractJobConfigMapReference extracts ConfigMap reference from Job
+func (r *LearningReconciler) extractJobConfigMapReference(job *batchv1.Job) string {
+	// Check volumes
+	for _, volume := range job.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["langop.io/agent"]) {
+			return volume.ConfigMap.Name
+		}
+	}
+
+	// Check environment variables
+	for _, container := range job.Spec.Template.Spec.Containers {
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["langop.io/agent"]) {
+				return envFrom.ConfigMapRef.Name
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s-v1", job.Labels["langop.io/agent"])
+}
+
+// patchJobConfigMap updates ConfigMap references in Job
+func (r *LearningReconciler) patchJobConfigMap(job *batchv1.Job, newConfigMapName string) bool {
+	updated := false
+
+	// Update volumes
+	for i, volume := range job.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["langop.io/agent"]) {
+			job.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
+			updated = true
+		}
+	}
+
+	// Update environment variables
+	for containerIdx, container := range job.Spec.Template.Spec.Containers {
+		for envIdx, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["langop.io/agent"]) {
+				job.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
+				updated = true
+			}
+		}
+	}
+
+	// Add annotation to track learning update
+	if job.Spec.Template.Annotations == nil {
+		job.Spec.Template.Annotations = make(map[string]string)
+	}
+	job.Spec.Template.Annotations["langop.io/learning-update"] = time.Now().Format(time.RFC3339)
+	job.Spec.Template.Annotations["langop.io/learned-configmap"] = newConfigMapName
+
+	return updated
+}
+
+// extractDaemonSetConfigMapReference extracts ConfigMap reference from DaemonSet
+func (r *LearningReconciler) extractDaemonSetConfigMapReference(daemonSet *appsv1.DaemonSet) string {
+	// Check volumes
+	for _, volume := range daemonSet.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["langop.io/agent"]) {
+			return volume.ConfigMap.Name
+		}
+	}
+
+	// Check environment variables
+	for _, container := range daemonSet.Spec.Template.Spec.Containers {
+		for _, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["langop.io/agent"]) {
+				return envFrom.ConfigMapRef.Name
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s-v1", daemonSet.Labels["langop.io/agent"])
+}
+
+// patchDaemonSetConfigMap updates ConfigMap references in DaemonSet
+func (r *LearningReconciler) patchDaemonSetConfigMap(daemonSet *appsv1.DaemonSet, newConfigMapName string) bool {
+	updated := false
+
+	// Update volumes
+	for i, volume := range daemonSet.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["langop.io/agent"]) {
+			daemonSet.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
+			updated = true
+		}
+	}
+
+	// Update environment variables
+	for containerIdx, container := range daemonSet.Spec.Template.Spec.Containers {
+		for envIdx, envFrom := range container.EnvFrom {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["langop.io/agent"]) {
+				daemonSet.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
+				updated = true
+			}
+		}
+	}
+
+	// Add annotation to track learning update
+	if daemonSet.Spec.Template.Annotations == nil {
+		daemonSet.Spec.Template.Annotations = make(map[string]string)
+	}
+	daemonSet.Spec.Template.Annotations["langop.io/learning-update"] = time.Now().Format(time.RFC3339)
+	daemonSet.Spec.Template.Annotations["langop.io/learned-configmap"] = newConfigMapName
+
+	return updated
 }
 
 // extractConfigMapReference extracts the current ConfigMap reference from deployment
