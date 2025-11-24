@@ -1889,27 +1889,77 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		hasGateway = false
 	}
 
+	var routeReady bool
+	var routeReadyMsg string
+
 	if hasGateway {
 		log.Info("Gateway API detected, creating HTTPRoute", "hostname", hostname)
 		if err := r.reconcileHTTPRoute(ctx, agent, hostname); err != nil {
+			// Set WebhookRouteCreated condition to false on failure
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "HTTPRouteCreationFailed", err.Error(), agent.Generation)
 			return fmt.Errorf("failed to reconcile HTTPRoute: %w", err)
+		}
+
+		// Set WebhookRouteCreated condition to true on success
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionTrue, "HTTPRouteCreated", "HTTPRoute created successfully", agent.Generation)
+
+		// Check if HTTPRoute is ready
+		ready, msg, err := r.checkHTTPRouteReadiness(ctx, agent.Name, agent.Namespace)
+		if err != nil {
+			log.Error(err, "Failed to check HTTPRoute readiness")
+			routeReady = false
+			routeReadyMsg = fmt.Sprintf("Failed to check readiness: %v", err)
+		} else {
+			routeReady = ready
+			routeReadyMsg = msg
 		}
 	} else {
 		log.Info("Gateway API not available, creating Ingress fallback", "hostname", hostname)
 		if err := r.reconcileIngress(ctx, agent, hostname); err != nil {
+			// Set WebhookRouteCreated condition to false on failure
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "IngressCreationFailed", err.Error(), agent.Generation)
 			return fmt.Errorf("failed to reconcile Ingress: %w", err)
+		}
+
+		// Set WebhookRouteCreated condition to true on success
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionTrue, "IngressCreated", "Ingress created successfully", agent.Generation)
+
+		// Check if Ingress is ready
+		ready, msg, err := r.checkIngressReadiness(ctx, agent.Name, agent.Namespace)
+		if err != nil {
+			log.Error(err, "Failed to check Ingress readiness")
+			routeReady = false
+			routeReadyMsg = fmt.Sprintf("Failed to check readiness: %v", err)
+		} else {
+			routeReady = ready
+			routeReadyMsg = msg
 		}
 	}
 
-	// Update agent status with webhook URL
-	webhookURL := fmt.Sprintf("https://%s", hostname)
-	if agent.Status.WebhookURLs == nil || len(agent.Status.WebhookURLs) == 0 || agent.Status.WebhookURLs[0] != webhookURL {
-		agent.Status.WebhookURLs = []string{webhookURL}
-		if err := r.Status().Update(ctx, agent); err != nil {
-			log.Error(err, "Failed to update webhook URLs in status")
-			return err
+	// Set WebhookRouteReady condition based on readiness check
+	if routeReady {
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteReadyCondition, metav1.ConditionTrue, "WebhookRouteReady", routeReadyMsg, agent.Generation)
+
+		// Only populate WebhookURLs when route is ready
+		webhookURL := fmt.Sprintf("https://%s", hostname)
+		if agent.Status.WebhookURLs == nil || len(agent.Status.WebhookURLs) == 0 || agent.Status.WebhookURLs[0] != webhookURL {
+			agent.Status.WebhookURLs = []string{webhookURL}
+			log.Info("Updated webhook URL in status", "url", webhookURL)
 		}
-		log.Info("Updated webhook URL in status", "url", webhookURL)
+	} else {
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteReadyCondition, metav1.ConditionFalse, "WebhookRouteNotReady", routeReadyMsg, agent.Generation)
+
+		// Clear webhook URLs when route is not ready
+		if len(agent.Status.WebhookURLs) > 0 {
+			agent.Status.WebhookURLs = nil
+			log.Info("Cleared webhook URLs from status - route not ready")
+		}
+	}
+
+	// Update agent status with conditions and potentially webhook URLs
+	if err := r.Status().Update(ctx, agent); err != nil {
+		log.Error(err, "Failed to update agent status")
+		return err
 	}
 
 	return nil
@@ -2779,6 +2829,108 @@ func (r *LanguageAgentReconciler) validateImageRegistry(agent *langopv1alpha1.La
 	}
 
 	return validation.ValidateImageRegistry(agent.Spec.Image, r.AllowedRegistries)
+}
+
+// checkHTTPRouteReadiness checks if an HTTPRoute is ready to serve traffic
+// Returns (isReady, statusMessage, error)
+func (r *LanguageAgentReconciler) checkHTTPRouteReadiness(ctx context.Context, name, namespace string) (bool, string, error) {
+	// Get HTTPRoute using unstructured to avoid Gateway API dependency
+	httpRoute := &unstructured.Unstructured{}
+	httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1",
+		Kind:    "HTTPRoute",
+	})
+
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, httpRoute)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, "HTTPRoute not found", nil
+		}
+		return false, "", fmt.Errorf("failed to get HTTPRoute: %w", err)
+	}
+
+	// Check status conditions
+	status, found, err := unstructured.NestedMap(httpRoute.Object, "status")
+	if err != nil {
+		return false, "", fmt.Errorf("failed to get HTTPRoute status: %w", err)
+	}
+	if !found {
+		return false, "HTTPRoute status not available", nil
+	}
+
+	// Check parents (Gateway references)
+	parents, found, err := unstructured.NestedSlice(status, "parents")
+	if err != nil {
+		return false, "", fmt.Errorf("failed to get HTTPRoute parents status: %w", err)
+	}
+	if !found || len(parents) == 0 {
+		return false, "HTTPRoute has no parent Gateway status", nil
+	}
+
+	// Check if any parent is ready (Accepted and Programmed)
+	for _, parentInterface := range parents {
+		parent, ok := parentInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		conditions, found, err := unstructured.NestedSlice(parent, "conditions")
+		if err != nil || !found {
+			continue
+		}
+
+		var accepted, programmed bool
+		for _, condInterface := range conditions {
+			cond, ok := condInterface.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			condType, _, _ := unstructured.NestedString(cond, "type")
+			condStatus, _, _ := unstructured.NestedString(cond, "status")
+
+			if condType == "Accepted" && condStatus == "True" {
+				accepted = true
+			}
+			if condType == "Programmed" && condStatus == "True" {
+				programmed = true
+			}
+		}
+
+		if accepted && programmed {
+			return true, "HTTPRoute is ready and programmed", nil
+		}
+	}
+
+	return false, "HTTPRoute is not ready - waiting for Gateway to accept and program route", nil
+}
+
+// checkIngressReadiness checks if an Ingress is ready to serve traffic
+// Returns (isReady, statusMessage, error)
+func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, name, namespace string) (bool, string, error) {
+	ingress := &networkingv1.Ingress{}
+	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ingress)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, "Ingress not found", nil
+		}
+		return false, "", fmt.Errorf("failed to get Ingress: %w", err)
+	}
+
+	// Check if load balancer is ready
+	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
+		return false, "Ingress load balancer not ready - no ingress points assigned", nil
+	}
+
+	// Check if any ingress point has an IP or hostname
+	for _, lbIngress := range ingress.Status.LoadBalancer.Ingress {
+		if lbIngress.IP != "" || lbIngress.Hostname != "" {
+			return true, "Ingress is ready with load balancer", nil
+		}
+	}
+
+	return false, "Ingress load balancer assigned but no IP or hostname available", nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

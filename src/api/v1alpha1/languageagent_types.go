@@ -647,6 +647,14 @@ type ModelCostSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// Condition types for LanguageAgent
+const (
+	// WebhookRouteCreatedCondition indicates that the webhook route (HTTPRoute/Ingress) has been created
+	WebhookRouteCreatedCondition = "WebhookRouteCreated"
+	// WebhookRouteReadyCondition indicates that the webhook route is ready and serving traffic
+	WebhookRouteReadyCondition = "WebhookRouteReady"
+)
+
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.executionMode`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`

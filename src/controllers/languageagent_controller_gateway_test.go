@@ -437,3 +437,123 @@ func TestLanguageAgentController_ReferenceGrantUpdate(t *testing.T) {
 		t.Errorf("Expected updated 'to' name to be 'new-gateway', got '%v'", to["name"])
 	}
 }
+
+// Test the readiness checking functions directly
+func TestLanguageAgentController_CheckHTTPRouteReadiness(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tests := []struct {
+		name          string
+		httpRoute     *unstructured.Unstructured
+		expectReady   bool
+		expectMessage string
+	}{
+		{
+			name: "HTTPRoute ready - Accepted and Programmed",
+			httpRoute: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "gateway.networking.k8s.io/v1",
+					"kind":       "HTTPRoute",
+					"metadata": map[string]interface{}{
+						"name":      "test-agent",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"parents": []interface{}{
+							map[string]interface{}{
+								"conditions": []interface{}{
+									map[string]interface{}{
+										"type":   "Accepted",
+										"status": "True",
+									},
+									map[string]interface{}{
+										"type":   "Programmed",
+										"status": "True",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectReady:   true,
+			expectMessage: "HTTPRoute is ready and programmed",
+		},
+		{
+			name: "HTTPRoute not ready - Accepted but not Programmed",
+			httpRoute: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "gateway.networking.k8s.io/v1",
+					"kind":       "HTTPRoute",
+					"metadata": map[string]interface{}{
+						"name":      "test-agent",
+						"namespace": "default",
+					},
+					"status": map[string]interface{}{
+						"parents": []interface{}{
+							map[string]interface{}{
+								"conditions": []interface{}{
+									map[string]interface{}{
+										"type":   "Accepted",
+										"status": "True",
+									},
+									map[string]interface{}{
+										"type":   "Programmed",
+										"status": "False",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectReady:   false,
+			expectMessage: "HTTPRoute is not ready - waiting for Gateway to accept and program route",
+		},
+		{
+			name: "HTTPRoute not found",
+			httpRoute: nil,
+			expectReady:   false,
+			expectMessage: "HTTPRoute not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(scheme)
+			
+			if tt.httpRoute != nil {
+				tt.httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
+					Group:   "gateway.networking.k8s.io",
+					Version: "v1",
+					Kind:    "HTTPRoute",
+				})
+				tt.httpRoute.SetName("test-agent")
+				tt.httpRoute.SetNamespace("default")
+				builder = builder.WithObjects(tt.httpRoute)
+			}
+
+			fakeClient := builder.Build()
+
+			reconciler := &LanguageAgentReconciler{
+				Client:   fakeClient,
+				Scheme:   scheme,
+				Log:      logr.Discard(),
+			}
+
+			ctx := context.Background()
+			ready, message, err := reconciler.checkHTTPRouteReadiness(ctx, "test-agent", "default")
+			if err != nil {
+				t.Fatalf("checkHTTPRouteReadiness failed: %v", err)
+			}
+
+			if ready != tt.expectReady {
+				t.Errorf("Expected ready=%v, got ready=%v", tt.expectReady, ready)
+			}
+
+			if message != tt.expectMessage {
+				t.Errorf("Expected message=%q, got message=%q", tt.expectMessage, message)
+			}
+		})
+	}
+}
