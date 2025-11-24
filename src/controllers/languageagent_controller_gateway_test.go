@@ -511,8 +511,8 @@ func TestLanguageAgentController_CheckHTTPRouteReadiness(t *testing.T) {
 			expectMessage: "HTTPRoute is not ready - waiting for Gateway to accept and program route",
 		},
 		{
-			name: "HTTPRoute not found",
-			httpRoute: nil,
+			name:          "HTTPRoute not found",
+			httpRoute:     nil,
 			expectReady:   false,
 			expectMessage: "HTTPRoute not found",
 		},
@@ -521,7 +521,7 @@ func TestLanguageAgentController_CheckHTTPRouteReadiness(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := fake.NewClientBuilder().WithScheme(scheme)
-			
+
 			if tt.httpRoute != nil {
 				tt.httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
 					Group:   "gateway.networking.k8s.io",
@@ -536,9 +536,9 @@ func TestLanguageAgentController_CheckHTTPRouteReadiness(t *testing.T) {
 			fakeClient := builder.Build()
 
 			reconciler := &LanguageAgentReconciler{
-				Client:   fakeClient,
-				Scheme:   scheme,
-				Log:      logr.Discard(),
+				Client: fakeClient,
+				Scheme: scheme,
+				Log:    logr.Discard(),
 			}
 
 			ctx := context.Background()
