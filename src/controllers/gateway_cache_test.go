@@ -160,7 +160,7 @@ func TestGatewayAPICache_Integration(t *testing.T) {
 
 	// Test that cache correctly determines freshness
 	now := time.Now()
-	
+
 	// Test fresh cache
 	reconciler.gatewayCache.mutex.Lock()
 	reconciler.gatewayCache.lastCheck = now
