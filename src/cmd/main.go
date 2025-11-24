@@ -315,13 +315,13 @@ func main() {
 		MetricsCollector:            metricsCollector,
 		EventProcessor:              eventProcessor,
 		LearningEnabled:             true,
-		LearningThreshold:           10,                // Trigger learning after 10 traces
-		LearningInterval:            5 * time.Minute,   // 5 minute cooldown between attempts
-		MaxVersions:                 5,                 // Keep last 5 ConfigMap versions
-		PatternConfidenceMin:        0.8,               // Require 80% confidence
-		ErrorFailureThreshold:       3,                 // Re-synthesize after 3 consecutive failures
-		ErrorCooldownPeriod:         5 * time.Minute,   // 5 minute cooldown for error re-synthesis
-		MaxErrorResynthesisAttempts: 3,                 // Max 3 error re-synthesis attempts per task
+		LearningThreshold:           10,              // Trigger learning after 10 traces
+		LearningInterval:            5 * time.Minute, // 5 minute cooldown between attempts
+		MaxVersions:                 5,               // Keep last 5 ConfigMap versions
+		PatternConfidenceMin:        0.8,             // Require 80% confidence
+		ErrorFailureThreshold:       3,               // Re-synthesize after 3 consecutive failures
+		ErrorCooldownPeriod:         5 * time.Minute, // 5 minute cooldown for error re-synthesis
+		MaxErrorResynthesisAttempts: 3,               // Max 3 error re-synthesis attempts per task
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Learning")
 		os.Exit(1)

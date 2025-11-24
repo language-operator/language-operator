@@ -81,20 +81,20 @@ func (mc *MetricsCollector) EstimateCostSavings(ctx context.Context, namespace, 
 
 // LearningSuccessRateAggregator tracks and calculates learning success rates
 type LearningSuccessRateAggregator struct {
-	namespace            string
-	agent                string
-	totalAttempts        int64
-	successfulAttempts   int64
-	windowStart          time.Time
-	windowDurationHours  int
+	namespace           string
+	agent               string
+	totalAttempts       int64
+	successfulAttempts  int64
+	windowStart         time.Time
+	windowDurationHours int
 }
 
 // NewLearningSuccessRateAggregator creates a new success rate aggregator
 func NewLearningSuccessRateAggregator(namespace, agent string, windowHours int) *LearningSuccessRateAggregator {
 	return &LearningSuccessRateAggregator{
 		namespace:           namespace,
-		agent:              agent,
-		windowStart:        time.Now(),
+		agent:               agent,
+		windowStart:         time.Now(),
 		windowDurationHours: windowHours,
 	}
 }
@@ -199,21 +199,21 @@ func (mc *MetricsCollector) RecordCategorizedTrigger(ctx context.Context, namesp
 
 // PatternConfidenceTracker tracks pattern confidence metrics
 type PatternConfidenceTracker struct {
-	namespace   string
-	agent       string
-	taskName    string
-	confidence  float64
-	timestamp   time.Time
+	namespace  string
+	agent      string
+	taskName   string
+	confidence float64
+	timestamp  time.Time
 }
 
 // NewPatternConfidenceTracker creates a new confidence tracker
 func NewPatternConfidenceTracker(namespace, agent, taskName string, confidence float64) *PatternConfidenceTracker {
 	return &PatternConfidenceTracker{
 		namespace:  namespace,
-		agent:     agent,
-		taskName:  taskName,
+		agent:      agent,
+		taskName:   taskName,
 		confidence: confidence,
-		timestamp: time.Now(),
+		timestamp:  time.Now(),
 	}
 }
 
@@ -382,7 +382,7 @@ func NewHealthMetrics(namespace, agent string) *HealthMetrics {
 func (hm *HealthMetrics) CalculateOverallLearningHealth(successRate, avgConfidence float64, errorRate float64) float64 {
 	// Weighted health score: success rate (40%), confidence (30%), inverse error rate (30%)
 	healthScore := (successRate * 0.4) + (avgConfidence * 0.3) + ((1.0 - errorRate) * 0.3)
-	
+
 	// Ensure score is between 0 and 1
 	if healthScore > 1.0 {
 		healthScore = 1.0
@@ -390,7 +390,7 @@ func (hm *HealthMetrics) CalculateOverallLearningHealth(successRate, avgConfiden
 	if healthScore < 0.0 {
 		healthScore = 0.0
 	}
-	
+
 	return healthScore
 }
 

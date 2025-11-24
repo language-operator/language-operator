@@ -4,9 +4,12 @@
 - **✅ COMPLETED**: Issue #18 - Update synthesis template for task/main generation
 - **✅ RESOLVED**: Issue #19 - agent_synthesis.tmpl already correct for DSL v1
 - **✅ COMPLETED**: Issue #23 - ConfigMap versioning for learned agents
-- **🚀 READY**: Issues #20, #21 - Foundation (validation & testing)
-- **Critical Path**: #20-21 → #22-24 (learning pipeline) → #29 (release)
-- **Learning Focus**: Build task_synthesis.tmpl support in language-operator (issues #22-26)
+- **✅ COMPLETED**: Issues #20, #21 - Foundation (validation & testing)
+- **🚀 READY**: Issue #24 - Deployment update for learned ConfigMaps (critical path)
+- **🚀 READY**: Issue #32 - HTTPRoute cross-namespace Gateway ReferenceGrant (production fix)
+- **🚀 READY**: Issue #39 - Include complete MCP tool schemas in synthesis (quality improvement)
+- **Critical Path**: #24 → #25-26 (advanced learning) → #29 (release)
+- **Parallel Work**: Gateway API issues (#32-38) can proceed independently
 
 ## Key Project Dependencies
 - ✅ Issue #18: Synthesis template consistency (COMPLETED)

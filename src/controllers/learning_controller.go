@@ -34,9 +34,9 @@ type LearningReconciler struct {
 	Scheme               *runtime.Scheme
 	Log                  logr.Logger
 	Recorder             record.EventRecorder
-	Synthesizer          synthesis.AgentSynthesizer  // For re-synthesis with task_synthesis.tmpl
-	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
-	MetricsCollector     *learning.MetricsCollector  // For learning metrics collection
+	Synthesizer          synthesis.AgentSynthesizer       // For re-synthesis with task_synthesis.tmpl
+	ConfigMapManager     *synthesis.ConfigMapManager      // For versioned ConfigMap management
+	MetricsCollector     *learning.MetricsCollector       // For learning metrics collection
 	EventProcessor       *learning.LearningEventProcessor // For processing learning events with metrics
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
@@ -200,7 +200,7 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			log.Error(err, "Failed to process learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
 			r.Recorder.Event(&agent, corev1.EventTypeWarning, "LearningFailed",
 				fmt.Sprintf("Failed to process learning for task %s: %v", trigger.TaskName, err))
-			
+
 			// Record learning failure metrics
 			if r.EventProcessor != nil {
 				failureErr := r.EventProcessor.ProcessLearningFailure(ctx, agent.Namespace, agent.Name, trigger.TaskName, err.Error())
@@ -208,7 +208,7 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					log.Error(failureErr, "Failed to record learning failure metrics", "task", trigger.TaskName)
 				}
 			}
-			
+
 			// Don't return error - continue processing other triggers
 		} else {
 			log.Info("Successfully processed learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
@@ -818,7 +818,7 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 		log.V(1).Info("Learning cooldown active, skipping",
 			"last_attempt", taskStatus.LastLearningAttempt,
 			"interval", r.LearningInterval)
-		
+
 		// Record cooldown violation metric
 		if r.EventProcessor != nil {
 			r.EventProcessor.ProcessCooldownViolation(ctx, agent.Namespace, agent.Name)
@@ -900,17 +900,17 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 	costSavings := 0.0
 	if r.MetricsCollector != nil {
 		// Estimate cost savings based on typical neural vs symbolic execution costs
-		neuralCostPerExecution := 0.01  // Estimated $0.01 per neural execution
+		neuralCostPerExecution := 0.01     // Estimated $0.01 per neural execution
 		symbolicCostPerExecution := 0.0001 // Estimated $0.0001 per symbolic execution
-		executionFrequency := int64(10) // Estimated 10 executions per day
-		
-		costSavings = r.MetricsCollector.EstimateCostSavings(ctx, agent.Namespace, agent.Name, trigger.TaskName, 
+		executionFrequency := int64(10)    // Estimated 10 executions per day
+
+		costSavings = r.MetricsCollector.EstimateCostSavings(ctx, agent.Namespace, agent.Name, trigger.TaskName,
 			neuralCostPerExecution, symbolicCostPerExecution, executionFrequency)
 	}
 
 	// Record comprehensive learning event with metrics
 	if r.EventProcessor != nil {
-		err := r.EventProcessor.ProcessTaskLearned(ctx, agent.Namespace, agent.Name, trigger.TaskName, 
+		err := r.EventProcessor.ProcessTaskLearned(ctx, agent.Namespace, agent.Name, trigger.TaskName,
 			trigger.EventType, trigger.Confidence, costSavings)
 		if err != nil {
 			r.Log.Error(err, "Failed to process task learned metrics", "task", trigger.TaskName)
