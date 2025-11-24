@@ -1031,11 +1031,22 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 
 		// Only set spec on creation (PVCs are immutable after creation)
 		if pvc.CreationTimestamp.IsZero() {
+			// Parse storage size safely to avoid controller panic
+			quantity, err := resource.ParseQuantity(size)
+			if err != nil {
+				return fmt.Errorf("invalid workspace size %q: %w", size, err)
+			}
+
+			// Validate minimum size - PVCs cannot have zero storage
+			if quantity.IsZero() {
+				return fmt.Errorf("workspace size cannot be zero, got: %s", size)
+			}
+
 			pvc.Spec = corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{accessMode},
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse(size),
+						corev1.ResourceStorage: quantity,
 					},
 				},
 			}

@@ -349,8 +349,10 @@ type WorkspaceSpec struct {
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
 
-	// Size is the requested storage size (e.g., "10Gi", "1Ti")
-	// +kubebuilder:validation:Pattern=`^[0-9]+(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)$`
+	// Size is the requested storage size (e.g., "10Gi", "1.5Ti", "500Mi")
+	// Supports integer and decimal quantities with standard Kubernetes suffixes
+	// +kubebuilder:validation:Pattern=`^([0-9]*\.?[0-9]+)(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K|m)?$`
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:default="10Gi"
 	// +optional
 	Size string `json:"size,omitempty"`

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -105,6 +106,34 @@ func (a *LanguageAgent) validateSpec() error {
 		if a.Spec.RateLimits.ToolCallsPerMinute != nil && *a.Spec.RateLimits.ToolCallsPerMinute < 0 {
 			return fmt.Errorf("spec.rateLimits.toolCallsPerMinute must be non-negative")
 		}
+	}
+
+	// Validate workspace configuration if present
+	if a.Spec.Workspace != nil && a.Spec.Workspace.Size != "" {
+		if err := a.validateWorkspaceSize(a.Spec.Workspace.Size); err != nil {
+			return fmt.Errorf("spec.workspace.size: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validateWorkspaceSize validates the workspace size format and constraints
+func (a *LanguageAgent) validateWorkspaceSize(size string) error {
+	// Parse the size to ensure it's valid
+	quantity, err := resource.ParseQuantity(size)
+	if err != nil {
+		return fmt.Errorf("invalid format %q, expected Kubernetes quantity format (e.g., \"10Gi\", \"1.5Ti\")", size)
+	}
+
+	// Ensure size is not zero (PVCs require non-zero storage)
+	if quantity.IsZero() {
+		return fmt.Errorf("cannot be zero, PersistentVolumeClaims require non-zero storage")
+	}
+
+	// Ensure size is positive (negative quantities don't make sense for storage)
+	if quantity.Sign() < 0 {
+		return fmt.Errorf("cannot be negative, got: %s", size)
 	}
 
 	return nil
