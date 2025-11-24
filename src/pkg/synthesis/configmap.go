@@ -37,22 +37,22 @@ type ConfigMapManager struct {
 
 // RetentionPolicy defines ConfigMap retention settings
 type RetentionPolicy struct {
-	KeepLastN        int32         // Number of latest versions to keep (0 = unlimited)
-	CleanupAfterDays int32         // Delete versions older than N days (0 = never)
+	KeepLastN         int32         // Number of latest versions to keep (0 = unlimited)
+	CleanupAfterDays  int32         // Delete versions older than N days (0 = never)
 	AlwaysKeepInitial bool          // Always preserve v1 (initial synthesis)
-	CleanupInterval  time.Duration // How often to run cleanup
+	CleanupInterval   time.Duration // How often to run cleanup
 }
 
 // ConfigMapVersion represents metadata about a versioned ConfigMap
 type ConfigMapVersion struct {
-	Name           string            `json:"name"`
-	Version        int32             `json:"version"`
-	SynthesisType  string            `json:"synthesisType"`  // initial, learned, manual
-	PreviousVersion *int32           `json:"previousVersion,omitempty"`
-	LearnedTask    string            `json:"learnedTask,omitempty"`
-	CreatedAt      time.Time         `json:"createdAt"`
-	Labels         map[string]string `json:"labels"`
-	Annotations    map[string]string `json:"annotations"`
+	Name            string            `json:"name"`
+	Version         int32             `json:"version"`
+	SynthesisType   string            `json:"synthesisType"` // initial, learned, manual
+	PreviousVersion *int32            `json:"previousVersion,omitempty"`
+	LearnedTask     string            `json:"learnedTask,omitempty"`
+	CreatedAt       time.Time         `json:"createdAt"`
+	Labels          map[string]string `json:"labels"`
+	Annotations     map[string]string `json:"annotations"`
 }
 
 // CreateVersionedConfigMap creates a new versioned ConfigMap with enhanced metadata tracking
@@ -90,8 +90,8 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 
 	// Build annotations with enhanced metadata
 	annotations := map[string]string{
-		"langop.io/created-at":    time.Now().Format(time.RFC3339),
-		"langop.io/learned-from":  options.LearningSource,
+		"langop.io/created-at":   time.Now().Format(time.RFC3339),
+		"langop.io/learned-from": options.LearningSource,
 	}
 
 	// Add custom annotations
@@ -141,13 +141,13 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 
 // ConfigMapOptions contains parameters for creating versioned ConfigMaps
 type ConfigMapOptions struct {
-	Code               string            `json:"code"`                         // Agent code content
-	Version            int32             `json:"version"`                      // Version number (must be positive)
-	SynthesisType      string            `json:"synthesisType"`                // initial, learned, manual
-	PreviousVersion    *int32            `json:"previousVersion,omitempty"`    // Previous version for tracking
-	LearnedTask        string            `json:"learnedTask,omitempty"`        // Task that triggered learning
-	LearningSource     string            `json:"learningSource,omitempty"`     // Source of learning: pattern-detection, error-recovery, manual
-	CustomAnnotations  map[string]string `json:"customAnnotations,omitempty"`  // Additional annotations
+	Code              string            `json:"code"`                        // Agent code content
+	Version           int32             `json:"version"`                     // Version number (must be positive)
+	SynthesisType     string            `json:"synthesisType"`               // initial, learned, manual
+	PreviousVersion   *int32            `json:"previousVersion,omitempty"`   // Previous version for tracking
+	LearnedTask       string            `json:"learnedTask,omitempty"`       // Task that triggered learning
+	LearningSource    string            `json:"learningSource,omitempty"`    // Source of learning: pattern-detection, error-recovery, manual
+	CustomAnnotations map[string]string `json:"customAnnotations,omitempty"` // Additional annotations
 }
 
 // GetVersionedConfigMaps retrieves all versioned ConfigMaps for an agent
@@ -479,4 +479,3 @@ func sortVersionsByNumber(versions []*ConfigMapVersion) {
 		}
 	}
 }
-

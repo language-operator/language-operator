@@ -31,7 +31,7 @@ type LearningReconciler struct {
 	Scheme               *runtime.Scheme
 	Log                  logr.Logger
 	Recorder             record.EventRecorder
-	Synthesizer          synthesis.AgentSynthesizer // For re-synthesis with task_synthesis.tmpl
+	Synthesizer          synthesis.AgentSynthesizer  // For re-synthesis with task_synthesis.tmpl
 	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
@@ -416,7 +416,7 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 
 	// Create new versioned ConfigMap using ConfigMapManager
 	newVersion := taskStatus.CurrentVersion + 1
-	
+
 	// Get previous version for tracking
 	var previousVersion *int32
 	if taskStatus.CurrentVersion > 0 {

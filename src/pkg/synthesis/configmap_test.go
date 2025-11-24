@@ -24,17 +24,17 @@ import (
 
 func TestConfigMapManager_CreateVersionedConfigMap(t *testing.T) {
 	tests := []struct {
-		name          string
-		options       *ConfigMapOptions
-		expectError   bool
-		validateFunc  func(t *testing.T, cm *corev1.ConfigMap)
+		name         string
+		options      *ConfigMapOptions
+		expectError  bool
+		validateFunc func(t *testing.T, cm *corev1.ConfigMap)
 	}{
 		{
 			name: "create initial version",
 			options: &ConfigMapOptions{
-				Code:          "agent 'test' do\nend",
-				Version:       1,
-				SynthesisType: "initial",
+				Code:           "agent 'test' do\nend",
+				Version:        1,
+				SynthesisType:  "initial",
 				LearningSource: "manual",
 			},
 			expectError: false,
@@ -124,7 +124,7 @@ func TestConfigMapManager_CreateVersionedConfigMap(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, cm)
-				
+
 				// Verify the ConfigMap was actually created in the fake client
 				retrievedCM := &corev1.ConfigMap{}
 				err = fakeClient.Get(context.Background(), types.NamespacedName{
@@ -269,11 +269,11 @@ func TestConfigMapManager_GetVersionedConfigMaps(t *testing.T) {
 
 func TestConfigMapManager_ApplyRetentionPolicy(t *testing.T) {
 	tests := []struct {
-		name                string
-		existingVersions    []int32
-		retentionPolicy     *RetentionPolicy
-		expectedDeletions   []int32
-		expectedRemaining   []int32
+		name              string
+		existingVersions  []int32
+		retentionPolicy   *RetentionPolicy
+		expectedDeletions []int32
+		expectedRemaining []int32
 	}{
 		{
 			name:             "keep last 2 versions",
@@ -304,9 +304,9 @@ func TestConfigMapManager_ApplyRetentionPolicy(t *testing.T) {
 			expectedRemaining: []int32{3},
 		},
 		{
-			name:             "no retention policy",
-			existingVersions: []int32{1, 2, 3, 4, 5},
-			retentionPolicy:  nil,
+			name:              "no retention policy",
+			existingVersions:  []int32{1, 2, 3, 4, 5},
+			retentionPolicy:   nil,
 			expectedDeletions: []int32{},
 			expectedRemaining: []int32{1, 2, 3, 4, 5},
 		},
@@ -345,7 +345,7 @@ func TestConfigMapManager_ApplyRetentionPolicy(t *testing.T) {
 			for i, version := range tt.existingVersions {
 				// Make older versions have older timestamps
 				timestamp := now.Add(-time.Duration(len(tt.existingVersions)-i) * 25 * time.Hour) // 25 hours ago, 50 hours ago, etc.
-				
+
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("test-agent-v%d", version),
@@ -521,7 +521,7 @@ func TestConfigMapManager_CreateCleanupCronJob(t *testing.T) {
 	container := containers[0]
 	assert.Equal(t, "cleanup", container.Name)
 	assert.Equal(t, "ghcr.io/language-operator/aictl:latest", container.Image)
-	
+
 	expectedCommand := []string{
 		"/usr/local/bin/aictl",
 		"agent", "cleanup",
@@ -642,10 +642,10 @@ func TestParseConfigMapVersion(t *testing.T) {
 					assert.Nil(t, result.PreviousVersion)
 				}
 				assert.Equal(t, tt.expected.LearnedTask, result.LearnedTask)
-				
+
 				// Check timestamp (allow small difference due to parsing)
 				if !tt.expected.CreatedAt.IsZero() {
-					assert.True(t, result.CreatedAt.Equal(tt.expected.CreatedAt) || 
+					assert.True(t, result.CreatedAt.Equal(tt.expected.CreatedAt) ||
 						result.CreatedAt.Sub(tt.expected.CreatedAt) < time.Second)
 				}
 			}

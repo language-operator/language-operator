@@ -406,13 +406,13 @@ func TestLearningReconciler_ConfigMapManagerIntegration(t *testing.T) {
 
 	// Test using ConfigMapManager directly
 	options := &synthesis.ConfigMapOptions{
-		Code:          learnedCode,
-		Version:       version,
-		SynthesisType: "learned",
-		LearnedTask:   taskName,
+		Code:           learnedCode,
+		Version:        version,
+		SynthesisType:  "learned",
+		LearnedTask:    taskName,
 		LearningSource: "pattern-detection",
 	}
-	
+
 	_, err := reconciler.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, options)
 	require.NoError(t, err)
 
