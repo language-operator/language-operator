@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -39,6 +40,11 @@ type LearningReconciler struct {
 	LearningInterval     time.Duration // Minimum interval between learning attempts
 	MaxVersions          int32         // Maximum number of ConfigMap versions to keep
 	PatternConfidenceMin float64       // Minimum confidence threshold for pattern detection
+
+	// Error-triggered re-synthesis configuration
+	ErrorFailureThreshold       int32         // Number of consecutive failures before triggering re-synthesis (default: 3)
+	ErrorCooldownPeriod         time.Duration // Cooldown period between error-triggered re-synthesis attempts (default: 5m)
+	MaxErrorResynthesisAttempts int32         // Maximum number of error re-synthesis attempts per task (default: 3)
 }
 
 // LearningEvent represents a learning trigger event
@@ -66,6 +72,14 @@ type TaskLearningStatus struct {
 	ErrorRate           float64   `json:"errorRate"`
 	CommonPattern       string    `json:"commonPattern"`
 	UniquePatternCount  int32     `json:"uniquePatternCount"`
+
+	// Error-triggered re-synthesis fields
+	ConsecutiveFailures      int32     `json:"consecutiveFailures"`
+	LastFailureTime          time.Time `json:"lastFailureTime"`
+	ErrorResynthesisAttempts int32     `json:"errorResynthesisAttempts"`
+	LastErrorMessage         string    `json:"lastErrorMessage"`
+	FailurePattern           string    `json:"failurePattern"`
+	LastSuccessTime          time.Time `json:"lastSuccessTime"`
 }
 
 // TaskTrace represents an execution trace for pattern detection
@@ -157,13 +171,24 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, fmt.Errorf("failed to get learning status: %w", err)
 	}
 
-	// Check for learning triggers
+	// Check for learning triggers (pattern-based and error-based)
 	learningTriggers, err := r.checkLearningTriggers(ctx, &agent, learningStatus)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to check learning triggers")
 		return ctrl.Result{}, fmt.Errorf("failed to check learning triggers: %w", err)
 	}
+
+	// Check for error-triggered re-synthesis
+	errorTriggers, err := r.checkErrorTriggers(ctx, &agent, learningStatus)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to check error triggers")
+		return ctrl.Result{}, fmt.Errorf("failed to check error triggers: %w", err)
+	}
+
+	// Combine all triggers
+	learningTriggers = append(learningTriggers, errorTriggers...)
 
 	// Process any learning triggers
 	requeue := false
@@ -253,17 +278,62 @@ func (r *LearningReconciler) getLearningStatus(ctx context.Context, agent *lango
 	return learningStatus, nil
 }
 
-// parseTaskLearningStatus parses learning status from JSON string
+// parseTaskLearningStatus parses learning status from string representation
 func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearningStatus, error) {
-	// For now, return a basic status - in production this would parse JSON
+	// Parse the simple string format: "traces:5,attempts:2,version:1,symbolic:false,confidence:0.85,failures:0,error_attempts:0"
 	// TODO: Implement JSON parsing once we define the full status structure
-	return &TaskLearningStatus{
-		TraceCount:        0,
-		LearningAttempts:  0,
-		CurrentVersion:    1,
-		IsSymbolic:        false,
-		PatternConfidence: 0.0,
-	}, nil
+	status := &TaskLearningStatus{
+		TraceCount:               0,
+		LearningAttempts:         0,
+		CurrentVersion:           1,
+		IsSymbolic:               false,
+		PatternConfidence:        0.0,
+		ConsecutiveFailures:      0,
+		ErrorResynthesisAttempts: 0,
+	}
+
+	// Simple parsing for key:value pairs
+	parts := strings.Split(data, ",")
+	for _, part := range parts {
+		keyValue := strings.Split(part, ":")
+		if len(keyValue) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(keyValue[0])
+		value := strings.TrimSpace(keyValue[1])
+
+		switch key {
+		case "traces":
+			if v, err := fmt.Sscanf(value, "%d", &status.TraceCount); err == nil && v == 1 {
+				// parsed successfully
+			}
+		case "attempts":
+			if v, err := fmt.Sscanf(value, "%d", &status.LearningAttempts); err == nil && v == 1 {
+				// parsed successfully
+			}
+		case "version":
+			if v, err := fmt.Sscanf(value, "%d", &status.CurrentVersion); err == nil && v == 1 {
+				// parsed successfully
+			}
+		case "symbolic":
+			status.IsSymbolic = value == "true"
+		case "confidence":
+			if v, err := fmt.Sscanf(value, "%f", &status.PatternConfidence); err == nil && v == 1 {
+				// parsed successfully
+			}
+		case "failures":
+			if v, err := fmt.Sscanf(value, "%d", &status.ConsecutiveFailures); err == nil && v == 1 {
+				// parsed successfully
+			}
+		case "error_attempts":
+			if v, err := fmt.Sscanf(value, "%d", &status.ErrorResynthesisAttempts); err == nil && v == 1 {
+				// parsed successfully
+			}
+		}
+	}
+
+	return status, nil
 }
 
 // checkLearningTriggers checks for conditions that should trigger learning
@@ -362,6 +432,326 @@ func (r *LearningReconciler) checkLearningTriggers(ctx context.Context, agent *l
 	return triggers, nil
 }
 
+// checkErrorTriggers checks for error-triggered re-synthesis conditions
+func (r *LearningReconciler) checkErrorTriggers(ctx context.Context, agent *langopv1alpha1.LanguageAgent, learningStatus map[string]*TaskLearningStatus) ([]LearningEvent, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.check_error_triggers")
+	defer span.End()
+
+	var triggers []LearningEvent
+
+	// Get recent task failures from agent events and logs
+	taskFailures, err := r.getTaskFailures(ctx, agent)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to get task failures: %w", err)
+	}
+
+	// Process failures for each task
+	for taskName, failures := range taskFailures {
+		status, exists := learningStatus[taskName]
+		if !exists {
+			status = &TaskLearningStatus{
+				TaskName:       taskName,
+				CurrentVersion: 1,
+			}
+			learningStatus[taskName] = status
+		}
+
+		// Update consecutive failures count
+		r.updateConsecutiveFailures(status, failures)
+
+		// Check if we've reached the failure threshold
+		if r.shouldTriggerErrorResynthesis(status) {
+			// Create error trigger event
+			trigger := LearningEvent{
+				AgentName:  agent.Name,
+				Namespace:  agent.Namespace,
+				TaskName:   taskName,
+				EventType:  "consecutive_failures",
+				TraceCount: status.TraceCount,
+				ErrorRate:  r.calculateRecentErrorRate(failures),
+				Confidence: 0.8, // High confidence for error-based re-synthesis
+				Timestamp:  time.Now(),
+			}
+			triggers = append(triggers, trigger)
+
+			r.Log.Info("Error-triggered re-synthesis condition met",
+				"agent", agent.Name,
+				"task", taskName,
+				"consecutive_failures", status.ConsecutiveFailures,
+				"threshold", r.ErrorFailureThreshold)
+		}
+	}
+
+	span.SetAttributes(attribute.Int("learning.error_triggers_found", len(triggers)))
+	return triggers, nil
+}
+
+// getTaskFailures retrieves recent task failures from agent events and logs
+func (r *LearningReconciler) getTaskFailures(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (map[string][]TaskFailure, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.get_task_failures")
+	defer span.End()
+
+	taskFailures := make(map[string][]TaskFailure)
+
+	// Get agent pod events for failures
+	events, err := r.getAgentEvents(ctx, agent)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to get agent events: %w", err)
+	}
+
+	// Parse events for task failures
+	for _, event := range events {
+		if failure := r.parseTaskFailureFromEvent(event); failure != nil {
+			taskFailures[failure.TaskName] = append(taskFailures[failure.TaskName], *failure)
+		}
+	}
+
+	// TODO: Also get failures from agent execution logs via OpenTelemetry traces
+	// This would provide more detailed error context for synthesis
+
+	span.SetAttributes(
+		attribute.Int("learning.events_processed", len(events)),
+		attribute.Int("learning.tasks_with_failures", len(taskFailures)),
+	)
+
+	return taskFailures, nil
+}
+
+// TaskFailure represents a task execution failure
+type TaskFailure struct {
+	TaskName     string    `json:"taskName"`
+	Timestamp    time.Time `json:"timestamp"`
+	ErrorMessage string    `json:"errorMessage"`
+	ErrorType    string    `json:"errorType"`
+	Context      string    `json:"context"`
+}
+
+// getAgentEvents retrieves recent events for the agent's pods
+func (r *LearningReconciler) getAgentEvents(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Event, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.get_agent_events")
+	defer span.End()
+
+	// List events in the agent's namespace
+	eventList := &corev1.EventList{}
+
+	// Get events from last 24 hours
+	timeLimit := metav1.NewTime(time.Now().Add(-24 * time.Hour))
+
+	if err := r.List(ctx, eventList, client.InNamespace(agent.Namespace)); err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	// Filter events related to this agent and within time limit
+	var agentEvents []corev1.Event
+	for _, event := range eventList.Items {
+		if r.isAgentRelatedEvent(&event, agent) && event.FirstTimestamp.After(timeLimit.Time) {
+			agentEvents = append(agentEvents, event)
+		}
+	}
+
+	span.SetAttributes(
+		attribute.Int("learning.total_events", len(eventList.Items)),
+		attribute.Int("learning.agent_events", len(agentEvents)),
+	)
+
+	return agentEvents, nil
+}
+
+// isAgentRelatedEvent checks if an event is related to the specific agent
+func (r *LearningReconciler) isAgentRelatedEvent(event *corev1.Event, agent *langopv1alpha1.LanguageAgent) bool {
+	// Check event message for agent name
+	if strings.Contains(event.Message, agent.Name) {
+		return true
+	}
+
+	// Check involved object name contains agent name
+	if strings.Contains(event.InvolvedObject.Name, agent.Name) {
+		return true
+	}
+
+	// Check if this is a pod or other resource that would be related to the agent
+	if event.InvolvedObject.Kind == "Pod" && strings.Contains(event.InvolvedObject.Name, agent.Name) {
+		return true
+	}
+
+	return false
+}
+
+// parseTaskFailureFromEvent parses a task failure from a Kubernetes event
+func (r *LearningReconciler) parseTaskFailureFromEvent(event corev1.Event) *TaskFailure {
+	// Only process warning/error events
+	if event.Type != corev1.EventTypeWarning {
+		return nil
+	}
+
+	// Look for task failure patterns in the event message
+	message := strings.ToLower(event.Message)
+
+	// Common failure patterns
+	failurePatterns := []string{
+		"failed", "error", "execution failed",
+		"runtime error", "panic", "exception",
+		"timeout", "connection failed", "network error",
+	}
+
+	var matchedPattern string
+	for _, pattern := range failurePatterns {
+		if strings.Contains(message, pattern) {
+			matchedPattern = pattern
+			break
+		}
+	}
+
+	if matchedPattern == "" {
+		return nil
+	}
+
+	// Try to extract task name from event
+	taskName := r.extractTaskNameFromEvent(event)
+	if taskName == "" {
+		taskName = "unknown"
+	}
+
+	return &TaskFailure{
+		TaskName:     taskName,
+		Timestamp:    event.FirstTimestamp.Time,
+		ErrorMessage: event.Message,
+		ErrorType:    matchedPattern,
+		Context:      fmt.Sprintf("Event: %s/%s", event.Reason, event.InvolvedObject.Kind),
+	}
+}
+
+// extractTaskNameFromEvent attempts to extract task name from event details
+func (r *LearningReconciler) extractTaskNameFromEvent(event corev1.Event) string {
+	message := event.Message
+
+	// Look for task name patterns in the message
+	// Example: "Task 'fetch_data' failed with error..."
+	if strings.Contains(message, "task '") {
+		parts := strings.Split(message, "task '")
+		if len(parts) > 1 {
+			taskPart := parts[1]
+			if endIdx := strings.Index(taskPart, "'"); endIdx > 0 {
+				return taskPart[:endIdx]
+			}
+		}
+	}
+
+	// Example: "Task fetch_data failed..."
+	if strings.Contains(strings.ToLower(message), "task ") {
+		parts := strings.Fields(message)
+		for i, part := range parts {
+			if strings.ToLower(part) == "task" && i+1 < len(parts) {
+				candidate := parts[i+1]
+				// Clean up the candidate name
+				candidate = strings.Trim(candidate, "':,.")
+				if candidate != "" && candidate != "failed" {
+					return candidate
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// updateConsecutiveFailures updates the consecutive failure count for a task
+func (r *LearningReconciler) updateConsecutiveFailures(status *TaskLearningStatus, failures []TaskFailure) {
+	if len(failures) == 0 {
+		return
+	}
+
+	// Sort failures by timestamp (most recent first)
+	sort.Slice(failures, func(i, j int) bool {
+		return failures[i].Timestamp.After(failures[j].Timestamp)
+	})
+
+	// Check if the most recent failure is very recent (within last hour)
+	mostRecentFailure := failures[0]
+	if time.Since(mostRecentFailure.Timestamp) > time.Hour {
+		// Reset consecutive failures if last failure was too long ago
+		status.ConsecutiveFailures = 0
+		return
+	}
+
+	// Count consecutive failures from the most recent backwards
+	consecutiveCount := int32(0)
+	cutoffTime := time.Now().Add(-1 * time.Hour) // Only count failures in last hour
+
+	for _, failure := range failures {
+		if failure.Timestamp.Before(cutoffTime) {
+			break // Stop counting if failure is too old
+		}
+		consecutiveCount++
+	}
+
+	// Update status
+	status.ConsecutiveFailures = consecutiveCount
+	status.LastFailureTime = mostRecentFailure.Timestamp
+	status.LastErrorMessage = mostRecentFailure.ErrorMessage
+	status.FailurePattern = mostRecentFailure.ErrorType
+
+	r.Log.V(1).Info("Updated consecutive failures",
+		"task", status.TaskName,
+		"consecutive_failures", consecutiveCount,
+		"most_recent_failure", mostRecentFailure.Timestamp,
+		"error_type", mostRecentFailure.ErrorType)
+}
+
+// shouldTriggerErrorResynthesis determines if error-based re-synthesis should be triggered
+func (r *LearningReconciler) shouldTriggerErrorResynthesis(status *TaskLearningStatus) bool {
+	// Check if we've reached the consecutive failure threshold
+	if status.ConsecutiveFailures < r.ErrorFailureThreshold {
+		return false
+	}
+
+	// Check if we're within the cooldown period
+	if time.Since(status.LastLearningAttempt) < r.ErrorCooldownPeriod {
+		return false
+	}
+
+	// Check if we've exceeded maximum error re-synthesis attempts
+	if status.ErrorResynthesisAttempts >= r.MaxErrorResynthesisAttempts {
+		return false
+	}
+
+	// Check if the task has had any recent successes (don't re-synthesize if never worked)
+	if status.LastSuccessTime.IsZero() && status.TraceCount == 0 {
+		return false
+	}
+
+	return true
+}
+
+// calculateRecentErrorRate calculates error rate from recent failures
+func (r *LearningReconciler) calculateRecentErrorRate(failures []TaskFailure) float64 {
+	if len(failures) == 0 {
+		return 0.0
+	}
+
+	// Calculate error rate based on failures in the last hour
+	recentCutoff := time.Now().Add(-1 * time.Hour)
+	recentFailures := 0
+
+	for _, failure := range failures {
+		if failure.Timestamp.After(recentCutoff) {
+			recentFailures++
+		}
+	}
+
+	// Assume roughly one execution per 5 minutes for rate calculation
+	estimatedExecutions := 12 // 60 minutes / 5 minutes per execution
+
+	if recentFailures >= estimatedExecutions {
+		return 1.0 // 100% error rate
+	}
+
+	return float64(recentFailures) / float64(estimatedExecutions)
+}
+
 // processLearningTrigger processes a single learning trigger
 func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *langopv1alpha1.LanguageAgent, trigger LearningEvent, learningStatus map[string]*TaskLearningStatus) error {
 	ctx, span := learningTracer.Start(ctx, "learning.process_trigger")
@@ -411,8 +801,13 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 	taskStatus.LastLearningAttempt = time.Now()
 	taskStatus.LearningAttempts++
 
-	// Generate learned code
-	learnedCode, err := r.generateLearnedCode(ctx, agent, trigger)
+	// Track error re-synthesis attempts separately
+	if trigger.EventType == "consecutive_failures" {
+		taskStatus.ErrorResynthesisAttempts++
+	}
+
+	// Generate learned code with error context if applicable
+	learnedCode, err := r.generateLearnedCode(ctx, agent, trigger, learningStatus)
 	if err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("failed to generate learned code: %w", err)
@@ -477,7 +872,7 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 }
 
 // generateLearnedCode generates optimized code for a task based on learning triggers
-func (r *LearningReconciler) generateLearnedCode(ctx context.Context, agent *langopv1alpha1.LanguageAgent, trigger LearningEvent) (string, error) {
+func (r *LearningReconciler) generateLearnedCode(ctx context.Context, agent *langopv1alpha1.LanguageAgent, trigger LearningEvent, learningStatus map[string]*TaskLearningStatus) (string, error) {
 	ctx, span := learningTracer.Start(ctx, "learning.generate_code")
 	defer span.End()
 
@@ -504,10 +899,55 @@ func (r *LearningReconciler) generateLearnedCode(ctx context.Context, agent *lan
 	}
 
 	// Use the synthesis service with task_synthesis.tmpl for learned code generation
-	synthesisReq := synthesis.AgentSynthesisRequest{
-		Instructions: fmt.Sprintf("Optimize task %s based on %d execution traces with pattern: %s", trigger.TaskName, trigger.TraceCount, analysis.CommonPattern),
-		AgentName:    agent.Name,
-		Namespace:    agent.Namespace,
+	var synthesisReq synthesis.AgentSynthesisRequest
+
+	if trigger.EventType == "consecutive_failures" {
+		// Error-triggered re-synthesis with error context
+		errorContextText := r.buildErrorContext(ctx, agent, trigger.TaskName)
+
+		// Build runtime errors from task failures
+		taskFailures, _ := r.getTaskFailures(ctx, agent)
+		failures, exists := taskFailures[trigger.TaskName]
+		var runtimeErrors []synthesis.RuntimeError
+		if exists {
+			for _, failure := range failures {
+				if len(runtimeErrors) < 5 { // Limit to recent failures
+					runtimeErrors = append(runtimeErrors, synthesis.RuntimeError{
+						Timestamp:         failure.Timestamp.Format(time.RFC3339),
+						ErrorType:         failure.ErrorType,
+						ErrorMessage:      failure.ErrorMessage,
+						StackTrace:        []string{failure.Context},
+						ContainerExitCode: 1, // Assume non-zero exit
+						SynthesisAttempt:  1, // Track which synthesis attempt this was
+					})
+				}
+			}
+		}
+
+		synthesisReq = synthesis.AgentSynthesisRequest{
+			Instructions: fmt.Sprintf("Fix task %s that has been failing. Error context: %s", trigger.TaskName, errorContextText),
+			AgentName:    agent.Name,
+			Namespace:    agent.Namespace,
+			ErrorContext: &synthesis.ErrorContext{
+				RuntimeErrors:       runtimeErrors,
+				LastCrashLog:        errorContextText,
+				ConsecutiveFailures: int32(len(failures)),
+				PreviousAttempts:    1, // This will be updated based on learning status
+			},
+			IsRetry: true, // Mark as retry/error recovery
+		}
+
+		// Update previous attempts if we have learning status
+		if status, exists := learningStatus[trigger.TaskName]; exists {
+			synthesisReq.ErrorContext.PreviousAttempts = status.ErrorResynthesisAttempts
+		}
+	} else {
+		// Pattern-based optimization
+		synthesisReq = synthesis.AgentSynthesisRequest{
+			Instructions: fmt.Sprintf("Optimize task %s based on %d execution traces with pattern: %s", trigger.TaskName, trigger.TraceCount, analysis.CommonPattern),
+			AgentName:    agent.Name,
+			Namespace:    agent.Namespace,
+		}
 	}
 
 	response, err := r.Synthesizer.SynthesizeAgent(ctx, synthesisReq)
@@ -529,6 +969,118 @@ func (r *LearningReconciler) generateLearnedCode(ctx context.Context, agent *lan
 	)
 
 	return response.DSLCode, nil
+}
+
+// buildErrorContext builds detailed error context for error-triggered re-synthesis
+func (r *LearningReconciler) buildErrorContext(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string) string {
+	ctx, span := learningTracer.Start(ctx, "learning.build_error_context")
+	defer span.End()
+
+	var contextBuilder strings.Builder
+
+	// Get recent failures for this task
+	taskFailures, err := r.getTaskFailures(ctx, agent)
+	if err != nil {
+		r.Log.Error(err, "Failed to get task failures for error context", "task", taskName)
+		return "Error context unavailable"
+	}
+
+	failures, exists := taskFailures[taskName]
+	if !exists || len(failures) == 0 {
+		return "No recent failure data available"
+	}
+
+	// Sort failures by timestamp (most recent first)
+	sort.Slice(failures, func(i, j int) bool {
+		return failures[i].Timestamp.After(failures[j].Timestamp)
+	})
+
+	// Build comprehensive error context
+	contextBuilder.WriteString(fmt.Sprintf("Task '%s' has encountered %d recent failures:\n\n", taskName, len(failures)))
+
+	// Include details of recent failures (up to 5 most recent)
+	maxFailuresToInclude := 5
+	if len(failures) < maxFailuresToInclude {
+		maxFailuresToInclude = len(failures)
+	}
+
+	for i := 0; i < maxFailuresToInclude; i++ {
+		failure := failures[i]
+		contextBuilder.WriteString(fmt.Sprintf("Failure %d (at %s):\n", i+1, failure.Timestamp.Format(time.RFC3339)))
+		contextBuilder.WriteString(fmt.Sprintf("  Error Type: %s\n", failure.ErrorType))
+		contextBuilder.WriteString(fmt.Sprintf("  Message: %s\n", failure.ErrorMessage))
+		contextBuilder.WriteString(fmt.Sprintf("  Context: %s\n", failure.Context))
+		contextBuilder.WriteString("\n")
+	}
+
+	// Identify common error patterns
+	errorPatterns := r.analyzeErrorPatterns(failures)
+	if len(errorPatterns) > 0 {
+		contextBuilder.WriteString("Common error patterns identified:\n")
+		for pattern, count := range errorPatterns {
+			contextBuilder.WriteString(fmt.Sprintf("  - %s (occurred %d times)\n", pattern, count))
+		}
+		contextBuilder.WriteString("\n")
+	}
+
+	// Add recommendations for the LLM
+	contextBuilder.WriteString("Please analyze these failures and generate a more robust implementation of this task that addresses the identified error patterns. ")
+	contextBuilder.WriteString("Consider adding error handling, input validation, timeouts, retries, or alternative approaches as appropriate.")
+
+	span.SetAttributes(
+		attribute.Int("learning.failures_analyzed", len(failures)),
+		attribute.Int("learning.error_patterns", len(errorPatterns)),
+		attribute.Int("learning.context_length", contextBuilder.Len()),
+	)
+
+	return contextBuilder.String()
+}
+
+// analyzeErrorPatterns analyzes common patterns in task failures
+func (r *LearningReconciler) analyzeErrorPatterns(failures []TaskFailure) map[string]int {
+	patterns := make(map[string]int)
+
+	for _, failure := range failures {
+		// Count occurrences of each error type
+		if failure.ErrorType != "" {
+			patterns[failure.ErrorType]++
+		}
+
+		// Look for specific error patterns in messages
+		message := strings.ToLower(failure.ErrorMessage)
+
+		// Network-related errors
+		if strings.Contains(message, "connection") || strings.Contains(message, "network") || strings.Contains(message, "timeout") {
+			patterns["network_connectivity"]++
+		}
+
+		// Authentication/authorization errors
+		if strings.Contains(message, "unauthorized") || strings.Contains(message, "forbidden") || strings.Contains(message, "authentication") {
+			patterns["auth_errors"]++
+		}
+
+		// Resource errors
+		if strings.Contains(message, "resource") || strings.Contains(message, "memory") || strings.Contains(message, "disk") {
+			patterns["resource_exhaustion"]++
+		}
+
+		// API/service errors
+		if strings.Contains(message, "api") || strings.Contains(message, "service unavailable") || strings.Contains(message, "500") {
+			patterns["external_service_errors"]++
+		}
+
+		// Input/data validation errors
+		if strings.Contains(message, "invalid") || strings.Contains(message, "validation") || strings.Contains(message, "format") {
+			patterns["input_validation_errors"]++
+		}
+
+		// Runtime/logic errors
+		if strings.Contains(message, "nil pointer") || strings.Contains(message, "null") || strings.Contains(message, "undefined") {
+			patterns["runtime_logic_errors"]++
+		}
+	}
+
+	return patterns
 }
 
 // generatePatternBasedCode generates optimized code based on detected patterns (fallback)
@@ -1283,12 +1835,14 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 func (r *LearningReconciler) serializeTaskLearningStatus(status *TaskLearningStatus) string {
 	// For now, return a simple string representation
 	// TODO: Implement JSON serialization
-	return fmt.Sprintf("traces:%d,attempts:%d,version:%d,symbolic:%t,confidence:%.2f",
+	return fmt.Sprintf("traces:%d,attempts:%d,version:%d,symbolic:%t,confidence:%.2f,failures:%d,error_attempts:%d",
 		status.TraceCount,
 		status.LearningAttempts,
 		status.CurrentVersion,
 		status.IsSymbolic,
 		status.PatternConfidence,
+		status.ConsecutiveFailures,
+		status.ErrorResynthesisAttempts,
 	)
 }
 

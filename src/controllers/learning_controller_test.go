@@ -673,7 +673,7 @@ func TestLearningReconciler_generateLearnedCode(t *testing.T) {
 				Synthesizer: tt.synthesizer,
 			}
 
-			code, err := reconciler.generateLearnedCode(context.Background(), agent, tt.trigger)
+			code, err := reconciler.generateLearnedCode(context.Background(), agent, tt.trigger, map[string]*TaskLearningStatus{})
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -883,4 +883,455 @@ func TestLearningReconciler_extractCronJobConfigMapReference(t *testing.T) {
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
+}
+
+// Tests for error-triggered re-synthesis functionality
+
+func TestLearningReconciler_checkErrorTriggers(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+	}
+
+	tests := []struct {
+		name                string
+		events              []corev1.Event
+		learningStatus      map[string]*TaskLearningStatus
+		errorThreshold      int32
+		expectedTriggers    int
+		expectedTaskTrigger string
+	}{
+		{
+			name: "no triggers - below threshold",
+			events: []corev1.Event{
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-10*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-5*time.Minute)),
+			},
+			learningStatus:      map[string]*TaskLearningStatus{},
+			errorThreshold:      3,
+			expectedTriggers:    0,
+			expectedTaskTrigger: "",
+		},
+		{
+			name: "trigger - reaches threshold",
+			events: []corev1.Event{
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-30*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-20*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-10*time.Minute)),
+			},
+			learningStatus: map[string]*TaskLearningStatus{
+				"fetch_data": {
+					TaskName:        "fetch_data",
+					TraceCount:      5,                              // Has some execution history
+					LastSuccessTime: time.Now().Add(-2 * time.Hour), // Had success before
+				},
+			},
+			errorThreshold:      3,
+			expectedTriggers:    1,
+			expectedTaskTrigger: "fetch_data",
+		},
+		{
+			name: "no trigger - cooldown active",
+			events: []corev1.Event{
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-30*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-20*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-10*time.Minute)),
+			},
+			learningStatus: map[string]*TaskLearningStatus{
+				"fetch_data": {
+					TaskName:            "fetch_data",
+					TraceCount:          5,
+					LastSuccessTime:     time.Now().Add(-2 * time.Hour),
+					LastLearningAttempt: time.Now().Add(-1 * time.Minute), // Recent attempt
+				},
+			},
+			errorThreshold:   3,
+			expectedTriggers: 0,
+		},
+		{
+			name: "no trigger - max attempts exceeded",
+			events: []corev1.Event{
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-30*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-20*time.Minute)),
+				createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed", time.Now().Add(-10*time.Minute)),
+			},
+			learningStatus: map[string]*TaskLearningStatus{
+				"fetch_data": {
+					TaskName:                 "fetch_data",
+					TraceCount:               5,
+					LastSuccessTime:          time.Now().Add(-2 * time.Hour),
+					ErrorResynthesisAttempts: 3, // Already at max attempts
+				},
+			},
+			errorThreshold:   3,
+			expectedTriggers: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create fake client with events
+			objects := []client.Object{agent}
+			for i := range tt.events {
+				objects = append(objects, &tt.events[i])
+			}
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			reconciler := &LearningReconciler{
+				Client:                      fakeClient,
+				Log:                         logr.Discard(),
+				ErrorFailureThreshold:       tt.errorThreshold,
+				ErrorCooldownPeriod:         5 * time.Minute,
+				MaxErrorResynthesisAttempts: 3,
+			}
+
+			ctx := context.Background()
+			triggers, err := reconciler.checkErrorTriggers(ctx, agent, tt.learningStatus)
+
+			require.NoError(t, err)
+
+			assert.Len(t, triggers, tt.expectedTriggers)
+
+			if tt.expectedTriggers > 0 {
+				assert.Equal(t, "consecutive_failures", triggers[0].EventType)
+				assert.Equal(t, tt.expectedTaskTrigger, triggers[0].TaskName)
+				assert.Equal(t, float64(0.8), triggers[0].Confidence)
+			}
+		})
+	}
+}
+
+func TestLearningReconciler_parseTaskFailureFromEvent(t *testing.T) {
+	reconciler := &LearningReconciler{}
+
+	tests := []struct {
+		name         string
+		event        corev1.Event
+		expectNil    bool
+		expectedTask string
+		expectedType string
+	}{
+		{
+			name: "valid task failure event",
+			event: corev1.Event{
+				Type:    corev1.EventTypeWarning,
+				Message: "Task 'fetch_data' failed with timeout error",
+			},
+			expectNil:    false,
+			expectedTask: "fetch_data",
+			expectedType: "failed",
+		},
+		{
+			name: "normal event - should ignore",
+			event: corev1.Event{
+				Type:    corev1.EventTypeNormal,
+				Message: "Task completed successfully",
+			},
+			expectNil: true,
+		},
+		{
+			name: "no failure pattern - should ignore",
+			event: corev1.Event{
+				Type:    corev1.EventTypeWarning,
+				Message: "Pod started successfully",
+			},
+			expectNil: true,
+		},
+		{
+			name: "runtime error with task name",
+			event: corev1.Event{
+				Type:    corev1.EventTypeWarning,
+				Message: "Task process_data encountered runtime error: nil pointer",
+			},
+			expectNil:    false,
+			expectedTask: "process_data",
+			expectedType: "error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failure := reconciler.parseTaskFailureFromEvent(tt.event)
+
+			if tt.expectNil {
+				assert.Nil(t, failure)
+			} else {
+				require.NotNil(t, failure)
+				assert.Equal(t, tt.expectedTask, failure.TaskName)
+				assert.Equal(t, tt.expectedType, failure.ErrorType)
+				assert.Equal(t, tt.event.Message, failure.ErrorMessage)
+			}
+		})
+	}
+}
+
+func TestLearningReconciler_updateConsecutiveFailures(t *testing.T) {
+	reconciler := &LearningReconciler{}
+
+	tests := []struct {
+		name                string
+		failures            []TaskFailure
+		expectedConsecutive int32
+		expectReset         bool
+	}{
+		{
+			name:                "no failures",
+			failures:            []TaskFailure{},
+			expectedConsecutive: 0,
+		},
+		{
+			name: "recent consecutive failures",
+			failures: []TaskFailure{
+				{Timestamp: time.Now().Add(-10 * time.Minute)},
+				{Timestamp: time.Now().Add(-20 * time.Minute)},
+				{Timestamp: time.Now().Add(-30 * time.Minute)},
+			},
+			expectedConsecutive: 3,
+		},
+		{
+			name: "old failure - should reset",
+			failures: []TaskFailure{
+				{Timestamp: time.Now().Add(-2 * time.Hour)},
+			},
+			expectedConsecutive: 0,
+			expectReset:         true,
+		},
+		{
+			name: "mixed old and new failures",
+			failures: []TaskFailure{
+				{Timestamp: time.Now().Add(-10 * time.Minute)},
+				{Timestamp: time.Now().Add(-20 * time.Minute)},
+				{Timestamp: time.Now().Add(-2 * time.Hour)}, // This one is too old
+			},
+			expectedConsecutive: 2, // Only count the recent ones
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status := &TaskLearningStatus{
+				TaskName: "test_task",
+			}
+
+			reconciler.updateConsecutiveFailures(status, tt.failures)
+
+			assert.Equal(t, tt.expectedConsecutive, status.ConsecutiveFailures)
+
+			if !tt.expectReset && len(tt.failures) > 0 {
+				// Should have updated failure info
+				assert.False(t, status.LastFailureTime.IsZero())
+			}
+		})
+	}
+}
+
+func TestLearningReconciler_shouldTriggerErrorResynthesis(t *testing.T) {
+	reconciler := &LearningReconciler{
+		ErrorFailureThreshold:       3,
+		ErrorCooldownPeriod:         5 * time.Minute,
+		MaxErrorResynthesisAttempts: 3,
+	}
+
+	tests := []struct {
+		name     string
+		status   *TaskLearningStatus
+		expected bool
+		reason   string
+	}{
+		{
+			name: "should trigger - meets all criteria",
+			status: &TaskLearningStatus{
+				ConsecutiveFailures:      3,
+				LastLearningAttempt:      time.Now().Add(-10 * time.Minute), // Outside cooldown
+				ErrorResynthesisAttempts: 1,                                 // Below max attempts
+				LastSuccessTime:          time.Now().Add(-1 * time.Hour),    // Had success before
+				TraceCount:               5,
+			},
+			expected: true,
+		},
+		{
+			name: "below failure threshold",
+			status: &TaskLearningStatus{
+				ConsecutiveFailures:      2, // Below threshold
+				LastLearningAttempt:      time.Now().Add(-10 * time.Minute),
+				ErrorResynthesisAttempts: 1,
+				LastSuccessTime:          time.Now().Add(-1 * time.Hour),
+				TraceCount:               5,
+			},
+			expected: false,
+			reason:   "below failure threshold",
+		},
+		{
+			name: "in cooldown period",
+			status: &TaskLearningStatus{
+				ConsecutiveFailures:      3,
+				LastLearningAttempt:      time.Now().Add(-1 * time.Minute), // Within cooldown
+				ErrorResynthesisAttempts: 1,
+				LastSuccessTime:          time.Now().Add(-1 * time.Hour),
+				TraceCount:               5,
+			},
+			expected: false,
+			reason:   "in cooldown",
+		},
+		{
+			name: "max attempts exceeded",
+			status: &TaskLearningStatus{
+				ConsecutiveFailures:      3,
+				LastLearningAttempt:      time.Now().Add(-10 * time.Minute),
+				ErrorResynthesisAttempts: 3, // At max attempts
+				LastSuccessTime:          time.Now().Add(-1 * time.Hour),
+				TraceCount:               5,
+			},
+			expected: false,
+			reason:   "max attempts exceeded",
+		},
+		{
+			name: "never worked - no success history",
+			status: &TaskLearningStatus{
+				ConsecutiveFailures:      3,
+				LastLearningAttempt:      time.Now().Add(-10 * time.Minute),
+				ErrorResynthesisAttempts: 1,
+				LastSuccessTime:          time.Time{}, // No success
+				TraceCount:               0,           // No traces
+			},
+			expected: false,
+			reason:   "never worked",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := reconciler.shouldTriggerErrorResynthesis(tt.status)
+			assert.Equal(t, tt.expected, result, tt.reason)
+		})
+	}
+}
+
+func TestLearningReconciler_analyzeErrorPatterns(t *testing.T) {
+	reconciler := &LearningReconciler{}
+
+	failures := []TaskFailure{
+		{ErrorType: "timeout", ErrorMessage: "connection timeout occurred"},
+		{ErrorType: "timeout", ErrorMessage: "network timeout"},
+		{ErrorMessage: "unauthorized access"},
+		{ErrorMessage: "API service unavailable with status 500"},
+		{ErrorMessage: "invalid input format provided"},
+		{ErrorMessage: "nil pointer dereference error"},
+	}
+
+	patterns := reconciler.analyzeErrorPatterns(failures)
+
+	// Check that patterns were detected
+	assert.Equal(t, 2, patterns["timeout"])                 // Two timeout errors
+	assert.Equal(t, 2, patterns["network_connectivity"])    // timeout messages count as network
+	assert.Equal(t, 1, patterns["auth_errors"])             // unauthorized
+	assert.Equal(t, 1, patterns["external_service_errors"]) // API 500
+	assert.Equal(t, 1, patterns["input_validation_errors"]) // invalid input
+	assert.Equal(t, 1, patterns["runtime_logic_errors"])    // nil pointer
+}
+
+func TestLearningReconciler_buildErrorContext(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+	}
+
+	// Create events for task failures
+	events := []corev1.Event{
+		createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed with timeout", time.Now().Add(-30*time.Minute)),
+		createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed with connection error", time.Now().Add(-20*time.Minute)),
+		createTaskFailureEvent("test-agent", "fetch_data", "Task 'fetch_data' failed with timeout", time.Now().Add(-10*time.Minute)),
+	}
+
+	objects := []client.Object{agent}
+	for i := range events {
+		objects = append(objects, &events[i])
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objects...).
+		Build()
+
+	reconciler := &LearningReconciler{
+		Client: fakeClient,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	errorContext := reconciler.buildErrorContext(ctx, agent, "fetch_data")
+
+	// Verify error context contains expected information
+	assert.Contains(t, errorContext, "fetch_data")
+	assert.Contains(t, errorContext, "3 recent failures")
+	assert.Contains(t, errorContext, "timeout")
+	assert.Contains(t, errorContext, "connection error")
+	assert.Contains(t, errorContext, "Common error patterns")
+	assert.Contains(t, errorContext, "more robust implementation")
+}
+
+// Helper function to create task failure events
+func createTaskFailureEvent(agentName, taskName, message string, timestamp time.Time) corev1.Event {
+	return corev1.Event{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("event-%d", timestamp.Unix()),
+			Namespace: "default",
+		},
+		Type:           corev1.EventTypeWarning,
+		Message:        message,
+		FirstTimestamp: metav1.Time{Time: timestamp},
+		InvolvedObject: corev1.ObjectReference{
+			Name:      agentName + "-pod",
+			Namespace: "default",
+			Kind:      "Pod",
+		},
+	}
+}
+
+func TestTaskLearningStatus_SerializeParse(t *testing.T) {
+	reconciler := &LearningReconciler{}
+
+	original := &TaskLearningStatus{
+		TaskName:                 "test_task",
+		TraceCount:               10,
+		LearningAttempts:         2,
+		CurrentVersion:           3,
+		IsSymbolic:               true,
+		PatternConfidence:        0.85,
+		ConsecutiveFailures:      2,
+		ErrorResynthesisAttempts: 1,
+	}
+
+	// Serialize
+	serialized := reconciler.serializeTaskLearningStatus(original)
+
+	// Parse
+	parsed, err := reconciler.parseTaskLearningStatus(serialized)
+	require.NoError(t, err)
+
+	// Verify all fields are preserved
+	assert.Equal(t, original.TaskName, parsed.TaskName)
+	assert.Equal(t, original.TraceCount, parsed.TraceCount)
+	assert.Equal(t, original.LearningAttempts, parsed.LearningAttempts)
+	assert.Equal(t, original.CurrentVersion, parsed.CurrentVersion)
+	assert.Equal(t, original.IsSymbolic, parsed.IsSymbolic)
+	assert.Equal(t, original.PatternConfidence, parsed.PatternConfidence)
+	assert.Equal(t, original.ConsecutiveFailures, parsed.ConsecutiveFailures)
+	assert.Equal(t, original.ErrorResynthesisAttempts, parsed.ErrorResynthesisAttempts)
 }
