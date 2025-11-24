@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/go-logr/logr"
+	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +49,7 @@ func TestSynthesisQuality(t *testing.T) {
 				strings.HasPrefix(strings.TrimSpace(code), "require"),
 				"Code should start with require statement")
 			assert.Contains(t, code, "agent", "Code should contain agent definition")
-			
+
 			// Verify DSL v1 task/main model
 			assert.Contains(t, code, "task :", "Code should contain task definition")
 			assert.Contains(t, code, "main do", "Code should contain main block")
@@ -171,23 +171,23 @@ func TestNeuralTaskSynthesis(t *testing.T) {
 	synthesizer := synthesis.NewSynthesizer(mockChatModel, logr.Discard())
 
 	tests := []struct {
-		name         string
-		instructions string
+		name          string
+		instructions  string
 		expectedTypes []string
 	}{
 		{
-			name:         "simple data processing",
-			instructions: "fetch data from API and clean it",
+			name:          "simple data processing",
+			instructions:  "fetch data from API and clean it",
 			expectedTypes: []string{"string"}, // Mock generates 'string' type
 		},
 		{
-			name:         "scheduled report generation",  
-			instructions: "generate daily report at 9am",
+			name:          "scheduled report generation",
+			instructions:  "generate daily report at 9am",
 			expectedTypes: []string{"string"}, // Mock generates 'string' type
 		},
 		{
-			name:         "multi-step analysis",
-			instructions: "analyze log files and alert on errors",
+			name:          "multi-step analysis",
+			instructions:  "analyze log files and alert on errors",
 			expectedTypes: []string{"string"}, // Mock generates 'string' type
 		},
 	}
@@ -220,7 +220,7 @@ func TestNeuralTaskSynthesis(t *testing.T) {
 
 			// Verify expected task types are present
 			for _, expectedType := range tt.expectedTypes {
-				assert.Contains(t, code, "'"+expectedType+"'", 
+				assert.Contains(t, code, "'"+expectedType+"'",
 					"Should contain type '%s'", expectedType)
 			}
 
@@ -320,26 +320,26 @@ func TestHybridTaskSynthesis(t *testing.T) {
 	synthesizer := synthesis.NewSynthesizer(mockChatModel, logr.Discard())
 
 	tests := []struct {
-		name         string
-		instructions string
+		name          string
+		instructions  string
 		expectedTasks map[string]string // task name -> task type (neural/symbolic)
 	}{
 		{
 			name:         "data pipeline with calculations",
 			instructions: "fetch data from API, calculate average, and send report",
 			expectedTasks: map[string]string{
-				"fetch_data":     "neural",   // API calls are complex
-				"calculate_avg":  "symbolic", // Math is deterministic  
-				"send_report":    "neural",   // Email formatting is complex
+				"fetch_data":    "neural",   // API calls are complex
+				"calculate_avg": "symbolic", // Math is deterministic
+				"send_report":   "neural",   // Email formatting is complex
 			},
 		},
 		{
 			name:         "file processing workflow",
 			instructions: "read file, count lines, and log result",
 			expectedTasks: map[string]string{
-				"read_file":    "neural",   // File I/O via workspace tool
-				"count_lines":  "symbolic", // Simple counting logic
-				"log_result":   "neural",   // Logging formatting
+				"read_file":   "neural",   // File I/O via workspace tool
+				"count_lines": "symbolic", // Simple counting logic
+				"log_result":  "neural",   // Logging formatting
 			},
 		},
 	}
@@ -349,7 +349,7 @@ func TestHybridTaskSynthesis(t *testing.T) {
 			req := synthesis.AgentSynthesisRequest{
 				Instructions: tt.instructions,
 				Tools:        []string{"web-fetch", "workspace", "logger"},
-				AgentName:    "hybrid-test-agent", 
+				AgentName:    "hybrid-test-agent",
 				Namespace:    "default",
 			}
 
@@ -379,18 +379,18 @@ func TestHybridTaskSynthesis(t *testing.T) {
 			mainBlockEnd := strings.LastIndex(code, "end")
 			if mainBlockStart > 0 && mainBlockEnd > mainBlockStart {
 				mainBlock := code[mainBlockStart:mainBlockEnd]
-				
+
 				// Should have multiple execute_task calls
 				executeCount := strings.Count(mainBlock, "execute_task")
-				assert.GreaterOrEqual(t, executeCount, 2, 
+				assert.GreaterOrEqual(t, executeCount, 2,
 					"Hybrid agent should have multiple task calls")
-				
+
 				// Should chain tasks (pass outputs as inputs)
 				assert.Contains(t, mainBlock, "inputs:",
 					"Should pass data between tasks")
 			}
 
-			t.Logf("✓ Hybrid synthesis validated: %d neural, %d symbolic tasks for: %s", 
+			t.Logf("✓ Hybrid synthesis validated: %d neural, %d symbolic tasks for: %s",
 				neuralCount, symbolicCount, tt.name)
 		})
 	}
@@ -405,10 +405,10 @@ func TestTypeSchemaInference(t *testing.T) {
 	synthesizer := synthesis.NewSynthesizer(mockChatModel, logr.Discard())
 
 	tests := []struct {
-		name              string
-		instructions      string
-		expectedTypes     []string // Expected types (inputs or outputs)
-		shouldHaveSchema  bool     // Should have type schema definitions
+		name             string
+		instructions     string
+		expectedTypes    []string // Expected types (inputs or outputs)
+		shouldHaveSchema bool     // Should have type schema definitions
 	}{
 		{
 			name:             "basic type validation",
@@ -417,7 +417,7 @@ func TestTypeSchemaInference(t *testing.T) {
 			shouldHaveSchema: true,
 		},
 		{
-			name:             "task structure validation", 
+			name:             "task structure validation",
 			instructions:     "analyze and report",
 			expectedTypes:    []string{"'string'"},
 			shouldHaveSchema: true,
@@ -502,7 +502,7 @@ func TestValidationErrorHandling(t *testing.T) {
 		{
 			name:                 "invalid type schema",
 			instructions:         "use invalid type in task",
-			expectedErrorType:    "type_definition", 
+			expectedErrorType:    "type_definition",
 			shouldFailValidation: true,
 		},
 		{
@@ -524,7 +524,7 @@ func TestValidationErrorHandling(t *testing.T) {
 			req := synthesis.AgentSynthesisRequest{
 				Instructions: tt.instructions,
 				AgentName:    "error-test-agent",
-				Namespace:    "default", 
+				Namespace:    "default",
 			}
 
 			ctx := context.Background()
@@ -539,7 +539,7 @@ func TestValidationErrorHandling(t *testing.T) {
 					require.NotNil(t, resp, "Response should not be nil")
 					assert.NotEmpty(t, resp.Error, "Response should have error message")
 					assert.NotEmpty(t, resp.ValidationErrors, "Should have validation errors")
-					
+
 					// Check that the specific error type is mentioned
 					found := false
 					for _, validationErr := range resp.ValidationErrors {

@@ -539,11 +539,11 @@ func (v *TaskValidator) validateTypeConsistency(agent *AgentStructure) []TaskVal
 
 		// Validate input types match expected
 		for inputName, inputValue := range taskCall.Inputs {
-			// Skip validation for symbolic tasks when using variable inputs
-			if task.IsSymbolic && inputName == "_variable" {
+			// Skip validation for variable inputs (both neural and symbolic tasks can accept them)
+			if inputName == "_variable" {
 				continue
 			}
-			
+
 			_, exists := task.Inputs[inputName]
 			if !exists {
 				errors = append(errors, TaskValidationError{
