@@ -509,7 +509,7 @@ func TestValidationErrorHandling(t *testing.T) {
 			name:                 "undefined task call",
 			instructions:         "call non-existent task",
 			expectedErrorType:    "task_call",
-			shouldFailValidation: false, // Skip this for now - parsing issue to fix later
+			shouldFailValidation: true, // Now works correctly after fixing parsing issue
 		},
 		{
 			name:                 "dangerous symbolic task",
