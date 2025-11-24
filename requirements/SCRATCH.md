@@ -6,9 +6,9 @@
 - **✅ COMPLETED**: Issue #23 - ConfigMap versioning for learned agents
 - **✅ COMPLETED**: Issues #20, #21 - Foundation (validation & testing)
 - **✅ COMPLETED**: Issue #27 - Remove old workflow synthesis templates
+- **✅ COMPLETED**: Issue #39 - Include complete MCP tool schemas in synthesis (quality improvement)
 - **🚀 READY**: Issue #24 - Deployment update for learned ConfigMaps (critical path)
 - **🚀 READY**: Issue #32 - HTTPRoute cross-namespace Gateway ReferenceGrant (production fix)
-- **🚀 READY**: Issue #39 - Include complete MCP tool schemas in synthesis (quality improvement)
 - **Critical Path**: #24 → #25-26 (advanced learning) → #29 (release)
 - **Parallel Work**: Gateway API issues (#32-38) can proceed independently
 
@@ -52,3 +52,12 @@
   - Updated controller logic to prefer new fields while maintaining compatibility
   - Added comprehensive unit tests for field precedence and defaults
   - Regenerated CRD manifests with improved Gateway API terminology
+
+- **Issue #39 Resolution**: Enhanced synthesis with complete MCP tool schemas
+  - Added ToolSchema, ToolSchemaDefinition, and ToolProperty types to LanguageTool CRD
+  - Implemented MCP JSON-RPC discovery in LanguageTool controller
+  - Enhanced AgentSynthesisRequest with ToolSchemas field (backward compatible)
+  - Updated synthesis prompt formatting to show parameter types, descriptions, examples
+  - Critical for learning-based synthesis quality: LLM gets complete tool context
+  - Comprehensive test coverage for MCP discovery and schema formatting
+  - Maintains backward compatibility with existing Tools field
