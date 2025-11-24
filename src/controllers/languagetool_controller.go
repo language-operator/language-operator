@@ -71,23 +71,23 @@ type MCPToolsListResult struct {
 
 // MCPTool represents an MCP tool definition
 type MCPTool struct {
-	Name        string                  `json:"name"`
-	Description string                  `json:"description,omitempty"`
-	InputSchema *MCPToolInputSchema     `json:"inputSchema,omitempty"`
+	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
+	InputSchema *MCPToolInputSchema `json:"inputSchema,omitempty"`
 }
 
 // MCPToolInputSchema represents the input schema for an MCP tool
 type MCPToolInputSchema struct {
-	Type       string                        `json:"type,omitempty"`
-	Properties map[string]MCPSchemaProperty  `json:"properties,omitempty"`
-	Required   []string                      `json:"required,omitempty"`
+	Type       string                       `json:"type,omitempty"`
+	Properties map[string]MCPSchemaProperty `json:"properties,omitempty"`
+	Required   []string                     `json:"required,omitempty"`
 }
 
 // MCPSchemaProperty represents a property in an MCP schema
 type MCPSchemaProperty struct {
-	Type        string      `json:"type"`
-	Description string      `json:"description,omitempty"`
-	Examples    []string    `json:"examples,omitempty"`
+	Type        string   `json:"type"`
+	Description string   `json:"description,omitempty"`
+	Examples    []string `json:"examples,omitempty"`
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch;create;update;patch;delete
@@ -408,7 +408,7 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 // discoverMCPToolSchemas queries an MCP server to discover available tools and their schemas
 func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
 	log := log.FromContext(ctx)
-	
+
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -481,7 +481,7 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 					Type:        mcpProp.Type,
 					Description: mcpProp.Description,
 				}
-				
+
 				// Convert first example if available
 				if len(mcpProp.Examples) > 0 {
 					exampleBytes, _ := json.Marshal(mcpProp.Examples[0])
@@ -504,10 +504,10 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if tool.Spec.DeploymentMode == "sidecar" {
 		tool.Status.Phase = "Running"
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
-		
+
 		// Note: Sidecar tools don't have a service endpoint, so we can't discover schemas
 		// Schemas will be populated from agent runtime when the sidecar is used
-		
+
 		return r.Status().Update(ctx, tool)
 	}
 
@@ -547,7 +547,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if deployment.Status.ReadyReplicas > 0 {
 		tool.Status.Phase = "Running"
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
-		
+
 		// Discover MCP tool schemas for service mode tools
 		if tool.Status.Endpoint != "" && tool.Spec.Type == "mcp" {
 			schemas, err := r.discoverMCPToolSchemas(ctx, tool.Status.Endpoint)
@@ -558,7 +558,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 			} else {
 				// Update tool schemas and available tools list
 				tool.Status.ToolSchemas = schemas
-				
+
 				// Update the AvailableTools list for backward compatibility
 				var toolNames []string
 				for _, schema := range schemas {
@@ -567,7 +567,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 				tool.Status.AvailableTools = toolNames
 			}
 		}
-		
+
 		return r.Status().Update(ctx, tool)
 	}
 

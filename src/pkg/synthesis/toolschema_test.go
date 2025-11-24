@@ -9,9 +9,9 @@ import (
 func TestBuildToolsList_EmptyRequest(t *testing.T) {
 	s := &Synthesizer{}
 	req := AgentSynthesisRequest{}
-	
+
 	result := s.buildToolsList(req)
-	
+
 	if result != "None" {
 		t.Errorf("Expected 'None', got '%s'", result)
 	}
@@ -22,10 +22,10 @@ func TestBuildToolsList_LegacyTools(t *testing.T) {
 	req := AgentSynthesisRequest{
 		Tools: []string{"workspace", "github"},
 	}
-	
+
 	result := s.buildToolsList(req)
 	expected := "  - workspace\n  - github\n"
-	
+
 	if result != expected {
 		t.Errorf("Expected '%s', got '%s'", expected, result)
 	}
@@ -71,21 +71,21 @@ func TestBuildToolsList_ToolSchemas(t *testing.T) {
 			},
 		},
 	}
-	
+
 	result := s.buildToolsList(req)
-	
+
 	// Check that it contains the expected tool information
 	expected := []string{
 		"### read_file",
 		"Read contents of a file",
 		"**Parameters:**",
 		"- `path`: string (required) - Path to the file to read (e.g., \"/workspace/data.txt\")",
-		"### write_file", 
+		"### write_file",
 		"Write content to a file",
 		"- `path`: string (required) - Path to the file to write",
 		"- `content`: string (required) - Content to write to the file",
 	}
-	
+
 	for _, expectedSubstring := range expected {
 		if !stringContains(result, expectedSubstring) {
 			t.Errorf("Expected result to contain '%s', but it didn't. Full result:\n%s", expectedSubstring, result)
@@ -95,9 +95,9 @@ func TestBuildToolsList_ToolSchemas(t *testing.T) {
 
 func TestFormatToolSchemas_EmptySchemas(t *testing.T) {
 	s := &Synthesizer{}
-	
+
 	result := s.formatToolSchemas([]langopv1alpha1.ToolSchema{})
-	
+
 	if result != "None" {
 		t.Errorf("Expected 'None', got '%s'", result)
 	}
@@ -129,7 +129,7 @@ func TestContainsString(t *testing.T) {
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := containsString(tt.slice, tt.item)

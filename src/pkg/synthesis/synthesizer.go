@@ -81,7 +81,7 @@ type Synthesizer struct {
 // AgentSynthesisRequest contains all information needed to synthesize an agent
 type AgentSynthesisRequest struct {
 	Instructions string
-	Tools        []string                     // Deprecated: use ToolSchemas instead
+	Tools        []string                    // Deprecated: use ToolSchemas instead
 	ToolSchemas  []langopv1alpha1.ToolSchema // Complete tool schemas with parameters/types
 	Models       []string
 	PersonaText  string // Distilled persona
@@ -447,7 +447,7 @@ func (s *Synthesizer) buildToolsList(req AgentSynthesisRequest) string {
 	if len(req.ToolSchemas) > 0 {
 		return s.formatToolSchemas(req.ToolSchemas)
 	}
-	
+
 	if len(req.Tools) > 0 {
 		toolsList := ""
 		for _, t := range req.Tools {
@@ -455,7 +455,7 @@ func (s *Synthesizer) buildToolsList(req AgentSynthesisRequest) string {
 		}
 		return toolsList
 	}
-	
+
 	return "None"
 }
 
@@ -468,11 +468,11 @@ func (s *Synthesizer) formatToolSchemas(schemas []langopv1alpha1.ToolSchema) str
 	var builder strings.Builder
 	for _, schema := range schemas {
 		builder.WriteString(fmt.Sprintf("### %s\n", schema.Name))
-		
+
 		if schema.Description != "" {
 			builder.WriteString(fmt.Sprintf("%s\n", schema.Description))
 		}
-		
+
 		// Format input parameters
 		if schema.InputSchema != nil && len(schema.InputSchema.Properties) > 0 {
 			builder.WriteString("**Parameters:**\n")
@@ -481,25 +481,25 @@ func (s *Synthesizer) formatToolSchemas(schemas []langopv1alpha1.ToolSchema) str
 				if containsString(schema.InputSchema.Required, paramName) {
 					required = " (required)"
 				}
-				
+
 				description := ""
 				if prop.Description != "" {
 					description = fmt.Sprintf(" - %s", prop.Description)
 				}
-				
+
 				example := ""
 				if prop.Example != "" {
 					example = fmt.Sprintf(" (e.g., %s)", prop.Example)
 				}
-				
-				builder.WriteString(fmt.Sprintf("- `%s`: %s%s%s%s\n", 
+
+				builder.WriteString(fmt.Sprintf("- `%s`: %s%s%s%s\n",
 					paramName, prop.Type, required, description, example))
 			}
 		}
-		
+
 		builder.WriteString("\n")
 	}
-	
+
 	return builder.String()
 }
 

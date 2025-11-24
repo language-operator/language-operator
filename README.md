@@ -98,15 +98,7 @@ aictl quickstart
 
 ## Status
 
-**Alpha** - Core functionality works but not yet recommended for production use.
-
-What's implemented:
-- ✅ Natural language synthesis
-- ✅ Neural and symbolic task execution
-- ✅ Progressive optimization via trace analysis
-- ✅ Security validation (AST, NetworkPolicy, registry)
-- ✅ OpenTelemetry integration
-- ✅ ConfigMap versioning and rollback
+**Pre-alpha** - Core functionality works, but this project is currently experimental.
 
 ## License
 

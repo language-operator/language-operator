@@ -544,8 +544,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		// Build synthesis request
 		synthReq := synthesis.AgentSynthesisRequest{
 			Instructions: agent.Spec.Instructions,
-			Tools:        tools,        // Kept for backward compatibility
-			ToolSchemas:  toolSchemas,  // Complete schemas for better synthesis
+			Tools:        tools,       // Kept for backward compatibility
+			ToolSchemas:  toolSchemas, // Complete schemas for better synthesis
 			Models:       models,
 			PersonaText:  distilledPersona,
 			AgentName:    agent.Name,
@@ -840,7 +840,7 @@ func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAge
 // getToolSchemas extracts complete tool schemas from agent's toolRefs
 func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.ToolSchema {
 	var allSchemas []langopv1alpha1.ToolSchema
-	
+
 	for _, ref := range agent.Spec.ToolRefs {
 		// Get the LanguageTool CR
 		tool := &langopv1alpha1.LanguageTool{}
@@ -848,20 +848,20 @@ func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *lan
 			Name:      ref.Name,
 			Namespace: agent.Namespace,
 		}, tool)
-		
+
 		if err != nil {
 			// Log error but continue - don't fail synthesis for missing tools
 			log := log.FromContext(ctx)
 			log.Error(err, "Failed to get LanguageTool for schema", "tool", ref.Name, "agent", agent.Name)
 			continue
 		}
-		
+
 		// Add schemas from this tool to the collection
 		if len(tool.Status.ToolSchemas) > 0 {
 			allSchemas = append(allSchemas, tool.Status.ToolSchemas...)
 		}
 	}
-	
+
 	return allSchemas
 }
 
