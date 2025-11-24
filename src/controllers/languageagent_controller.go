@@ -195,7 +195,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Synthesis failed")
 			SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionFalse, "SynthesisFailed", err.Error(), agent.Generation)
-			r.Status().Update(ctx, agent)
+			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after synthesis failure")
+			}
 			return ctrl.Result{}, err
 		}
 		SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionTrue, "CodeGenerated", "Agent code synthesized successfully", agent.Generation)
@@ -207,7 +209,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ConfigMap reconciliation failed")
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), agent.Generation)
-		r.Status().Update(ctx, agent)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after ConfigMap error")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -217,7 +221,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "PVC reconciliation failed")
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "PVCError", err.Error(), agent.Generation)
-		r.Status().Update(ctx, agent)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after PVC error")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -227,7 +233,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
-		r.Status().Update(ctx, agent)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after NetworkPolicy error")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -263,7 +271,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Service reconciliation failed")
 		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), agent.Generation)
-		r.Status().Update(ctx, agent)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after Service error")
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -285,7 +295,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Deployment reconciliation failed")
 			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
-			r.Status().Update(ctx, agent)
+			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after Deployment error")
+			}
 			return ctrl.Result{}, err
 		}
 	case "scheduled":
@@ -294,7 +306,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "CronJob reconciliation failed")
 			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "CronJobError", err.Error(), agent.Generation)
-			r.Status().Update(ctx, agent)
+			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after CronJob error")
+			}
 			return ctrl.Result{}, err
 		}
 	case "":
