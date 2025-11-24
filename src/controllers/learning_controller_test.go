@@ -764,7 +764,7 @@ func TestLearningReconciler_updateAlternativeWorkload(t *testing.T) {
 
 				// Verify ConfigMap reference was updated
 				assert.Equal(t, "test-agent-v2", cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes[0].ConfigMap.Name)
-				
+
 				// Verify learning annotations were added
 				assert.Contains(t, cronJob.Spec.JobTemplate.Spec.Template.Annotations, "langop.io/learning-update")
 				assert.Equal(t, "test-agent-v2", cronJob.Spec.JobTemplate.Spec.Template.Annotations["langop.io/learned-configmap"])
@@ -836,7 +836,7 @@ func TestLearningReconciler_extractCronJobConfigMapReference(t *testing.T) {
 		},
 		{
 			name:           "fallback when no ConfigMap found",
-			configMapName:  "", // No ConfigMap configured
+			configMapName:  "",              // No ConfigMap configured
 			expectedResult: "test-agent-v1", // Should fallback to v1
 		},
 	}
