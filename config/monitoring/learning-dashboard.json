@@ -1,0 +1,529 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Language Operator - Learning Metrics",
+    "tags": ["language-operator", "learning", "metrics"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "hideControls": false,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+    },
+    "refresh": "30s",
+    "schemaVersion": 16,
+    "version": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Learning Velocity (Tasks Learned Over Time)",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "increase(learning_tasks_total[5m])",
+            "legendFormat": "{{namespace}}/{{agent}} - {{trigger_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Tasks Learned",
+            "min": 0
+          },
+          {
+            "show": false
+          }
+        ],
+        "xAxis": {
+          "show": true
+        },
+        "tooltip": {
+          "shared": true
+        },
+        "legend": {
+          "show": true
+        },
+        "fill": 1,
+        "linewidth": 2,
+        "pointradius": 2,
+        "bars": false,
+        "lines": true,
+        "points": true,
+        "stack": false,
+        "percentage": false,
+        "nullValue": "null"
+      },
+      {
+        "id": 2,
+        "title": "Learning Success Rate by Agent",
+        "type": "gauge",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "learning_success_rate",
+            "legendFormat": "{{namespace}}/{{agent}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 1,
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.6
+                },
+                {
+                  "color": "green",
+                  "value": 0.8
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Cost Savings from Learning (USD)",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(learning_cost_savings_usd_total[24h]))",
+            "legendFormat": "Daily Savings",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(learning_cost_savings_usd_total)",
+            "legendFormat": "Total Savings",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "green",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Re-synthesis Trigger Breakdown",
+        "type": "piechart",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 6,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum by (reason) (resynthesis_trigger_reasons_total)",
+            "legendFormat": "{{reason}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "pieType": "pie",
+          "tooltip": {
+            "mode": "single"
+          },
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Neural vs Symbolic Task Distribution",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 12,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(task_symbolic_conversions_total)",
+            "legendFormat": "Symbolic Tasks",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(learning_tasks_total) - sum(task_symbolic_conversions_total)",
+            "legendFormat": "Neural Tasks",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 10
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Error-Triggered Re-synthesis Rate",
+        "type": "graph",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 18,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(error_triggered_resynthesis_total[5m])",
+            "legendFormat": "{{namespace}}/{{agent}} - {{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Re-synthesis/sec",
+            "min": 0
+          },
+          {
+            "show": false
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.01],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Re-synthesis Rate",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 7,
+        "title": "Pattern Confidence Distribution",
+        "type": "heatmap",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 14
+        },
+        "targets": [
+          {
+            "expr": "increase(pattern_confidence_distribution_bucket[5m])",
+            "legendFormat": "{{le}}",
+            "refId": "A"
+          }
+        ],
+        "heatmap": {
+          "xAxis": {
+            "show": true
+          },
+          "yAxis": {
+            "show": true,
+            "min": 0,
+            "max": 1,
+            "unit": "percentunit"
+          },
+          "colorMode": "spectrum",
+          "colorScale": "exponential",
+          "colorScheme": "interpolateSpectral"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Learning Attempts vs Success Rate",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 14
+        },
+        "targets": [
+          {
+            "expr": "rate(learning_attempts_total{status=\"success\"}[5m])",
+            "legendFormat": "{{namespace}}/{{agent}} - Success",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(learning_attempts_total{status=\"failed\"}[5m])",
+            "legendFormat": "{{namespace}}/{{agent}} - Failed",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Attempts/sec",
+            "min": 0
+          },
+          {
+            "show": false
+          }
+        ],
+        "seriesOverrides": [
+          {
+            "alias": "/Failed/",
+            "color": "red",
+            "fill": 3
+          },
+          {
+            "alias": "/Success/",
+            "color": "green",
+            "fill": 1
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Learning Cooldown Violations",
+        "type": "singlestat",
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 0,
+          "y": 22
+        },
+        "targets": [
+          {
+            "expr": "sum(increase(learning_cooldown_violations_total[1h]))",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "valueFontSize": "80%",
+        "thresholds": "1,5",
+        "colorBackground": true,
+        "colors": ["green", "yellow", "red"],
+        "sparkline": {
+          "show": true,
+          "full": false,
+          "lineColor": "rgb(31, 120, 193)"
+        }
+      },
+      {
+        "id": 10,
+        "title": "Active Learning Agents",
+        "type": "singlestat",
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 4,
+          "y": 22
+        },
+        "targets": [
+          {
+            "expr": "count(count by (agent) (learning_tasks_total))",
+            "refId": "A"
+          }
+        ],
+        "valueName": "current",
+        "valueFontSize": "80%",
+        "thresholds": "",
+        "colorBackground": false,
+        "colors": ["green", "yellow", "red"]
+      },
+      {
+        "id": 11,
+        "title": "Learning Efficiency Score",
+        "type": "gauge",
+        "gridPos": {
+          "h": 4,
+          "w": 8,
+          "x": 8,
+          "y": 22
+        },
+        "targets": [
+          {
+            "expr": "(sum(rate(learning_attempts_total{status=\"success\"}[1h])) / sum(rate(learning_attempts_total[1h]))) * (sum(learning_cost_savings_usd_total) / (sum(learning_cost_savings_usd_total) + 1))",
+            "legendFormat": "Efficiency Score",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 1,
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.5
+                },
+                {
+                  "color": "green",
+                  "value": 0.8
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Top Learning Agents by Cost Savings",
+        "type": "table",
+        "gridPos": {
+          "h": 6,
+          "w": 8,
+          "x": 16,
+          "y": 22
+        },
+        "targets": [
+          {
+            "expr": "topk(10, sum by (namespace, agent) (learning_cost_savings_usd_total))",
+            "legendFormat": "",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "Time": true
+              },
+              "renameByName": {
+                "namespace": "Namespace",
+                "agent": "Agent",
+                "Value": "Total Savings (USD)"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "namespace",
+          "type": "query",
+          "query": "label_values(learning_tasks_total, namespace)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "agent",
+          "type": "query",
+          "query": "label_values(learning_tasks_total{namespace=~\"$namespace\"}, agent)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        },
+        {
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(learning_tasks_total[1m]) > 0",
+          "iconColor": "green",
+          "name": "Task Learned",
+          "titleFormat": "Task {{task_name}} learned",
+          "textFormat": "Agent {{agent}} in {{namespace}} learned task {{task_name}} via {{trigger_type}}"
+        }
+      ]
+    }
+  }
+}

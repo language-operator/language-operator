@@ -41,6 +41,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers"
 	"github.com/language-operator/language-operator/pkg/cni"
+	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 	//+kubebuilder:scaffold:imports
@@ -292,6 +293,37 @@ func main() {
 		Log:    ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
+		os.Exit(1)
+	}
+
+	// Setup Learning controller with metrics collection
+	learningLog := ctrl.Log.WithName("controllers").WithName("Learning")
+	metricsCollector := learning.NewMetricsCollector(learningLog)
+	eventProcessor := learning.NewLearningEventProcessor(metricsCollector)
+
+	configMapManager := &synthesis.ConfigMapManager{
+		Client: mgr.GetClient(),
+		Log:    learningLog.WithName("configmap"),
+	}
+
+	if err = (&controllers.LearningReconciler{
+		Client:                      mgr.GetClient(),
+		Scheme:                      mgr.GetScheme(),
+		Log:                         learningLog,
+		Recorder:                    mgr.GetEventRecorderFor("learning-controller"),
+		ConfigMapManager:            configMapManager,
+		MetricsCollector:            metricsCollector,
+		EventProcessor:              eventProcessor,
+		LearningEnabled:             true,
+		LearningThreshold:           10,                // Trigger learning after 10 traces
+		LearningInterval:            5 * time.Minute,   // 5 minute cooldown between attempts
+		MaxVersions:                 5,                 // Keep last 5 ConfigMap versions
+		PatternConfidenceMin:        0.8,               // Require 80% confidence
+		ErrorFailureThreshold:       3,                 // Re-synthesize after 3 consecutive failures
+		ErrorCooldownPeriod:         5 * time.Minute,   // 5 minute cooldown for error re-synthesis
+		MaxErrorResynthesisAttempts: 3,                 // Max 3 error re-synthesis attempts per task
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Learning")
 		os.Exit(1)
 	}
 

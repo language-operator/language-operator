@@ -1,0 +1,240 @@
+# Language Operator Learning System Alert Rules
+# These alerts monitor the health and performance of the learning system
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: language-operator-learning-alerts
+  namespace: language-operator-system
+  labels:
+    app: language-operator
+    component: learning
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: language-operator.learning.health
+    interval: 30s
+    rules:
+    
+    # Learning Success Rate Alerts
+    - alert: LearningSuccessRateLow
+      expr: learning_success_rate < 0.6
+      for: 5m
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Learning success rate is low for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has a learning success rate of {{ $value | humanizePercentage }}, which is below the 60% threshold. This may indicate issues with pattern detection or synthesis quality."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/learning-success-rate"
+
+    - alert: LearningSuccessRateCritical
+      expr: learning_success_rate < 0.3
+      for: 2m
+      labels:
+        severity: critical
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Learning success rate is critically low for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has a learning success rate of {{ $value | humanizePercentage }}, which is critically low. Immediate investigation required."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/learning-success-rate"
+
+    # Error Re-synthesis Alerts  
+    - alert: HighErrorResynthesisRate
+      expr: rate(error_triggered_resynthesis_total[5m]) > 0.01
+      for: 2m
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "High error-triggered re-synthesis rate for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} is experiencing frequent error-triggered re-synthesis ({{ $value | humanize }} per second). This suggests recurring task execution failures."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/error-resynthesis"
+
+    # Pattern Confidence Alerts
+    - alert: PatternConfidenceDegrading
+      expr: avg_over_time(pattern_confidence_distribution[10m]) < 0.5
+      for: 5m
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Pattern confidence is degrading for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has average pattern confidence of {{ $value | humanizePercentage }} over the last 10 minutes, indicating poor pattern detection quality."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/pattern-confidence"
+
+    # Learning Cooldown Alerts
+    - alert: ExcessiveLearningCooldownViolations
+      expr: increase(learning_cooldown_violations_total[1h]) > 10
+      for: 0m
+      labels:
+        severity: info
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Excessive learning cooldown violations for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has had {{ $value }} cooldown violations in the last hour. This may indicate overly aggressive learning triggers or misconfigured cooldown periods."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/cooldown-violations"
+
+    # Learning Stagnation Alerts
+    - alert: LearningStagnation
+      expr: increase(learning_tasks_total[24h]) == 0 and increase(learning_attempts_total[24h]) > 0
+      for: 1h
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "No learning progress for agent {{ $labels.agent }} despite attempts"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has made learning attempts but hasn't successfully learned any tasks in the last 24 hours."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/learning-stagnation"
+
+    # Cost Optimization Alerts
+    - alert: LowCostSavings
+      expr: increase(learning_cost_savings_usd_total[24h]) < 0.10
+      for: 6h
+      labels:
+        severity: info
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Low cost savings from learning for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has generated less than $0.10 in cost savings over the last 24 hours, suggesting limited learning optimization impact."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/cost-optimization"
+
+  - name: language-operator.learning.performance
+    interval: 1m
+    rules:
+
+    # Learning Velocity Alerts
+    - alert: LearningVelocityTooHigh
+      expr: rate(learning_tasks_total[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Very high learning velocity for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} is learning tasks at a rate of {{ $value | humanize }} per second, which may indicate unstable patterns or configuration issues."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/learning-velocity"
+
+    # Learning Failure Burst Alerts
+    - alert: LearningFailureBurst
+      expr: rate(learning_attempts_total{status="failed"}[2m]) > 0.05
+      for: 1m
+      labels:
+        severity: critical
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Burst of learning failures for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} is experiencing a burst of learning failures ({{ $value | humanize }} per second). This requires immediate attention."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/learning-failures"
+
+    # Neural Task Persistence Alert
+    - alert: ExcessiveNeuralTasks
+      expr: |
+        (
+          count(learning_tasks_total) - count(task_symbolic_conversions_total)
+        ) / count(learning_tasks_total) > 0.8
+      for: 1h
+      labels:
+        severity: info
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "High percentage of tasks remain neural for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} has more than 80% of tasks still in neural mode, suggesting learning optimization may not be working effectively."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/neural-task-persistence"
+
+  - name: language-operator.learning.system
+    interval: 2m
+    rules:
+
+    # System-wide Learning Health
+    - alert: SystemWideLearningDegraded
+      expr: |
+        (
+          sum(rate(learning_attempts_total{status="success"}[10m])) / 
+          sum(rate(learning_attempts_total[10m]))
+        ) < 0.5
+      for: 10m
+      labels:
+        severity: warning
+        component: learning
+      annotations:
+        summary: "System-wide learning success rate is degraded"
+        description: "The overall learning success rate across all agents is {{ $value | humanizePercentage }}, which is below the 50% threshold. This indicates systemic issues with the learning infrastructure."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/system-learning-health"
+
+    # Learning Controller Health
+    - alert: LearningControllerDown
+      expr: up{job="language-operator-controller-manager"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: learning
+      annotations:
+        summary: "Language Operator controller is down"
+        description: "The Language Operator controller manager is not running, which means learning functionality is completely unavailable."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/controller-down"
+
+    # Metrics Collection Health
+    - alert: LearningMetricsStale
+      expr: time() - learning_tasks_total > 300
+      for: 2m
+      labels:
+        severity: warning
+        component: learning
+      annotations:
+        summary: "Learning metrics appear stale"
+        description: "Learning metrics haven't been updated in over 5 minutes, suggesting issues with metrics collection or the learning controller."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/stale-metrics"
+
+  - name: language-operator.learning.cost
+    interval: 5m
+    rules:
+
+    # Cost Efficiency Alerts
+    - alert: NegativeCostSavings
+      expr: rate(learning_cost_savings_usd_total[1h]) < 0
+      for: 10m
+      labels:
+        severity: warning
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "Negative cost savings trend for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} is showing negative cost savings, which may indicate issues with cost calculation or learning effectiveness."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/negative-savings"
+
+    # Budget Alert for High Learning Activity
+    - alert: HighLearningActivity
+      expr: rate(learning_tasks_total[1h]) > 1.0
+      for: 15m
+      labels:
+        severity: info
+        component: learning
+        namespace: "{{ $labels.namespace }}"
+        agent: "{{ $labels.agent }}"
+      annotations:
+        summary: "High learning activity detected for agent {{ $labels.agent }}"
+        description: "Agent {{ $labels.agent }} in namespace {{ $labels.namespace }} is learning tasks at a high rate ({{ $value | humanize }} per second), which may impact synthesis costs. Monitor for budget implications."
+        runbook_url: "https://docs.language-operator.io/troubleshooting/high-learning-activity"

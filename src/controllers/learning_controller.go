@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 )
 
@@ -35,6 +36,8 @@ type LearningReconciler struct {
 	Recorder             record.EventRecorder
 	Synthesizer          synthesis.AgentSynthesizer  // For re-synthesis with task_synthesis.tmpl
 	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
+	MetricsCollector     *learning.MetricsCollector  // For learning metrics collection
+	EventProcessor       *learning.LearningEventProcessor // For processing learning events with metrics
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
 	LearningInterval     time.Duration // Minimum interval between learning attempts
@@ -197,6 +200,15 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			log.Error(err, "Failed to process learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
 			r.Recorder.Event(&agent, corev1.EventTypeWarning, "LearningFailed",
 				fmt.Sprintf("Failed to process learning for task %s: %v", trigger.TaskName, err))
+			
+			// Record learning failure metrics
+			if r.EventProcessor != nil {
+				failureErr := r.EventProcessor.ProcessLearningFailure(ctx, agent.Namespace, agent.Name, trigger.TaskName, err.Error())
+				if failureErr != nil {
+					log.Error(failureErr, "Failed to record learning failure metrics", "task", trigger.TaskName)
+				}
+			}
+			
 			// Don't return error - continue processing other triggers
 		} else {
 			log.Info("Successfully processed learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
@@ -400,6 +412,12 @@ func (r *LearningReconciler) checkLearningTriggers(ctx context.Context, agent *l
 		status.UniquePatternCount = analysis.UniquePatternCount
 		status.ErrorRate = r.calculateErrorRate(taskTraceList)
 
+		// Record pattern confidence metrics
+		if r.MetricsCollector != nil {
+			confidenceTracker := learning.NewPatternConfidenceTracker(agent.Namespace, agent.Name, taskName, analysis.Confidence)
+			r.MetricsCollector.RecordPatternConfidenceMetrics(ctx, confidenceTracker)
+		}
+
 		// Check if pattern confidence meets threshold
 		if analysis.Confidence >= r.PatternConfidenceMin && analysis.IsDeterministic {
 			trigger := LearningEvent{
@@ -476,6 +494,18 @@ func (r *LearningReconciler) checkErrorTriggers(ctx context.Context, agent *lang
 				Timestamp:  time.Now(),
 			}
 			triggers = append(triggers, trigger)
+
+			// Record error-triggered re-synthesis metrics
+			if r.EventProcessor != nil {
+				errorType := "consecutive_failures"
+				if len(failures) > 0 {
+					errorType = failures[0].ErrorType
+				}
+				err := r.EventProcessor.ProcessErrorTriggeredResynthesis(ctx, agent.Namespace, agent.Name, taskName, errorType)
+				if err != nil {
+					r.Log.Error(err, "Failed to record error-triggered re-synthesis metrics", "task", taskName)
+				}
+			}
 
 			r.Log.Info("Error-triggered re-synthesis condition met",
 				"agent", agent.Name,
@@ -788,6 +818,11 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 		log.V(1).Info("Learning cooldown active, skipping",
 			"last_attempt", taskStatus.LastLearningAttempt,
 			"interval", r.LearningInterval)
+		
+		// Record cooldown violation metric
+		if r.EventProcessor != nil {
+			r.EventProcessor.ProcessCooldownViolation(ctx, agent.Namespace, agent.Name)
+		}
 		return nil
 	}
 
@@ -861,7 +896,28 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 	taskStatus.IsSymbolic = true
 	taskStatus.PatternConfidence = trigger.Confidence
 
-	// Record learning event
+	// Calculate cost savings from the conversion
+	costSavings := 0.0
+	if r.MetricsCollector != nil {
+		// Estimate cost savings based on typical neural vs symbolic execution costs
+		neuralCostPerExecution := 0.01  // Estimated $0.01 per neural execution
+		symbolicCostPerExecution := 0.0001 // Estimated $0.0001 per symbolic execution
+		executionFrequency := int64(10) // Estimated 10 executions per day
+		
+		costSavings = r.MetricsCollector.EstimateCostSavings(ctx, agent.Namespace, agent.Name, trigger.TaskName, 
+			neuralCostPerExecution, symbolicCostPerExecution, executionFrequency)
+	}
+
+	// Record comprehensive learning event with metrics
+	if r.EventProcessor != nil {
+		err := r.EventProcessor.ProcessTaskLearned(ctx, agent.Namespace, agent.Name, trigger.TaskName, 
+			trigger.EventType, trigger.Confidence, costSavings)
+		if err != nil {
+			r.Log.Error(err, "Failed to process task learned metrics", "task", trigger.TaskName)
+		}
+	}
+
+	// Record learning event (legacy event recording)
 	r.recordLearningEvent(agent, trigger, newVersion)
 
 	span.SetAttributes(
