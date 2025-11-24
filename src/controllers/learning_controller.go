@@ -1178,17 +1178,17 @@ func (r *LearningReconciler) identifyCommonPattern(traces []TaskTrace, toolCallP
 		return "deterministic_tool_sequence"
 	}
 
-	// Check for transformation patterns
+	// Check for conditional patterns (multiple but limited patterns) first
+	if len(toolCallPatterns) > 1 && len(toolCallPatterns) <= 3 {
+		return "conditional_logic"
+	}
+
+	// Check for transformation patterns (only if not conditional)
 	transformationKeywords := []string{"transform", "convert", "process", "format"}
 	for _, keyword := range transformationKeywords {
 		if strings.Contains(strings.ToLower(mostCommonPattern), keyword) {
 			return "simple_transformation"
 		}
-	}
-
-	// Check for conditional patterns (multiple but limited patterns)
-	if len(toolCallPatterns) > 1 && len(toolCallPatterns) <= 3 {
-		return "conditional_logic"
 	}
 
 	return "variable_pattern"
