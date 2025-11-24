@@ -280,7 +280,7 @@ func (r *LearningReconciler) getLearningStatus(ctx context.Context, agent *lango
 
 // parseTaskLearningStatus parses learning status from string representation
 func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearningStatus, error) {
-	// Parse the simple string format: "traces:5,attempts:2,version:1,symbolic:false,confidence:0.85,failures:0,error_attempts:0"
+	// Parse the simple string format: "task:task_name,traces:5,attempts:2,version:1,symbolic:false,confidence:0.85,failures:0,error_attempts:0"
 	// TODO: Implement JSON parsing once we define the full status structure
 	status := &TaskLearningStatus{
 		TraceCount:               0,
@@ -304,6 +304,8 @@ func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearning
 		value := strings.TrimSpace(keyValue[1])
 
 		switch key {
+		case "task":
+			status.TaskName = value
 		case "traces":
 			if v, err := fmt.Sscanf(value, "%d", &status.TraceCount); err == nil && v == 1 {
 				// parsed successfully
@@ -1835,7 +1837,8 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 func (r *LearningReconciler) serializeTaskLearningStatus(status *TaskLearningStatus) string {
 	// For now, return a simple string representation
 	// TODO: Implement JSON serialization
-	return fmt.Sprintf("traces:%d,attempts:%d,version:%d,symbolic:%t,confidence:%.2f,failures:%d,error_attempts:%d",
+	return fmt.Sprintf("task:%s,traces:%d,attempts:%d,version:%d,symbolic:%t,confidence:%.2f,failures:%d,error_attempts:%d",
+		status.TaskName,
 		status.TraceCount,
 		status.LearningAttempts,
 		status.CurrentVersion,
