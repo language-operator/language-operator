@@ -81,24 +81,22 @@ The `main` block never changes. Implementations evolve without breaking callers.
 - Cloud or local LLM support
 - AST-based security validation
 - Self-healing (re-synthesizes on errors)
+- Trace-based learning
 
 **Execution**
 - Three modes: autonomous, scheduled, reactive
 - MCP tool integration
 - Multiple LLM providers
 - Type-safe task execution
+- OpenTelemetry distributed tracing
 
-**Security**
+**Sandboxing**
 - AST validation blocks dangerous operations
 - Kubernetes NetworkPolicies (CNI-validated)
 - Container registry whitelist
-- Non-root execution, read-only filesystem
+- Non-root execution
 
 **Observability**
-- OpenTelemetry distributed tracing
-- Prometheus metrics
-- Cost tracking
-- Trace-based learning
 
 ## Installation
 

@@ -58,8 +58,19 @@ spec:
                 properties:
                   gatewayClassName:
                     description: |-
+                      Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.
                       GatewayClassName specifies the Gateway API GatewayClass to use
                       If empty, will attempt auto-detection or fall back to Ingress
+                    type: string
+                  gatewayName:
+                    description: |-
+                      GatewayName specifies the Gateway resource name to use
+                      If empty, will attempt auto-detection or fall back to Ingress
+                    type: string
+                  gatewayNamespace:
+                    description: |-
+                      GatewayNamespace specifies the namespace of the Gateway resource
+                      If empty, defaults to the same namespace as the LanguageCluster
                     type: string
                   ingressClassName:
                     description: |-

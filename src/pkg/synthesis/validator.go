@@ -158,10 +158,10 @@ func (v *TaskValidator) ParseAgentStructure(code string) (*AgentStructure, error
 // parseTaskDefinitions extracts task definitions from the code
 func (v *TaskValidator) parseTaskDefinitions(code string, lines []string, agent *AgentStructure) error {
 	// More robust task parsing - handle multi-line task definitions
-	
+
 	// First, find all task blocks (both neural and symbolic)
 	taskBlocks := v.extractTaskBlocks(code)
-	
+
 	for _, block := range taskBlocks {
 		task := v.parseTaskBlock(block, lines)
 		if task != nil {
@@ -175,16 +175,16 @@ func (v *TaskValidator) parseTaskDefinitions(code string, lines []string, agent 
 // extractTaskBlocks finds all task definitions in the code
 func (v *TaskValidator) extractTaskBlocks(code string) []string {
 	var blocks []string
-	
+
 	// Find task statements using a simple approach
 	lines := strings.Split(code, "\n")
 	var currentBlock []string
 	inTaskBlock := false
 	blockDepth := 0
-	
+
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		
+
 		// Check if this line starts a task
 		if strings.HasPrefix(trimmedLine, "task :") {
 			// If we were already in a block, save it
@@ -201,10 +201,10 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 			}
 			continue
 		}
-		
+
 		if inTaskBlock {
 			currentBlock = append(currentBlock, line)
-			
+
 			// Count do/end pairs for symbolic tasks
 			if strings.Contains(trimmedLine, " do") {
 				blockDepth++
@@ -218,9 +218,9 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 					inTaskBlock = false
 				}
 			}
-			
+
 			// For neural tasks (no do block), end when we hit another task or main
-			if blockDepth == 0 && (strings.HasPrefix(trimmedLine, "task :") || 
+			if blockDepth == 0 && (strings.HasPrefix(trimmedLine, "task :") ||
 				strings.HasPrefix(trimmedLine, "main ") ||
 				strings.HasPrefix(trimmedLine, "end") ||
 				trimmedLine == "") {
@@ -236,12 +236,12 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 			}
 		}
 	}
-	
+
 	// Don't forget the last block
 	if inTaskBlock && len(currentBlock) > 0 {
 		blocks = append(blocks, strings.Join(currentBlock, "\n"))
 	}
-	
+
 	return blocks
 }
 
@@ -254,28 +254,28 @@ func (v *TaskValidator) parseTaskBlock(block string, lines []string) *TaskDefini
 		return nil
 	}
 	taskName := nameMatch[1]
-	
+
 	// Extract instructions
 	instructionsRegex := regexp.MustCompile(`instructions:\s*["']([^"']+)["']`)
 	instructions := ""
 	if instrMatch := instructionsRegex.FindStringSubmatch(block); len(instrMatch) > 1 {
 		instructions = instrMatch[1]
 	}
-	
+
 	// Extract inputs
 	inputsRegex := regexp.MustCompile(`inputs:\s*\{([^}]*)\}`)
 	inputs := make(map[string]string)
 	if inputMatch := inputsRegex.FindStringSubmatch(block); len(inputMatch) > 1 {
 		inputs = parseTypeHash(inputMatch[1])
 	}
-	
+
 	// Extract outputs
 	outputsRegex := regexp.MustCompile(`outputs:\s*\{([^}]*)\}`)
 	outputs := make(map[string]string)
 	if outputMatch := outputsRegex.FindStringSubmatch(block); len(outputMatch) > 1 {
 		outputs = parseTypeHash(outputMatch[1])
 	}
-	
+
 	// Check if it's a symbolic task (has do |inputs| block)
 	isSymbolic := strings.Contains(block, " do |")
 	codeBlock := ""
@@ -286,7 +286,7 @@ func (v *TaskValidator) parseTaskBlock(block string, lines []string) *TaskDefini
 			codeBlock = strings.TrimSpace(codeMatch[1])
 		}
 	}
-	
+
 	// Find line number
 	lineNum := 0
 	for i, line := range lines {
@@ -295,7 +295,7 @@ func (v *TaskValidator) parseTaskBlock(block string, lines []string) *TaskDefini
 			break
 		}
 	}
-	
+
 	return &TaskDefinition{
 		Name:         taskName,
 		Instructions: instructions,
@@ -315,10 +315,10 @@ func (v *TaskValidator) parseMainBlock(code string, lines []string, agent *Agent
 	inMainBlock := false
 	blockDepth := 0
 	lineNum := 0
-	
+
 	for i, line := range codeLines {
 		trimmedLine := strings.TrimSpace(line)
-		
+
 		// Check if this line starts a main block
 		if strings.HasPrefix(trimmedLine, "main do") || strings.Contains(trimmedLine, "main do |") {
 			inMainBlock = true
@@ -326,7 +326,7 @@ func (v *TaskValidator) parseMainBlock(code string, lines []string, agent *Agent
 			lineNum = i + 1
 			continue // Don't include the "main do" line itself
 		}
-		
+
 		if inMainBlock {
 			// Count do/end pairs
 			if strings.Contains(trimmedLine, " do") {
@@ -342,7 +342,7 @@ func (v *TaskValidator) parseMainBlock(code string, lines []string, agent *Agent
 			mainBlockLines = append(mainBlockLines, line)
 		}
 	}
-	
+
 	if !inMainBlock {
 		return nil // No main block found
 	}
@@ -364,7 +364,7 @@ func (v *TaskValidator) parseTaskCalls(codeBlock string, mainBlock *MainBlock) {
 	// Find execute_task calls
 	taskCallRegex := regexp.MustCompile(`(\w+)\s*=\s*execute_task\(\s*:(\w+)(?:,\s*inputs:\s*\{([^}]*)\})?\s*\)`)
 	matches := taskCallRegex.FindAllStringSubmatch(codeBlock, -1)
-	
+
 	for _, match := range matches {
 		variable := match[1]
 		taskName := match[2]

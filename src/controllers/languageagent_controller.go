@@ -1974,10 +1974,21 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
 		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
-			if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.GatewayClassName != "" {
-				// Use specified gateway
-				gatewayName = cluster.Spec.IngressConfig.GatewayClassName
-				gatewayNamespace = agent.Namespace
+			if cluster.Spec.IngressConfig != nil {
+				// Prefer new GatewayName field, fall back to deprecated GatewayClassName for backward compatibility
+				if cluster.Spec.IngressConfig.GatewayName != "" {
+					gatewayName = cluster.Spec.IngressConfig.GatewayName
+					// Use specified namespace or default to cluster namespace
+					if cluster.Spec.IngressConfig.GatewayNamespace != "" {
+						gatewayNamespace = cluster.Spec.IngressConfig.GatewayNamespace
+					} else {
+						gatewayNamespace = agent.Namespace
+					}
+				} else if cluster.Spec.IngressConfig.GatewayClassName != "" {
+					// Backward compatibility: treat GatewayClassName as Gateway resource name
+					gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+					gatewayNamespace = agent.Namespace
+				}
 			}
 		}
 	}

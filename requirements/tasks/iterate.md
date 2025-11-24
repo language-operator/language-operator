@@ -1,39 +1,34 @@
 # Task
 
-Iterate
+## Prerequisites
+
+Please read the following context files:
+
+* Persona: requirements/personas/go-engineer.md
+* Feature Spec: requirements/proposals/dsl-v1.md
+* Scratch: requirements/SCRATCH.md
 
 ## Persona
 
-**CRITICAL:** Read and switch to the [go-engineer](requirements/personas/go-engineer.md) persona before executing these instructions.
-
-## Background
-
-This is a early-phase project that works exclusively in main.
-Issues are found using the `gh` command for this project:
-- Owner: language-operator
-- Repository: language-operator
-
-This repository frequently refers to `aictl`, a Ruby command.  You can run it via `bundle exec aictl`.
-
-## Inputs
-
-- id int -- A GitHub issue index ID.
+**CRITICAL**: Adopt the go-engineer persona while executing these instructions, please.
 
 ## Instructions
 
 Follow these directions closely:
 
-1. Use the gh command to find the top issue for this repository.
-2. Investigate if it's valid, partially implemented, or a misunderstanding.
-3. Plan your course of action and propose it before making changes.
+1. Use the `gh` tool to find the top issue for this repository (language-operator/language-operator) with the "ready" label.
+2. Investigate if it's valid, or a mis-use of the intended feature.
+3. **CRITICAL:** Switch to plan mode, and propose an implementation plan.  Await my feedback.
 4. Add your implementation plan as a comment on the issue.
-5. Implement the changes.
-6. Run existing tests, and add new ones if necessary.
-7. **CRITICAL: Test the actual functionality manually before committing.** If it's a CLI command, run it. If it's library code, test it in the appropriate context. Never commit untested code.
-8. Commit the change and push to origin.
-9. **CRITICAL:** Wait for the user to confirm CI passes, and until all errors are resolved.
-12. Comment on your solution in the GitHub issue.
-13. Resolve the issue.
+5. Implement your plan.
+6. Run existing tests, and add new ones if necessary.  Remember to include CI. Remember the linter and that bundler will fail if it's out of sync with its lockfile.
+7. **CRITICAL:** Test the actual functionality manually before committing. If it's a CLI command, run it. If it's library code, test it in the appropriate context. Never commit untested code.
+8. Commit the change with a semantic, ONE LINE message, like 'feat: create task_definition structure' and push to origin.
+9. **CRITICAL:** Halt while CI runs and await my feedback.
+10. Add resolution details as a comment on the GitHub issue.
+11. Resolve the GitHub issue.
+
+Consider if you need to update requirements/SCRATCH.md for the next run.
 
 ## Output
 

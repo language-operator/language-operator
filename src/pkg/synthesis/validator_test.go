@@ -158,12 +158,12 @@ end`,
 
 			hasErrors := errorCount > 0
 			if hasErrors != tt.expectErrors {
-				t.Errorf("Expected errors: %v, got errors: %v (found %d errors)", 
+				t.Errorf("Expected errors: %v, got errors: %v (found %d errors)",
 					tt.expectErrors, hasErrors, errorCount)
 				for _, err := range errors {
 					t.Logf("  - %s [%s]: %s", err.Type, err.Severity, err.Message)
 				}
-				
+
 				// Debug: show parsed structure for failing test
 				if tt.name == "calling_undefined_task" {
 					agent, parseErr := validator.ParseAgentStructure(tt.code)
@@ -190,7 +190,7 @@ end`,
 			// Check that expected error types are present
 			for _, expectedType := range tt.errorTypes {
 				if !foundErrorTypes[expectedType] {
-					t.Errorf("Expected error type '%s' not found. Found types: %v", 
+					t.Errorf("Expected error type '%s' not found. Found types: %v",
 						expectedType, foundErrorTypes)
 				}
 			}
@@ -213,8 +213,8 @@ func TestTaskValidator_ParseTypeHash(t *testing.T) {
 			},
 		},
 		{
-			name:  "empty string",
-			input: "",
+			name:     "empty string",
+			input:    "",
 			expected: map[string]string{},
 		},
 		{
@@ -228,7 +228,7 @@ func TestTaskValidator_ParseTypeHash(t *testing.T) {
 			name:  "double quotes",
 			input: `source: "string", result: "hash"`,
 			expected: map[string]string{
-				"source": "string", 
+				"source": "string",
 				"result": "hash",
 			},
 		},
@@ -237,16 +237,16 @@ func TestTaskValidator_ParseTypeHash(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := parseTypeHash(tt.input)
-			
+
 			if len(result) != len(tt.expected) {
 				t.Errorf("Expected %d items, got %d", len(tt.expected), len(result))
 			}
-			
+
 			for key, expectedValue := range tt.expected {
 				if actualValue, exists := result[key]; !exists {
 					t.Errorf("Expected key '%s' not found", key)
 				} else if actualValue != expectedValue {
-					t.Errorf("For key '%s': expected '%s', got '%s'", 
+					t.Errorf("For key '%s': expected '%s', got '%s'",
 						key, expectedValue, actualValue)
 				}
 			}

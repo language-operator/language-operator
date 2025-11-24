@@ -43,6 +43,17 @@ type IngressConfig struct {
 	// +optional
 	TLS *IngressTLSConfig `json:"tls,omitempty"`
 
+	// GatewayName specifies the Gateway resource name to use
+	// If empty, will attempt auto-detection or fall back to Ingress
+	// +optional
+	GatewayName string `json:"gatewayName,omitempty"`
+
+	// GatewayNamespace specifies the namespace of the Gateway resource
+	// If empty, defaults to the same namespace as the LanguageCluster
+	// +optional
+	GatewayNamespace string `json:"gatewayNamespace,omitempty"`
+
+	// Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.
 	// GatewayClassName specifies the Gateway API GatewayClass to use
 	// If empty, will attempt auto-detection or fall back to Ingress
 	// +optional

@@ -83,5 +83,6 @@ help:
 fetch-synthesis-templates:
 	@echo "Fetching synthesis templates from language-operator-gem..."
 	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/agent_synthesis.tmpl -o src/pkg/synthesis/agent_synthesis.tmpl
+	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/task_synthesis.tmpl -o src/pkg/synthesis/task_synthesis.tmpl
 	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/persona_distillation.tmpl -o src/pkg/synthesis/persona_distillation.tmpl
 	@echo "✓ Synthesis templates updated successfully!"

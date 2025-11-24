@@ -1,0 +1,117 @@
+You are analyzing whether an agentic task can be converted to symbolic Ruby code.
+
+## What "Symbolic" Means
+
+A task is **symbolic** (can be optimized) if it follows a predictable algorithm:
+- Reading files, calling APIs, transforming data = SYMBOLIC (even though outputs vary based on data)
+- The same code logic applies regardless of the actual data values
+- Conditional branches based on data (if file exists, if value > threshold) are fine
+
+A task is **neural** (cannot be optimized) only if it requires:
+- Creative text generation (writing stories, poems, marketing copy)
+- Subjective reasoning or judgment calls
+- Understanding nuanced human intent that varies per request
+
+**Key insight:** File I/O, API calls, and data transformation are deterministic CODE even if their outputs depend on external state. "Read a file and count lines" is symbolic - the algorithm is fixed.
+
+## Task Definition
+
+**Name:** {{.TaskName}}
+**Instructions:** {{.Instructions}}
+
+**Inputs:**
+{{.Inputs}}
+
+**Outputs:**
+{{.Outputs}}
+
+## Current Task Code
+
+```ruby
+{{.TaskCode}}
+```
+
+## Execution Traces ({{.TraceCount}} samples)
+
+{{.Traces}}
+
+## Pattern Analysis
+
+- **Most Common Pattern:** {{.CommonPattern}}
+- **Pattern Consistency:** {{.ConsistencyScore}}%
+- **Unique Patterns Observed:** {{.UniquePatternCount}}
+
+## Available Tools
+
+{{.ToolsList}}
+
+---
+
+## Your Task
+
+Analyze whether this neural task can be converted to symbolic Ruby code.
+
+Questions to ask:
+1. Is there a clear algorithm implied by the instructions?
+2. Do the tool call patterns show a logical sequence?
+3. Can conditional logic handle the variations seen in traces?
+
+Tasks that ARE symbolic (optimize these):
+- "Read file X and return its contents" → read_file, return content
+- "Check if file exists, create if not" → get_file_info, conditional write_file
+- "Fetch data from API and transform it" → api_call, data transformation
+
+Tasks that are NOT symbolic (don't optimize):
+- "Write a creative story continuation"
+- "Decide what the user probably meant"
+- "Generate marketing copy for this product"
+
+## Output Format
+
+Respond with valid JSON:
+
+```json
+{
+  "is_deterministic": true/false,
+  "confidence": 0.0-1.0,
+  "explanation": "Brief explanation",
+  "code": "Ruby code if symbolic, null otherwise"
+}
+```
+
+**Code Requirements (if symbolic):**
+- IMPORTANT: Only generate the code that goes INSIDE the task block
+- Do NOT include the outer `task :name, inputs:, outputs: do |inputs|` wrapper
+- The code will be inserted into this structure automatically:
+  ```ruby
+  task :{{.TaskName}},
+       inputs: { {{.Inputs}} },
+       outputs: { {{.Outputs}} } do |inputs|
+    %%YOUR_CODE_HERE%%
+  end
+  ```
+
+- Your generated code should be ONLY the body that replaces `%%YOUR_CODE_HERE%%`
+- Example of what to generate:
+  ```ruby
+  # Good - just the body code:
+  result = execute_tool('read_file', { path: inputs[:file_path] })
+  line_count = result.split("\n").length
+  { content: result, lines: line_count }
+
+  # Bad - includes task wrapper (do NOT do this):
+  task :my_task, inputs: { ... }, outputs: { ... } do |inputs|
+    result = execute_tool('read_file', { path: inputs[:file_path] })
+    { content: result }
+  end
+  ```
+
+- Available helper methods in the execution context:
+  - `execute_tool('tool_name', { arg: value })` - Call an MCP tool (tool name is String)
+  - `execute_task(:task_name, inputs: { ... })` - Call another task (task name is Symbol)
+  - `execute_llm(prompt)` - Call LLM directly
+  - `logger` - Logger instance
+
+- The `inputs` parameter is a hash with the keys defined in the task inputs schema
+- Your code must return a hash matching the outputs schema exactly (same keys)
+- Do NOT use system(), eval(), fork(), or other unsafe methods
