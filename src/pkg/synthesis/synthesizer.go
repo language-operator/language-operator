@@ -81,7 +81,8 @@ type Synthesizer struct {
 // AgentSynthesisRequest contains all information needed to synthesize an agent
 type AgentSynthesisRequest struct {
 	Instructions string
-	Tools        []string
+	Tools        []string                     // Deprecated: use ToolSchemas instead
+	ToolSchemas  []langopv1alpha1.ToolSchema // Complete tool schemas with parameters/types
 	Models       []string
 	PersonaText  string // Distilled persona
 	AgentName    string
@@ -440,15 +441,81 @@ func (s *Synthesizer) DistillPersona(ctx context.Context, persona PersonaInfo, a
 	return strings.TrimSpace(distilled), nil
 }
 
-// buildSynthesisPrompt creates the prompt for agent code synthesis
-func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
-	toolsList := "None"
+// buildToolsList creates formatted tool information for synthesis prompts
+func (s *Synthesizer) buildToolsList(req AgentSynthesisRequest) string {
+	// Use ToolSchemas if available, otherwise fall back to Tools for backward compatibility
+	if len(req.ToolSchemas) > 0 {
+		return s.formatToolSchemas(req.ToolSchemas)
+	}
+	
 	if len(req.Tools) > 0 {
-		toolsList = ""
+		toolsList := ""
 		for _, t := range req.Tools {
 			toolsList += fmt.Sprintf("  - %s\n", t)
 		}
+		return toolsList
 	}
+	
+	return "None"
+}
+
+// formatToolSchemas converts ToolSchemas to human-readable format for LLM synthesis
+func (s *Synthesizer) formatToolSchemas(schemas []langopv1alpha1.ToolSchema) string {
+	if len(schemas) == 0 {
+		return "None"
+	}
+
+	var builder strings.Builder
+	for _, schema := range schemas {
+		builder.WriteString(fmt.Sprintf("### %s\n", schema.Name))
+		
+		if schema.Description != "" {
+			builder.WriteString(fmt.Sprintf("%s\n", schema.Description))
+		}
+		
+		// Format input parameters
+		if schema.InputSchema != nil && len(schema.InputSchema.Properties) > 0 {
+			builder.WriteString("**Parameters:**\n")
+			for paramName, prop := range schema.InputSchema.Properties {
+				required := ""
+				if containsString(schema.InputSchema.Required, paramName) {
+					required = " (required)"
+				}
+				
+				description := ""
+				if prop.Description != "" {
+					description = fmt.Sprintf(" - %s", prop.Description)
+				}
+				
+				example := ""
+				if prop.Example != "" {
+					example = fmt.Sprintf(" (e.g., %s)", prop.Example)
+				}
+				
+				builder.WriteString(fmt.Sprintf("- `%s`: %s%s%s%s\n", 
+					paramName, prop.Type, required, description, example))
+			}
+		}
+		
+		builder.WriteString("\n")
+	}
+	
+	return builder.String()
+}
+
+// containsString checks if a string slice contains a given string
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// buildSynthesisPrompt creates the prompt for agent code synthesis
+func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
+	toolsList := s.buildToolsList(req)
 
 	modelsList := "None"
 	if len(req.Models) > 0 {

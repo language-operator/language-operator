@@ -5,6 +5,53 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ToolSchema represents the complete schema of an MCP tool
+type ToolSchema struct {
+	// Name is the tool identifier
+	Name string `json:"name"`
+
+	// Description is a human-readable description of the tool
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// InputSchema defines the parameters this tool accepts
+	// +optional
+	InputSchema *ToolSchemaDefinition `json:"inputSchema,omitempty"`
+
+	// OutputSchema defines the structure this tool returns
+	// +optional
+	OutputSchema *ToolSchemaDefinition `json:"outputSchema,omitempty"`
+}
+
+// ToolSchemaDefinition defines parameter or return value structure
+type ToolSchemaDefinition struct {
+	// Type is the JSON schema type (object, array, string, etc.)
+	// +optional
+	Type string `json:"type,omitempty"`
+
+	// Properties defines object properties (for type: object)
+	// +optional
+	Properties map[string]ToolProperty `json:"properties,omitempty"`
+
+	// Required lists required property names (for type: object)
+	// +optional
+	Required []string `json:"required,omitempty"`
+}
+
+// ToolProperty defines an individual parameter or return field
+type ToolProperty struct {
+	// Type is the JSON schema type (string, integer, boolean, etc.)
+	Type string `json:"type"`
+
+	// Description explains what this property represents
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Example provides an example value as a JSON string
+	// +optional
+	Example string `json:"example,omitempty"`
+}
+
 // LanguageToolSpec defines the desired state of LanguageTool
 type LanguageToolSpec struct {
 	// ClusterRef references a LanguageCluster to deploy this tool into
@@ -198,6 +245,10 @@ type LanguageToolStatus struct {
 	// AvailableTools lists the tools discovered from this service
 	// +optional
 	AvailableTools []string `json:"availableTools,omitempty"`
+
+	// ToolSchemas contains the complete MCP tool schemas discovered from this service
+	// +optional
+	ToolSchemas []ToolSchema `json:"toolSchemas,omitempty"`
 
 	// ReadyReplicas is the number of pods ready and passing health checks
 	// +optional

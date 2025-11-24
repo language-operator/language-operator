@@ -5,6 +5,7 @@
 - **✅ RESOLVED**: Issue #19 - agent_synthesis.tmpl already correct for DSL v1
 - **✅ COMPLETED**: Issue #23 - ConfigMap versioning for learned agents
 - **✅ COMPLETED**: Issues #20, #21 - Foundation (validation & testing)
+- **✅ COMPLETED**: Issue #27 - Remove old workflow synthesis templates
 - **🚀 READY**: Issue #24 - Deployment update for learned ConfigMaps (critical path)
 - **🚀 READY**: Issue #32 - HTTPRoute cross-namespace Gateway ReferenceGrant (production fix)
 - **🚀 READY**: Issue #39 - Include complete MCP tool schemas in synthesis (quality improvement)

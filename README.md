@@ -74,30 +74,6 @@ end
 
 The `main` block never changes. Implementations evolve without breaking callers.
 
-## Features
-
-**Synthesis**
-- Natural language → Ruby DSL
-- Cloud or local LLM support
-- AST-based security validation
-- Self-healing (re-synthesizes on errors)
-- Trace-based learning
-
-**Execution**
-- Three modes: autonomous, scheduled, reactive
-- MCP tool integration
-- Multiple LLM providers
-- Type-safe task execution
-- OpenTelemetry distributed tracing
-
-**Sandboxing**
-- AST validation blocks dangerous operations
-- Kubernetes NetworkPolicies (CNI-validated)
-- Container registry whitelist
-- Non-root execution
-
-**Observability**
-
 ## Installation
 
 ```bash

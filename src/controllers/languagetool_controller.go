@@ -1,10 +1,14 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
@@ -37,6 +41,54 @@ type LanguageToolReconciler struct {
 
 // tracer is the OpenTelemetry tracer for the LanguageTool controller
 var toolTracer = otel.Tracer("language-operator/tool-controller")
+
+// MCPRequest represents an MCP JSON-RPC request
+type MCPRequest struct {
+	JSONRpc string      `json:"jsonrpc"`
+	ID      int         `json:"id"`
+	Method  string      `json:"method"`
+	Params  interface{} `json:"params,omitempty"`
+}
+
+// MCPResponse represents an MCP JSON-RPC response
+type MCPResponse struct {
+	JSONRpc string          `json:"jsonrpc"`
+	ID      int             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *MCPError       `json:"error,omitempty"`
+}
+
+// MCPError represents an MCP JSON-RPC error
+type MCPError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// MCPToolsListResult represents the result of tools/list MCP method
+type MCPToolsListResult struct {
+	Tools []MCPTool `json:"tools"`
+}
+
+// MCPTool represents an MCP tool definition
+type MCPTool struct {
+	Name        string                  `json:"name"`
+	Description string                  `json:"description,omitempty"`
+	InputSchema *MCPToolInputSchema     `json:"inputSchema,omitempty"`
+}
+
+// MCPToolInputSchema represents the input schema for an MCP tool
+type MCPToolInputSchema struct {
+	Type       string                        `json:"type,omitempty"`
+	Properties map[string]MCPSchemaProperty  `json:"properties,omitempty"`
+	Required   []string                      `json:"required,omitempty"`
+}
+
+// MCPSchemaProperty represents a property in an MCP schema
+type MCPSchemaProperty struct {
+	Type        string      `json:"type"`
+	Description string      `json:"description,omitempty"`
+	Examples    []string    `json:"examples,omitempty"`
+}
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/status,verbs=get;update;patch
@@ -353,11 +405,109 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, tool, networkPolicy)
 }
 
+// discoverMCPToolSchemas queries an MCP server to discover available tools and their schemas
+func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
+	log := log.FromContext(ctx)
+	
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Create MCP tools/list request
+	request := MCPRequest{
+		JSONRpc: "2.0",
+		ID:      1,
+		Method:  "tools/list",
+	}
+
+	reqBody, err := json.Marshal(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal MCP request: %w", err)
+	}
+
+	// Make HTTP POST request to MCP server
+	resp, err := client.Post(fmt.Sprintf("http://%s/mcp", endpoint), "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call MCP server at %s: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("MCP server returned status %d", resp.StatusCode)
+	}
+
+	// Read response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read MCP response: %w", err)
+	}
+
+	// Parse MCP response
+	var mcpResp MCPResponse
+	if err := json.Unmarshal(respBody, &mcpResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MCP response: %w", err)
+	}
+
+	if mcpResp.Error != nil {
+		return nil, fmt.Errorf("MCP server error: %s (code %d)", mcpResp.Error.Message, mcpResp.Error.Code)
+	}
+
+	// Parse tools list result
+	var toolsResult MCPToolsListResult
+	if err := json.Unmarshal(mcpResp.Result, &toolsResult); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal tools list: %w", err)
+	}
+
+	// Convert MCP tools to LanguageOperator ToolSchema format
+	var schemas []langopv1alpha1.ToolSchema
+	for _, mcpTool := range toolsResult.Tools {
+		schema := langopv1alpha1.ToolSchema{
+			Name:        mcpTool.Name,
+			Description: mcpTool.Description,
+		}
+
+		// Convert input schema if present
+		if mcpTool.InputSchema != nil {
+			schema.InputSchema = &langopv1alpha1.ToolSchemaDefinition{
+				Type:       mcpTool.InputSchema.Type,
+				Required:   mcpTool.InputSchema.Required,
+				Properties: make(map[string]langopv1alpha1.ToolProperty),
+			}
+
+			// Convert properties
+			for propName, mcpProp := range mcpTool.InputSchema.Properties {
+				prop := langopv1alpha1.ToolProperty{
+					Type:        mcpProp.Type,
+					Description: mcpProp.Description,
+				}
+				
+				// Convert first example if available
+				if len(mcpProp.Examples) > 0 {
+					exampleBytes, _ := json.Marshal(mcpProp.Examples[0])
+					prop.Example = string(exampleBytes)
+				}
+
+				schema.InputSchema.Properties[propName] = prop
+			}
+		}
+
+		schemas = append(schemas, schema)
+	}
+
+	log.Info("Successfully discovered MCP tool schemas", "endpoint", endpoint, "toolCount", len(schemas))
+	return schemas, nil
+}
+
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
 	// For sidecar mode tools, just set as ready (no deployment to check)
 	if tool.Spec.DeploymentMode == "sidecar" {
 		tool.Status.Phase = "Running"
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
+		
+		// Note: Sidecar tools don't have a service endpoint, so we can't discover schemas
+		// Schemas will be populated from agent runtime when the sidecar is used
+		
 		return r.Status().Update(ctx, tool)
 	}
 
@@ -397,6 +547,27 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if deployment.Status.ReadyReplicas > 0 {
 		tool.Status.Phase = "Running"
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
+		
+		// Discover MCP tool schemas for service mode tools
+		if tool.Status.Endpoint != "" && tool.Spec.Type == "mcp" {
+			schemas, err := r.discoverMCPToolSchemas(ctx, tool.Status.Endpoint)
+			if err != nil {
+				// Log error but don't fail - tool is still ready even if schema discovery fails
+				log := log.FromContext(ctx)
+				log.Error(err, "Failed to discover MCP tool schemas", "tool", tool.Name, "endpoint", tool.Status.Endpoint)
+			} else {
+				// Update tool schemas and available tools list
+				tool.Status.ToolSchemas = schemas
+				
+				// Update the AvailableTools list for backward compatibility
+				var toolNames []string
+				for _, schema := range schemas {
+					toolNames = append(toolNames, schema.Name)
+				}
+				tool.Status.AvailableTools = toolNames
+			}
+		}
+		
 		return r.Status().Update(ctx, tool)
 	}
 

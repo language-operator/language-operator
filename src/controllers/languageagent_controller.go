@@ -538,10 +538,14 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			}
 		}
 
+		// Get complete tool schemas for better synthesis quality
+		toolSchemas := r.getToolSchemas(ctx, agent)
+
 		// Build synthesis request
 		synthReq := synthesis.AgentSynthesisRequest{
 			Instructions: agent.Spec.Instructions,
-			Tools:        tools,
+			Tools:        tools,        // Kept for backward compatibility
+			ToolSchemas:  toolSchemas,  // Complete schemas for better synthesis
 			Models:       models,
 			PersonaText:  distilledPersona,
 			AgentName:    agent.Name,
@@ -831,6 +835,34 @@ func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAge
 		names = append(names, ref.Name)
 	}
 	return names
+}
+
+// getToolSchemas extracts complete tool schemas from agent's toolRefs
+func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.ToolSchema {
+	var allSchemas []langopv1alpha1.ToolSchema
+	
+	for _, ref := range agent.Spec.ToolRefs {
+		// Get the LanguageTool CR
+		tool := &langopv1alpha1.LanguageTool{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      ref.Name,
+			Namespace: agent.Namespace,
+		}, tool)
+		
+		if err != nil {
+			// Log error but continue - don't fail synthesis for missing tools
+			log := log.FromContext(ctx)
+			log.Error(err, "Failed to get LanguageTool for schema", "tool", ref.Name, "agent", agent.Name)
+			continue
+		}
+		
+		// Add schemas from this tool to the collection
+		if len(tool.Status.ToolSchemas) > 0 {
+			allSchemas = append(allSchemas, tool.Status.ToolSchemas...)
+		}
+	}
+	
+	return allSchemas
 }
 
 // getModelNames extracts model names from agent's modelRefs
@@ -2190,10 +2222,14 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		lastKnownGoodCode = agent.Status.LastSuccessfulCode
 	}
 
+	// Get complete tool schemas for better self-healing synthesis quality
+	toolSchemas := r.getToolSchemas(ctx, agent)
+
 	// Build synthesis request with error context
 	synthReq := synthesis.AgentSynthesisRequest{
 		Instructions:      agent.Spec.Instructions,
-		Tools:             r.getToolNames(agent),
+		Tools:             r.getToolNames(agent), // Kept for backward compatibility
+		ToolSchemas:       toolSchemas,           // Complete schemas for better synthesis
 		Models:            r.getModelNames(agent),
 		PersonaText:       distilledPersona,
 		AgentName:         agent.Name,

@@ -4263,6 +4263,98 @@ spec:
                 description: Reason provides a machine-readable reason for the current
                   state
                 type: string
+              toolSchemas:
+                description: ToolSchemas contains the complete MCP tool schemas discovered
+                  from this service
+                items:
+                  description: ToolSchema represents the complete schema of an MCP
+                    tool
+                  properties:
+                    description:
+                      description: Description is a human-readable description of
+                        the tool
+                      type: string
+                    inputSchema:
+                      description: InputSchema defines the parameters this tool accepts
+                      properties:
+                        properties:
+                          additionalProperties:
+                            description: ToolProperty defines an individual parameter
+                              or return field
+                            properties:
+                              description:
+                                description: Description explains what this property
+                                  represents
+                                type: string
+                              example:
+                                description: Example provides an example value as
+                                  a JSON string
+                                type: string
+                              type:
+                                description: Type is the JSON schema type (string,
+                                  integer, boolean, etc.)
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          description: 'Properties defines object properties (for
+                            type: object)'
+                          type: object
+                        required:
+                          description: 'Required lists required property names (for
+                            type: object)'
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type is the JSON schema type (object, array,
+                            string, etc.)
+                          type: string
+                      type: object
+                    name:
+                      description: Name is the tool identifier
+                      type: string
+                    outputSchema:
+                      description: OutputSchema defines the structure this tool returns
+                      properties:
+                        properties:
+                          additionalProperties:
+                            description: ToolProperty defines an individual parameter
+                              or return field
+                            properties:
+                              description:
+                                description: Description explains what this property
+                                  represents
+                                type: string
+                              example:
+                                description: Example provides an example value as
+                                  a JSON string
+                                type: string
+                              type:
+                                description: Type is the JSON schema type (string,
+                                  integer, boolean, etc.)
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          description: 'Properties defines object properties (for
+                            type: object)'
+                          type: object
+                        required:
+                          description: 'Required lists required property names (for
+                            type: object)'
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type is the JSON schema type (object, array,
+                            string, etc.)
+                          type: string
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
               unavailableReplicas:
                 description: UnavailableReplicas is the number of pods targeted by
                   this LanguageTool that are unavailable
