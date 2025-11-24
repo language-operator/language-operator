@@ -741,15 +741,21 @@ func TestValidateGeneratedCodeAgainstSchema_WithRuby(t *testing.T) {
 		skipCheck   bool
 	}{
 		{
-			name: "valid DSL code",
+			name: "valid DSL v1 code",
 			code: `require 'language_operator'
 
 agent "test" do
   description "Test agent"
-  workflow do
-    step :test do
-      puts "test"
-    end
+  instructions "Process test data"
+  
+  task :test_task,
+    instructions: "Run a test",
+    inputs: {},
+    outputs: { result: 'string' }
+  
+  main do |inputs|
+    result = execute_task(:test_task)
+    result
   end
 end`,
 			expectError: false,

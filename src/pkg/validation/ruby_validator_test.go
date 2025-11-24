@@ -20,16 +20,27 @@ func TestValidateRubyCode(t *testing.T) {
 	}{
 		// Safe code tests
 		{
-			name: "safe agent DSL code",
+			name: "safe agent DSL v1 code",
 			code: `require 'language_operator'
 
 agent "test" do
   description "Test agent"
-  workflow do
-    step :fetch_data, tool: "web-fetch", params: {url: "https://api.example.com"}
-    step :process do
-      puts "Processing data"
-    end
+  instructions "Fetch and process data"
+  
+  task :fetch_data,
+    instructions: "Get data from web API",
+    inputs: {},
+    outputs: { data: 'hash' }
+  
+  task :process_data,
+    instructions: "Process the fetched data",
+    inputs: { data: 'hash' },
+    outputs: { result: 'string' }
+  
+  main do |inputs|
+    data = execute_task(:fetch_data)
+    result = execute_task(:process_data, inputs: data)
+    result
   end
 end`,
 			shouldErr: false,
@@ -417,33 +428,60 @@ func TestValidateRubyCode_Performance(t *testing.T) {
 		t.Skip("Ruby not available - tests only run in operator container with Ruby support")
 	}
 
-	// Test performance with 10KB of typical agent code
+	// Test performance with 10KB of typical DSL v1 agent code
 	code := `require 'language_operator'
 
 agent "performance-test" do
   description "Test agent for performance"
+  instructions "Process test data with multiple tasks"
 
-  workflow do
-    step :step1 do
-      data = {name: "test", value: 42}
-      result = data.transform_keys(&:to_s)
-      puts result.inspect
-    end
+  task :process_data,
+    instructions: "Process basic data structures",
+    inputs: {},
+    outputs: { result: 'hash' }
+  do |inputs|
+    data = {name: "test", value: 42}
+    result = data.transform_keys(&:to_s)
+    puts result.inspect
+    { result: result }
+  end
 
-    step :step2 do
-      items = (1..100).to_a
-      processed = items.map { |n| n * 2 }.select { |n| n > 50 }
-      puts processed.sum
-    end
+  task :calculate_items,
+    instructions: "Calculate items from range",
+    inputs: {},
+    outputs: { total: 'integer' }
+  do |inputs|
+    items = (1..100).to_a
+    processed = items.map { |n| n * 2 }.select { |n| n > 50 }
+    total = processed.sum
+    puts total
+    { total: total }
+  end
 
-    step :step3 do
-      config = {
-        timeout: 30,
-        retries: 3,
-        endpoint: "https://api.example.com"
-      }
-      puts "Config: #{config.inspect}"
-    end
+  task :setup_config,
+    instructions: "Setup configuration",
+    inputs: {},
+    outputs: { config: 'hash' }
+  do |inputs|
+    config = {
+      timeout: 30,
+      retries: 3,
+      endpoint: "https://api.example.com"
+    }
+    puts "Config: #{config.inspect}"
+    { config: config }
+  end
+
+  main do |inputs|
+    data_result = execute_task(:process_data)
+    calc_result = execute_task(:calculate_items)
+    config_result = execute_task(:setup_config)
+    
+    {
+      data: data_result,
+      calculation: calc_result,
+      config: config_result
+    }
   end
 
   constraints do

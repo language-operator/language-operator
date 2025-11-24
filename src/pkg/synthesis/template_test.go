@@ -207,63 +207,41 @@ func TestTemplateCodeExamplesAreSyntacticallyValid(t *testing.T) {
 	t.Skip("Template contains Go template placeholders - validated via TestSynthesisTemplateValidity instead")
 }
 
-// TestTemplateGeneratesValidWorkflow ensures generated workflow blocks are valid
-func TestTemplateGeneratesValidWorkflow(t *testing.T) {
+// TestTemplateGeneratesValidTaskMain ensures generated task/main DSL v1 agents are valid
+func TestTemplateGeneratesValidTaskMain(t *testing.T) {
 	// Skip if Ruby/bundler not available
 	if _, err := exec.LookPath("ruby"); err != nil {
-		t.Skip("Ruby not available, skipping workflow validation")
+		t.Skip("Ruby not available, skipping task/main validation")
 	}
 	if _, err := exec.LookPath("bundle"); err != nil {
-		t.Skip("Bundler not available, skipping workflow validation")
+		t.Skip("Bundler not available, skipping task/main validation")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Generate a complete agent with workflow using the template
-	tmpl, err := template.New("agent_synthesis").Parse(agentSynthesisTemplate)
-	if err != nil {
-		t.Fatalf("Failed to parse template: %v", err)
-	}
-
-	templateData := map[string]interface{}{
-		"Instructions":       "Fetch data from API and process it",
-		"ToolsList":          "  - http\n  - shell\n",
-		"ModelsList":         "  - gpt-4\n",
-		"AgentName":          "workflow-test",
-		"TemporalIntent":     "Continuous",
-		"PersonaSection":     "",
-		"ScheduleSection":    "",
-		"ConstraintsSection": "  constraints do\n    max_iterations 100\n    timeout \"5m\"\n  end",
-		"ScheduleRules":      "",
-		"ErrorContext":       nil,
-		"AttemptNumber":      0,
-		"MaxAttempts":        5,
-		"LastKnownGoodCode":  "",
-	}
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, templateData); err != nil {
-		t.Fatalf("Failed to execute template: %v", err)
-	}
-
-	// Extract and validate the template output
-	prompt := buf.String()
-	if !strings.Contains(prompt, "agent") {
-		t.Error("Template does not include agent definition")
-		return
-	}
-
-	// Create a complete agent for validation
+	// Create a complete DSL v1 agent with task/main structure for validation
 	agentCode := `require 'language_operator'
 
-agent 'workflow-test' do
-  description 'Agent with objectives and constraints'
+agent 'task-main-test' do
+  description 'Agent using DSL v1 task/main model'
+  instructions 'Fetch data from API and process it'
 
-  objectives [
-    'Fetch data from API',
-    'Process the data'
-  ]
+  task :fetch_data,
+    instructions: 'Get data from the API',
+    inputs: {},
+    outputs: { data: 'array' }
+
+  task :process_data,
+    instructions: 'Process the fetched data',
+    inputs: { data: 'array' },
+    outputs: { result: 'string' }
+
+  main do |inputs|
+    data = execute_task(:fetch_data)
+    result = execute_task(:process_data, inputs: data)
+    result
+  end
 
   constraints do
     max_iterations 100
@@ -276,17 +254,18 @@ agent 'workflow-test' do
 end
 `
 
-	// Validate the agent code
+	// Validate the agent code against DSL v1 schema
 	violations, err := ValidateGeneratedCodeAgainstSchema(ctx, agentCode)
 	if err != nil {
 		t.Fatalf("Schema validation failed: %v", err)
 	}
 
 	if len(violations) > 0 {
-		t.Errorf("Workflow code produced violations:")
+		t.Errorf("DSL v1 task/main code produced violations:")
 		for _, v := range violations {
 			t.Errorf("  - Line %d: %s (%s)", v.Location, v.Message, v.Type)
 		}
+		t.Logf("Generated code:\n%s", agentCode)
 	}
 }
 
@@ -320,10 +299,10 @@ func extractExampleCodeFromPrompt(prompt string) string {
 func extractDSLMethodsFromTemplate(templateContent string) []string {
 	methods := make(map[string]bool)
 
-	// Known DSL methods that appear in templates
+	// Known DSL methods that appear in templates (DSL v1)
 	knownMethods := []string{
-		"agent", "description", "persona", "schedule", "objectives",
-		"workflow", "step", "constraints", "max_iterations", "timeout",
+		"agent", "description", "persona", "schedule", "instructions",
+		"task", "main", "execute_task", "constraints", "max_iterations", "timeout",
 		"output", "workspace",
 	}
 
@@ -352,11 +331,11 @@ func extractSafeMethodsFromSchema(schema *DSLSchema) []string {
 		methods = append(methods, key)
 	}
 
-	// Add known safe nested methods (these are always safe in the DSL)
+	// Add known safe nested methods (DSL v1 - these are always safe in the DSL)
 	safeMethods := []string{
-		"agent", "description", "persona", "schedule", "objectives",
-		"workflow", "step", "constraints", "max_iterations", "timeout",
-		"output", "workspace", "depends_on", "tool", "params",
+		"agent", "description", "persona", "schedule", "instructions",
+		"task", "main", "execute_task", "constraints", "max_iterations", "timeout",
+		"output", "workspace", "inputs", "outputs",
 	}
 
 	methods = append(methods, safeMethods...)
