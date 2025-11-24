@@ -79,6 +79,7 @@ const (
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1996,6 +1997,75 @@ func (r *LanguageAgentReconciler) hasGatewayAPI(ctx context.Context) (bool, erro
 	return false, nil
 }
 
+// reconcileReferenceGrant creates or updates a Gateway API ReferenceGrant for cross-namespace access
+func (r *LanguageAgentReconciler) reconcileReferenceGrant(ctx context.Context, agent *langopv1alpha1.LanguageAgent, gatewayName, gatewayNamespace string) error {
+	log := log.FromContext(ctx)
+
+	// Only create ReferenceGrant if gateway is in a different namespace
+	if agent.Namespace == gatewayNamespace {
+		return nil
+	}
+
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	referenceGrantName := fmt.Sprintf("%s-%s-referencegrant", agent.Name, agent.Namespace)
+
+	// Create ReferenceGrant using unstructured to avoid Gateway API dependency
+	referenceGrant := &unstructured.Unstructured{}
+	referenceGrant.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "gateway.networking.k8s.io",
+		Version: "v1beta1", // ReferenceGrant is in beta
+		Kind:    "ReferenceGrant",
+	})
+	referenceGrant.SetName(referenceGrantName)
+	referenceGrant.SetNamespace(gatewayNamespace) // Must be created in gateway namespace
+	referenceGrant.SetLabels(labels)
+
+	// Build ReferenceGrant spec
+	spec := map[string]interface{}{
+		"from": []interface{}{
+			map[string]interface{}{
+				"group":     "gateway.networking.k8s.io",
+				"kind":      "HTTPRoute",
+				"namespace": agent.Namespace,
+			},
+		},
+		"to": []interface{}{
+			map[string]interface{}{
+				"group": "gateway.networking.k8s.io",
+				"kind":  "Gateway",
+				"name":  gatewayName,
+			},
+		},
+	}
+
+	// Check if ReferenceGrant already exists
+	existing := &unstructured.Unstructured{}
+	existing.SetGroupVersionKind(referenceGrant.GroupVersionKind())
+	err := r.Get(ctx, types.NamespacedName{Name: referenceGrantName, Namespace: gatewayNamespace}, existing)
+
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		// Create new ReferenceGrant
+		referenceGrant.Object["spec"] = spec
+		log.Info("Creating ReferenceGrant", "name", referenceGrantName, "namespace", gatewayNamespace, "gateway", gatewayName)
+		if err := r.Create(ctx, referenceGrant); err != nil {
+			return fmt.Errorf("failed to create ReferenceGrant: %w", err)
+		}
+	} else {
+		// Update existing ReferenceGrant
+		existing.Object["spec"] = spec
+		existing.SetLabels(labels)
+		log.Info("Updating ReferenceGrant", "name", referenceGrantName, "namespace", gatewayNamespace, "gateway", gatewayName)
+		if err := r.Update(ctx, existing); err != nil {
+			return fmt.Errorf("failed to update ReferenceGrant: %w", err)
+		}
+	}
+
+	return nil
+}
+
 // reconcileHTTPRoute creates or updates a Gateway API HTTPRoute for the agent
 func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
 	log := log.FromContext(ctx)
@@ -2029,6 +2099,11 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	if gatewayName == "" {
 		gatewayName = "default"
 		gatewayNamespace = "default"
+	}
+
+	// Create ReferenceGrant if cross-namespace Gateway reference is needed
+	if err := r.reconcileReferenceGrant(ctx, agent, gatewayName, gatewayNamespace); err != nil {
+		return fmt.Errorf("failed to reconcile ReferenceGrant: %w", err)
 	}
 
 	// Create HTTPRoute using unstructured to avoid Gateway API dependency
