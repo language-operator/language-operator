@@ -3,10 +3,10 @@
 ## Current Priority Status (Nov 25, 2025)
 
 ### 🚀 READY Issues (Priority Order)
-*All critical infrastructure issues completed! SigNoz adapter implemented.*
+*All critical infrastructure issues completed! Telemetry adapter fully configured.*
 
 ### 📋 Remaining Work
-- **Issues #48-49** - Telemetry adapter integration and configuration
+- **Issue #48** - Telemetry adapter integration with learning controller (ready for implementation)
 - **Issues #25-26** - Advanced learning features (error-triggered, metrics)  
 - **Issue #36** - UX improvements (DNS documentation)
 - **Issue #29** - DSL v1 release (final milestone)
@@ -24,14 +24,15 @@
 - ✅ Issue #40: Remove legacy synthesize command with misleading API key errors (Nov 25) - legacy cleanup
 - ✅ Issue #46: Telemetry adapter interface for learning system (Nov 25) - foundation for organic functions
 - ✅ Issue #47: SigNoz telemetry adapter implementation (Nov 25) - 86% test coverage, ClickHouse queries, PromQL support
+- ✅ Issue #49: Telemetry adapter configuration and deployment integration (Nov 25) - Helm chart configuration, environment variables, documentation
 - ✅ Issue #24: Deployment updates for learned ConfigMaps (learning pipeline complete)
 - ✅ All core infrastructure for DSL v1 synthesis pipeline
 
 **Critical Infrastructure Dependencies:**
-- ✅ Issue #45 (operator stability) → ✅ #44 (validation) → ✅ #41 (error handling) → ✅ #42 (IPv6 support) → ✅ #47 (SigNoz adapter) → ✅ #24 (learning) ✅
-- **ALL CRITICAL INFRASTRUCTURE COMPLETE!** Core platform is production-ready
-- **Next Priority:** Telemetry integration (#48-49) then advanced learning features (#25-26)  
-- DSL v1 release ready after telemetry integration complete
+- ✅ Issue #45 (operator stability) → ✅ #44 (validation) → ✅ #41 (error handling) → ✅ #42 (IPv6 support) → ✅ #47 (SigNoz adapter) → ✅ #49 (configuration) → ✅ #24 (learning) ✅
+- **ALL CRITICAL INFRASTRUCTURE COMPLETE!** Core platform is production-ready with full telemetry configuration
+- **Next Priority:** Learning controller integration (#48) then advanced learning features (#25-26)  
+- DSL v1 release ready after learning integration complete
 
 **Key Implementation Notes:**
 - ConfigMap versioning: Always preserve v1 (initial synthesis)
@@ -41,6 +42,7 @@
 - Workspace validation: Multi-layer defense (CRD + webhook + controller) prevents panics
 - SigNoz adapter: Full TelemetryAdapter implementation ready for learning controller integration
 - Telemetry capabilities: ClickHouse span queries, PromQL metrics, availability checking, 86% test coverage
+- Telemetry configuration: Complete Helm chart integration, secure credential management, comprehensive documentation
 
 **Deployment Process:**
 - ⚠️ **CANNOT** build/deploy operator locally from source

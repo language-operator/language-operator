@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -2028,22 +2029,86 @@ func (r *LearningReconciler) parseJSONAttribute(jsonStr string) map[string]inter
 		return map[string]interface{}{}
 	}
 
-	// In a real implementation, this would use json.Unmarshal
-	// For now, return empty map to avoid import dependencies
-	return map[string]interface{}{}
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		r.Log.V(1).Info("Failed to parse JSON attribute", "json", jsonStr, "error", err)
+		return map[string]interface{}{}
+	}
+
+	return result
 }
 
-// extractToolCallsFromSpan extracts tool calls from span (placeholder implementation)
+// extractToolCallsFromSpan extracts tool calls from span attributes
 func (r *LearningReconciler) extractToolCallsFromSpan(span telemetry.Span) []ToolCall {
 	var toolCalls []ToolCall
 
-	// In a real implementation, this would:
-	// 1. Look for child spans with operation_name="tool_call"
-	// 2. Extract tool name, method, parameters from span attributes
-	// 3. Parse results from span attributes or events
-	// For now, return empty slice
+	// Check if this is a tool execution span
+	if span.Attributes["gen_ai.operation.name"] == "execute_tool" {
+		toolCall := ToolCall{
+			ToolName:   span.Attributes["gen_ai.tool.name"],
+			Method:     "execute", // Default method for MCP tools
+			Parameters: r.parseJSONAttribute(span.Attributes["gen_ai.tool.call.arguments"]),
+			Result:     r.parseJSONAttribute(span.Attributes["gen_ai.tool.call.result"]),
+		}
+
+		if toolCall.ToolName != "" {
+			toolCalls = append(toolCalls, toolCall)
+		}
+	}
+
+	// Also check for tool call sequence in task.tool_calls attribute (if available)
+	if toolCallsData := span.Attributes["task.tool_calls"]; toolCallsData != "" {
+		parsedCalls := r.parseToolCallSequence(toolCallsData)
+		toolCalls = append(toolCalls, parsedCalls...)
+	}
 
 	return toolCalls
+}
+
+// parseToolCallSequence parses a JSON array of tool calls from span attributes
+func (r *LearningReconciler) parseToolCallSequence(toolCallsJSON string) []ToolCall {
+	var toolCalls []ToolCall
+
+	var rawCalls []map[string]interface{}
+	if err := json.Unmarshal([]byte(toolCallsJSON), &rawCalls); err != nil {
+		r.Log.V(1).Info("Failed to parse tool call sequence", "json", toolCallsJSON, "error", err)
+		return toolCalls
+	}
+
+	for _, call := range rawCalls {
+		toolCall := ToolCall{
+			ToolName: getString(call, "tool_name"),
+			Method:   getString(call, "method"),
+		}
+
+		if params, ok := call["parameters"]; ok {
+			if paramsMap, ok := params.(map[string]interface{}); ok {
+				toolCall.Parameters = paramsMap
+			}
+		}
+
+		if result, ok := call["result"]; ok {
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				toolCall.Result = resultMap
+			}
+		}
+
+		if toolCall.ToolName != "" {
+			toolCalls = append(toolCalls, toolCall)
+		}
+	}
+
+	return toolCalls
+}
+
+// getString safely extracts a string value from a map
+func getString(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
 }
 
 // groupTracesByTask groups execution traces by task name
@@ -2112,13 +2177,11 @@ func (r *LearningReconciler) analyzeToolCallPatterns(traces []TaskTrace) map[str
 	patterns := make(map[string]int)
 
 	for _, trace := range traces {
-		// Create a pattern signature from the sequence of tool calls
-		var patternParts []string
-		for _, toolCall := range trace.ToolCalls {
-			patternParts = append(patternParts, fmt.Sprintf("%s.%s", toolCall.ToolName, toolCall.Method))
+		// Use the same normalization logic as the consistency analysis
+		pattern := r.normalizeToolCallPattern(trace.ToolCalls)
+		if pattern != "" {
+			patterns[pattern]++
 		}
-		pattern := strings.Join(patternParts, "->")
-		patterns[pattern]++
 	}
 
 	return patterns
@@ -2130,22 +2193,145 @@ func (r *LearningReconciler) analyzeInputOutputConsistency(traces []TaskTrace) f
 		return 0.0
 	}
 
-	// TODO: Implement sophisticated I/O consistency analysis
-	// This would analyze:
-	// - Input parameter stability
-	// - Output format consistency
-	// - Value ranges and types
-	// - Transformation patterns
+	// Group traces by input signature (following Ruby implementation)
+	inputGroups := r.groupTracesByInputSignature(traces)
 
-	// For now, return a placeholder based on success rate
-	successCount := 0
+	// Calculate consistency for each input signature
+	var totalExecutions int
+	var weightedConsistency float64
+
+	for inputSignature, groupTraces := range inputGroups {
+		// Analyze tool call patterns within this input group
+		toolPatterns := make(map[string]int)
+		for _, trace := range groupTraces {
+			pattern := r.normalizeToolCallPattern(trace.ToolCalls)
+			toolPatterns[pattern]++
+		}
+
+		// Find the most common pattern for this input signature
+		var mostCommon string
+		var mostCommonCount int
+		for pattern, count := range toolPatterns {
+			if count > mostCommonCount {
+				mostCommon = pattern
+				mostCommonCount = count
+			}
+		}
+
+		// Calculate consistency for this input signature
+		groupTotal := len(groupTraces)
+		groupConsistency := float64(mostCommonCount) / float64(groupTotal)
+
+		// Weight by number of executions
+		weight := float64(groupTotal)
+		weightedConsistency += weight * groupConsistency
+		totalExecutions += groupTotal
+
+		r.Log.V(2).Info("Input signature consistency analysis",
+			"inputSignature", inputSignature,
+			"executions", groupTotal,
+			"mostCommonPattern", mostCommon,
+			"consistency", groupConsistency)
+	}
+
+	if totalExecutions == 0 {
+		return 0.0
+	}
+
+	// Return weighted average consistency across all input signatures
+	overallConsistency := weightedConsistency / float64(totalExecutions)
+	return overallConsistency
+}
+
+// groupTracesByInputSignature groups traces by their normalized input signature
+func (r *LearningReconciler) groupTracesByInputSignature(traces []TaskTrace) map[string][]TaskTrace {
+	inputGroups := make(map[string][]TaskTrace)
+
 	for _, trace := range traces {
-		if trace.Success {
-			successCount++
+		signature := r.normalizeInputSignature(trace.Inputs)
+		inputGroups[signature] = append(inputGroups[signature], trace)
+	}
+
+	return inputGroups
+}
+
+// normalizeInputSignature creates a consistent signature from input parameters
+func (r *LearningReconciler) normalizeInputSignature(inputs map[string]interface{}) string {
+	if len(inputs) == 0 {
+		return ""
+	}
+
+	// Convert to deterministic string representation
+	// Sort keys to ensure consistent ordering
+	keys := make([]string, 0, len(inputs))
+	for k := range inputs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var parts []string
+	for _, key := range keys {
+		value := inputs[key]
+		parts = append(parts, fmt.Sprintf("%s:%v", key, value))
+	}
+
+	return strings.Join(parts, ",")
+}
+
+// normalizeToolCallPattern creates a pattern string from tool call sequence
+func (r *LearningReconciler) normalizeToolCallPattern(toolCalls []ToolCall) string {
+	if len(toolCalls) == 0 {
+		return ""
+	}
+
+	// Extract tool names in sequence
+	var toolNames []string
+	for _, call := range toolCalls {
+		toolNames = append(toolNames, call.ToolName)
+	}
+
+	// Collapse consecutive duplicates (following Ruby implementation)
+	return r.collapseConsecutiveDuplicates(toolNames)
+}
+
+// collapseConsecutiveDuplicates collapses consecutive duplicate tool calls
+func (r *LearningReconciler) collapseConsecutiveDuplicates(toolNames []string) string {
+	if len(toolNames) == 0 {
+		return ""
+	}
+
+	var collapsed []string
+	currentTool := ""
+	count := 0
+
+	for _, tool := range toolNames {
+		if tool == currentTool {
+			count++
+		} else {
+			// Add previous tool (if any) to result
+			if currentTool != "" {
+				collapsed = append(collapsed, r.formatToolWithCount(currentTool, count))
+			}
+			// Start new sequence
+			currentTool = tool
+			count = 1
 		}
 	}
 
-	return float64(successCount) / float64(len(traces))
+	// Add final tool
+	if currentTool != "" {
+		collapsed = append(collapsed, r.formatToolWithCount(currentTool, count))
+	}
+
+	return strings.Join(collapsed, " → ")
+}
+
+// formatToolWithCount formats tool name with count if > 1
+func (r *LearningReconciler) formatToolWithCount(toolName string, count int) string {
+	if count > 1 {
+		return fmt.Sprintf("%s (×%d)", toolName, count)
+	}
+	return toolName
 }
 
 // isDeterministicTask determines if a task exhibits deterministic behavior

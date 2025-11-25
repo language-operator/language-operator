@@ -272,8 +272,8 @@ func TestLearningReconciler_analyzeTaskPatterns(t *testing.T) {
 				},
 			},
 			expectedDeterministic: true,
-			expectedConfidence:    0.95, // High confidence due to identical patterns (capped at 0.95)
-			expectedPattern:       "simple_tool_sequence",
+			expectedConfidence:    1.0, // Perfect consistency - all identical patterns
+			expectedPattern:       "deterministic_tool_sequence", // Now correctly classified
 		},
 		{
 			name:     "variable pattern",
@@ -296,7 +296,7 @@ func TestLearningReconciler_analyzeTaskPatterns(t *testing.T) {
 				},
 			},
 			expectedDeterministic: false,
-			expectedConfidence:    0.5, // Medium confidence based on mixed patterns
+			expectedConfidence:    0.333, // Real calculation: 1/3 consistency for most common pattern
 			expectedPattern:       "conditional_logic",
 		},
 	}
@@ -1509,10 +1509,12 @@ func TestLearningReconciler_convertSpansToTaskTraces(t *testing.T) {
 	assert.True(t, trace.Success)
 	assert.Empty(t, trace.ErrorMessage)
 
-	// parseJSONAttribute returns empty map in current implementation
-	assert.Equal(t, map[string]interface{}{}, trace.Inputs)
-	assert.Equal(t, map[string]interface{}{}, trace.Outputs)
+	// parseJSONAttribute now actually parses JSON
+	expectedInputs := map[string]interface{}{"id": float64(123)}
+	expectedOutputs := map[string]interface{}{"result": "success"}
+	assert.Equal(t, expectedInputs, trace.Inputs)
+	assert.Equal(t, expectedOutputs, trace.Outputs)
 
-	// extractToolCallsFromSpan returns empty slice in current implementation
+	// extractToolCallsFromSpan should be empty since no tool call attributes are provided
 	assert.Empty(t, trace.ToolCalls)
 }
