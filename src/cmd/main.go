@@ -117,9 +117,17 @@ func initializeSigNozAdapter() telemetry.TelemetryAdapter {
 		return telemetry.NewNoOpAdapter()
 	}
 
+	// Log configuration details (excluding sensitive information)
 	setupLog.Info("SigNoz telemetry adapter initialized successfully",
 		"endpoint", endpoint,
-		"timeout", timeout)
+		"timeout", timeout,
+		"retryAttempts", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_ATTEMPTS", "3"),
+		"retryBackoff", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_BACKOFF", "1s"),
+		"maxTraces", getEnvOrDefault("TELEMETRY_ADAPTER_MAX_TRACES", "100"),
+		"lookbackPeriod", getEnvOrDefault("TELEMETRY_ADAPTER_LOOKBACK_PERIOD", "24h"),
+		"queryTimeout", getEnvOrDefault("TELEMETRY_ADAPTER_QUERY_TIMEOUT", "10s"),
+		"healthCheckEnabled", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED", "true"),
+		"healthCheckInterval", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL", "5m"))
 
 	return adapter
 }
@@ -517,4 +525,12 @@ func loadAllowedRegistries(ctx context.Context, clientset *kubernetes.Clientset)
 
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
+}
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }

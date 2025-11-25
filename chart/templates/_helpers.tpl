@@ -105,3 +105,42 @@ Builds a comma-separated list of key=value pairs for OTEL_RESOURCE_ATTRIBUTES
 {{- end -}}
 {{- join "," $attrs -}}
 {{- end }}
+
+{{/*
+Telemetry adapter enabled check
+Returns true if telemetry adapter is enabled and properly configured
+*/}}
+{{- define "language-operator.telemetryAdapter.enabled" -}}
+{{- if and .Values.telemetry.adapter.enabled .Values.telemetry.adapter.endpoint -}}
+{{- true -}}
+{{- else -}}
+{{- false -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry adapter API key value
+Returns the API key value, either direct or from secret reference
+*/}}
+{{- define "language-operator.telemetryAdapter.apiKey" -}}
+{{- if .Values.telemetry.adapter.auth.apiKeySecret.name -}}
+{{- printf "secretKeyRef:\n        name: %s\n        key: %s" .Values.telemetry.adapter.auth.apiKeySecret.name .Values.telemetry.adapter.auth.apiKeySecret.key -}}
+{{- else if .Values.telemetry.adapter.auth.apiKey -}}
+{{- .Values.telemetry.adapter.auth.apiKey | quote -}}
+{{- else -}}
+{{- "" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry adapter type validation
+Returns the adapter type if valid, otherwise "noop"
+*/}}
+{{- define "language-operator.telemetryAdapter.type" -}}
+{{- $validTypes := list "signoz" "jaeger" "tempo" "noop" -}}
+{{- if has .Values.telemetry.adapter.type $validTypes -}}
+{{- .Values.telemetry.adapter.type -}}
+{{- else -}}
+{{- "noop" -}}
+{{- end -}}
+{{- end }}

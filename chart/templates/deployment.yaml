@@ -115,6 +115,46 @@ spec:
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: {{ include "language-operator.otelResourceAttributes" . | quote }}
         {{- end }}
+        {{- if include "language-operator.telemetryAdapter.enabled" . }}
+        # Telemetry adapter configuration
+        - name: TELEMETRY_ADAPTER_TYPE
+          value: {{ include "language-operator.telemetryAdapter.type" . | quote }}
+        - name: TELEMETRY_ADAPTER_ENDPOINT
+          value: {{ .Values.telemetry.adapter.endpoint | quote }}
+        {{- if or .Values.telemetry.adapter.auth.apiKey .Values.telemetry.adapter.auth.apiKeySecret.name }}
+        - name: TELEMETRY_ADAPTER_API_KEY
+          {{- if .Values.telemetry.adapter.auth.apiKeySecret.name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.telemetry.adapter.auth.apiKeySecret.name }}
+              key: {{ .Values.telemetry.adapter.auth.apiKeySecret.key }}
+          {{- else }}
+          value: {{ .Values.telemetry.adapter.auth.apiKey | quote }}
+          {{- end }}
+        {{- end }}
+        - name: TELEMETRY_ADAPTER_TIMEOUT
+          value: {{ .Values.telemetry.adapter.timeout | quote }}
+        - name: TELEMETRY_ADAPTER_RETRY_ATTEMPTS
+          value: {{ .Values.telemetry.adapter.retryAttempts | quote }}
+        - name: TELEMETRY_ADAPTER_RETRY_BACKOFF
+          value: {{ .Values.telemetry.adapter.retryBackoff | quote }}
+        - name: TELEMETRY_ADAPTER_MAX_TRACES
+          value: {{ .Values.telemetry.adapter.query.maxTraces | quote }}
+        - name: TELEMETRY_ADAPTER_LOOKBACK_PERIOD
+          value: {{ .Values.telemetry.adapter.query.lookbackPeriod | quote }}
+        - name: TELEMETRY_ADAPTER_QUERY_TIMEOUT
+          value: {{ .Values.telemetry.adapter.query.timeout | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED
+          value: {{ .Values.telemetry.adapter.healthCheck.enabled | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL
+          value: {{ .Values.telemetry.adapter.healthCheck.interval | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_TIMEOUT
+          value: {{ .Values.telemetry.adapter.healthCheck.timeout | quote }}
+        {{- range $header, $value := .Values.telemetry.adapter.auth.headers }}
+        - name: TELEMETRY_ADAPTER_HEADER_{{ upper $header | replace "-" "_" }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
         {{- with .Values.env }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

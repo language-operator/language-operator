@@ -501,6 +501,70 @@ opentelemetry:
     #   cost_center: "engineering"
     custom: {}
 
+# Telemetry adapter configuration for the learning system
+# Enables querying historical traces and metrics from telemetry backends
+telemetry:
+  adapter:
+    # Enable telemetry adapter (default: false for opt-in behavior)
+    enabled: false
+
+    # Adapter type: "signoz", "jaeger", "tempo", or "noop"
+    type: "signoz"
+
+    # Connection configuration
+    endpoint: ""
+    # Example endpoints:
+    #   SigNoz: "https://signoz.example.com" 
+    #   Jaeger: "https://jaeger.example.com"
+    #   Tempo: "https://tempo.example.com"
+
+    # Authentication
+    auth:
+      # API key for authentication (for SigNoz, Grafana Cloud, etc.)
+      # Can be provided directly or via secret reference
+      apiKey: ""
+      
+      # Secret reference for API key (recommended for production)
+      # Example:
+      #   secretName: "signoz-credentials"
+      #   secretKey: "api-key"
+      apiKeySecret:
+        name: ""
+        key: ""
+
+      # Additional auth headers (optional)
+      # Example for custom auth schemes:
+      #   Authorization: "Bearer token"
+      #   X-Custom-Auth: "value"
+      headers: {}
+
+    # Connection settings
+    timeout: "30s"
+    retryAttempts: 3
+    retryBackoff: "1s"
+
+    # Query configuration
+    query:
+      # Maximum number of traces to query per request
+      maxTraces: 100
+      
+      # Time range for historical queries
+      lookbackPeriod: "24h"
+      
+      # Query timeout for individual requests  
+      timeout: "10s"
+
+    # Health check configuration
+    healthCheck:
+      # Enable periodic health checks
+      enabled: true
+      
+      # Health check interval
+      interval: "5m"
+      
+      # Health check timeout
+      timeout: "10s"
+
 # Agent-specific telemetry configuration
 # Allows agents to use different telemetry settings than the operator
 agentTelemetry:
