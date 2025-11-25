@@ -272,7 +272,7 @@ func TestLearningReconciler_analyzeTaskPatterns(t *testing.T) {
 				},
 			},
 			expectedDeterministic: true,
-			expectedConfidence:    1.0, // Perfect consistency - all identical patterns
+			expectedConfidence:    1.0,                           // Perfect consistency - all identical patterns
 			expectedPattern:       "deterministic_tool_sequence", // Now correctly classified
 		},
 		{
