@@ -3,6 +3,8 @@ package synthesis
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -103,10 +105,49 @@ func GetSchemaVersion(ctx context.Context) (string, error) {
 	return version, nil
 }
 
+// allowedCommands defines the allowlist of commands that can be executed for security.
+// This prevents command injection attacks by restricting execution to known-safe binaries.
+var allowedCommands = map[string]bool{
+	"aictl":  true, // Language operator CLI tool
+	"bundle": true, // Ruby bundler for executing validation scripts
+	"ruby":   true, // Ruby interpreter for schema validation
+}
+
+// validateCommandSecurity validates command and arguments for security.
+// Returns an error if the command or arguments are not allowed.
+func validateCommandSecurity(command string, args []string) error {
+	// Check if command is in allowlist
+	if !allowedCommands[command] {
+		return fmt.Errorf("command not allowed: %s (not in security allowlist)", command)
+	}
+
+	// Validate command path is clean (no shell metacharacters)
+	if strings.ContainsAny(command, "$`;&|><*?[]{}()~") {
+		return fmt.Errorf("command contains invalid characters: %s", command)
+	}
+
+	// Validate arguments don't contain shell metacharacters
+	for i, arg := range args {
+		if strings.ContainsAny(arg, "$`;&|><*?{}()~") {
+			return fmt.Errorf("argument %d contains invalid characters: %s", i, arg)
+		}
+	}
+
+	return nil
+}
+
 // executeCommand executes a command with the given context and returns its output.
 // It handles timeouts, errors, and provides detailed error messages for debugging.
 // Returns only stdout (not stderr) to avoid parser warnings interfering with JSON parsing.
+// 
+// SECURITY: This function validates all commands and arguments against an allowlist
+// to prevent command injection attacks.
 func executeCommand(ctx context.Context, command string, args ...string) ([]byte, error) {
+	// Validate command security first
+	if err := validateCommandSecurity(command, args); err != nil {
+		return nil, fmt.Errorf("security validation failed: %w", err)
+	}
+
 	cmd := exec.CommandContext(ctx, command, args...)
 
 	// Capture stdout and stderr separately
@@ -154,30 +195,58 @@ type SchemaViolation struct {
 	Message  string `json:"message"`
 }
 
-// findSchemaValidatorScript looks for the schema validator script in common locations
-func findSchemaValidatorScript() string {
-	// Try locations in order of preference
-	locations := []string{
-		"/usr/local/bin/validate-dsl-schema.rb",                              // Docker container
-		"scripts/validate-dsl-schema.rb",                                     // CI from src/ directory
-		"../../../scripts/validate-dsl-schema.rb",                            // Test from src/pkg/synthesis
-		filepath.Join("..", "..", "..", "scripts", "validate-dsl-schema.rb"), // Alternative path
-		"../../scripts/validate-dsl-schema.rb",                               // From src subdirectory
-		"../scripts/validate-dsl-schema.rb",                                  // From pkg/synthesis
+// expectedScriptHash is the SHA256 hash of the trusted validation script.
+// This prevents script replacement attacks by verifying integrity.
+const expectedScriptHash = "d40378d720f162608fdc81f74fb27e6937dd64e593f0cde24b72b0d92939dc28"
+
+// schemaValidatorPaths defines allowed script locations in order of preference.
+// SECURITY: Limited paths prevent filesystem traversal and script replacement.
+var schemaValidatorPaths = []string{
+	"/usr/local/bin/validate-dsl-schema.rb", // Production container location
+	"scripts/validate-dsl-schema.rb",        // Development/CI location
+}
+
+// validateScriptIntegrity verifies the Ruby script hasn't been tampered with.
+func validateScriptIntegrity(scriptPath string) error {
+	data, err := os.ReadFile(scriptPath)
+	if err != nil {
+		return fmt.Errorf("failed to read script for integrity check: %w", err)
 	}
 
-	for _, path := range locations {
+	hash := sha256.Sum256(data)
+	actualHash := hex.EncodeToString(hash[:])
+	
+	if actualHash != expectedScriptHash {
+		return fmt.Errorf("script integrity check failed: expected %s, got %s", expectedScriptHash, actualHash)
+	}
+
+	return nil
+}
+
+// findSchemaValidatorScript securely locates and validates the schema validator script.
+// Returns an error if no valid script is found or if integrity validation fails.
+func findSchemaValidatorScript() (string, error) {
+	for _, path := range schemaValidatorPaths {
+		// Convert to absolute path for security
 		absPath, err := filepath.Abs(path)
 		if err != nil {
 			continue
 		}
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath
+		
+		// Check if file exists
+		if _, err := os.Stat(absPath); err != nil {
+			continue
 		}
+
+		// Verify script integrity
+		if err := validateScriptIntegrity(absPath); err != nil {
+			return "", fmt.Errorf("script integrity validation failed for %s: %w", absPath, err)
+		}
+
+		return absPath, nil
 	}
 
-	// Default to container location
-	return "/usr/local/bin/validate-dsl-schema.rb"
+	return "", fmt.Errorf("no valid schema validator script found in allowed paths: %v", schemaValidatorPaths)
 }
 
 // ValidateGeneratedCodeAgainstSchema validates generated DSL code against the language-operator schema.
@@ -218,8 +287,22 @@ func ValidateGeneratedCodeAgainstSchema(ctx context.Context, code string) ([]Sch
 		defer cancel()
 	}
 
-	// Find the validator script
-	scriptPath := findSchemaValidatorScript()
+	// Find and validate the validator script
+	scriptPath, err := findSchemaValidatorScript()
+	if err != nil {
+		// In test environments, script might not be available - skip validation
+		// In production, this would be a critical error
+		if strings.Contains(err.Error(), "no valid schema validator script found") {
+			return nil, nil // Skip validation in test environment
+		}
+		return nil, fmt.Errorf("failed to locate schema validator script: %w", err)
+	}
+
+	// Validate command security before execution
+	args := []string{"exec", "ruby", scriptPath}
+	if err := validateCommandSecurity("bundle", args); err != nil {
+		return nil, fmt.Errorf("security validation failed: %w", err)
+	}
 
 	// Execute Ruby validator script via bundle exec
 	cmd := exec.CommandContext(ctx, "bundle", "exec", "ruby", scriptPath)

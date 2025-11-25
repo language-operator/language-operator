@@ -57,11 +57,18 @@ func (v *TaskValidator) ValidateTaskAgent(ctx context.Context, code string) ([]T
 	safetyErrors := v.validateSymbolicTaskSafety(agent)
 	errors = append(errors, safetyErrors...)
 
-	// Run existing schema validation as well
+	// Run schema validation - this is critical for security and correctness
 	schemaViolations, err := ValidateGeneratedCodeAgainstSchema(ctx, code)
 	if err != nil {
-		v.logger.Info("Schema validation failed", "error", err.Error())
-		// Don't fail validation if schema validation has issues - it's supplemental
+		v.logger.Error(err, "Schema validation failed")
+		// SECURITY: Schema validation failures must block synthesis to prevent invalid code deployment
+		errors = append(errors, TaskValidationError{
+			Type:     "schema_system",
+			Field:    "",
+			Line:     0,
+			Message:  fmt.Sprintf("Schema validation system error: %v", err),
+			Severity: "error",
+		})
 	} else {
 		// Convert schema violations to task validation errors
 		for _, violation := range schemaViolations {
