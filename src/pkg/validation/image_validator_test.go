@@ -160,6 +160,32 @@ func TestValidateImageRegistry(t *testing.T) {
 			wantError: false,
 		},
 
+		// IPv6 addresses
+		{
+			name:      "ipv6 localhost",
+			image:     "[::1]:5000/myimage",
+			allowed:   []string{"[::1]:5000"},
+			wantError: false,
+		},
+		{
+			name:      "ipv6 full address",
+			image:     "[2001:db8::1]:8080/app:latest",
+			allowed:   []string{"[2001:db8::1]:8080"},
+			wantError: false,
+		},
+		{
+			name:      "ipv6 without port",
+			image:     "[::1]/image",
+			allowed:   []string{"[::1]"},
+			wantError: false,
+		},
+		{
+			name:      "ipv6 rejected",
+			image:     "[::1]:5000/image",
+			allowed:   allowedRegistries,
+			wantError: true,
+		},
+
 		// Rejection cases
 		{
 			name:      "untrusted registry",
@@ -233,6 +259,16 @@ func TestExtractRegistry(t *testing.T) {
 		{"localhost with port", "localhost:5000/image", "localhost:5000"},
 		{"registry with port", "registry.example.com:443/image", "registry.example.com:443"},
 		{"registry with port and tag", "registry.example.com:443/image:tag", "registry.example.com:443"},
+
+		// IPv6 addresses
+		{"ipv6 localhost", "[::1]/image", "[::1]"},
+		{"ipv6 localhost with port", "[::1]:5000/image", "[::1]:5000"},
+		{"ipv6 with port and tag", "[2001:db8::1]:8080/app:latest", "[2001:db8::1]:8080"},
+		{"ipv6 full address", "[2001:0db8:85a3::8a2e:0370:7334]:9090/service", "[2001:0db8:85a3::8a2e:0370:7334]:9090"},
+		{"ipv6 without port", "[::1]/org/image", "[::1]"},
+		{"ipv6 nested path", "[::1]:5000/org/project/image", "[::1]:5000"},
+		{"ipv6 with digest", "[::1]:5000/image@sha256:abc", "[::1]:5000"},
+		{"ipv6 compressed", "[::ffff:192.0.2.1]:8080/app", "[::ffff:192.0.2.1]:8080"},
 	}
 
 	for _, tt := range tests {

@@ -36,6 +36,8 @@ func ValidateImageRegistry(image string, allowedRegistries []string) error {
 //   - "docker.io/nginx" -> "docker.io"
 //   - "gcr.io/project/image:tag" -> "gcr.io"
 //   - "localhost:5000/image" -> "localhost:5000"
+//   - "[::1]:5000/image" -> "[::1]:5000" (IPv6)
+//   - "[2001:db8::1]:8080/app" -> "[2001:db8::1]:8080" (IPv6 with port)
 func extractRegistry(image string) string {
 	// Remove tag or digest if present
 	// Tags: image:tag
@@ -43,6 +45,23 @@ func extractRegistry(image string) string {
 	if idx := strings.Index(image, "@"); idx != -1 {
 		image = image[:idx]
 	}
+
+	// Handle IPv6 addresses: [IPv6]:port format
+	if strings.HasPrefix(image, "[") {
+		if closeBracket := strings.Index(image, "]"); closeBracket != -1 {
+			// Find the first slash after the closing bracket to separate registry from path
+			remainder := image[closeBracket+1:]
+			if slashIdx := strings.Index(remainder, "/"); slashIdx != -1 {
+				// Extract registry portion: [IPv6]:port up to first slash
+				return image[:closeBracket+1+slashIdx]
+			}
+			// If no slash found, entire string is the registry
+			return image
+		}
+		// If no closing bracket found, treat as malformed but continue with normal parsing
+	}
+
+	// Original IPv4/hostname logic for non-bracketed addresses
 	if idx := strings.Index(image, ":"); idx != -1 {
 		// Check if colon is part of port number (e.g., localhost:5000)
 		// or a tag separator. Port comes before first slash.
