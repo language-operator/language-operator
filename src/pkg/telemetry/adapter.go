@@ -196,7 +196,7 @@ type Span struct {
 	// Attributes contains key-value pairs from the span.
 	// Common learning-relevant attributes:
 	// - "task.inputs": JSON string of task inputs
-	// - "task.outputs": JSON string of task outputs  
+	// - "task.outputs": JSON string of task outputs
 	// - "tool.name": Name of tool called
 	// - "tool.method": Method/function called on tool
 	// - "llm.model": Model name for LLM calls

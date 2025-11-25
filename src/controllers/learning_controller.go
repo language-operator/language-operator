@@ -1938,7 +1938,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 
 	// Check if telemetry adapter is available
 	if r.TelemetryAdapter == nil || !r.TelemetryAdapter.Available() {
-		r.Log.V(1).Info("Telemetry adapter not available, returning empty traces", 
+		r.Log.V(1).Info("Telemetry adapter not available, returning empty traces",
 			"agent", agent.Name, "namespace", agent.Namespace)
 		span.SetAttributes(
 			attribute.String("learning.adapter_status", "unavailable"),
@@ -1956,7 +1956,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 	filter := telemetry.SpanFilter{
 		TimeRange: timeRange,
 		Attributes: map[string]string{
-			"agent.name": agent.Name,
+			"agent.name":      agent.Name,
 			"agent.namespace": agent.Namespace,
 		},
 		Limit: 1000, // Reasonable limit for pattern analysis
@@ -1966,7 +1966,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to query spans")
-		r.Log.Error(err, "Failed to query execution traces", 
+		r.Log.Error(err, "Failed to query execution traces",
 			"agent", agent.Name, "namespace", agent.Namespace)
 		return []TaskTrace{}, fmt.Errorf("failed to query execution traces: %w", err)
 	}
@@ -1980,8 +1980,8 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 		attribute.Int("learning.traces_retrieved", len(traces)),
 	)
 
-	r.Log.V(1).Info("Retrieved execution traces for learning", 
-		"agent", agent.Name, 
+	r.Log.V(1).Info("Retrieved execution traces for learning",
+		"agent", agent.Name,
 		"namespace", agent.Namespace,
 		"traces_count", len(traces))
 
@@ -1991,7 +1991,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 // convertSpansToTaskTraces converts telemetry spans to TaskTrace format
 func (r *LearningReconciler) convertSpansToTaskTraces(spans []telemetry.Span) []TaskTrace {
 	var traces []TaskTrace
-	
+
 	for _, span := range spans {
 		// Only process spans that represent task executions
 		if span.OperationName != "execute_task" || span.TaskName == "" {
@@ -2001,7 +2001,7 @@ func (r *LearningReconciler) convertSpansToTaskTraces(spans []telemetry.Span) []
 		// Extract task inputs/outputs from span attributes
 		inputs := r.parseJSONAttribute(span.Attributes["task.inputs"])
 		outputs := r.parseJSONAttribute(span.Attributes["task.outputs"])
-		
+
 		// Extract tool calls from child spans (simplified)
 		toolCalls := r.extractToolCallsFromSpan(span)
 
@@ -2036,13 +2036,13 @@ func (r *LearningReconciler) parseJSONAttribute(jsonStr string) map[string]inter
 // extractToolCallsFromSpan extracts tool calls from span (placeholder implementation)
 func (r *LearningReconciler) extractToolCallsFromSpan(span telemetry.Span) []ToolCall {
 	var toolCalls []ToolCall
-	
+
 	// In a real implementation, this would:
 	// 1. Look for child spans with operation_name="tool_call"
 	// 2. Extract tool name, method, parameters from span attributes
 	// 3. Parse results from span attributes or events
 	// For now, return empty slice
-	
+
 	return toolCalls
 }
 

@@ -48,7 +48,7 @@ func TestTimeRange(t *testing.T) {
 
 	t.Run("Contains", func(t *testing.T) {
 		tr := TimeRange{Start: oneHourAgo, End: now}
-		
+
 		// Test time within range
 		midTime := oneHourAgo.Add(30 * time.Minute)
 		assert.True(t, tr.Contains(midTime), "Time within range should return true")
@@ -69,7 +69,7 @@ func TestTimeRange(t *testing.T) {
 func TestMockAdapter(t *testing.T) {
 	t.Run("Default behavior", func(t *testing.T) {
 		adapter := NewMockAdapter()
-		
+
 		// Should be available by default
 		assert.True(t, adapter.Available(), "Mock adapter should be available by default")
 
@@ -89,7 +89,7 @@ func TestMockAdapter(t *testing.T) {
 		mockSpans := []Span{
 			{
 				SpanID:        "span-1",
-				TraceID:       "trace-1", 
+				TraceID:       "trace-1",
 				OperationName: "execute_task",
 				TaskName:      "fetch_user",
 				StartTime:     time.Now(),

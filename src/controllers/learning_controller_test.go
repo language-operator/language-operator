@@ -1377,7 +1377,7 @@ func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T
 				},
 			},
 			{
-				SpanID:        "span-2", 
+				SpanID:        "span-2",
 				TraceID:       "trace-1",
 				OperationName: "execute_task",
 				TaskName:      "process_user",
@@ -1392,7 +1392,7 @@ func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T
 			},
 			{
 				SpanID:        "span-3",
-				TraceID:       "trace-2", 
+				TraceID:       "trace-2",
 				OperationName: "tool_call", // Should be filtered out
 				TaskName:      "",
 				StartTime:     time.Now().Add(-15 * time.Minute),
@@ -1414,7 +1414,7 @@ func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T
 
 		traces, err := reconciler.getExecutionTraces(ctx, agent)
 		require.NoError(t, err)
-		
+
 		// Should convert 2 task execution spans (filter out tool_call span)
 		require.Len(t, traces, 2, "Should convert execute_task spans to TaskTrace")
 
@@ -1508,11 +1508,11 @@ func TestLearningReconciler_convertSpansToTaskTraces(t *testing.T) {
 	assert.Equal(t, 2*time.Second, trace.Duration)
 	assert.True(t, trace.Success)
 	assert.Empty(t, trace.ErrorMessage)
-	
+
 	// parseJSONAttribute returns empty map in current implementation
 	assert.Equal(t, map[string]interface{}{}, trace.Inputs)
 	assert.Equal(t, map[string]interface{}{}, trace.Outputs)
-	
+
 	// extractToolCallsFromSpan returns empty slice in current implementation
 	assert.Empty(t, trace.ToolCalls)
 }
