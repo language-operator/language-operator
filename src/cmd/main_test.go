@@ -30,7 +30,7 @@ func TestInitializeTelemetryAdapter(t *testing.T) {
 	originalEndpoint := os.Getenv("TELEMETRY_ADAPTER_ENDPOINT")
 	originalAPIKey := os.Getenv("TELEMETRY_ADAPTER_API_KEY")
 	originalTimeout := os.Getenv("TELEMETRY_ADAPTER_TIMEOUT")
-	
+
 	defer func() {
 		os.Setenv("TELEMETRY_ADAPTER_TYPE", originalType)
 		os.Setenv("TELEMETRY_ADAPTER_ENDPOINT", originalEndpoint)
@@ -39,10 +39,10 @@ func TestInitializeTelemetryAdapter(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name           string
-		envVars        map[string]string
-		expectedType   string
-		shouldBeNoop   bool
+		name         string
+		envVars      map[string]string
+		expectedType string
+		shouldBeNoop bool
 	}{
 		{
 			name: "no configuration - defaults to NoOpAdapter",
@@ -57,7 +57,7 @@ func TestInitializeTelemetryAdapter(t *testing.T) {
 			envVars: map[string]string{
 				"TELEMETRY_ADAPTER_TYPE": "disabled",
 			},
-			expectedType: "*telemetry.NoOpAdapter", 
+			expectedType: "*telemetry.NoOpAdapter",
 			shouldBeNoop: true,
 		},
 		{
@@ -105,7 +105,7 @@ func TestInitializeTelemetryAdapter(t *testing.T) {
 			os.Unsetenv("TELEMETRY_ADAPTER_ENDPOINT")
 			os.Unsetenv("TELEMETRY_ADAPTER_API_KEY")
 			os.Unsetenv("TELEMETRY_ADAPTER_TIMEOUT")
-			
+
 			// Set test env vars
 			for key, value := range tc.envVars {
 				os.Setenv(key, value)
@@ -146,7 +146,7 @@ func TestInitializeSigNozAdapter(t *testing.T) {
 	originalEndpoint := os.Getenv("TELEMETRY_ADAPTER_ENDPOINT")
 	originalAPIKey := os.Getenv("TELEMETRY_ADAPTER_API_KEY")
 	originalTimeout := os.Getenv("TELEMETRY_ADAPTER_TIMEOUT")
-	
+
 	defer func() {
 		os.Setenv("TELEMETRY_ADAPTER_ENDPOINT", originalEndpoint)
 		os.Setenv("TELEMETRY_ADAPTER_API_KEY", originalAPIKey)
@@ -168,7 +168,7 @@ func TestInitializeSigNozAdapter(t *testing.T) {
 			shouldBeNoop: true,
 		},
 		{
-			name:         "missing API key - falls back to NoOpAdapter", 
+			name:         "missing API key - falls back to NoOpAdapter",
 			endpoint:     "https://signoz.example.com",
 			apiKey:       "",
 			timeout:      "",
@@ -184,7 +184,7 @@ func TestInitializeSigNozAdapter(t *testing.T) {
 		{
 			name:         "valid config with custom timeout - creates SigNozAdapter",
 			endpoint:     "https://signoz.example.com",
-			apiKey:       "test-key", 
+			apiKey:       "test-key",
 			timeout:      "60s",
 			shouldBeNoop: false,
 		},
