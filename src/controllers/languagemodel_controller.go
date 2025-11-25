@@ -29,7 +29,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -39,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
 // LanguageModelReconciler reconciles a LanguageModel object
@@ -48,7 +48,7 @@ type LanguageModelReconciler struct {
 	Log    logr.Logger
 }
 
-// tracer is the OpenTelemetry tracer for the LanguageModel controller
+// modelTracer is used by methods that haven't been refactored yet  
 var modelTracer = otel.Tracer("language-operator/model-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch;create;update;patch;delete
@@ -62,36 +62,36 @@ var modelTracer = otel.Tracer("language-operator/model-controller")
 
 // Reconcile reconciles a LanguageModel resource
 func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Start OpenTelemetry span for reconciliation
-	ctx, span := modelTracer.Start(ctx, "model.reconcile")
-	defer span.End()
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguageModel]{
+		Client:       r.Client,
+		TracerName:   "language-operator/model-controller",
+		ResourceType: "model",
+	}
 
-	// Add basic span attributes from request
-	span.SetAttributes(
-		attribute.String("model.name", req.Name),
-		attribute.String("model.namespace", req.Namespace),
-	)
-
-	log := log.FromContext(ctx)
-
-	// Fetch the LanguageModel instance
 	model := &langopv1alpha1.LanguageModel{}
-	if err := r.Get(ctx, req.NamespacedName, model); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("LanguageModel resource not found. Ignoring since object must be deleted")
-			span.SetStatus(codes.Ok, "Resource not found (deleted)")
-			return ctrl.Result{}, nil
-		}
-		log.Error(err, "Failed to get LanguageModel")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get LanguageModel")
+	result, err := helper.StartReconcile(ctx, req, model)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if result == nil {
+		// Resource was deleted
+		return ctrl.Result{}, nil
+	}
+
+	// Capture the error for proper span completion
+	var reconcileErr error
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
+
+	ctx = result.Ctx
+	span := result.Span
+	log := log.FromContext(ctx)
 
 	// Add model-specific attributes to span
 	span.SetAttributes(
 		attribute.String("model.provider", model.Spec.Provider),
-		attribute.Int64("model.generation", model.Generation),
 	)
 
 	// Handle deletion
@@ -104,6 +104,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		controllerutil.AddFinalizer(model, FinalizerName)
 		if err := r.Update(ctx, model); err != nil {
 			log.Error(err, "Failed to add finalizer")
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -119,6 +120,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -132,6 +134,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -145,6 +148,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -158,6 +162,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -171,6 +176,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 

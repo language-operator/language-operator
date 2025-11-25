@@ -21,10 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/go-logr/logr"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
 // LanguagePersonaReconciler reconciles a LanguagePersona object
@@ -42,8 +40,6 @@ type LanguagePersonaReconciler struct {
 	Log    logr.Logger
 }
 
-// tracer is the OpenTelemetry tracer for the LanguagePersona controller
-var personaTracer = otel.Tracer("language-operator/persona-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/status,verbs=get;update;patch
@@ -52,36 +48,32 @@ var personaTracer = otel.Tracer("language-operator/persona-controller")
 
 // Reconcile reconciles a LanguagePersona resource
 func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Start OpenTelemetry span for reconciliation
-	ctx, span := personaTracer.Start(ctx, "persona.reconcile")
-	defer span.End()
-
-	// Add basic span attributes from request
-	span.SetAttributes(
-		attribute.String("persona.name", req.Name),
-		attribute.String("persona.namespace", req.Namespace),
-	)
-
-	log := log.FromContext(ctx)
-
-	// Fetch the LanguagePersona instance
-	persona := &langopv1alpha1.LanguagePersona{}
-	if err := r.Get(ctx, req.NamespacedName, persona); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("LanguagePersona resource not found. Ignoring since object must be deleted")
-			span.SetStatus(codes.Ok, "Resource not found (deleted)")
-			return ctrl.Result{}, nil
-		}
-		log.Error(err, "Failed to get LanguagePersona")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get LanguagePersona")
-		return ctrl.Result{}, err
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguagePersona]{
+		Client:       r.Client,
+		TracerName:   "language-operator/persona-controller",
+		ResourceType: "persona",
 	}
 
-	// Add persona-specific attributes to span
-	span.SetAttributes(
-		attribute.Int64("persona.generation", persona.Generation),
-	)
+	persona := &langopv1alpha1.LanguagePersona{}
+	result, err := helper.StartReconcile(ctx, req, persona)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if result == nil {
+		// Resource was deleted
+		return ctrl.Result{}, nil
+	}
+
+	// Capture the error for proper span completion
+	var reconcileErr error
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
+
+	ctx = result.Ctx
+	span := result.Span
+	log := log.FromContext(ctx)
 
 	// Handle deletion
 	if !persona.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -93,6 +85,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		controllerutil.AddFinalizer(persona, FinalizerName)
 		if err := r.Update(ctx, persona); err != nil {
 			log.Error(err, "Failed to add finalizer")
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -108,6 +101,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if statusErr := r.Status().Update(ctx, persona); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -121,6 +115,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 

@@ -24,8 +24,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
 // LanguageClusterReconciler reconciles a LanguageCluster object
@@ -43,42 +42,38 @@ type LanguageClusterReconciler struct {
 	Log    logr.Logger
 }
 
-// tracer is the OpenTelemetry tracer for the LanguageCluster controller
-var clusterTracer = otel.Tracer("language-operator/cluster-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/status,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Start OpenTelemetry span for reconciliation
-	ctx, span := clusterTracer.Start(ctx, "cluster.reconcile")
-	defer span.End()
-
-	// Add basic span attributes from request
-	span.SetAttributes(
-		attribute.String("cluster.name", req.Name),
-		attribute.String("cluster.namespace", req.Namespace),
-	)
-
-	log := log.FromContext(ctx)
-
-	// Fetch LanguageCluster
-	cluster := &langopv1alpha1.LanguageCluster{}
-	if err := r.Get(ctx, req.NamespacedName, cluster); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			span.SetStatus(codes.Ok, "Resource not found (deleted)")
-		} else {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to get LanguageCluster")
-		}
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguageCluster]{
+		Client:       r.Client,
+		TracerName:   "language-operator/cluster-controller",
+		ResourceType: "cluster",
 	}
 
-	// Add cluster-specific attributes to span
-	span.SetAttributes(
-		attribute.Int64("cluster.generation", cluster.Generation),
-	)
+	cluster := &langopv1alpha1.LanguageCluster{}
+	result, err := helper.StartReconcile(ctx, req, cluster)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if result == nil {
+		// Resource was deleted
+		return ctrl.Result{}, nil
+	}
+
+	// Capture the error for proper span completion
+	var reconcileErr error
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
+
+	ctx = result.Ctx
+	span := result.Span
+	log := log.FromContext(ctx)
 
 	// Validate DNS configuration if domain is set
 	if cluster.Spec.Domain != "" {
@@ -95,6 +90,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 

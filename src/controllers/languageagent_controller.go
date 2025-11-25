@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/validation"
 )
@@ -67,7 +68,7 @@ type LanguageAgentReconciler struct {
 	gatewayCache           *gatewayAPICache
 }
 
-// agentTracer is the OpenTelemetry tracer for the LanguageAgent controller
+// agentTracer is used by methods that haven't been refactored yet
 var agentTracer = otel.Tracer("language-operator/agent-controller")
 
 const (
@@ -102,36 +103,36 @@ func (r *LanguageAgentReconciler) InitializeGatewayCache() {
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Start OpenTelemetry span for reconciliation
-	ctx, span := agentTracer.Start(ctx, "agent.reconcile")
-	defer span.End()
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguageAgent]{
+		Client:       r.Client,
+		TracerName:   "language-operator/agent-controller",
+		ResourceType: "agent",
+	}
 
-	// Add basic span attributes from request
-	span.SetAttributes(
-		attribute.String("agent.name", req.Name),
-		attribute.String("agent.namespace", req.Namespace),
-	)
-
-	log := log.FromContext(ctx)
-
-	// Fetch the LanguageAgent instance
 	agent := &langopv1alpha1.LanguageAgent{}
-	if err := r.Get(ctx, req.NamespacedName, agent); err != nil {
-		if errors.IsNotFound(err) {
-			// Resource not found, likely deleted - this is not an error
-			span.SetStatus(codes.Ok, "Resource not found (deleted)")
-			return ctrl.Result{}, nil
-		}
-		log.Error(err, "Failed to get LanguageAgent")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get LanguageAgent")
+	result, err := helper.StartReconcile(ctx, req, agent)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if result == nil {
+		// Resource was deleted
+		return ctrl.Result{}, nil
+	}
+	
+	// Capture the error for proper span completion
+	var reconcileErr error
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
+
+	ctx = result.Ctx
+	span := result.Span
+	log := log.FromContext(ctx)
 
 	// Add agent-specific attributes to span
 	span.SetAttributes(
 		attribute.String("agent.mode", agent.Spec.ExecutionMode),
-		attribute.Int64("agent.generation", agent.Generation),
 	)
 
 	// Handle deletion
@@ -141,12 +142,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if err := r.cleanupResources(ctx, agent); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "Failed to cleanup resources")
+				reconcileErr = err
 				return ctrl.Result{}, err
 			}
 			controllerutil.RemoveFinalizer(agent, FinalizerName)
 			if err := r.Update(ctx, agent); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "Failed to remove finalizer")
+				reconcileErr = err
 				return ctrl.Result{}, err
 			}
 		}
@@ -160,6 +163,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Update(ctx, agent); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to add finalizer")
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 	}
@@ -176,6 +180,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after registry validation failure")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 	SetCondition(&agent.Status.Conditions, "RegistryValidated", metav1.ConditionTrue, "Validated", "Image registry is in whitelist", agent.Generation)
@@ -198,6 +203,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after synthesis failure")
 			}
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 		SetCondition(&agent.Status.Conditions, "Synthesized", metav1.ConditionTrue, "CodeGenerated", "Agent code synthesized successfully", agent.Generation)
@@ -212,6 +218,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after ConfigMap error")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -224,6 +231,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after PVC error")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -236,6 +244,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after NetworkPolicy error")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -260,6 +269,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Error(err, "Failed to update agent UUID")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to update agent UUID")
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
@@ -298,6 +308,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after Deployment error")
 			}
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 	case "scheduled":
@@ -309,6 +320,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after CronJob error")
 			}
+			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 	case "":
