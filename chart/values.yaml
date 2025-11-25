@@ -289,6 +289,31 @@ rbac:
       - update
       - patch
       - delete
+    # Gateway API resources
+    - apiGroups:
+      - gateway.networking.k8s.io
+      resources:
+      - httproutes
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+    - apiGroups:
+      - gateway.networking.k8s.io
+      resources:
+      - referencegrants
+      verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
     # Policy resources
     - apiGroups:
       - policy
