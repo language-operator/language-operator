@@ -72,6 +72,7 @@ type SignozAdapter struct {
 		value     bool
 		timestamp time.Time
 		ttl       time.Duration
+		timeNow   func() time.Time // Injectable for testing
 	}
 }
 
@@ -149,6 +150,7 @@ func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAd
 
 	// Initialize availability cache with 30 second TTL
 	adapter.availabilityCache.ttl = 30 * time.Second
+	adapter.availabilityCache.timeNow = time.Now
 
 	return adapter, nil
 }
@@ -744,7 +746,7 @@ func (s *SignozAdapter) extractMetricUnit(labels map[string]string) string {
 // If this returns false, learning controller should gracefully degrade
 // rather than failing hard.
 func (s *SignozAdapter) Available() bool {
-	now := time.Now()
+	now := s.availabilityCache.timeNow()
 
 	// Check cache first
 	if now.Sub(s.availabilityCache.timestamp) < s.availabilityCache.ttl {

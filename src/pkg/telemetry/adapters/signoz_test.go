@@ -407,8 +407,13 @@ func TestSignozAdapter_Available(t *testing.T) {
 		adapter, err := NewSignozAdapter(server.URL, "test-api-key", 30*time.Second)
 		require.NoError(t, err)
 
-		// Force cache TTL to be very short for testing
-		adapter.availabilityCache.ttl = 1 * time.Millisecond
+		// Set up deterministic time control for testing
+		baseTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+		currentTime := baseTime
+		adapter.availabilityCache.ttl = 10 * time.Second
+		adapter.availabilityCache.timeNow = func() time.Time {
+			return currentTime
+		}
 
 		// First call
 		available := adapter.Available()
@@ -420,10 +425,10 @@ func TestSignozAdapter_Available(t *testing.T) {
 		assert.True(t, available)
 		assert.Equal(t, 1, callCount)
 
-		// Wait for cache to expire
-		time.Sleep(2 * time.Millisecond)
+		// Advance time beyond cache TTL
+		currentTime = baseTime.Add(15 * time.Second)
 
-		// Third call (should make new request)
+		// Third call (should make new request due to expired cache)
 		available = adapter.Available()
 		assert.True(t, available)
 		assert.Equal(t, 2, callCount)
