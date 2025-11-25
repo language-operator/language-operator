@@ -1,5 +1,21 @@
 .PHONY: build help k8s-install k8s-uninstall k8s-status operator test test-unit test-integration
 
+QA_PROMPT := "/task test"
+ITERATE_PROMPT := "/task iterate"
+PRIORITIZE_PROMPT := "/task prioritize"
+
+# Use claude to prioritize the backlog
+prioritize:
+	@claude $(PRIORITIZE_PROMPT)
+
+# Use claude to iterate on the backlog
+iterate:
+	@claude $(ITERATE_PROMPT)
+
+# Use claude to find bugs
+qa:
+	@claude --dangerously-skip-permissions $(QA_PROMPT)
+
 # Build all Docker images using the build script
 build:
 	@./scripts/build
