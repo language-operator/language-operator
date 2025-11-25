@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -44,6 +45,7 @@ import (
 	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
+	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -57,6 +59,69 @@ func init() {
 
 	utilruntime.Must(langopv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+// initializeTelemetryAdapter creates and initializes a telemetry adapter based on environment configuration
+func initializeTelemetryAdapter() telemetry.TelemetryAdapter {
+	adapterType := os.Getenv("TELEMETRY_ADAPTER_TYPE")
+	
+	// Default to NoOpAdapter if no type specified
+	if adapterType == "" {
+		setupLog.Info("No telemetry adapter type specified, using NoOpAdapter")
+		return telemetry.NewNoOpAdapter()
+	}
+
+	switch strings.ToLower(adapterType) {
+	case "signoz":
+		return initializeSigNozAdapter()
+	case "noop", "disabled":
+		setupLog.Info("Telemetry adapter explicitly disabled")
+		return telemetry.NewNoOpAdapter()
+	default:
+		setupLog.Info("Unknown telemetry adapter type, falling back to NoOpAdapter", 
+			"type", adapterType)
+		return telemetry.NewNoOpAdapter()
+	}
+}
+
+// initializeSigNozAdapter creates a SigNoz telemetry adapter from environment variables
+func initializeSigNozAdapter() telemetry.TelemetryAdapter {
+	endpoint := os.Getenv("TELEMETRY_ADAPTER_ENDPOINT")
+	apiKey := os.Getenv("TELEMETRY_ADAPTER_API_KEY")
+	
+	// Validate required configuration
+	if endpoint == "" {
+		setupLog.Error(nil, "SigNoz adapter requires TELEMETRY_ADAPTER_ENDPOINT environment variable")
+		return telemetry.NewNoOpAdapter()
+	}
+	
+	if apiKey == "" {
+		setupLog.Error(nil, "SigNoz adapter requires TELEMETRY_ADAPTER_API_KEY environment variable") 
+		return telemetry.NewNoOpAdapter()
+	}
+	
+	// Parse timeout with default
+	timeout := 30 * time.Second
+	if timeoutStr := os.Getenv("TELEMETRY_ADAPTER_TIMEOUT"); timeoutStr != "" {
+		if parsedTimeout, err := time.ParseDuration(timeoutStr); err == nil {
+			timeout = parsedTimeout
+		} else {
+			setupLog.Error(err, "Invalid TELEMETRY_ADAPTER_TIMEOUT, using default 30s", "value", timeoutStr)
+		}
+	}
+	
+	// Create SigNoz adapter
+	adapter, err := adapters.NewSignozAdapter(endpoint, apiKey, timeout)
+	if err != nil {
+		setupLog.Error(err, "Failed to create SigNoz telemetry adapter, falling back to NoOpAdapter")
+		return telemetry.NewNoOpAdapter()
+	}
+	
+	setupLog.Info("SigNoz telemetry adapter initialized successfully", 
+		"endpoint", endpoint, 
+		"timeout", timeout)
+	
+	return adapter
 }
 
 func main() {
@@ -309,6 +374,9 @@ func main() {
 		Log:    learningLog.WithName("configmap"),
 	}
 
+	// Initialize telemetry adapter for learning system
+	telemetryAdapter := initializeTelemetryAdapter()
+
 	if err = (&controllers.LearningReconciler{
 		Client:                      mgr.GetClient(),
 		Scheme:                      mgr.GetScheme(),
@@ -317,6 +385,7 @@ func main() {
 		ConfigMapManager:            configMapManager,
 		MetricsCollector:            metricsCollector,
 		EventProcessor:              eventProcessor,
+		TelemetryAdapter:            telemetryAdapter,
 		LearningEnabled:             true,
 		LearningThreshold:           10,              // Trigger learning after 10 traces
 		LearningInterval:            5 * time.Minute, // 5 minute cooldown between attempts
