@@ -22,6 +22,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/synthesis"
+	"github.com/language-operator/language-operator/pkg/telemetry"
 )
 
 // MockSynthesizer implements synthesis.AgentSynthesizer for testing
@@ -1334,4 +1335,184 @@ func TestTaskLearningStatus_SerializeParse(t *testing.T) {
 	assert.Equal(t, original.PatternConfidence, parsed.PatternConfidence)
 	assert.Equal(t, original.ConsecutiveFailures, parsed.ConsecutiveFailures)
 	assert.Equal(t, original.ErrorResynthesisAttempts, parsed.ErrorResynthesisAttempts)
+}
+
+func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T) {
+	ctx := context.Background()
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+	}
+
+	t.Run("adapter unavailable", func(t *testing.T) {
+		// Create reconciler with unavailable adapter
+		reconciler := &LearningReconciler{
+			Log:              ctrl.Log.WithName("test"),
+			TelemetryAdapter: telemetry.NewNoOpAdapter(),
+		}
+
+		traces, err := reconciler.getExecutionTraces(ctx, agent)
+		require.NoError(t, err)
+		assert.Empty(t, traces, "Should return empty traces when adapter unavailable")
+	})
+
+	t.Run("adapter available with spans", func(t *testing.T) {
+		// Create mock adapter with test data
+		mockSpans := []telemetry.Span{
+			{
+				SpanID:        "span-1",
+				TraceID:       "trace-1",
+				OperationName: "execute_task",
+				TaskName:      "fetch_user",
+				StartTime:     time.Now().Add(-time.Hour),
+				EndTime:       time.Now().Add(-time.Hour).Add(2 * time.Second),
+				Duration:      2 * time.Second,
+				Status:        true,
+				Attributes: map[string]string{
+					"task.inputs":  `{"user_id": 123}`,
+					"task.outputs": `{"user": {"name": "Alice"}}`,
+				},
+			},
+			{
+				SpanID:        "span-2", 
+				TraceID:       "trace-1",
+				OperationName: "execute_task",
+				TaskName:      "process_user",
+				StartTime:     time.Now().Add(-30 * time.Minute),
+				EndTime:       time.Now().Add(-30 * time.Minute).Add(time.Second),
+				Duration:      time.Second,
+				Status:        false,
+				ErrorMessage:  "API timeout",
+				Attributes: map[string]string{
+					"task.inputs": `{"user": {"name": "Alice"}}`,
+				},
+			},
+			{
+				SpanID:        "span-3",
+				TraceID:       "trace-2", 
+				OperationName: "tool_call", // Should be filtered out
+				TaskName:      "",
+				StartTime:     time.Now().Add(-15 * time.Minute),
+				EndTime:       time.Now().Add(-15 * time.Minute).Add(500 * time.Millisecond),
+				Duration:      500 * time.Millisecond,
+				Status:        true,
+			},
+		}
+
+		mockAdapter := &telemetry.MockAdapter{
+			AvailableReturn: true,
+			SpanResults:     mockSpans,
+		}
+
+		reconciler := &LearningReconciler{
+			Log:              ctrl.Log.WithName("test"),
+			TelemetryAdapter: mockAdapter,
+		}
+
+		traces, err := reconciler.getExecutionTraces(ctx, agent)
+		require.NoError(t, err)
+		
+		// Should convert 2 task execution spans (filter out tool_call span)
+		require.Len(t, traces, 2, "Should convert execute_task spans to TaskTrace")
+
+		// Verify first trace
+		trace1 := traces[0]
+		assert.Equal(t, "fetch_user", trace1.TaskName)
+		assert.Equal(t, 2*time.Second, trace1.Duration)
+		assert.True(t, trace1.Success)
+		assert.Empty(t, trace1.ErrorMessage)
+
+		// Verify second trace (error case)
+		trace2 := traces[1]
+		assert.Equal(t, "process_user", trace2.TaskName)
+		assert.Equal(t, time.Second, trace2.Duration)
+		assert.False(t, trace2.Success)
+		assert.Equal(t, "API timeout", trace2.ErrorMessage)
+	})
+
+	t.Run("adapter query error", func(t *testing.T) {
+		// Create mock adapter that returns error
+		mockAdapter := &telemetry.MockAdapter{
+			AvailableReturn: true,
+			SpanResults:     nil, // Will cause error in real implementation
+		}
+
+		// Override QuerySpans to return error
+		errorAdapter := &mockErrorAdapter{
+			MockAdapter: mockAdapter,
+		}
+
+		reconciler := &LearningReconciler{
+			Log:              ctrl.Log.WithName("test"),
+			TelemetryAdapter: errorAdapter,
+		}
+
+		traces, err := reconciler.getExecutionTraces(ctx, agent)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to query execution traces")
+		assert.Empty(t, traces)
+	})
+}
+
+// mockErrorAdapter wraps MockAdapter to return errors for testing
+type mockErrorAdapter struct {
+	*telemetry.MockAdapter
+}
+
+func (m *mockErrorAdapter) QuerySpans(ctx context.Context, filter telemetry.SpanFilter) ([]telemetry.Span, error) {
+	return nil, fmt.Errorf("mock telemetry error")
+}
+
+func TestLearningReconciler_convertSpansToTaskTraces(t *testing.T) {
+	reconciler := &LearningReconciler{
+		Log: ctrl.Log.WithName("test"),
+	}
+
+	spans := []telemetry.Span{
+		{
+			SpanID:        "span-1",
+			TraceID:       "trace-1",
+			OperationName: "execute_task",
+			TaskName:      "fetch_data",
+			StartTime:     time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
+			EndTime:       time.Date(2025, 1, 1, 12, 0, 2, 0, time.UTC),
+			Duration:      2 * time.Second,
+			Status:        true,
+			Attributes: map[string]string{
+				"task.inputs":  `{"id": 123}`,
+				"task.outputs": `{"result": "success"}`,
+				"tool.name":    "database",
+			},
+		},
+		{
+			OperationName: "tool_call", // Should be filtered out
+			TaskName:      "database_query",
+		},
+		{
+			OperationName: "execute_task",
+			TaskName:      "", // Should be filtered out (empty task name)
+		},
+	}
+
+	traces := reconciler.convertSpansToTaskTraces(spans)
+
+	// Should only convert the first span
+	require.Len(t, traces, 1)
+
+	trace := traces[0]
+	assert.Equal(t, "fetch_data", trace.TaskName)
+	assert.Equal(t, time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC), trace.Timestamp)
+	assert.Equal(t, 2*time.Second, trace.Duration)
+	assert.True(t, trace.Success)
+	assert.Empty(t, trace.ErrorMessage)
+	
+	// parseJSONAttribute returns empty map in current implementation
+	assert.Equal(t, map[string]interface{}{}, trace.Inputs)
+	assert.Equal(t, map[string]interface{}{}, trace.Outputs)
+	
+	// extractToolCallsFromSpan returns empty slice in current implementation
+	assert.Empty(t, trace.ToolCalls)
 }

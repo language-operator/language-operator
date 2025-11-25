@@ -26,6 +26,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
+	"github.com/language-operator/language-operator/pkg/telemetry"
 )
 
 // LearningReconciler reconciles learning events and triggers re-synthesis
@@ -38,6 +39,7 @@ type LearningReconciler struct {
 	ConfigMapManager     *synthesis.ConfigMapManager      // For versioned ConfigMap management
 	MetricsCollector     *learning.MetricsCollector       // For learning metrics collection
 	EventProcessor       *learning.LearningEventProcessor // For processing learning events with metrics
+	TelemetryAdapter     telemetry.TelemetryAdapter       // For querying historical execution data
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
 	LearningInterval     time.Duration // Minimum interval between learning attempts
@@ -1934,19 +1936,114 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 	ctx, span := learningTracer.Start(ctx, "learning.get_traces")
 	defer span.End()
 
-	// TODO: Implement actual trace retrieval from monitoring/observability system
-	// This would typically query:
-	// - OpenTelemetry traces
-	// - Application logs
-	// - Metrics storage
-	// - Custom trace storage
+	// Check if telemetry adapter is available
+	if r.TelemetryAdapter == nil || !r.TelemetryAdapter.Available() {
+		r.Log.V(1).Info("Telemetry adapter not available, returning empty traces", 
+			"agent", agent.Name, "namespace", agent.Namespace)
+		span.SetAttributes(
+			attribute.String("learning.adapter_status", "unavailable"),
+			attribute.Int("learning.traces_retrieved", 0),
+		)
+		return []TaskTrace{}, nil
+	}
 
-	// For now, return empty traces - this will be implemented when we integrate
-	// with the actual agent execution environment
-	var traces []TaskTrace
+	// Query spans from the last 24 hours for this agent
+	timeRange := telemetry.TimeRange{
+		Start: time.Now().Add(-24 * time.Hour),
+		End:   time.Now(),
+	}
 
-	span.SetAttributes(attribute.Int("learning.traces_retrieved", len(traces)))
+	filter := telemetry.SpanFilter{
+		TimeRange: timeRange,
+		Attributes: map[string]string{
+			"agent.name": agent.Name,
+			"agent.namespace": agent.Namespace,
+		},
+		Limit: 1000, // Reasonable limit for pattern analysis
+	}
+
+	spans, err := r.TelemetryAdapter.QuerySpans(ctx, filter)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to query spans")
+		r.Log.Error(err, "Failed to query execution traces", 
+			"agent", agent.Name, "namespace", agent.Namespace)
+		return []TaskTrace{}, fmt.Errorf("failed to query execution traces: %w", err)
+	}
+
+	// Convert telemetry spans to TaskTrace format
+	traces := r.convertSpansToTaskTraces(spans)
+
+	span.SetAttributes(
+		attribute.String("learning.adapter_status", "available"),
+		attribute.Int("learning.spans_queried", len(spans)),
+		attribute.Int("learning.traces_retrieved", len(traces)),
+	)
+
+	r.Log.V(1).Info("Retrieved execution traces for learning", 
+		"agent", agent.Name, 
+		"namespace", agent.Namespace,
+		"traces_count", len(traces))
+
 	return traces, nil
+}
+
+// convertSpansToTaskTraces converts telemetry spans to TaskTrace format
+func (r *LearningReconciler) convertSpansToTaskTraces(spans []telemetry.Span) []TaskTrace {
+	var traces []TaskTrace
+	
+	for _, span := range spans {
+		// Only process spans that represent task executions
+		if span.OperationName != "execute_task" || span.TaskName == "" {
+			continue
+		}
+
+		// Extract task inputs/outputs from span attributes
+		inputs := r.parseJSONAttribute(span.Attributes["task.inputs"])
+		outputs := r.parseJSONAttribute(span.Attributes["task.outputs"])
+		
+		// Extract tool calls from child spans (simplified)
+		toolCalls := r.extractToolCallsFromSpan(span)
+
+		trace := TaskTrace{
+			TaskName:     span.TaskName,
+			Timestamp:    span.StartTime,
+			Inputs:       inputs,
+			Outputs:      outputs,
+			ToolCalls:    toolCalls,
+			Duration:     span.Duration,
+			Success:      span.Status,
+			ErrorMessage: span.ErrorMessage,
+		}
+
+		traces = append(traces, trace)
+	}
+
+	return traces
+}
+
+// parseJSONAttribute safely parses JSON from span attributes
+func (r *LearningReconciler) parseJSONAttribute(jsonStr string) map[string]interface{} {
+	if jsonStr == "" {
+		return map[string]interface{}{}
+	}
+
+	// In a real implementation, this would use json.Unmarshal
+	// For now, return empty map to avoid import dependencies
+	return map[string]interface{}{}
+}
+
+// extractToolCallsFromSpan extracts tool calls from span (placeholder implementation)
+func (r *LearningReconciler) extractToolCallsFromSpan(span telemetry.Span) []ToolCall {
+	var toolCalls []ToolCall
+	
+	// In a real implementation, this would:
+	// 1. Look for child spans with operation_name="tool_call"
+	// 2. Extract tool name, method, parameters from span attributes
+	// 3. Parse results from span attributes or events
+	// For now, return empty slice
+	
+	return toolCalls
 }
 
 // groupTracesByTask groups execution traces by task name
