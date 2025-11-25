@@ -1,13 +1,14 @@
 # Agent Memory Bank
 
-## Current Priority Status (Nov 24, 2025)
+## Current Priority Status (Nov 25, 2025)
 
 ### 🚀 READY Issues (Priority Order)
-*All critical infrastructure issues completed! Moving to UX polish phase.*
+*All critical infrastructure issues completed! SigNoz adapter implemented.*
 
 ### 📋 Remaining Work
-- **Issue #36** - UX improvements (DNS documentation)
+- **Issues #48-49** - Telemetry adapter integration and configuration
 - **Issues #25-26** - Advanced learning features (error-triggered, metrics)  
+- **Issue #36** - UX improvements (DNS documentation)
 - **Issue #29** - DSL v1 release (final milestone)
 
 ## Key Context
@@ -22,14 +23,15 @@
 - ✅ Issue #42: IPv6 registry validation support (Nov 24) - networking compatibility fix
 - ✅ Issue #40: Remove legacy synthesize command with misleading API key errors (Nov 25) - legacy cleanup
 - ✅ Issue #46: Telemetry adapter interface for learning system (Nov 25) - foundation for organic functions
+- ✅ Issue #47: SigNoz telemetry adapter implementation (Nov 25) - 86% test coverage, ClickHouse queries, PromQL support
 - ✅ Issue #24: Deployment updates for learned ConfigMaps (learning pipeline complete)
 - ✅ All core infrastructure for DSL v1 synthesis pipeline
 
 **Critical Infrastructure Dependencies:**
-- ✅ Issue #45 (operator stability) → ✅ #44 (validation) → ✅ #41 (error handling) → ✅ #42 (IPv6 support) → ✅ #24 (learning) ✅
+- ✅ Issue #45 (operator stability) → ✅ #44 (validation) → ✅ #41 (error handling) → ✅ #42 (IPv6 support) → ✅ #47 (SigNoz adapter) → ✅ #24 (learning) ✅
 - **ALL CRITICAL INFRASTRUCTURE COMPLETE!** Core platform is production-ready
-- Current focus: UX polish (#36) and advanced learning features (#25-26)  
-- DSL v1 release ready after advanced learning features (#25-26) complete
+- **Next Priority:** Telemetry integration (#48-49) then advanced learning features (#25-26)  
+- DSL v1 release ready after telemetry integration complete
 
 **Key Implementation Notes:**
 - ConfigMap versioning: Always preserve v1 (initial synthesis)
@@ -37,7 +39,8 @@
 - Webhook timing: Route readiness verification before URL population
 - Performance: Gateway API detection cached with 5-minute TTL
 - Workspace validation: Multi-layer defense (CRD + webhook + controller) prevents panics
-- Telemetry adapter: Interface foundation ready for SigNoz/Jaeger implementations (#47/#48)
+- SigNoz adapter: Full TelemetryAdapter implementation ready for learning controller integration
+- Telemetry capabilities: ClickHouse span queries, PromQL metrics, availability checking, 86% test coverage
 
 **Deployment Process:**
 - ⚠️ **CANNOT** build/deploy operator locally from source
