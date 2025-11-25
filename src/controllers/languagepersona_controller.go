@@ -40,7 +40,6 @@ type LanguagePersonaReconciler struct {
 	Log    logr.Logger
 }
 
-
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/finalizers,verbs=update

@@ -39,7 +39,6 @@ type LanguageToolReconciler struct {
 	AllowedRegistries []string
 }
 
-
 // MCPRequest represents an MCP JSON-RPC request
 type MCPRequest struct {
 	JSONRpc string      `json:"jsonrpc"`

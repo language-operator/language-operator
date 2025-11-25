@@ -42,7 +42,6 @@ type LanguageClusterReconciler struct {
 	Log    logr.Logger
 }
 
-
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/status,verbs=get;update;patch
 

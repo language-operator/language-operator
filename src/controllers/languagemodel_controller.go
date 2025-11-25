@@ -48,7 +48,7 @@ type LanguageModelReconciler struct {
 	Log    logr.Logger
 }
 
-// modelTracer is used by methods that haven't been refactored yet  
+// modelTracer is used by methods that haven't been refactored yet
 var modelTracer = otel.Tracer("language-operator/model-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch;create;update;patch;delete

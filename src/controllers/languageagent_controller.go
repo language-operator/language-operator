@@ -119,7 +119,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// Resource was deleted
 		return ctrl.Result{}, nil
 	}
-	
+
 	// Capture the error for proper span completion
 	var reconcileErr error
 	defer func() {
