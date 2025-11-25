@@ -123,7 +123,7 @@ var learningTracer = otel.Tracer("language-operator/learning")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;get;list;patch;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;update;patch
