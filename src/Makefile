@@ -53,10 +53,6 @@ docs: crd-ref-docs ## Generate CRD API reference documentation.
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go
 
-.PHONY: synthesize
-synthesize: fmt vet ## Build synthesize CLI tool.
-	go build -o bin/synthesize cmd/synthesize/main.go
-
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
