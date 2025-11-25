@@ -4116,7 +4116,7 @@ spec:
               uuid:
                 description: |-
                   UUID is a unique identifier for this agent instance
-                  Used for webhook routing (e.g., <uuid>.agents.domain.com)
+                  Used for webhook routing (e.g., <uuid>.domain.com)
                 type: string
               webhookURLs:
                 description: WebhookURLs contains the URLs where this agent can receive

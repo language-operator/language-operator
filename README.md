@@ -93,7 +93,8 @@ aictl quickstart
 ## Requirements
 
 - Kubernetes 1.26+
-- NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
+- NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)  
+- **Wildcard DNS** for agent webhooks (see [DNS Setup](docs/dns.md))
 - Optional: GPU nodes for local model inference
 
 ## Status

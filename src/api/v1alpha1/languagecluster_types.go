@@ -26,9 +26,10 @@ type LanguageClusterSpec struct {
 	// All resources referencing this cluster must be in the same namespace.
 	// No configuration needed - cluster provides logical grouping for resources.
 
-	// Domain is the base domain for webhook routing
-	// Agent webhooks will be accessible at <uuid>.agents.<domain>
-	// Example: "example.com" results in webhooks like "abc123.agents.example.com"
+	// Domain is the base domain for the cluster and agent webhook routing
+	// The domain itself serves as the cluster dashboard/UI endpoint
+	// Agent webhooks will be accessible at <uuid>.<domain>
+	// Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io"
 	// +optional
 	Domain string `json:"domain,omitempty"`
 

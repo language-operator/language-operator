@@ -16,6 +16,10 @@ The Language Operator provides Custom Resources for deploying and managing AI in
 
 - Kubernetes 1.24+
 - Helm 3.8+
+- **Wildcard DNS** configured for agent webhooks (see [DNS Setup](../docs/dns.md))
+  - Required when using LanguageCluster with `domain` field
+  - Pattern: `*.<domain>` → cluster ingress
+  - Use nip.io for local development
 
 ## Installation
 
@@ -227,7 +231,7 @@ metadata:
   name: dev-cluster
   namespace: default
 spec:
-  domain: example.com
+  domain: ai.theryans.io
   ingressConfig:
     tls:
       enabled: true

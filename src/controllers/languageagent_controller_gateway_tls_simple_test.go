@@ -152,7 +152,7 @@ func TestReconcileHTTPRoute_TLSValidation(t *testing.T) {
 		reconciler := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme}
 
 		// Call reconcileHTTPRoute - should fail
-		err := reconciler.reconcileHTTPRoute(ctx, agent, "test-agent.agents.example.com")
+		err := reconciler.reconcileHTTPRoute(ctx, agent, "test-agent.example.com")
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Gateway TLS validation failed")

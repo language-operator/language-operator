@@ -2136,8 +2136,8 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		return nil
 	}
 
-	// Build webhook hostname: <uuid>.agents.<domain>
-	hostname := fmt.Sprintf("%s.agents.%s", agent.Status.UUID, domain)
+	// Build webhook hostname: <uuid>.<domain>
+	hostname := fmt.Sprintf("%s.%s", agent.Status.UUID, domain)
 
 	// Check if Gateway API is available
 	hasGateway, err := r.hasGatewayAPI(ctx)

@@ -468,7 +468,7 @@ type LanguageAgentStatus struct {
 	SynthesisInfo *SynthesisInfo `json:"synthesisInfo,omitempty"`
 
 	// UUID is a unique identifier for this agent instance
-	// Used for webhook routing (e.g., <uuid>.agents.domain.com)
+	// Used for webhook routing (e.g., <uuid>.domain.com)
 	// +optional
 	UUID string `json:"uuid,omitempty"`
 
