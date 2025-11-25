@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: operator-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+data:
+  # List of allowed container registries (one per line)
+  # Common registries are included by default
+  allowed-registries: |
+    docker.io
+    gcr.io
+    *.gcr.io
+    quay.io
+    ghcr.io
+    registry.k8s.io
+    codeberg.org
+    gitlab.com
+    *.amazonaws.com
+    *.azurecr.io
