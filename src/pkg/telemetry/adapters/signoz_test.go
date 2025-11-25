@@ -33,7 +33,7 @@ import (
 func TestNewSignozAdapter(t *testing.T) {
 	t.Run("Valid configuration", func(t *testing.T) {
 		adapter, err := NewSignozAdapter("https://signoz.example.com", "test-api-key", 30*time.Second)
-		
+
 		require.NoError(t, err)
 		assert.NotNil(t, adapter)
 		assert.Equal(t, "https://signoz.example.com", adapter.endpoint)
@@ -44,35 +44,35 @@ func TestNewSignozAdapter(t *testing.T) {
 
 	t.Run("Empty endpoint", func(t *testing.T) {
 		_, err := NewSignozAdapter("", "test-api-key", 30*time.Second)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "endpoint cannot be empty")
 	})
 
 	t.Run("Empty API key", func(t *testing.T) {
 		_, err := NewSignozAdapter("https://signoz.example.com", "", 30*time.Second)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "apiKey cannot be empty")
 	})
 
 	t.Run("Zero timeout", func(t *testing.T) {
 		_, err := NewSignozAdapter("https://signoz.example.com", "test-api-key", 0)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "timeout must be positive")
 	})
 
 	t.Run("Invalid URL", func(t *testing.T) {
 		_, err := NewSignozAdapter("not-a-url", "test-api-key", 30*time.Second)
-		
+
 		require.NoError(t, err) // URL parsing is lenient, but endpoint would be invalid
 		// Note: url.Parse doesn't fail for most strings, real validation happens during requests
 	})
 
 	t.Run("Trailing slash removal", func(t *testing.T) {
 		adapter, err := NewSignozAdapter("https://signoz.example.com/", "test-api-key", 30*time.Second)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, "https://signoz.example.com", adapter.endpoint)
 	})
@@ -85,9 +85,9 @@ func TestNewSignozAdapterFromConfig(t *testing.T) {
 			APIKey:   "test-api-key",
 			Timeout:  45 * time.Second,
 		}
-		
+
 		adapter, err := NewSignozAdapterFromConfig(config)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, "https://signoz.example.com", adapter.endpoint)
 		assert.Equal(t, "test-api-key", adapter.apiKey)
@@ -100,9 +100,9 @@ func TestNewSignozAdapterFromConfig(t *testing.T) {
 			APIKey:   "test-api-key",
 			// Timeout not specified
 		}
-		
+
 		adapter, err := NewSignozAdapterFromConfig(config)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, 30*time.Second, adapter.timeout)
 	})
@@ -131,7 +131,7 @@ func TestSignozAdapter_QuerySpans(t *testing.T) {
 							"duration":      float64(1000000000), // 1 second in nanoseconds
 							"statusCode":    float64(200),
 							"attributes": map[string]interface{}{
-								"task.name": "fetch_user",
+								"task.name":  "fetch_user",
 								"agent.name": "test-agent",
 							},
 							"events": []interface{}{},
@@ -275,7 +275,7 @@ func TestSignozAdapter_QueryMetrics(t *testing.T) {
 								"status":    "success",
 							},
 							"values": [][]interface{}{
-								{float64(1704110400), "1.5"},  // [timestamp, value]
+								{float64(1704110400), "1.5"}, // [timestamp, value]
 								{float64(1704110460), "2.1"},
 							},
 						},
@@ -710,7 +710,7 @@ func TestTelemetryAdapterInterface(t *testing.T) {
 
 	// Test that all methods exist and return expected types
 	ctx := context.Background()
-	
+
 	// Available should return bool
 	available := adapter.Available()
 	assert.IsType(t, true, available)
@@ -720,7 +720,7 @@ func TestTelemetryAdapterInterface(t *testing.T) {
 	assert.IsType(t, []telemetry.Span{}, spans)
 	assert.IsType(t, (*error)(nil), &err)
 
-	// QueryMetrics should return []MetricPoint and error  
+	// QueryMetrics should return []MetricPoint and error
 	metrics, err := adapter.QueryMetrics(ctx, telemetry.MetricFilter{})
 	assert.IsType(t, []telemetry.MetricPoint{}, metrics)
 	assert.IsType(t, (*error)(nil), &err)

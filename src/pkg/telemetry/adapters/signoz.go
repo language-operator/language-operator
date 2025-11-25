@@ -44,12 +44,13 @@ import (
 // - Proper authentication with SIGNOZ-API-KEY header
 //
 // Example usage:
-//   adapter := NewSignozAdapter("https://signoz.example.com", "api-key", 30*time.Second)
-//   spans, err := adapter.QuerySpans(ctx, telemetry.SpanFilter{
-//     TaskName: "fetch_user",
-//     TimeRange: telemetry.TimeRange{Start: yesterday, End: now},
-//     Limit: 50,
-//   })
+//
+//	adapter := NewSignozAdapter("https://signoz.example.com", "api-key", 30*time.Second)
+//	spans, err := adapter.QuerySpans(ctx, telemetry.SpanFilter{
+//	  TaskName: "fetch_user",
+//	  TimeRange: telemetry.TimeRange{Start: yesterday, End: now},
+//	  Limit: 50,
+//	})
 type SignozAdapter struct {
 	// endpoint is the base URL of the SigNoz instance
 	// Example: "https://signoz.example.com" or "http://localhost:3301"
@@ -104,11 +105,12 @@ type SignozConfig struct {
 //   - timeout is zero or negative
 //
 // Example:
-//   adapter, err := NewSignozAdapter(
-//     "https://signoz.example.com",
-//     "your-api-key",
-//     30*time.Second,
-//   )
+//
+//	adapter, err := NewSignozAdapter(
+//	  "https://signoz.example.com",
+//	  "your-api-key",
+//	  30*time.Second,
+//	)
 func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAdapter, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("endpoint cannot be empty")
@@ -220,10 +222,10 @@ func (s *SignozAdapter) makeRequest(ctx context.Context, method, path string, bo
 // QuerySpans retrieves execution spans from SigNoz matching the given filter criteria.
 //
 // Implements TelemetryAdapter.QuerySpans by:
-//   1. Building ClickHouse SQL query with appropriate WHERE clauses
-//   2. Calling SigNoz /api/v5/query_range endpoint
-//   3. Parsing response and converting to standard Span format
-//   4. Handling pagination and result limits
+//  1. Building ClickHouse SQL query with appropriate WHERE clauses
+//  2. Calling SigNoz /api/v5/query_range endpoint
+//  3. Parsing response and converting to standard Span format
+//  4. Handling pagination and result limits
 //
 // The method constructs complex ClickHouse queries to filter spans by:
 //   - Time range (start/end timestamps)
@@ -269,7 +271,7 @@ func (s *SignozAdapter) QuerySpans(ctx context.Context, filter telemetry.SpanFil
 //
 // SigNoz stores spans in ClickHouse with the following relevant columns:
 //   - timestamp: Span start time (DateTime64)
-//   - traceID: Trace identifier (String)  
+//   - traceID: Trace identifier (String)
 //   - spanID: Span identifier (String)
 //   - parentSpanID: Parent span identifier (String)
 //   - operationName: Operation name (String)
@@ -325,8 +327,8 @@ func (s *SignozAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 	// Custom attributes filter
 	for key, value := range filter.Attributes {
 		conditions = append(conditions, fmt.Sprintf(
-			"attributes['%s'] = '%s'", 
-			escapeClickHouseString(key), 
+			"attributes['%s'] = '%s'",
+			escapeClickHouseString(key),
 			escapeClickHouseString(value)))
 	}
 
@@ -349,16 +351,17 @@ func (s *SignozAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 // parseSpanResponse parses SigNoz ClickHouse query response into standard Span format.
 //
 // SigNoz returns query results in JSON format with structure:
-//   {
-//     "data": {
-//       "result": [
-//         {
-//           "metric": {},
-//           "values": [[timestamp, value], ...]
-//         }
-//       ]
-//     }
-//   }
+//
+//	{
+//	  "data": {
+//	    "result": [
+//	      {
+//	        "metric": {},
+//	        "values": [[timestamp, value], ...]
+//	      }
+//	    ]
+//	  }
+//	}
 //
 // However, for span queries, the format is different and contains actual row data.
 func (s *SignozAdapter) parseSpanResponse(respBody []byte, limit int) ([]telemetry.Span, error) {
@@ -489,14 +492,14 @@ func (s *SignozAdapter) convertRowToSpan(row map[string]interface{}) (telemetry.
 //
 // Looks for task name in common attribute keys:
 //   - task.name
-//   - task_name  
+//   - task_name
 //   - function_name
 //
 // Falls back to operation name if no task-specific attribute found.
 func (s *SignozAdapter) extractTaskName(operationName string, attributes map[string]string) string {
 	// Try common task name attribute keys
 	taskNameKeys := []string{"task.name", "task_name", "function_name", "method_name"}
-	
+
 	for _, key := range taskNameKeys {
 		if taskName, exists := attributes[key]; exists && taskName != "" {
 			return taskName
@@ -517,10 +520,10 @@ func (s *SignozAdapter) extractTaskName(operationName string, attributes map[str
 // QueryMetrics retrieves metric data points from SigNoz matching the given filter.
 //
 // Implements TelemetryAdapter.QueryMetrics by:
-//   1. Building PromQL-style query for metrics
-//   2. Calling SigNoz /api/v1/query_range endpoint
-//   3. Parsing response and converting to standard MetricPoint format
-//   4. Handling aggregations and time series data
+//  1. Building PromQL-style query for metrics
+//  2. Calling SigNoz /api/v1/query_range endpoint
+//  3. Parsing response and converting to standard MetricPoint format
+//  4. Handling aggregations and time series data
 //
 // Returns metrics ordered by timestamp (newest first) up to filter.Limit.
 // Returns empty slice (not error) if no metrics match criteria.
@@ -596,18 +599,19 @@ func (s *SignozAdapter) buildMetricQuery(filter telemetry.MetricFilter) string {
 // parseMetricResponse parses SigNoz PromQL query response into standard MetricPoint format.
 //
 // SigNoz returns PromQL query results in Prometheus-compatible format:
-//   {
-//     "status": "success",
-//     "data": {
-//       "resultType": "matrix",
-//       "result": [
-//         {
-//           "metric": {"__name__": "metric_name", "label1": "value1"},
-//           "values": [[timestamp, "value"], ...]
-//         }
-//       ]
-//     }
-//   }
+//
+//	{
+//	  "status": "success",
+//	  "data": {
+//	    "resultType": "matrix",
+//	    "result": [
+//	      {
+//	        "metric": {"__name__": "metric_name", "label1": "value1"},
+//	        "values": [[timestamp, "value"], ...]
+//	      }
+//	    ]
+//	  }
+//	}
 func (s *SignozAdapter) parseMetricResponse(respBody []byte, limit int) ([]telemetry.MetricPoint, error) {
 	var response struct {
 		Status string `json:"status"`
@@ -712,15 +716,15 @@ func (s *SignozAdapter) extractMetricUnit(labels map[string]string) string {
 
 	// Common unit patterns
 	unitPatterns := map[string]string{
-		"_seconds":     "seconds",
-		"_milliseconds": "milliseconds", 
-		"_bytes":       "bytes",
-		"_count":       "count",
-		"_total":       "count",
-		"_ratio":       "ratio",
-		"_percent":     "percent",
-		"_dollars":     "dollars",
-		"_cost":        "dollars",
+		"_seconds":      "seconds",
+		"_milliseconds": "milliseconds",
+		"_bytes":        "bytes",
+		"_count":        "count",
+		"_total":        "count",
+		"_ratio":        "ratio",
+		"_percent":      "percent",
+		"_dollars":      "dollars",
+		"_cost":         "dollars",
 	}
 
 	for suffix, unit := range unitPatterns {
