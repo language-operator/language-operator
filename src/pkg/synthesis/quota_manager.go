@@ -261,22 +261,54 @@ func (qm *QuotaManager) GetRemainingQuota(namespace string) (remainingCost float
 		return qm.maxCostPerNamespacePerDay, qm.maxAttemptsPerDay
 	}
 
-	quota.mu.RLock()
-	defer quota.mu.RUnlock()
+	// Use helper method that safely handles reset logic with proper locking
+	dailyCost, dailyAttempts := qm.getQuotaValuesAfterReset(quota)
 
-	quota.resetIfNeeded()
-
-	remainingCost = qm.maxCostPerNamespacePerDay - quota.dailyCost
+	remainingCost = qm.maxCostPerNamespacePerDay - dailyCost
 	if remainingCost < 0 {
 		remainingCost = 0
 	}
 
-	remainingAttempts = qm.maxAttemptsPerDay - quota.dailyAttempts
+	remainingAttempts = qm.maxAttemptsPerDay - dailyAttempts
 	if remainingAttempts < 0 {
 		remainingAttempts = 0
 	}
 
 	return remainingCost, remainingAttempts
+}
+
+// getQuotaValuesAfterReset safely reads quota values after checking/performing reset
+// Uses lock upgrade pattern to ensure thread safety when reset is needed
+func (qm *QuotaManager) getQuotaValuesAfterReset(quota *NamespaceQuota) (dailyCost float64, dailyAttempts int) {
+	// First try with read lock - most common case (no reset needed)
+	quota.mu.RLock()
+	
+	// Check if reset is needed without modifying anything
+	now := time.Now()
+	needsCostReset := now.After(quota.dailyResetAt)
+	needsAttemptReset := now.After(quota.attemptsResetAt)
+	
+	if !needsCostReset && !needsAttemptReset {
+		// No reset needed - safe to read with RLock
+		dailyCost = quota.dailyCost
+		dailyAttempts = quota.dailyAttempts
+		quota.mu.RUnlock()
+		return dailyCost, dailyAttempts
+	}
+	
+	// Reset is needed - upgrade to write lock
+	quota.mu.RUnlock()
+	quota.mu.Lock()
+	defer quota.mu.Unlock()
+	
+	// Perform reset if still needed (double-check after lock upgrade)
+	quota.resetIfNeeded()
+	
+	// Read values after reset
+	dailyCost = quota.dailyCost
+	dailyAttempts = quota.dailyAttempts
+	
+	return dailyCost, dailyAttempts
 }
 
 // resetIfNeeded resets daily counters if the reset time has passed
