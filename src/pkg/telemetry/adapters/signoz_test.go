@@ -809,7 +809,7 @@ func TestSignozAdapter_ResponseSizeLimiting(t *testing.T) {
 		for i := range largeData {
 			largeData[i] = 'A'
 		}
-		
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -830,7 +830,7 @@ func TestSignozAdapter_ResponseSizeLimiting(t *testing.T) {
 		}
 
 		_, err = adapter.QuerySpans(context.Background(), filter)
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
 		assert.Contains(t, err.Error(), "512000 bytes") // 500KB in bytes
@@ -843,7 +843,7 @@ func TestSignozAdapter_ResponseSizeLimiting(t *testing.T) {
 		for i := range exactData {
 			exactData[i] = 'B'
 		}
-		
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -862,7 +862,7 @@ func TestSignozAdapter_ResponseSizeLimiting(t *testing.T) {
 		}
 
 		_, err = adapter.QuerySpans(context.Background(), filter)
-		
+
 		// Should succeed (no size limit error, though may have JSON parsing error)
 		if err != nil {
 			assert.NotContains(t, err.Error(), "exceeds maximum allowed size")
