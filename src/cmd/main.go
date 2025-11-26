@@ -29,7 +29,6 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -507,76 +506,8 @@ func trimSpace(s string) string {
 	return s[start:end]
 }
 
-// loadAllowedRegistries loads the allowed container registries from the operator-config ConfigMap
-// with strict validation to prevent configuration drift from unknown fields
-func loadAllowedRegistries(ctx context.Context, clientset kubernetes.Interface) ([]string, error) {
-	// Get operator namespace from environment (set by k8s downward API or default to kube-system)
-	operatorNamespace := os.Getenv("OPERATOR_NAMESPACE")
-	if operatorNamespace == "" {
-		operatorNamespace = "kube-system" // Default namespace for the operator
-	}
 
-	// Get the ConfigMap
-	configMap, err := clientset.CoreV1().ConfigMaps(operatorNamespace).Get(ctx, "operator-config", metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get operator-config ConfigMap: %w", err)
-	}
 
-	// Validate ConfigMap structure - reject unknown fields to prevent configuration drift
-	if err := validateOperatorConfigMapSchema(configMap.Data); err != nil {
-		return nil, fmt.Errorf("invalid operator-config ConfigMap structure: %w", err)
-	}
-
-	// Parse the allowed-registries data
-	registriesData, ok := configMap.Data["allowed-registries"]
-	if !ok {
-		return nil, fmt.Errorf("allowed-registries key not found in ConfigMap")
-	}
-
-	// Split by newlines and filter empty lines
-	var registries []string
-	for _, line := range splitAndTrim(registriesData, "\n") {
-		line = trimSpace(line)
-		// Skip empty lines and comments
-		if line != "" && !hasPrefix(line, "#") {
-			registries = append(registries, line)
-		}
-	}
-
-	if len(registries) == 0 {
-		return nil, fmt.Errorf("no registries found in ConfigMap")
-	}
-
-	return registries, nil
-}
-
-// validateOperatorConfigMapSchema validates that the operator-config ConfigMap contains only supported fields
-// This prevents configuration drift and security issues from unknown fields like invalid version fields
-func validateOperatorConfigMapSchema(data map[string]string) error {
-	// Define supported fields for operator-config ConfigMap
-	supportedFields := map[string]bool{
-		"allowed-registries": true,
-	}
-
-	// Check for unknown fields
-	var unknownFields []string
-	for field := range data {
-		if !supportedFields[field] {
-			unknownFields = append(unknownFields, field)
-		}
-	}
-
-	// Reject ConfigMap with unknown fields
-	if len(unknownFields) > 0 {
-		return fmt.Errorf("unsupported fields found: %v. operator-config ConfigMap only supports: allowed-registries", unknownFields)
-	}
-
-	return nil
-}
-
-func hasPrefix(s, prefix string) bool {
-	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
-}
 
 // getEnvOrDefault returns environment variable value or default if not set
 func getEnvOrDefault(key, defaultValue string) string {
