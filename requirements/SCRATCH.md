@@ -6,6 +6,7 @@
 *Memory leak fixes - Critical system stability issues*
 
 **Phase 2 Priority Focus (Nov 26):**
+- ✅ **Issue #73** - Telemetry adapter cache race condition allows stale availability data - **RESOLVED** (Nov 26) - Added RWMutex protection to SignozAdapter cache
 - ✅ **Issue #57** - Memory leak in TypeCoercion cache with unbounded growth - **RESOLVED** (Nov 26) - Investigation revealed stale issue description; LRU cache already implemented
 
 **Recently Completed:**
@@ -25,13 +26,12 @@
 - ✅ **Issue #60** - Command injection vulnerability in synthesis schema validation (SECURITY) - **RESOLVED**
 - ✅ **Issue #66** - Synthesis validator silently ignores critical schema validation failures - **RESOLVED** (same commit as #60)
 
-### 📋 Remaining Work (13 Security/Validation Issues)
+### 📋 Remaining Work (12 Security/Validation Issues)
 **Priority Queue After Memory Fixes:**
 
 **Tier 2 - Validation Pipeline Foundation (Next After Ready Issues):**
 - Issue #51: Synthesis pipeline ignores schema validation failures 
 - Issue #72: Synthesis validator continues after validation failure
-- Issue #73: Telemetry adapter cache race condition
 
 **Tier 3 - Security & Configuration Validation:**
 - Issue #74: Registry whitelist bypass (operator-config version field)
