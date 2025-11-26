@@ -153,8 +153,20 @@ func NewSignozAdapterWithMaxSize(endpoint, apiKey string, timeout time.Duration,
 	}
 
 	// Validate endpoint is a proper URL
-	if _, err := url.Parse(endpoint); err != nil {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
 		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
+	}
+
+	// Validate URL has required scheme and host
+	if parsedURL.Scheme == "" {
+		return nil, fmt.Errorf("endpoint URL must include scheme (http or https): %s", endpoint)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("endpoint URL scheme must be http or https, got: %s", parsedURL.Scheme)
+	}
+	if parsedURL.Host == "" {
+		return nil, fmt.Errorf("endpoint URL must include host: %s", endpoint)
 	}
 
 	// Remove trailing slash from endpoint for consistent URL building

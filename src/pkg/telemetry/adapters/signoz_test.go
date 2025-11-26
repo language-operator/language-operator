@@ -67,8 +67,36 @@ func TestNewSignozAdapter(t *testing.T) {
 	t.Run("Invalid URL", func(t *testing.T) {
 		_, err := NewSignozAdapter("not-a-url", "test-api-key", 30*time.Second)
 
-		require.NoError(t, err) // URL parsing is lenient, but endpoint would be invalid
-		// Note: url.Parse doesn't fail for most strings, real validation happens during requests
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "endpoint URL must include scheme")
+	})
+
+	t.Run("Invalid URL with unsupported scheme", func(t *testing.T) {
+		_, err := NewSignozAdapter("ftp://signoz.example.com", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "endpoint URL scheme must be http or https")
+	})
+
+	t.Run("Invalid URL missing host", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "endpoint URL must include host")
+	})
+
+	t.Run("Valid URL with port", func(t *testing.T) {
+		adapter, err := NewSignozAdapter("https://signoz.example.com:3000", "test-api-key", 30*time.Second)
+
+		require.NoError(t, err)
+		assert.Equal(t, "https://signoz.example.com:3000", adapter.endpoint)
+	})
+
+	t.Run("Valid URL with path", func(t *testing.T) {
+		adapter, err := NewSignozAdapter("http://localhost:3000/api", "test-api-key", 30*time.Second)
+
+		require.NoError(t, err)
+		assert.Equal(t, "http://localhost:3000/api", adapter.endpoint)
 	})
 
 	t.Run("Trailing slash removal", func(t *testing.T) {

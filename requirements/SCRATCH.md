@@ -10,17 +10,17 @@
 - ✅ **Issue #74**: Registry whitelist bypass via operator-config version field - **RESOLVED** (Nov 26) - Added strict ConfigMap validation
 - ✅ **Issue #52**: ConfigMap version validation allows zero/negative versions - **RESOLVED** (Nov 26) - Added CurrentVersion validation in learning controller
 
-### Priority 3: Core Controller Stability (Ready - Nov 26)
+### Priority 3: Configuration & Validation Infrastructure (Ready - Nov 26)
 - ✅ **Issue #71**: Learning controller status update failures - **RESOLVED** (Nov 26) - Fixed JSON serialization, ConfigMap size validation, and status data rotation
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
+- 🎯 **Issue #68**: Telemetry adapter configuration validation failures - **READY**
+- 🎯 **Issue #53**: IPv6 registry validation bracket handling failures - **READY**
 
 ### Lower Priority: Security Edge Cases (Backlog)
-- **Issue #68**: Telemetry adapter configuration validation failures
 - **Issue #76**: IPv6 registry validation bypass (malformed addresses) 
 - **Issue #65**: IPv6 registry parsing vulnerability
 - **Issue #55**: Telemetry adapter endpoint validation panics
-- **Issue #53**: IPv6 registry address bracket handling failures
 
 ## Key Implementation Context
 
