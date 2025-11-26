@@ -19,10 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math"
+	"math/rand"
 	"net"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -32,7 +35,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 )
 
@@ -100,6 +105,7 @@ func ValidateClusterReference(ctx context.Context, c client.Client, clusterRef, 
 }
 
 // CreateOrUpdateNetworkPolicy creates or updates a NetworkPolicy with owner reference
+// Includes timeout and exponential backoff retry logic for slow CNI plugins
 func CreateOrUpdateNetworkPolicy(
 	ctx context.Context,
 	c client.Client,
@@ -107,11 +113,95 @@ func CreateOrUpdateNetworkPolicy(
 	owner client.Object,
 	networkPolicy *networkingv1.NetworkPolicy,
 ) error {
+	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, c, scheme, owner, networkPolicy, 30*time.Second, 3)
+}
+
+// CreateOrUpdateNetworkPolicyWithTimeout creates or updates a NetworkPolicy with configurable timeout and retries
+func CreateOrUpdateNetworkPolicyWithTimeout(
+	ctx context.Context,
+	c client.Client,
+	scheme *runtime.Scheme,
+	owner client.Object,
+	networkPolicy *networkingv1.NetworkPolicy,
+	timeout time.Duration,
+	maxRetries int,
+) error {
+	logger := log.FromContext(ctx).WithValues(
+		"networkPolicy", networkPolicy.Name,
+		"namespace", networkPolicy.Namespace,
+		"timeout", timeout,
+		"maxRetries", maxRetries,
+	)
+
 	// Set owner reference so NetworkPolicy is cleaned up with owner
 	if err := controllerutil.SetControllerReference(owner, networkPolicy, scheme); err != nil {
 		return fmt.Errorf("failed to set owner reference: %w", err)
 	}
 
+	// Retry logic with exponential backoff
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Create timeout context for this attempt
+		timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		start := time.Now()
+		err := tryCreateOrUpdateNetworkPolicy(timeoutCtx, c, networkPolicy, logger)
+		duration := time.Since(start)
+
+		if err == nil {
+			if attempt > 0 {
+				logger.Info("NetworkPolicy operation succeeded after retry",
+					"attempt", attempt+1,
+					"duration", duration)
+			} else {
+				logger.V(1).Info("NetworkPolicy operation succeeded",
+					"duration", duration)
+			}
+			return nil
+		}
+
+		lastErr = err
+
+		// Don't retry on the last attempt
+		if attempt == maxRetries {
+			break
+		}
+
+		// Calculate exponential backoff delay with jitter
+		baseDelay := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+		jitter := time.Duration(rand.Float64() * float64(baseDelay/2))
+		delay := baseDelay + jitter
+
+		logger.Info("NetworkPolicy operation failed, retrying",
+			"attempt", attempt+1,
+			"duration", duration,
+			"error", err.Error(),
+			"retryDelay", delay)
+
+		// Wait before retry with context cancellation check
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+			// Continue to next attempt
+		}
+	}
+
+	logger.Error(lastErr, "NetworkPolicy operation failed after all retries",
+		"maxRetries", maxRetries,
+		"totalAttempts", maxRetries+1)
+
+	return fmt.Errorf("NetworkPolicy operation failed after %d attempts: %w", maxRetries+1, lastErr)
+}
+
+// tryCreateOrUpdateNetworkPolicy performs a single attempt to create or update a NetworkPolicy
+func tryCreateOrUpdateNetworkPolicy(
+	ctx context.Context,
+	c client.Client,
+	networkPolicy *networkingv1.NetworkPolicy,
+	logger logr.Logger,
+) error {
 	// Try to get existing NetworkPolicy
 	existingPolicy := &networkingv1.NetworkPolicy{}
 	err := c.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existingPolicy)
@@ -119,6 +209,7 @@ func CreateOrUpdateNetworkPolicy(
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Create new NetworkPolicy
+			logger.V(1).Info("Creating new NetworkPolicy")
 			if err := c.Create(ctx, networkPolicy); err != nil {
 				return fmt.Errorf("failed to create NetworkPolicy: %w", err)
 			}
@@ -128,6 +219,7 @@ func CreateOrUpdateNetworkPolicy(
 	}
 
 	// Update existing NetworkPolicy
+	logger.V(1).Info("Updating existing NetworkPolicy")
 	existingPolicy.Spec = networkPolicy.Spec
 	existingPolicy.Labels = networkPolicy.Labels
 	if err := c.Update(ctx, existingPolicy); err != nil {

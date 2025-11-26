@@ -143,6 +143,8 @@ func main() {
 	var watchNamespaces string
 	var concurrency int
 	var requireNetworkPolicy bool
+	var networkPolicyTimeout time.Duration
+	var networkPolicyRetries int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -152,6 +154,10 @@ func main() {
 	flag.BoolVar(&requireNetworkPolicy, "require-network-policy", false,
 		"Fail operator startup if CNI does not support NetworkPolicy enforcement. "+
 			"Default is false to allow operation on local/development clusters.")
+	flag.DurationVar(&networkPolicyTimeout, "network-policy-timeout", 30*time.Second,
+		"Timeout for NetworkPolicy operations. Increase for slow CNI plugins.")
+	flag.IntVar(&networkPolicyRetries, "network-policy-retries", 3,
+		"Number of retry attempts for NetworkPolicy operations.")
 	flag.DurationVar(&leaseDuration, "leader-elect-lease-duration", 15*time.Second,
 		"The duration that non-leader candidates will wait after observing a leadership renewal.")
 	flag.DurationVar(&renewDeadline, "leader-elect-renew-deadline", 10*time.Second,
@@ -322,11 +328,13 @@ func main() {
 
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		Log:               ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
-		Recorder:          mgr.GetEventRecorderFor("languageagent-controller"),
-		AllowedRegistries: allowedRegistries,
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder:             mgr.GetEventRecorderFor("languageagent-controller"),
+		AllowedRegistries:    allowedRegistries,
+		NetworkPolicyTimeout: networkPolicyTimeout,
+		NetworkPolicyRetries: networkPolicyRetries,
 	}
 
 	// Initialize Gateway API cache

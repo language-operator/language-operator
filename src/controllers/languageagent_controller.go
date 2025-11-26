@@ -65,6 +65,8 @@ type LanguageAgentReconciler struct {
 	RateLimiter            *synthesis.RateLimiter
 	QuotaManager           *synthesis.QuotaManager
 	AllowedRegistries      []string
+	NetworkPolicyTimeout   time.Duration
+	NetworkPolicyRetries   int
 	gatewayCache           *gatewayAPICache
 }
 
@@ -239,13 +241,43 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcileNetworkPolicy(ctx, agent); err != nil {
 		log.Error(err, "Failed to reconcile NetworkPolicy")
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
-		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after NetworkPolicy error")
+
+		// Determine if this is a timeout error vs other error
+		isTimeout := strings.Contains(err.Error(), "context deadline exceeded") ||
+			strings.Contains(err.Error(), "timeout")
+
+		if isTimeout {
+			// For timeout errors, set a specific condition but continue reconciliation
+			SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionFalse, "NetworkPolicyTimeout",
+				fmt.Sprintf("NetworkPolicy creation timed out after %v with %d retries. This may indicate slow CNI response. The operator will continue to retry. Error: %v",
+					r.NetworkPolicyTimeout, r.NetworkPolicyRetries, err), agent.Generation)
+
+			log.Info("NetworkPolicy timeout detected - continuing reconciliation with degraded network isolation",
+				"timeout", r.NetworkPolicyTimeout,
+				"retries", r.NetworkPolicyRetries,
+				"error", err.Error())
+
+			// Record warning event
+			if r.Recorder != nil {
+				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyTimeout",
+					"NetworkPolicy creation timed out. Network isolation may be degraded. Consider increasing --network-policy-timeout flag for slow CNI.")
+			}
+
+			// Don't fail the entire reconciliation for timeout - continue with degraded state
+		} else {
+			// For non-timeout errors, fail the reconciliation
+			span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
+			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
+			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after NetworkPolicy error")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
 		}
-		reconcileErr = err
-		return ctrl.Result{}, err
+	} else {
+		// NetworkPolicy succeeded
+		SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+			"NetworkPolicy created successfully", agent.Generation)
 	}
 
 	// Detect if NetworkPolicy enforcement is supported
@@ -1442,8 +1474,8 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.Egress,
 	)
 
-	// Create or update the NetworkPolicy with owner reference
-	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, agent, networkPolicy)
+	// Create or update the NetworkPolicy with owner reference and configured timeout/retries
+	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, r.Client, r.Scheme, agent, networkPolicy, r.NetworkPolicyTimeout, r.NetworkPolicyRetries)
 }
 
 func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, []string, error) {

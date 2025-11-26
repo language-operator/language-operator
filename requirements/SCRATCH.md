@@ -3,17 +3,22 @@
 ## Current Priority Status (Nov 25, 2025)
 
 ### 🚀 READY Issues (Priority Order)
-*Major infrastructure complete, now addressing security and validation issues*
+*Critical startup blocker takes precedence - operator must start before other fixes can be tested*
 
-**Critical Security/Validation Fixes (Nov 25):**
-- **Issue #60** - Command injection vulnerability in synthesis schema validation (SECURITY)
+**Phase 2 Priority Focus (Nov 26):**
+- **Issue #69** - CNI detection succeeds but NetworkPolicy creation timeout causes operator startup failure (STARTUP BLOCKER)
 - **Issue #63** - Race condition in QuotaManager GetRemainingQuota (DATA INTEGRITY)  
-- **Issue #66** - Synthesis validator silently ignores critical schema validation failures (CORE FUNCTION)
 
-### 📋 Remaining Work (22 Security/Validation Issues)
-**Tier 2 - System Function Blockers:**
-- Issues #69, #54: Operator startup failures (CNI/NetworkPolicy timeouts)
+**Recently Completed:**
+- ✅ **Issue #60** - Command injection vulnerability in synthesis schema validation (SECURITY) - **RESOLVED**
+- ✅ **Issue #66** - Synthesis validator silently ignores critical schema validation failures - **RESOLVED** (same commit as #60)
+
+### 📋 Remaining Work (24 Security/Validation Issues)
+**Next Priority After Startup Fix:**
 - Issues #67, #62: Webhook validation bypass during controller lag (SECURITY/COST)
+- Issue #54: Duplicate CNI/NetworkPolicy timeout issue (likely can be closed after #69)
+
+**Tier 2 - Data/Memory Issues:**
 - Issue #58: QuotaManager race condition allows cost/attempt limit bypass
 - Issue #70: Workspace size validation inconsistency
 
@@ -30,19 +35,20 @@
 - ✅ Issues #18-29: Task/main DSL transition, synthesis templates, learning system
 - ✅ Issues #41-49: Gateway API, controller stability, telemetry adapters, configurations
 - ✅ Issue #50: SigNoz adapter cache test flakiness fix (Nov 25)
+- ✅ Issue #60: Command injection vulnerability fixed (Nov 25) - SECURITY CRITICAL
 - ✅ **ALL CORE INFRASTRUCTURE DELIVERED** - Platform ready for production use
 
-**Critical Phase Transition (Nov 25):**
+**Critical Phase Transition (Nov 26):**
 - **Phase 1 Complete**: Core platform infrastructure and learning system
-- **Phase 2 Current**: Security hardening and validation robustness
-- **Discovery**: 22 security/validation gaps identified requiring immediate attention
-- **Priority Shift**: From feature delivery to security and reliability hardening
+- **Phase 2 Current**: Startup reliability → Security hardening and validation robustness
+- **Discovery**: 24 security/validation gaps identified, with startup blocker taking precedence
+- **Priority Shift**: Operator startup must work before other fixes can be validated
 
 **Security Hardening Focus (Nov 25):**
-- **Command Injection**: Schema validation vulnerable to code injection attacks
+- ✅ **Command Injection**: Schema validation vulnerable to code injection attacks - **FIXED**
 - **Race Conditions**: QuotaManager has multiple data race vulnerabilities  
 - **Validation Bypass**: Webhook validation can be bypassed during controller lag
-- **Silent Failures**: Schema validation failures not properly surfaced to users
+- ✅ **Silent Failures**: Schema validation failures not properly surfaced to users - **FIXED**
 - **Memory Leaks**: Unbounded caching in telemetry and type coercion systems
 - **Startup Failures**: NetworkPolicy timeout issues blocking operator deployment
 

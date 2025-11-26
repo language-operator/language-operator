@@ -6,7 +6,7 @@ PRIORITIZE_PROMPT := "/task prioritize"
 
 # Use claude to prioritize the backlog
 prioritize:
-	@claude $(PRIORITIZE_PROMPT)
+	@claude --dangerously-skip-permissions $(PRIORITIZE_PROMPT)
 
 # Use claude to iterate on the backlog
 iterate:
