@@ -3938,9 +3938,41 @@ spec:
                     description: AverageIterations is the average number of iterations
                       per execution
                     type: number
+                  learningHealthCategory:
+                    description: LearningHealthCategory provides a human-readable
+                      health category
+                    enum:
+                    - excellent
+                    - good
+                    - fair
+                    - poor
+                    - critical
+                    type: string
+                  learningHealthScore:
+                    description: LearningHealthScore is an overall health score for
+                      the learning system (0.0-1.0)
+                    type: number
+                  learningSuccessRate:
+                    description: LearningSuccessRate is the percentage of successful
+                      learning attempts
+                    type: number
+                  neuralTaskCount:
+                    description: NeuralTaskCount is the number of tasks still using
+                      neural execution
+                    format: int32
+                    type: integer
+                  projectedMonthlyCostSavings:
+                    description: ProjectedMonthlyCostSavings is the estimated monthly
+                      cost savings from learning (USD)
+                    type: number
                   successRate:
                     description: SuccessRate is the percentage of successful executions
                     type: number
+                  symbolicTaskCount:
+                    description: SymbolicTaskCount is the number of tasks that have
+                      been learned (converted to symbolic)
+                    format: int32
+                    type: integer
                   totalTokens:
                     description: TotalTokens is the total number of tokens consumed
                     format: int64

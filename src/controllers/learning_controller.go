@@ -42,6 +42,7 @@ type LearningReconciler struct {
 	MetricsCollector     *learning.MetricsCollector       // For learning metrics collection
 	EventProcessor       *learning.LearningEventProcessor // For processing learning events with metrics
 	TelemetryAdapter     telemetry.TelemetryAdapter       // For querying historical execution data
+	SuccessRateAggregator map[string]*learning.LearningSuccessRateAggregator // Per-agent success rate tracking
 	LearningEnabled      bool
 	LearningThreshold    int32         // Number of execution traces before triggering learning
 	LearningInterval     time.Duration // Minimum interval between learning attempts
@@ -219,9 +220,22 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				}
 			}
 
+			// Track failure in success rate aggregator
+			agentKey := fmt.Sprintf("%s/%s", agent.Namespace, agent.Name)
+			if r.SuccessRateAggregator != nil && r.SuccessRateAggregator[agentKey] != nil {
+				r.SuccessRateAggregator[agentKey].AddAttempt(false)
+			}
+
 			// Don't return error - continue processing other triggers
 		} else {
 			log.Info("Successfully processed learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
+
+			// Track success in success rate aggregator
+			agentKey := fmt.Sprintf("%s/%s", agent.Namespace, agent.Name)
+			if r.SuccessRateAggregator != nil && r.SuccessRateAggregator[agentKey] != nil {
+				r.SuccessRateAggregator[agentKey].AddAttempt(true)
+			}
+
 			requeue = true
 		}
 	}
@@ -231,6 +245,14 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Error(err, "Failed to update learning status")
 		reconcileErr = fmt.Errorf("failed to update learning status: %w", err)
 		return ctrl.Result{}, reconcileErr
+	}
+
+	// Update agent health metrics in status
+	if err := r.updateAgentHealthMetrics(ctx, agent, learningStatus); err != nil {
+		log.Error(err, "Failed to update agent health metrics")
+		// Don't fail reconciliation for health metrics errors, just log
+		r.Recorder.Event(agent, corev1.EventTypeWarning, "HealthMetricsUpdateFailed",
+			fmt.Sprintf("Failed to update learning health metrics: %v", err))
 	}
 
 	// Add learning-specific attributes to span
@@ -2103,6 +2125,129 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 		attribute.Int("learning.configmap_size_kb", totalSize/1024),
 		attribute.Bool("learning.status_update_success", true),
 	)
+
+	return nil
+}
+
+// updateAgentHealthMetrics calculates and updates learning health metrics in agent status
+func (r *LearningReconciler) updateAgentHealthMetrics(ctx context.Context, agent *langopv1alpha1.LanguageAgent, learningStatus map[string]*TaskLearningStatus) error {
+	ctx, span := learningTracer.Start(ctx, "learning.update_health_metrics")
+	defer span.End()
+
+	// Get or create the success rate aggregator for this agent
+	agentKey := fmt.Sprintf("%s/%s", agent.Namespace, agent.Name)
+	if r.SuccessRateAggregator == nil {
+		r.SuccessRateAggregator = make(map[string]*learning.LearningSuccessRateAggregator)
+	}
+	if r.SuccessRateAggregator[agentKey] == nil {
+		r.SuccessRateAggregator[agentKey] = learning.NewLearningSuccessRateAggregator(agent.Namespace, agent.Name, 24) // 24-hour window
+	}
+	aggregator := r.SuccessRateAggregator[agentKey]
+
+	// Check if aggregator needs reset
+	if aggregator.ShouldReset() {
+		aggregator.Reset()
+		r.Log.V(1).Info("Reset learning success rate aggregator window", "agent", agent.Name)
+	}
+
+	// Calculate health metrics from learning status
+	var totalConfidence float64
+	var confidenceCount int
+	var symbolicTaskCount, neuralTaskCount int32
+	var totalCostSavings float64
+
+	for _, status := range learningStatus {
+		if status.IsSymbolic {
+			symbolicTaskCount++
+			// Calculate cost savings for symbolic tasks
+			if r.MetricsCollector != nil {
+				costSavings := r.MetricsCollector.EstimateCostSavings(ctx, agent.Namespace, agent.Name, status.TaskName, 0.01, 0.0001, 10) // Sample values
+				totalCostSavings += costSavings
+			}
+		} else {
+			neuralTaskCount++
+		}
+
+		// Include pattern confidence in health calculation
+		if status.PatternConfidence > 0 {
+			totalConfidence += status.PatternConfidence
+			confidenceCount++
+		}
+	}
+
+	// Calculate average confidence
+	avgConfidence := 0.0
+	if confidenceCount > 0 {
+		avgConfidence = totalConfidence / float64(confidenceCount)
+	}
+
+	// Get success rate from aggregator
+	successRate := aggregator.CalculateSuccessRate()
+
+	// Calculate error rate from recent learning attempts
+	errorRate := 0.0
+	totalAttempts := int64(0)
+	failedAttempts := int64(0)
+	for _, status := range learningStatus {
+		if status.LearningAttempts > 0 {
+			totalAttempts += int64(status.LearningAttempts)
+			// Use error rate from task status if available
+			failedAttempts += int64(float64(status.LearningAttempts) * status.ErrorRate)
+		}
+	}
+	if totalAttempts > 0 {
+		errorRate = float64(failedAttempts) / float64(totalAttempts)
+	}
+
+	// Calculate overall health score using HealthMetrics
+	healthMetrics := learning.NewHealthMetrics(agent.Namespace, agent.Name)
+	healthScore := healthMetrics.CalculateOverallLearningHealth(successRate, avgConfidence, errorRate)
+	healthCategory := healthMetrics.GetHealthCategory(healthScore)
+
+	// Project monthly cost savings
+	monthlyCostSavings := totalCostSavings * 30 // Assuming daily savings
+
+	// Initialize agent metrics if needed
+	if agent.Status.Metrics == nil {
+		agent.Status.Metrics = &langopv1alpha1.AgentMetrics{}
+	}
+
+	// Update learning health metrics
+	agent.Status.Metrics.LearningHealthScore = &healthScore
+	agent.Status.Metrics.LearningHealthCategory = healthCategory
+	agent.Status.Metrics.LearningSuccessRate = &successRate
+	agent.Status.Metrics.SymbolicTaskCount = symbolicTaskCount
+	agent.Status.Metrics.NeuralTaskCount = neuralTaskCount
+	agent.Status.Metrics.ProjectedMonthlyCostSavings = &monthlyCostSavings
+
+	// Update agent status
+	if err := r.Status().Update(ctx, agent); err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update agent health metrics in status: %w", err)
+	}
+
+	// Update success rate metrics in telemetry
+	if r.MetricsCollector != nil {
+		r.MetricsCollector.UpdateLearningSuccessRates(ctx, agent.Namespace, agent.Name, aggregator)
+	}
+
+	span.SetAttributes(
+		attribute.Float64("learning.health_score", healthScore),
+		attribute.String("learning.health_category", healthCategory),
+		attribute.Float64("learning.success_rate", successRate),
+		attribute.Int("learning.symbolic_tasks", int(symbolicTaskCount)),
+		attribute.Int("learning.neural_tasks", int(neuralTaskCount)),
+		attribute.Float64("learning.monthly_cost_savings", monthlyCostSavings),
+	)
+
+	r.Log.V(1).Info("Updated agent health metrics",
+		"agent", agent.Name,
+		"health_score", healthScore,
+		"health_category", healthCategory,
+		"success_rate", successRate,
+		"symbolic_tasks", symbolicTaskCount,
+		"neural_tasks", neuralTaskCount,
+		"monthly_savings", monthlyCostSavings)
 
 	return nil
 }

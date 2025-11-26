@@ -580,6 +580,31 @@ type AgentMetrics struct {
 	// SuccessRate is the percentage of successful executions
 	// +optional
 	SuccessRate *float64 `json:"successRate,omitempty"`
+
+	// LearningHealthScore is an overall health score for the learning system (0.0-1.0)
+	// +optional
+	LearningHealthScore *float64 `json:"learningHealthScore,omitempty"`
+
+	// LearningHealthCategory provides a human-readable health category
+	// +kubebuilder:validation:Enum=excellent;good;fair;poor;critical
+	// +optional
+	LearningHealthCategory string `json:"learningHealthCategory,omitempty"`
+
+	// LearningSuccessRate is the percentage of successful learning attempts
+	// +optional
+	LearningSuccessRate *float64 `json:"learningSuccessRate,omitempty"`
+
+	// SymbolicTaskCount is the number of tasks that have been learned (converted to symbolic)
+	// +optional
+	SymbolicTaskCount int32 `json:"symbolicTaskCount,omitempty"`
+
+	// NeuralTaskCount is the number of tasks still using neural execution
+	// +optional
+	NeuralTaskCount int32 `json:"neuralTaskCount,omitempty"`
+
+	// ProjectedMonthlyCostSavings is the estimated monthly cost savings from learning (USD)
+	// +optional
+	ProjectedMonthlyCostSavings *float64 `json:"projectedMonthlyCostSavings,omitempty"`
 }
 
 // ToolUsageSpec tracks tool usage

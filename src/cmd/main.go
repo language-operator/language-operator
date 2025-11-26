@@ -414,6 +414,7 @@ func main() {
 		MetricsCollector:            metricsCollector,
 		EventProcessor:              eventProcessor,
 		TelemetryAdapter:            telemetryAdapter,
+		SuccessRateAggregator:       make(map[string]*learning.LearningSuccessRateAggregator),
 		LearningEnabled:             true,
 		LearningThreshold:           10,              // Trigger learning after 10 traces
 		LearningInterval:            5 * time.Minute, // 5 minute cooldown between attempts
