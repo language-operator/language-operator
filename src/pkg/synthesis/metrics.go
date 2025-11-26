@@ -265,7 +265,7 @@ func RecordLearningCooldownViolation(namespace, agent string) {
 func RecordConfigMapSizeViolation(agent string, actualSize, maxSize int, compressed bool) {
 	// Record a learning attempt failure due to size limit
 	RecordLearningAttempt(agent, agent, "size_limit_exceeded")
-	
+
 	// Note: In a future version, we could add a dedicated Prometheus metric:
 	// compressedStr := "false"
 	// if compressed {
