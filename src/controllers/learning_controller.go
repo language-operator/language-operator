@@ -2268,7 +2268,14 @@ func (r *LearningReconciler) summarizeTraceData(trace TaskTrace) TaskTrace {
 	// Summarize tool call results
 	for i, toolCall := range trace.ToolCalls {
 		summarized.ToolCalls[i].Parameters = r.summarizeData(toolCall.Parameters)
-		summarized.ToolCalls[i].Result = r.summarizeData(toolCall.Result)
+		
+		// Handle Result which may be of different types
+		if resultMap, ok := toolCall.Result.(map[string]interface{}); ok {
+			summarized.ToolCalls[i].Result = r.summarizeData(resultMap)
+		} else {
+			// Keep non-map results as-is (strings, numbers, etc.)
+			summarized.ToolCalls[i].Result = toolCall.Result
+		}
 	}
 	
 	return summarized
