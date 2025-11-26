@@ -332,17 +332,6 @@ func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 	}
 }
 
-// MergeLabels merges two label maps, with the second map taking precedence
-func MergeLabels(base, override map[string]string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range base {
-		result[k] = v
-	}
-	for k, v := range override {
-		result[k] = v
-	}
-	return result
-}
 
 // resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
 // Supports wildcards: *.example.com will resolve example.com and cache the result
