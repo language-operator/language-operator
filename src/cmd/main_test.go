@@ -569,9 +569,9 @@ func TestValidateOperatorConfigMapSchema(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:          "valid - empty data map",
-			data:          map[string]string{},
-			expectError:   false,
+			name:        "valid - empty data map",
+			data:        map[string]string{},
+			expectError: false,
 		},
 		{
 			name: "invalid - version field not supported",
