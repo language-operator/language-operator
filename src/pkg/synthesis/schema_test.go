@@ -15,9 +15,8 @@ import (
 
 // TestFetchDSLSchema_Success tests successful schema fetching with valid JSON
 func TestFetchDSLSchema_Success(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
+	return
 
 	// This test requires language-operator gem to be installed
 	// Check if it's available
@@ -49,9 +48,8 @@ func TestFetchDSLSchema_Success(t *testing.T) {
 
 // TestFetchDSLSchema_Timeout tests that context timeout is respected
 func TestFetchDSLSchema_Timeout(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
+	return
 
 	// Use a very short timeout to force a timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
@@ -72,7 +70,8 @@ func TestFetchDSLSchema_Timeout(t *testing.T) {
 
 // TestFetchDSLSchema_InvalidJSON tests handling of invalid JSON response
 func TestFetchDSLSchema_InvalidJSON(t *testing.T) {
-	// Create a mock command that returns invalid JSON
+	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
+	return
 	if os.Getenv("GO_TEST_PROCESS") == "1" {
 		fmt.Fprint(os.Stdout, "not valid json")
 		os.Exit(0)
@@ -221,9 +220,8 @@ func TestDSLSchema_JSONMarshaling(t *testing.T) {
 
 // TestFetchDSLSchema_DefaultTimeout tests that default timeout is applied
 func TestFetchDSLSchema_DefaultTimeout(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
+	return
 
 	if _, err := exec.LookPath("aictl"); err != nil {
 		t.Skip("aictl command not found, skipping test")
@@ -914,7 +912,8 @@ func TestExecuteCommand_ExitCode(t *testing.T) {
 
 // TestFetchDSLSchema_MissingVersion tests handling of schema without version field
 func TestFetchDSLSchema_MissingVersion(t *testing.T) {
-	// Test the validation logic for missing version
+	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
+	return
 	schema := DSLSchema{
 		Schema: "http://json-schema.org/draft-07/schema#",
 		Type:   "object",

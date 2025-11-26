@@ -27,47 +27,6 @@ type DSLSchema struct {
 	Required   []string               `json:"required"`
 }
 
-// FetchDSLSchema executes the language_operator CLI to fetch the DSL schema
-// in JSON format. It returns the parsed schema or an error if the command
-// fails or the output is invalid.
-//
-// Example usage:
-//
-//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-//	defer cancel()
-//	schema, err := FetchDSLSchema(ctx)
-//	if err != nil {
-//	    log.Error(err, "Failed to fetch DSL schema")
-//	    return err
-//	}
-//	log.Info("Fetched schema", "version", schema.Version)
-func FetchDSLSchema(ctx context.Context) (*DSLSchema, error) {
-	// Default timeout if none specified in context
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-	}
-
-	// Execute the command to fetch schema
-	output, err := executeCommand(ctx, "aictl", "system", "schema", "--format=json")
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute aictl system schema command: %w", err)
-	}
-
-	// Parse JSON output
-	var schema DSLSchema
-	if err := json.Unmarshal(output, &schema); err != nil {
-		return nil, fmt.Errorf("failed to parse schema JSON: %w (output: %s)", err, string(output))
-	}
-
-	// Basic validation
-	if schema.Version == "" {
-		return nil, fmt.Errorf("schema missing version field")
-	}
-
-	return &schema, nil
-}
 
 // GetSchemaVersion executes the language_operator CLI to fetch just the schema
 // version string. This is more efficient than fetching the full schema when only
