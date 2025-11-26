@@ -99,7 +99,7 @@ func TestValidateCommandSecurity_BlockedCommands(t *testing.T) {
 				t.Errorf("validateCommandSecurity() should have failed for dangerous command: %s %v", tt.command, tt.args)
 				return
 			}
-			
+
 			if tt.wantErr != "" && !strings.Contains(err.Error(), tt.wantErr) {
 				t.Errorf("validateCommandSecurity() error = %v, want error containing %v", err, tt.wantErr)
 			}
@@ -112,32 +112,32 @@ func TestValidateScriptIntegrity(t *testing.T) {
 	// Test with actual script (if it exists)
 	scriptPath := "../../scripts/validate-dsl-schema.rb"
 	err := validateScriptIntegrity(scriptPath)
-	
+
 	if err != nil {
 		// This might fail in test environment - that's okay
 		t.Logf("Script integrity check failed (expected in test env): %v", err)
 		return
 	}
-	
+
 	t.Logf("Script integrity validation passed for: %s", scriptPath)
 }
 
 // TestFindSchemaValidatorScript_Security tests secure script finding
 func TestFindSchemaValidatorScript_Security(t *testing.T) {
 	path, err := findSchemaValidatorScript()
-	
+
 	if err != nil {
 		// Expected in test environments without Ruby script
 		t.Logf("Script finding failed (expected in test env): %v", err)
 		return
 	}
-	
+
 	// If script is found, verify it's in an allowed path
 	allowedPaths := []string{
 		"/usr/local/bin/validate-dsl-schema.rb",
 		"scripts/validate-dsl-schema.rb",
 	}
-	
+
 	found := false
 	for _, allowedPath := range allowedPaths {
 		if strings.Contains(path, allowedPath) {
@@ -145,7 +145,7 @@ func TestFindSchemaValidatorScript_Security(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !found {
 		t.Errorf("Script path %s is not in allowed paths: %v", path, allowedPaths)
 	}
@@ -154,14 +154,14 @@ func TestFindSchemaValidatorScript_Security(t *testing.T) {
 // TestExecuteCommand_Security tests that executeCommand uses security validation
 func TestExecuteCommand_Security(t *testing.T) {
 	ctx := context.Background()
-	
+
 	// Test that blocked commands are rejected
 	_, err := executeCommand(ctx, "sh", "-c", "echo hello")
 	if err == nil {
 		t.Error("executeCommand should reject dangerous commands")
 		return
 	}
-	
+
 	if !strings.Contains(err.Error(), "security validation failed") {
 		t.Errorf("Expected security validation error, got: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestExecuteCommand_Security(t *testing.T) {
 // TestExecuteCommand_AllowedCommands tests that allowed commands work
 func TestExecuteCommand_AllowedCommands(t *testing.T) {
 	ctx := context.Background()
-	
+
 	// Test that allowed commands work (if binaries exist)
 	_, err := executeCommand(ctx, "ruby", "-v")
 	if err != nil {
@@ -182,4 +182,3 @@ func TestExecuteCommand_AllowedCommands(t *testing.T) {
 		}
 	}
 }
-

@@ -139,7 +139,7 @@ func validateCommandSecurity(command string, args []string) error {
 // executeCommand executes a command with the given context and returns its output.
 // It handles timeouts, errors, and provides detailed error messages for debugging.
 // Returns only stdout (not stderr) to avoid parser warnings interfering with JSON parsing.
-// 
+//
 // SECURITY: This function validates all commands and arguments against an allowlist
 // to prevent command injection attacks.
 func executeCommand(ctx context.Context, command string, args ...string) ([]byte, error) {
@@ -215,7 +215,7 @@ func validateScriptIntegrity(scriptPath string) error {
 
 	hash := sha256.Sum256(data)
 	actualHash := hex.EncodeToString(hash[:])
-	
+
 	if actualHash != expectedScriptHash {
 		return fmt.Errorf("script integrity check failed: expected %s, got %s", expectedScriptHash, actualHash)
 	}
@@ -232,7 +232,7 @@ func findSchemaValidatorScript() (string, error) {
 		if err != nil {
 			continue
 		}
-		
+
 		// Check if file exists
 		if _, err := os.Stat(absPath); err != nil {
 			continue

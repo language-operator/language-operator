@@ -151,9 +151,9 @@ func TestExecuteCommand_CommandNotFound(t *testing.T) {
 	}
 
 	// After security changes, command not in allowlist gets security validation error
-	if !strings.Contains(err.Error(), "security validation failed") && 
-	   !strings.Contains(err.Error(), "not found") && 
-	   !strings.Contains(err.Error(), "executable file not found") {
+	if !strings.Contains(err.Error(), "security validation failed") &&
+		!strings.Contains(err.Error(), "not found") &&
+		!strings.Contains(err.Error(), "executable file not found") {
 		t.Errorf("Expected 'security validation failed' or 'not found' error, got: %v", err)
 	}
 }
