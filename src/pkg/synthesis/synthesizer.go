@@ -336,11 +336,11 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	schemaViolations, err := ValidateGeneratedCodeAgainstSchema(ctx, dslCode)
 	if err != nil {
 		s.log.Error(err, "Schema validation execution failed", "agent", req.AgentName)
-		
+
 		duration := time.Since(startTime).Seconds()
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Schema validation execution failed")
-		
+
 		return &AgentSynthesisResponse{
 			DSLCode:          dslCode,
 			Error:            fmt.Sprintf("Schema validation execution failed: %v", err),
