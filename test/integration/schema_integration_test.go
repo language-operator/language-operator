@@ -29,12 +29,7 @@ import (
 // - language_operator gem must be available (via bundle exec aictl)
 func TestSchemaIntegrationEndToEnd(t *testing.T) {
 	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
-	
-	// Check if bundle and aictl are available
-	// Skip gracefully if not (common in CI without Ruby)
-	if _, err := exec.LookPath("bundle"); err != nil {
-		t.Skip("Bundler not available, skipping schema integration test")
-	}
+	return
 
 	// Verify aictl is accessible via bundle exec
 	ctx := context.Background()
