@@ -663,14 +663,14 @@ func TestConfigMapManager_CompressCodeData(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		input           string
+		name             string
+		input            string
 		expectCompressed bool
-		validateFunc    func(t *testing.T, result string, compressed bool)
+		validateFunc     func(t *testing.T, result string, compressed bool)
 	}{
 		{
-			name:            "small code not compressed",
-			input:           "agent 'test' do\nend",
+			name:             "small code not compressed",
+			input:            "agent 'test' do\nend",
 			expectCompressed: false,
 			validateFunc: func(t *testing.T, result string, compressed bool) {
 				assert.False(t, compressed)
@@ -678,8 +678,8 @@ func TestConfigMapManager_CompressCodeData(t *testing.T) {
 			},
 		},
 		{
-			name:            "large code compressed",
-			input:           generateLargeCode(900 * 1024), // 900KB - exceeds threshold
+			name:             "large code compressed",
+			input:            generateLargeCode(900 * 1024), // 900KB - exceeds threshold
 			expectCompressed: true,
 			validateFunc: func(t *testing.T, result string, compressed bool) {
 				assert.True(t, compressed)
@@ -694,7 +694,7 @@ func TestConfigMapManager_CompressCodeData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, compressed, err := cm.compressCodeData(tt.input)
-			
+
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectCompressed, compressed)
 			tt.validateFunc(t, result, compressed)
@@ -712,45 +712,45 @@ func TestConfigMapManager_ValidateConfigMapSize(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
+		name          string
 		configMapName string
-		data         map[string]string
-		compressed   bool
-		originalSize int
-		expectError  bool
-		errorType    string
+		data          map[string]string
+		compressed    bool
+		originalSize  int
+		expectError   bool
+		errorType     string
 	}{
 		{
-			name:         "small configmap valid",
+			name:          "small configmap valid",
 			configMapName: "test-v1",
-			data:         map[string]string{"agent.rb": "agent 'test' do\nend"},
-			compressed:   false,
-			originalSize: 0,
-			expectError:  false,
+			data:          map[string]string{"agent.rb": "agent 'test' do\nend"},
+			compressed:    false,
+			originalSize:  0,
+			expectError:   false,
 		},
 		{
-			name:         "large configmap exceeds limit",
+			name:          "large configmap exceeds limit",
 			configMapName: "test-v1",
-			data:         map[string]string{"agent.rb": generateLargeCode(1200 * 1024)}, // 1.2MB
-			compressed:   false,
-			originalSize: 1200 * 1024,
-			expectError:  true,
-			errorType:    "*synthesis.ConfigMapSizeError",
+			data:          map[string]string{"agent.rb": generateLargeCode(1200 * 1024)}, // 1.2MB
+			compressed:    false,
+			originalSize:  1200 * 1024,
+			expectError:   true,
+			errorType:     "*synthesis.ConfigMapSizeError",
 		},
 		{
-			name:         "compressed large data valid",
+			name:          "compressed large data valid",
 			configMapName: "test-v1",
-			data:         map[string]string{"agent.rb": generateLargeCode(500 * 1024)}, // 500KB compressed
-			compressed:   true,
-			originalSize: 1200 * 1024,
-			expectError:  false,
+			data:          map[string]string{"agent.rb": generateLargeCode(500 * 1024)}, // 500KB compressed
+			compressed:    true,
+			originalSize:  1200 * 1024,
+			expectError:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := cm.validateConfigMapSize(tt.configMapName, tt.data, tt.compressed, tt.originalSize)
-			
+
 			if tt.expectError {
 				require.Error(t, err)
 				if tt.errorType != "" {
@@ -796,9 +796,9 @@ func TestConfigMapManager_CreateVersionedConfigMap_WithCompression(t *testing.T)
 	ctx := context.Background()
 
 	tests := []struct {
-		name        string
-		codeSize    int
-		expectError bool
+		name         string
+		codeSize     int
+		expectError  bool
 		validateFunc func(t *testing.T, cm *corev1.ConfigMap, originalSize int)
 	}{
 		{
@@ -828,7 +828,7 @@ func TestConfigMapManager_CreateVersionedConfigMap_WithCompression(t *testing.T)
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			code := generateLargeCode(tt.codeSize)
-			
+
 			options := &ConfigMapOptions{
 				Code:           code,
 				Version:        int32(i + 1), // Use unique version for each test
@@ -891,12 +891,12 @@ func TestConfigMapSizeError(t *testing.T) {
 func generateLargeCode(size int) string {
 	baseCode := "agent 'test' do\n  # Large generated code\n"
 	padding := "  # This is padding to make the code larger\n"
-	
+
 	code := baseCode
 	for len(code) < size {
 		code += padding
 	}
-	
+
 	code += "end\n"
 	return code[:size] // Truncate to exact size
 }
@@ -905,14 +905,14 @@ func generateLargeCode(size int) string {
 func generateIncompressibleCode(size int) string {
 	baseCode := "agent 'test' do\n"
 	randomPart := ""
-	
+
 	// Generate random variable assignments that won't compress
-	for len(baseCode + randomPart) < size-10 {
+	for len(baseCode+randomPart) < size-10 {
 		varName := fmt.Sprintf("var_%d", len(randomPart)%1000)
 		// Create pseudo-random values using a simple hash
 		value := (len(randomPart)*137 + 42) % 100000
 		randomPart += fmt.Sprintf("  %s = %d\n", varName, value)
 	}
-	
+
 	return baseCode + randomPart + "end\n"
 }
