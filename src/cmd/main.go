@@ -524,7 +524,8 @@ func trimSpace(s string) string {
 }
 
 // loadAllowedRegistries loads the allowed container registries from the operator-config ConfigMap
-func loadAllowedRegistries(ctx context.Context, clientset *kubernetes.Clientset) ([]string, error) {
+// with strict validation to prevent configuration drift from unknown fields
+func loadAllowedRegistries(ctx context.Context, clientset kubernetes.Interface) ([]string, error) {
 	// Get operator namespace from environment (set by k8s downward API or default to kube-system)
 	operatorNamespace := os.Getenv("OPERATOR_NAMESPACE")
 	if operatorNamespace == "" {
@@ -535,6 +536,11 @@ func loadAllowedRegistries(ctx context.Context, clientset *kubernetes.Clientset)
 	configMap, err := clientset.CoreV1().ConfigMaps(operatorNamespace).Get(ctx, "operator-config", metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get operator-config ConfigMap: %w", err)
+	}
+
+	// Validate ConfigMap structure - reject unknown fields to prevent configuration drift
+	if err := validateOperatorConfigMapSchema(configMap.Data); err != nil {
+		return nil, fmt.Errorf("invalid operator-config ConfigMap structure: %w", err)
 	}
 
 	// Parse the allowed-registries data
@@ -558,6 +564,30 @@ func loadAllowedRegistries(ctx context.Context, clientset *kubernetes.Clientset)
 	}
 
 	return registries, nil
+}
+
+// validateOperatorConfigMapSchema validates that the operator-config ConfigMap contains only supported fields
+// This prevents configuration drift and security issues from unknown fields like invalid version fields
+func validateOperatorConfigMapSchema(data map[string]string) error {
+	// Define supported fields for operator-config ConfigMap
+	supportedFields := map[string]bool{
+		"allowed-registries": true,
+	}
+
+	// Check for unknown fields
+	var unknownFields []string
+	for field := range data {
+		if !supportedFields[field] {
+			unknownFields = append(unknownFields, field)
+		}
+	}
+
+	// Reject ConfigMap with unknown fields
+	if len(unknownFields) > 0 {
+		return fmt.Errorf("unsupported fields found: %v. operator-config ConfigMap only supports: allowed-registries", unknownFields)
+	}
+
+	return nil
 }
 
 func hasPrefix(s, prefix string) bool {

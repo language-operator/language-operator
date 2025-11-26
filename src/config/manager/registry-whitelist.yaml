@@ -8,7 +8,12 @@
 # 2. Apply changes: kubectl apply -f config/manager/registry-whitelist.yaml
 # 3. Restart the operator pod to reload the configuration
 #
-# Supported patterns:
+# Supported fields:
+# - allowed-registries: List of registry patterns (one per line)
+#   IMPORTANT: Only this field is supported. Unknown fields like 'version' will cause
+#   operator startup failure to prevent configuration drift and security issues.
+#
+# Supported registry patterns:
 # - Exact domain: docker.io
 # - Wildcard subdomain: *.gcr.io (matches gcr.io, us.gcr.io, eu.gcr.io, etc.)
 #
