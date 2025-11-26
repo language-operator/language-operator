@@ -209,11 +209,11 @@ func NewSynthesizerFromLanguageModel(ctx context.Context, k8sClient client.Clien
 
 	synth := NewSynthesizer(chatModel, log)
 	synth.modelName = model.Spec.ModelName
-	
+
 	// Set up cost tracking if enabled in the model
 	costTracker := NewCostTracker(model)
 	synth.SetCostTracker(costTracker, model.Spec.ModelName)
-	
+
 	return synth, nil
 }
 
