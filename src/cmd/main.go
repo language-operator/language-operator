@@ -506,9 +506,6 @@ func trimSpace(s string) string {
 	return s[start:end]
 }
 
-
-
-
 // getEnvOrDefault returns environment variable value or default if not set
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
