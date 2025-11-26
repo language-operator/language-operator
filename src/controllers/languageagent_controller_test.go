@@ -18,6 +18,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// mockRegistryManager implements RegistryManager for testing
+type mockRegistryManager struct {
+	registries []string
+}
+
+func (m *mockRegistryManager) GetRegistries() []string {
+	if m.registries == nil {
+		return []string{"docker.io", "gcr.io", "ghcr.io"}
+	}
+	return m.registries
+}
+
 // Note: Synthesis is now configured per-agent via ModelRefs
 // Tests that need to verify synthesis behavior require integration tests with actual LanguageModel resources
 
@@ -43,10 +55,11 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -98,10 +111,11 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -157,10 +171,11 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -224,10 +239,11 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -282,10 +298,11 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -342,10 +359,11 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -390,10 +408,11 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -456,10 +475,11 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -528,10 +548,11 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -612,10 +633,11 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -711,10 +733,11 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -813,10 +836,11 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -907,10 +931,11 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -981,10 +1006,11 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -1074,10 +1100,11 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 
@@ -1164,10 +1191,11 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
 	}
 	reconciler.InitializeGatewayCache()
 

@@ -34,9 +34,9 @@ import (
 // LanguageToolReconciler reconciles a LanguageTool object
 type LanguageToolReconciler struct {
 	client.Client
-	Scheme            *runtime.Scheme
-	Log               logr.Logger
-	AllowedRegistries []string
+	Scheme          *runtime.Scheme
+	Log             logr.Logger
+	RegistryManager RegistryManager
 }
 
 // MCPRequest represents an MCP JSON-RPC request
@@ -600,11 +600,12 @@ func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *lan
 // validateImageRegistry validates that the tool's container image registry is in the whitelist
 func (r *LanguageToolReconciler) validateImageRegistry(tool *langopv1alpha1.LanguageTool) error {
 	// Skip validation if no whitelist configured
-	if len(r.AllowedRegistries) == 0 {
+	allowedRegistries := r.RegistryManager.GetRegistries()
+	if len(allowedRegistries) == 0 {
 		return nil
 	}
 
-	return validation.ValidateImageRegistry(tool.Spec.Image, r.AllowedRegistries)
+	return validation.ValidateImageRegistry(tool.Spec.Image, allowedRegistries)
 }
 
 // SetupWithManager sets up the controller with the Manager.

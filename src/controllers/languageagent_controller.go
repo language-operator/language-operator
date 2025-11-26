@@ -54,6 +54,11 @@ const (
 	gatewayAPICacheTTL = 5 * time.Minute
 )
 
+// RegistryManager interface for registry configuration management
+type RegistryManager interface {
+	GetRegistries() []string
+}
+
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
@@ -64,7 +69,7 @@ type LanguageAgentReconciler struct {
 	SelfHealingEnabled     bool
 	RateLimiter            *synthesis.RateLimiter
 	QuotaManager           *synthesis.QuotaManager
-	AllowedRegistries      []string
+	RegistryManager        RegistryManager
 	NetworkPolicyTimeout   time.Duration
 	NetworkPolicyRetries   int
 	gatewayCache           *gatewayAPICache
@@ -3167,11 +3172,12 @@ func (r *LanguageAgentReconciler) extractPodErrorInfo(ctx context.Context, pod *
 // validateImageRegistry validates that the agent's container image registry is in the whitelist
 func (r *LanguageAgentReconciler) validateImageRegistry(agent *langopv1alpha1.LanguageAgent) error {
 	// Skip validation if no whitelist configured
-	if len(r.AllowedRegistries) == 0 {
+	allowedRegistries := r.RegistryManager.GetRegistries()
+	if len(allowedRegistries) == 0 {
 		return nil
 	}
 
-	return validation.ValidateImageRegistry(agent.Spec.Image, r.AllowedRegistries)
+	return validation.ValidateImageRegistry(agent.Spec.Image, allowedRegistries)
 }
 
 // checkHTTPRouteReadiness checks if an HTTPRoute is ready to serve traffic

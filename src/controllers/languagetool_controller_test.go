@@ -38,8 +38,9 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
 	}
 
 	ctx := context.Background()
@@ -97,8 +98,9 @@ func TestLanguageToolController_ServiceMode(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
 	}
 
 	ctx := context.Background()
@@ -233,8 +235,9 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				Build()
 
 			reconciler := &LanguageToolReconciler{
-				Client: fakeClient,
-				Scheme: scheme,
+				Client:          fakeClient,
+				Scheme:          scheme,
+				RegistryManager: &mockRegistryManager{},
 			}
 
 			ctx := context.Background()
@@ -299,8 +302,9 @@ func TestLanguageToolController_NotFoundHandling(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
 	}
 
 	ctx := context.Background()

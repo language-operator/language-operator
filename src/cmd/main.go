@@ -43,6 +43,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers"
 	"github.com/language-operator/language-operator/pkg/cni"
+	registryconfig "github.com/language-operator/language-operator/pkg/config"
 	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
@@ -230,33 +231,15 @@ func main() {
 		cniErr = fmt.Errorf("CNI detection timed out after %v - CNI may still be initializing", networkPolicyTimeout)
 	}
 
-	// Load allowed registries from ConfigMap with timeout
-	registryCtx, registryCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer registryCancel()
-
-	allowedRegistries, err := loadAllowedRegistries(registryCtx, clientset)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			setupLog.Error(err, "registry loading timed out after 30s - check DNS resolution")
-		} else {
-			setupLog.Error(err, "unable to load allowed registries from ConfigMap")
-		}
-		setupLog.Info("Using default registry whitelist")
-		// Fallback to default registries
-		allowedRegistries = []string{
-			"docker.io",
-			"gcr.io",
-			"*.gcr.io",
-			"quay.io",
-			"ghcr.io",
-			"registry.k8s.io",
-			"codeberg.org",
-			"gitlab.com",
-			"*.amazonaws.com",
-			"*.azurecr.io",
-		}
+	// Initialize registry configuration manager for dynamic configuration updates
+	registryManager := registryconfig.NewRegistryConfigManager(clientset)
+	if err := registryManager.StartWatcher(ctx); err != nil {
+		setupLog.Error(err, "failed to start registry configuration watcher")
+		os.Exit(1)
 	}
-	setupLog.Info("Registry whitelist loaded", "registries", allowedRegistries)
+	defer registryManager.Stop()
+
+	setupLog.Info("Registry configuration manager started", "registries", registryManager.GetRegistries())
 
 	// Validate schema compatibility between operator and gem
 	setupLog.Info("Checking schema compatibility with language_operator gem")
@@ -336,10 +319,10 @@ func main() {
 
 	// Setup LanguageTool controller
 	if err = (&controllers.LanguageToolReconciler{
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		Log:               ctrl.Log.WithName("controllers").WithName("LanguageTool"),
-		AllowedRegistries: allowedRegistries,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		Log:             ctrl.Log.WithName("controllers").WithName("LanguageTool"),
+		RegistryManager: registryManager,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
 		os.Exit(1)
@@ -361,7 +344,7 @@ func main() {
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
 		Recorder:             mgr.GetEventRecorderFor("languageagent-controller"),
-		AllowedRegistries:    allowedRegistries,
+		RegistryManager:      registryManager,
 		NetworkPolicyTimeout: networkPolicyTimeout,
 		NetworkPolicyRetries: networkPolicyRetries,
 	}
