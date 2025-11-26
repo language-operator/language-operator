@@ -877,7 +877,7 @@ func validateHost(host string) error {
 		}
 		// Otherwise it might be IPv6, let normal validation handle it
 	}
-	
+
 	if strings.HasSuffix(host, ":") {
 		return fmt.Errorf("host cannot end with colon (missing port): %s", host)
 	}
@@ -931,7 +931,7 @@ func validateHostname(hostname string) error {
 	if hostname == "." {
 		return fmt.Errorf("hostname cannot be single dot")
 	}
-	
+
 	if strings.HasPrefix(hostname, ".") {
 		return fmt.Errorf("hostname cannot start with dot: %s", hostname)
 	}
