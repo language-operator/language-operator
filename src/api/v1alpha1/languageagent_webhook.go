@@ -17,7 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/robfig/cron/v3"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -48,6 +51,7 @@ func (a *LanguageAgent) Default() {
 
 // ValidateCreate implements webhook.Validator
 func (a *LanguageAgent) ValidateCreate() (admission.Warnings, error) {
+	ctx := context.Background()
 	warnings := admission.Warnings{}
 
 	// Basic validation
@@ -55,14 +59,17 @@ func (a *LanguageAgent) ValidateCreate() (admission.Warnings, error) {
 		return warnings, err
 	}
 
-	// Note: Cost validation is performed at the controller level
-	// (admission webhooks run before cost estimation is possible)
+	// Perform cost validation to prevent expensive agents during controller lag
+	if err := a.validateCost(ctx); err != nil {
+		return warnings, err
+	}
 
 	return warnings, nil
 }
 
 // ValidateUpdate implements webhook.Validator
 func (a *LanguageAgent) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	ctx := context.Background()
 	warnings := admission.Warnings{}
 
 	// Basic validation
@@ -70,8 +77,10 @@ func (a *LanguageAgent) ValidateUpdate(old runtime.Object) (admission.Warnings, 
 		return warnings, err
 	}
 
-	// Note: Cost validation is performed at the controller level
-	// (admission webhooks run before cost estimation is possible)
+	// Perform cost validation to prevent expensive agents during controller lag
+	if err := a.validateCost(ctx); err != nil {
+		return warnings, err
+	}
 
 	return warnings, nil
 }
@@ -165,6 +174,74 @@ func (a *LanguageAgent) validateSchedule() error {
 	}
 
 	return nil
+}
+
+// validateCost performs cost validation to prevent expensive agents during controller lag
+func (a *LanguageAgent) validateCost(ctx context.Context) error {
+	// Get cost configuration from environment (same as main.go)
+	maxCostPerDay := 10.0 // Default: $10 per namespace per day
+	if envCost := os.Getenv("MAX_COST_PER_DAY"); envCost != "" {
+		if cost, err := strconv.ParseFloat(envCost, 64); err == nil {
+			maxCostPerDay = cost
+		}
+	}
+
+	// Estimate synthesis cost based on agent configuration
+	estimatedCost := a.estimateSynthesisCost()
+
+	// Simple quota check: if estimated cost exceeds half the daily limit,
+	// reject to prevent expensive agents during controller lag
+	conservativeLimit := maxCostPerDay * 0.5
+	if estimatedCost > conservativeLimit {
+		return fmt.Errorf("agent synthesis would exceed cost quota: estimated cost %.4f USD exceeds conservative limit %.4f USD (50%% of daily limit %.4f USD)",
+			estimatedCost, conservativeLimit, maxCostPerDay)
+	}
+
+	return nil
+}
+
+// estimateSynthesisCost estimates the cost of synthesizing this agent
+func (a *LanguageAgent) estimateSynthesisCost() float64 {
+	// Base cost factors
+	baseCost := 0.01 // Base synthesis cost in USD
+
+	// Factor in instruction complexity (rough token estimation)
+	instructionTokens := len(a.Spec.Instructions) / 4             // Rough 4 chars per token
+	instructionCostFactor := float64(instructionTokens) * 0.00001 // $0.00001 per token
+
+	// Factor in model configuration if using expensive models
+	modelCostFactor := 1.0
+	if a.Spec.ModelRefs != nil {
+		for _, modelRef := range a.Spec.ModelRefs {
+			// Add cost factor for expensive models
+			if modelRef.Name != "" {
+				// Basic heuristic: larger model names often indicate more expensive models
+				if len(modelRef.Name) > 10 {
+					modelCostFactor *= 1.5
+				}
+			}
+		}
+	}
+
+	// Factor in safety config constraints
+	safetyFactor := 1.0
+	if a.Spec.SafetyConfig != nil && a.Spec.SafetyConfig.MaxCostPerExecution != nil {
+		// If user set a high cost limit, synthesis might be more expensive
+		if *a.Spec.SafetyConfig.MaxCostPerExecution > 1.0 {
+			safetyFactor = 1.2
+		}
+	}
+
+	// Calculate total estimated cost
+	totalCost := baseCost + instructionCostFactor
+	totalCost *= modelCostFactor * safetyFactor
+
+	// Cap the estimate to prevent overly conservative blocking
+	if totalCost > 1.0 {
+		totalCost = 1.0
+	}
+
+	return totalCost
 }
 
 // SetupWebhookWithManager sets up the webhook with the Manager
