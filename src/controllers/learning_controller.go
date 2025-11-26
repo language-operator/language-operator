@@ -26,6 +26,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/learning"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 )
@@ -122,6 +123,7 @@ type PatternAnalysis struct {
 	Explanation        string  `json:"explanation"`
 }
 
+// learningTracer is used by helper methods for detailed tracing
 var learningTracer = otel.Tracer("language-operator/learning")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;update;patch
@@ -134,14 +136,31 @@ var learningTracer = otel.Tracer("language-operator/learning")
 
 // Reconcile handles learning events and triggers re-synthesis when appropriate
 func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx, span := learningTracer.Start(ctx, "learning.reconcile")
-	defer span.End()
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguageAgent]{
+		Client:       r.Client,
+		TracerName:   "language-operator/learning-controller",
+		ResourceType: "agent",
+	}
 
-	span.SetAttributes(
-		attribute.String("learning.agent_name", req.Name),
-		attribute.String("learning.namespace", req.Namespace),
-	)
+	agent := &langopv1alpha1.LanguageAgent{}
+	result, err := helper.StartReconcile(ctx, req, agent)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if result == nil {
+		// Resource was deleted
+		return ctrl.Result{}, nil
+	}
 
+	// Capture the error for proper span completion
+	var reconcileErr error
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
+
+	ctx = result.Ctx
+	span := result.Span
 	log := r.Log.WithValues("agent", req.NamespacedName)
 
 	if !r.LearningEnabled {
@@ -151,46 +170,34 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Info("Processing learning event", "agent", req.NamespacedName)
 
-	// Get the LanguageAgent
-	var agent langopv1alpha1.LanguageAgent
-	if err := r.Get(ctx, req.NamespacedName, &agent); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("LanguageAgent not found, may have been deleted")
-			return ctrl.Result{}, nil
-		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get LanguageAgent")
-		return ctrl.Result{}, fmt.Errorf("failed to get LanguageAgent: %w", err)
-	}
-
 	// Check if learning is enabled for this agent
-	if !r.isLearningEnabled(&agent) {
+	if !r.isLearningEnabled(agent) {
 		log.V(1).Info("Learning disabled for this agent")
 		return ctrl.Result{}, nil
 	}
 
 	// Get learning status from ConfigMap
-	learningStatus, err := r.getLearningStatus(ctx, &agent)
+	learningStatus, err := r.getLearningStatus(ctx, agent)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to get learning status")
-		return ctrl.Result{}, fmt.Errorf("failed to get learning status: %w", err)
+		log.Error(err, "Failed to get learning status")
+		reconcileErr = fmt.Errorf("failed to get learning status: %w", err)
+		return ctrl.Result{}, reconcileErr
 	}
 
 	// Check for learning triggers (pattern-based and error-based)
-	learningTriggers, err := r.checkLearningTriggers(ctx, &agent, learningStatus)
+	learningTriggers, err := r.checkLearningTriggers(ctx, agent, learningStatus)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to check learning triggers")
-		return ctrl.Result{}, fmt.Errorf("failed to check learning triggers: %w", err)
+		log.Error(err, "Failed to check learning triggers")
+		reconcileErr = fmt.Errorf("failed to check learning triggers: %w", err)
+		return ctrl.Result{}, reconcileErr
 	}
 
 	// Check for error-triggered re-synthesis
-	errorTriggers, err := r.checkErrorTriggers(ctx, &agent, learningStatus)
+	errorTriggers, err := r.checkErrorTriggers(ctx, agent, learningStatus)
 	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to check error triggers")
-		return ctrl.Result{}, fmt.Errorf("failed to check error triggers: %w", err)
+		log.Error(err, "Failed to check error triggers")
+		reconcileErr = fmt.Errorf("failed to check error triggers: %w", err)
+		return ctrl.Result{}, reconcileErr
 	}
 
 	// Combine all triggers
@@ -199,9 +206,9 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// Process any learning triggers
 	requeue := false
 	for _, trigger := range learningTriggers {
-		if err := r.processLearningTrigger(ctx, &agent, trigger, learningStatus); err != nil {
+		if err := r.processLearningTrigger(ctx, agent, trigger, learningStatus); err != nil {
 			log.Error(err, "Failed to process learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
-			r.Recorder.Event(&agent, corev1.EventTypeWarning, "LearningFailed",
+			r.Recorder.Event(agent, corev1.EventTypeWarning, "LearningFailed",
 				fmt.Sprintf("Failed to process learning for task %s: %v", trigger.TaskName, err))
 
 			// Record learning failure metrics
@@ -220,13 +227,14 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Update learning status
-	if err := r.updateLearningStatus(ctx, &agent, learningStatus); err != nil {
-		span.RecordError(err)
-		return ctrl.Result{}, fmt.Errorf("failed to update learning status: %w", err)
+	if err := r.updateLearningStatus(ctx, agent, learningStatus); err != nil {
+		log.Error(err, "Failed to update learning status")
+		reconcileErr = fmt.Errorf("failed to update learning status: %w", err)
+		return ctrl.Result{}, reconcileErr
 	}
 
+	// Add learning-specific attributes to span
 	span.SetAttributes(attribute.Int("learning.triggers_processed", len(learningTriggers)))
-	span.SetStatus(codes.Ok, "Learning reconciliation completed")
 
 	// Requeue to check for new learning opportunities
 	requeueAfter := r.LearningInterval
