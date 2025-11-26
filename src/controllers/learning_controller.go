@@ -34,20 +34,20 @@ import (
 // LearningReconciler reconciles learning events and triggers re-synthesis
 type LearningReconciler struct {
 	client.Client
-	Scheme               *runtime.Scheme
-	Log                  logr.Logger
-	Recorder             record.EventRecorder
-	Synthesizer          synthesis.AgentSynthesizer       // For re-synthesis with task_synthesis.tmpl
-	ConfigMapManager     *synthesis.ConfigMapManager      // For versioned ConfigMap management
-	MetricsCollector     *learning.MetricsCollector       // For learning metrics collection
-	EventProcessor       *learning.LearningEventProcessor // For processing learning events with metrics
-	TelemetryAdapter     telemetry.TelemetryAdapter       // For querying historical execution data
+	Scheme                *runtime.Scheme
+	Log                   logr.Logger
+	Recorder              record.EventRecorder
+	Synthesizer           synthesis.AgentSynthesizer                         // For re-synthesis with task_synthesis.tmpl
+	ConfigMapManager      *synthesis.ConfigMapManager                        // For versioned ConfigMap management
+	MetricsCollector      *learning.MetricsCollector                         // For learning metrics collection
+	EventProcessor        *learning.LearningEventProcessor                   // For processing learning events with metrics
+	TelemetryAdapter      telemetry.TelemetryAdapter                         // For querying historical execution data
 	SuccessRateAggregator map[string]*learning.LearningSuccessRateAggregator // Per-agent success rate tracking
-	LearningEnabled      bool
-	LearningThreshold    int32         // Number of execution traces before triggering learning
-	LearningInterval     time.Duration // Minimum interval between learning attempts
-	MaxVersions          int32         // Maximum number of ConfigMap versions to keep
-	PatternConfidenceMin float64       // Minimum confidence threshold for pattern detection
+	LearningEnabled       bool
+	LearningThreshold     int32         // Number of execution traces before triggering learning
+	LearningInterval      time.Duration // Minimum interval between learning attempts
+	MaxVersions           int32         // Maximum number of ConfigMap versions to keep
+	PatternConfidenceMin  float64       // Minimum confidence threshold for pattern detection
 
 	// Error-triggered re-synthesis configuration
 	ErrorFailureThreshold       int32         // Number of consecutive failures before triggering re-synthesis (default: 3)
