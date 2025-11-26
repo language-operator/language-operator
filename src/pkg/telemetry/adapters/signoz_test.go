@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -447,6 +448,72 @@ func TestSignozAdapter_Available(t *testing.T) {
 		available = adapter.Available()
 		assert.True(t, available)
 		assert.Equal(t, 2, callCount)
+	})
+
+	t.Run("Concurrent cache access race condition", func(t *testing.T) {
+		var callCount int
+		var callCountMutex sync.Mutex
+		
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			callCountMutex.Lock()
+			callCount++
+			callCountMutex.Unlock()
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{"version": "0.12.0"})
+		}))
+		defer server.Close()
+
+		adapter, err := NewSignozAdapter(server.URL, "test-api-key", 30*time.Second)
+		require.NoError(t, err)
+
+		// Set up deterministic time and long cache TTL for testing
+		baseTime := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
+		adapter.availabilityCache.ttl = 10 * time.Second // Long TTL
+		adapter.availabilityCache.timeNow = func() time.Time {
+			return baseTime
+		}
+
+		// First call to populate cache
+		first := adapter.Available()
+		assert.True(t, first)
+		
+		// Get initial call count
+		callCountMutex.Lock()
+		initialCalls := callCount
+		callCountMutex.Unlock()
+
+		// Run multiple goroutines concurrently to test for race conditions
+		const numGoroutines = 20
+		const numCallsPerGoroutine = 5
+
+		var wg sync.WaitGroup
+		results := make([]bool, numGoroutines*numCallsPerGoroutine)
+
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(goroutineID int) {
+				defer wg.Done()
+				for j := 0; j < numCallsPerGoroutine; j++ {
+					// All calls should return same result (true) due to caching
+					result := adapter.Available()
+					results[goroutineID*numCallsPerGoroutine+j] = result
+				}
+			}(i)
+		}
+
+		wg.Wait()
+
+		// Verify all calls returned true (consistent cache behavior)
+		for i, result := range results {
+			assert.True(t, result, "Call %d should return true", i)
+		}
+
+		// Verify cache was effective (should be no additional calls after initial population)
+		callCountMutex.Lock()
+		finalCalls := callCount
+		callCountMutex.Unlock()
+		
+		assert.Equal(t, initialCalls, finalCalls, "Should not make additional HTTP requests due to caching")
 	})
 }
 

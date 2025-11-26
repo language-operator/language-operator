@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/language-operator/language-operator/pkg/telemetry"
@@ -80,6 +81,7 @@ type SignozAdapter struct {
 	// availabilityCache caches the result of Available() checks
 	// to avoid frequent health checks
 	availabilityCache struct {
+		sync.RWMutex
 		value     bool
 		timestamp time.Time
 		ttl       time.Duration
@@ -784,17 +786,23 @@ func (s *SignozAdapter) extractMetricUnit(labels map[string]string) string {
 func (s *SignozAdapter) Available() bool {
 	now := s.availabilityCache.timeNow()
 
-	// Check cache first
+	// Check cache first with read lock
+	s.availabilityCache.RLock()
 	if now.Sub(s.availabilityCache.timestamp) < s.availabilityCache.ttl {
-		return s.availabilityCache.value
+		value := s.availabilityCache.value
+		s.availabilityCache.RUnlock()
+		return value
 	}
+	s.availabilityCache.RUnlock()
 
 	// Perform health check
 	available := s.checkAvailability()
 
-	// Update cache
+	// Update cache with write lock
+	s.availabilityCache.Lock()
 	s.availabilityCache.value = available
 	s.availabilityCache.timestamp = now
+	s.availabilityCache.Unlock()
 
 	return available
 }
