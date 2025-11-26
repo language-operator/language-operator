@@ -85,6 +85,95 @@ func TestNewSignozAdapter(t *testing.T) {
 		assert.Contains(t, err.Error(), "endpoint URL must include host")
 	})
 
+	t.Run("Invalid URL empty host with port", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://:3000", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "host cannot start with colon")
+	})
+
+	t.Run("Invalid URL host with empty port", func(t *testing.T) {
+		_, err := NewSignozAdapter("http://localhost:", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "host cannot end with colon")
+	})
+
+	t.Run("Invalid URL port out of range", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://example.com:99999", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "port must be ≤65535")
+	})
+
+	t.Run("Invalid URL port zero", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://example.com:0", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "port must be positive")
+	})
+
+	t.Run("Invalid hostname single dot", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://.", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "hostname cannot be single dot")
+	})
+
+	t.Run("Invalid hostname leading dot", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://.example.com", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "hostname cannot start with dot")
+	})
+
+	t.Run("Valid IPv6 with port", func(t *testing.T) {
+		adapter, err := NewSignozAdapter("https://[::1]:3000", "test-api-key", 30*time.Second)
+
+		require.NoError(t, err)
+		assert.Equal(t, "https://[::1]:3000", adapter.endpoint)
+	})
+
+	t.Run("Valid IPv6 without port", func(t *testing.T) {
+		adapter, err := NewSignozAdapter("http://::1", "test-api-key", 30*time.Second)
+
+		require.NoError(t, err)
+		assert.Equal(t, "http://::1", adapter.endpoint)
+	})
+
+	t.Run("Invalid IPv6 in brackets", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://[invalid::ipv6::address]:3000", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "hostname contains colon but is not valid IPv6")
+	})
+
+	t.Run("Invalid IPv4 in IPv6 brackets", func(t *testing.T) {
+		_, err := NewSignozAdapter("https://[192.168.1.1]:3000", "test-api-key", 30*time.Second)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "IPv4 address in IPv6 brackets")
+	})
+
+	t.Run("Valid edge case ports", func(t *testing.T) {
+		testCases := []struct {
+			port string
+			url  string
+		}{
+			{"1", "https://example.com:1"},
+			{"65535", "https://example.com:65535"},
+			{"8080", "https://example.com:8080"},
+		}
+
+		for _, tc := range testCases {
+			t.Run("port "+tc.port, func(t *testing.T) {
+				adapter, err := NewSignozAdapter(tc.url, "test-api-key", 30*time.Second)
+				require.NoError(t, err)
+				assert.Equal(t, tc.url, adapter.endpoint)
+			})
+		}
+	})
+
 	t.Run("Valid URL with port", func(t *testing.T) {
 		adapter, err := NewSignozAdapter("https://signoz.example.com:3000", "test-api-key", 30*time.Second)
 
@@ -973,4 +1062,280 @@ func TestDefaultMaxResponseSize(t *testing.T) {
 	adapter, err := NewSignozAdapter("https://example.com", "key", 30*time.Second)
 	require.NoError(t, err)
 	assert.Equal(t, int64(DefaultMaxResponseSize), adapter.maxResponseSize)
+}
+
+func TestValidateHost(t *testing.T) {
+	testCases := []struct {
+		name        string
+		host        string
+		expectError bool
+		errorText   string
+	}{
+		{
+			name:        "valid hostname",
+			host:        "example.com",
+			expectError: false,
+		},
+		{
+			name:        "valid hostname with port",
+			host:        "example.com:3000",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv4",
+			host:        "192.168.1.1",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv4 with port",
+			host:        "192.168.1.1:8080",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv6 with brackets and port",
+			host:        "[::1]:3000",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv6 without brackets (no port)",
+			host:        "::1",
+			expectError: false,
+		},
+		{
+			name:        "empty host",
+			host:        "",
+			expectError: true,
+			errorText:   "host cannot be empty",
+		},
+		{
+			name:        "host starting with colon",
+			host:        ":3000",
+			expectError: true,
+			errorText:   "host cannot start with colon",
+		},
+		{
+			name:        "host ending with colon",
+			host:        "localhost:",
+			expectError: true,
+			errorText:   "host cannot end with colon",
+		},
+		{
+			name:        "invalid port range high",
+			host:        "example.com:99999",
+			expectError: true,
+			errorText:   "port must be ≤65535",
+		},
+		{
+			name:        "invalid port zero",
+			host:        "example.com:0",
+			expectError: true,
+			errorText:   "port must be positive",
+		},
+		{
+			name:        "invalid port negative",
+			host:        "example.com:-1",
+			expectError: true,
+			errorText:   "invalid port",
+		},
+		{
+			name:        "single dot hostname",
+			host:        ".",
+			expectError: true,
+			errorText:   "hostname cannot be single dot",
+		},
+		{
+			name:        "hostname starting with dot",
+			host:        ".example.com",
+			expectError: true,
+			errorText:   "hostname cannot start with dot",
+		},
+		{
+			name:        "invalid IPv6 in brackets",
+			host:        "[invalid::ipv6]:3000",
+			expectError: true,
+			errorText:   "hostname contains colon but is not valid IPv6",
+		},
+		{
+			name:        "IPv4 in IPv6 brackets",
+			host:        "[192.168.1.1]:3000",
+			expectError: true,
+			errorText:   "IPv4 address in IPv6 brackets",
+		},
+		{
+			name:        "valid boundary ports",
+			host:        "example.com:1",
+			expectError: false,
+		},
+		{
+			name:        "valid max port",
+			host:        "example.com:65535",
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateHost(tc.host)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for host: %s", tc.host)
+				if tc.errorText != "" {
+					assert.Contains(t, err.Error(), tc.errorText)
+				}
+			} else {
+				assert.NoError(t, err, "Expected no error for host: %s", tc.host)
+			}
+		})
+	}
+}
+
+func TestValidateHostname(t *testing.T) {
+	testCases := []struct {
+		name        string
+		hostname    string
+		expectError bool
+		errorText   string
+	}{
+		{
+			name:        "valid hostname",
+			hostname:    "example.com",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv4",
+			hostname:    "192.168.1.1",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv6",
+			hostname:    "::1",
+			expectError: false,
+		},
+		{
+			name:        "valid IPv6 with brackets",
+			hostname:    "[::1]",
+			expectError: false,
+		},
+		{
+			name:        "empty hostname",
+			hostname:    "",
+			expectError: true,
+			errorText:   "hostname cannot be empty",
+		},
+		{
+			name:        "single dot",
+			hostname:    ".",
+			expectError: true,
+			errorText:   "hostname cannot be single dot",
+		},
+		{
+			name:        "leading dot",
+			hostname:    ".example.com",
+			expectError: true,
+			errorText:   "hostname cannot start with dot",
+		},
+		{
+			name:        "invalid colon usage",
+			hostname:    "invalid:colon:usage",
+			expectError: true,
+			errorText:   "hostname contains colon but is not valid IPv6",
+		},
+		{
+			name:        "invalid IPv6 brackets",
+			hostname:    "[invalid::ipv6]",
+			expectError: true,
+			errorText:   "invalid IPv6 address",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateHostname(tc.hostname)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for hostname: %s", tc.hostname)
+				if tc.errorText != "" {
+					assert.Contains(t, err.Error(), tc.errorText)
+				}
+			} else {
+				assert.NoError(t, err, "Expected no error for hostname: %s", tc.hostname)
+			}
+		})
+	}
+}
+
+func TestValidatePort(t *testing.T) {
+	testCases := []struct {
+		name        string
+		port        string
+		expectError bool
+		errorText   string
+	}{
+		{
+			name:        "valid port",
+			port:        "3000",
+			expectError: false,
+		},
+		{
+			name:        "valid port 1",
+			port:        "1",
+			expectError: false,
+		},
+		{
+			name:        "valid port max",
+			port:        "65535",
+			expectError: false,
+		},
+		{
+			name:        "empty port",
+			port:        "",
+			expectError: true,
+			errorText:   "port cannot be empty",
+		},
+		{
+			name:        "non-numeric port",
+			port:        "abc",
+			expectError: true,
+			errorText:   "port must be numeric",
+		},
+		{
+			name:        "port zero",
+			port:        "0",
+			expectError: true,
+			errorText:   "port must be positive",
+		},
+		{
+			name:        "negative port",
+			port:        "-1",
+			expectError: true,
+			errorText:   "port must be positive",
+		},
+		{
+			name:        "port too high",
+			port:        "99999",
+			expectError: true,
+			errorText:   "port must be ≤65535",
+		},
+		{
+			name:        "port with decimal",
+			port:        "3000.5",
+			expectError: true,
+			errorText:   "port must be numeric",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validatePort(tc.port)
+
+			if tc.expectError {
+				assert.Error(t, err, "Expected error for port: %s", tc.port)
+				if tc.errorText != "" {
+					assert.Contains(t, err.Error(), tc.errorText)
+				}
+			} else {
+				assert.NoError(t, err, "Expected no error for port: %s", tc.port)
+			}
+		})
+	}
 }

@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -167,6 +168,11 @@ func NewSignozAdapterWithMaxSize(endpoint, apiKey string, timeout time.Duration,
 	}
 	if parsedURL.Host == "" {
 		return nil, fmt.Errorf("endpoint URL must include host: %s", endpoint)
+	}
+
+	// Enhanced validation to prevent runtime panics
+	if err := validateHost(parsedURL.Host); err != nil {
+		return nil, fmt.Errorf("invalid endpoint host: %w", err)
 	}
 
 	// Remove trailing slash from endpoint for consistent URL building
@@ -841,4 +847,142 @@ func (s *SignozAdapter) checkAvailability() bool {
 // ClickHouse string literals need single quotes escaped.
 func escapeClickHouseString(s string) string {
 	return strings.ReplaceAll(s, "'", "''")
+}
+
+// validateHost performs comprehensive host validation to prevent runtime panics.
+//
+// Validates that the host portion of a URL is properly formatted and will not
+// cause issues during HTTP client operations. This catches edge cases that
+// url.Parse() accepts but cause panics in http.Client.
+//
+// Common problematic patterns caught:
+//   - Empty host with port: ":3000"
+//   - Host with trailing colon: "localhost:"
+//   - Invalid port numbers: "localhost:99999"
+//   - Malformed IPv6: "[::1"
+//   - Empty hostname: "."
+//
+// Returns nil if host is valid, error describing the problem otherwise.
+func validateHost(host string) error {
+	if host == "" {
+		return fmt.Errorf("host cannot be empty")
+	}
+
+	// Check for common malformed patterns
+	// If starts with colon, check if it's just a port (invalid) or valid IPv6
+	if strings.HasPrefix(host, ":") {
+		// If it's just a port number, that's invalid
+		if len(host) > 1 && host[1] >= '0' && host[1] <= '9' {
+			return fmt.Errorf("host cannot start with colon (empty hostname): %s", host)
+		}
+		// Otherwise it might be IPv6, let normal validation handle it
+	}
+	
+	if strings.HasSuffix(host, ":") {
+		return fmt.Errorf("host cannot end with colon (missing port): %s", host)
+	}
+
+	// Split host and port for individual validation
+	hostname, port, err := net.SplitHostPort(host)
+	hadBrackets := strings.HasPrefix(host, "[") && strings.Contains(host, "]:")
+	if err != nil {
+		// If SplitHostPort fails, treat the entire host as hostname (no port)
+		hostname = host
+		port = ""
+		hadBrackets = strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]")
+	}
+
+	// Validate hostname if present
+	if hostname != "" {
+		if err := validateHostname(hostname); err != nil {
+			return fmt.Errorf("invalid hostname: %w", err)
+		}
+		// Special check: if hostname came from IPv6 brackets, ensure it's actually IPv6
+		if hadBrackets {
+			if ip := net.ParseIP(hostname); ip == nil || ip.To4() != nil {
+				return fmt.Errorf("IPv4 address in IPv6 brackets: [%s]", hostname)
+			}
+		}
+	} else if port != "" {
+		// Port specified but no hostname
+		return fmt.Errorf("port specified but hostname is empty: %s", host)
+	}
+
+	// Validate port if present
+	if port != "" {
+		if err := validatePort(port); err != nil {
+			return fmt.Errorf("invalid port: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// validateHostname validates that a hostname is properly formatted.
+//
+// This performs basic validation to catch common issues that could cause
+// DNS resolution or connection failures.
+func validateHostname(hostname string) error {
+	if hostname == "" {
+		return fmt.Errorf("hostname cannot be empty")
+	}
+
+	// Check for obviously invalid patterns
+	if hostname == "." {
+		return fmt.Errorf("hostname cannot be single dot")
+	}
+	
+	if strings.HasPrefix(hostname, ".") {
+		return fmt.Errorf("hostname cannot start with dot: %s", hostname)
+	}
+
+	// IPv6 addresses should be bracketed when used with ports
+	// If we see unbracketed IPv6, it's fine for hostname-only
+	if strings.Contains(hostname, ":") && !strings.HasPrefix(hostname, "[") {
+		// Could be IPv6 without brackets - check if it parses as IP
+		if ip := net.ParseIP(hostname); ip == nil {
+			return fmt.Errorf("hostname contains colon but is not valid IPv6: %s", hostname)
+		}
+		// It's valid IPv6, which is fine for hostname-only (will work with http.Client)
+		return nil
+	}
+
+	// Additional IPv6 validation for bracketed form (only when no port splitting occurred)
+	if strings.HasPrefix(hostname, "[") && strings.HasSuffix(hostname, "]") {
+		ipv6 := hostname[1 : len(hostname)-1]
+		ip := net.ParseIP(ipv6)
+		if ip == nil {
+			return fmt.Errorf("invalid IPv6 address: %s", hostname)
+		}
+		if ip.To4() != nil {
+			return fmt.Errorf("IPv4 address in IPv6 brackets: %s", hostname)
+		}
+	}
+
+	return nil
+}
+
+// validatePort validates that a port number is within valid range.
+//
+// Port numbers must be in range 1-65535. Port 0 is technically valid in some
+// contexts but causes issues with HTTP clients, so we reject it.
+func validatePort(portStr string) error {
+	if portStr == "" {
+		return fmt.Errorf("port cannot be empty")
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return fmt.Errorf("port must be numeric: %s", portStr)
+	}
+
+	if port < 1 {
+		return fmt.Errorf("port must be positive (1-65535), got: %d", port)
+	}
+
+	if port > 65535 {
+		return fmt.Errorf("port must be ≤65535, got: %d", port)
+	}
+
+	return nil
 }
