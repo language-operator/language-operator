@@ -50,10 +50,10 @@ type ConfigMapSizeError struct {
 
 func (e *ConfigMapSizeError) Error() string {
 	if e.Compressed {
-		return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes (compressed from %d) > %d bytes max", 
+		return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes (compressed from %d) > %d bytes max",
 			e.Name, e.ActualSize, e.OriginalSize, e.MaxSize)
 	}
-	return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes > %d bytes max", 
+	return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes > %d bytes max",
 		e.Name, e.ActualSize, e.MaxSize)
 }
 
@@ -88,7 +88,7 @@ type ConfigMapVersion struct {
 // compressCodeData compresses code data if it exceeds the threshold
 func (cm *ConfigMapManager) compressCodeData(code string) (string, bool, error) {
 	originalSize := len(code)
-	
+
 	// Only compress if code exceeds threshold
 	if originalSize < CompressionThreshold {
 		return code, false, nil
@@ -97,44 +97,44 @@ func (cm *ConfigMapManager) compressCodeData(code string) (string, bool, error) 
 	// Apply gzip compression
 	var compressedData bytes.Buffer
 	writer := gzip.NewWriter(&compressedData)
-	
+
 	if _, err := writer.Write([]byte(code)); err != nil {
 		return "", false, fmt.Errorf("failed to write to gzip compressor: %w", err)
 	}
-	
+
 	if err := writer.Close(); err != nil {
 		return "", false, fmt.Errorf("failed to close gzip compressor: %w", err)
 	}
 
 	// Base64 encode for safe storage in ConfigMap
 	compressed := base64.StdEncoding.EncodeToString(compressedData.Bytes())
-	
+
 	// Add compression prefix
 	finalData := CompressionPrefix + compressed
-	
+
 	compressionRatio := float64(len(finalData)) / float64(originalSize)
-	
+
 	cm.Log.V(1).Info("Compressed ConfigMap data",
 		"original_size", originalSize,
 		"compressed_size", len(finalData),
 		"compression_ratio", fmt.Sprintf("%.2f", compressionRatio))
-	
+
 	return finalData, true, nil
 }
 
 // validateConfigMapSize validates that ConfigMap data doesn't exceed Kubernetes limits
 func (cm *ConfigMapManager) validateConfigMapSize(name string, data map[string]string, compressed bool, originalSize int) error {
 	totalSize := 0
-	
+
 	// Calculate total size of all data fields
 	for key, value := range data {
 		totalSize += len(key) + len(value)
 	}
-	
+
 	// Add metadata overhead estimation (labels, annotations, etc.)
 	metadataOverhead := 2048 // Conservative estimate
 	totalSize += metadataOverhead
-	
+
 	if totalSize > MaxConfigMapSize {
 		return &ConfigMapSizeError{
 			Name:         name,
@@ -144,7 +144,7 @@ func (cm *ConfigMapManager) validateConfigMapSize(name string, data map[string]s
 			OriginalSize: originalSize,
 		}
 	}
-	
+
 	// Log size information for monitoring
 	sizeUtilization := float64(totalSize) / float64(MaxConfigMapSize)
 	cm.Log.V(1).Info("ConfigMap size validation passed",
@@ -153,7 +153,7 @@ func (cm *ConfigMapManager) validateConfigMapSize(name string, data map[string]s
 		"max_size", MaxConfigMapSize,
 		"utilization", fmt.Sprintf("%.1f%%", sizeUtilization*100),
 		"compressed", compressed)
-	
+
 	return nil
 }
 
@@ -270,10 +270,10 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 		"original_size", originalSize,
 		"compressed", compressed,
 	}
-	
+
 	if compressed {
 		compressionRatio := float64(len(processedCode)) / float64(originalSize)
-		logFields = append(logFields, 
+		logFields = append(logFields,
 			"final_size", len(processedCode),
 			"compression_ratio", fmt.Sprintf("%.2f", compressionRatio),
 			"size_savings", originalSize-len(processedCode))
