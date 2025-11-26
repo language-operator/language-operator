@@ -11,8 +11,8 @@
 - ✅ **Issue #52**: ConfigMap version validation allows zero/negative versions - **RESOLVED** (Nov 26) - Added CurrentVersion validation in learning controller
 
 ### Priority 3: Core Controller Stability (Ready - Nov 26)
+- ✅ **Issue #71**: Learning controller status update failures - **RESOLVED** (Nov 26) - Fixed JSON serialization, ConfigMap size validation, and status data rotation
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
-- 🎯 **Issue #71**: Learning controller status update failures - **READY**  
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
 
 ### Lower Priority: Security Edge Cases (Backlog)

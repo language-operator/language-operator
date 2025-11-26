@@ -379,42 +379,42 @@ func (r *LearningReconciler) parseTaskLearningStatusLegacy(data string) (*TaskLe
 // validateConfigMapSize validates that the ConfigMap won't exceed Kubernetes size limits
 func (r *LearningReconciler) validateConfigMapSize(configMap *corev1.ConfigMap) error {
 	const maxConfigMapSize = 800 * 1024 // 800KB (staying under 1MB limit with margin)
-	
+
 	totalSize := 0
-	
+
 	// Calculate size of all data entries
 	for key, value := range configMap.Data {
 		totalSize += len(key) + len(value)
 	}
-	
+
 	// Add metadata overhead (rough estimate)
 	totalSize += len(configMap.Name) + len(configMap.Namespace) + 1024 // metadata overhead
-	
+
 	if totalSize > maxConfigMapSize {
 		return fmt.Errorf("ConfigMap size (%d bytes) exceeds limit (%d bytes)", totalSize, maxConfigMapSize)
 	}
-	
+
 	return nil
 }
 
 // cleanupStatusData removes old or less important status data to reduce ConfigMap size
 func (r *LearningReconciler) cleanupStatusData(configMap *corev1.ConfigMap, agent *langopv1alpha1.LanguageAgent) (*corev1.ConfigMap, error) {
-	r.Log.Info("Attempting to cleanup learning status data to reduce ConfigMap size", 
+	r.Log.Info("Attempting to cleanup learning status data to reduce ConfigMap size",
 		"configmap", configMap.Name, "current_entries", len(configMap.Data))
-	
+
 	// Parse all status entries to prioritize which to keep
 	type statusEntry struct {
 		key    string
 		status *TaskLearningStatus
 		size   int
 	}
-	
+
 	var entries []statusEntry
 	for key, value := range configMap.Data {
 		if !strings.HasSuffix(key, "-status") {
 			continue // Keep non-status data
 		}
-		
+
 		status, err := r.parseTaskLearningStatus(value)
 		if err != nil {
 			r.Log.Error(err, "Failed to parse status during cleanup", "key", key)
@@ -422,14 +422,14 @@ func (r *LearningReconciler) cleanupStatusData(configMap *corev1.ConfigMap, agen
 			delete(configMap.Data, key)
 			continue
 		}
-		
+
 		entries = append(entries, statusEntry{
 			key:    key,
 			status: status,
 			size:   len(key) + len(value),
 		})
 	}
-	
+
 	// Sort by importance: symbolic tasks first (they're learned), then by trace count
 	sort.Slice(entries, func(i, j int) bool {
 		// Prioritize symbolic tasks (already learned)
@@ -439,16 +439,16 @@ func (r *LearningReconciler) cleanupStatusData(configMap *corev1.ConfigMap, agen
 		if !entries[i].status.IsSymbolic && entries[j].status.IsSymbolic {
 			return false
 		}
-		
+
 		// Then prioritize by trace count (more traces = more valuable)
 		return entries[i].status.TraceCount > entries[j].status.TraceCount
 	})
-	
+
 	// Keep most important entries that fit within size limit
 	const targetSize = 600 * 1024 // Target 600KB to leave room for growth
 	currentSize := 0
 	cleanedData := make(map[string]string)
-	
+
 	// Copy non-status data first
 	for key, value := range configMap.Data {
 		if !strings.HasSuffix(key, "-status") {
@@ -456,27 +456,27 @@ func (r *LearningReconciler) cleanupStatusData(configMap *corev1.ConfigMap, agen
 			currentSize += len(key) + len(value)
 		}
 	}
-	
+
 	// Add status entries in priority order until we hit size limit
 	entriesKept := 0
 	for _, entry := range entries {
-		if currentSize + entry.size > targetSize {
+		if currentSize+entry.size > targetSize {
 			break // Would exceed target size
 		}
-		
+
 		cleanedData[entry.key] = configMap.Data[entry.key]
 		currentSize += entry.size
 		entriesKept++
 	}
-	
+
 	configMap.Data = cleanedData
-	
+
 	r.Log.Info("Cleaned up learning status data",
 		"original_entries", len(entries),
 		"kept_entries", entriesKept,
 		"removed_entries", len(entries)-entriesKept,
 		"estimated_size_kb", currentSize/1024)
-	
+
 	return configMap, nil
 }
 
@@ -2035,7 +2035,7 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 	if err := r.validateConfigMapSize(configMap); err != nil {
 		span.RecordError(err)
 		r.Log.Error(err, "ConfigMap size validation failed", "configmap", configMapName)
-		
+
 		// Attempt to clean up old status data and retry
 		if cleanedConfigMap, cleanupErr := r.cleanupStatusData(configMap, agent); cleanupErr == nil {
 			configMap = cleanedConfigMap
@@ -2060,14 +2060,14 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 		r.Log.V(1).Info("Creating new learning status ConfigMap", "configmap", configMapName)
 		if err := r.Create(ctx, configMap); err != nil {
 			span.RecordError(err)
-			r.Log.Error(err, "Failed to create learning status ConfigMap", 
+			r.Log.Error(err, "Failed to create learning status ConfigMap",
 				"configmap", configMapName, "agent", agent.Name)
 			return fmt.Errorf("failed to create learning status ConfigMap: %w", err)
 		}
 		r.Log.Info("Successfully created learning status ConfigMap", "configmap", configMapName)
 	} else if err != nil {
 		span.RecordError(err)
-		r.Log.Error(err, "Failed to get learning status ConfigMap", 
+		r.Log.Error(err, "Failed to get learning status ConfigMap",
 			"configmap", configMapName, "agent", agent.Name)
 		return fmt.Errorf("failed to get learning status ConfigMap: %w", err)
 	} else {
@@ -2075,11 +2075,11 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 		existing.Data = configMap.Data
 		if err := r.Update(ctx, &existing); err != nil {
 			span.RecordError(err)
-			r.Log.Error(err, "Failed to update learning status ConfigMap", 
+			r.Log.Error(err, "Failed to update learning status ConfigMap",
 				"configmap", configMapName, "agent", agent.Name, "data_entries", len(configMap.Data))
 			return fmt.Errorf("failed to update learning status ConfigMap: %w", err)
 		}
-		r.Log.Info("Successfully updated learning status ConfigMap", 
+		r.Log.Info("Successfully updated learning status ConfigMap",
 			"configmap", configMapName, "status_entries", len(learningStatus))
 	}
 
@@ -2088,14 +2088,14 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 	for key, value := range configMap.Data {
 		totalSize += len(key) + len(value)
 	}
-	
+
 	span.SetAttributes(
 		attribute.Int("learning.status_entries", len(learningStatus)),
 		attribute.Int("learning.configmap_size_bytes", totalSize),
 		attribute.Int("learning.configmap_size_kb", totalSize/1024),
 		attribute.Bool("learning.status_update_success", true),
 	)
-	
+
 	return nil
 }
 
