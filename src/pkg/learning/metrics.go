@@ -418,7 +418,7 @@ func (mc *MetricsCollector) RecordConfigMapSizeExceeded(agentName, taskName stri
 
 	// Record size limit violation metric
 	synthesis.RecordConfigMapSizeViolation(agentName, actualSize, maxSize, compressed)
-	
+
 	// Calculate size utilization percentage
 	utilization := float64(actualSize) / float64(maxSize)
 

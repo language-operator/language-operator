@@ -878,16 +878,16 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 
 	if _, err := r.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, configMapOptions); err != nil {
 		span.RecordError(err)
-		
+
 		// Record learning failure event with specific error details
-		errorMsg := fmt.Sprintf("Failed to create ConfigMap v%d for task %s: %v", 
+		errorMsg := fmt.Sprintf("Failed to create ConfigMap v%d for task %s: %v",
 			newVersion, trigger.TaskName, err)
 		r.Recorder.Event(agent, corev1.EventTypeWarning, "LearningConfigMapFailed", errorMsg)
-		
+
 		// Update task status to reflect the failure
 		taskStatus.LearningAttempts++
 		taskStatus.LastLearningAttempt = time.Now()
-		
+
 		// If this was a size limit error, record specific metrics
 		if sizeErr, ok := err.(*synthesis.ConfigMapSizeError); ok {
 			r.Log.Error(err, "ConfigMap size limit exceeded during learning",
@@ -898,20 +898,20 @@ func (r *LearningReconciler) processLearningTrigger(ctx context.Context, agent *
 				"limit", sizeErr.MaxSize,
 				"compressed", sizeErr.Compressed,
 				"original_size", sizeErr.OriginalSize)
-			
+
 			// Record size limit metric if collector available
 			if r.MetricsCollector != nil {
 				r.MetricsCollector.RecordConfigMapSizeExceeded(
-					agent.Name, 
-					trigger.TaskName, 
-					sizeErr.ActualSize, 
+					agent.Name,
+					trigger.TaskName,
+					sizeErr.ActualSize,
 					sizeErr.MaxSize,
 					sizeErr.Compressed)
 			}
-			
+
 			return fmt.Errorf("ConfigMap size limit exceeded: %w", err)
 		}
-		
+
 		return fmt.Errorf("failed to create versioned ConfigMap: %w", err)
 	}
 
@@ -2013,7 +2013,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 
 	// Convert telemetry spans to TaskTrace format
 	traces := r.convertSpansToTaskTraces(spans)
-	
+
 	// Summarize traces to reduce data size for ConfigMap storage
 	summarizedTraces := r.summarizeTraces(traces)
 
@@ -2212,7 +2212,7 @@ func (r *LearningReconciler) summarizeTaskTraces(taskName string, traces []TaskT
 	// Keep patterns: recent traces + representative examples of each pattern
 	var result []TaskTrace
 	toolCallPatterns := make(map[string]bool)
-	
+
 	// Always keep the most recent 3 traces
 	recentCount := 3
 	if len(traces) < recentCount {
@@ -2223,14 +2223,14 @@ func (r *LearningReconciler) summarizeTaskTraces(taskName string, traces []TaskT
 	// Add representative examples of different tool call patterns
 	for i := recentCount; i < len(traces) && len(result) < 15; i++ {
 		trace := traces[i]
-		
+
 		// Create a simplified pattern signature from tool calls
 		patternSignature := r.createToolCallSignature(trace.ToolCalls)
-		
+
 		// Keep this trace if it represents a new pattern
 		if !toolCallPatterns[patternSignature] {
 			toolCallPatterns[patternSignature] = true
-			
+
 			// Summarize large inputs/outputs to reduce size
 			summarizedTrace := r.summarizeTraceData(trace)
 			result = append(result, summarizedTrace)
@@ -2253,22 +2253,22 @@ func (r *LearningReconciler) createToolCallSignature(toolCalls []ToolCall) strin
 		}
 		signature.WriteString(fmt.Sprintf("%s.%s", call.ToolName, call.Method))
 	}
-	
+
 	return signature.String()
 }
 
 // summarizeTraceData reduces the size of individual trace data
 func (r *LearningReconciler) summarizeTraceData(trace TaskTrace) TaskTrace {
 	summarized := trace
-	
+
 	// Summarize large input/output data
 	summarized.Inputs = r.summarizeData(trace.Inputs)
 	summarized.Outputs = r.summarizeData(trace.Outputs)
-	
+
 	// Summarize tool call results
 	for i, toolCall := range trace.ToolCalls {
 		summarized.ToolCalls[i].Parameters = r.summarizeData(toolCall.Parameters)
-		
+
 		// Handle Result which may be of different types
 		if resultMap, ok := toolCall.Result.(map[string]interface{}); ok {
 			summarized.ToolCalls[i].Result = r.summarizeData(resultMap)
@@ -2277,7 +2277,7 @@ func (r *LearningReconciler) summarizeTraceData(trace TaskTrace) TaskTrace {
 			summarized.ToolCalls[i].Result = toolCall.Result
 		}
 	}
-	
+
 	return summarized
 }
 
@@ -2289,12 +2289,12 @@ func (r *LearningReconciler) summarizeData(data map[string]interface{}) map[stri
 
 	summarized := make(map[string]interface{})
 	const maxFieldSize = 256 // Maximum size for individual field values
-	
+
 	for key, value := range data {
 		switch v := value.(type) {
 		case string:
 			if len(v) > maxFieldSize {
-				summarized[key] = fmt.Sprintf("%s...[truncated %d bytes]", 
+				summarized[key] = fmt.Sprintf("%s...[truncated %d bytes]",
 					v[:maxFieldSize-50], len(v)-maxFieldSize+50)
 			} else {
 				summarized[key] = v
@@ -2318,7 +2318,7 @@ func (r *LearningReconciler) summarizeData(data map[string]interface{}) map[stri
 			summarized[key] = value
 		}
 	}
-	
+
 	return summarized
 }
 
