@@ -296,7 +296,7 @@ func TestLanguageAgentValidateWorkspaceSize(t *testing.T) {
 			name:      "empty string",
 			size:      "",
 			expectErr: true,
-			errMsg:    "invalid format",
+			errMsg:    "cannot be empty",
 		},
 	}
 
@@ -374,7 +374,8 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					ModelRefs:    []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Size: "0Gi",
+						Enabled: true,
+						Size:    "0Gi",
 					},
 				},
 			},
@@ -393,7 +394,28 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					ModelRefs:    []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Size: "invalid",
+						Enabled: true,
+						Size:    "invalid",
+					},
+				},
+			},
+			expectErr: true,
+			errMsg:    "workspace.size",
+		},
+		{
+			name: "invalid workspace size - empty string",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Instructions: "test instructions",
+					Workspace: &WorkspaceSpec{
+						Enabled: true,
+						Size:    "",
 					},
 				},
 			},

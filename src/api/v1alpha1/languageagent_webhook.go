@@ -118,8 +118,8 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
-	// Validate workspace configuration if present
-	if a.Spec.Workspace != nil && a.Spec.Workspace.Size != "" {
+	// Validate workspace configuration if present and enabled
+	if a.Spec.Workspace != nil && a.Spec.Workspace.Enabled {
 		if err := a.validateWorkspaceSize(a.Spec.Workspace.Size); err != nil {
 			return fmt.Errorf("spec.workspace.size: %w", err)
 		}
@@ -135,6 +135,11 @@ func (a *LanguageAgent) validateSpec() error {
 
 // validateWorkspaceSize validates the workspace size format and constraints
 func (a *LanguageAgent) validateWorkspaceSize(size string) error {
+	// Check for empty size - not allowed since PVCs require explicit storage
+	if size == "" {
+		return fmt.Errorf("cannot be empty, PersistentVolumeClaims require explicit storage size (e.g., \"10Gi\", \"1.5Ti\")")
+	}
+
 	// Parse the size to ensure it's valid
 	quantity, err := resource.ParseQuantity(size)
 	if err != nil {
