@@ -413,7 +413,7 @@ func (hm *HealthMetrics) GetHealthCategory(healthScore float64) string {
 
 // RecordConfigMapSizeExceeded records metrics when ConfigMap size limits are exceeded
 func (mc *MetricsCollector) RecordConfigMapSizeExceeded(agentName, taskName string, actualSize, maxSize int, compressed bool) {
-	ctx, span := learningMetricsTracer.Start(context.Background(), "learning.record_configmap_size_exceeded")
+	_, span := learningMetricsTracer.Start(context.Background(), "learning.record_configmap_size_exceeded")
 	defer span.End()
 
 	// Record size limit violation metric
