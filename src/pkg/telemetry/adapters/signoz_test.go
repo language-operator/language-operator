@@ -453,7 +453,7 @@ func TestSignozAdapter_Available(t *testing.T) {
 	t.Run("Concurrent cache access race condition", func(t *testing.T) {
 		var callCount int
 		var callCountMutex sync.Mutex
-		
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			callCountMutex.Lock()
 			callCount++
@@ -476,7 +476,7 @@ func TestSignozAdapter_Available(t *testing.T) {
 		// First call to populate cache
 		first := adapter.Available()
 		assert.True(t, first)
-		
+
 		// Get initial call count
 		callCountMutex.Lock()
 		initialCalls := callCount
@@ -512,7 +512,7 @@ func TestSignozAdapter_Available(t *testing.T) {
 		callCountMutex.Lock()
 		finalCalls := callCount
 		callCountMutex.Unlock()
-		
+
 		assert.Equal(t, initialCalls, finalCalls, "Should not make additional HTTP requests due to caching")
 	})
 }
