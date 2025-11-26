@@ -1,32 +1,45 @@
 # Agent Memory Bank
 
-## Current Priority Status (Nov 25, 2025)
+## Current Priority Status (Nov 26, 2025)
 
-### 🚀 READY Issues (Priority Order)
-*Critical startup blocker takes precedence - operator must start before other fixes can be tested*
+### 🚀 READY Issues (Priority Order)  
+*Memory leak fixes - Critical system stability issues*
 
 **Phase 2 Priority Focus (Nov 26):**
-- **Issue #69** - CNI detection succeeds but NetworkPolicy creation timeout causes operator startup failure (STARTUP BLOCKER)
-- **Issue #63** - Race condition in QuotaManager GetRemainingQuota (DATA INTEGRITY)  
+- ✅ **Issue #57** - Memory leak in TypeCoercion cache with unbounded growth - **RESOLVED** (Nov 26) - Investigation revealed stale issue description; LRU cache already implemented
 
 **Recently Completed:**
+- ✅ **Issue #59** - Telemetry adapter memory leak via unbounded response buffering causes OOMKilled pods - **RESOLVED** (Nov 26)
+- ✅ **Issue #56** - Agent UUID collision causes webhook routing failures - **RESOLVED** (Nov 26)
+- ✅ **Issue #64** - DNS validation timeout causes startup failures - **RESOLVED** (Nov 26)
+- ✅ **Issue #70** - Workspace size validation inconsistency (webhook accepts zero, PVC fails) - **RESOLVED** (Nov 26)
+- ✅ **Issue #58** - Race condition in QuotaManager allows users to exceed daily cost/attempt limits (DATA INTEGRITY) - **RESOLVED** (Nov 26)
+
+**Recently Completed:**
+- ✅ **Issue #75** - QuotaManager data races during concurrent synthesis requests (DATA INTEGRITY) - **RESOLVED** (Nov 26)
+- ✅ **Issue #63** - Race condition in QuotaManager GetRemainingQuota (DATA INTEGRITY) - **RESOLVED** (Nov 26)
+- ✅ **Issue #69** - CNI detection/NetworkPolicy timeout startup blocker - **RESOLVED** (Nov 26)
+- ✅ **Issue #67** - Webhook cost validation bypass during controller lag - **RESOLVED** (Nov 26)
+- ✅ **Issue #62** - Webhook validation bypass (duplicate of #67) - **CLOSED** (Nov 26)
+- ✅ **Issue #54** - CNI/NetworkPolicy timeout (duplicate of #69) - **CLOSED** (Nov 26)
 - ✅ **Issue #60** - Command injection vulnerability in synthesis schema validation (SECURITY) - **RESOLVED**
 - ✅ **Issue #66** - Synthesis validator silently ignores critical schema validation failures - **RESOLVED** (same commit as #60)
 
-### 📋 Remaining Work (24 Security/Validation Issues)
-**Next Priority After Startup Fix:**
-- Issues #67, #62: Webhook validation bypass during controller lag (SECURITY/COST)
-- Issue #54: Duplicate CNI/NetworkPolicy timeout issue (likely can be closed after #69)
+### 📋 Remaining Work (13 Security/Validation Issues)
+**Priority Queue After Memory Fixes:**
 
-**Tier 2 - Data/Memory Issues:**
-- Issue #58: QuotaManager race condition allows cost/attempt limit bypass
-- Issue #70: Workspace size validation inconsistency
+**Tier 2 - Validation Pipeline Foundation (Next After Ready Issues):**
+- Issue #51: Synthesis pipeline ignores schema validation failures 
+- Issue #72: Synthesis validator continues after validation failure
+- Issue #73: Telemetry adapter cache race condition
 
-**Tier 3 - Performance/Stability:**
-- Issues #59, #57: Memory leaks in telemetry adapter and TypeCoercion cache
-- Issues #72, #71, #51: Synthesis pipeline and ConfigMap serialization issues
+**Tier 3 - Security & Configuration Validation:**
+- Issue #74: Registry whitelist bypass (operator-config version field)
+- Issue #52: ConfigMap version validation allows zero/negative versions
+- Issue #77: Learning controller ConfigMap serialization failures  
+- Issue #71: Learning controller status update failures
 
-**Tier 4 - Edge Cases (19 remaining validation/networking issues)**
+**Tier 4 - Edge Cases (7 remaining validation/networking issues)**
 
 ## Key Context
 
