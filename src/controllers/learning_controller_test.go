@@ -1337,6 +1337,42 @@ func TestTaskLearningStatus_SerializeParse(t *testing.T) {
 	assert.Equal(t, original.ErrorResynthesisAttempts, parsed.ErrorResynthesisAttempts)
 }
 
+func TestLearningReconciler_parseTaskLearningStatus_InvalidVersions(t *testing.T) {
+	reconciler := &LearningReconciler{
+		Log: logr.Discard(),
+	}
+
+	tests := []struct {
+		name             string
+		serializedStatus string
+		expectedVersion  int32
+	}{
+		{
+			name:             "negative version should be reset to 0",
+			serializedStatus: "task:test_task,traces:5,attempts:2,version:-1,symbolic:false,confidence:0.85,failures:0,error_attempts:0",
+			expectedVersion:  0,
+		},
+		{
+			name:             "zero version should be preserved",
+			serializedStatus: "task:test_task,traces:5,attempts:2,version:0,symbolic:false,confidence:0.85,failures:0,error_attempts:0",
+			expectedVersion:  0,
+		},
+		{
+			name:             "positive version should be preserved",
+			serializedStatus: "task:test_task,traces:5,attempts:2,version:3,symbolic:false,confidence:0.85,failures:0,error_attempts:0",
+			expectedVersion:  3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := reconciler.parseTaskLearningStatus(tt.serializedStatus)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedVersion, parsed.CurrentVersion)
+		})
+	}
+}
+
 func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T) {
 	ctx := context.Background()
 

@@ -331,7 +331,12 @@ func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearning
 			}
 		case "version":
 			if v, err := fmt.Sscanf(value, "%d", &status.CurrentVersion); err == nil && v == 1 {
-				// parsed successfully
+				// Validate that version is non-negative
+				if status.CurrentVersion < 0 {
+					r.Log.Error(fmt.Errorf("invalid version in task status: %d", status.CurrentVersion),
+						"Invalid version number in task status", "task", status.TaskName, "version", status.CurrentVersion)
+					status.CurrentVersion = 0 // Reset to safe default
+				}
 			}
 		case "symbolic":
 			status.IsSymbolic = value == "true"
