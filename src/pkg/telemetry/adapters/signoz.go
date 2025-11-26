@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,6 +29,12 @@ import (
 	"time"
 
 	"github.com/language-operator/language-operator/pkg/telemetry"
+)
+
+const (
+	// DefaultMaxResponseSize is the default maximum size for HTTP response bodies (50MB)
+	// This prevents memory exhaustion from large telemetry datasets
+	DefaultMaxResponseSize = 50 * 1024 * 1024 // 50MB
 )
 
 // SignozAdapter implements TelemetryAdapter for SigNoz observability platform.
@@ -66,6 +73,10 @@ type SignozAdapter struct {
 	// timeout is the default timeout for HTTP requests
 	timeout time.Duration
 
+	// maxResponseSize is the maximum allowed size for HTTP response bodies
+	// Prevents memory exhaustion from large telemetry responses
+	maxResponseSize int64
+
 	// availabilityCache caches the result of Available() checks
 	// to avoid frequent health checks
 	availabilityCache struct {
@@ -91,6 +102,11 @@ type SignozConfig struct {
 	// RetryCount is the number of retries for failed requests
 	// Defaults to 3 if not specified
 	RetryCount int
+
+	// MaxResponseSize is the maximum allowed size for HTTP response bodies
+	// Defaults to 50MB (50 * 1024 * 1024 bytes) if not specified
+	// Prevents memory exhaustion from large telemetry datasets
+	MaxResponseSize int64
 }
 
 // NewSignozAdapter creates a new SignozAdapter with the given configuration.
@@ -113,6 +129,11 @@ type SignozConfig struct {
 //	  30*time.Second,
 //	)
 func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAdapter, error) {
+	return NewSignozAdapterWithMaxSize(endpoint, apiKey, timeout, DefaultMaxResponseSize)
+}
+
+// NewSignozAdapterWithMaxSize creates a new SignozAdapter with custom response size limit.
+func NewSignozAdapterWithMaxSize(endpoint, apiKey string, timeout time.Duration, maxResponseSize int64) (*SignozAdapter, error) {
 	if endpoint == "" {
 		return nil, fmt.Errorf("endpoint cannot be empty")
 	}
@@ -125,6 +146,10 @@ func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAd
 		return nil, fmt.Errorf("timeout must be positive, got %v", timeout)
 	}
 
+	if maxResponseSize <= 0 {
+		return nil, fmt.Errorf("maxResponseSize must be positive, got %d", maxResponseSize)
+	}
+
 	// Validate endpoint is a proper URL
 	if _, err := url.Parse(endpoint); err != nil {
 		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
@@ -134,9 +159,10 @@ func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAd
 	endpoint = strings.TrimSuffix(endpoint, "/")
 
 	adapter := &SignozAdapter{
-		endpoint: endpoint,
-		apiKey:   apiKey,
-		timeout:  timeout,
+		endpoint:        endpoint,
+		apiKey:          apiKey,
+		timeout:         timeout,
+		maxResponseSize: maxResponseSize,
 		httpClient: &http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -159,6 +185,7 @@ func NewSignozAdapter(endpoint, apiKey string, timeout time.Duration) (*SignozAd
 //
 // Applies default values for optional fields:
 //   - Timeout: 30 seconds if not specified
+//   - MaxResponseSize: 50MB if not specified
 //   - RetryCount: 3 if not specified (currently unused)
 func NewSignozAdapterFromConfig(config SignozConfig) (*SignozAdapter, error) {
 	timeout := config.Timeout
@@ -166,7 +193,12 @@ func NewSignozAdapterFromConfig(config SignozConfig) (*SignozAdapter, error) {
 		timeout = 30 * time.Second
 	}
 
-	return NewSignozAdapter(config.Endpoint, config.APIKey, timeout)
+	maxResponseSize := config.MaxResponseSize
+	if maxResponseSize == 0 {
+		maxResponseSize = DefaultMaxResponseSize
+	}
+
+	return NewSignozAdapterWithMaxSize(config.Endpoint, config.APIKey, timeout, maxResponseSize)
 }
 
 // makeRequest performs an HTTP request with proper authentication and error handling.
@@ -199,16 +231,20 @@ func (s *SignozAdapter) makeRequest(ctx context.Context, method, path string, bo
 	}
 	defer resp.Body.Close()
 
-	// Read response body
-	respBody := make([]byte, 0, 4096)
-	buf := make([]byte, 1024)
-	for {
-		n, err := resp.Body.Read(buf)
+	// Read response body with size limit to prevent memory exhaustion
+	limitedReader := io.LimitReader(resp.Body, s.maxResponseSize)
+	respBody, err := io.ReadAll(limitedReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check if response was truncated due to size limit
+	if int64(len(respBody)) == s.maxResponseSize {
+		// Try to read one more byte to confirm truncation
+		buf := make([]byte, 1)
+		n, _ := resp.Body.Read(buf)
 		if n > 0 {
-			respBody = append(respBody, buf[:n]...)
-		}
-		if err != nil {
-			break
+			return nil, fmt.Errorf("response body exceeds maximum allowed size of %d bytes", s.maxResponseSize)
 		}
 	}
 

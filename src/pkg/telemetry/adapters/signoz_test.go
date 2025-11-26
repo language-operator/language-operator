@@ -81,9 +81,10 @@ func TestNewSignozAdapter(t *testing.T) {
 func TestNewSignozAdapterFromConfig(t *testing.T) {
 	t.Run("Complete config", func(t *testing.T) {
 		config := SignozConfig{
-			Endpoint: "https://signoz.example.com",
-			APIKey:   "test-api-key",
-			Timeout:  45 * time.Second,
+			Endpoint:        "https://signoz.example.com",
+			APIKey:          "test-api-key",
+			Timeout:         45 * time.Second,
+			MaxResponseSize: 100 * 1024 * 1024, // 100MB
 		}
 
 		adapter, err := NewSignozAdapterFromConfig(config)
@@ -92,6 +93,7 @@ func TestNewSignozAdapterFromConfig(t *testing.T) {
 		assert.Equal(t, "https://signoz.example.com", adapter.endpoint)
 		assert.Equal(t, "test-api-key", adapter.apiKey)
 		assert.Equal(t, 45*time.Second, adapter.timeout)
+		assert.Equal(t, int64(100*1024*1024), adapter.maxResponseSize)
 	})
 
 	t.Run("Default timeout", func(t *testing.T) {
@@ -105,6 +107,19 @@ func TestNewSignozAdapterFromConfig(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, 30*time.Second, adapter.timeout)
+	})
+
+	t.Run("Default max response size", func(t *testing.T) {
+		config := SignozConfig{
+			Endpoint: "https://signoz.example.com",
+			APIKey:   "test-api-key",
+			// MaxResponseSize not specified
+		}
+
+		adapter, err := NewSignozAdapterFromConfig(config)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(DefaultMaxResponseSize), adapter.maxResponseSize)
 	})
 }
 
@@ -729,4 +744,138 @@ func TestTelemetryAdapterInterface(t *testing.T) {
 	metrics, err := adapter.QueryMetrics(ctx, telemetry.MetricFilter{})
 	assert.IsType(t, []telemetry.MetricPoint{}, metrics)
 	assert.IsType(t, (*error)(nil), &err)
+}
+
+func TestNewSignozAdapterWithMaxSize(t *testing.T) {
+	t.Run("Valid configuration", func(t *testing.T) {
+		maxSize := int64(10 * 1024 * 1024) // 10MB
+		adapter, err := NewSignozAdapterWithMaxSize("https://signoz.example.com", "test-api-key", 30*time.Second, maxSize)
+
+		require.NoError(t, err)
+		assert.NotNil(t, adapter)
+		assert.Equal(t, "https://signoz.example.com", adapter.endpoint)
+		assert.Equal(t, "test-api-key", adapter.apiKey)
+		assert.Equal(t, 30*time.Second, adapter.timeout)
+		assert.Equal(t, maxSize, adapter.maxResponseSize)
+	})
+
+	t.Run("Zero max response size", func(t *testing.T) {
+		_, err := NewSignozAdapterWithMaxSize("https://signoz.example.com", "test-api-key", 30*time.Second, 0)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "maxResponseSize must be positive")
+	})
+
+	t.Run("Negative max response size", func(t *testing.T) {
+		_, err := NewSignozAdapterWithMaxSize("https://signoz.example.com", "test-api-key", 30*time.Second, -100)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "maxResponseSize must be positive")
+	})
+}
+
+func TestSignozAdapter_ResponseSizeLimiting(t *testing.T) {
+	t.Run("Response within size limit", func(t *testing.T) {
+		responseData := "small response data"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(responseData))
+		}))
+		defer server.Close()
+
+		// Set max size to 1KB (much larger than our test response)
+		adapter, err := NewSignozAdapterWithMaxSize(server.URL, "test-api-key", 30*time.Second, 1024)
+		require.NoError(t, err)
+
+		// Test the makeRequest method directly (it's unexported, but we can test through QuerySpans)
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		// This should succeed without errors
+		_, err = adapter.QuerySpans(context.Background(), filter)
+		// Note: We expect an error here due to JSON parsing of our simple string, but not a size limit error
+		assert.Error(t, err)
+		assert.NotContains(t, err.Error(), "exceeds maximum allowed size")
+	})
+
+	t.Run("Response exceeds size limit", func(t *testing.T) {
+		// Create a large response (1MB of data)
+		largeData := make([]byte, 1024*1024) // 1MB
+		for i := range largeData {
+			largeData[i] = 'A'
+		}
+		
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(largeData)
+		}))
+		defer server.Close()
+
+		// Set max size to 500KB (smaller than our 1MB response)
+		maxSize := int64(500 * 1024) // 500KB
+		adapter, err := NewSignozAdapterWithMaxSize(server.URL, "test-api-key", 30*time.Second, maxSize)
+		require.NoError(t, err)
+
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		_, err = adapter.QuerySpans(context.Background(), filter)
+		
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds maximum allowed size")
+		assert.Contains(t, err.Error(), "512000 bytes") // 500KB in bytes
+	})
+
+	t.Run("Response exactly at size limit", func(t *testing.T) {
+		// Create response data exactly at the limit
+		maxSize := int64(1024) // 1KB
+		exactData := make([]byte, maxSize)
+		for i := range exactData {
+			exactData[i] = 'B'
+		}
+		
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(exactData)
+		}))
+		defer server.Close()
+
+		adapter, err := NewSignozAdapterWithMaxSize(server.URL, "test-api-key", 30*time.Second, maxSize)
+		require.NoError(t, err)
+
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		_, err = adapter.QuerySpans(context.Background(), filter)
+		
+		// Should succeed (no size limit error, though may have JSON parsing error)
+		if err != nil {
+			assert.NotContains(t, err.Error(), "exceeds maximum allowed size")
+		}
+	})
+}
+
+func TestDefaultMaxResponseSize(t *testing.T) {
+	// Test that the default constant is reasonable (50MB)
+	assert.Equal(t, 50*1024*1024, DefaultMaxResponseSize)
+
+	// Test that NewSignozAdapter uses the default
+	adapter, err := NewSignozAdapter("https://example.com", "key", 30*time.Second)
+	require.NoError(t, err)
+	assert.Equal(t, int64(DefaultMaxResponseSize), adapter.maxResponseSize)
 }
