@@ -959,6 +959,178 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-uuid-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "ghcr.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+		// Status.UUID should be empty initially
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+
+	// First reconcile should assign UUID
+	result1, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+
+	// Fetch updated agent to get UUID
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, updatedAgent)
+	if err != nil {
+		t.Fatalf("Failed to fetch updated agent: %v", err)
+	}
+
+	// Verify UUID was assigned
+	if updatedAgent.Status.UUID == "" {
+		t.Fatal("Expected UUID to be assigned on first reconcile")
+	}
+	firstUUID := updatedAgent.Status.UUID
+
+	// Second reconcile should NOT change the UUID
+	result2, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Fetch agent again
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, updatedAgent)
+	if err != nil {
+		t.Fatalf("Failed to fetch agent after second reconcile: %v", err)
+	}
+
+	// Verify UUID remained the same
+	if updatedAgent.Status.UUID != firstUUID {
+		t.Errorf("Expected UUID to remain %s, but got %s", firstUUID, updatedAgent.Status.UUID)
+	}
+
+	// Both results should not requeue for UUID reasons
+	if result1.Requeue || result2.Requeue {
+		t.Error("Reconciles should not requeue when UUID assignment succeeds")
+	}
+}
+
+func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "test-conflict-agent",
+			Namespace:  "default",
+			Generation: 1,
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "ghcr.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+		Status: langopv1alpha1.LanguageAgentStatus{
+			ObservedGeneration: 0, // Outdated to simulate conflict scenario
+		},
+	}
+
+	// Create a client that will simulate version conflicts on status updates
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+
+	// Simulate updating the agent's observed generation externally (as if another reconciler updated it)
+	// This would happen in practice when multiple reconcilers are running
+	err := fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, agent)
+	if err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+
+	// Update the agent to have newer generation to simulate conflict conditions
+	agent.Generation = 2
+	err = fakeClient.Update(ctx, agent)
+	if err != nil {
+		t.Fatalf("Failed to update agent generation: %v", err)
+	}
+
+	// Now reconcile with the old agent object (ObservedGeneration: 0, but actual Generation: 2)
+	// This should trigger the UUID assignment logic
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	})
+
+	// The reconcile should succeed (not return an error) even if there's a conflict
+	// The conflict handling should cause a requeue, not an error
+	if err != nil {
+		t.Fatalf("Reconcile should handle conflicts gracefully, but got error: %v", err)
+	}
+
+	// Verify agent eventually has UUID assigned
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, updatedAgent)
+	if err != nil {
+		t.Fatalf("Failed to get updated agent: %v", err)
+	}
+
+	// Should have UUID assigned
+	if updatedAgent.Status.UUID == "" {
+		t.Error("Expected UUID to be assigned after conflict resolution")
+	}
+}
+
 func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

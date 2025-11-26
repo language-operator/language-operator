@@ -298,6 +298,11 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if agent.Status.UUID == "" {
 		agent.Status.UUID = uuid.New().String()
 		if err := r.Status().Update(ctx, agent); err != nil {
+			if errors.IsConflict(err) {
+				// Another reconciler updated first, requeue to get their UUID
+				log.V(1).Info("UUID assignment conflict, requeuing to get assigned UUID")
+				return ctrl.Result{Requeue: true}, nil
+			}
 			log.Error(err, "Failed to update agent UUID")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to update agent UUID")
