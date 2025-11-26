@@ -3,7 +3,6 @@ package synthesis
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -150,25 +149,6 @@ func TestSynthesisTemplateValidity(t *testing.T) {
 // This test fetches the actual schema and validates template method usage
 func TestTemplateSchemaCompatibility(t *testing.T) {
 	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
-	return
-
-	// Parse the template to find DSL method references
-	templateMethods := extractDSLMethodsFromTemplate(agentSynthesisTemplate)
-
-	// Get safe methods from schema
-	safeMethods := extractSafeMethodsFromSchema(schema)
-
-	// Validate each template method is in the safe methods list
-	for _, method := range templateMethods {
-		if !contains(safeMethods, method) {
-			t.Errorf("Template uses method '%s' which is not in schema's safe methods list", method)
-		}
-	}
-
-	// Log schema version and method count for debugging
-	t.Logf("Schema version: %s", schema.Version)
-	t.Logf("Safe methods in schema: %d", len(safeMethods))
-	t.Logf("Methods used in template: %d", len(templateMethods))
 }
 
 // TestTemplateCodeExamplesAreSyntacticallyValid validates all Ruby code blocks in templates
@@ -366,41 +346,6 @@ func contains(slice []string, item string) bool {
 // TestFetchDSLSchemaIntegration tests the real schema fetching
 func TestFetchDSLSchemaIntegration(t *testing.T) {
 	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
-	return
-	if err != nil {
-		// Skip if aictl not available (CI environment)
-		if strings.Contains(err.Error(), "command not found") || strings.Contains(err.Error(), "gem installed") {
-			t.Skip(fmt.Sprintf("aictl command not available, skipping test: %v", err))
-		}
-		t.Fatalf("Failed to fetch DSL schema: %v", err)
-	}
-
-	// Validate schema structure
-	if schema.Version == "" {
-		t.Error("Schema missing version")
-	}
-
-	if schema.Type != "object" {
-		t.Errorf("Expected schema type 'object', got '%s'", schema.Type)
-	}
-
-	if len(schema.Properties) == 0 {
-		t.Error("Schema has no properties defined")
-	}
-
-	// Log schema details for debugging
-	t.Logf("Schema version: %s", schema.Version)
-	t.Logf("Schema properties: %d", len(schema.Properties))
-
-	// Validate schema can be marshaled to JSON
-	jsonData, err := json.MarshalIndent(schema, "", "  ")
-	if err != nil {
-		t.Errorf("Failed to marshal schema to JSON: %v", err)
-	}
-
-	if len(jsonData) == 0 {
-		t.Error("Schema JSON output is empty")
-	}
 }
 
 // TestGetSchemaVersionIntegration tests fetching just the version

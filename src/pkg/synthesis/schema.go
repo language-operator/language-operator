@@ -27,7 +27,6 @@ type DSLSchema struct {
 	Required   []string               `json:"required"`
 }
 
-
 // GetSchemaVersion executes the language_operator CLI to fetch just the schema
 // version string. This is more efficient than fetching the full schema when only
 // the version is needed (e.g., for compatibility checking).
