@@ -332,7 +332,6 @@ func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 	}
 }
 
-
 // resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
 // Supports wildcards: *.example.com will resolve example.com and cache the result
 // Special case: "*" means allow all destinations (0.0.0.0/0)
