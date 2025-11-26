@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -179,8 +180,21 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	// Initialize OpenTelemetry tracing
-	ctx := context.Background()
+	// Initialize OpenTelemetry tracing with startup timeout
+	startupTimeout := 60 * time.Second
+	if timeoutStr := os.Getenv("STARTUP_TIMEOUT"); timeoutStr != "" {
+		if parsedTimeout, err := time.ParseDuration(timeoutStr); err == nil {
+			startupTimeout = parsedTimeout
+		} else {
+			setupLog.Error(err, "Invalid STARTUP_TIMEOUT, using default 60s", "value", timeoutStr)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancel()
+
+	setupLog.Info("Startup operations timeout configured", "timeout", startupTimeout)
+
 	tracerProvider, err := telemetry.InitTracer(ctx)
 	if err != nil {
 		setupLog.Error(err, "failed to initialize OpenTelemetry, tracing disabled")
@@ -206,12 +220,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	cniCaps, cniErr := cni.DetectNetworkPolicySupport(ctx, clientset)
+	// Create timeout context for CNI detection
+	cniCtx, cniCancel := context.WithTimeout(ctx, networkPolicyTimeout)
+	defer cniCancel()
 
-	// Load allowed registries from ConfigMap
-	allowedRegistries, err := loadAllowedRegistries(ctx, clientset)
+	cniCaps, cniErr := cni.DetectNetworkPolicySupport(cniCtx, clientset)
+	if cniErr != nil && errors.Is(cniErr, context.DeadlineExceeded) {
+		setupLog.Error(cniErr, "CNI detection timed out", "timeout", networkPolicyTimeout)
+		cniErr = fmt.Errorf("CNI detection timed out after %v - CNI may still be initializing", networkPolicyTimeout)
+	}
+
+	// Load allowed registries from ConfigMap with timeout
+	registryCtx, registryCancel := context.WithTimeout(ctx, 30*time.Second)
+	defer registryCancel()
+
+	allowedRegistries, err := loadAllowedRegistries(registryCtx, clientset)
 	if err != nil {
-		setupLog.Error(err, "unable to load allowed registries from ConfigMap")
+		if errors.Is(err, context.DeadlineExceeded) {
+			setupLog.Error(err, "registry loading timed out after 30s - check DNS resolution")
+		} else {
+			setupLog.Error(err, "unable to load allowed registries from ConfigMap")
+		}
 		setupLog.Info("Using default registry whitelist")
 		// Fallback to default registries
 		allowedRegistries = []string{

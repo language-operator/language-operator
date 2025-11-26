@@ -19,6 +19,7 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/language-operator/language-operator/pkg/telemetry"
 	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
@@ -225,6 +226,80 @@ func TestInitializeSigNozAdapter(t *testing.T) {
 				}
 				// Note: SigNoz adapter availability depends on network connectivity to the endpoint
 				// In tests, this will likely be false unless the endpoint is actually reachable
+			}
+		})
+	}
+}
+
+func TestStartupTimeoutConfiguration(t *testing.T) {
+	// Store original env var to restore after tests
+	originalTimeout := os.Getenv("STARTUP_TIMEOUT")
+	defer func() {
+		if originalTimeout == "" {
+			os.Unsetenv("STARTUP_TIMEOUT")
+		} else {
+			os.Setenv("STARTUP_TIMEOUT", originalTimeout)
+		}
+	}()
+
+	tests := []struct {
+		name            string
+		envValue        string
+		expectedTimeout time.Duration
+		expectDefault   bool
+	}{
+		{
+			name:            "no env var - uses default",
+			envValue:        "",
+			expectedTimeout: 60 * time.Second,
+			expectDefault:   true,
+		},
+		{
+			name:            "valid timeout value",
+			envValue:        "120s",
+			expectedTimeout: 120 * time.Second,
+			expectDefault:   false,
+		},
+		{
+			name:            "valid timeout in minutes",
+			envValue:        "5m",
+			expectedTimeout: 5 * time.Minute,
+			expectDefault:   false,
+		},
+		{
+			name:            "invalid timeout - falls back to default",
+			envValue:        "invalid",
+			expectedTimeout: 60 * time.Second,
+			expectDefault:   true,
+		},
+		{
+			name:            "zero timeout - uses zero",
+			envValue:        "0s",
+			expectedTimeout: 0,
+			expectDefault:   false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set up environment variable
+			if tc.envValue == "" {
+				os.Unsetenv("STARTUP_TIMEOUT")
+			} else {
+				os.Setenv("STARTUP_TIMEOUT", tc.envValue)
+			}
+
+			// Parse timeout (mimics main.go logic)
+			startupTimeout := 60 * time.Second
+			if timeoutStr := os.Getenv("STARTUP_TIMEOUT"); timeoutStr != "" {
+				if parsedTimeout, err := time.ParseDuration(timeoutStr); err == nil {
+					startupTimeout = parsedTimeout
+				}
+				// Note: In real code, invalid values log an error but we don't test that here
+			}
+
+			if startupTimeout != tc.expectedTimeout {
+				t.Errorf("Expected timeout %v, got %v", tc.expectedTimeout, startupTimeout)
 			}
 		})
 	}
