@@ -3,6 +3,11 @@
 QA_PROMPT := "/task test"
 ITERATE_PROMPT := "/task iterate"
 PRIORITIZE_PROMPT := "/task prioritize"
+DISTILL_PROMPT := "/task distill"
+
+# Distill Claude's SCRATCH.md file
+distill:
+	@claude --dangerously-skip-permissions $(DISTILL_PROMPT)
 
 # Use claude to prioritize the backlog
 prioritize:
@@ -10,7 +15,7 @@ prioritize:
 
 # Use claude to iterate on the backlog
 iterate:
-	@claude $(ITERATE_PROMPT)
+	@claude --dangerously-skip-permissions $(ITERATE_PROMPT)
 
 # Use claude to find bugs
 qa:

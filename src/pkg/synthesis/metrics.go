@@ -260,3 +260,17 @@ func RecordErrorTriggeredResynthesis(namespace, agent, taskName, errorType strin
 func RecordLearningCooldownViolation(namespace, agent string) {
 	LearningCooldownViolations.WithLabelValues(namespace, agent).Inc()
 }
+
+// RecordConfigMapSizeViolation records when ConfigMap size limits are exceeded
+func RecordConfigMapSizeViolation(agent string, actualSize, maxSize int, compressed bool) {
+	// Record a learning attempt failure due to size limit
+	RecordLearningAttempt(agent, agent, "size_limit_exceeded")
+	
+	// Note: In a future version, we could add a dedicated Prometheus metric:
+	// compressedStr := "false"
+	// if compressed {
+	//     compressedStr = "true"
+	// }
+	// ConfigMapSizeViolations.WithLabelValues(agent, compressedStr).Inc()
+	// ConfigMapSizeBytes.WithLabelValues(agent).Set(float64(actualSize))
+}

@@ -2,6 +2,7 @@ package learning
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -408,4 +409,33 @@ func (hm *HealthMetrics) GetHealthCategory(healthScore float64) string {
 	default:
 		return "critical"
 	}
+}
+
+// RecordConfigMapSizeExceeded records metrics when ConfigMap size limits are exceeded
+func (mc *MetricsCollector) RecordConfigMapSizeExceeded(agentName, taskName string, actualSize, maxSize int, compressed bool) {
+	ctx, span := learningMetricsTracer.Start(context.Background(), "learning.record_configmap_size_exceeded")
+	defer span.End()
+
+	// Record size limit violation metric
+	synthesis.RecordConfigMapSizeViolation(agentName, actualSize, maxSize, compressed)
+	
+	// Calculate size utilization percentage
+	utilization := float64(actualSize) / float64(maxSize)
+
+	span.SetAttributes(
+		attribute.String("learning.agent", agentName),
+		attribute.String("learning.task", taskName),
+		attribute.Int("learning.actual_size", actualSize),
+		attribute.Int("learning.max_size", maxSize),
+		attribute.Bool("learning.compressed", compressed),
+		attribute.Float64("learning.size_utilization", utilization),
+	)
+
+	mc.log.Error(nil, "ConfigMap size limit exceeded during learning",
+		"agent", agentName,
+		"task", taskName,
+		"actual_size", actualSize,
+		"max_size", maxSize,
+		"utilization_percent", fmt.Sprintf("%.1f%%", utilization*100),
+		"compressed", compressed)
 }

@@ -1,7 +1,10 @@
 package synthesis
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -26,6 +29,33 @@ import (
 )
 
 var configMapTracer = otel.Tracer("language-operator/configmap-manager")
+
+const (
+	// MaxConfigMapSize represents the Kubernetes etcd size limit for ConfigMaps (1MB)
+	MaxConfigMapSize = 1024 * 1024
+	// CompressionThreshold defines when to apply compression (800KB)
+	CompressionThreshold = 800 * 1024
+	// CompressionPrefix indicates compressed data in ConfigMap
+	CompressionPrefix = "gzip:"
+)
+
+// ConfigMapSizeError represents a ConfigMap size limit error
+type ConfigMapSizeError struct {
+	Name         string
+	ActualSize   int
+	MaxSize      int
+	Compressed   bool
+	OriginalSize int
+}
+
+func (e *ConfigMapSizeError) Error() string {
+	if e.Compressed {
+		return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes (compressed from %d) > %d bytes max", 
+			e.Name, e.ActualSize, e.OriginalSize, e.MaxSize)
+	}
+	return fmt.Sprintf("ConfigMap %s exceeds size limit: %d bytes > %d bytes max", 
+		e.Name, e.ActualSize, e.MaxSize)
+}
 
 // ConfigMapManager manages versioned ConfigMaps for agent code synthesis
 type ConfigMapManager struct {
@@ -53,6 +83,78 @@ type ConfigMapVersion struct {
 	CreatedAt       time.Time         `json:"createdAt"`
 	Labels          map[string]string `json:"labels"`
 	Annotations     map[string]string `json:"annotations"`
+}
+
+// compressCodeData compresses code data if it exceeds the threshold
+func (cm *ConfigMapManager) compressCodeData(code string) (string, bool, error) {
+	originalSize := len(code)
+	
+	// Only compress if code exceeds threshold
+	if originalSize < CompressionThreshold {
+		return code, false, nil
+	}
+
+	// Apply gzip compression
+	var compressedData bytes.Buffer
+	writer := gzip.NewWriter(&compressedData)
+	
+	if _, err := writer.Write([]byte(code)); err != nil {
+		return "", false, fmt.Errorf("failed to write to gzip compressor: %w", err)
+	}
+	
+	if err := writer.Close(); err != nil {
+		return "", false, fmt.Errorf("failed to close gzip compressor: %w", err)
+	}
+
+	// Base64 encode for safe storage in ConfigMap
+	compressed := base64.StdEncoding.EncodeToString(compressedData.Bytes())
+	
+	// Add compression prefix
+	finalData := CompressionPrefix + compressed
+	
+	compressionRatio := float64(len(finalData)) / float64(originalSize)
+	
+	cm.Log.V(1).Info("Compressed ConfigMap data",
+		"original_size", originalSize,
+		"compressed_size", len(finalData),
+		"compression_ratio", fmt.Sprintf("%.2f", compressionRatio))
+	
+	return finalData, true, nil
+}
+
+// validateConfigMapSize validates that ConfigMap data doesn't exceed Kubernetes limits
+func (cm *ConfigMapManager) validateConfigMapSize(name string, data map[string]string, compressed bool, originalSize int) error {
+	totalSize := 0
+	
+	// Calculate total size of all data fields
+	for key, value := range data {
+		totalSize += len(key) + len(value)
+	}
+	
+	// Add metadata overhead estimation (labels, annotations, etc.)
+	metadataOverhead := 2048 // Conservative estimate
+	totalSize += metadataOverhead
+	
+	if totalSize > MaxConfigMapSize {
+		return &ConfigMapSizeError{
+			Name:         name,
+			ActualSize:   totalSize,
+			MaxSize:      MaxConfigMapSize,
+			Compressed:   compressed,
+			OriginalSize: originalSize,
+		}
+	}
+	
+	// Log size information for monitoring
+	sizeUtilization := float64(totalSize) / float64(MaxConfigMapSize)
+	cm.Log.V(1).Info("ConfigMap size validation passed",
+		"name", name,
+		"size", totalSize,
+		"max_size", MaxConfigMapSize,
+		"utilization", fmt.Sprintf("%.1f%%", sizeUtilization*100),
+		"compressed", compressed)
+	
+	return nil
 }
 
 // CreateVersionedConfigMap creates a new versioned ConfigMap with enhanced metadata tracking
@@ -99,6 +201,34 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 		annotations[k] = v
 	}
 
+	// Apply compression if needed
+	originalSize := len(options.Code)
+	processedCode, compressed, err := cm.compressCodeData(options.Code)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to compress ConfigMap data: %w", err)
+	}
+
+	// Add compression metadata to annotations
+	if compressed {
+		annotations["langop.io/compressed"] = "true"
+		annotations["langop.io/original-size"] = fmt.Sprintf("%d", originalSize)
+		annotations["langop.io/compression-ratio"] = fmt.Sprintf("%.2f", float64(len(processedCode))/float64(originalSize))
+		// Add compression info to labels for easy filtering
+		labels["langop.io/compressed"] = "true"
+	}
+
+	// Prepare ConfigMap data
+	configMapData := map[string]string{
+		"agent.rb": processedCode,
+	}
+
+	// Validate ConfigMap size before creation
+	if err := cm.validateConfigMapSize(configMapName, configMapData, compressed, originalSize); err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("ConfigMap size validation failed: %w", err)
+	}
+
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        configMapName,
@@ -106,9 +236,7 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 			Labels:      labels,
 			Annotations: annotations,
 		},
-		Data: map[string]string{
-			"agent.rb": options.Code,
-		},
+		Data: configMapData,
 	}
 
 	// Set owner reference for garbage collection
@@ -128,13 +256,30 @@ func (cm *ConfigMapManager) CreateVersionedConfigMap(ctx context.Context, agent 
 		attribute.String("configmap.name", configMapName),
 		attribute.Int("configmap.version", int(options.Version)),
 		attribute.String("configmap.synthesis_type", options.SynthesisType),
+		attribute.Bool("configmap.compressed", compressed),
+		attribute.Int("configmap.original_size", originalSize),
+		attribute.Int("configmap.final_size", len(processedCode)),
 	)
 
-	cm.Log.Info("Created versioned ConfigMap",
+	// Prepare log fields
+	logFields := []interface{}{
 		"configmap", configMapName,
 		"version", options.Version,
 		"synthesis_type", options.SynthesisType,
-		"learned_task", options.LearnedTask)
+		"learned_task", options.LearnedTask,
+		"original_size", originalSize,
+		"compressed", compressed,
+	}
+	
+	if compressed {
+		compressionRatio := float64(len(processedCode)) / float64(originalSize)
+		logFields = append(logFields, 
+			"final_size", len(processedCode),
+			"compression_ratio", fmt.Sprintf("%.2f", compressionRatio),
+			"size_savings", originalSize-len(processedCode))
+	}
+
+	cm.Log.Info("Created versioned ConfigMap", logFields...)
 
 	return configMap, nil
 }

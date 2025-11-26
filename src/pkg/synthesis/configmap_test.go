@@ -652,3 +652,267 @@ func TestParseConfigMapVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestConfigMapManager_CompressCodeData(t *testing.T) {
+	logger := zap.New()
+	recorder := record.NewFakeRecorder(10)
+
+	cm := &ConfigMapManager{
+		Log:      logger,
+		Recorder: recorder,
+	}
+
+	tests := []struct {
+		name            string
+		input           string
+		expectCompressed bool
+		validateFunc    func(t *testing.T, result string, compressed bool)
+	}{
+		{
+			name:            "small code not compressed",
+			input:           "agent 'test' do\nend",
+			expectCompressed: false,
+			validateFunc: func(t *testing.T, result string, compressed bool) {
+				assert.False(t, compressed)
+				assert.Equal(t, "agent 'test' do\nend", result)
+			},
+		},
+		{
+			name:            "large code compressed",
+			input:           generateLargeCode(900 * 1024), // 900KB - exceeds threshold
+			expectCompressed: true,
+			validateFunc: func(t *testing.T, result string, compressed bool) {
+				assert.True(t, compressed)
+				assert.True(t, len(result) > 0)
+				assert.Contains(t, result, CompressionPrefix)
+				// Compressed size should be smaller than original
+				assert.True(t, len(result) < 900*1024)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, compressed, err := cm.compressCodeData(tt.input)
+			
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectCompressed, compressed)
+			tt.validateFunc(t, result, compressed)
+		})
+	}
+}
+
+func TestConfigMapManager_ValidateConfigMapSize(t *testing.T) {
+	logger := zap.New()
+	recorder := record.NewFakeRecorder(10)
+
+	cm := &ConfigMapManager{
+		Log:      logger,
+		Recorder: recorder,
+	}
+
+	tests := []struct {
+		name         string
+		configMapName string
+		data         map[string]string
+		compressed   bool
+		originalSize int
+		expectError  bool
+		errorType    string
+	}{
+		{
+			name:         "small configmap valid",
+			configMapName: "test-v1",
+			data:         map[string]string{"agent.rb": "agent 'test' do\nend"},
+			compressed:   false,
+			originalSize: 0,
+			expectError:  false,
+		},
+		{
+			name:         "large configmap exceeds limit",
+			configMapName: "test-v1",
+			data:         map[string]string{"agent.rb": generateLargeCode(1200 * 1024)}, // 1.2MB
+			compressed:   false,
+			originalSize: 1200 * 1024,
+			expectError:  true,
+			errorType:    "*synthesis.ConfigMapSizeError",
+		},
+		{
+			name:         "compressed large data valid",
+			configMapName: "test-v1",
+			data:         map[string]string{"agent.rb": generateLargeCode(500 * 1024)}, // 500KB compressed
+			compressed:   true,
+			originalSize: 1200 * 1024,
+			expectError:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := cm.validateConfigMapSize(tt.configMapName, tt.data, tt.compressed, tt.originalSize)
+			
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.errorType != "" {
+					_, ok := err.(*ConfigMapSizeError)
+					assert.True(t, ok, "Expected ConfigMapSizeError")
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConfigMapManager_CreateVersionedConfigMap_WithCompression(t *testing.T) {
+	scheme := runtime.NewScheme()
+	err := langopv1alpha1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	client := fake.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	logger := zap.New()
+	recorder := record.NewFakeRecorder(10)
+
+	cm := &ConfigMapManager{
+		Client:   client,
+		Scheme:   scheme,
+		Log:      logger,
+		Recorder: recorder,
+	}
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+		},
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		codeSize    int
+		expectError bool
+		validateFunc func(t *testing.T, cm *corev1.ConfigMap, originalSize int)
+	}{
+		{
+			name:        "small code no compression",
+			codeSize:    1024, // 1KB
+			expectError: false,
+			validateFunc: func(t *testing.T, cm *corev1.ConfigMap, originalSize int) {
+				assert.NotContains(t, cm.Data["agent.rb"], CompressionPrefix)
+				assert.Equal(t, "", cm.Annotations["langop.io/compressed"])
+				assert.Equal(t, "", cm.Labels["langop.io/compressed"])
+			},
+		},
+		{
+			name:        "large code with compression",
+			codeSize:    850 * 1024, // 850KB - exceeds compression threshold
+			expectError: false,
+			validateFunc: func(t *testing.T, cm *corev1.ConfigMap, originalSize int) {
+				assert.Contains(t, cm.Data["agent.rb"], CompressionPrefix)
+				assert.Equal(t, "true", cm.Annotations["langop.io/compressed"])
+				assert.Equal(t, "true", cm.Labels["langop.io/compressed"])
+				assert.Equal(t, fmt.Sprintf("%d", originalSize), cm.Annotations["langop.io/original-size"])
+				assert.Contains(t, cm.Annotations, "langop.io/compression-ratio")
+			},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code := generateLargeCode(tt.codeSize)
+			
+			options := &ConfigMapOptions{
+				Code:           code,
+				Version:        int32(i + 1), // Use unique version for each test
+				SynthesisType:  "learned",
+				LearningSource: "test",
+			}
+
+			result, err := cm.CreateVersionedConfigMap(ctx, agent, options)
+
+			if tt.expectError {
+				require.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				tt.validateFunc(t, result, len(code))
+			}
+		})
+	}
+}
+
+func TestConfigMapSizeError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      *ConfigMapSizeError
+		expected string
+	}{
+		{
+			name: "uncompressed error",
+			err: &ConfigMapSizeError{
+				Name:         "test-v1",
+				ActualSize:   1500000,
+				MaxSize:      1048576,
+				Compressed:   false,
+				OriginalSize: 0,
+			},
+			expected: "ConfigMap test-v1 exceeds size limit: 1500000 bytes > 1048576 bytes max",
+		},
+		{
+			name: "compressed error",
+			err: &ConfigMapSizeError{
+				Name:         "test-v1",
+				ActualSize:   1200000,
+				MaxSize:      1048576,
+				Compressed:   true,
+				OriginalSize: 2000000,
+			},
+			expected: "ConfigMap test-v1 exceeds size limit: 1200000 bytes (compressed from 2000000) > 1048576 bytes max",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.err.Error())
+		})
+	}
+}
+
+// generateLargeCode generates code of specified size for testing
+func generateLargeCode(size int) string {
+	baseCode := "agent 'test' do\n  # Large generated code\n"
+	padding := "  # This is padding to make the code larger\n"
+	
+	code := baseCode
+	for len(code) < size {
+		code += padding
+	}
+	
+	code += "end\n"
+	return code[:size] // Truncate to exact size
+}
+
+// generateIncompressibleCode generates code with random data that won't compress well
+func generateIncompressibleCode(size int) string {
+	baseCode := "agent 'test' do\n"
+	randomPart := ""
+	
+	// Generate random variable assignments that won't compress
+	for len(baseCode + randomPart) < size-10 {
+		varName := fmt.Sprintf("var_%d", len(randomPart)%1000)
+		// Create pseudo-random values using a simple hash
+		value := (len(randomPart)*137 + 42) % 100000
+		randomPart += fmt.Sprintf("  %s = %d\n", varName, value)
+	}
+	
+	return baseCode + randomPart + "end\n"
+}
