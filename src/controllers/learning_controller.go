@@ -293,10 +293,28 @@ func (r *LearningReconciler) getLearningStatus(ctx context.Context, agent *lango
 	return learningStatus, nil
 }
 
-// parseTaskLearningStatus parses learning status from string representation
+// parseTaskLearningStatus parses learning status from JSON string
 func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearningStatus, error) {
+	// Try JSON parsing first (new format)
+	var status TaskLearningStatus
+	if err := json.Unmarshal([]byte(data), &status); err == nil {
+		// Validate that version is non-negative
+		if status.CurrentVersion < 0 {
+			r.Log.Error(fmt.Errorf("invalid version in task status: %d", status.CurrentVersion),
+				"Invalid version number in task status", "task", status.TaskName, "version", status.CurrentVersion)
+			status.CurrentVersion = 0 // Reset to safe default
+		}
+		return &status, nil
+	}
+
+	// Fall back to legacy string parsing for backward compatibility
+	r.Log.V(1).Info("JSON parsing failed, attempting legacy string parsing", "data", data)
+	return r.parseTaskLearningStatusLegacy(data)
+}
+
+// parseTaskLearningStatusLegacy parses learning status from legacy string format
+func (r *LearningReconciler) parseTaskLearningStatusLegacy(data string) (*TaskLearningStatus, error) {
 	// Parse the simple string format: "task:task_name,traces:5,attempts:2,version:1,symbolic:false,confidence:0.85,failures:0,error_attempts:0"
-	// TODO: Implement JSON parsing once we define the full status structure
 	status := &TaskLearningStatus{
 		TraceCount:               0,
 		LearningAttempts:         0,
@@ -356,6 +374,110 @@ func (r *LearningReconciler) parseTaskLearningStatus(data string) (*TaskLearning
 	}
 
 	return status, nil
+}
+
+// validateConfigMapSize validates that the ConfigMap won't exceed Kubernetes size limits
+func (r *LearningReconciler) validateConfigMapSize(configMap *corev1.ConfigMap) error {
+	const maxConfigMapSize = 800 * 1024 // 800KB (staying under 1MB limit with margin)
+	
+	totalSize := 0
+	
+	// Calculate size of all data entries
+	for key, value := range configMap.Data {
+		totalSize += len(key) + len(value)
+	}
+	
+	// Add metadata overhead (rough estimate)
+	totalSize += len(configMap.Name) + len(configMap.Namespace) + 1024 // metadata overhead
+	
+	if totalSize > maxConfigMapSize {
+		return fmt.Errorf("ConfigMap size (%d bytes) exceeds limit (%d bytes)", totalSize, maxConfigMapSize)
+	}
+	
+	return nil
+}
+
+// cleanupStatusData removes old or less important status data to reduce ConfigMap size
+func (r *LearningReconciler) cleanupStatusData(configMap *corev1.ConfigMap, agent *langopv1alpha1.LanguageAgent) (*corev1.ConfigMap, error) {
+	r.Log.Info("Attempting to cleanup learning status data to reduce ConfigMap size", 
+		"configmap", configMap.Name, "current_entries", len(configMap.Data))
+	
+	// Parse all status entries to prioritize which to keep
+	type statusEntry struct {
+		key    string
+		status *TaskLearningStatus
+		size   int
+	}
+	
+	var entries []statusEntry
+	for key, value := range configMap.Data {
+		if !strings.HasSuffix(key, "-status") {
+			continue // Keep non-status data
+		}
+		
+		status, err := r.parseTaskLearningStatus(value)
+		if err != nil {
+			r.Log.Error(err, "Failed to parse status during cleanup", "key", key)
+			// Remove invalid entries
+			delete(configMap.Data, key)
+			continue
+		}
+		
+		entries = append(entries, statusEntry{
+			key:    key,
+			status: status,
+			size:   len(key) + len(value),
+		})
+	}
+	
+	// Sort by importance: symbolic tasks first (they're learned), then by trace count
+	sort.Slice(entries, func(i, j int) bool {
+		// Prioritize symbolic tasks (already learned)
+		if entries[i].status.IsSymbolic && !entries[j].status.IsSymbolic {
+			return true
+		}
+		if !entries[i].status.IsSymbolic && entries[j].status.IsSymbolic {
+			return false
+		}
+		
+		// Then prioritize by trace count (more traces = more valuable)
+		return entries[i].status.TraceCount > entries[j].status.TraceCount
+	})
+	
+	// Keep most important entries that fit within size limit
+	const targetSize = 600 * 1024 // Target 600KB to leave room for growth
+	currentSize := 0
+	cleanedData := make(map[string]string)
+	
+	// Copy non-status data first
+	for key, value := range configMap.Data {
+		if !strings.HasSuffix(key, "-status") {
+			cleanedData[key] = value
+			currentSize += len(key) + len(value)
+		}
+	}
+	
+	// Add status entries in priority order until we hit size limit
+	entriesKept := 0
+	for _, entry := range entries {
+		if currentSize + entry.size > targetSize {
+			break // Would exceed target size
+		}
+		
+		cleanedData[entry.key] = configMap.Data[entry.key]
+		currentSize += entry.size
+		entriesKept++
+	}
+	
+	configMap.Data = cleanedData
+	
+	r.Log.Info("Cleaned up learning status data",
+		"original_entries", len(entries),
+		"kept_entries", entriesKept,
+		"removed_entries", len(entries)-entriesKept,
+		"estimated_size_kb", currentSize/1024)
+	
+	return configMap, nil
 }
 
 // checkLearningTriggers checks for conditions that should trigger learning
@@ -1900,8 +2022,31 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 
 	// Serialize learning status
 	for taskName, status := range learningStatus {
-		statusData := r.serializeTaskLearningStatus(status)
+		statusData, err := r.serializeTaskLearningStatus(status)
+		if err != nil {
+			span.RecordError(err)
+			r.Log.Error(err, "Failed to serialize task learning status", "task", taskName)
+			continue // Skip this task status rather than failing the entire operation
+		}
 		configMap.Data[fmt.Sprintf("%s-status", taskName)] = statusData
+	}
+
+	// Validate ConfigMap size before update
+	if err := r.validateConfigMapSize(configMap); err != nil {
+		span.RecordError(err)
+		r.Log.Error(err, "ConfigMap size validation failed", "configmap", configMapName)
+		
+		// Attempt to clean up old status data and retry
+		if cleanedConfigMap, cleanupErr := r.cleanupStatusData(configMap, agent); cleanupErr == nil {
+			configMap = cleanedConfigMap
+			if validateErr := r.validateConfigMapSize(configMap); validateErr != nil {
+				span.RecordError(validateErr)
+				return fmt.Errorf("failed to update learning status: ConfigMap too large even after cleanup: %w", validateErr)
+			}
+		} else {
+			span.RecordError(cleanupErr)
+			return fmt.Errorf("failed to update learning status: %w, cleanup also failed: %w", err, cleanupErr)
+		}
 	}
 
 	// Create or update ConfigMap
@@ -1912,39 +2057,55 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 	}, &existing)
 
 	if errors.IsNotFound(err) {
+		r.Log.V(1).Info("Creating new learning status ConfigMap", "configmap", configMapName)
 		if err := r.Create(ctx, configMap); err != nil {
 			span.RecordError(err)
+			r.Log.Error(err, "Failed to create learning status ConfigMap", 
+				"configmap", configMapName, "agent", agent.Name)
 			return fmt.Errorf("failed to create learning status ConfigMap: %w", err)
 		}
+		r.Log.Info("Successfully created learning status ConfigMap", "configmap", configMapName)
 	} else if err != nil {
 		span.RecordError(err)
+		r.Log.Error(err, "Failed to get learning status ConfigMap", 
+			"configmap", configMapName, "agent", agent.Name)
 		return fmt.Errorf("failed to get learning status ConfigMap: %w", err)
 	} else {
+		r.Log.V(1).Info("Updating existing learning status ConfigMap", "configmap", configMapName)
 		existing.Data = configMap.Data
 		if err := r.Update(ctx, &existing); err != nil {
 			span.RecordError(err)
+			r.Log.Error(err, "Failed to update learning status ConfigMap", 
+				"configmap", configMapName, "agent", agent.Name, "data_entries", len(configMap.Data))
 			return fmt.Errorf("failed to update learning status ConfigMap: %w", err)
 		}
+		r.Log.Info("Successfully updated learning status ConfigMap", 
+			"configmap", configMapName, "status_entries", len(learningStatus))
 	}
 
-	span.SetAttributes(attribute.Int("learning.status_entries", len(learningStatus)))
+	// Add telemetry attributes for monitoring
+	totalSize := 0
+	for key, value := range configMap.Data {
+		totalSize += len(key) + len(value)
+	}
+	
+	span.SetAttributes(
+		attribute.Int("learning.status_entries", len(learningStatus)),
+		attribute.Int("learning.configmap_size_bytes", totalSize),
+		attribute.Int("learning.configmap_size_kb", totalSize/1024),
+		attribute.Bool("learning.status_update_success", true),
+	)
+	
 	return nil
 }
 
-// serializeTaskLearningStatus serializes task learning status to string
-func (r *LearningReconciler) serializeTaskLearningStatus(status *TaskLearningStatus) string {
-	// For now, return a simple string representation
-	// TODO: Implement JSON serialization
-	return fmt.Sprintf("task:%s,traces:%d,attempts:%d,version:%d,symbolic:%t,confidence:%.2f,failures:%d,error_attempts:%d",
-		status.TaskName,
-		status.TraceCount,
-		status.LearningAttempts,
-		status.CurrentVersion,
-		status.IsSymbolic,
-		status.PatternConfidence,
-		status.ConsecutiveFailures,
-		status.ErrorResynthesisAttempts,
-	)
+// serializeTaskLearningStatus serializes task learning status to JSON string
+func (r *LearningReconciler) serializeTaskLearningStatus(status *TaskLearningStatus) (string, error) {
+	data, err := json.Marshal(status)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal task learning status: %w", err)
+	}
+	return string(data), nil
 }
 
 // recordLearningEvent records a learning event for auditing and monitoring

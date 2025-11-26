@@ -1320,7 +1320,8 @@ func TestTaskLearningStatus_SerializeParse(t *testing.T) {
 	}
 
 	// Serialize
-	serialized := reconciler.serializeTaskLearningStatus(original)
+	serialized, err := reconciler.serializeTaskLearningStatus(original)
+	require.NoError(t, err)
 
 	// Parse
 	parsed, err := reconciler.parseTaskLearningStatus(serialized)
