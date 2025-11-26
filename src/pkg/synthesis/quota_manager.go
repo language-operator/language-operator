@@ -282,12 +282,12 @@ func (qm *QuotaManager) GetRemainingQuota(namespace string) (remainingCost float
 func (qm *QuotaManager) getQuotaValuesAfterReset(quota *NamespaceQuota) (dailyCost float64, dailyAttempts int) {
 	// First try with read lock - most common case (no reset needed)
 	quota.mu.RLock()
-	
+
 	// Check if reset is needed without modifying anything
 	now := time.Now()
 	needsCostReset := now.After(quota.dailyResetAt)
 	needsAttemptReset := now.After(quota.attemptsResetAt)
-	
+
 	if !needsCostReset && !needsAttemptReset {
 		// No reset needed - safe to read with RLock
 		dailyCost = quota.dailyCost
@@ -295,19 +295,19 @@ func (qm *QuotaManager) getQuotaValuesAfterReset(quota *NamespaceQuota) (dailyCo
 		quota.mu.RUnlock()
 		return dailyCost, dailyAttempts
 	}
-	
+
 	// Reset is needed - upgrade to write lock
 	quota.mu.RUnlock()
 	quota.mu.Lock()
 	defer quota.mu.Unlock()
-	
+
 	// Perform reset if still needed (double-check after lock upgrade)
 	quota.resetIfNeeded()
-	
+
 	// Read values after reset
 	dailyCost = quota.dailyCost
 	dailyAttempts = quota.dailyAttempts
-	
+
 	return dailyCost, dailyAttempts
 }
 
