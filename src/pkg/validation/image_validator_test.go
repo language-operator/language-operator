@@ -211,6 +211,50 @@ func TestValidateImageRegistry(t *testing.T) {
 			allowed:   allowedRegistries,
 			wantError: true,
 		},
+
+		// Malformed IPv6 cases (security vulnerability tests)
+		{
+			name:      "ipv6 missing closing bracket",
+			image:     "[::1/image",
+			allowed:   []string{"[::1]"},
+			wantError: true,
+		},
+		{
+			name:      "ipv6 missing closing bracket with port",
+			image:     "[::1:5000/image",
+			allowed:   []string{"[::1]:5000"},
+			wantError: true,
+		},
+		{
+			name:      "ipv6 missing closing bracket complex",
+			image:     "[2001:db8::1:8080/malicious-image",
+			allowed:   []string{"[2001:db8::1]:8080"},
+			wantError: true,
+		},
+		{
+			name:      "ipv6 empty brackets",
+			image:     "[]/image",
+			allowed:   []string{"[]"},
+			wantError: true,
+		},
+		{
+			name:      "ipv6 like but valid bracket format",
+			image:     "[invalid-but-bracketed]/image",
+			allowed:   []string{"[invalid-but-bracketed]"},
+			wantError: false, // Bracket format is valid, content doesn't matter for this validation
+		},
+		{
+			name:      "ipv6 with digest missing bracket",
+			image:     "[::1/image@sha256:abc123",
+			allowed:   []string{"[::1]"},
+			wantError: true,
+		},
+		{
+			name:      "ipv6 with tag missing bracket",
+			image:     "[::1/image:latest",
+			allowed:   []string{"[::1]"},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -358,6 +402,108 @@ func TestValidationPerformance(t *testing.T) {
 	}
 
 	t.Logf("Performance: %v per validation (%d validations in %v)", avgPerValidation, iterations*len(testImages), elapsed)
+}
+
+// TestValidateIPv6Brackets tests the IPv6 bracket validation function specifically
+func TestValidateIPv6Brackets(t *testing.T) {
+	tests := []struct {
+		name      string
+		image     string
+		wantError bool
+	}{
+		// Valid IPv6 cases
+		{
+			name:      "valid ipv6 localhost",
+			image:     "[::1]/image",
+			wantError: false,
+		},
+		{
+			name:      "valid ipv6 with port",
+			image:     "[::1]:5000/image",
+			wantError: false,
+		},
+		{
+			name:      "valid ipv6 complex",
+			image:     "[2001:db8::1]:8080/app:latest",
+			wantError: false,
+		},
+		{
+			name:      "valid ipv6 with digest",
+			image:     "[::1]:5000/image@sha256:abc123",
+			wantError: false,
+		},
+		{
+			name:      "valid ipv6 with tag",
+			image:     "[::1]/image:latest",
+			wantError: false,
+		},
+
+		// Non-IPv6 cases (should pass validation)
+		{
+			name:      "regular hostname",
+			image:     "docker.io/nginx",
+			wantError: false,
+		},
+		{
+			name:      "hostname with port",
+			image:     "localhost:5000/image",
+			wantError: false,
+		},
+
+		// Invalid IPv6 cases
+		{
+			name:      "missing closing bracket",
+			image:     "[::1/image",
+			wantError: true,
+		},
+		{
+			name:      "missing closing bracket with port",
+			image:     "[::1:5000/image",
+			wantError: true,
+		},
+		{
+			name:      "missing closing bracket complex",
+			image:     "[2001:db8::1:8080/malicious-image",
+			wantError: true,
+		},
+		{
+			name:      "empty brackets",
+			image:     "[]/image",
+			wantError: true,
+		},
+		{
+			name:      "only opening bracket",
+			image:     "[::1",
+			wantError: true,
+		},
+		{
+			name:      "extra opening bracket",
+			image:     "[[::1]/image",
+			wantError: false, // This is valid - multiple [ are ok as long as first closes
+		},
+		{
+			name:      "missing bracket with digest",
+			image:     "[::1/image@sha256:abc123",
+			wantError: true,
+		},
+		{
+			name:      "missing bracket with tag",
+			image:     "[::1/image:latest",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIPv6Brackets(tt.image)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateIPv6Brackets(%q) error = %v, wantError %v", tt.image, err, tt.wantError)
+			}
+			if err != nil && !tt.wantError {
+				t.Errorf("Unexpected error: %v", err)
+			}
+		})
+	}
 }
 
 // TestErrorMessages ensures error messages are clear and helpful

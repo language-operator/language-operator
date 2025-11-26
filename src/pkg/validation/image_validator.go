@@ -18,6 +18,11 @@ func ValidateImageRegistry(image string, allowedRegistries []string) error {
 		return fmt.Errorf("image reference cannot be empty")
 	}
 
+	// Validate IPv6 bracket format before extracting registry
+	if err := validateIPv6Brackets(image); err != nil {
+		return err
+	}
+
 	registry := extractRegistry(image)
 
 	// Check if registry matches any allowed registry (exact or wildcard)
@@ -28,6 +33,47 @@ func ValidateImageRegistry(image string, allowedRegistries []string) error {
 	}
 
 	return fmt.Errorf("registry %s not in whitelist: %v", registry, allowedRegistries)
+}
+
+// validateIPv6Brackets validates that IPv6 addresses are properly bracketed.
+// Returns an error if the image starts with '[' but lacks a closing ']'.
+func validateIPv6Brackets(image string) error {
+	if !strings.HasPrefix(image, "[") {
+		return nil // Not an IPv6 address, no validation needed
+	}
+
+	// Remove tag or digest for bracket validation
+	imageForValidation := image
+	if idx := strings.Index(image, "@"); idx != -1 {
+		imageForValidation = image[:idx]
+	}
+	if idx := strings.Index(imageForValidation, ":"); idx != -1 {
+		// Check if this colon is part of a tag (after the path)
+		if slashIdx := strings.Index(imageForValidation, "/"); slashIdx != -1 && idx > slashIdx {
+			imageForValidation = imageForValidation[:idx]
+		}
+	}
+
+	// Find bracket positions
+	openIdx := strings.Index(imageForValidation, "[")
+	closeIdx := strings.Index(imageForValidation, "]")
+
+	// Check for missing closing bracket
+	if closeIdx == -1 {
+		return fmt.Errorf("invalid IPv6 address format: missing closing bracket ']' in %s", image)
+	}
+
+	// Check that closing bracket comes after opening bracket
+	if closeIdx <= openIdx {
+		return fmt.Errorf("invalid IPv6 address format: malformed bracket order in %s", image)
+	}
+
+	// Check for empty brackets
+	if closeIdx == openIdx+1 {
+		return fmt.Errorf("invalid IPv6 address format: empty brackets '[]' in %s", image)
+	}
+
+	return nil
 }
 
 // extractRegistry extracts the registry from an image reference.
@@ -58,7 +104,8 @@ func extractRegistry(image string) string {
 			// If no slash found, entire string is the registry
 			return image
 		}
-		// If no closing bracket found, treat as malformed but continue with normal parsing
+		// Note: Malformed IPv6 addresses (missing ']') are now validated by validateIPv6Brackets()
+		// before this function is called, so this path should never be reached for malformed IPv6.
 	}
 
 	// Original IPv4/hostname logic for non-bracketed addresses
