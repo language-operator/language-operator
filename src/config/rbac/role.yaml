@@ -181,6 +181,12 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
   - languageclusters/status
   verbs:
   - get

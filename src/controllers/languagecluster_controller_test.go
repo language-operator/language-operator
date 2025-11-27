@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
@@ -404,7 +404,7 @@ func TestLanguageClusterController_DeletionWithDependents(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			ClusterRef: "test-cluster-with-deps",
+			ClusterRef:   "test-cluster-with-deps",
 			Instructions: "test agent",
 		},
 	}
