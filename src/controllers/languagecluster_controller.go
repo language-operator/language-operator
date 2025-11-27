@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -44,6 +45,9 @@ type LanguageClusterReconciler struct {
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=langop.io,resources=languageclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;delete
+//+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -74,6 +78,44 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	span := result.Span
 	log := log.FromContext(ctx)
 
+	// Handle deletion
+	if !cluster.DeletionTimestamp.IsZero() {
+		if controllerutil.ContainsFinalizer(cluster, FinalizerName) {
+			// Cleanup dependent resources
+			if err := r.cleanupDependentResources(ctx, cluster); err != nil {
+				log.Error(err, "Failed to cleanup dependent resources")
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Failed to cleanup dependent resources")
+				reconcileErr = err
+				return ctrl.Result{}, err
+			}
+
+			// Remove finalizer
+			controllerutil.RemoveFinalizer(cluster, FinalizerName)
+			if err := r.Update(ctx, cluster); err != nil {
+				log.Error(err, "Failed to remove finalizer")
+				span.SetStatus(codes.Error, "Failed to remove finalizer")
+				reconcileErr = err
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Add finalizer if not present
+	if !controllerutil.ContainsFinalizer(cluster, FinalizerName) {
+		controllerutil.AddFinalizer(cluster, FinalizerName)
+		if err := r.Update(ctx, cluster); err != nil {
+			log.Error(err, "Failed to add finalizer")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to add finalizer")
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+		// Requeue after adding finalizer
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	// Validate DNS configuration if domain is set
 	if cluster.Spec.Domain != "" {
 		r.validateDNS(ctx, cluster)
@@ -95,6 +137,54 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
+}
+
+// cleanupDependentResources removes all resources that reference this cluster
+func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	clusterName := cluster.Name
+	namespace := cluster.Namespace
+
+	log.Info("Cleaning up dependent resources", "cluster", clusterName, "namespace", namespace)
+
+	// Delete all LanguageAgents that reference this cluster
+	agentList := &langopv1alpha1.LanguageAgentList{}
+	if err := r.List(ctx, agentList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list agents in namespace %s: %w", namespace, err)
+	}
+
+	for _, agent := range agentList.Items {
+		if agent.Spec.ClusterRef == clusterName {
+			log.Info("Deleting agent", "agent", agent.Name, "cluster", clusterName)
+			if err := r.Delete(ctx, &agent, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+				if client.IgnoreNotFound(err) != nil {
+					log.Error(err, "Failed to delete agent", "agent", agent.Name)
+					// Continue with other resources, don't fail completely
+				}
+			}
+		}
+	}
+
+	// Delete all LanguageTools that reference this cluster
+	toolList := &langopv1alpha1.LanguageToolList{}
+	if err := r.List(ctx, toolList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list tools in namespace %s: %w", namespace, err)
+	}
+
+	for _, tool := range toolList.Items {
+		if tool.Spec.ClusterRef == clusterName {
+			log.Info("Deleting tool", "tool", tool.Name, "cluster", clusterName)
+			if err := r.Delete(ctx, &tool, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+				if client.IgnoreNotFound(err) != nil {
+					log.Error(err, "Failed to delete tool", "tool", tool.Name)
+					// Continue with other resources, don't fail completely
+				}
+			}
+		}
+	}
+
+	log.Info("Completed cleanup of dependent resources", "cluster", clusterName)
+	return nil
 }
 
 // validateDNS checks if wildcard DNS is configured for the cluster domain
