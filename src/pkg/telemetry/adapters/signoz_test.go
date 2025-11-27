@@ -1339,3 +1339,220 @@ func TestValidatePort(t *testing.T) {
 		})
 	}
 }
+
+// TestQueryBuilderV5Payload tests the new Query Builder v5 payload generation
+func TestQueryBuilderV5Payload(t *testing.T) {
+	adapter, err := NewSignozAdapter("https://signoz.example.com", "test-api-key", 30*time.Second)
+	require.NoError(t, err)
+
+	t.Run("Basic payload structure", func(t *testing.T) {
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+			Limit: 10,
+		}
+
+		payload := adapter.buildQueryBuilderV5Payload(filter)
+
+		// Check top-level structure
+		assert.Equal(t, "raw", payload["requestType"])
+		assert.NotNil(t, payload["start"])
+		assert.NotNil(t, payload["end"])
+		assert.NotNil(t, payload["variables"])
+		assert.NotNil(t, payload["compositeQuery"])
+
+		// Check timestamps are in milliseconds
+		startMs := payload["start"].(int64)
+		endMs := payload["end"].(int64)
+		assert.Greater(t, startMs, int64(1000000000000)) // > 1 billion milliseconds (year 2001)
+		assert.Greater(t, endMs, startMs)
+
+		// Check compositeQuery structure
+		compositeQuery := payload["compositeQuery"].(map[string]interface{})
+		queries := compositeQuery["queries"].([]map[string]interface{})
+		assert.Len(t, queries, 1)
+
+		query := queries[0]
+		assert.Equal(t, "builder_query", query["type"])
+
+		spec := query["spec"].(map[string]interface{})
+		assert.Equal(t, "A", spec["name"])
+		assert.Equal(t, "traces", spec["signal"])
+		assert.Equal(t, 10, spec["limit"])
+		assert.Equal(t, 0, spec["offset"])
+		assert.Equal(t, false, spec["disabled"])
+
+		// Check selectFields
+		selectFields := spec["selectFields"].([]map[string]string)
+		expectedFields := []string{"spanID", "traceID", "parentSpanID", "operationName", "timestamp", "duration", "statusCode", "attributes", "events"}
+		assert.Len(t, selectFields, len(expectedFields))
+		for i, field := range expectedFields {
+			assert.Equal(t, field, selectFields[i]["name"])
+		}
+
+		// Check order
+		order := spec["order"].([]map[string]interface{})
+		assert.Len(t, order, 1)
+		assert.Equal(t, "timestamp", order[0]["key"].(map[string]string)["name"])
+		assert.Equal(t, "desc", order[0]["direction"])
+	})
+
+	t.Run("Filter expressions", func(t *testing.T) {
+		filter := telemetry.SpanFilter{
+			TaskName: "fetch_user",
+			TraceID:  "trace-123",
+			Attributes: map[string]string{
+				"environment": "production",
+				"service":     "api",
+			},
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		payload := adapter.buildQueryBuilderV5Payload(filter)
+
+		compositeQuery := payload["compositeQuery"].(map[string]interface{})
+		queries := compositeQuery["queries"].([]map[string]interface{})
+		spec := queries[0]["spec"].(map[string]interface{})
+		filterMap := spec["filter"].(map[string]interface{})
+		expression := filterMap["expression"].(string)
+
+		// Check that all filters are included
+		assert.Contains(t, expression, "fetch_user")
+		assert.Contains(t, expression, "trace-123")
+		assert.Contains(t, expression, "environment")
+		assert.Contains(t, expression, "production")
+		assert.Contains(t, expression, "service")
+		assert.Contains(t, expression, "api")
+		assert.Contains(t, expression, " AND ")
+	})
+
+	t.Run("No filters (empty expression)", func(t *testing.T) {
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		payload := adapter.buildQueryBuilderV5Payload(filter)
+
+		compositeQuery := payload["compositeQuery"].(map[string]interface{})
+		queries := compositeQuery["queries"].([]map[string]interface{})
+		spec := queries[0]["spec"].(map[string]interface{})
+		filterMap := spec["filter"].(map[string]interface{})
+		expression := filterMap["expression"].(string)
+
+		assert.Equal(t, "", expression, "Empty filter should result in empty expression")
+	})
+}
+
+// TestQueryBuilderV5Response tests parsing of Query Builder v5 responses
+func TestQueryBuilderV5Response(t *testing.T) {
+	t.Run("Parse successful Query Builder v5 response", func(t *testing.T) {
+		// Mock SigNoz server with Query Builder v5 response format
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Verify the request payload is Query Builder v5 format
+			var reqPayload map[string]interface{}
+			json.NewDecoder(r.Body).Decode(&reqPayload)
+
+			// Verify key Query Builder v5 fields exist
+			assert.Equal(t, "raw", reqPayload["requestType"])
+			assert.NotNil(t, reqPayload["compositeQuery"])
+
+			// Mock Query Builder v5 response
+			response := map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"resultType": "list",
+					"result": []map[string]interface{}{
+						{
+							"spanID":        "span-123",
+							"traceID":       "trace-456",
+							"parentSpanID":  "parent-789",
+							"operationName": "execute_task",
+							"timestamp":     "2025-01-01T12:00:00Z",
+							"duration":      float64(1000000000), // 1 second in nanoseconds
+							"statusCode":    float64(200),
+							"attributes": map[string]interface{}{
+								"task.name":  "fetch_user",
+								"agent.name": "test-agent",
+							},
+							"events": []interface{}{},
+						},
+					},
+				},
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		adapter, err := NewSignozAdapter(server.URL, "test-api-key", 30*time.Second)
+		require.NoError(t, err)
+
+		filter := telemetry.SpanFilter{
+			TaskName: "fetch_user",
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+			Limit: 10,
+		}
+
+		spans, err := adapter.QuerySpans(context.Background(), filter)
+
+		require.NoError(t, err)
+		assert.Len(t, spans, 1)
+
+		span := spans[0]
+		assert.Equal(t, "span-123", span.SpanID)
+		assert.Equal(t, "trace-456", span.TraceID)
+		assert.Equal(t, "parent-789", span.ParentSpanID)
+		assert.Equal(t, "execute_task", span.OperationName)
+		assert.Equal(t, "fetch_user", span.TaskName)
+		assert.True(t, span.Status) // Status code 200 = success
+		assert.Equal(t, 1*time.Second, span.Duration)
+	})
+
+	t.Run("Handle API errors in Query Builder v5 format", func(t *testing.T) {
+		// Mock server that returns Query Builder v5 error response
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+
+			response := map[string]interface{}{
+				"status": "error",
+				"error": map[string]interface{}{
+					"code":    "invalid_input",
+					"message": "failed to decode request body: unknown field \"query\"",
+				},
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		adapter, err := NewSignozAdapter(server.URL, "test-api-key", 30*time.Second)
+		require.NoError(t, err)
+
+		filter := telemetry.SpanFilter{
+			TimeRange: telemetry.TimeRange{
+				Start: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		spans, err := adapter.QuerySpans(context.Background(), filter)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "SigNoz API error: 400")
+		assert.Contains(t, err.Error(), "unknown field")
+		assert.Empty(t, spans)
+	})
+}

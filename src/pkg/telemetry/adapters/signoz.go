@@ -280,13 +280,13 @@ func (s *SignozAdapter) makeRequest(ctx context.Context, method, path string, bo
 // QuerySpans retrieves execution spans from SigNoz matching the given filter criteria.
 //
 // Implements TelemetryAdapter.QuerySpans by:
-//  1. Building ClickHouse SQL query with appropriate WHERE clauses
+//  1. Building Query Builder v5 payload with filter expressions
 //  2. Calling SigNoz /api/v5/query_range endpoint
 //  3. Parsing response and converting to standard Span format
 //  4. Handling pagination and result limits
 //
-// The method constructs complex ClickHouse queries to filter spans by:
-//   - Time range (start/end timestamps)
+// The method constructs Query Builder v5 requests to filter spans by:
+//   - Time range (start/end timestamps in milliseconds)
 //   - Task name (extracted from span attributes)
 //   - Trace ID (exact match)
 //   - Custom attributes (key-value pairs)
@@ -294,16 +294,8 @@ func (s *SignozAdapter) makeRequest(ctx context.Context, method, path string, bo
 // Returns spans ordered by timestamp (newest first) up to filter.Limit.
 // Returns empty slice (not error) if no spans match criteria.
 func (s *SignozAdapter) QuerySpans(ctx context.Context, filter telemetry.SpanFilter) ([]telemetry.Span, error) {
-	// Build ClickHouse query based on filter
-	query := s.buildSpanQuery(filter)
-
-	// Prepare request payload for SigNoz API
-	reqPayload := map[string]interface{}{
-		"query": query,
-		"start": filter.TimeRange.Start.Unix(),
-		"end":   filter.TimeRange.End.Unix(),
-		"step":  60, // 1 minute step for aggregation (not used for span queries)
-	}
+	// Build Query Builder v5 payload
+	reqPayload := s.buildQueryBuilderV5Payload(filter)
 
 	reqBody, err := json.Marshal(reqPayload)
 	if err != nil {
@@ -325,7 +317,125 @@ func (s *SignozAdapter) QuerySpans(ctx context.Context, filter telemetry.SpanFil
 	return spans, nil
 }
 
+// buildQueryBuilderV5Payload constructs a Query Builder v5 payload for SigNoz trace queries.
+//
+// SigNoz Query Builder v5 uses a structured JSON format instead of raw ClickHouse SQL.
+// The payload structure follows the pattern:
+//   - start/end: timestamps in milliseconds
+//   - requestType: "raw" for span data retrieval
+//   - compositeQuery: contains query specifications
+//   - queries[].spec: defines filtering, ordering, and result selection
+//
+// This replaces the old ClickHouse SQL-based approach with expression-based filtering.
+func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) map[string]interface{} {
+	// Convert timestamps to milliseconds (SigNoz v5 requirement)
+	startMs := filter.TimeRange.Start.UnixMilli()
+	endMs := filter.TimeRange.End.Unix() * 1000 // Handle cases where UnixMilli() might not be available
+	if filter.TimeRange.End.UnixNano() > 0 {
+		endMs = filter.TimeRange.End.UnixNano() / 1000000
+	}
+
+	// Build filter expression based on SpanFilter criteria
+	filterExpression := s.buildFilterExpression(filter)
+
+	// Define select fields for span data
+	selectFields := []map[string]string{
+		{"name": "spanID"},
+		{"name": "traceID"},
+		{"name": "parentSpanID"},
+		{"name": "operationName"},
+		{"name": "timestamp"},
+		{"name": "duration"},
+		{"name": "statusCode"},
+		{"name": "attributes"},
+		{"name": "events"},
+	}
+
+	// Build Query Builder v5 payload structure
+	payload := map[string]interface{}{
+		"start":       startMs,
+		"end":         endMs,
+		"requestType": "raw",
+		"variables":   map[string]interface{}{},
+		"compositeQuery": map[string]interface{}{
+			"queries": []map[string]interface{}{
+				{
+					"type": "builder_query",
+					"spec": map[string]interface{}{
+						"name":   "A",
+						"signal": "traces",
+						"filter": map[string]interface{}{
+							"expression": filterExpression,
+						},
+						"selectFields": selectFields,
+						"order": []map[string]interface{}{
+							{
+								"key":       map[string]string{"name": "timestamp"},
+								"direction": "desc",
+							},
+						},
+						"limit":    filter.Limit,
+						"offset":   0,
+						"disabled": false,
+					},
+				},
+			},
+		},
+	}
+
+	return payload
+}
+
+// buildFilterExpression constructs a SigNoz Query Builder v5 filter expression.
+//
+// Converts SpanFilter criteria to expression syntax that SigNoz understands.
+// Combines multiple conditions with AND operators.
+func (s *SignozAdapter) buildFilterExpression(filter telemetry.SpanFilter) string {
+	var conditions []string
+
+	// Task name filter - check multiple possible attribute keys
+	if filter.TaskName != "" {
+		taskConditions := []string{
+			fmt.Sprintf("attributes['task.name'] = '%s'", s.escapeFilterValue(filter.TaskName)),
+			fmt.Sprintf("attributes['task_name'] = '%s'", s.escapeFilterValue(filter.TaskName)),
+			fmt.Sprintf("operationName = '%s'", s.escapeFilterValue(filter.TaskName)),
+		}
+		conditions = append(conditions, "("+strings.Join(taskConditions, " OR ")+")")
+	}
+
+	// Trace ID filter
+	if filter.TraceID != "" {
+		conditions = append(conditions, fmt.Sprintf("traceID = '%s'", s.escapeFilterValue(filter.TraceID)))
+	}
+
+	// Custom attributes filter
+	for key, value := range filter.Attributes {
+		conditions = append(conditions, fmt.Sprintf(
+			"attributes['%s'] = '%s'",
+			s.escapeFilterValue(key),
+			s.escapeFilterValue(value)))
+	}
+
+	// Combine all conditions with AND
+	if len(conditions) == 0 {
+		return "" // No specific filters, return all spans in time range
+	}
+
+	return strings.Join(conditions, " AND ")
+}
+
+// escapeFilterValue escapes special characters for SigNoz filter expressions.
+//
+// SigNoz filter expressions need single quotes escaped to prevent injection.
+func (s *SignozAdapter) escapeFilterValue(value string) string {
+	// Escape single quotes for filter expression safety
+	return strings.ReplaceAll(value, "'", "''")
+}
+
 // buildSpanQuery constructs a ClickHouse SQL query for span filtering.
+//
+// DEPRECATED: This method is kept for backward compatibility but should not be used
+// with SigNoz v0.103.0+. Use buildQueryBuilderV5Payload instead.
 //
 // SigNoz stores spans in ClickHouse with the following relevant columns:
 //   - timestamp: Span start time (DateTime64)
@@ -406,36 +516,67 @@ func (s *SignozAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 	return query
 }
 
-// parseSpanResponse parses SigNoz ClickHouse query response into standard Span format.
+// parseSpanResponse parses SigNoz Query Builder v5 response into standard Span format.
 //
-// SigNoz returns query results in JSON format with structure:
+// SigNoz Query Builder v5 returns query results in JSON format with structure:
 //
 //	{
+//	  "status": "success",
 //	  "data": {
+//	    "resultType": "list",
 //	    "result": [
 //	      {
-//	        "metric": {},
-//	        "values": [[timestamp, value], ...]
+//	        "spanID": "...",
+//	        "traceID": "...",
+//	        "timestamp": "2023-11-27T10:00:00Z",
+//	        "attributes": {...},
+//	        ...
 //	      }
 //	    ]
 //	  }
 //	}
 //
-// However, for span queries, the format is different and contains actual row data.
+// This handles the new Query Builder v5 response format for trace queries.
 func (s *SignozAdapter) parseSpanResponse(respBody []byte, limit int) ([]telemetry.Span, error) {
-	var response struct {
+	// First, try to parse as Query Builder v5 response format
+	var v5Response struct {
+		Status string `json:"status"`
+		Data   struct {
+			ResultType string                   `json:"resultType"`
+			Result     []map[string]interface{} `json:"result"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(respBody, &v5Response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal v5 response: %w", err)
+	}
+
+	// Check if it's a successful Query Builder v5 response
+	if v5Response.Status == "success" && v5Response.Data.ResultType == "list" {
+		return s.parseV5SpanResponse(v5Response.Data.Result, limit)
+	}
+
+	// Fallback: try to parse as old response format for backward compatibility
+	var legacyResponse struct {
 		Data struct {
 			Result []map[string]interface{} `json:"result"`
 		} `json:"data"`
 	}
 
-	if err := json.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	if err := json.Unmarshal(respBody, &legacyResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal legacy response: %w", err)
 	}
 
-	spans := make([]telemetry.Span, 0, len(response.Data.Result))
+	return s.parseV5SpanResponse(legacyResponse.Data.Result, limit)
+}
 
-	for _, row := range response.Data.Result {
+// parseV5SpanResponse processes Query Builder v5 span result data.
+//
+// Converts the raw Query Builder v5 span data to our standard telemetry.Span format.
+func (s *SignozAdapter) parseV5SpanResponse(result []map[string]interface{}, limit int) ([]telemetry.Span, error) {
+	spans := make([]telemetry.Span, 0, len(result))
+
+	for _, row := range result {
 		span, err := s.convertRowToSpan(row)
 		if err != nil {
 			// Log error but continue processing other spans
