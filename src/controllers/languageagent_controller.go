@@ -1666,10 +1666,21 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 	// and trigger reconciliation loops. The agent pod will create its own traces.
 
 	// Inject OpenTelemetry configuration from operator environment
+	// Check both direct OTEL configuration and telemetry adapter configuration
+	var otelEndpoint string
+
+	// Priority 1: Direct OTEL configuration (if operator OpenTelemetry is enabled)
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		otelEndpoint = endpoint
+	} else if telemetryEndpoint := os.Getenv("TELEMETRY_ADAPTER_ENDPOINT"); telemetryEndpoint != "" {
+		// Priority 2: Use telemetry adapter endpoint for agent tracing
+		otelEndpoint = telemetryEndpoint
+	}
+
+	if otelEndpoint != "" {
 		// Ruby OpenTelemetry exporter uses HTTP (port 4318) not gRPC (port 4317)
 		// Replace :4317 with :4318 for Ruby agents
-		agentEndpoint := strings.Replace(endpoint, ":4317", ":4318", 1)
+		agentEndpoint := strings.Replace(otelEndpoint, ":4317", ":4318", 1)
 
 		// Ensure http:// protocol is present (required by Ruby OTLP exporter)
 		if !strings.HasPrefix(agentEndpoint, "http://") && !strings.HasPrefix(agentEndpoint, "https://") {
@@ -1693,6 +1704,28 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Name:  "OTEL_LOGS_EXPORTER",
 			Value: "otlp",
 		})
+
+		// Inject additional OTEL variables from operator environment if present
+		if resourceAttrs := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceAttrs != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_RESOURCE_ATTRIBUTES",
+				Value: resourceAttrs,
+			})
+		}
+
+		if sampler := os.Getenv("OTEL_TRACES_SAMPLER"); sampler != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER",
+				Value: sampler,
+			})
+		}
+
+		if samplerArg := os.Getenv("OTEL_TRACES_SAMPLER_ARG"); samplerArg != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER_ARG",
+				Value: samplerArg,
+			})
+		}
 	}
 
 	// Set unique service name for agent
