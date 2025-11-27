@@ -10,10 +10,12 @@
 - ✅ **Issue #74**: Registry whitelist bypass via operator-config version field - **RESOLVED** (Nov 26) - Added strict ConfigMap validation
 - ✅ **Issue #52**: ConfigMap version validation allows zero/negative versions - **RESOLVED** (Nov 26) - Added CurrentVersion validation in learning controller
 
-### Priority 3: Configuration & Validation Infrastructure (Ready - Nov 26)
+### Priority 3: Resource Lifecycle Management (Nov 27)  
+- ✅ **Issue #84**: Deleting clusters leaves orphans - **RESOLVED** (Nov 27) - Added finalizer cleanup for LanguageCluster controller
 - ✅ **Issue #71**: Learning controller status update failures - **RESOLVED** (Nov 26) - Fixed JSON serialization, ConfigMap size validation, and status data rotation
 - ✅ **Issue #68**: Telemetry adapter configuration validation failures - **RESOLVED** (Nov 26) - Added strict URL validation to prevent runtime failures
 - ✅ **Issue #53**: IPv6 registry validation bracket handling failures - **RESOLVED** (Nov 26) - Invalid bug report, implementation is complete and working
+- ✅ **Issue #79**: Remove unused utility functions from controllers - **RESOLVED** (Nov 26) - Removed MergeLabels() function, 10 lines dead code cleanup
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
 
@@ -43,6 +45,8 @@
 
 ## Recent Completions Summary
 - **Phase 1 Complete**: Core platform infrastructure delivered
-- **Phase 2 Progress**: Resolved 18 critical issues (memory leaks, race conditions, security vulnerabilities)
+- **Phase 2 Progress**: Resolved 19 critical issues (memory leaks, race conditions, security vulnerabilities)
+- **Resource Lifecycle (Nov 27)**: Fixed LanguageCluster orphaned resource cleanup with finalizer implementation
 - **Controller Optimization**: Extracted common pattern, eliminated ~150 lines duplicate code
+- **Dead Code Cleanup (Nov 26)**: Removed 398 lines of unused code from cmd/main.go, eliminated duplicate registry loading logic
 - **Next Optimization**: Learning controller migration to ReconcileHelper pattern (15+ lines reduction, standardization)
