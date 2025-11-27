@@ -1666,6 +1666,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 	// and trigger reconciliation loops. The agent pod will create its own traces.
 
 	// Inject OpenTelemetry configuration from operator environment
+	// Agents use the collector endpoint for sending telemetry data
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
 		// Ruby OpenTelemetry exporter uses HTTP (port 4318) not gRPC (port 4317)
 		// Replace :4317 with :4318 for Ruby agents
@@ -1693,6 +1694,28 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Name:  "OTEL_LOGS_EXPORTER",
 			Value: "otlp",
 		})
+
+		// Inject additional OTEL variables from operator environment if present
+		if resourceAttrs := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceAttrs != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_RESOURCE_ATTRIBUTES",
+				Value: resourceAttrs,
+			})
+		}
+
+		if sampler := os.Getenv("OTEL_TRACES_SAMPLER"); sampler != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER",
+				Value: sampler,
+			})
+		}
+
+		if samplerArg := os.Getenv("OTEL_TRACES_SAMPLER_ARG"); samplerArg != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER_ARG",
+				Value: samplerArg,
+			})
+		}
 	}
 
 	// Set unique service name for agent

@@ -466,59 +466,65 @@ monitoring:
 
 # OpenTelemetry configuration
 # Enables distributed tracing for operator and agents
+# OpenTelemetry Configuration
+# Split into two distinct purposes for clarity:
+
+# 1. DATA COLLECTION - Where agents/tools/operator send telemetry data
 opentelemetry:
-  # Enable OpenTelemetry tracing (default: false for opt-in behavior)
-  enabled: false
-
-  # OTLP gRPC endpoint for exporting traces
-  # Examples:
-  #   - "otel-collector.observability.svc.cluster.local:4317" (in-cluster collector)
-  #   - "otel-collector:4317" (same namespace)
-  #   - "jaeger-collector.observability.svc.cluster.local:4317" (Jaeger with OTLP)
-  endpoint: ""
-
-  # Sampling configuration
-  sampling:
-    # Trace sampling rate (0.0 to 1.0)
-    # 1.0 = sample 100% of traces (recommended for development)
-    # 0.1 = sample 10% of traces (recommended for production)
-    # 0.01 = sample 1% of traces (high-volume production)
-    rate: 1.0
-
-  # Resource attributes for trace identification
-  # These attributes help identify and filter traces in your observability platform
-  resourceAttributes:
-    # Environment identifier (e.g., production, staging, development)
-    environment: "production"
-
-    # Kubernetes cluster name (helps when aggregating traces from multiple clusters)
-    cluster: "main"
-
-    # Custom resource attributes (key-value pairs)
-    # Example:
-    #   region: "us-east-1"
-    #   team: "platform"
-    #   cost_center: "engineering"
-    custom: {}
-
-# Telemetry adapter configuration for the learning system
-# Enables querying historical traces and metrics from telemetry backends
-telemetry:
-  adapter:
-    # Enable telemetry adapter (default: false for opt-in behavior)
+  collector:
+    # Enable OpenTelemetry data collection (default: false for opt-in behavior)
     enabled: false
 
-    # Adapter type: "signoz", "jaeger", "tempo", or "noop"
+    # OTLP gRPC endpoint for exporting traces/metrics/logs
+    # This is where all operator components send their telemetry data
+    # Examples:
+    #   - "otel-collector.observability.svc.cluster.local:4317" (in-cluster collector)
+    #   - "otel-collector:4317" (same namespace)
+    #   - "jaeger-collector.observability.svc.cluster.local:4317" (Jaeger with OTLP)
+    endpoint: ""
+
+    # Sampling configuration for data collection
+    sampling:
+      # Trace sampling rate (0.0 to 1.0)
+      # 1.0 = sample 100% of traces (recommended for development)
+      # 0.1 = sample 10% of traces (recommended for production)
+      # 0.01 = sample 1% of traces (high-volume production)
+      rate: 1.0
+
+    # Resource attributes for trace identification
+    # These attributes help identify and filter traces in your observability platform
+    resourceAttributes:
+      # Environment identifier (e.g., production, staging, development)
+      environment: "production"
+
+      # Kubernetes cluster name (helps when aggregating traces from multiple clusters)
+      cluster: "main"
+
+      # Custom resource attributes (key-value pairs)
+      # Example:
+      #   region: "us-east-1"
+      #   team: "platform"
+      #   cost_center: "engineering"
+      custom: {}
+
+# 2. DATA QUERYING - Where the learning system queries historical telemetry data
+telemetry:
+  queryBackend:
+    # Enable telemetry query backend for learning system (default: false for opt-in behavior)
+    enabled: false
+
+    # Backend type: "signoz", "jaeger", "tempo", or "noop"
     type: "signoz"
 
-    # Connection configuration
+    # Query endpoint for historical data retrieval
+    # This is where the learning system queries traces for pattern analysis
     endpoint: ""
     # Example endpoints:
     #   SigNoz: "https://signoz.example.com" 
     #   Jaeger: "https://jaeger.example.com"
     #   Tempo: "https://tempo.example.com"
 
-    # Authentication
+    # Authentication for query backend
     auth:
       # API key for authentication (for SigNoz, Grafana Cloud, etc.)
       # Can be provided directly or via secret reference
@@ -565,17 +571,17 @@ telemetry:
       # Health check timeout
       timeout: "10s"
 
-# Agent-specific telemetry configuration
-# Allows agents to use different telemetry settings than the operator
+# Agent-specific data collection configuration
+# Allows agents and tools to use different collection settings than the operator
 agentTelemetry:
-  # OTLP endpoint override for agents
-  # If empty, agents inherit the operator's opentelemetry.endpoint
-  # Useful for routing agent traces to a different collector or backend
+  # OTLP endpoint override for agents and tools
+  # If empty, agents inherit the operator's opentelemetry.collector.endpoint
+  # Useful for routing agent traces to a different collector
   # Example: "otel-collector-agents.observability.svc.cluster.local:4317"
   endpoint: ""
 
-  # Sampling rate override for agents
-  # If null, agents inherit the operator's opentelemetry.sampling.rate
+  # Sampling rate override for agents and tools
+  # If null, agents inherit the operator's opentelemetry.collector.sampling.rate
   # Set to a lower rate (e.g., 0.1) to reduce agent trace volume
   # while keeping operator traces at 100% sampling
   samplingRate: null

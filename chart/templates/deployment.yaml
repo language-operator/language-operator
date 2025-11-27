@@ -103,54 +103,55 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        {{- if .Values.opentelemetry.enabled }}
+        {{- if .Values.opentelemetry.collector.enabled }}
+        # OpenTelemetry data collection configuration
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: {{ .Values.opentelemetry.endpoint | quote }}
+          value: {{ .Values.opentelemetry.collector.endpoint | quote }}
         - name: OTEL_SERVICE_NAME
           value: "language-operator"
         - name: OTEL_TRACES_SAMPLER
           value: "traceidratio"
         - name: OTEL_TRACES_SAMPLER_ARG
-          value: {{ .Values.opentelemetry.sampling.rate | quote }}
+          value: {{ .Values.opentelemetry.collector.sampling.rate | quote }}
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: {{ include "language-operator.otelResourceAttributes" . | quote }}
         {{- end }}
         {{- if include "language-operator.telemetryAdapter.enabled" . }}
-        # Telemetry adapter configuration
+        # Telemetry query backend configuration for learning system
         - name: TELEMETRY_ADAPTER_TYPE
           value: {{ include "language-operator.telemetryAdapter.type" . | quote }}
         - name: TELEMETRY_ADAPTER_ENDPOINT
-          value: {{ .Values.telemetry.adapter.endpoint | quote }}
-        {{- if or .Values.telemetry.adapter.auth.apiKey .Values.telemetry.adapter.auth.apiKeySecret.name }}
+          value: {{ .Values.telemetry.queryBackend.endpoint | quote }}
+        {{- if or .Values.telemetry.queryBackend.auth.apiKey .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
         - name: TELEMETRY_ADAPTER_API_KEY
-          {{- if .Values.telemetry.adapter.auth.apiKeySecret.name }}
+          {{- if .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.telemetry.adapter.auth.apiKeySecret.name }}
-              key: {{ .Values.telemetry.adapter.auth.apiKeySecret.key }}
+              name: {{ .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
+              key: {{ .Values.telemetry.queryBackend.auth.apiKeySecret.key }}
           {{- else }}
-          value: {{ .Values.telemetry.adapter.auth.apiKey | quote }}
+          value: {{ .Values.telemetry.queryBackend.auth.apiKey | quote }}
           {{- end }}
         {{- end }}
         - name: TELEMETRY_ADAPTER_TIMEOUT
-          value: {{ .Values.telemetry.adapter.timeout | quote }}
+          value: {{ .Values.telemetry.queryBackend.timeout | quote }}
         - name: TELEMETRY_ADAPTER_RETRY_ATTEMPTS
-          value: {{ .Values.telemetry.adapter.retryAttempts | quote }}
+          value: {{ .Values.telemetry.queryBackend.retryAttempts | quote }}
         - name: TELEMETRY_ADAPTER_RETRY_BACKOFF
-          value: {{ .Values.telemetry.adapter.retryBackoff | quote }}
+          value: {{ .Values.telemetry.queryBackend.retryBackoff | quote }}
         - name: TELEMETRY_ADAPTER_MAX_TRACES
-          value: {{ .Values.telemetry.adapter.query.maxTraces | quote }}
+          value: {{ .Values.telemetry.queryBackend.query.maxTraces | quote }}
         - name: TELEMETRY_ADAPTER_LOOKBACK_PERIOD
-          value: {{ .Values.telemetry.adapter.query.lookbackPeriod | quote }}
+          value: {{ .Values.telemetry.queryBackend.query.lookbackPeriod | quote }}
         - name: TELEMETRY_ADAPTER_QUERY_TIMEOUT
-          value: {{ .Values.telemetry.adapter.query.timeout | quote }}
+          value: {{ .Values.telemetry.queryBackend.query.timeout | quote }}
         - name: TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED
-          value: {{ .Values.telemetry.adapter.healthCheck.enabled | quote }}
+          value: {{ .Values.telemetry.queryBackend.healthCheck.enabled | quote }}
         - name: TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL
-          value: {{ .Values.telemetry.adapter.healthCheck.interval | quote }}
+          value: {{ .Values.telemetry.queryBackend.healthCheck.interval | quote }}
         - name: TELEMETRY_ADAPTER_HEALTH_CHECK_TIMEOUT
-          value: {{ .Values.telemetry.adapter.healthCheck.timeout | quote }}
-        {{- range $header, $value := .Values.telemetry.adapter.auth.headers }}
+          value: {{ .Values.telemetry.queryBackend.healthCheck.timeout | quote }}
+        {{- range $header, $value := .Values.telemetry.queryBackend.auth.headers }}
         - name: TELEMETRY_ADAPTER_HEADER_{{ upper $header | replace "-" "_" }}
           value: {{ $value | quote }}
         {{- end }}

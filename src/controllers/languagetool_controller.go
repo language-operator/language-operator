@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -314,7 +315,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							Env: tool.Spec.Env,
+							Env: r.buildToolEnv(tool),
 						},
 					},
 				},
@@ -333,6 +334,72 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 	})
 
 	return err
+}
+
+func (r *LanguageToolReconciler) buildToolEnv(tool *langopv1alpha1.LanguageTool) []corev1.EnvVar {
+	// Start with user-specified environment variables
+	env := append([]corev1.EnvVar{}, tool.Spec.Env...)
+
+	// Inject OpenTelemetry configuration from operator environment
+	// Tools use the collector endpoint for sending telemetry data
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		// Tools may use various languages/runtimes, so we provide gRPC endpoint (default)
+		// Most OTLP implementations support gRPC
+		toolEndpoint := endpoint
+
+		// Ensure http:// protocol is present for HTTP-based collectors
+		if !strings.HasPrefix(toolEndpoint, "http://") && !strings.HasPrefix(toolEndpoint, "https://") {
+			toolEndpoint = "http://" + toolEndpoint
+		}
+
+		// Configure OpenTelemetry auto-instrumentation via standard env vars
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
+			Value: toolEndpoint,
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_TRACES_EXPORTER",
+			Value: "otlp",
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_EXPORTER_OTLP_PROTOCOL",
+			Value: "grpc",
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "OTEL_LOGS_EXPORTER",
+			Value: "otlp",
+		})
+
+		// Inject additional OTEL variables from operator environment if present
+		if resourceAttrs := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceAttrs != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_RESOURCE_ATTRIBUTES",
+				Value: resourceAttrs,
+			})
+		}
+
+		if sampler := os.Getenv("OTEL_TRACES_SAMPLER"); sampler != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER",
+				Value: sampler,
+			})
+		}
+
+		if samplerArg := os.Getenv("OTEL_TRACES_SAMPLER_ARG"); samplerArg != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "OTEL_TRACES_SAMPLER_ARG",
+				Value: samplerArg,
+			})
+		}
+	}
+
+	// Set unique service name for tool
+	env = append(env, corev1.EnvVar{
+		Name:  "OTEL_SERVICE_NAME",
+		Value: fmt.Sprintf("language-operator-tool-%s", tool.Name),
+	})
+
+	return env
 }
 
 func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
