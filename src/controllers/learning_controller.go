@@ -2331,7 +2331,7 @@ func (r *LearningReconciler) mapJobToAgent(ctx context.Context, obj client.Objec
 	}
 
 	// Check if this job belongs to a language operator agent
-	agentName, exists := job.Labels["langop.io/agent"]
+	agentName, exists := job.Labels["app.kubernetes.io/name"]
 	if !exists {
 		return nil
 	}
