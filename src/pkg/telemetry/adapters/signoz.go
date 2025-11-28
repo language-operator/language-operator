@@ -406,8 +406,13 @@ func (s *SignozAdapter) buildFilterExpression(filter telemetry.SpanFilter) strin
 
 	// Add attribute filters if specified
 	for key, value := range filter.Attributes {
-		// Use attributes.key syntax for SigNoz Query Builder v5
-		conditions = append(conditions, fmt.Sprintf(`attributes.%s = '%s'`, key, s.escapeFilterValue(value)))
+		// Handle special fields that aren't custom attributes
+		if key == "service.name" {
+			conditions = append(conditions, fmt.Sprintf(`serviceName = '%s'`, s.escapeFilterValue(value)))
+		} else {
+			// Use attributes.key syntax for custom attributes in SigNoz Query Builder v5
+			conditions = append(conditions, fmt.Sprintf(`attributes.%s = '%s'`, key, s.escapeFilterValue(value)))
+		}
 	}
 
 	// If no conditions, return empty string (gets all spans in time range)

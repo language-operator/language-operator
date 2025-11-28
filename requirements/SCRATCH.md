@@ -16,6 +16,7 @@
 - ✅ **Issue #68**: Telemetry adapter configuration validation failures - **RESOLVED** (Nov 26) - Added strict URL validation to prevent runtime failures
 - ✅ **Issue #53**: IPv6 registry validation bracket handling failures - **RESOLVED** (Nov 26) - Invalid bug report, implementation is complete and working
 - ✅ **Issue #79**: Remove unused utility functions from controllers - **RESOLVED** (Nov 26) - Removed MergeLabels() function, 10 lines dead code cleanup
+- ✅ **Issue #87**: SigNoz API compatibility issue preventing learning system trace queries - **RESOLVED** (Nov 27) - Updated adapter for Query Builder v5 format, fixed SigNoz v0.103.0 compatibility
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
 
