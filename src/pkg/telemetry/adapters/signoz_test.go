@@ -1386,7 +1386,7 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 
 		// Check selectFields - only basic fields to avoid SigNoz v5 compatibility issues
 		selectFields := spec["selectFields"].([]map[string]string)
-		expectedFields := []string{"spanID", "traceID", "timestamp", "duration"}
+		expectedFields := []string{"spanID", "traceID", "timestamp"}
 		assert.Len(t, selectFields, len(expectedFields))
 		for i, field := range expectedFields {
 			assert.Equal(t, field, selectFields[i]["name"])

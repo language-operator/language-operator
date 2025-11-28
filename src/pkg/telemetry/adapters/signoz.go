@@ -343,7 +343,6 @@ func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) 
 		{"name": "spanID"},
 		{"name": "traceID"},
 		{"name": "timestamp"},
-		{"name": "duration"},
 	}
 
 	// Build Query Builder v5 payload structure
