@@ -344,11 +344,21 @@ func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) 
 	// Build filter expression based on SpanFilter criteria
 	filterExpression := s.buildFilterExpression(filter)
 
-	// Define select fields for span data - use basic fields that exist in SigNoz v5
+	// Define select fields for span data - match the original gem's sophisticated field selection
 	selectFields := []map[string]string{
 		{"name": "spanID"},
 		{"name": "traceID"},
 		{"name": "timestamp"},
+		{"name": "durationNano"},
+		{"name": "name"},
+		{"name": "serviceName"},
+		{"name": "task.name"},
+		{"name": "task.input.keys"},
+		{"name": "task.output.keys"},
+		{"name": "gen_ai.operation.name"},
+		{"name": "gen_ai.tool.name"},
+		{"name": "gen_ai.tool.call.arguments"},
+		{"name": "gen_ai.tool.call.result"},
 	}
 
 	// Build Query Builder v5 payload structure
@@ -410,8 +420,9 @@ func (s *SignozAdapter) buildFilterExpression(filter telemetry.SpanFilter) strin
 		if key == "service.name" {
 			conditions = append(conditions, fmt.Sprintf(`serviceName = '%s'`, s.escapeFilterValue(value)))
 		} else {
-			// Use attributes.key syntax for custom attributes in SigNoz Query Builder v5
-			conditions = append(conditions, fmt.Sprintf(`attributes.%s = '%s'`, key, s.escapeFilterValue(value)))
+			// Use direct field syntax for semantic attributes like task.name, agent.name
+			// This matches the original gem's proven working approach
+			conditions = append(conditions, fmt.Sprintf(`%s = '%s'`, key, s.escapeFilterValue(value)))
 		}
 	}
 

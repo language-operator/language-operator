@@ -2343,9 +2343,9 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 
 	filter := telemetry.SpanFilter{
 		TimeRange: timeRange,
-		// Use service name pattern: agents have service names like "language-operator-agent-{name}"
+		// Use semantic attributes like the original gem implementation
 		Attributes: map[string]string{
-			"service.name": fmt.Sprintf("language-operator-agent-%s", agent.Name),
+			"agent.name": agent.Name,
 		},
 		Limit: 1000, // Reasonable limit for pattern analysis
 	}
