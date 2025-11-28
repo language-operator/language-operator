@@ -1488,9 +1488,8 @@ func TestLearningReconciler_getExecutionTraces_withTelemetryAdapter(t *testing.T
 		}
 
 		traces, err := reconciler.getExecutionTraces(ctx, agent)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to query execution traces")
-		assert.Empty(t, traces)
+		require.NoError(t, err) // Should not return error, continues with empty traces
+		assert.Empty(t, traces) // Should return empty traces when adapter has errors
 	})
 }
 

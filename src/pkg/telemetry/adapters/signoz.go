@@ -338,17 +338,12 @@ func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) 
 	// Build filter expression based on SpanFilter criteria
 	filterExpression := s.buildFilterExpression(filter)
 
-	// Define select fields for span data
+	// Define select fields for span data - use basic fields that exist in SigNoz v5
 	selectFields := []map[string]string{
 		{"name": "spanID"},
 		{"name": "traceID"},
-		{"name": "parentSpanID"},
-		{"name": "operationName"},
 		{"name": "timestamp"},
 		{"name": "duration"},
-		{"name": "statusCode"},
-		{"name": "attributes"},
-		{"name": "events"},
 	}
 
 	// Build Query Builder v5 payload structure
