@@ -1384,9 +1384,9 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 		assert.Equal(t, 0, spec["offset"])
 		assert.Equal(t, false, spec["disabled"])
 
-		// Check selectFields - only basic fields to avoid SigNoz v5 compatibility issues
+		// Check selectFields - includes semantic attributes for learning system integration
 		selectFields := spec["selectFields"].([]map[string]string)
-		expectedFields := []string{"spanID", "traceID", "timestamp"}
+		expectedFields := []string{"spanID", "traceID", "timestamp", "durationNano", "name", "serviceName", "task.name", "task.input.keys", "task.output.keys", "gen_ai.operation.name", "gen_ai.tool.name", "gen_ai.tool.call.arguments", "gen_ai.tool.call.result"}
 		assert.Len(t, selectFields, len(expectedFields))
 		for i, field := range expectedFields {
 			assert.Equal(t, field, selectFields[i]["name"])
@@ -1424,8 +1424,8 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 		// Check that all filters are included in the expression
 		assert.Contains(t, expression, "name = 'fetch_user'")
 		assert.Contains(t, expression, "traceID = 'trace-123'")
-		assert.Contains(t, expression, "attributes.environment = 'production'")
-		assert.Contains(t, expression, "attributes.service = 'api'")
+		assert.Contains(t, expression, "environment = 'production'")
+		assert.Contains(t, expression, "service = 'api'")
 		assert.Contains(t, expression, " AND ")
 	})
 
