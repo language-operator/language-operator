@@ -396,22 +396,22 @@ func (s *SignozAdapter) buildFilterExpression(filter telemetry.SpanFilter) strin
 	// Task name filter - check multiple possible attribute keys
 	if filter.TaskName != "" {
 		taskConditions := []string{
-			fmt.Sprintf("attributes['task.name'] = '%s'", s.escapeFilterValue(filter.TaskName)),
-			fmt.Sprintf("attributes['task_name'] = '%s'", s.escapeFilterValue(filter.TaskName)),
-			fmt.Sprintf("operationName = '%s'", s.escapeFilterValue(filter.TaskName)),
+			fmt.Sprintf("attributes.`task.name` == '%s'", s.escapeFilterValue(filter.TaskName)),
+			fmt.Sprintf("attributes.`task_name` == '%s'", s.escapeFilterValue(filter.TaskName)),
+			fmt.Sprintf("operationName == '%s'", s.escapeFilterValue(filter.TaskName)),
 		}
 		conditions = append(conditions, "("+strings.Join(taskConditions, " OR ")+")")
 	}
 
 	// Trace ID filter
 	if filter.TraceID != "" {
-		conditions = append(conditions, fmt.Sprintf("traceID = '%s'", s.escapeFilterValue(filter.TraceID)))
+		conditions = append(conditions, fmt.Sprintf("traceID == '%s'", s.escapeFilterValue(filter.TraceID)))
 	}
 
 	// Custom attributes filter
 	for key, value := range filter.Attributes {
 		conditions = append(conditions, fmt.Sprintf(
-			"attributes['%s'] = '%s'",
+			"attributes.`%s` == '%s'",
 			s.escapeFilterValue(key),
 			s.escapeFilterValue(value)))
 	}
