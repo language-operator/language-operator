@@ -1555,3 +1555,212 @@ func TestLearningReconciler_convertSpansToTaskTraces(t *testing.T) {
 	// extractToolCallsFromSpan should be empty since no tool call attributes are provided
 	assert.Empty(t, trace.ToolCalls)
 }
+
+// TestProcessAgentExecution tests the ProcessAgentExecution method
+func TestProcessAgentExecution(t *testing.T) {
+	scheme := runtime.NewScheme()
+	langopv1alpha1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "test-image",
+			ModelRefs: []langopv1alpha1.ModelReference{
+				{Name: "test-model"},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		Build()
+
+	reconciler := &LearningReconciler{
+		Client:               fakeClient,
+		Scheme:               scheme,
+		Log:                  logr.Discard(),
+		LearningThreshold:    10,
+		PatternConfidenceMin: 0.8,
+	}
+
+	ctx := context.Background()
+	executionTime := time.Now()
+
+	// Test successful execution
+	err := reconciler.ProcessAgentExecution(ctx, agent, "test_task", true, executionTime)
+	require.NoError(t, err)
+
+	// Verify ConfigMap was created with execution data
+	configMapName := fmt.Sprintf("%s-learning-status", agent.Name)
+	configMap := &corev1.ConfigMap{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      configMapName,
+		Namespace: agent.Namespace,
+	}, configMap)
+	require.NoError(t, err)
+
+	// Verify task status was created
+	assert.Contains(t, configMap.Data, "test_task-status")
+	assert.Contains(t, configMap.Data, "execution-summary")
+
+	// Test failed execution
+	err = reconciler.ProcessAgentExecution(ctx, agent, "test_task", false, executionTime)
+	require.NoError(t, err)
+
+	// Retrieve updated ConfigMap
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      configMapName,
+		Namespace: agent.Namespace,
+	}, configMap)
+	require.NoError(t, err)
+
+	// Parse and verify task status
+	statusData := configMap.Data["test_task-status"]
+	status, err := reconciler.parseTaskLearningStatus(statusData)
+	require.NoError(t, err)
+
+	assert.Equal(t, "test_task", status.TaskName)
+	assert.Equal(t, int32(2), status.TotalExecutions)
+	assert.Equal(t, int32(1), status.SuccessfulExecutions)
+	assert.Equal(t, int32(1), status.FailedExecutions)
+	assert.Equal(t, 0.5, status.SuccessRate)
+	assert.Equal(t, "learning", status.LearningStatus)
+}
+
+// TestDetermineLearningStatus tests the determineLearningStatus method
+func TestDetermineLearningStatus(t *testing.T) {
+	reconciler := &LearningReconciler{
+		LearningThreshold:    10,
+		PatternConfidenceMin: 0.8,
+	}
+
+	tests := []struct {
+		name     string
+		status   *TaskLearningStatus
+		expected string
+	}{
+		{
+			name: "already symbolic",
+			status: &TaskLearningStatus{
+				IsSymbolic: true,
+			},
+			expected: "symbolic",
+		},
+		{
+			name: "ready for symbolic",
+			status: &TaskLearningStatus{
+				TotalExecutions:   15,
+				SuccessRate:       0.9,
+				PatternConfidence: 0.85,
+				IsSymbolic:        false,
+			},
+			expected: "ready_for_symbolic",
+		},
+		{
+			name: "still learning - not enough executions",
+			status: &TaskLearningStatus{
+				TotalExecutions:   5,
+				SuccessRate:       0.9,
+				PatternConfidence: 0.85,
+				IsSymbolic:        false,
+			},
+			expected: "learning",
+		},
+		{
+			name: "still learning - low success rate",
+			status: &TaskLearningStatus{
+				TotalExecutions:   15,
+				SuccessRate:       0.7,
+				PatternConfidence: 0.85,
+				IsSymbolic:        false,
+			},
+			expected: "learning",
+		},
+		{
+			name: "still learning - low confidence",
+			status: &TaskLearningStatus{
+				TotalExecutions:   15,
+				SuccessRate:       0.9,
+				PatternConfidence: 0.5,
+				IsSymbolic:        false,
+			},
+			expected: "learning",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := reconciler.determineLearningStatus(tt.status)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestGenerateExecutionSummary tests the GenerateExecutionSummary method
+func TestGenerateExecutionSummary(t *testing.T) {
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+	}
+
+	reconciler := &LearningReconciler{
+		LearningThreshold: 10,
+	}
+
+	ctx := context.Background()
+	now := time.Now()
+
+	learningStatus := map[string]*TaskLearningStatus{
+		"task1": {
+			TaskName:            "task1",
+			TotalExecutions:     15,
+			SuccessfulExecutions: 13,
+			SuccessRate:         0.87,
+			PatternConfidence:   0.85,
+			LearningStatus:      "ready_for_symbolic",
+			LastExecutionTime:   now,
+		},
+		"task2": {
+			TaskName:            "task2",
+			TotalExecutions:     8,
+			SuccessfulExecutions: 7,
+			SuccessRate:         0.875,
+			PatternConfidence:   0.4,
+			LearningStatus:      "learning",
+			LastExecutionTime:   now.Add(-1 * time.Hour),
+		},
+	}
+
+	summary, err := reconciler.GenerateExecutionSummary(ctx, agent, learningStatus)
+	require.NoError(t, err)
+
+	// Verify summary data
+	assert.Equal(t, int32(10), summary.LearningThreshold)
+	assert.Equal(t, int32(23), summary.TotalExecutions) // 15 + 8
+	assert.Equal(t, now, summary.LastExecution)
+	
+	expectedSuccessRate := float64(20) / float64(23) // (13 + 7) / (15 + 8)
+	assert.InDelta(t, expectedSuccessRate, summary.SuccessRate, 0.001)
+
+	// Verify task data
+	require.Len(t, summary.Tasks, 2)
+	
+	task1 := summary.Tasks["task1"]
+	assert.Equal(t, int32(15), task1.Executions)
+	assert.Equal(t, 0.87, task1.SuccessRate)
+	assert.Equal(t, 0.85, task1.Confidence)
+	assert.Equal(t, "ready_for_symbolic", task1.Status)
+
+	task2 := summary.Tasks["task2"]
+	assert.Equal(t, int32(8), task2.Executions)
+	assert.Equal(t, 0.875, task2.SuccessRate)
+	assert.Equal(t, 0.4, task2.Confidence)
+	assert.Equal(t, "learning", task2.Status)
+}

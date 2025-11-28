@@ -88,6 +88,14 @@ type TaskLearningStatus struct {
 	LastErrorMessage         string    `json:"lastErrorMessage"`
 	FailurePattern           string    `json:"failurePattern"`
 	LastSuccessTime          time.Time `json:"lastSuccessTime"`
+
+	// Execution metrics for learning status command
+	TotalExecutions      int32     `json:"totalExecutions"`
+	SuccessfulExecutions int32     `json:"successfulExecutions"`
+	FailedExecutions     int32     `json:"failedExecutions"`
+	LastExecutionTime    time.Time `json:"lastExecutionTime"`
+	SuccessRate          float64   `json:"successRate"`
+	LearningStatus       string    `json:"learningStatus"` // "learning", "ready_for_symbolic", "symbolic"
 }
 
 // TaskTrace represents an execution trace for pattern detection
@@ -122,6 +130,25 @@ type PatternAnalysis struct {
 	UniquePatternCount int32   `json:"uniquePatternCount"`
 	RecommendedCode    string  `json:"recommendedCode,omitempty"`
 	Explanation        string  `json:"explanation"`
+}
+
+// TaskExecutionStatus represents execution status for a single task in the summary
+type TaskExecutionStatus struct {
+	Executions  int32   `json:"executions"`
+	SuccessRate float64 `json:"successRate"`
+	Confidence  float64 `json:"confidence"`
+	Status      string  `json:"status"` // "learning", "ready_for_symbolic", "symbolic"
+}
+
+// AgentExecutionSummary provides a summary of agent execution metrics for the Ruby gem
+type AgentExecutionSummary struct {
+	TotalExecutions   int32                           `json:"totalExecutions"`
+	LastExecution     time.Time                       `json:"lastExecution"`
+	SuccessRate       float64                         `json:"successRate"`
+	LearningThreshold int32                           `json:"learningThreshold"`
+	Tasks             map[string]TaskExecutionStatus `json:"tasks"`
+	Created           time.Time                       `json:"created"`
+	Updated           time.Time                       `json:"updated"`
 }
 
 // learningTracer is used by helper methods for detailed tracing
@@ -2113,6 +2140,13 @@ func (r *LearningReconciler) updateLearningStatus(ctx context.Context, agent *la
 			"configmap", configMapName, "status_entries", len(learningStatus))
 	}
 
+	// Update execution summary for Ruby gem consumption
+	if err := r.updateExecutionSummary(ctx, agent, learningStatus); err != nil {
+		span.RecordError(err)
+		r.Log.Error(err, "Failed to update execution summary", "agent", agent.Name)
+		// Don't fail the entire operation if summary update fails
+	}
+
 	// Add telemetry attributes for monitoring
 	totalSize := 0
 	for key, value := range configMap.Data {
@@ -3027,4 +3061,238 @@ func (r *LearningReconciler) generatePatternExplanation(taskName string, traces 
 	}
 
 	return explanation.String()
+}
+
+// ProcessAgentExecution processes agent execution events and updates learning status metrics
+func (r *LearningReconciler) ProcessAgentExecution(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string, success bool, executionTime time.Time) error {
+	ctx, span := learningTracer.Start(ctx, "learning.process_agent_execution")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("learning.agent", agent.Name),
+		attribute.String("learning.namespace", agent.Namespace),
+		attribute.String("learning.task", taskName),
+		attribute.Bool("learning.success", success),
+	)
+
+	// Get current learning status
+	learningStatus, err := r.getLearningStatus(ctx, agent)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to get learning status: %w", err)
+	}
+
+	// Update task execution metrics
+	taskStatus, exists := learningStatus[taskName]
+	if !exists {
+		taskStatus = &TaskLearningStatus{
+			TaskName:       taskName,
+			CurrentVersion: 1,
+		}
+		learningStatus[taskName] = taskStatus
+	}
+
+	// Update execution counters
+	taskStatus.TotalExecutions++
+	taskStatus.LastExecutionTime = executionTime
+	
+	if success {
+		taskStatus.SuccessfulExecutions++
+		taskStatus.LastSuccessTime = executionTime
+		// Reset consecutive failures on success
+		taskStatus.ConsecutiveFailures = 0
+	} else {
+		taskStatus.FailedExecutions++
+		taskStatus.LastFailureTime = executionTime
+		taskStatus.ConsecutiveFailures++
+	}
+
+	// Calculate success rate
+	if taskStatus.TotalExecutions > 0 {
+		taskStatus.SuccessRate = float64(taskStatus.SuccessfulExecutions) / float64(taskStatus.TotalExecutions)
+	}
+
+	// Determine learning status
+	taskStatus.LearningStatus = r.determineLearningStatus(taskStatus)
+
+	// Update learning status in ConfigMap
+	if err := r.updateLearningStatus(ctx, agent, learningStatus); err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update learning status: %w", err)
+	}
+
+	// Update execution summary
+	if err := r.updateExecutionSummary(ctx, agent, learningStatus); err != nil {
+		span.RecordError(err)
+		r.Log.Error(err, "Failed to update execution summary", "agent", agent.Name, "task", taskName)
+		// Don't fail the entire operation if summary update fails
+	}
+
+	span.SetAttributes(
+		attribute.Int("learning.total_executions", int(taskStatus.TotalExecutions)),
+		attribute.Float64("learning.success_rate", taskStatus.SuccessRate),
+		attribute.String("learning.status", taskStatus.LearningStatus),
+	)
+
+	r.Log.V(1).Info("Updated execution metrics for task",
+		"agent", agent.Name,
+		"task", taskName,
+		"total_executions", taskStatus.TotalExecutions,
+		"success_rate", taskStatus.SuccessRate,
+		"status", taskStatus.LearningStatus)
+
+	return nil
+}
+
+// determineLearningStatus determines the current learning status based on execution metrics
+func (r *LearningReconciler) determineLearningStatus(status *TaskLearningStatus) string {
+	// If already symbolic, return symbolic
+	if status.IsSymbolic {
+		return "symbolic"
+	}
+
+	// Check if ready for symbolic conversion
+	if status.TotalExecutions >= r.LearningThreshold && 
+		status.SuccessRate >= 0.8 && 
+		status.PatternConfidence >= r.PatternConfidenceMin {
+		return "ready_for_symbolic"
+	}
+
+	// Otherwise still learning
+	return "learning"
+}
+
+// GenerateExecutionSummary creates an execution summary for Ruby gem consumption
+func (r *LearningReconciler) GenerateExecutionSummary(ctx context.Context, agent *langopv1alpha1.LanguageAgent, learningStatus map[string]*TaskLearningStatus) (*AgentExecutionSummary, error) {
+	ctx, span := learningTracer.Start(ctx, "learning.generate_execution_summary")
+	defer span.End()
+
+	summary := &AgentExecutionSummary{
+		LearningThreshold: r.LearningThreshold,
+		Tasks:            make(map[string]TaskExecutionStatus),
+		Created:          time.Now(),
+		Updated:          time.Now(),
+	}
+
+	var totalExecutions int32
+	var totalSuccessful int32
+	var lastExecution time.Time
+
+	// Aggregate data from all tasks
+	for taskName, status := range learningStatus {
+		totalExecutions += status.TotalExecutions
+		totalSuccessful += status.SuccessfulExecutions
+
+		if status.LastExecutionTime.After(lastExecution) {
+			lastExecution = status.LastExecutionTime
+		}
+
+		// Create task status entry
+		summary.Tasks[taskName] = TaskExecutionStatus{
+			Executions:  status.TotalExecutions,
+			SuccessRate: status.SuccessRate,
+			Confidence:  status.PatternConfidence,
+			Status:      status.LearningStatus,
+		}
+	}
+
+	// Calculate overall metrics
+	summary.TotalExecutions = totalExecutions
+	summary.LastExecution = lastExecution
+	
+	if totalExecutions > 0 {
+		summary.SuccessRate = float64(totalSuccessful) / float64(totalExecutions)
+	}
+
+	span.SetAttributes(
+		attribute.Int("learning.total_executions", int(totalExecutions)),
+		attribute.Float64("learning.overall_success_rate", summary.SuccessRate),
+		attribute.Int("learning.task_count", len(summary.Tasks)),
+	)
+
+	return summary, nil
+}
+
+// updateExecutionSummary updates the execution summary in the ConfigMap
+func (r *LearningReconciler) updateExecutionSummary(ctx context.Context, agent *langopv1alpha1.LanguageAgent, learningStatus map[string]*TaskLearningStatus) error {
+	ctx, span := learningTracer.Start(ctx, "learning.update_execution_summary")
+	defer span.End()
+
+	// Generate execution summary
+	summary, err := r.GenerateExecutionSummary(ctx, agent, learningStatus)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to generate execution summary: %w", err)
+	}
+
+	// Get existing ConfigMap
+	configMapName := fmt.Sprintf("%s-learning-status", agent.Name)
+	configMap := &corev1.ConfigMap{}
+	err = r.Get(ctx, types.NamespacedName{
+		Name:      configMapName,
+		Namespace: agent.Namespace,
+	}, configMap)
+
+	if errors.IsNotFound(err) {
+		// Create new ConfigMap if it doesn't exist
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      configMapName,
+				Namespace: agent.Namespace,
+				Labels: map[string]string{
+					"langop.io/agent":     agent.Name,
+					"langop.io/component": "learning-status",
+				},
+			},
+			Data: make(map[string]string),
+		}
+		
+		if err := controllerutil.SetControllerReference(agent, configMap, r.Scheme); err != nil {
+			span.RecordError(err)
+			return fmt.Errorf("failed to set owner reference: %w", err)
+		}
+	} else if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to get ConfigMap: %w", err)
+	}
+
+	// Ensure Data field is initialized
+	if configMap.Data == nil {
+		configMap.Data = make(map[string]string)
+	}
+
+	// Serialize execution summary
+	summaryData, err := json.Marshal(summary)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to marshal execution summary: %w", err)
+	}
+
+	// Update ConfigMap with execution summary
+	configMap.Data["execution-summary"] = string(summaryData)
+
+	// Create or update ConfigMap
+	if configMap.ResourceVersion == "" {
+		err = r.Create(ctx, configMap)
+	} else {
+		err = r.Update(ctx, configMap)
+	}
+
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to update ConfigMap: %w", err)
+	}
+
+	span.SetAttributes(
+		attribute.Int("learning.summary_size", len(summaryData)),
+		attribute.Int("learning.tasks_included", len(summary.Tasks)),
+	)
+
+	r.Log.V(1).Info("Updated execution summary",
+		"agent", agent.Name,
+		"total_executions", summary.TotalExecutions,
+		"success_rate", summary.SuccessRate,
+		"tasks", len(summary.Tasks))
+
+	return nil
 }
