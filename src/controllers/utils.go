@@ -598,6 +598,48 @@ func BuildEgressNetworkPolicy(
 		}
 	}
 
+	// Allow egress to Kubernetes API server for event emission
+	// This enables agents to create Kubernetes events for learning system integration
+	egress = append(egress, networkingv1.NetworkPolicyEgressRule{
+		To: []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"name": "kube-system",
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"component": "kube-apiserver",
+					},
+				},
+			},
+			// Also allow direct access to API server service
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"name": "default",
+					},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"component": "kubernetes",
+					},
+				},
+			},
+		},
+		Ports: []networkingv1.NetworkPolicyPort{
+			{
+				Protocol: protocolPtr(corev1.ProtocolTCP),
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
+			},
+			{
+				Protocol: protocolPtr(corev1.ProtocolTCP),
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
+			},
+		},
+	})
+
 	// Add user-defined egress rules
 	for _, rule := range egressRules {
 		if rule.To == nil {
