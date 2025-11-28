@@ -3,10 +3,10 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: latest
-    created: "2025-11-27T21:29:21.566591508Z"
+    created: "2025-11-28T01:11:57.183283967Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 198d7f3424ee755d96e86f26ad23a0d6404dd9e432a5054cf3d3d60289da6cbf
+    digest: e0a0342efe24e34003af7a9c5d1125ff0a8b59241ddff8919382711c0c5b8dab
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -24,4 +24,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-0.1.5.tgz
     version: 0.1.5
-generated: "2025-11-27T21:29:21.562812551Z"
+generated: "2025-11-28T01:11:57.178898224Z"
