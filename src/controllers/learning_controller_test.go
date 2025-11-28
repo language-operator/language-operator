@@ -23,6 +23,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // MockSynthesizer implements synthesis.AgentSynthesizer for testing
@@ -1762,4 +1763,117 @@ func TestGenerateExecutionSummary(t *testing.T) {
 	assert.Equal(t, 0.875, task2.SuccessRate)
 	assert.Equal(t, 0.4, task2.Confidence)
 	assert.Equal(t, "learning", task2.Status)
+}
+
+func TestLearningReconciler_mapJobToAgent(t *testing.T) {
+	reconciler := &LearningReconciler{
+		Log: logr.Discard(),
+	}
+
+	tests := []struct {
+		name     string
+		job      *batchv1.Job
+		expected []reconcile.Request
+	}{
+		{
+			name: "successful job completion triggers reconciliation",
+			job: &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent-job-123",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"langop.io/agent": "test-agent",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Succeeded: 1,
+					Failed:    0,
+				},
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Name:      "test-agent",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+		},
+		{
+			name: "failed job completion triggers reconciliation",
+			job: &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent-job-456",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"langop.io/agent": "another-agent",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Succeeded: 0,
+					Failed:    1,
+				},
+			},
+			expected: []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Name:      "another-agent",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+		},
+		{
+			name: "running job does not trigger reconciliation",
+			job: &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "running-job",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"langop.io/agent": "test-agent",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Succeeded: 0,
+					Failed:    0,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "job without agent label does not trigger reconciliation",
+			job: &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "non-agent-job",
+					Namespace: "test-namespace",
+					Labels:    map[string]string{},
+				},
+				Status: batchv1.JobStatus{
+					Succeeded: 1,
+					Failed:    0,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name:     "non-job object returns nil",
+			job:      nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var obj client.Object
+			if tt.job != nil {
+				obj = tt.job
+			} else {
+				// Test with non-Job object
+				obj = &corev1.Pod{}
+			}
+
+			result := reconciler.mapJobToAgent(context.Background(), obj)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

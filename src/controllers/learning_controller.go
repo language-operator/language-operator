@@ -23,6 +23,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/learning"
@@ -2315,8 +2317,46 @@ func (r *LearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&corev1.ConfigMap{}).
+		Watches(&batchv1.Job{},
+			handler.EnqueueRequestsFromMapFunc(r.mapJobToAgent)).
 		Named("learning").
 		Complete(r)
+}
+
+// mapJobToAgent maps Job completion events to LanguageAgent reconciliation requests
+func (r *LearningReconciler) mapJobToAgent(ctx context.Context, obj client.Object) []reconcile.Request {
+	job, ok := obj.(*batchv1.Job)
+	if !ok {
+		return nil
+	}
+
+	// Check if this job belongs to a language operator agent
+	agentName, exists := job.Labels["langop.io/agent"]
+	if !exists {
+		return nil
+	}
+
+	// Only trigger learning reconciliation on job completion (success or failure)
+	if job.Status.Succeeded == 0 && job.Status.Failed == 0 {
+		// Job is still running, not completed yet
+		return nil
+	}
+
+	r.Log.V(1).Info("Job completion detected, triggering learning reconciliation",
+		"job", job.Name,
+		"agent", agentName,
+		"namespace", job.Namespace,
+		"succeeded", job.Status.Succeeded,
+		"failed", job.Status.Failed)
+
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      agentName,
+				Namespace: job.Namespace,
+			},
+		},
+	}
 }
 
 // getExecutionTraces retrieves execution traces for pattern analysis
