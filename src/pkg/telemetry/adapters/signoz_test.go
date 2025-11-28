@@ -1421,9 +1421,12 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 		filterMap := spec["filter"].(map[string]interface{})
 		expression := filterMap["expression"].(string)
 
-		// Filter expression should be empty due to SigNoz v5 syntax compatibility issues
-		// buildFilterExpression returns empty string to avoid query errors
-		assert.Equal(t, "", expression)
+		// Check that all filters are included in the expression
+		assert.Contains(t, expression, "name = 'fetch_user'")
+		assert.Contains(t, expression, "traceID = 'trace-123'")
+		assert.Contains(t, expression, "attributes.environment = 'production'")
+		assert.Contains(t, expression, "attributes.service = 'api'")
+		assert.Contains(t, expression, " AND ")
 	})
 
 	t.Run("No filters (empty expression)", func(t *testing.T) {
