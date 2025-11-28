@@ -2354,9 +2354,14 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to query spans")
-		r.Log.Error(err, "Failed to query execution traces",
+		r.Log.Error(err, "Failed to query execution traces, continuing with empty traces",
 			"agent", agent.Name, "namespace", agent.Namespace)
-		return []TaskTrace{}, fmt.Errorf("failed to query execution traces: %w", err)
+		// Don't fail - continue with empty traces to allow ConfigMap creation
+		span.SetAttributes(
+			attribute.String("learning.adapter_status", "error"),
+			attribute.Int("learning.traces_retrieved", 0),
+		)
+		return []TaskTrace{}, nil
 	}
 
 	// Convert telemetry spans to TaskTrace format
