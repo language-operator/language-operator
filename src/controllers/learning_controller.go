@@ -142,13 +142,13 @@ type TaskExecutionStatus struct {
 
 // AgentExecutionSummary provides a summary of agent execution metrics for the Ruby gem
 type AgentExecutionSummary struct {
-	TotalExecutions   int32                           `json:"totalExecutions"`
-	LastExecution     time.Time                       `json:"lastExecution"`
-	SuccessRate       float64                         `json:"successRate"`
-	LearningThreshold int32                           `json:"learningThreshold"`
+	TotalExecutions   int32                          `json:"totalExecutions"`
+	LastExecution     time.Time                      `json:"lastExecution"`
+	SuccessRate       float64                        `json:"successRate"`
+	LearningThreshold int32                          `json:"learningThreshold"`
 	Tasks             map[string]TaskExecutionStatus `json:"tasks"`
-	Created           time.Time                       `json:"created"`
-	Updated           time.Time                       `json:"updated"`
+	Created           time.Time                      `json:"created"`
+	Updated           time.Time                      `json:"updated"`
 }
 
 // learningTracer is used by helper methods for detailed tracing
@@ -3095,7 +3095,7 @@ func (r *LearningReconciler) ProcessAgentExecution(ctx context.Context, agent *l
 	// Update execution counters
 	taskStatus.TotalExecutions++
 	taskStatus.LastExecutionTime = executionTime
-	
+
 	if success {
 		taskStatus.SuccessfulExecutions++
 		taskStatus.LastSuccessTime = executionTime
@@ -3152,8 +3152,8 @@ func (r *LearningReconciler) determineLearningStatus(status *TaskLearningStatus)
 	}
 
 	// Check if ready for symbolic conversion
-	if status.TotalExecutions >= r.LearningThreshold && 
-		status.SuccessRate >= 0.8 && 
+	if status.TotalExecutions >= r.LearningThreshold &&
+		status.SuccessRate >= 0.8 &&
 		status.PatternConfidence >= r.PatternConfidenceMin {
 		return "ready_for_symbolic"
 	}
@@ -3169,9 +3169,9 @@ func (r *LearningReconciler) GenerateExecutionSummary(ctx context.Context, agent
 
 	summary := &AgentExecutionSummary{
 		LearningThreshold: r.LearningThreshold,
-		Tasks:            make(map[string]TaskExecutionStatus),
-		Created:          time.Now(),
-		Updated:          time.Now(),
+		Tasks:             make(map[string]TaskExecutionStatus),
+		Created:           time.Now(),
+		Updated:           time.Now(),
 	}
 
 	var totalExecutions int32
@@ -3199,7 +3199,7 @@ func (r *LearningReconciler) GenerateExecutionSummary(ctx context.Context, agent
 	// Calculate overall metrics
 	summary.TotalExecutions = totalExecutions
 	summary.LastExecution = lastExecution
-	
+
 	if totalExecutions > 0 {
 		summary.SuccessRate = float64(totalSuccessful) / float64(totalExecutions)
 	}
@@ -3246,7 +3246,7 @@ func (r *LearningReconciler) updateExecutionSummary(ctx context.Context, agent *
 			},
 			Data: make(map[string]string),
 		}
-		
+
 		if err := controllerutil.SetControllerReference(agent, configMap, r.Scheme); err != nil {
 			span.RecordError(err)
 			return fmt.Errorf("failed to set owner reference: %w", err)
