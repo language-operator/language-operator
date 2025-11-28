@@ -605,7 +605,7 @@ func BuildEgressNetworkPolicy(
 			{
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"name": "kube-system",
+						"kubernetes.io/metadata.name": "kube-system",
 					},
 				},
 				PodSelector: &metav1.LabelSelector{
@@ -618,7 +618,7 @@ func BuildEgressNetworkPolicy(
 			{
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"name": "default",
+						"kubernetes.io/metadata.name": "default",
 					},
 				},
 				PodSelector: &metav1.LabelSelector{
