@@ -240,6 +240,8 @@ rbac:
       verbs:
       - create
       - patch
+      - list
+      - watch
     # Coordination resources for leader election
     - apiGroups:
       - coordination.k8s.io

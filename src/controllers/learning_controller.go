@@ -2385,7 +2385,7 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 		TimeRange: timeRange,
 		// Use semantic attributes like the original gem implementation
 		Attributes: map[string]string{
-			"agent.name": agent.Name,
+			"service.name": fmt.Sprintf("language-operator-agent-%s", agent.Name),
 		},
 		Limit: 1000, // Reasonable limit for pattern analysis
 	}
