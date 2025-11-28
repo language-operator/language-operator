@@ -1719,22 +1719,22 @@ func TestGenerateExecutionSummary(t *testing.T) {
 
 	learningStatus := map[string]*TaskLearningStatus{
 		"task1": {
-			TaskName:            "task1",
-			TotalExecutions:     15,
+			TaskName:             "task1",
+			TotalExecutions:      15,
 			SuccessfulExecutions: 13,
-			SuccessRate:         0.87,
-			PatternConfidence:   0.85,
-			LearningStatus:      "ready_for_symbolic",
-			LastExecutionTime:   now,
+			SuccessRate:          0.87,
+			PatternConfidence:    0.85,
+			LearningStatus:       "ready_for_symbolic",
+			LastExecutionTime:    now,
 		},
 		"task2": {
-			TaskName:            "task2",
-			TotalExecutions:     8,
+			TaskName:             "task2",
+			TotalExecutions:      8,
 			SuccessfulExecutions: 7,
-			SuccessRate:         0.875,
-			PatternConfidence:   0.4,
-			LearningStatus:      "learning",
-			LastExecutionTime:   now.Add(-1 * time.Hour),
+			SuccessRate:          0.875,
+			PatternConfidence:    0.4,
+			LearningStatus:       "learning",
+			LastExecutionTime:    now.Add(-1 * time.Hour),
 		},
 	}
 
@@ -1745,13 +1745,13 @@ func TestGenerateExecutionSummary(t *testing.T) {
 	assert.Equal(t, int32(10), summary.LearningThreshold)
 	assert.Equal(t, int32(23), summary.TotalExecutions) // 15 + 8
 	assert.Equal(t, now, summary.LastExecution)
-	
+
 	expectedSuccessRate := float64(20) / float64(23) // (13 + 7) / (15 + 8)
 	assert.InDelta(t, expectedSuccessRate, summary.SuccessRate, 0.001)
 
 	// Verify task data
 	require.Len(t, summary.Tasks, 2)
-	
+
 	task1 := summary.Tasks["task1"]
 	assert.Equal(t, int32(15), task1.Executions)
 	assert.Equal(t, 0.87, task1.SuccessRate)
