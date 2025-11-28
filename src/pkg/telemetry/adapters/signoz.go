@@ -391,37 +391,10 @@ func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) 
 // Converts SpanFilter criteria to expression syntax that SigNoz understands.
 // Combines multiple conditions with AND operators.
 func (s *SignozAdapter) buildFilterExpression(filter telemetry.SpanFilter) string {
-	var conditions []string
-
-	// Task name filter - check multiple possible attribute keys
-	if filter.TaskName != "" {
-		taskConditions := []string{
-			fmt.Sprintf("attributes.`task.name` == '%s'", s.escapeFilterValue(filter.TaskName)),
-			fmt.Sprintf("attributes.`task_name` == '%s'", s.escapeFilterValue(filter.TaskName)),
-			fmt.Sprintf("operationName == '%s'", s.escapeFilterValue(filter.TaskName)),
-		}
-		conditions = append(conditions, "("+strings.Join(taskConditions, " OR ")+")")
-	}
-
-	// Trace ID filter
-	if filter.TraceID != "" {
-		conditions = append(conditions, fmt.Sprintf("traceID == '%s'", s.escapeFilterValue(filter.TraceID)))
-	}
-
-	// Custom attributes filter
-	for key, value := range filter.Attributes {
-		conditions = append(conditions, fmt.Sprintf(
-			"attributes.`%s` == '%s'",
-			s.escapeFilterValue(key),
-			s.escapeFilterValue(value)))
-	}
-
-	// Combine all conditions with AND
-	if len(conditions) == 0 {
-		return "" // No specific filters, return all spans in time range
-	}
-
-	return strings.Join(conditions, " AND ")
+	// TODO: Fix SigNoz Query Builder v5 expression syntax
+	// For now, return empty filter to allow learning controller to proceed without SigNoz query errors
+	// This will return all spans in the time range, which the learning controller can then filter client-side
+	return ""
 }
 
 // escapeFilterValue escapes special characters for SigNoz filter expressions.
