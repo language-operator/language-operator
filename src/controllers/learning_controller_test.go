@@ -458,7 +458,7 @@ func TestLearningReconciler_findAgentDeployment(t *testing.T) {
 			Name:      "test-agent-deployment",
 			Namespace: "default",
 			Labels: map[string]string{
-				"langop.io/agent": "test-agent",
+				"app.kubernetes.io/name": "test-agent",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{

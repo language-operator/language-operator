@@ -1495,7 +1495,7 @@ func (r *LearningReconciler) findAgentDeployment(ctx context.Context, agent *lan
 	// List deployments with the agent label
 	deploymentList := &appsv1.DeploymentList{}
 	labelSelector := client.MatchingLabels{
-		"langop.io/agent": agent.Name,
+		"app.kubernetes.io/name": agent.Name,
 	}
 
 	err := r.List(ctx, deploymentList,
@@ -1591,7 +1591,7 @@ func (r *LearningReconciler) updateCronJobConfigMap(ctx context.Context, agent *
 	// Find CronJob for this agent
 	cronJobList := &batchv1.CronJobList{}
 	labelSelector := client.MatchingLabels{
-		"langop.io/agent": agent.Name,
+		"app.kubernetes.io/name": agent.Name,
 	}
 
 	err := r.List(ctx, cronJobList,
@@ -1639,7 +1639,7 @@ func (r *LearningReconciler) updateJobConfigMap(ctx context.Context, agent *lang
 	// Find Job for this agent
 	jobList := &batchv1.JobList{}
 	labelSelector := client.MatchingLabels{
-		"langop.io/agent": agent.Name,
+		"app.kubernetes.io/name": agent.Name,
 	}
 
 	err := r.List(ctx, jobList,
@@ -1687,7 +1687,7 @@ func (r *LearningReconciler) updateDaemonSetConfigMap(ctx context.Context, agent
 	// Find DaemonSet for this agent
 	daemonSetList := &appsv1.DaemonSetList{}
 	labelSelector := client.MatchingLabels{
-		"langop.io/agent": agent.Name,
+		"app.kubernetes.io/name": agent.Name,
 	}
 
 	err := r.List(ctx, daemonSetList,
@@ -1733,7 +1733,7 @@ func (r *LearningReconciler) updateDaemonSetConfigMap(ctx context.Context, agent
 func (r *LearningReconciler) extractCronJobConfigMapReference(cronJob *batchv1.CronJob) string {
 	// Check volumes
 	for _, volume := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["app.kubernetes.io/name"]) {
 			return volume.ConfigMap.Name
 		}
 	}
@@ -1741,13 +1741,13 @@ func (r *LearningReconciler) extractCronJobConfigMapReference(cronJob *batchv1.C
 	// Check environment variables
 	for _, container := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers {
 		for _, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["app.kubernetes.io/name"]) {
 				return envFrom.ConfigMapRef.Name
 			}
 		}
 	}
 
-	return fmt.Sprintf("%s-v1", cronJob.Labels["langop.io/agent"])
+	return fmt.Sprintf("%s-v1", cronJob.Labels["app.kubernetes.io/name"])
 }
 
 // patchCronJobConfigMap updates ConfigMap references in CronJob
@@ -1756,7 +1756,7 @@ func (r *LearningReconciler) patchCronJobConfigMap(cronJob *batchv1.CronJob, new
 
 	// Update volumes
 	for i, volume := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, cronJob.Labels["app.kubernetes.io/name"]) {
 			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
 			updated = true
 		}
@@ -1765,7 +1765,7 @@ func (r *LearningReconciler) patchCronJobConfigMap(cronJob *batchv1.CronJob, new
 	// Update environment variables
 	for containerIdx, container := range cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers {
 		for envIdx, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, cronJob.Labels["app.kubernetes.io/name"]) {
 				cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
 				updated = true
 			}
@@ -1786,7 +1786,7 @@ func (r *LearningReconciler) patchCronJobConfigMap(cronJob *batchv1.CronJob, new
 func (r *LearningReconciler) extractJobConfigMapReference(job *batchv1.Job) string {
 	// Check volumes
 	for _, volume := range job.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["app.kubernetes.io/name"]) {
 			return volume.ConfigMap.Name
 		}
 	}
@@ -1794,13 +1794,13 @@ func (r *LearningReconciler) extractJobConfigMapReference(job *batchv1.Job) stri
 	// Check environment variables
 	for _, container := range job.Spec.Template.Spec.Containers {
 		for _, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["app.kubernetes.io/name"]) {
 				return envFrom.ConfigMapRef.Name
 			}
 		}
 	}
 
-	return fmt.Sprintf("%s-v1", job.Labels["langop.io/agent"])
+	return fmt.Sprintf("%s-v1", job.Labels["app.kubernetes.io/name"])
 }
 
 // patchJobConfigMap updates ConfigMap references in Job
@@ -1809,7 +1809,7 @@ func (r *LearningReconciler) patchJobConfigMap(job *batchv1.Job, newConfigMapNam
 
 	// Update volumes
 	for i, volume := range job.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, job.Labels["app.kubernetes.io/name"]) {
 			job.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
 			updated = true
 		}
@@ -1818,7 +1818,7 @@ func (r *LearningReconciler) patchJobConfigMap(job *batchv1.Job, newConfigMapNam
 	// Update environment variables
 	for containerIdx, container := range job.Spec.Template.Spec.Containers {
 		for envIdx, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, job.Labels["app.kubernetes.io/name"]) {
 				job.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
 				updated = true
 			}
@@ -1839,7 +1839,7 @@ func (r *LearningReconciler) patchJobConfigMap(job *batchv1.Job, newConfigMapNam
 func (r *LearningReconciler) extractDaemonSetConfigMapReference(daemonSet *appsv1.DaemonSet) string {
 	// Check volumes
 	for _, volume := range daemonSet.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["app.kubernetes.io/name"]) {
 			return volume.ConfigMap.Name
 		}
 	}
@@ -1847,13 +1847,13 @@ func (r *LearningReconciler) extractDaemonSetConfigMapReference(daemonSet *appsv
 	// Check environment variables
 	for _, container := range daemonSet.Spec.Template.Spec.Containers {
 		for _, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["app.kubernetes.io/name"]) {
 				return envFrom.ConfigMapRef.Name
 			}
 		}
 	}
 
-	return fmt.Sprintf("%s-v1", daemonSet.Labels["langop.io/agent"])
+	return fmt.Sprintf("%s-v1", daemonSet.Labels["app.kubernetes.io/name"])
 }
 
 // patchDaemonSetConfigMap updates ConfigMap references in DaemonSet
@@ -1862,7 +1862,7 @@ func (r *LearningReconciler) patchDaemonSetConfigMap(daemonSet *appsv1.DaemonSet
 
 	// Update volumes
 	for i, volume := range daemonSet.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, daemonSet.Labels["app.kubernetes.io/name"]) {
 			daemonSet.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
 			updated = true
 		}
@@ -1871,7 +1871,7 @@ func (r *LearningReconciler) patchDaemonSetConfigMap(daemonSet *appsv1.DaemonSet
 	// Update environment variables
 	for containerIdx, container := range daemonSet.Spec.Template.Spec.Containers {
 		for envIdx, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, daemonSet.Labels["app.kubernetes.io/name"]) {
 				daemonSet.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
 				updated = true
 			}
@@ -1892,7 +1892,7 @@ func (r *LearningReconciler) patchDaemonSetConfigMap(daemonSet *appsv1.DaemonSet
 func (r *LearningReconciler) extractConfigMapReference(deployment *appsv1.Deployment) string {
 	// Look through volumes for ConfigMap references
 	for _, volume := range deployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, deployment.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, deployment.Labels["app.kubernetes.io/name"]) {
 			return volume.ConfigMap.Name
 		}
 	}
@@ -1900,14 +1900,14 @@ func (r *LearningReconciler) extractConfigMapReference(deployment *appsv1.Deploy
 	// Look through environment variables for ConfigMap references
 	for _, container := range deployment.Spec.Template.Spec.Containers {
 		for _, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, deployment.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, deployment.Labels["app.kubernetes.io/name"]) {
 				return envFrom.ConfigMapRef.Name
 			}
 		}
 	}
 
 	// Default fallback
-	return fmt.Sprintf("%s-v1", deployment.Labels["langop.io/agent"])
+	return fmt.Sprintf("%s-v1", deployment.Labels["app.kubernetes.io/name"])
 }
 
 // patchDeploymentConfigMap updates the deployment to use a new ConfigMap
@@ -1920,7 +1920,7 @@ func (r *LearningReconciler) patchDeploymentConfigMap(ctx context.Context, deplo
 
 	// Update ConfigMap references in volumes
 	for i, volume := range updatedDeployment.Spec.Template.Spec.Volumes {
-		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, deployment.Labels["langop.io/agent"]) {
+		if volume.ConfigMap != nil && strings.Contains(volume.ConfigMap.Name, deployment.Labels["app.kubernetes.io/name"]) {
 			updatedDeployment.Spec.Template.Spec.Volumes[i].ConfigMap.Name = newConfigMapName
 		}
 	}
@@ -1928,7 +1928,7 @@ func (r *LearningReconciler) patchDeploymentConfigMap(ctx context.Context, deplo
 	// Update ConfigMap references in environment
 	for containerIdx, container := range updatedDeployment.Spec.Template.Spec.Containers {
 		for envIdx, envFrom := range container.EnvFrom {
-			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, deployment.Labels["langop.io/agent"]) {
+			if envFrom.ConfigMapRef != nil && strings.Contains(envFrom.ConfigMapRef.Name, deployment.Labels["app.kubernetes.io/name"]) {
 				updatedDeployment.Spec.Template.Spec.Containers[containerIdx].EnvFrom[envIdx].ConfigMapRef.Name = newConfigMapName
 			}
 		}
