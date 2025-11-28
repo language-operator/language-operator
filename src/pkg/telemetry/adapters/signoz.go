@@ -302,11 +302,17 @@ func (s *SignozAdapter) QuerySpans(ctx context.Context, filter telemetry.SpanFil
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	// Debug: Log the actual query being sent to SigNoz
+	fmt.Printf("DEBUG: SigNoz Query Payload: %s\n", string(reqBody))
+
 	// Make request to SigNoz
 	respBody, err := s.makeRequest(ctx, "POST", "/api/v5/query_range", reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query SigNoz: %w", err)
 	}
+
+	// Debug: Log the response from SigNoz
+	fmt.Printf("DEBUG: SigNoz Response: %s\n", string(respBody))
 
 	// Parse SigNoz response
 	spans, err := s.parseSpanResponse(respBody, filter.Limit)
