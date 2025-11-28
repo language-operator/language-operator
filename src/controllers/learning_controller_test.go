@@ -719,7 +719,7 @@ func TestLearningReconciler_updateAlternativeWorkload(t *testing.T) {
 					Name:      "test-agent",
 					Namespace: "default",
 					Labels: map[string]string{
-						"langop.io/agent": "test-agent",
+						"app.kubernetes.io/name": "test-agent",
 					},
 				},
 				Spec: batchv1.CronJobSpec{
@@ -850,7 +850,7 @@ func TestLearningReconciler_extractCronJobConfigMapReference(t *testing.T) {
 			cronJob := &batchv1.CronJob{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"langop.io/agent": "test-agent",
+						"app.kubernetes.io/name": "test-agent",
 					},
 				},
 				Spec: batchv1.CronJobSpec{
@@ -1782,7 +1782,7 @@ func TestLearningReconciler_mapJobToAgent(t *testing.T) {
 					Name:      "test-agent-job-123",
 					Namespace: "test-namespace",
 					Labels: map[string]string{
-						"langop.io/agent": "test-agent",
+						"app.kubernetes.io/name": "test-agent",
 					},
 				},
 				Status: batchv1.JobStatus{
@@ -1806,7 +1806,7 @@ func TestLearningReconciler_mapJobToAgent(t *testing.T) {
 					Name:      "test-agent-job-456",
 					Namespace: "test-namespace",
 					Labels: map[string]string{
-						"langop.io/agent": "another-agent",
+						"app.kubernetes.io/name": "another-agent",
 					},
 				},
 				Status: batchv1.JobStatus{
@@ -1830,7 +1830,7 @@ func TestLearningReconciler_mapJobToAgent(t *testing.T) {
 					Name:      "running-job",
 					Namespace: "test-namespace",
 					Labels: map[string]string{
-						"langop.io/agent": "test-agent",
+						"app.kubernetes.io/name": "test-agent",
 					},
 				},
 				Status: batchv1.JobStatus{
