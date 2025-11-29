@@ -93,15 +93,15 @@ agent "daily-report" do
   mode :scheduled
   schedule "0 9 * * *"
 
-  task :fetch_sales,
+  task(:fetch_sales,
     instructions: "fetch yesterday's sales data from database",
     inputs: {},
-    outputs: { sales: 'array', total: 'number' }
+    outputs: { sales: 'array', total: 'number' })
 
-  task :generate_report,
+  task(:generate_report,
     instructions: "create a markdown report summarizing the sales",
     inputs: { sales: 'array', total: 'number' },
-    outputs: { report: 'string' }
+    outputs: { report: 'string' })
 
   main do |inputs|
     sales_data = execute_task(:fetch_sales)
@@ -130,10 +130,10 @@ agent "code-reviewer" do
   end
 
   # Neural task - creative analysis
-  task :analyze_code,
+  task(:analyze_code,
     instructions: "review code changes for bugs and improvements",
     inputs: { diff: 'string' },
-    outputs: { issues: 'array', severity: 'string' }
+    outputs: { issues: 'array', severity: 'string' })
 
   # Symbolic task - deterministic logic
   task :should_approve do |inputs|
@@ -157,20 +157,20 @@ require 'language_operator'
 agent "data-pipeline" do
   description "ETL pipeline"
 
-  task :extract_data,
+  task(:extract_data,
     instructions: "extract data from the source database",
     inputs: { source: 'string' },
-    outputs: { records: 'array', count: 'integer' }
+    outputs: { records: 'array', count: 'integer' })
 
-  task :transform_data,
+  task(:transform_data,
     instructions: "clean and normalize the records",
     inputs: { records: 'array' },
-    outputs: { cleaned_records: 'array' }
+    outputs: { cleaned_records: 'array' })
 
-  task :load_data,
+  task(:load_data,
     instructions: "load cleaned records into warehouse",
     inputs: { cleaned_records: 'array' },
-    outputs: { success: 'boolean', loaded_count: 'integer' }
+    outputs: { success: 'boolean', loaded_count: 'integer' })
 
   main do |inputs|
     extracted = execute_task(:extract_data, inputs: inputs)
@@ -191,22 +191,22 @@ agent "story-builder" do
   schedule "0 * * * *"
 
   # Neural task - LLM reads file using workspace tool
-  task :read_existing_story,
+  task(:read_existing_story,
     instructions: "Read the story.txt file from workspace. If it doesn't exist, return empty string. Return the content and count of sentences.",
     inputs: {},
-    outputs: { content: 'string', sentence_count: 'integer' }
+    outputs: { content: 'string', sentence_count: 'integer' })
 
   # Neural task - LLM generates creative continuation
-  task :generate_next_sentence,
+  task(:generate_next_sentence,
     instructions: "Generate exactly one new sentence to continue this story. Maintain consistent tone and style. Only output the new sentence.",
     inputs: { existing_content: 'string' },
-    outputs: { sentence: 'string' }
+    outputs: { sentence: 'string' })
 
   # Neural task - LLM writes file using workspace tool
-  task :append_to_story,
+  task(:append_to_story,
     instructions: "Append the new sentence to story.txt in workspace. If the file has existing content, add a newline first.",
     inputs: { sentence: 'string' },
-    outputs: { success: 'boolean', total_sentences: 'integer' }
+    outputs: { success: 'boolean', total_sentences: 'integer' })
 
   main do |inputs|
     # Read current state from workspace
@@ -257,10 +257,10 @@ agent "{{.AgentName}}" do
   description "<ACTUAL description based on user instructions>"
 {{.PersonaSection}}{{.ScheduleSection}}
   # Define specific tasks needed for this agent
-  task :<ACTUAL_task_name>,
+  task(:<ACTUAL_task_name>,
     instructions: "<ACTUAL description of what this specific task does>",
     inputs: { <actual_param>: '<actual_type>' },
-    outputs: { <actual_result>: '<actual_type>' }
+    outputs: { <actual_result>: '<actual_type>' })
 
   # Add more tasks as needed based on user instructions
 
@@ -287,6 +287,22 @@ end
 - `'array'` - lists
 - `'hash'` - key-value objects
 - `'any'` - any type
+
+**CRITICAL Ruby Syntax Rule:**
+Neural tasks with input/output schemas MUST use parentheses around arguments:
+```ruby
+# Correct syntax (parentheses required):
+task(:task_name,
+  instructions: "...",
+  inputs: { ... },
+  outputs: { ... })
+
+# INVALID syntax (will cause Ruby parser errors):
+task :task_name,
+  instructions: "...",
+  inputs: { ... },
+  outputs: { ... }
+```
 
 **Rules:**
 1. Generate ONLY the Ruby code within triple-backticks, no explanations before or after

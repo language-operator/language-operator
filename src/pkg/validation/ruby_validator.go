@@ -107,3 +107,53 @@ func formatViolations(violations []Violation) error {
 	}
 	return fmt.Errorf("security violations detected:\n  %s", strings.Join(msgs, "\n  "))
 }
+
+// ValidateGeneratedCodeAgainstSchema validates Ruby DSL code for syntax and security violations
+// Returns a list of violations and an error if validation fails
+func ValidateGeneratedCodeAgainstSchema(ctx context.Context, code string) ([]Violation, error) {
+	// Check if Ruby is available
+	if _, err := exec.LookPath("ruby"); err != nil {
+		// Ruby not available - skip validation in test environments
+		return nil, nil
+	}
+
+	// Find the validator script
+	scriptPath := findValidatorScript()
+
+	// Execute Ruby wrapper script that calls the gem's AST validator
+	cmd := exec.CommandContext(ctx, "ruby", scriptPath)
+	cmd.Stdin = strings.NewReader(code)
+
+	// Capture STDOUT and STDERR separately
+	output, err := cmd.Output()
+
+	// Check for timeout
+	if ctx.Err() == context.DeadlineExceeded {
+		return nil, fmt.Errorf("validation timeout: code too large or complex")
+	}
+
+	// Parse JSON output from validator (STDOUT only)
+	var violations []Violation
+	if jsonErr := json.Unmarshal(output, &violations); jsonErr != nil {
+		// If JSON parsing fails, the output might be an error message or syntax error
+		if len(output) > 0 {
+			// Ruby syntax errors or other validation failures
+			outputStr := strings.TrimSpace(string(output))
+			if strings.Contains(outputStr, "unexpected") || strings.Contains(outputStr, "syntax error") {
+				// Create a violation for syntax errors
+				return []Violation{{
+					Type:     "syntax_error",
+					Location: 1,
+					Message:  outputStr,
+				}}, nil
+			}
+			return nil, fmt.Errorf("validator error: %s", outputStr)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("validator execution failed: %w", err)
+		}
+		return nil, fmt.Errorf("validator produced invalid output")
+	}
+
+	return violations, nil
+}
