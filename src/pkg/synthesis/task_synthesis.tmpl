@@ -81,12 +81,12 @@ Respond with valid JSON:
 
 **Code Requirements (if symbolic):**
 - IMPORTANT: Only generate the code that goes INSIDE the task block
-- Do NOT include the outer `task :name, inputs:, outputs: do |inputs|` wrapper
+- Do NOT include the outer `task(:name, inputs:, outputs:) do |inputs|` wrapper
 - The code will be inserted into this structure automatically:
   ```ruby
-  task :{{.TaskName}},
+  task(:{{.TaskName}},
        inputs: { {{.Inputs}} },
-       outputs: { {{.Outputs}} } do |inputs|
+       outputs: { {{.Outputs}} }) do |inputs|
     %%YOUR_CODE_HERE%%
   end
   ```
@@ -100,7 +100,7 @@ Respond with valid JSON:
   { content: result, lines: line_count }
 
   # Bad - includes task wrapper (do NOT do this):
-  task :my_task, inputs: { ... }, outputs: { ... } do |inputs|
+  task(:my_task, inputs: { ... }, outputs: { ... }) do |inputs|
     result = execute_tool('read_file', { path: inputs[:file_path] })
     { content: result }
   end

@@ -38,14 +38,14 @@ After execution, the system analyzes OpenTelemetry traces to detect patterns. De
 
 **Initial (fully neural):**
 ```ruby
-task :check_api,
+task(:check_api,
   instructions: "Check API health",
-  outputs: { status: 'string' }
+  outputs: { status: 'string' })
 
-task :send_alert,
+task(:send_alert,
   instructions: "Send alert if unhealthy",
   inputs: { status: 'string' },
-  outputs: { sent: 'boolean' }
+  outputs: { sent: 'boolean' })
 
 main do
   result = execute_task(:check_api)
@@ -55,16 +55,15 @@ end
 
 **After learning (hybrid):**
 ```ruby
-task :check_api,
-  outputs: { status: 'string' }
-do |inputs|
+task(:check_api,
+  outputs: { status: 'string' }) do |inputs|
   execute_tool('http', 'get', url: 'https://api.example.com/health')
 end
 
-task :send_alert,  # Kept neural - decision logic varies
+task(:send_alert,  # Kept neural - decision logic varies
   instructions: "Send alert if unhealthy",
   inputs: { status: 'string' },
-  outputs: { sent: 'boolean' }
+  outputs: { sent: 'boolean' })
 
 main do  # Unchanged
   result = execute_task(:check_api)
