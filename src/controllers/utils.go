@@ -603,29 +603,16 @@ func BuildEgressNetworkPolicy(
 	egress = append(egress, networkingv1.NetworkPolicyEgressRule{
 		To: []networkingv1.NetworkPolicyPeer{
 			{
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": "kube-system",
-					},
-				},
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"component": "kube-apiserver",
-					},
-				},
-			},
-			// Also allow direct access to API server service
-			{
+				// Target the kubernetes service in default namespace
+				// Works for both k3s and managed clusters where API server
+				// doesn't run as pods with specific component labels
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"kubernetes.io/metadata.name": "default",
 					},
 				},
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"component": "kubernetes",
-					},
-				},
+				// No podSelector - allow access to any pod/service in default namespace
+				// This will include the kubernetes service endpoints
 			},
 		},
 		Ports: []networkingv1.NetworkPolicyPort{
