@@ -284,6 +284,12 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	// Build the synthesis prompt
 	prompt := s.buildSynthesisPrompt(req)
 
+	// Log the complete rendered template for debugging
+	s.log.Info("Synthesis template rendered",
+		"agent", req.AgentName,
+		"promptLength", len(prompt))
+	s.log.V(1).Info("Full synthesis prompt", "prompt", prompt)
+
 	// Call LLM using eino ChatModel
 	messages := []*schema.Message{
 		{
@@ -306,6 +312,12 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	}
 
 	dslCode := responseMsg.Content
+
+	// Log the raw LLM response for debugging
+	s.log.Info("LLM response received",
+		"agent", req.AgentName,
+		"responseLength", len(dslCode))
+	s.log.V(1).Info("Raw LLM response", "response", dslCode)
 
 	// Track cost if cost tracker is configured
 	var synthesisCost *SynthesisCost
@@ -335,6 +347,12 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 
 	// Extract code from markdown blocks if present
 	dslCode = extractCodeFromMarkdown(dslCode)
+
+	// Log the extracted DSL code for debugging
+	s.log.Info("DSL code extracted",
+		"agent", req.AgentName,
+		"codeLength", len(dslCode))
+	s.log.V(1).Info("Extracted DSL code", "code", dslCode)
 
 	// Validate against DSL schema first
 	validationErrors := []string{}

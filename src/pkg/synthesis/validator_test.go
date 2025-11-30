@@ -44,6 +44,56 @@ end`,
 			expectErrors: false,
 		},
 		{
+			name: "valid task agent with parentheses syntax",
+			code: `require 'language_operator'
+
+agent "test-agent" do
+  description "Test agent with new syntax"
+  
+  task(:fetch_data,
+    instructions: "fetch some data from API",
+    inputs: { source: 'string' },
+    outputs: { data: 'array', count: 'integer' })
+  
+  task(:process_data,
+    instructions: "process the fetched data",
+    inputs: { data: 'array' },
+    outputs: { result: 'hash' })
+  
+  main do |inputs|
+    raw_data = execute_task(:fetch_data, inputs: { source: inputs[:source] })
+    result = execute_task(:process_data, inputs: { data: raw_data[:data] })
+    result
+  end
+end`,
+			expectErrors: false,
+		},
+		{
+			name: "multi-line task definition with parentheses",
+			code: `require 'language_operator'
+
+agent "story-builder" do
+  description "Build a story one sentence at a time"
+  
+  task(:read_existing_story,
+    instructions: "Read the story.txt file from workspace",
+    inputs: {},
+    outputs: { content: 'string', sentence_count: 'integer' })
+  
+  task(:generate_next_sentence,
+    instructions: "Generate the next sentence of the story",
+    inputs: { content: 'string', sentence_count: 'integer' },
+    outputs: { new_sentence: 'string' })
+  
+  main do |inputs|
+    story_data = execute_task(:read_existing_story)
+    next_sentence = execute_task(:generate_next_sentence, inputs: story_data)
+    next_sentence
+  end
+end`,
+			expectErrors: false,
+		},
+		{
 			name: "agent missing main block",
 			code: `require 'language_operator'
 

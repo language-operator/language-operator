@@ -41,6 +41,27 @@ func (v *TaskValidator) ValidateTaskAgent(ctx context.Context, code string) ([]T
 		return nil, fmt.Errorf("failed to parse agent structure: %w", err)
 	}
 
+	// Log what we found during parsing for debugging
+	if agent != nil {
+		definedTasks := []string{}
+		for taskName := range agent.Tasks {
+			definedTasks = append(definedTasks, taskName)
+		}
+		v.logger.Info("Parsed agent structure",
+			"agentName", agent.Name,
+			"definedTasks", definedTasks,
+			"hasMainBlock", agent.MainBlock != nil)
+
+		if agent.MainBlock != nil {
+			calledTasks := []string{}
+			for _, call := range agent.MainBlock.TaskCalls {
+				calledTasks = append(calledTasks, call.TaskName)
+			}
+			v.logger.Info("Main block task calls",
+				"calledTasks", calledTasks)
+		}
+	}
+
 	// Validate task definitions
 	taskErrors := v.validateTaskDefinitions(agent)
 	errors = append(errors, taskErrors...)
@@ -183,17 +204,18 @@ func (v *TaskValidator) parseTaskDefinitions(code string, lines []string, agent 
 func (v *TaskValidator) extractTaskBlocks(code string) []string {
 	var blocks []string
 
-	// Find task statements using a simple approach
+	// Find task statements - handle both single-line and multi-line formats
 	lines := strings.Split(code, "\n")
 	var currentBlock []string
 	inTaskBlock := false
 	blockDepth := 0
+	parenDepth := 0 // Track parentheses for neural tasks
 
-	for _, line := range lines {
+	for i, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
-		// Check if this line starts a task
-		if strings.HasPrefix(trimmedLine, "task :") {
+		// Check if this line starts a task (both formats)
+		if strings.HasPrefix(trimmedLine, "task :") || strings.HasPrefix(trimmedLine, "task(:") {
 			// If we were already in a block, save it
 			if inTaskBlock && len(currentBlock) > 0 {
 				blocks = append(blocks, strings.Join(currentBlock, "\n"))
@@ -202,6 +224,7 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 			currentBlock = []string{line}
 			inTaskBlock = true
 			blockDepth = 0
+			parenDepth = strings.Count(line, "(") - strings.Count(line, ")")
 			// Check if this line contains " do"
 			if strings.Contains(line, " do") {
 				blockDepth = 1
@@ -212,13 +235,16 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 		if inTaskBlock {
 			currentBlock = append(currentBlock, line)
 
+			// Track parentheses for neural tasks (multi-line definitions)
+			parenDepth += strings.Count(line, "(") - strings.Count(line, ")")
+
 			// Count do/end pairs for symbolic tasks
 			if strings.Contains(trimmedLine, " do") {
 				blockDepth++
 			}
-			if strings.Contains(trimmedLine, "end") {
+			if trimmedLine == "end" || strings.HasPrefix(trimmedLine, "end ") || strings.HasSuffix(trimmedLine, " end") {
 				blockDepth--
-				if blockDepth <= 0 {
+				if blockDepth <= 0 && parenDepth <= 0 {
 					// End of task block
 					blocks = append(blocks, strings.Join(currentBlock, "\n"))
 					currentBlock = nil
@@ -226,20 +252,26 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 				}
 			}
 
-			// For neural tasks (no do block), end when we hit another task or main
-			if blockDepth == 0 && (strings.HasPrefix(trimmedLine, "task :") ||
-				strings.HasPrefix(trimmedLine, "main ") ||
-				strings.HasPrefix(trimmedLine, "end") ||
-				trimmedLine == "") {
-				// End of neural task
-				if !strings.HasPrefix(trimmedLine, "task :") && len(currentBlock) > 1 { // Don't include next task in this block
-					currentBlock = currentBlock[:len(currentBlock)-1]
+			// For neural tasks, check if we've closed all parentheses and hit next definition
+			if blockDepth == 0 && parenDepth <= 0 {
+				// Look ahead to see if next line starts a new definition
+				nextLine := ""
+				if i+1 < len(lines) {
+					nextLine = strings.TrimSpace(lines[i+1])
 				}
-				if len(currentBlock) > 0 {
+
+				if nextLine != "" && (strings.HasPrefix(nextLine, "task :") ||
+					strings.HasPrefix(nextLine, "task(:") ||
+					strings.HasPrefix(nextLine, "main ") ||
+					nextLine == "end" ||
+					strings.HasPrefix(nextLine, "output") ||
+					strings.HasPrefix(nextLine, "constraints")) {
+					// End of neural task
 					blocks = append(blocks, strings.Join(currentBlock, "\n"))
+					currentBlock = nil
+					inTaskBlock = false
+					parenDepth = 0
 				}
-				currentBlock = nil
-				inTaskBlock = false
 			}
 		}
 	}
@@ -254,8 +286,10 @@ func (v *TaskValidator) extractTaskBlocks(code string) []string {
 
 // parseTaskBlock parses a single task block
 func (v *TaskValidator) parseTaskBlock(block string, lines []string) *TaskDefinition {
-	// Extract task name
-	taskNameRegex := regexp.MustCompile(`task\s+:(\w+)`)
+	// Extract task name - support both syntaxes:
+	// task :name (old style)
+	// task(:name (new style with parentheses)
+	taskNameRegex := regexp.MustCompile(`task\s*\(?\s*:(\w+)`)
 	nameMatch := taskNameRegex.FindStringSubmatch(block)
 	if len(nameMatch) < 2 {
 		return nil
@@ -294,10 +328,10 @@ func (v *TaskValidator) parseTaskBlock(block string, lines []string) *TaskDefini
 		}
 	}
 
-	// Find line number
+	// Find line number - check both formats
 	lineNum := 0
 	for i, line := range lines {
-		if strings.Contains(line, "task :"+taskName) {
+		if strings.Contains(line, "task :"+taskName) || strings.Contains(line, "task(:"+taskName) {
 			lineNum = i + 1
 			break
 		}
@@ -511,9 +545,25 @@ func (v *TaskValidator) validateMainBlock(agent *AgentStructure) []TaskValidatio
 		return errors
 	}
 
+	// Log what tasks are defined vs called for debugging
+	definedTasks := []string{}
+	for taskName := range agent.Tasks {
+		definedTasks = append(definedTasks, taskName)
+	}
+	calledTasks := []string{}
+	for _, call := range agent.MainBlock.TaskCalls {
+		calledTasks = append(calledTasks, call.TaskName)
+	}
+	v.logger.V(1).Info("Validating task references",
+		"defined", definedTasks,
+		"called", calledTasks)
+
 	// Validate that all called tasks are defined
 	for _, taskCall := range agent.MainBlock.TaskCalls {
 		if _, exists := agent.Tasks[taskCall.TaskName]; !exists {
+			v.logger.Info("Task reference validation failed",
+				"taskName", taskCall.TaskName,
+				"definedTasks", definedTasks)
 			errors = append(errors, TaskValidationError{
 				Type:     "task_call",
 				Task:     taskCall.TaskName,

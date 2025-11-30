@@ -17,3 +17,5 @@ src/bin/synthesize
 # Test synthesis output
 test/instructions/**/*.rb
 test/synthesis_results.json
+
+values.local.yaml
