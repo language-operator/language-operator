@@ -368,7 +368,7 @@ func main() {
 	agentReconciler.RateLimiter = rateLimiter
 	setupLog.Info("Synthesis rate limiter initialized", "maxPerHour", maxSynthesisPerHour)
 
-	maxCostPerDay := 10.0    // Default: $10 per namespace per day
+	maxCostPerDay := 10.0                                                 // Default: $10 per namespace per day
 	maxAttemptsPerDay := getEnvInt("SYNTHESIS_MAX_ATTEMPTS_PER_DAY", 100) // Default: 100 attempts per namespace per day
 	quotaManager := synthesis.NewQuotaManager(maxCostPerDay, maxAttemptsPerDay, "USD", ctrl.Log.WithName("quota-manager"))
 	agentReconciler.QuotaManager = quotaManager
