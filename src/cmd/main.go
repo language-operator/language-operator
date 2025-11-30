@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,6 +61,16 @@ func init() {
 
 	utilruntime.Must(langopv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+// getEnvInt reads an integer from environment variable with a default value
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
 }
 
 // initializeTelemetryAdapter creates and initializes a telemetry adapter based on environment configuration
@@ -352,13 +363,13 @@ func main() {
 	agentReconciler.InitializeGatewayCache()
 
 	// Initialize rate limiter and quota manager for synthesis cost controls
-	maxSynthesisPerHour := 500 // Default: 500 synthesis per namespace per hour
+	maxSynthesisPerHour := getEnvInt("SYNTHESIS_MAX_PER_HOUR", 500) // Default: 500 synthesis per namespace per hour
 	rateLimiter := synthesis.NewRateLimiter(maxSynthesisPerHour, ctrl.Log.WithName("rate-limiter"))
 	agentReconciler.RateLimiter = rateLimiter
 	setupLog.Info("Synthesis rate limiter initialized", "maxPerHour", maxSynthesisPerHour)
 
 	maxCostPerDay := 10.0    // Default: $10 per namespace per day
-	maxAttemptsPerDay := 100 // Default: 100 attempts per namespace per day
+	maxAttemptsPerDay := getEnvInt("SYNTHESIS_MAX_ATTEMPTS_PER_DAY", 100) // Default: 100 attempts per namespace per day
 	quotaManager := synthesis.NewQuotaManager(maxCostPerDay, maxAttemptsPerDay, "USD", ctrl.Log.WithName("quota-manager"))
 	agentReconciler.QuotaManager = quotaManager
 	setupLog.Info("Synthesis quota manager initialized", "maxCostPerDay", maxCostPerDay, "maxAttemptsPerDay", maxAttemptsPerDay)
