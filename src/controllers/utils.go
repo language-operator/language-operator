@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -627,6 +628,34 @@ func BuildEgressNetworkPolicy(
 		},
 	})
 
+	// Add CIDR-based rules for Kubernetes API server access
+	// These CIDRs are configurable via Helm chart values and environment variables
+	apiServerCIDRs := getAPIServerCIDRs()
+	if len(apiServerCIDRs) > 0 {
+		var apiServerPeers []networkingv1.NetworkPolicyPeer
+		for _, cidr := range apiServerCIDRs {
+			apiServerPeers = append(apiServerPeers, networkingv1.NetworkPolicyPeer{
+				IPBlock: &networkingv1.IPBlock{
+					CIDR: cidr,
+				},
+			})
+		}
+
+		egress = append(egress, networkingv1.NetworkPolicyEgressRule{
+			To: apiServerPeers,
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
+				},
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
+				},
+			},
+		})
+	}
+
 	// Add user-defined egress rules
 	for _, rule := range egressRules {
 		if rule.To == nil {
@@ -699,4 +728,30 @@ func BuildEgressNetworkPolicy(
 
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
 	return &p
+}
+
+// getAPIServerCIDRs retrieves the configured API server CIDR ranges from environment variables
+// Returns the combined list of default and custom CIDRs for Kubernetes API server access
+func getAPIServerCIDRs() []string {
+	var cidrs []string
+
+	// Get API server CIDRs from Helm configuration
+	if apiServerCIDRsEnv := os.Getenv("NETWORKPOLICY_API_SERVER_CIDRS"); apiServerCIDRsEnv != "" {
+		cidrs = append(cidrs, strings.Split(apiServerCIDRsEnv, ",")...)
+	}
+
+	// Get custom CIDRs from Helm configuration
+	if customCIDRsEnv := os.Getenv("NETWORKPOLICY_CUSTOM_CIDRS"); customCIDRsEnv != "" {
+		cidrs = append(cidrs, strings.Split(customCIDRsEnv, ",")...)
+	}
+
+	// Clean up any whitespace and filter empty strings
+	var cleanCIDRs []string
+	for _, cidr := range cidrs {
+		if trimmed := strings.TrimSpace(cidr); trimmed != "" {
+			cleanCIDRs = append(cleanCIDRs, trimmed)
+		}
+	}
+
+	return cleanCIDRs
 }

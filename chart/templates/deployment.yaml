@@ -167,6 +167,17 @@ spec:
           value: {{ $value | quote }}
         {{- end }}
         {{- end }}
+        {{- if .Values.config.networkPolicy }}
+        # NetworkPolicy configuration for agent pods
+        {{- if .Values.config.networkPolicy.apiServerCIDRs }}
+        - name: NETWORKPOLICY_API_SERVER_CIDRS
+          value: {{ join "," .Values.config.networkPolicy.apiServerCIDRs | quote }}
+        {{- end }}
+        {{- if .Values.config.networkPolicy.customCIDRs }}
+        - name: NETWORKPOLICY_CUSTOM_CIDRS
+          value: {{ join "," .Values.config.networkPolicy.customCIDRs | quote }}
+        {{- end }}
+        {{- end }}
         {{- with .Values.env }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -175,6 +175,25 @@ config:
     # Timeout for log extraction
     logFetchTimeout: 5s
 
+  # Network policy configuration for agent pods
+  # These settings control NetworkPolicy rules applied to LanguageAgent, LanguageTool, and LanguageModel pods
+  networkPolicy:
+    # Kubernetes API server CIDR ranges for agent pod access
+    # These CIDRs allow agent pods to reach the Kubernetes API server for event emission and learning integration
+    # Configure these to match your cluster's network topology
+    apiServerCIDRs:
+      # Common cluster service networks where API servers typically reside
+      - "10.0.0.0/8"        # Covers most kubeadm clusters (10.96.0.1), k3s (10.43.0.1)
+      - "172.16.0.0/12"     # Docker default bridge network, some managed clusters
+      - "192.168.0.0/16"    # Local/dev clusters, some node networks
+      
+    # Additional custom CIDR ranges (empty by default)
+    # Use this to add specific network ranges for your environment
+    # Example:
+    #   - "203.0.113.0/24"  # External API server network
+    #   - "198.51.100.0/24" # Load balancer network
+    customCIDRs: []
+
   # Agent runtime security configuration
   # These settings apply to LanguageAgent pods created by the operator
   agentSecurity:
