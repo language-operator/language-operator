@@ -103,6 +103,17 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        {{- if .Values.config.synthesis.rateLimits }}
+        # Synthesis rate limiting configuration
+        {{- if .Values.config.synthesis.rateLimits.perHour }}
+        - name: SYNTHESIS_MAX_PER_HOUR
+          value: {{ .Values.config.synthesis.rateLimits.perHour | quote }}
+        {{- end }}
+        {{- if .Values.config.synthesis.rateLimits.perDay }}
+        - name: SYNTHESIS_MAX_ATTEMPTS_PER_DAY
+          value: {{ .Values.config.synthesis.rateLimits.perDay | quote }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.opentelemetry.collector.enabled }}
         # OpenTelemetry data collection configuration
         - name: OTEL_EXPORTER_OTLP_ENDPOINT

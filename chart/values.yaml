@@ -148,6 +148,14 @@ config:
     # Sync period for controller
     syncPeriod: 10m
 
+  # Synthesis rate limiting configuration
+  synthesis:
+    rateLimits:
+      # Maximum synthesis attempts per namespace per hour
+      perHour: 500
+      # Maximum synthesis attempts per namespace per day
+      perDay: 100
+
   # Self-healing synthesis configuration
   selfHealing:
     # Enable self-healing synthesis for failed agents
