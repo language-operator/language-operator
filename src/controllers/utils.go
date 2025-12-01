@@ -630,16 +630,12 @@ func BuildEgressNetworkPolicy(
 
 	// Add CIDR-based rules for Kubernetes API server access
 	// These CIDRs are configurable via Helm chart values and environment variables
-	apiServerCIDRs := getAPIServerCIDRs()
-	if len(apiServerCIDRs) > 0 {
+	// Note: CIDR-based rules removed due to Cilium NetworkPolicy compatibility issues
+	// Use broad rule for external API access instead
+	if true { // Always add broad external API access rule
+		// Use empty peer list to allow all external destinations on specific ports
+		// This works better with Cilium than specific CIDR ranges
 		var apiServerPeers []networkingv1.NetworkPolicyPeer
-		for _, cidr := range apiServerCIDRs {
-			apiServerPeers = append(apiServerPeers, networkingv1.NetworkPolicyPeer{
-				IPBlock: &networkingv1.IPBlock{
-					CIDR: cidr,
-				},
-			})
-		}
 
 		egress = append(egress, networkingv1.NetworkPolicyEgressRule{
 			To: apiServerPeers,

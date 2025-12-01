@@ -30,6 +30,7 @@
 
 ### Deployment Process
 - ⚠️ **CANNOT** build/deploy operator locally from source
+- **YOU CAN ONLY DEPLOY THE FUCKING OPERATOR FROM CI**
 - Must push changes to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
 - Use `git push` workflow, not `make operator` or local builds
 
@@ -38,6 +39,7 @@
 - **Gateway API**: ReferenceGrant auto-creation for cross-namespace refs
 - **Testing**: Always run with race detection enabled
 - **Code Style**: Use generic `ReconcileHelper[T]` pattern for new controllers
+- **Command Safety**: DO NOT run commands without checking they exist first
 
 ### Development Standards
 - ❌ **NEVER** implement fake/stub algorithms or placeholder functions
