@@ -25,6 +25,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,6 +50,8 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -121,6 +125,20 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.validateDNS(ctx, cluster)
 	}
 
+	// Ensure agent RBAC resources exist in the cluster namespace
+	if err := r.reconcileAgentRBAC(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile agent RBAC")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile agent RBAC")
+		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+			"RBACError", err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after RBAC error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
 	// LanguageCluster is now just a logical grouping - no namespace management
 	// Child resources reference the cluster and live in the same namespace
 	cluster.Status.Phase = "Ready"
@@ -137,6 +155,113 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
+}
+
+// reconcileAgentRBAC ensures the agent RBAC resources exist in the cluster namespace
+func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	namespace := cluster.Namespace
+
+	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
+
+	// Create the agents Role
+	agentsRole := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agents",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       "language-operator",
+				"app.kubernetes.io/managed-by": "language-operator",
+				"app.kubernetes.io/component":  "agent-rbac",
+				"langop.io/cluster":            cluster.Name,
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create"},
+			},
+		},
+	}
+
+	// Set cluster as owner so RBAC gets cleaned up when cluster is deleted
+	if err := controllerutil.SetControllerReference(cluster, agentsRole, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference for agents Role: %w", err)
+	}
+
+	// Create or update the Role
+	if err := r.Create(ctx, agentsRole); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create agents Role: %w", err)
+		}
+		// Role already exists, update it if needed
+		existingRole := &rbacv1.Role{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(agentsRole), existingRole); err != nil {
+			return fmt.Errorf("failed to get existing agents Role: %w", err)
+		}
+		existingRole.Rules = agentsRole.Rules
+		if err := r.Update(ctx, existingRole); err != nil {
+			return fmt.Errorf("failed to update agents Role: %w", err)
+		}
+		log.V(1).Info("Updated existing agents Role", "namespace", namespace)
+	} else {
+		log.Info("Created agents Role", "namespace", namespace)
+	}
+
+	// Create the agents RoleBinding
+	agentsRoleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agents",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       "language-operator",
+				"app.kubernetes.io/managed-by": "language-operator",
+				"app.kubernetes.io/component":  "agent-rbac",
+				"langop.io/cluster":            cluster.Name,
+			},
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "default",
+				Namespace: namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "agents",
+		},
+	}
+
+	// Set cluster as owner so RBAC gets cleaned up when cluster is deleted
+	if err := controllerutil.SetControllerReference(cluster, agentsRoleBinding, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference for agents RoleBinding: %w", err)
+	}
+
+	// Create or update the RoleBinding
+	if err := r.Create(ctx, agentsRoleBinding); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create agents RoleBinding: %w", err)
+		}
+		// RoleBinding already exists, update it if needed
+		existingRoleBinding := &rbacv1.RoleBinding{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(agentsRoleBinding), existingRoleBinding); err != nil {
+			return fmt.Errorf("failed to get existing agents RoleBinding: %w", err)
+		}
+		existingRoleBinding.Subjects = agentsRoleBinding.Subjects
+		existingRoleBinding.RoleRef = agentsRoleBinding.RoleRef
+		if err := r.Update(ctx, existingRoleBinding); err != nil {
+			return fmt.Errorf("failed to update agents RoleBinding: %w", err)
+		}
+		log.V(1).Info("Updated existing agents RoleBinding", "namespace", namespace)
+	} else {
+		log.Info("Created agents RoleBinding", "namespace", namespace)
+	}
+
+	log.V(1).Info("Successfully reconciled agent RBAC", "cluster", cluster.Name, "namespace", namespace)
+	return nil
 }
 
 // cleanupDependentResources removes all resources that reference this cluster

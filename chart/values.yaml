@@ -479,20 +479,6 @@ rbac:
       - patch
       - delete
 
-# Agent RBAC configuration - permissions for agent pods
-agentRBAC:
-  # Specifies whether agent RBAC resources should be created
-  create: true
-  # Rules for the agents Role (namespace-scoped)
-  rules:
-    # Events resource for telemetry integration
-    - apiGroups:
-      - ""
-      resources:
-      - events
-      verbs:
-      - create
-
 # Monitoring configuration
 monitoring:
   # Prometheus ServiceMonitor
