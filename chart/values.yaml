@@ -266,8 +266,10 @@ rbac:
       - events
       verbs:
       - create
-      - patch
+      - get
       - list
+      - patch
+      - update
       - watch
     # Coordination resources for leader election
     - apiGroups:
