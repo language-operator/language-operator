@@ -3421,9 +3421,9 @@ func (r *LearningReconciler) processJobExecution(ctx context.Context, agent *lan
 	// Extract task name from job labels or annotations
 	taskName := r.extractTaskName(job)
 
-	log.Info("Processing Job execution", 
-		"task", taskName, 
-		"success", success, 
+	log.Info("Processing Job execution",
+		"task", taskName,
+		"success", success,
 		"completion_time", executionTime.Time)
 
 	// Call ProcessAgentExecution to update metrics
@@ -3457,7 +3457,7 @@ func (r *LearningReconciler) markJobAsProcessed(ctx context.Context, agent *lang
 		job.Annotations = make(map[string]string)
 	}
 	job.Annotations["langop.io/learning-processed"] = time.Now().Format(time.RFC3339)
-	
+
 	return r.Update(ctx, job)
 }
 
@@ -3646,6 +3646,6 @@ func (r *LearningReconciler) markEventAsProcessed(ctx context.Context, agent *la
 		event.Annotations = make(map[string]string)
 	}
 	event.Annotations["langop.io/learning-processed"] = time.Now().Format(time.RFC3339)
-	
+
 	return r.Update(ctx, event)
 }
