@@ -214,7 +214,7 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, reconcileErr
 	}
 
-	// Process agent execution events from completed Jobs
+	// Process agent execution events from TaskCompleted events and completed Jobs
 	if err := r.processAgentExecutions(ctx, agent); err != nil {
 		log.Error(err, "Failed to process agent executions")
 		// Don't fail reconciliation for execution tracking errors, just log
@@ -2327,6 +2327,8 @@ func (r *LearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Watches(&batchv1.Job{},
 			handler.EnqueueRequestsFromMapFunc(r.mapJobToAgent)).
+		Watches(&corev1.Event{},
+			handler.EnqueueRequestsFromMapFunc(r.mapEventToAgent)).
 		Named("learning").
 		Complete(r)
 }
@@ -3350,14 +3352,20 @@ func (r *LearningReconciler) updateExecutionSummary(ctx context.Context, agent *
 	return nil
 }
 
-// processAgentExecutions finds and processes completed Jobs for an agent to track execution metrics
+// processAgentExecutions finds and processes TaskCompleted events and completed Jobs for an agent to track execution metrics
 func (r *LearningReconciler) processAgentExecutions(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	ctx, span := learningTracer.Start(ctx, "learning.process_agent_executions")
 	defer span.End()
 
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
 
-	// Find Jobs for this agent
+	// Process TaskCompleted events (preferred method)
+	if err := r.processTaskCompletedEvents(ctx, agent); err != nil {
+		log.Error(err, "Failed to process TaskCompleted events")
+		// Don't return error - continue with fallback Job processing
+	}
+
+	// Fallback: Process completed Jobs (for backward compatibility)
 	jobList := &batchv1.JobList{}
 	listOpts := []client.ListOption{
 		client.InNamespace(agent.Namespace),
@@ -3479,4 +3487,165 @@ func (r *LearningReconciler) extractTaskName(job *batchv1.Job) string {
 	}
 
 	return "main_task" // Default task name
+}
+
+// mapEventToAgent maps TaskCompleted events to LanguageAgent reconciliation requests
+func (r *LearningReconciler) mapEventToAgent(ctx context.Context, obj client.Object) []reconcile.Request {
+	event, ok := obj.(*corev1.Event)
+	if !ok {
+		return nil
+	}
+
+	// Only process TaskCompleted events
+	if event.Reason != "TaskCompleted" {
+		return nil
+	}
+
+	// Extract agent name from the involved object
+	if event.InvolvedObject.Kind != "LanguageAgent" {
+		return nil
+	}
+
+	agentName := event.InvolvedObject.Name
+	namespace := event.InvolvedObject.Namespace
+
+	r.Log.V(1).Info("TaskCompleted event detected, triggering learning reconciliation",
+		"event", event.Name,
+		"agent", agentName,
+		"namespace", namespace,
+		"task", r.extractTaskFromEventMessage(event.Message))
+
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      agentName,
+				Namespace: namespace,
+			},
+		},
+	}
+}
+
+// extractTaskFromEventMessage parses task name from TaskCompleted event message
+func (r *LearningReconciler) extractTaskFromEventMessage(message string) string {
+	// Expected format: "Task 'task_name' completed successfully in 1234ms (task_type: neural)"
+	// Use regex to extract task name between single quotes
+	if strings.Contains(message, "Task '") && strings.Contains(message, "' completed") {
+		start := strings.Index(message, "Task '") + 6
+		end := strings.Index(message[start:], "' completed")
+		if end > 0 {
+			return message[start : start+end]
+		}
+	}
+	return "unknown_task"
+}
+
+// processTaskCompletedEvents finds and processes recent TaskCompleted events for an agent
+func (r *LearningReconciler) processTaskCompletedEvents(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	ctx, span := learningTracer.Start(ctx, "learning.process_task_completed_events")
+	defer span.End()
+
+	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+
+	// Find TaskCompleted events for this agent
+	eventList := &corev1.EventList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(agent.Namespace),
+	}
+
+	if err := r.List(ctx, eventList, listOpts...); err != nil {
+		return fmt.Errorf("failed to list Events for agent %s: %w", agent.Name, err)
+	}
+
+	log.V(1).Info("Found events for namespace", "count", len(eventList.Items))
+
+	// Process TaskCompleted events for this agent
+	processedCount := 0
+	for _, event := range eventList.Items {
+		if err := r.processTaskCompletedEvent(ctx, agent, &event); err != nil {
+			log.Error(err, "Failed to process TaskCompleted event", "event", event.Name)
+			// Continue processing other events
+		} else if r.isRelevantTaskEvent(&event, agent) {
+			processedCount++
+		}
+	}
+
+	log.V(1).Info("Processed TaskCompleted events", "count", processedCount)
+	return nil
+}
+
+// processTaskCompletedEvent processes a single TaskCompleted event
+func (r *LearningReconciler) processTaskCompletedEvent(ctx context.Context, agent *langopv1alpha1.LanguageAgent, event *corev1.Event) error {
+	// Only process TaskCompleted events for this agent
+	if !r.isRelevantTaskEvent(event, agent) {
+		return nil
+	}
+
+	ctx, span := learningTracer.Start(ctx, "learning.process_task_completed_event")
+	defer span.End()
+
+	log := r.Log.WithValues("agent", agent.Name, "event", event.Name)
+
+	// Check if we've already processed this event
+	if r.isEventProcessed(ctx, agent, event) {
+		log.V(2).Info("Event already processed, skipping")
+		return nil
+	}
+
+	// Parse event data
+	taskName := r.extractTaskFromEventMessage(event.Message)
+	success := r.isTaskSuccessfulFromEventMessage(event.Message)
+	executionTime := event.CreationTimestamp.Time
+
+	log.Info("Processing TaskCompleted event",
+		"task", taskName,
+		"success", success,
+		"timestamp", executionTime)
+
+	// Call ProcessAgentExecution to update metrics
+	if err := r.ProcessAgentExecution(ctx, agent, taskName, success, executionTime); err != nil {
+		return fmt.Errorf("failed to process agent execution from event: %w", err)
+	}
+
+	// Mark this event as processed
+	if err := r.markEventAsProcessed(ctx, agent, event); err != nil {
+		log.Error(err, "Failed to mark event as processed", "event", event.Name)
+		// Don't fail - this is just for optimization
+	}
+
+	return nil
+}
+
+// isRelevantTaskEvent checks if an event is a TaskCompleted event for the given agent
+func (r *LearningReconciler) isRelevantTaskEvent(event *corev1.Event, agent *langopv1alpha1.LanguageAgent) bool {
+	return event.Reason == "TaskCompleted" &&
+		event.InvolvedObject.Kind == "LanguageAgent" &&
+		event.InvolvedObject.Name == agent.Name &&
+		event.InvolvedObject.Namespace == agent.Namespace
+}
+
+// isTaskSuccessfulFromEventMessage parses success status from TaskCompleted event message
+func (r *LearningReconciler) isTaskSuccessfulFromEventMessage(message string) bool {
+	// Expected format: "Task 'task_name' completed successfully in 1234ms (task_type: neural)"
+	return strings.Contains(message, "completed successfully")
+}
+
+// isEventProcessed checks if we've already processed this Event
+func (r *LearningReconciler) isEventProcessed(ctx context.Context, agent *langopv1alpha1.LanguageAgent, event *corev1.Event) bool {
+	// Check if event has our processing annotation
+	if event.Annotations != nil {
+		if _, exists := event.Annotations["langop.io/learning-processed"]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// markEventAsProcessed marks an Event as processed to avoid duplicate processing
+func (r *LearningReconciler) markEventAsProcessed(ctx context.Context, agent *langopv1alpha1.LanguageAgent, event *corev1.Event) error {
+	if event.Annotations == nil {
+		event.Annotations = make(map[string]string)
+	}
+	event.Annotations["langop.io/learning-processed"] = time.Now().Format(time.RFC3339)
+	
+	return r.Update(ctx, event)
 }
