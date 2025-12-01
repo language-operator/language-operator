@@ -214,6 +214,14 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, reconcileErr
 	}
 
+	// Process agent execution events from completed Jobs
+	if err := r.processAgentExecutions(ctx, agent); err != nil {
+		log.Error(err, "Failed to process agent executions")
+		// Don't fail reconciliation for execution tracking errors, just log
+		r.Recorder.Event(agent, corev1.EventTypeWarning, "ExecutionTrackingFailed",
+			fmt.Sprintf("Failed to track agent executions: %v", err))
+	}
+
 	// Check for learning triggers (pattern-based and error-based)
 	learningTriggers, err := r.checkLearningTriggers(ctx, agent, learningStatus)
 	if err != nil {
@@ -3340,4 +3348,135 @@ func (r *LearningReconciler) updateExecutionSummary(ctx context.Context, agent *
 		"tasks", len(summary.Tasks))
 
 	return nil
+}
+
+// processAgentExecutions finds and processes completed Jobs for an agent to track execution metrics
+func (r *LearningReconciler) processAgentExecutions(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	ctx, span := learningTracer.Start(ctx, "learning.process_agent_executions")
+	defer span.End()
+
+	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+
+	// Find Jobs for this agent
+	jobList := &batchv1.JobList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(agent.Namespace),
+		client.MatchingLabels{
+			"app.kubernetes.io/name": agent.Name,
+		},
+	}
+
+	if err := r.List(ctx, jobList, listOpts...); err != nil {
+		return fmt.Errorf("failed to list Jobs for agent %s: %w", agent.Name, err)
+	}
+
+	log.V(1).Info("Found Jobs for agent", "count", len(jobList.Items))
+
+	// Process each completed Job
+	for _, job := range jobList.Items {
+		if err := r.processJobExecution(ctx, agent, &job); err != nil {
+			log.Error(err, "Failed to process Job execution", "job", job.Name)
+			// Continue processing other jobs
+		}
+	}
+
+	return nil
+}
+
+// processJobExecution processes a single Job execution and calls ProcessAgentExecution
+func (r *LearningReconciler) processJobExecution(ctx context.Context, agent *langopv1alpha1.LanguageAgent, job *batchv1.Job) error {
+	ctx, span := learningTracer.Start(ctx, "learning.process_job_execution")
+	defer span.End()
+
+	log := r.Log.WithValues("agent", agent.Name, "job", job.Name)
+
+	// Only process completed jobs
+	if job.Status.Succeeded == 0 && job.Status.Failed == 0 {
+		log.V(2).Info("Job not yet completed, skipping")
+		return nil
+	}
+
+	// Check if we've already processed this job
+	if r.isJobProcessed(ctx, agent, job) {
+		log.V(2).Info("Job already processed, skipping")
+		return nil
+	}
+
+	// Determine success/failure
+	success := job.Status.Succeeded > 0
+	executionTime := job.Status.CompletionTime
+	if executionTime == nil {
+		// Fallback to creation time if completion time is not available
+		executionTime = &job.CreationTimestamp
+	}
+
+	// Extract task name from job labels or annotations
+	taskName := r.extractTaskName(job)
+
+	log.Info("Processing Job execution", 
+		"task", taskName, 
+		"success", success, 
+		"completion_time", executionTime.Time)
+
+	// Call ProcessAgentExecution to update metrics
+	if err := r.ProcessAgentExecution(ctx, agent, taskName, success, executionTime.Time); err != nil {
+		return fmt.Errorf("failed to process agent execution: %w", err)
+	}
+
+	// Mark this job as processed
+	if err := r.markJobAsProcessed(ctx, agent, job); err != nil {
+		log.Error(err, "Failed to mark job as processed", "job", job.Name)
+		// Don't fail - this is just for optimization
+	}
+
+	return nil
+}
+
+// isJobProcessed checks if we've already processed this Job
+func (r *LearningReconciler) isJobProcessed(ctx context.Context, agent *langopv1alpha1.LanguageAgent, job *batchv1.Job) bool {
+	// Check if job has our processing annotation
+	if job.Annotations != nil {
+		if _, exists := job.Annotations["langop.io/learning-processed"]; exists {
+			return true
+		}
+	}
+	return false
+}
+
+// markJobAsProcessed marks a Job as processed to avoid duplicate processing
+func (r *LearningReconciler) markJobAsProcessed(ctx context.Context, agent *langopv1alpha1.LanguageAgent, job *batchv1.Job) error {
+	if job.Annotations == nil {
+		job.Annotations = make(map[string]string)
+	}
+	job.Annotations["langop.io/learning-processed"] = time.Now().Format(time.RFC3339)
+	
+	return r.Update(ctx, job)
+}
+
+// extractTaskName extracts the task name from Job metadata
+func (r *LearningReconciler) extractTaskName(job *batchv1.Job) string {
+	// Try to get task name from labels first
+	if job.Labels != nil {
+		if taskName, exists := job.Labels["langop.io/task"]; exists {
+			return taskName
+		}
+	}
+
+	// Try annotations
+	if job.Annotations != nil {
+		if taskName, exists := job.Annotations["langop.io/task"]; exists {
+			return taskName
+		}
+	}
+
+	// Fallback to job name or a default
+	if strings.Contains(job.Name, "-") {
+		// For CronJob generated jobs like "agent-name-123456", extract the task
+		parts := strings.Split(job.Name, "-")
+		if len(parts) > 1 {
+			return strings.Join(parts[:len(parts)-1], "-")
+		}
+	}
+
+	return "main_task" // Default task name
 }
