@@ -1,0 +1,11 @@
+{{- if .Values.agentRBAC.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "language-operator.fullname" . }}-agents
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+rules:
+{{- toYaml .Values.agentRBAC.rules | nindent 2 }}
+{{- end }}
