@@ -1376,8 +1376,8 @@ func (r *LanguageAgentReconciler) checkAndIncrementRunsCounter(ctx context.Conte
 	// List Jobs owned by this agent's CronJob
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, client.InNamespace(agent.Namespace), client.MatchingLabels{
-		"app.kubernetes.io/name":      agent.Name,
-		"app.kubernetes.io/component": "LanguageAgent",
+		"app.kubernetes.io/name": agent.Name,
+		"langop.io/kind":         "LanguageAgent",
 	}); err != nil {
 		return false, fmt.Errorf("failed to list Jobs: %w", err)
 	}
