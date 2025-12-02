@@ -672,9 +672,7 @@ func TestLearningReconciler_generateLearnedCode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reconciler := &LearningReconciler{
-				Client: fakeClient,
-				Scheme: scheme,
-				Log:    logr.Discard(),
+				Log: logr.Discard(),
 			}
 
 			// Since we can't easily mock the model creation, we'll test the fallback behavior
