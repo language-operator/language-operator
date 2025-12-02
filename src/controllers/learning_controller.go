@@ -290,11 +290,11 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 		}
 
 		options := &synthesis.ConfigMapOptions{
-			Code:              response.DSLCode,
-			Version:           newVersion,
-			SynthesisType:     "learned",
-			LearningSource:    "run-threshold",
-			PreviousVersion:   &latestVersion,
+			Code:            response.DSLCode,
+			Version:         newVersion,
+			SynthesisType:   "learned",
+			LearningSource:  "run-threshold",
+			PreviousVersion: &latestVersion,
 		}
 		if _, err := r.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, options); err != nil {
 			span.RecordError(err)
@@ -302,8 +302,8 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			return fmt.Errorf("failed to create optimized code: %w", err)
 		}
 
-		log.Info("Created versioned ConfigMap for optimized agent code", 
-			"version", newVersion, 
+		log.Info("Created versioned ConfigMap for optimized agent code",
+			"version", newVersion,
 			"previousVersion", latestVersion,
 			"codeLength", len(response.DSLCode))
 	}
