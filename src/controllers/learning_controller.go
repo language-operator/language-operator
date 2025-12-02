@@ -163,8 +163,6 @@ var learningTracer = otel.Tracer("language-operator/learning")
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;get;list;patch;watch;update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;update;patch
 
 // Reconcile handles learning events and triggers re-synthesis when appropriate
 func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
