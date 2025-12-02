@@ -2627,10 +2627,10 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 		}
 	}
 
-	// Default to "default" gateway if not specified
+	// Skip Gateway API if no gateway is configured
 	if gatewayName == "" {
-		gatewayName = "default"
-		gatewayNamespace = "default"
+		log.Info("No Gateway configured, skipping HTTPRoute creation")
+		return nil
 	}
 
 	// Validate Gateway TLS configuration and determine protocol
