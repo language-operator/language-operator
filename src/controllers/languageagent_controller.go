@@ -1372,11 +1372,11 @@ func (r *LanguageAgentReconciler) checkAndIncrementRunsCounter(ctx context.Conte
 	}
 
 	log := log.FromContext(ctx)
-	
+
 	// List Jobs owned by this agent's CronJob
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, client.InNamespace(agent.Namespace), client.MatchingLabels{
-		"app.kubernetes.io/name": agent.Name,
+		"app.kubernetes.io/name":      agent.Name,
 		"app.kubernetes.io/component": "LanguageAgent",
 	}); err != nil {
 		return false, fmt.Errorf("failed to list Jobs: %w", err)
@@ -1387,14 +1387,14 @@ func (r *LanguageAgentReconciler) checkAndIncrementRunsCounter(ctx context.Conte
 	for _, job := range jobList.Items {
 		// Check if Job is successfully completed
 		if isJobCompleted(&job) && !hasJobBeenCounted(&job) {
-			log.Info("Detected completed Job, incrementing runsPendingLearning", 
-				"job", job.Name, 
+			log.Info("Detected completed Job, incrementing runsPendingLearning",
+				"job", job.Name,
 				"currentCount", agent.Status.RunsPendingLearning)
-			
+
 			// Increment the counter
 			agent.Status.RunsPendingLearning++
 			counterIncremented = true
-			
+
 			// Mark this Job as counted by adding an annotation
 			if err := r.markJobAsCounted(ctx, &job); err != nil {
 				log.Error(err, "Failed to mark Job as counted", "job", job.Name)

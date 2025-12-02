@@ -205,25 +205,25 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.V(1).Info("Learning disabled for this agent")
 		return ctrl.Result{}, nil
 	}
-	
-	log.Info("Processing simplified learning check", 
+
+	log.Info("Processing simplified learning check",
 		"agent", req.NamespacedName,
 		"runsPendingLearning", agent.Status.RunsPendingLearning,
 		"threshold", r.LearningThreshold)
-	
+
 	// Simplified learning logic: check if runsPendingLearning reaches threshold
 	if agent.Status.RunsPendingLearning >= r.LearningThreshold {
-		log.Info("Learning threshold reached, triggering optimization", 
-			"runs", agent.Status.RunsPendingLearning, 
+		log.Info("Learning threshold reached, triggering optimization",
+			"runs", agent.Status.RunsPendingLearning,
 			"threshold", r.LearningThreshold)
-		
+
 		// Trigger optimization
 		if err := r.triggerOptimization(ctx, agent); err != nil {
 			log.Error(err, "Failed to trigger optimization")
 			reconcileErr = fmt.Errorf("failed to trigger optimization: %w", err)
 			return ctrl.Result{}, reconcileErr
 		}
-		
+
 		// Reset counter after successful optimization
 		agent.Status.RunsPendingLearning = 0
 		if err := r.Status().Update(ctx, agent); err != nil {
@@ -231,10 +231,10 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			reconcileErr = fmt.Errorf("failed to reset counter: %w", err)
 			return ctrl.Result{}, reconcileErr
 		}
-		
+
 		log.Info("Optimization completed and counter reset")
 	}
-	
+
 	span.SetStatus(codes.Ok, "Learning reconciliation completed")
 	return ctrl.Result{}, nil
 }
@@ -243,17 +243,17 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	ctx, span := learningTracer.Start(ctx, "learning.trigger_optimization")
 	defer span.End()
-	
+
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
 	log.Info("Triggering agent optimization based on accumulated runs")
-	
+
 	// Create synthesis request for optimization
 	synthesisReq := synthesis.AgentSynthesisRequest{
 		Instructions: fmt.Sprintf("Optimize agent code based on telemetry data from %d completed runs", agent.Status.RunsPendingLearning),
 		AgentName:    agent.Name,
 		Namespace:    agent.Namespace,
 	}
-	
+
 	// Call the synthesizer to optimize the agent code
 	response, err := r.Synthesizer.SynthesizeAgent(ctx, synthesisReq)
 	if err != nil {
@@ -261,14 +261,14 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 		log.Error(err, "Failed to synthesize optimized agent code")
 		return fmt.Errorf("synthesis failed: %w", err)
 	}
-	
+
 	if response.Error != "" {
 		err := fmt.Errorf("synthesis error: %s", response.Error)
 		span.RecordError(err)
 		log.Error(err, "Synthesis returned error")
 		return err
 	}
-	
+
 	// Update the agent's code ConfigMap with the optimized version
 	if r.ConfigMapManager != nil {
 		options := &synthesis.ConfigMapOptions{
@@ -282,11 +282,11 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			return fmt.Errorf("failed to create optimized code: %w", err)
 		}
 	}
-	
+
 	// Record successful optimization event
 	r.Recorder.Event(agent, corev1.EventTypeNormal, "OptimizationTriggered",
 		fmt.Sprintf("Agent code optimized after %d runs", agent.Status.RunsPendingLearning))
-	
+
 	log.Info("Successfully triggered agent optimization")
 	span.SetStatus(codes.Ok, "Optimization completed")
 	return nil

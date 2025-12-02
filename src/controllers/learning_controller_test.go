@@ -134,7 +134,9 @@ func TestLearningReconciler_Reconcile(t *testing.T) {
 			},
 			expectError: false,
 			validateFunc: func(t *testing.T, client client.Client, result ctrl.Result) {
-				assert.Greater(t, result.RequeueAfter, time.Duration(0))
+				// Simplified learning controller no longer requeues on its own
+				// It only acts when runsPendingLearning reaches threshold
+				assert.Equal(t, ctrl.Result{}, result)
 			},
 		},
 	}
