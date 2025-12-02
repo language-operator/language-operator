@@ -399,6 +399,12 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Reconciliation successful
 	span.SetStatus(codes.Ok, "Reconciliation successful")
+	
+	// For scheduled agents, requeue periodically to check for completed jobs
+	if agent.Spec.ExecutionMode == "scheduled" {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+	
 	return ctrl.Result{}, nil
 }
 
