@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
@@ -26,6 +27,9 @@ import (
 
 //go:embed agent_synthesis.tmpl
 var agentSynthesisTemplate string
+
+//go:embed task_synthesis.tmpl
+var taskSynthesisTemplate string
 
 //go:embed persona_distillation.tmpl
 var personaDistillationTemplate string
@@ -61,6 +65,7 @@ func (t TemporalIntent) String() string {
 // AgentSynthesizer is the interface for synthesizing agent code
 type AgentSynthesizer interface {
 	SynthesizeAgent(ctx context.Context, req AgentSynthesisRequest) (*AgentSynthesisResponse, error)
+	SynthesizeTask(ctx context.Context, req TaskSynthesisRequest) (*TaskSynthesisResponse, error)
 	DistillPersona(ctx context.Context, persona PersonaInfo, agentContext AgentContext) (string, error)
 }
 
@@ -102,6 +107,34 @@ type AgentSynthesisResponse struct {
 	DurationSeconds  float64
 	ValidationErrors []string
 	Cost             *SynthesisCost // Cost tracking for this synthesis
+}
+
+// TaskSynthesisRequest contains all information needed to synthesize optimized task code
+type TaskSynthesisRequest struct {
+	TaskName        string
+	Instructions    string
+	Inputs          string // JSON schema or description of inputs
+	Outputs         string // JSON schema or description of outputs
+	TaskCode        string // Current task code (if any)
+	Traces          string // Execution traces for pattern analysis
+	TraceCount      int
+	CommonPattern   string
+	ConsistencyScore int
+	UniquePatternCount int
+	ToolsList       string // Available tools for this task
+	AgentName       string
+	Namespace       string
+}
+
+// TaskSynthesisResponse contains the synthesized task optimization result
+type TaskSynthesisResponse struct {
+	IsDeterministic bool    `json:"is_deterministic"`
+	Confidence      float64 `json:"confidence"`
+	Explanation     string  `json:"explanation"`
+	Code            *string `json:"code"` // Optimized task code (null if not deterministic)
+	Error           string
+	DurationSeconds float64
+	Cost            *SynthesisCost
 }
 
 // PersonaInfo contains persona details for distillation
@@ -443,6 +476,146 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 	}, nil
 }
 
+// SynthesizeTask generates optimized task code based on execution patterns
+func (s *Synthesizer) SynthesizeTask(ctx context.Context, req TaskSynthesisRequest) (*TaskSynthesisResponse, error) {
+	// Start synthesis span
+	ctx, span := tracer.Start(ctx, "synthesis.task.generate")
+	defer span.End()
+
+	// Add initial span attributes
+	spanAttrs := []attribute.KeyValue{
+		attribute.String("synthesis.task_name", req.TaskName),
+		attribute.String("synthesis.agent_name", req.AgentName),
+		attribute.String("synthesis.namespace", req.Namespace),
+		attribute.Int("synthesis.trace_count", req.TraceCount),
+		attribute.Int("synthesis.consistency_score", req.ConsistencyScore),
+		attribute.Int("synthesis.unique_patterns", req.UniquePatternCount),
+	}
+
+	// Add DSL schema version if available
+	if s.schemaVersion != "" {
+		spanAttrs = append(spanAttrs, attribute.String("dsl.schema.version", s.schemaVersion))
+	}
+
+	span.SetAttributes(spanAttrs...)
+
+	startTime := time.Now()
+
+	s.log.Info("Synthesizing task code",
+		"task", req.TaskName,
+		"agent", req.AgentName,
+		"namespace", req.Namespace,
+		"traceCount", req.TraceCount)
+
+	// Build the task synthesis prompt
+	prompt := s.buildTaskSynthesisPrompt(req)
+
+	// Log the complete rendered template for debugging
+	s.log.Info("Task synthesis template rendered",
+		"task", req.TaskName,
+		"promptLength", len(prompt))
+	s.log.V(1).Info("Full task synthesis prompt", "prompt", prompt)
+
+	// Call LLM using eino ChatModel
+	messages := []*schema.Message{
+		{
+			Role:    schema.User,
+			Content: prompt,
+		},
+	}
+
+	// Call the chat model
+	responseMsg, err := s.chatModel.Generate(ctx, messages)
+	if err != nil {
+		duration := time.Since(startTime).Seconds()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "LLM call failed")
+		return &TaskSynthesisResponse{
+			Error:           err.Error(),
+			DurationSeconds: duration,
+		}, err
+	}
+
+	responseContent := responseMsg.Content
+
+	// Log the raw LLM response for debugging
+	s.log.Info("Task synthesis LLM response received",
+		"task", req.TaskName,
+		"responseLength", len(responseContent))
+	s.log.V(1).Info("Raw task synthesis response", "response", responseContent)
+
+	// Track cost if cost tracker is configured
+	var synthesisCost *SynthesisCost
+	if s.costTracker != nil {
+		inputTokens := EstimateTokens(prompt)
+		outputTokens := EstimateTokens(responseContent)
+		synthesisCost = s.costTracker.CalculateCost(inputTokens, outputTokens, s.modelName)
+
+		// Add token/cost attributes to span
+		span.SetAttributes(
+			attribute.Int64("synthesis.input_tokens", synthesisCost.InputTokens),
+			attribute.Int64("synthesis.output_tokens", synthesisCost.OutputTokens),
+			attribute.Float64("synthesis.cost_usd", synthesisCost.TotalCost),
+			attribute.String("synthesis.model", s.modelName),
+		)
+
+		s.log.Info("Task synthesis cost tracked",
+			"task", req.TaskName,
+			"inputTokens", synthesisCost.InputTokens,
+			"outputTokens", synthesisCost.OutputTokens,
+			"totalCost", synthesisCost.TotalCost,
+			"currency", synthesisCost.Currency)
+	}
+
+	// Parse the JSON response
+	var taskResponse TaskSynthesisResponse
+	responseContent = extractCodeFromMarkdown(responseContent)
+	
+	if err := json.Unmarshal([]byte(responseContent), &taskResponse); err != nil {
+		duration := time.Since(startTime).Seconds()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to parse task synthesis response")
+		
+		s.log.Error(err, "Failed to parse task synthesis JSON response",
+			"task", req.TaskName,
+			"response", responseContent)
+		
+		return &TaskSynthesisResponse{
+			Error:           fmt.Sprintf("Failed to parse JSON response: %v", err),
+			DurationSeconds: duration,
+			Cost:            synthesisCost,
+		}, err
+	}
+
+	duration := time.Since(startTime).Seconds()
+
+	// Add success attributes to span
+	span.SetAttributes(
+		attribute.Bool("synthesis.is_deterministic", taskResponse.IsDeterministic),
+		attribute.Float64("synthesis.confidence", taskResponse.Confidence),
+		attribute.Float64("synthesis.duration_seconds", duration),
+	)
+
+	if taskResponse.Code != nil {
+		span.SetAttributes(attribute.Int("synthesis.code_length", len(*taskResponse.Code)))
+	}
+
+	span.SetStatus(codes.Ok, "Task synthesis successful")
+
+	s.log.Info("Task code synthesis completed",
+		"task", req.TaskName,
+		"isDeterministic", taskResponse.IsDeterministic,
+		"confidence", taskResponse.Confidence,
+		"hasCode", taskResponse.Code != nil,
+		"duration", duration)
+
+	// Set response metadata
+	taskResponse.DurationSeconds = duration
+	taskResponse.Cost = synthesisCost
+
+	return &taskResponse, nil
+}
+
 // DistillPersona converts a detailed persona into a concise system message
 func (s *Synthesizer) DistillPersona(ctx context.Context, persona PersonaInfo, agentContext AgentContext) (string, error) {
 	s.log.Info("Distilling persona",
@@ -639,6 +812,142 @@ func (s *Synthesizer) buildSynthesisPrompt(req AgentSynthesisRequest) string {
 	}
 
 	return buf.String()
+}
+
+// buildTaskSynthesisPrompt creates the prompt for task code synthesis
+func (s *Synthesizer) buildTaskSynthesisPrompt(req TaskSynthesisRequest) string {
+	// Execute template
+	tmpl, err := template.New("task_synthesis").Parse(taskSynthesisTemplate)
+	if err != nil {
+		s.log.Error(err, "Failed to parse task synthesis template")
+		// Fallback to inline template if parsing fails
+		return s.buildTaskSynthesisPromptFallback(req)
+	}
+
+	data := map[string]interface{}{
+		"TaskName":          req.TaskName,
+		"Instructions":      req.Instructions,
+		"Inputs":           req.Inputs,
+		"Outputs":          req.Outputs,
+		"TaskCode":         req.TaskCode,
+		"Traces":           req.Traces,
+		"TraceCount":       req.TraceCount,
+		"CommonPattern":    req.CommonPattern,
+		"ConsistencyScore": req.ConsistencyScore,
+		"UniquePatternCount": req.UniquePatternCount,
+		"ToolsList":        req.ToolsList,
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		s.log.Error(err, "Failed to execute task synthesis template")
+		return s.buildTaskSynthesisPromptFallback(req)
+	}
+
+	return buf.String()
+}
+
+// buildTaskSynthesisPromptFallback provides a fallback when template loading fails
+func (s *Synthesizer) buildTaskSynthesisPromptFallback(req TaskSynthesisRequest) string {
+	return fmt.Sprintf(`You are analyzing whether an agentic task can be converted to symbolic Ruby code.
+
+## What "Symbolic" Means
+
+A task is **symbolic** (can be optimized) if it follows a predictable algorithm:
+- Reading files, calling APIs, transforming data = SYMBOLIC (even though outputs vary based on data)
+- The same code logic applies regardless of the actual data values
+- Conditional branches based on data (if file exists, if value > threshold) are fine
+
+A task is **neural** (cannot be optimized) only if it requires:
+- Creative text generation (writing stories, poems, marketing copy)
+- Subjective reasoning or judgment calls
+- Understanding nuanced human intent that varies per request
+
+**Key insight:** File I/O, API calls, and data transformation are deterministic CODE even if their outputs depend on external state. "Read a file and count lines" is symbolic - the algorithm is fixed.
+
+## Task Definition
+
+**Name:** %s
+**Instructions:** %s
+
+**Inputs:**
+%s
+
+**Outputs:**
+%s
+
+## Current Task Code
+
+%s
+
+## Execution Traces (%d samples)
+
+%s
+
+## Pattern Analysis
+
+- **Most Common Pattern:** %s
+- **Pattern Consistency:** %d%%
+- **Unique Patterns Observed:** %d
+
+## Available Tools
+
+%s
+
+---
+
+## Your Task
+
+Analyze whether this neural task can be converted to symbolic Ruby code.
+
+Questions to ask:
+1. Is there a clear algorithm implied by the instructions?
+2. Do the tool call patterns show a logical sequence?
+3. Can conditional logic handle the variations seen in traces?
+
+Tasks that ARE symbolic (optimize these):
+- "Read file X and return its contents" → read_file, return content
+- "Check if file exists, create if not" → get_file_info, conditional write_file
+- "Fetch data from API and transform it" → api_call, data transformation
+
+Tasks that are NOT symbolic (don't optimize):
+- "Write a creative story continuation"
+- "Decide what the user probably meant"
+- "Generate marketing copy for this product"
+
+## Output Format
+
+Respond with valid JSON:
+
+{
+  "is_deterministic": true/false,
+  "confidence": 0.0-1.0,
+  "explanation": "Brief explanation",
+  "code": "Ruby code if symbolic, null otherwise"
+}
+
+**Code Requirements (if symbolic):**
+- IMPORTANT: Only generate the code that goes INSIDE the task block
+- Do NOT include the outer task(:name, inputs:, outputs:) wrapper
+- The code will be inserted automatically
+- Your generated code should be ONLY the body that replaces the task implementation
+- Available helper methods: execute_tool('tool_name', {...}), execute_task(:task_name, inputs: {...}), execute_llm(prompt), logger
+- The inputs parameter is a hash with the keys defined in the task inputs schema
+- Your code must return a hash matching the outputs schema exactly (same keys)
+- Do NOT use system(), eval(), fork(), or other unsafe methods
+
+Generate the analysis now:`,
+		req.TaskName,
+		req.Instructions,
+		req.Inputs,
+		req.Outputs,
+		req.TaskCode,
+		req.TraceCount,
+		req.Traces,
+		req.CommonPattern,
+		req.ConsistencyScore,
+		req.UniquePatternCount,
+		req.ToolsList)
 }
 
 // buildSynthesisPromptFallback provides a fallback when template loading fails
