@@ -3320,6 +3320,5 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
-		Owns(&corev1.Pod{}).
 		Complete(r)
 }
