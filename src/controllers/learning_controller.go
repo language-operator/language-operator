@@ -41,7 +41,6 @@ type LearningReconciler struct {
 	Scheme                *runtime.Scheme
 	Log                   logr.Logger
 	Recorder              record.EventRecorder
-	Synthesizer           synthesis.AgentSynthesizer                         // For re-synthesis with task_synthesis.tmpl
 	ConfigMapManager      *synthesis.ConfigMapManager                        // For versioned ConfigMap management
 	MetricsCollector      *learning.MetricsCollector                         // For learning metrics collection
 	EventProcessor        *learning.LearningEventProcessor                   // For processing learning events with metrics
@@ -252,8 +251,16 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 		Namespace:    agent.Namespace,
 	}
 
+	// Create synthesizer from agent's model for optimization
+	synthesizer, err := r.createSynthesizerForAgent(ctx, agent)
+	if err != nil {
+		span.RecordError(err)
+		log.Error(err, "Failed to create synthesizer for optimization")
+		return fmt.Errorf("failed to create synthesizer: %w", err)
+	}
+
 	// Call the synthesizer to optimize the agent code
-	response, err := r.Synthesizer.SynthesizeAgent(ctx, synthesisReq)
+	response, err := synthesizer.SynthesizeAgent(ctx, synthesisReq)
 	if err != nil {
 		span.RecordError(err)
 		log.Error(err, "Failed to synthesize optimized agent code")
@@ -1221,7 +1228,15 @@ func (r *LearningReconciler) generateLearnedCode(ctx context.Context, agent *lan
 		}
 	}
 
-	response, err := r.Synthesizer.SynthesizeAgent(ctx, synthesisReq)
+	// Create synthesizer from agent's model
+	synthesizer, err := r.createSynthesizerForAgent(ctx, agent)
+	if err != nil {
+		r.Log.Error(err, "Failed to create synthesizer for task optimization", "task", trigger.TaskName)
+		// Fallback to pattern-based code generation
+		return r.generatePatternBasedCode(trigger.TaskName, analysis), nil
+	}
+
+	response, err := synthesizer.SynthesizeAgent(ctx, synthesisReq)
 	if err != nil {
 		// Fallback to pattern-based code generation if synthesis fails
 		r.Log.Info("Synthesis service failed, using fallback pattern generation",
@@ -3634,4 +3649,59 @@ func (r *LearningReconciler) markEventAsProcessed(ctx context.Context, agent *la
 	event.Annotations["langop.io/learning-processed"] = time.Now().Format(time.RFC3339)
 
 	return r.Update(ctx, event)
+}
+
+// createSynthesizerForAgent creates a synthesizer from the agent's model for optimization
+func (r *LearningReconciler) createSynthesizerForAgent(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (synthesis.AgentSynthesizer, error) {
+	// Get the primary model from the agent
+	if len(agent.Spec.ModelRefs) == 0 {
+		return nil, fmt.Errorf("agent has no model references")
+	}
+
+	var primaryModel *langopv1alpha1.LanguageModel
+	for _, modelRef := range agent.Spec.ModelRefs {
+		if modelRef.Role == "primary" {
+			model := &langopv1alpha1.LanguageModel{}
+			modelNamespace := agent.Namespace
+			if modelRef.Namespace != "" {
+				modelNamespace = modelRef.Namespace
+			}
+
+			err := r.Get(ctx, types.NamespacedName{
+				Name:      modelRef.Name,
+				Namespace: modelNamespace,
+			}, model)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get model %s: %w", modelRef.Name, err)
+			}
+			primaryModel = model
+			break
+		}
+	}
+
+	if primaryModel == nil {
+		// Fallback to first model if no primary role found
+		model := &langopv1alpha1.LanguageModel{}
+		modelNamespace := agent.Namespace
+		if agent.Spec.ModelRefs[0].Namespace != "" {
+			modelNamespace = agent.Spec.ModelRefs[0].Namespace
+		}
+
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      agent.Spec.ModelRefs[0].Name,
+			Namespace: modelNamespace,
+		}, model)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fallback model %s: %w", agent.Spec.ModelRefs[0].Name, err)
+		}
+		primaryModel = model
+	}
+
+	// Create synthesizer from the model
+	synthesizer, err := synthesis.NewSynthesizerFromLanguageModel(ctx, r.Client, primaryModel, r.Log.WithName("learning-synthesis"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create synthesizer: %w", err)
+	}
+
+	return synthesizer, nil
 }
