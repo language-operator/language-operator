@@ -1198,8 +1198,20 @@ func extractCodeFromMarkdown(content string) string {
 	// Remove markdown code fences if present
 	content = strings.TrimSpace(content)
 
-	// Try ```ruby first
-	if idx := strings.Index(content, "```ruby"); idx != -1 {
+	// Handle LLM responses that start with "json" prefix
+	if strings.HasPrefix(content, "json\n") {
+		content = content[5:] // Remove "json\n"
+		content = strings.TrimSpace(content)
+	}
+
+	// Try ```json first (for task synthesis responses)
+	if idx := strings.Index(content, "```json"); idx != -1 {
+		content = content[idx+7:]
+		if end := strings.Index(content, "```"); end != -1 {
+			content = content[:end]
+		}
+	} else if idx := strings.Index(content, "```ruby"); idx != -1 {
+		// Try ```ruby for agent synthesis
 		content = content[idx+7:]
 		if end := strings.Index(content, "```"); end != -1 {
 			content = content[:end]
