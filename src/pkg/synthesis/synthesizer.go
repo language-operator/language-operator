@@ -111,19 +111,19 @@ type AgentSynthesisResponse struct {
 
 // TaskSynthesisRequest contains all information needed to synthesize optimized task code
 type TaskSynthesisRequest struct {
-	TaskName        string
-	Instructions    string
-	Inputs          string // JSON schema or description of inputs
-	Outputs         string // JSON schema or description of outputs
-	TaskCode        string // Current task code (if any)
-	Traces          string // Execution traces for pattern analysis
-	TraceCount      int
-	CommonPattern   string
-	ConsistencyScore int
+	TaskName           string
+	Instructions       string
+	Inputs             string // JSON schema or description of inputs
+	Outputs            string // JSON schema or description of outputs
+	TaskCode           string // Current task code (if any)
+	Traces             string // Execution traces for pattern analysis
+	TraceCount         int
+	CommonPattern      string
+	ConsistencyScore   int
 	UniquePatternCount int
-	ToolsList       string // Available tools for this task
-	AgentName       string
-	Namespace       string
+	ToolsList          string // Available tools for this task
+	AgentName          string
+	Namespace          string
 }
 
 // TaskSynthesisResponse contains the synthesized task optimization result
@@ -570,16 +570,16 @@ func (s *Synthesizer) SynthesizeTask(ctx context.Context, req TaskSynthesisReque
 	// Parse the JSON response
 	var taskResponse TaskSynthesisResponse
 	responseContent = extractCodeFromMarkdown(responseContent)
-	
+
 	if err := json.Unmarshal([]byte(responseContent), &taskResponse); err != nil {
 		duration := time.Since(startTime).Seconds()
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to parse task synthesis response")
-		
+
 		s.log.Error(err, "Failed to parse task synthesis JSON response",
 			"task", req.TaskName,
 			"response", responseContent)
-		
+
 		return &TaskSynthesisResponse{
 			Error:           fmt.Sprintf("Failed to parse JSON response: %v", err),
 			DurationSeconds: duration,
@@ -825,17 +825,17 @@ func (s *Synthesizer) buildTaskSynthesisPrompt(req TaskSynthesisRequest) string 
 	}
 
 	data := map[string]interface{}{
-		"TaskName":          req.TaskName,
-		"Instructions":      req.Instructions,
-		"Inputs":           req.Inputs,
-		"Outputs":          req.Outputs,
-		"TaskCode":         req.TaskCode,
-		"Traces":           req.Traces,
-		"TraceCount":       req.TraceCount,
-		"CommonPattern":    req.CommonPattern,
-		"ConsistencyScore": req.ConsistencyScore,
+		"TaskName":           req.TaskName,
+		"Instructions":       req.Instructions,
+		"Inputs":             req.Inputs,
+		"Outputs":            req.Outputs,
+		"TaskCode":           req.TaskCode,
+		"Traces":             req.Traces,
+		"TraceCount":         req.TraceCount,
+		"CommonPattern":      req.CommonPattern,
+		"ConsistencyScore":   req.ConsistencyScore,
 		"UniquePatternCount": req.UniquePatternCount,
-		"ToolsList":        req.ToolsList,
+		"ToolsList":          req.ToolsList,
 	}
 
 	var buf bytes.Buffer

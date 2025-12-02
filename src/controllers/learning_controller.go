@@ -276,7 +276,7 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	optimizedAnyTask := false
 	for _, taskReq := range tasksToOptimize {
 		log.Info("Optimizing task", "task", taskReq.TaskName, "agent", agent.Name)
-		
+
 		taskResponse, err := synthesizer.SynthesizeTask(ctx, taskReq)
 		if err != nil {
 			log.Error(err, "Failed to synthesize task", "task", taskReq.TaskName)
@@ -290,7 +290,7 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 
 		// Check if task was determined to be optimizable
 		if !taskResponse.IsDeterministic || taskResponse.Code == nil {
-			log.Info("Task not suitable for optimization", 
+			log.Info("Task not suitable for optimization",
 				"task", taskReq.TaskName,
 				"isDeterministic", taskResponse.IsDeterministic,
 				"confidence", taskResponse.Confidence,
@@ -3742,52 +3742,52 @@ func (r *LearningReconciler) createSynthesizerForAgent(ctx context.Context, agen
 func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]synthesis.TaskSynthesisRequest, error) {
 	// For now, return a simple example task based on the TaskCompleted events we've seen
 	// TODO: Implement proper task identification from telemetry data
-	
+
 	// Create a placeholder task based on the known tasks from agent s003
 	// In a real implementation, this would parse the agent's current code and telemetry data
 	var tasks []synthesis.TaskSynthesisRequest
-	
+
 	// Based on the TaskCompleted events we saw earlier, agent s003 has these tasks:
 	// - read_existing_story
-	// - generate_next_sentence  
+	// - generate_next_sentence
 	// - append_to_story
-	
+
 	// For demonstration, let's create a task synthesis request for a deterministic task
 	// that would likely benefit from optimization (file operations)
 	tasks = append(tasks, synthesis.TaskSynthesisRequest{
-		TaskName:     "read_existing_story",
-		Instructions: "Read the existing story file and return its current content",
-		Inputs:       `{ "file_path": "string" }`,
-		Outputs:      `{ "content": "string", "line_count": "integer" }`,
-		TaskCode:     "", // Would be extracted from current agent code
-		Traces:       "Multiple execution traces showing consistent file read patterns",
-		TraceCount:   int(agent.Status.RunsPendingLearning),
-		CommonPattern: "execute_tool('read_file', { path: inputs[:file_path] })",
-		ConsistencyScore: 95, // High consistency indicates good optimization candidate
+		TaskName:           "read_existing_story",
+		Instructions:       "Read the existing story file and return its current content",
+		Inputs:             `{ "file_path": "string" }`,
+		Outputs:            `{ "content": "string", "line_count": "integer" }`,
+		TaskCode:           "", // Would be extracted from current agent code
+		Traces:             "Multiple execution traces showing consistent file read patterns",
+		TraceCount:         int(agent.Status.RunsPendingLearning),
+		CommonPattern:      "execute_tool('read_file', { path: inputs[:file_path] })",
+		ConsistencyScore:   95, // High consistency indicates good optimization candidate
 		UniquePatternCount: 1,
-		ToolsList:    "read_file, write_file, workspace tools",
-		AgentName:    agent.Name,
-		Namespace:    agent.Namespace,
+		ToolsList:          "read_file, write_file, workspace tools",
+		AgentName:          agent.Name,
+		Namespace:          agent.Namespace,
 	})
-	
+
 	// Add another task that might be optimizable (file append operations)
 	tasks = append(tasks, synthesis.TaskSynthesisRequest{
-		TaskName:     "append_to_story", 
-		Instructions: "Append new content to the story file",
-		Inputs:       `{ "content": "string", "file_path": "string" }`,
-		Outputs:      `{ "success": "boolean", "updated_content": "string" }`,
-		TaskCode:     "", // Would be extracted from current agent code
-		Traces:       "Multiple execution traces showing file append operations",
-		TraceCount:   int(agent.Status.RunsPendingLearning),
-		CommonPattern: "execute_tool('write_file', { path: inputs[:file_path], content: existing + inputs[:content] })",
-		ConsistencyScore: 90,
+		TaskName:           "append_to_story",
+		Instructions:       "Append new content to the story file",
+		Inputs:             `{ "content": "string", "file_path": "string" }`,
+		Outputs:            `{ "success": "boolean", "updated_content": "string" }`,
+		TaskCode:           "", // Would be extracted from current agent code
+		Traces:             "Multiple execution traces showing file append operations",
+		TraceCount:         int(agent.Status.RunsPendingLearning),
+		CommonPattern:      "execute_tool('write_file', { path: inputs[:file_path], content: existing + inputs[:content] })",
+		ConsistencyScore:   90,
 		UniquePatternCount: 2,
-		ToolsList:    "read_file, write_file, workspace tools", 
-		AgentName:    agent.Name,
-		Namespace:    agent.Namespace,
+		ToolsList:          "read_file, write_file, workspace tools",
+		AgentName:          agent.Name,
+		Namespace:          agent.Namespace,
 	})
-	
+
 	// Note: generate_next_sentence is likely neural/creative and wouldn't be optimized
-	
+
 	return tasks, nil
 }
