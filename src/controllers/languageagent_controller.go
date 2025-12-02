@@ -98,6 +98,7 @@ func (r *LanguageAgentReconciler) InitializeGatewayCache() {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch
 //+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -370,8 +371,15 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.V(1).Info("ExecutionMode not set, skipping workload reconciliation until synthesis completes")
 	}
 
+	// Check for completed Jobs and increment runsPendingLearning counter
+	runCounterIncremented, err := r.checkAndIncrementRunsCounter(ctx, agent)
+	if err != nil {
+		log.Error(err, "Failed to check Job completions")
+		// Don't fail reconciliation, just log the error
+	}
+
 	// Update status only if something changed
-	statusChanged := false
+	statusChanged := runCounterIncremented
 	if agent.Status.Phase != "Running" {
 		agent.Status.Phase = "Running"
 		statusChanged = true
@@ -1354,6 +1362,76 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	})
 
 	return err
+}
+
+// checkAndIncrementRunsCounter checks for completed Jobs and increments runsPendingLearning
+func (r *LanguageAgentReconciler) checkAndIncrementRunsCounter(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (bool, error) {
+	// Only track runs for scheduled agents
+	if agent.Spec.ExecutionMode != "scheduled" {
+		return false, nil
+	}
+
+	log := log.FromContext(ctx)
+	
+	// List Jobs owned by this agent's CronJob
+	jobList := &batchv1.JobList{}
+	if err := r.List(ctx, jobList, client.InNamespace(agent.Namespace), client.MatchingLabels{
+		"app.kubernetes.io/name": agent.Name,
+		"app.kubernetes.io/component": "LanguageAgent",
+	}); err != nil {
+		return false, fmt.Errorf("failed to list Jobs: %w", err)
+	}
+
+	// Check for newly completed Jobs since last check
+	counterIncremented := false
+	for _, job := range jobList.Items {
+		// Check if Job is successfully completed
+		if isJobCompleted(&job) && !hasJobBeenCounted(&job) {
+			log.Info("Detected completed Job, incrementing runsPendingLearning", 
+				"job", job.Name, 
+				"currentCount", agent.Status.RunsPendingLearning)
+			
+			// Increment the counter
+			agent.Status.RunsPendingLearning++
+			counterIncremented = true
+			
+			// Mark this Job as counted by adding an annotation
+			if err := r.markJobAsCounted(ctx, &job); err != nil {
+				log.Error(err, "Failed to mark Job as counted", "job", job.Name)
+				// Continue processing other Jobs even if this fails
+			}
+		}
+	}
+
+	return counterIncremented, nil
+}
+
+// isJobCompleted checks if a Job has completed successfully
+func isJobCompleted(job *batchv1.Job) bool {
+	for _, condition := range job.Status.Conditions {
+		if condition.Type == batchv1.JobComplete && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// hasJobBeenCounted checks if a Job has already been counted
+func hasJobBeenCounted(job *batchv1.Job) bool {
+	if job.Annotations == nil {
+		return false
+	}
+	_, exists := job.Annotations["langop.io/run-counted"]
+	return exists
+}
+
+// markJobAsCounted marks a Job as counted by adding an annotation
+func (r *LanguageAgentReconciler) markJobAsCounted(ctx context.Context, job *batchv1.Job) error {
+	if job.Annotations == nil {
+		job.Annotations = make(map[string]string)
+	}
+	job.Annotations["langop.io/run-counted"] = "true"
+	return r.Update(ctx, job)
 }
 
 func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
@@ -3316,6 +3394,7 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.CronJob{}).
+		Owns(&batchv1.Job{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.NetworkPolicy{}).

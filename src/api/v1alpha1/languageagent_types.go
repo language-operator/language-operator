@@ -499,6 +499,11 @@ type LanguageAgentStatus struct {
 	// LastSuccessfulCode stores the last known working code for rollback
 	// +optional
 	LastSuccessfulCode string `json:"lastSuccessfulCode,omitempty"`
+
+	// RunsPendingLearning is the number of runs since the last learning optimization
+	// Resets to 0 when learning optimization is triggered
+	// +optional
+	RunsPendingLearning int32 `json:"runsPendingLearning,omitempty"`
 }
 
 // SynthesisInfo contains metadata about agent code synthesis

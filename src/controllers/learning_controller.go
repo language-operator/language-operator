@@ -200,114 +200,96 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
-	log.Info("Processing learning event", "agent", req.NamespacedName)
-
 	// Check if learning is enabled for this agent
 	if !r.isLearningEnabled(agent) {
 		log.V(1).Info("Learning disabled for this agent")
 		return ctrl.Result{}, nil
 	}
+	
+	log.Info("Processing simplified learning check", 
+		"agent", req.NamespacedName,
+		"runsPendingLearning", agent.Status.RunsPendingLearning,
+		"threshold", r.LearningThreshold)
+	
+	// Simplified learning logic: check if runsPendingLearning reaches threshold
+	if agent.Status.RunsPendingLearning >= r.LearningThreshold {
+		log.Info("Learning threshold reached, triggering optimization", 
+			"runs", agent.Status.RunsPendingLearning, 
+			"threshold", r.LearningThreshold)
+		
+		// Trigger optimization
+		if err := r.triggerOptimization(ctx, agent); err != nil {
+			log.Error(err, "Failed to trigger optimization")
+			reconcileErr = fmt.Errorf("failed to trigger optimization: %w", err)
+			return ctrl.Result{}, reconcileErr
+		}
+		
+		// Reset counter after successful optimization
+		agent.Status.RunsPendingLearning = 0
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to reset runsPendingLearning counter")
+			reconcileErr = fmt.Errorf("failed to reset counter: %w", err)
+			return ctrl.Result{}, reconcileErr
+		}
+		
+		log.Info("Optimization completed and counter reset")
+	}
+	
+	span.SetStatus(codes.Ok, "Learning reconciliation completed")
+	return ctrl.Result{}, nil
+}
 
-	// Get learning status from ConfigMap
-	learningStatus, err := r.getLearningStatus(ctx, agent)
+// triggerOptimization triggers agent code optimization based on telemetry data
+func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	ctx, span := learningTracer.Start(ctx, "learning.trigger_optimization")
+	defer span.End()
+	
+	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+	log.Info("Triggering agent optimization based on accumulated runs")
+	
+	// Create synthesis request for optimization
+	synthesisReq := synthesis.AgentSynthesisRequest{
+		Instructions: fmt.Sprintf("Optimize agent code based on telemetry data from %d completed runs", agent.Status.RunsPendingLearning),
+		AgentName:    agent.Name,
+		Namespace:    agent.Namespace,
+	}
+	
+	// Call the synthesizer to optimize the agent code
+	response, err := r.Synthesizer.SynthesizeAgent(ctx, synthesisReq)
 	if err != nil {
-		log.Error(err, "Failed to get learning status")
-		reconcileErr = fmt.Errorf("failed to get learning status: %w", err)
-		return ctrl.Result{}, reconcileErr
+		span.RecordError(err)
+		log.Error(err, "Failed to synthesize optimized agent code")
+		return fmt.Errorf("synthesis failed: %w", err)
 	}
-
-	// Process agent execution events from TaskCompleted events and completed Jobs
-	if err := r.processAgentExecutions(ctx, agent); err != nil {
-		log.Error(err, "Failed to process agent executions")
-		// Don't fail reconciliation for execution tracking errors, just log
-		r.Recorder.Event(agent, corev1.EventTypeWarning, "ExecutionTrackingFailed",
-			fmt.Sprintf("Failed to track agent executions: %v", err))
+	
+	if response.Error != "" {
+		err := fmt.Errorf("synthesis error: %s", response.Error)
+		span.RecordError(err)
+		log.Error(err, "Synthesis returned error")
+		return err
 	}
-
-	// Check for learning triggers (pattern-based and error-based)
-	learningTriggers, err := r.checkLearningTriggers(ctx, agent, learningStatus)
-	if err != nil {
-		log.Error(err, "Failed to check learning triggers")
-		reconcileErr = fmt.Errorf("failed to check learning triggers: %w", err)
-		return ctrl.Result{}, reconcileErr
-	}
-
-	// Check for error-triggered re-synthesis
-	errorTriggers, err := r.checkErrorTriggers(ctx, agent, learningStatus)
-	if err != nil {
-		log.Error(err, "Failed to check error triggers")
-		reconcileErr = fmt.Errorf("failed to check error triggers: %w", err)
-		return ctrl.Result{}, reconcileErr
-	}
-
-	// Combine all triggers
-	learningTriggers = append(learningTriggers, errorTriggers...)
-
-	// Process any learning triggers
-	requeue := false
-	for _, trigger := range learningTriggers {
-		if err := r.processLearningTrigger(ctx, agent, trigger, learningStatus); err != nil {
-			log.Error(err, "Failed to process learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
-			r.Recorder.Event(agent, corev1.EventTypeWarning, "LearningFailed",
-				fmt.Sprintf("Failed to process learning for task %s: %v", trigger.TaskName, err))
-
-			// Record learning failure metrics
-			if r.EventProcessor != nil {
-				failureErr := r.EventProcessor.ProcessLearningFailure(ctx, agent.Namespace, agent.Name, trigger.TaskName, err.Error())
-				if failureErr != nil {
-					log.Error(failureErr, "Failed to record learning failure metrics", "task", trigger.TaskName)
-				}
-			}
-
-			// Track failure in success rate aggregator
-			agentKey := fmt.Sprintf("%s/%s", agent.Namespace, agent.Name)
-			if r.SuccessRateAggregator != nil && r.SuccessRateAggregator[agentKey] != nil {
-				r.SuccessRateAggregator[agentKey].AddAttempt(false)
-			}
-
-			// Don't return error - continue processing other triggers
-		} else {
-			log.Info("Successfully processed learning trigger", "trigger", trigger.EventType, "task", trigger.TaskName)
-
-			// Track success in success rate aggregator
-			agentKey := fmt.Sprintf("%s/%s", agent.Namespace, agent.Name)
-			if r.SuccessRateAggregator != nil && r.SuccessRateAggregator[agentKey] != nil {
-				r.SuccessRateAggregator[agentKey].AddAttempt(true)
-			}
-
-			requeue = true
+	
+	// Update the agent's code ConfigMap with the optimized version
+	if r.ConfigMapManager != nil {
+		options := &synthesis.ConfigMapOptions{
+			Code:           response.DSLCode,
+			SynthesisType:  "learned",
+			LearningSource: "run-threshold",
+		}
+		if _, err := r.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, options); err != nil {
+			span.RecordError(err)
+			log.Error(err, "Failed to create optimized code ConfigMap")
+			return fmt.Errorf("failed to create optimized code: %w", err)
 		}
 	}
-
-	// Update learning status
-	if err := r.updateLearningStatus(ctx, agent, learningStatus); err != nil {
-		log.Error(err, "Failed to update learning status")
-		reconcileErr = fmt.Errorf("failed to update learning status: %w", err)
-		return ctrl.Result{}, reconcileErr
-	}
-
-	// Update agent health metrics in status
-	if err := r.updateAgentHealthMetrics(ctx, agent, learningStatus); err != nil {
-		log.Error(err, "Failed to update agent health metrics")
-		// Don't fail reconciliation for health metrics errors, just log
-		r.Recorder.Event(agent, corev1.EventTypeWarning, "HealthMetricsUpdateFailed",
-			fmt.Sprintf("Failed to update learning health metrics: %v", err))
-	}
-
-	// Add learning-specific attributes to span
-	span.SetAttributes(attribute.Int("learning.triggers_processed", len(learningTriggers)))
-
-	// Requeue to check for new learning opportunities
-	requeueAfter := r.LearningInterval
-	if requeue {
-		requeueAfter = time.Minute // Faster requeue after learning events
-	}
-
-	log.V(1).Info("Learning reconciliation completed",
-		"triggers", len(learningTriggers),
-		"requeue_after", requeueAfter)
-
-	return ctrl.Result{RequeueAfter: requeueAfter}, nil
+	
+	// Record successful optimization event
+	r.Recorder.Event(agent, corev1.EventTypeNormal, "OptimizationTriggered",
+		fmt.Sprintf("Agent code optimized after %d runs", agent.Status.RunsPendingLearning))
+	
+	log.Info("Successfully triggered agent optimization")
+	span.SetStatus(codes.Ok, "Optimization completed")
+	return nil
 }
 
 // isLearningEnabled checks if learning is enabled for the given agent
