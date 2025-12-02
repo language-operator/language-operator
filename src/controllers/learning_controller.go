@@ -2325,8 +2325,6 @@ func (r *LearningReconciler) recordLearningEvent(agent *langopv1alpha1.LanguageA
 // SetupWithManager sets up the controller with the Manager
 func (r *LearningReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&langopv1alpha1.LanguageAgent{}).
-		Owns(&corev1.ConfigMap{}).
 		Watches(&batchv1.Job{},
 			handler.EnqueueRequestsFromMapFunc(r.mapJobToAgent)).
 		Watches(&corev1.Event{},
