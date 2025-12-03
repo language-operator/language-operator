@@ -20,7 +20,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -304,7 +304,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if agent.Status.UUID == "" {
 		agent.Status.UUID = uuid.New().String()
 		if err := r.Status().Update(ctx, agent); err != nil {
-			if errors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				// Another reconciler updated first, requeue to get their UUID
 				log.V(1).Info("UUID assignment conflict, requeuing to get assigned UUID")
 				return ctrl.Result{Requeue: true}, nil
@@ -542,7 +542,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	needsSynthesis := false
 	needsPersonaUpdate := false
 
-	if errors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		needsSynthesis = true
 		log.Info("Code ConfigMap not found, will synthesize")
 	} else if err != nil {
@@ -1219,11 +1219,10 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 
 	// Add code ConfigMap volume if agent has modelRefs and instructions (synthesis enabled)
 	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
-		// Use versionRef if specified, otherwise use base code ConfigMap
-		var codeConfigMapName string
-		if agent.Spec.VersionRef != "" {
-			codeConfigMapName = agent.Spec.VersionRef
-		} else {
+		// Resolve ConfigMap name from AgentVersionRef or use base code ConfigMap
+		codeConfigMapName, err := r.resolveCodeConfigMapName(ctx, agent)
+		if err != nil {
+			log.FromContext(ctx).Error(err, "Failed to resolve code ConfigMap name, using base ConfigMap")
 			codeConfigMapName = GenerateConfigMapName(agent.Name, "code")
 		}
 		volumes = append(volumes, corev1.Volume{
@@ -1913,7 +1912,7 @@ func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *lango
 		// Fetch the LanguagePersona
 		persona := &langopv1alpha1.LanguagePersona{}
 		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: namespace}, persona); err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return nil, fmt.Errorf("persona %s/%s not found", namespace, ref.Name)
 			}
 			return nil, fmt.Errorf("failed to get persona %s/%s: %w", namespace, ref.Name, err)
@@ -2091,7 +2090,7 @@ func (r *LanguageAgentReconciler) cleanupHTTPRoutes(ctx context.Context, agent *
 	labelSelector := client.MatchingLabels(labels)
 
 	if err := r.List(ctx, httpRouteList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to list HTTPRoutes: %w", err)
@@ -2117,7 +2116,7 @@ func (r *LanguageAgentReconciler) cleanupIngresses(ctx context.Context, agent *l
 	labelSelector := client.MatchingLabels(labels)
 
 	if err := r.List(ctx, ingressList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to list Ingresses: %w", err)
@@ -2144,7 +2143,7 @@ func (r *LanguageAgentReconciler) cleanupServices(ctx context.Context, agent *la
 	labelSelector := client.MatchingLabels(labels)
 
 	if err := r.List(ctx, serviceList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to list Services: %w", err)
@@ -2178,7 +2177,7 @@ func (r *LanguageAgentReconciler) cleanupReferenceGrants(ctx context.Context, ag
 
 	// List all ReferenceGrants across all namespaces to find ones created for this agent
 	if err := r.List(ctx, referenceGrantList); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to list ReferenceGrants: %w", err)
@@ -2207,7 +2206,7 @@ func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, o
 
 	// Delete the resource
 	if err := r.Delete(ctx, obj); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Already deleted
 			return nil
 		}
@@ -2229,7 +2228,7 @@ func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, o
 		case <-ticker.C:
 			// Check if resource still exists
 			err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, obj)
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// Resource has been deleted successfully
 				log.V(1).Info("Verified resource deletion", "type", resourceType, "name", name, "namespace", namespace)
 				return nil
@@ -2288,7 +2287,7 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 	if agent.Spec.ClusterRef != "" {
 		cluster := &langopv1alpha1.LanguageCluster{}
 		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			if errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				log.Info("Cluster not found, skipping webhook reconciliation", "cluster", agent.Spec.ClusterRef)
 				return nil
 			}
@@ -2555,7 +2554,7 @@ func (r *LanguageAgentReconciler) reconcileReferenceGrant(ctx context.Context, a
 	err := r.Get(ctx, types.NamespacedName{Name: referenceGrantName, Namespace: gatewayNamespace}, existing)
 
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			return err
 		}
 		// Create new ReferenceGrant
@@ -2592,7 +2591,7 @@ func (r *LanguageAgentReconciler) validateGatewayTLS(ctx context.Context, gatewa
 
 	err := r.Get(ctx, types.NamespacedName{Name: gatewayName, Namespace: gatewayNamespace}, gateway)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			if tlsEnabled {
 				return "", fmt.Errorf("Gateway %s/%s not found, but TLS is enabled in cluster config", gatewayNamespace, gatewayName)
 			}
@@ -2780,7 +2779,7 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	err = r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existing)
 
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			return err
 		}
 		// Create new HTTPRoute
@@ -3306,7 +3305,7 @@ func (r *LanguageAgentReconciler) checkHTTPRouteReadiness(ctx context.Context, n
 
 	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, httpRoute)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return false, "HTTPRoute not found", nil
 		}
 		return false, "", fmt.Errorf("failed to get HTTPRoute: %w", err)
@@ -3374,7 +3373,7 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	ingress := &networkingv1.Ingress{}
 	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, ingress)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return false, "Ingress not found", nil
 		}
 		return false, "", fmt.Errorf("failed to get Ingress: %w", err)
@@ -3412,4 +3411,53 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Complete(r)
+}
+
+// resolveCodeConfigMapName resolves the ConfigMap name for agent code based on AgentVersionRef
+func (r *LanguageAgentReconciler) resolveCodeConfigMapName(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (string, error) {
+	// If no AgentVersionRef is specified, use the base code ConfigMap
+	if agent.Spec.AgentVersionRef == nil {
+		return GenerateConfigMapName(agent.Name, "code"), nil
+	}
+
+	// Determine namespace for version lookup
+	versionNamespace := agent.Spec.AgentVersionRef.Namespace
+	if versionNamespace == "" {
+		versionNamespace = agent.Namespace
+	}
+
+	// Fetch the referenced LanguageAgentVersion
+	agentVersion := &langopv1alpha1.LanguageAgentVersion{}
+	versionKey := types.NamespacedName{
+		Name:      agent.Spec.AgentVersionRef.Name,
+		Namespace: versionNamespace,
+	}
+
+	if err := r.Get(ctx, versionKey, agentVersion); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", fmt.Errorf("referenced LanguageAgentVersion %s not found in namespace %s",
+				agent.Spec.AgentVersionRef.Name, versionNamespace)
+		}
+		return "", fmt.Errorf("failed to get referenced LanguageAgentVersion: %w", err)
+	}
+
+	// Check if the version is ready
+	if agentVersion.Status.Phase != "Ready" {
+		return "", fmt.Errorf("referenced LanguageAgentVersion %s is not ready (phase: %s)",
+			agent.Spec.AgentVersionRef.Name, agentVersion.Status.Phase)
+	}
+
+	// Return the ConfigMap name from the version's status
+	if agentVersion.Status.ConfigMapName == "" {
+		return "", fmt.Errorf("LanguageAgentVersion %s has no ConfigMap name in status",
+			agent.Spec.AgentVersionRef.Name)
+	}
+
+	log.FromContext(ctx).Info("Using optimized agent code from LanguageAgentVersion",
+		"agent", agent.Name,
+		"agentVersion", agentVersion.Name,
+		"version", agentVersion.Spec.Version,
+		"configMap", agentVersion.Status.ConfigMapName)
+
+	return agentVersion.Status.ConfigMapName, nil
 }

@@ -48,11 +48,11 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
-	// VersionRef specifies which version of optimized agent code to use
+	// AgentVersionRef specifies which LanguageAgentVersion to use for optimized agent code
 	// If not specified, uses the base agent code. When learning creates
-	// optimized versions, this can be set to use specific versions like "s003-v1"
+	// optimized versions, this can be set to reference specific LanguageAgentVersion resources
 	// +optional
-	VersionRef string `json:"versionRef,omitempty"`
+	AgentVersionRef *AgentVersionReference `json:"agentVersionRef,omitempty"`
 
 	// ExecutionMode defines how the agent operates
 	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven

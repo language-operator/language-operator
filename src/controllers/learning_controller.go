@@ -311,42 +311,14 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	if len(optimizedTasks) == 0 {
 		log.Info("No tasks were successfully optimized", "agent", agent.Name)
 	} else {
-		// Apply optimized task code to agent's ConfigMap
-		if err := r.applyOptimizedTasks(ctx, agent, optimizedTasks, synthesizer); err != nil {
-			log.Error(err, "Failed to apply optimized tasks to agent ConfigMap")
-			// Don't return error - learning was successful, ConfigMap update failed
+		// Create LanguageAgentVersion resource with optimized code
+		if err := r.createAgentVersion(ctx, agent, optimizedTasks, synthesizer); err != nil {
+			log.Error(err, "Failed to create LanguageAgentVersion")
+			// Don't return error - learning was successful, version creation failed
 		} else {
-			log.Info("Successfully applied optimized tasks to agent ConfigMap",
+			log.Info("Successfully created LanguageAgentVersion with optimized tasks",
 				"agent", agent.Name,
 				"optimizedTaskCount", len(optimizedTasks))
-
-			// Set versionRef to use the new optimized ConfigMap
-			if r.ConfigMapManager != nil {
-				// Get the latest version to set as versionRef
-				latestVersion, err := r.ConfigMapManager.GetLatestVersion(ctx, agent)
-				if err != nil {
-					log.Error(err, "Failed to get latest ConfigMap version for versionRef update")
-				} else {
-					// Get the ConfigMap name for the latest version
-					latestConfigMapName, err := r.ConfigMapManager.GetConfigMapName(ctx, agent, latestVersion)
-					if err != nil {
-						log.Error(err, "Failed to get ConfigMap name for latest version",
-							"version", latestVersion)
-					} else {
-						// Update agent's versionRef to point to the new optimized ConfigMap
-						if err := r.setAgentVersionRef(ctx, agent, latestConfigMapName); err != nil {
-							log.Error(err, "Failed to update agent versionRef",
-								"configMapName", latestConfigMapName)
-							// Don't fail the whole optimization - ConfigMap was created successfully
-						} else {
-							log.Info("Successfully updated agent versionRef to use optimized ConfigMap",
-								"agent", agent.Name,
-								"versionRef", latestConfigMapName,
-								"version", latestVersion)
-						}
-					}
-				}
-			}
 		}
 	}
 
@@ -3948,14 +3920,141 @@ func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTa
 func (r *LearningReconciler) setAgentVersionRef(ctx context.Context, agent *langopv1alpha1.LanguageAgent, configMapName string) error {
 	log := r.Log.WithValues("agent", agent.Name, "versionRef", configMapName)
 
-	// Update the agent's versionRef
-	agent.Spec.VersionRef = configMapName
+	// DEPRECATED: This method is kept for compatibility but no longer functional
+	log.Info("setAgentVersionRef is deprecated, use LanguageAgentVersion resources instead")
+	return nil
+}
 
-	if err := r.Update(ctx, agent); err != nil {
-		log.Error(err, "Failed to update agent versionRef")
-		return fmt.Errorf("failed to update agent versionRef: %w", err)
+// createAgentVersion creates a new LanguageAgentVersion resource with optimized code
+func (r *LearningReconciler) createAgentVersion(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]string, synthesizer synthesis.AgentSynthesizer) error {
+	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+
+	// Get the current agent code from the existing ConfigMap
+	currentCode, err := r.getCurrentAgentCode(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("failed to get current agent code: %w", err)
 	}
 
-	log.Info("Successfully updated agent versionRef")
+	// Merge optimized tasks into the current agent code
+	optimizedCode, err := r.mergeOptimizedTasks(currentCode, optimizedTasks)
+	if err != nil {
+		return fmt.Errorf("failed to merge optimized tasks: %w", err)
+	}
+
+	// Get next version number
+	nextVersion, err := r.getNextVersionNumber(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("failed to get next version number: %w", err)
+	}
+
+	// Build optimized tasks metadata
+	optimizedTasksMetadata := make(map[string]langopv1alpha1.OptimizedTask)
+	for taskName := range optimizedTasks {
+		optimizedTasksMetadata[taskName] = langopv1alpha1.OptimizedTask{
+			Name:               taskName,
+			ConfidenceScore:    95, // Default confidence score for learning-optimized tasks
+			OptimizationReason: "Task optimized by learning system based on execution patterns",
+		}
+	}
+
+	// Create LanguageAgentVersion resource
+	agentVersion := &langopv1alpha1.LanguageAgentVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-v%d", agent.Name, nextVersion),
+			Namespace: agent.Namespace,
+			Labels: map[string]string{
+				"langop.io/agent":      agent.Name,
+				"langop.io/source":     "learning",
+				"langop.io/managed-by": "language-operator",
+			},
+			Annotations: map[string]string{
+				"langop.io/generated-by": "learning-controller",
+			},
+		},
+		Spec: langopv1alpha1.LanguageAgentVersionSpec{
+			AgentRef: langopv1alpha1.AgentReference{
+				Name:      agent.Name,
+				Namespace: agent.Namespace,
+			},
+			Version:        nextVersion,
+			Code:           optimizedCode,
+			OptimizedTasks: optimizedTasksMetadata,
+			SourceType:     "learning",
+			Description:    fmt.Sprintf("Optimized version with %d improved tasks", len(optimizedTasks)),
+			CreatedBy:      "learning-system",
+		},
+	}
+
+	// Set owner reference so LanguageAgentVersion is cleaned up when LanguageAgent is deleted
+	if err := controllerutil.SetControllerReference(agent, agentVersion, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference: %w", err)
+	}
+
+	// Create the LanguageAgentVersion
+	if err := r.Create(ctx, agentVersion); err != nil {
+		return fmt.Errorf("failed to create LanguageAgentVersion: %w", err)
+	}
+
+	log.Info("Created LanguageAgentVersion",
+		"versionName", agentVersion.Name,
+		"version", nextVersion,
+		"optimizedTasks", len(optimizedTasks))
+
+	// Update agent to reference the new version
+	if err := r.setAgentVersionReference(ctx, agent, agentVersion.Name); err != nil {
+		log.Error(err, "Failed to update agent's AgentVersionRef",
+			"versionName", agentVersion.Name)
+		// Don't fail - the version was created successfully
+		return nil
+	}
+
+	log.Info("Successfully updated agent to use new LanguageAgentVersion",
+		"agent", agent.Name,
+		"versionName", agentVersion.Name,
+		"version", nextVersion)
+
+	return nil
+}
+
+// getNextVersionNumber determines the next version number for an agent
+func (r *LearningReconciler) getNextVersionNumber(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (int32, error) {
+	// List all LanguageAgentVersion resources for this agent
+	versionList := &langopv1alpha1.LanguageAgentVersionList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(agent.Namespace),
+		client.MatchingLabels{"langop.io/agent": agent.Name},
+	}
+
+	if err := r.List(ctx, versionList, listOpts...); err != nil {
+		return 0, fmt.Errorf("failed to list existing versions: %w", err)
+	}
+
+	// Find highest version number
+	var maxVersion int32 = 0
+	for _, version := range versionList.Items {
+		if version.Spec.Version > maxVersion {
+			maxVersion = version.Spec.Version
+		}
+	}
+
+	return maxVersion + 1, nil
+}
+
+// setAgentVersionReference updates the agent's AgentVersionRef field
+func (r *LearningReconciler) setAgentVersionReference(ctx context.Context, agent *langopv1alpha1.LanguageAgent, versionName string) error {
+	log := r.Log.WithValues("agent", agent.Name, "versionName", versionName)
+
+	// Update the agent's AgentVersionRef
+	agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
+		Name:      versionName,
+		Namespace: agent.Namespace,
+	}
+
+	if err := r.Update(ctx, agent); err != nil {
+		log.Error(err, "Failed to update agent AgentVersionRef")
+		return fmt.Errorf("failed to update agent AgentVersionRef: %w", err)
+	}
+
+	log.Info("Successfully updated agent AgentVersionRef")
 	return nil
 }

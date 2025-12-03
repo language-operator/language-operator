@@ -439,6 +439,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup LanguageAgentVersion controller
+	if err = (&controllers.LanguageAgentVersionReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("languageagentversion-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgentVersion")
+		os.Exit(1)
+	}
+
 	// Setup LanguageCluster webhook
 	if err = (&langopv1alpha1.LanguageCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")

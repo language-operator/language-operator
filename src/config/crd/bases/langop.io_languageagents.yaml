@@ -946,6 +946,22 @@ spec:
                         type: array
                     type: object
                 type: object
+              agentVersionRef:
+                description: |-
+                  AgentVersionRef specifies which LanguageAgentVersion to use for optimized agent code
+                  If not specified, uses the base agent code. When learning creates
+                  optimized versions, this can be set to reference specific LanguageAgentVersion resources
+                properties:
+                  name:
+                    description: Name is the name of the LanguageAgentVersion
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the LanguageAgentVersion
+                      (defaults to same namespace)
+                    type: string
+                required:
+                - name
+                type: object
               backoffLimit:
                 default: 3
                 description: BackoffLimit specifies the number of retries before marking
@@ -2000,12 +2016,6 @@ spec:
                   - name
                   type: object
                 type: array
-              versionRef:
-                description: |-
-                  VersionRef specifies which version of optimized agent code to use
-                  If not specified, uses the base agent code. When learning creates
-                  optimized versions, this can be set to use specific versions like "s003-v1"
-                type: string
               volumeMounts:
                 description: VolumeMounts to mount into the agent container
                 items:
