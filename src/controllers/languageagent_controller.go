@@ -816,11 +816,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		log.Info("Using existing synthesized code", "agent", agent.Name)
 	}
 
-	// Determine source type based on context
+	// Determine source type - always use "manual" for initial synthesis as per CRD validation
 	sourceType := "manual"
-	if needsSynthesis {
-		sourceType = "synthesis"
-	}
 
 	// Create or update LanguageAgentVersion instead of ConfigMap
 	agentVersion, err := r.createInitialAgentVersion(ctx, agent, dslCode, sourceType)
