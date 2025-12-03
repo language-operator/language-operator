@@ -409,6 +409,7 @@ func main() {
 
 	configMapManager := &synthesis.ConfigMapManager{
 		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 		Log:    learningLog.WithName("configmap"),
 	}
 
