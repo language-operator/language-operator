@@ -2000,6 +2000,12 @@ spec:
                   - name
                   type: object
                 type: array
+              versionRef:
+                description: |-
+                  VersionRef specifies which version of optimized agent code to use
+                  If not specified, uses the base agent code. When learning creates
+                  optimized versions, this can be set to use specific versions like "s003-v1"
+                type: string
               volumeMounts:
                 description: VolumeMounts to mount into the agent container
                 items:

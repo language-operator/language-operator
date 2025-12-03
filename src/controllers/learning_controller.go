@@ -320,22 +320,30 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 				"agent", agent.Name,
 				"optimizedTaskCount", len(optimizedTasks))
 
-			// Update deployment/CronJob to use the new versioned ConfigMap
+			// Set versionRef to use the new optimized ConfigMap
 			if r.ConfigMapManager != nil {
-				// Get the latest version to update deployment
+				// Get the latest version to set as versionRef
 				latestVersion, err := r.ConfigMapManager.GetLatestVersion(ctx, agent)
 				if err != nil {
-					log.Error(err, "Failed to get latest ConfigMap version for deployment update")
+					log.Error(err, "Failed to get latest ConfigMap version for versionRef update")
 				} else {
-					// Update the deployment to use the new optimized ConfigMap
-					if err := r.updateDeployment(ctx, agent, "optimized-tasks", latestVersion); err != nil {
-						log.Error(err, "Failed to update deployment with optimized ConfigMap",
+					// Get the ConfigMap name for the latest version
+					latestConfigMapName, err := r.ConfigMapManager.GetConfigMapName(ctx, agent, latestVersion)
+					if err != nil {
+						log.Error(err, "Failed to get ConfigMap name for latest version",
 							"version", latestVersion)
-						// Don't fail the whole optimization - ConfigMap was created successfully
 					} else {
-						log.Info("Successfully updated deployment with optimized ConfigMap",
-							"agent", agent.Name,
-							"version", latestVersion)
+						// Update agent's versionRef to point to the new optimized ConfigMap
+						if err := r.setAgentVersionRef(ctx, agent, latestConfigMapName); err != nil {
+							log.Error(err, "Failed to update agent versionRef",
+								"configMapName", latestConfigMapName)
+							// Don't fail the whole optimization - ConfigMap was created successfully
+						} else {
+							log.Info("Successfully updated agent versionRef to use optimized ConfigMap",
+								"agent", agent.Name,
+								"versionRef", latestConfigMapName,
+								"version", latestVersion)
+						}
 					}
 				}
 			}
@@ -3934,4 +3942,20 @@ func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTa
 	}
 
 	return mergedCode, nil
+}
+
+// setAgentVersionRef updates the agent's versionRef field to point to an optimized ConfigMap
+func (r *LearningReconciler) setAgentVersionRef(ctx context.Context, agent *langopv1alpha1.LanguageAgent, configMapName string) error {
+	log := r.Log.WithValues("agent", agent.Name, "versionRef", configMapName)
+
+	// Update the agent's versionRef
+	agent.Spec.VersionRef = configMapName
+
+	if err := r.Update(ctx, agent); err != nil {
+		log.Error(err, "Failed to update agent versionRef")
+		return fmt.Errorf("failed to update agent versionRef: %w", err)
+	}
+
+	log.Info("Successfully updated agent versionRef")
+	return nil
 }

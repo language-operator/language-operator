@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1220,8 +1219,13 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 
 	// Add code ConfigMap volume if agent has modelRefs and instructions (synthesis enabled)
 	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
-		// Check for optimized ConfigMap version, fallback to original
-		codeConfigMapName := r.getActiveConfigMapName(ctx, agent)
+		// Use versionRef if specified, otherwise use base code ConfigMap
+		var codeConfigMapName string
+		if agent.Spec.VersionRef != "" {
+			codeConfigMapName = agent.Spec.VersionRef
+		} else {
+			codeConfigMapName = GenerateConfigMapName(agent.Name, "code")
+		}
 		volumes = append(volumes, corev1.Volume{
 			Name: "agent-code",
 			VolumeSource: corev1.VolumeSource{
@@ -3389,63 +3393,6 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	}
 
 	return false, "Ingress load balancer assigned but no IP or hostname available", nil
-}
-
-// getActiveConfigMapName returns the most recent ConfigMap name for the agent
-// This checks for optimized versions created by the learning controller
-func (r *LanguageAgentReconciler) getActiveConfigMapName(ctx context.Context, agent *langopv1alpha1.LanguageAgent) string {
-	// Default to the original code ConfigMap
-	originalConfigMapName := GenerateConfigMapName(agent.Name, "code")
-
-	// Look for versioned ConfigMaps created by learning optimization
-	configMapList := &corev1.ConfigMapList{}
-	labelSelector := client.MatchingLabels{
-		"langop.io/agent":     agent.Name,
-		"langop.io/component": "agent-code",
-	}
-
-	err := r.List(ctx, configMapList,
-		client.InNamespace(agent.Namespace),
-		labelSelector)
-	if err != nil {
-		// If we can't query, fallback to original
-		return originalConfigMapName
-	}
-
-	// Find the highest version number
-	highestVersion := int32(0)
-	newestConfigMapName := originalConfigMapName
-
-	for _, configMap := range configMapList.Items {
-		if versionStr, exists := configMap.Labels["langop.io/version"]; exists {
-			if version, err := strconv.ParseInt(versionStr, 10, 32); err == nil {
-				if int32(version) > highestVersion {
-					highestVersion = int32(version)
-					newestConfigMapName = configMap.Name
-				}
-			}
-		}
-	}
-
-	// Only use optimized version if it actually exists and is newer
-	if highestVersion > 0 {
-		// Verify the ConfigMap actually exists and is ready
-		optimizedConfigMap := &corev1.ConfigMap{}
-		err := r.Get(ctx, client.ObjectKey{
-			Name:      newestConfigMapName,
-			Namespace: agent.Namespace,
-		}, optimizedConfigMap)
-		if err == nil {
-			log.FromContext(ctx).Info("Using optimized ConfigMap for agent",
-				"agent", agent.Name,
-				"configMap", newestConfigMapName,
-				"version", highestVersion)
-			return newestConfigMapName
-		}
-	}
-
-	// Fallback to original ConfigMap
-	return originalConfigMapName
 }
 
 // SetupWithManager sets up the controller with the Manager.

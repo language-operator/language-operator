@@ -607,6 +607,11 @@ func (cm *ConfigMapManager) GetLatestVersion(ctx context.Context, agent *langopv
 	return maxVersion, nil
 }
 
+// GetConfigMapName returns the ConfigMap name for a specific version
+func (cm *ConfigMapManager) GetConfigMapName(ctx context.Context, agent *langopv1alpha1.LanguageAgent, version int32) (string, error) {
+	return fmt.Sprintf("%s-v%d", agent.Name, version), nil
+}
+
 // Helper functions
 
 // sortVersionsByNumber sorts ConfigMap versions by version number (newest first)
