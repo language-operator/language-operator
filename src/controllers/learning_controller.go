@@ -319,6 +319,26 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			log.Info("Successfully applied optimized tasks to agent ConfigMap",
 				"agent", agent.Name,
 				"optimizedTaskCount", len(optimizedTasks))
+			
+			// Update deployment/CronJob to use the new versioned ConfigMap
+			if r.ConfigMapManager != nil {
+				// Get the latest version to update deployment
+				latestVersion, err := r.ConfigMapManager.GetLatestVersion(ctx, agent)
+				if err != nil {
+					log.Error(err, "Failed to get latest ConfigMap version for deployment update")
+				} else {
+					// Update the deployment to use the new optimized ConfigMap
+					if err := r.updateDeployment(ctx, agent, "optimized-tasks", latestVersion); err != nil {
+						log.Error(err, "Failed to update deployment with optimized ConfigMap",
+							"version", latestVersion)
+						// Don't fail the whole optimization - ConfigMap was created successfully
+					} else {
+						log.Info("Successfully updated deployment with optimized ConfigMap",
+							"agent", agent.Name,
+							"version", latestVersion)
+					}
+				}
+			}
 		}
 	}
 
