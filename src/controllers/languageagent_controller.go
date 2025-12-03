@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1170,7 +1171,7 @@ func (r *LanguageAgentReconciler) buildContainerSecurityContext() *corev1.Securi
 }
 
 // buildVolumes creates the volumes and volume mounts for agent pods
-func (r *LanguageAgentReconciler) buildVolumes(agent *langopv1alpha1.LanguageAgent) ([]corev1.Volume, []corev1.VolumeMount) {
+func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{}
 	volumeMounts := []corev1.VolumeMount{}
 
@@ -1219,7 +1220,8 @@ func (r *LanguageAgentReconciler) buildVolumes(agent *langopv1alpha1.LanguageAge
 
 	// Add code ConfigMap volume if agent has modelRefs and instructions (synthesis enabled)
 	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
-		codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
+		// Check for optimized ConfigMap version, fallback to original
+		codeConfigMapName := r.getActiveConfigMapName(ctx, agent)
 		volumes = append(volumes, corev1.Volume{
 			Name: "agent-code",
 			VolumeSource: corev1.VolumeSource{
@@ -1356,7 +1358,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
 		// Build and apply volumes and volume mounts
-		volumes, volumeMounts := r.buildVolumes(agent)
+		volumes, volumeMounts := r.buildVolumes(ctx, agent)
 		if len(volumes) > 0 {
 			deployment.Spec.Template.Spec.Volumes = volumes
 		}
@@ -1536,7 +1538,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
 		// Build and apply volumes and volume mounts
-		volumes, volumeMounts := r.buildVolumes(agent)
+		volumes, volumeMounts := r.buildVolumes(ctx, agent)
 		if len(volumes) > 0 {
 			cronJob.Spec.JobTemplate.Spec.Template.Spec.Volumes = volumes
 		}
@@ -3387,6 +3389,63 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	}
 
 	return false, "Ingress load balancer assigned but no IP or hostname available", nil
+}
+
+// getActiveConfigMapName returns the most recent ConfigMap name for the agent
+// This checks for optimized versions created by the learning controller
+func (r *LanguageAgentReconciler) getActiveConfigMapName(ctx context.Context, agent *langopv1alpha1.LanguageAgent) string {
+	// Default to the original code ConfigMap
+	originalConfigMapName := GenerateConfigMapName(agent.Name, "code")
+
+	// Look for versioned ConfigMaps created by learning optimization
+	configMapList := &corev1.ConfigMapList{}
+	labelSelector := client.MatchingLabels{
+		"langop.io/agent":     agent.Name,
+		"langop.io/component": "agent-code",
+	}
+
+	err := r.List(ctx, configMapList,
+		client.InNamespace(agent.Namespace),
+		labelSelector)
+	if err != nil {
+		// If we can't query, fallback to original
+		return originalConfigMapName
+	}
+
+	// Find the highest version number
+	highestVersion := int32(0)
+	newestConfigMapName := originalConfigMapName
+
+	for _, configMap := range configMapList.Items {
+		if versionStr, exists := configMap.Labels["langop.io/version"]; exists {
+			if version, err := strconv.ParseInt(versionStr, 10, 32); err == nil {
+				if int32(version) > highestVersion {
+					highestVersion = int32(version)
+					newestConfigMapName = configMap.Name
+				}
+			}
+		}
+	}
+
+	// Only use optimized version if it actually exists and is newer
+	if highestVersion > 0 {
+		// Verify the ConfigMap actually exists and is ready
+		optimizedConfigMap := &corev1.ConfigMap{}
+		err := r.Get(ctx, client.ObjectKey{
+			Name:      newestConfigMapName,
+			Namespace: agent.Namespace,
+		}, optimizedConfigMap)
+		if err == nil {
+			log.FromContext(ctx).Info("Using optimized ConfigMap for agent",
+				"agent", agent.Name,
+				"configMap", newestConfigMapName,
+				"version", highestVersion)
+			return newestConfigMapName
+		}
+	}
+
+	// Fallback to original ConfigMap
+	return originalConfigMapName
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -319,7 +319,7 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			log.Info("Successfully applied optimized tasks to agent ConfigMap",
 				"agent", agent.Name,
 				"optimizedTaskCount", len(optimizedTasks))
-			
+
 			// Update deployment/CronJob to use the new versioned ConfigMap
 			if r.ConfigMapManager != nil {
 				// Get the latest version to update deployment
@@ -3824,19 +3824,19 @@ func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, a
 // applyOptimizedTasks merges optimized task implementations into the agent's DSL and creates a versioned ConfigMap
 func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]string, synthesizer synthesis.AgentSynthesizer) error {
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
-	
+
 	// Get the current agent code from the existing ConfigMap
 	currentCode, err := r.getCurrentAgentCode(ctx, agent)
 	if err != nil {
 		return fmt.Errorf("failed to get current agent code: %w", err)
 	}
-	
+
 	// Merge optimized tasks into the current agent code
 	optimizedCode, err := r.mergeOptimizedTasks(currentCode, optimizedTasks)
 	if err != nil {
 		return fmt.Errorf("failed to merge optimized tasks: %w", err)
 	}
-	
+
 	// Create versioned ConfigMap with optimized code
 	if r.ConfigMapManager != nil {
 		// Get the latest version and increment it
@@ -3858,7 +3858,7 @@ func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *lan
 			LearningSource:  "task-level-optimization",
 			PreviousVersion: &latestVersion,
 		}
-		
+
 		if _, err := r.ConfigMapManager.CreateVersionedConfigMap(ctx, agent, options); err != nil {
 			log.Error(err, "Failed to create optimized code ConfigMap")
 			return fmt.Errorf("failed to create optimized code: %w", err)
@@ -3870,7 +3870,7 @@ func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *lan
 			"codeLength", len(optimizedCode),
 			"optimizedTasks", len(optimizedTasks))
 	}
-	
+
 	return nil
 }
 
@@ -3920,14 +3920,14 @@ func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTa
 		// Simple replacement for demonstration
 		// In production, use proper Ruby parser
 		if strings.Contains(mergedCode, fmt.Sprintf("task :%s", taskName)) {
-			r.Log.Info("Replacing existing task with optimized version", 
-				"taskName", taskName, 
+			r.Log.Info("Replacing existing task with optimized version",
+				"taskName", taskName,
 				"optimizedCodeLength", len(optimizedCode))
 			// Note: This is a placeholder - proper AST parsing needed
 			mergedCode = fmt.Sprintf("%s\n\n# Optimized task: %s\n%s", mergedCode, taskName, optimizedTask)
 		} else {
-			r.Log.Info("Adding new optimized task", 
-				"taskName", taskName, 
+			r.Log.Info("Adding new optimized task",
+				"taskName", taskName,
 				"optimizedCodeLength", len(optimizedCode))
 			mergedCode = fmt.Sprintf("%s\n\n# New optimized task: %s\n%s", mergedCode, taskName, optimizedTask)
 		}
