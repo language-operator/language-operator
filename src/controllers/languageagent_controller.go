@@ -477,9 +477,6 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
 
-	// ConfigMap name for synthesized code
-	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
-
 	// Check if agent is in failure state requiring self-healing
 	if r.shouldAttemptSelfHealing(agent) {
 		log.Info("Agent in failure state, checking self-healing eligibility",
@@ -532,52 +529,36 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	// Normal synthesis flow
 	// Check if we need to synthesize
 	// Smart change detection:
-	// 1. ConfigMap doesn't exist → full synthesis
+	// 1. LanguageAgentVersion v1 doesn't exist → full synthesis
 	// 2. Instructions changed → full synthesis
 	// 3. Persona changed → re-distill only (update existing code's context)
 	// 4. Tools/models changed → env var update only (no synthesis needed)
-	existingCM := &corev1.ConfigMap{}
-	err := r.Get(ctx, types.NamespacedName{Name: codeConfigMapName, Namespace: agent.Namespace}, existingCM)
+	existingVersionV1 := &langopv1alpha1.LanguageAgentVersion{}
+	versionV1Name := fmt.Sprintf("%s-v1", agent.Name)
+	err := r.Get(ctx, types.NamespacedName{Name: versionV1Name, Namespace: agent.Namespace}, existingVersionV1)
 
 	needsSynthesis := false
 	needsPersonaUpdate := false
 
 	if apierrors.IsNotFound(err) {
 		needsSynthesis = true
-		log.Info("Code ConfigMap not found, will synthesize")
+		log.Info("LanguageAgentVersion v1 not found, will synthesize")
 	} else if err != nil {
 		return err
 	} else {
-		// Check if ConfigMap has been optimized by CLI - skip synthesis but ensure owner reference
-		if existingCM.Annotations["langop.io/optimized"] == "true" {
-			log.Info("ConfigMap has langop.io/optimized annotation, skipping synthesis",
-				"optimizedAt", existingCM.Annotations["langop.io/optimized-at"],
-				"optimizedTask", existingCM.Annotations["langop.io/optimized-task"])
-
-			// Ensure owner reference is set for proper garbage collection
-			if err := controllerutil.SetControllerReference(agent, existingCM, r.Scheme); err != nil {
-				return fmt.Errorf("failed to set owner reference on optimized ConfigMap: %w", err)
-			}
-			if err := r.Update(ctx, existingCM); err != nil {
-				return fmt.Errorf("failed to update optimized ConfigMap with owner reference: %w", err)
-			}
-
-			return nil
-		}
-
 		// Compare current vs previous hashes for smart change detection
 		currentInstructionsHash := hashString(agent.Spec.Instructions)
-		previousInstructionsHash := existingCM.Annotations["langop.io/instructions-hash"]
+		previousInstructionsHash := existingVersionV1.Annotations["langop.io/instructions-hash"]
 
 		currentToolsHash := hashString(strings.Join(r.getToolNames(agent), ","))
-		previousToolsHash := existingCM.Annotations["langop.io/tools-hash"]
+		previousToolsHash := existingVersionV1.Annotations["langop.io/tools-hash"]
 
 		currentModelsHash := hashString(strings.Join(r.getModelNames(agent), ","))
-		previousModelsHash := existingCM.Annotations["langop.io/models-hash"]
+		previousModelsHash := existingVersionV1.Annotations["langop.io/models-hash"]
 
 		personaRefs := r.getPersonaNames(agent)
 		currentPersonaHash := hashString(strings.Join(personaRefs, ","))
-		previousPersonaHash := existingCM.Annotations["langop.io/persona-hash"]
+		previousPersonaHash := existingVersionV1.Annotations["langop.io/persona-hash"]
 
 		// Instructions changed → full re-synthesis
 		if currentInstructionsHash != previousInstructionsHash {
@@ -813,7 +794,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	} else if needsPersonaUpdate {
 		// Persona changed but instructions didn't → re-distill only
 		// This updates the persona context without re-synthesizing the entire code
-		dslCode = existingCM.Data["agent.rb"]
+		dslCode = existingVersionV1.Spec.Code
 
 		persona, err := r.fetchPersona(ctx, agent)
 		if err != nil {
@@ -831,35 +812,34 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		}
 	} else {
 		// Use existing code
-		dslCode = existingCM.Data["agent.rb"]
+		dslCode = existingVersionV1.Spec.Code
 		log.Info("Using existing synthesized code", "agent", agent.Name)
 	}
 
-	// Create or update ConfigMap with synthesized code
-	data := map[string]string{
-		"agent.rb": dslCode,
+	// Determine source type based on context
+	sourceType := "manual"
+	if needsSynthesis {
+		sourceType = "synthesis"
 	}
 
-	// Store all hashes for smart change detection
-	annotations := map[string]string{
-		"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
-		"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
-		"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
-		"langop.io/persona-hash":      hashString(strings.Join(r.getPersonaNames(agent), ",")),
+	// Create or update LanguageAgentVersion instead of ConfigMap
+	agentVersion, err := r.createInitialAgentVersion(ctx, agent, dslCode, sourceType)
+	if err != nil {
+		return fmt.Errorf("failed to create/update LanguageAgentVersion: %w", err)
 	}
 
-	// Only update synthesized-at timestamp when we actually synthesized new code
-	if needsSynthesis || needsPersonaUpdate {
-		annotations["langop.io/synthesized-at"] = metav1.Now().Format("2006-01-02T15:04:05Z")
-	} else if existingCM != nil && existingCM.Annotations != nil {
-		// Preserve existing timestamp when reusing code
-		if existingTimestamp, ok := existingCM.Annotations["langop.io/synthesized-at"]; ok {
-			annotations["langop.io/synthesized-at"] = existingTimestamp
+	// Set agentVersionRef to point to the created version
+	if agent.Spec.AgentVersionRef == nil || agent.Spec.AgentVersionRef.Name != agentVersion.Name {
+		agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
+			Name:      agentVersion.Name,
+			Namespace: agentVersion.Namespace,
 		}
-	}
-
-	if err := CreateOrUpdateConfigMapWithAnnotations(ctx, r.Client, r.Scheme, agent, codeConfigMapName, agent.Namespace, data, annotations); err != nil {
-		return err
+		if err := r.Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to update agent with AgentVersionRef", "versionName", agentVersion.Name)
+			// Don't fail - the version was created successfully
+		} else {
+			log.Info("Updated agent to use LanguageAgentVersion v1", "agent", agent.Name, "versionName", agentVersion.Name)
+		}
 	}
 
 	// Parse DSL to extract mode and schedule, then update spec if needed
@@ -3460,4 +3440,73 @@ func (r *LanguageAgentReconciler) resolveCodeConfigMapName(ctx context.Context, 
 		"configMap", agentVersion.Status.ConfigMapName)
 
 	return agentVersion.Status.ConfigMapName, nil
+}
+
+// createInitialAgentVersion creates the initial LanguageAgentVersion (v1) for an agent
+func (r *LanguageAgentReconciler) createInitialAgentVersion(ctx context.Context, agent *langopv1alpha1.LanguageAgent, dslCode string, sourceType string) (*langopv1alpha1.LanguageAgentVersion, error) {
+	log := log.FromContext(ctx)
+
+	// Create LanguageAgentVersion resource
+	agentVersion := &langopv1alpha1.LanguageAgentVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-v1", agent.Name),
+			Namespace: agent.Namespace,
+			Labels: map[string]string{
+				"langop.io/agent":      agent.Name,
+				"langop.io/source":     sourceType,
+				"langop.io/managed-by": "language-operator",
+			},
+			Annotations: map[string]string{
+				"langop.io/generated-by":      "agent-controller",
+				"langop.io/instructions-hash": hashString(agent.Spec.Instructions),
+				"langop.io/tools-hash":        hashString(strings.Join(r.getToolNames(agent), ",")),
+				"langop.io/models-hash":       hashString(strings.Join(r.getModelNames(agent), ",")),
+				"langop.io/persona-hash":      hashString(strings.Join(r.getPersonaNames(agent), ",")),
+			},
+		},
+		Spec: langopv1alpha1.LanguageAgentVersionSpec{
+			AgentRef: langopv1alpha1.AgentReference{
+				Name:      agent.Name,
+				Namespace: agent.Namespace,
+			},
+			Version:     1,
+			Code:        dslCode,
+			SourceType:  sourceType,
+			Description: "Initial synthesized version",
+			CreatedBy:   "agent-controller",
+		},
+	}
+
+	// Set owner reference so LanguageAgentVersion is cleaned up when LanguageAgent is deleted
+	if err := controllerutil.SetControllerReference(agent, agentVersion, r.Scheme); err != nil {
+		return nil, fmt.Errorf("failed to set controller reference: %w", err)
+	}
+
+	// Create the LanguageAgentVersion
+	if err := r.Create(ctx, agentVersion); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			// If it already exists, get it and update it
+			existingVersion := &langopv1alpha1.LanguageAgentVersion{}
+			if err := r.Get(ctx, types.NamespacedName{Name: agentVersion.Name, Namespace: agentVersion.Namespace}, existingVersion); err != nil {
+				return nil, fmt.Errorf("failed to get existing LanguageAgentVersion: %w", err)
+			}
+
+			// Update the code and annotations
+			existingVersion.Spec.Code = dslCode
+			existingVersion.Annotations = agentVersion.Annotations
+			existingVersion.Spec.Description = "Updated synthesized version"
+
+			if err := r.Update(ctx, existingVersion); err != nil {
+				return nil, fmt.Errorf("failed to update existing LanguageAgentVersion: %w", err)
+			}
+
+			log.Info("Updated existing LanguageAgentVersion v1", "agent", agent.Name)
+			return existingVersion, nil
+		} else {
+			return nil, fmt.Errorf("failed to create LanguageAgentVersion: %w", err)
+		}
+	}
+
+	log.Info("Created initial LanguageAgentVersion v1", "agent", agent.Name, "versionName", agentVersion.Name)
+	return agentVersion, nil
 }
