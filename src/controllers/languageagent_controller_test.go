@@ -812,27 +812,68 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 		},
 	}
 
-	// Create a code ConfigMap with the optimized annotation
-	codeConfigMapName := GenerateConfigMapName(agent.Name, "code")
-	optimizedConfigMap := &corev1.ConfigMap{
+	// Create a LanguageAgentVersion v1 to simulate existing synthesis
+	// Need to calculate the expected hashes for the test agent to match controller logic
+	instructionsHash := hashString(agent.Spec.Instructions)
+	toolsHash := hashString("") // No tools in this test agent
+	modelsHash := hashString("test-model") // Based on agent.Spec.ModelRefs  
+	personaHash := hashString("") // No personas in this test
+	
+	agentVersion := &langopv1alpha1.LanguageAgentVersion{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      codeConfigMapName,
-			Namespace: agent.Namespace,
+			Name:      "test-agent-v1",
+			Namespace: "default",
 			Annotations: map[string]string{
-				"langop.io/optimized":      "true",
-				"langop.io/optimized-at":   "2025-11-21T16:50:00Z",
-				"langop.io/optimized-task": "read_existing_story",
+				"langop.io/instructions-hash": instructionsHash,
+				"langop.io/tools-hash":        toolsHash,
+				"langop.io/models-hash":       modelsHash,
+				"langop.io/persona-hash":      personaHash,
 			},
 		},
+		Spec: langopv1alpha1.LanguageAgentVersionSpec{
+			Version: 1,
+			AgentRef: langopv1alpha1.AgentReference{
+				Name:      "test-agent",
+				Namespace: "default",
+			},
+			Code:        "# Existing synthesized code",
+			SourceType:  "manual",
+			Description: "Initial synthesized version",
+			CreatedBy:   "test",
+		},
+		Status: langopv1alpha1.LanguageAgentVersionStatus{
+			Phase:         "Ready",
+			ConfigMapName: "test-agent-v1",
+		},
+	}
+
+	// Create the LanguageModel required by the agent
+	model := &langopv1alpha1.LanguageModel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-model",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageModelSpec{
+			Provider:  "openai",
+			ModelName: "gpt-4",
+		},
+	}
+
+	// Create the corresponding ConfigMap for the LanguageAgentVersion
+	versionConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent-v1",
+			Namespace: "default",
+		},
 		Data: map[string]string{
-			"agent.rb": "# Optimized code that should not be overwritten",
+			"agent.rb": "# Existing synthesized code",
 		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent, optimizedConfigMap).
-		WithStatusSubresource(agent).
+		WithObjects(agent, agentVersion, versionConfigMap, model).
+		WithStatusSubresource(agent, agentVersion, model).
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
@@ -855,40 +896,33 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify the ConfigMap still has the optimized code (not overwritten)
-	cm := &corev1.ConfigMap{}
+	// Verify the LanguageAgentVersion v1 was not recreated (synthesis was skipped)
+	existingVersion := &langopv1alpha1.LanguageAgentVersion{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      codeConfigMapName,
+		Name:      "test-agent-v1",
 		Namespace: agent.Namespace,
-	}, cm)
+	}, existingVersion)
 	if err != nil {
-		t.Fatalf("Expected code ConfigMap to exist, but got error: %v", err)
+		t.Fatalf("Expected LanguageAgentVersion v1 to exist, but got error: %v", err)
 	}
 
-	// The optimized annotation should still be present
-	if cm.Annotations["langop.io/optimized"] != "true" {
-		t.Error("Expected langop.io/optimized annotation to be preserved")
+	// The original version should be preserved (not overwritten)
+	if existingVersion.Spec.Code != "# Existing synthesized code" {
+		t.Errorf("Expected existing code to be preserved, got: %s", existingVersion.Spec.Code)
 	}
 
-	// The original data should be preserved
-	if cm.Data["agent.rb"] != "# Optimized code that should not be overwritten" {
-		t.Errorf("Expected optimized code to be preserved, got: %s", cm.Data["agent.rb"])
+	// Verify the agent was updated to reference the existing version
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, updatedAgent)
+	if err != nil {
+		t.Fatalf("Failed to get updated agent: %v", err)
 	}
 
-	// Owner reference should be set for proper garbage collection
-	if len(cm.OwnerReferences) == 0 {
-		t.Error("Expected owner reference to be set on optimized ConfigMap")
-	} else {
-		ownerRef := cm.OwnerReferences[0]
-		if ownerRef.Name != agent.Name {
-			t.Errorf("Expected owner reference name to be %s, got %s", agent.Name, ownerRef.Name)
-		}
-		if ownerRef.Kind != "LanguageAgent" {
-			t.Errorf("Expected owner reference kind to be LanguageAgent, got %s", ownerRef.Kind)
-		}
-		if !*ownerRef.Controller {
-			t.Error("Expected owner reference to have controller=true")
-		}
+	if updatedAgent.Spec.AgentVersionRef == nil || updatedAgent.Spec.AgentVersionRef.Name != "test-agent-v1" {
+		t.Error("Expected agent to reference the existing LanguageAgentVersion v1")
 	}
 }
 
