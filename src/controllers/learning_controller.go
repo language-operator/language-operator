@@ -4061,7 +4061,7 @@ func (r *LearningReconciler) setAgentVersionReference(ctx context.Context, agent
 // setAgentVersionReferenceWithRetry handles race conditions when updating agent version reference
 func (r *LearningReconciler) setAgentVersionReferenceWithRetry(ctx context.Context, agent *langopv1alpha1.LanguageAgent, versionName string) error {
 	log := r.Log.WithValues("agent", agent.Name, "versionName", versionName)
-	
+
 	maxRetries := 5
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		// Fetch fresh agent resource to avoid conflicts
@@ -4079,7 +4079,7 @@ func (r *LearningReconciler) setAgentVersionReferenceWithRetry(ctx context.Conte
 
 		if err := r.Update(ctx, freshAgent); err != nil {
 			if apierrors.IsConflict(err) && attempt < maxRetries-1 {
-				log.V(1).Info("Resource conflict updating agent version reference, retrying", 
+				log.V(1).Info("Resource conflict updating agent version reference, retrying",
 					"attempt", attempt+1, "maxRetries", maxRetries)
 				// Brief sleep to avoid tight retry loop
 				time.Sleep(time.Millisecond * time.Duration(100*(attempt+1)))

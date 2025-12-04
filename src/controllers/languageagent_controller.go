@@ -836,32 +836,32 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		if currentVersionNamespace == "" {
 			currentVersionNamespace = agent.Namespace
 		}
-		
+
 		currentVersion := &langopv1alpha1.LanguageAgentVersion{}
 		currentVersionKey := types.NamespacedName{
 			Name:      agent.Spec.AgentVersionRef.Name,
 			Namespace: currentVersionNamespace,
 		}
-		
+
 		if err := r.Get(ctx, currentVersionKey, currentVersion); err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Info("Current AgentVersionRef points to non-existent version, updating to v1", 
+				log.Info("Current AgentVersionRef points to non-existent version, updating to v1",
 					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "newRef", agentVersion.Name)
 				shouldUpdateVersionRef = true
 			} else {
-				log.Error(err, "Failed to check current AgentVersionRef, keeping current reference", 
+				log.Error(err, "Failed to check current AgentVersionRef, keeping current reference",
 					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name)
 			}
 		} else if currentVersion.Status.Phase != "Ready" {
-			log.Info("Current AgentVersionRef points to unready version, updating to v1", 
+			log.Info("Current AgentVersionRef points to unready version, updating to v1",
 				"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "phase", currentVersion.Status.Phase, "newRef", agentVersion.Name)
 			shouldUpdateVersionRef = true
 		} else {
-			log.Info("AgentVersionRef already points to valid version, keeping current reference", 
+			log.Info("AgentVersionRef already points to valid version, keeping current reference",
 				"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "version", currentVersion.Spec.Version)
 		}
 	}
-	
+
 	if shouldUpdateVersionRef {
 		agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 			Name:      agentVersion.Name,
@@ -3473,7 +3473,7 @@ func (r *LanguageAgentReconciler) resolveCodeConfigMapName(ctx context.Context, 
 	} else {
 		logMsg = "Using optimized agent code from LanguageAgentVersion"
 	}
-	
+
 	log.FromContext(ctx).Info(logMsg,
 		"agent", agent.Name,
 		"agentVersion", agentVersion.Name,
