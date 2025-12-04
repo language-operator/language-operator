@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -3882,38 +3885,108 @@ func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *lan
 }
 
 // mergeOptimizedTasks merges optimized task implementations into the current agent DSL code
+// using Ruby AST parsing for proper code reconstruction
 func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTasks map[string]string) (string, error) {
 	if len(optimizedTasks) == 0 {
 		return currentCode, nil
 	}
 
-	// For now, implement simple string replacement
-	// In a production system, this should use proper Ruby AST parsing
-	mergedCode := currentCode
+	// Use Ruby AST-based reconstruction for proper code merging
+	reconstructedCode, err := r.reconstructAgentCodeWithRuby(currentCode, optimizedTasks)
+	if err != nil {
+		r.Log.Error(err, "Ruby AST reconstruction failed, falling back to simple concatenation")
+		// Fallback to simple concatenation if AST reconstruction fails
+		return r.fallbackMergeOptimizedTasks(currentCode, optimizedTasks), nil
+	}
 
-	for taskName, optimizedCode := range optimizedTasks {
-		// Look for existing task definition and replace it
-		// This is a simplified implementation - ideally would use AST parsing
-		_ = fmt.Sprintf(`task :%s do.*?end`, taskName) // taskPattern for future AST parsing
-		optimizedTask := fmt.Sprintf("task :%s do\n%s\nend", taskName, optimizedCode)
+	r.Log.Info("Successfully reconstructed agent code using Ruby AST",
+		"originalCodeLength", len(currentCode),
+		"reconstructedCodeLength", len(reconstructedCode),
+		"optimizedTaskCount", len(optimizedTasks))
 
-		// Simple replacement for demonstration
-		// In production, use proper Ruby parser
-		if strings.Contains(mergedCode, fmt.Sprintf("task :%s", taskName)) {
-			r.Log.Info("Replacing existing task with optimized version",
-				"taskName", taskName,
-				"optimizedCodeLength", len(optimizedCode))
-			// Note: This is a placeholder - proper AST parsing needed
-			mergedCode = fmt.Sprintf("%s\n\n# Optimized task: %s\n%s", mergedCode, taskName, optimizedTask)
-		} else {
-			r.Log.Info("Adding new optimized task",
-				"taskName", taskName,
-				"optimizedCodeLength", len(optimizedCode))
-			mergedCode = fmt.Sprintf("%s\n\n# New optimized task: %s\n%s", mergedCode, taskName, optimizedTask)
+	return reconstructedCode, nil
+}
+
+// reconstructAgentCodeWithRuby uses Ruby script for AST-based code reconstruction
+func (r *LearningReconciler) reconstructAgentCodeWithRuby(originalCode string, optimizedTasks map[string]string) (string, error) {
+	// Prepare input JSON for Ruby script
+	input := map[string]interface{}{
+		"original_code":    originalCode,
+		"optimized_tasks":  optimizedTasks,
+	}
+
+	inputJSON, err := json.Marshal(input)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal input JSON: %w", err)
+	}
+
+	// Find the reconstruction script
+	scriptPath := r.findReconstructionScript()
+
+	// Execute Ruby script with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "ruby", scriptPath)
+	cmd.Stdin = strings.NewReader(string(inputJSON))
+
+	output, err := cmd.Output()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return "", fmt.Errorf("reconstruction timeout: code too complex (>10s)")
+		}
+		// Try to get stderr for better error reporting
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("reconstruction script failed: %s", string(exitErr.Stderr))
+		}
+		return "", fmt.Errorf("reconstruction script execution failed: %w", err)
+	}
+
+	reconstructedCode := strings.TrimSpace(string(output))
+	if reconstructedCode == "" {
+		return "", fmt.Errorf("reconstruction script produced empty output")
+	}
+
+	return reconstructedCode, nil
+}
+
+// findReconstructionScript locates the Ruby reconstruction script
+func (r *LearningReconciler) findReconstructionScript() string {
+	locations := []string{
+		"/usr/local/bin/reconstruct-agent-code.rb",                              // Docker container
+		"scripts/reconstruct-agent-code.rb",                                     // CI from src/ directory
+		"../../../scripts/reconstruct-agent-code.rb",                            // Test from src/pkg/validation
+		filepath.Join("..", "..", "..", "scripts", "reconstruct-agent-code.rb"), // Alternative path
+		"../../scripts/reconstruct-agent-code.rb",                               // From src subdirectory
+		"../scripts/reconstruct-agent-code.rb",                                  // From pkg/validation
+	}
+
+	for _, path := range locations {
+		if absPath, err := filepath.Abs(path); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				return absPath
+			}
 		}
 	}
 
-	return mergedCode, nil
+	// Default to container location
+	return "/usr/local/bin/reconstruct-agent-code.rb"
+}
+
+// fallbackMergeOptimizedTasks provides fallback behavior if Ruby reconstruction fails
+func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, optimizedTasks map[string]string) string {
+	mergedCode := currentCode
+
+	for taskName, optimizedCode := range optimizedTasks {
+		optimizedTask := fmt.Sprintf("task :%s do |inputs|\n%s\nend", taskName, optimizedCode)
+
+		r.Log.Info("Adding optimized task (fallback mode)",
+			"taskName", taskName,
+			"optimizedCodeLength", len(optimizedCode))
+		mergedCode = fmt.Sprintf("%s\n\n# Optimized task (fallback): %s\n%s", mergedCode, taskName, optimizedTask)
+	}
+
+	return mergedCode
 }
 
 // setAgentVersionRef updates the agent's versionRef field to point to an optimized ConfigMap
