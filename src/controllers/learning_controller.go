@@ -4000,12 +4000,11 @@ func (r *LearningReconciler) createAgentVersion(ctx context.Context, agent *lang
 		"version", nextVersion,
 		"optimizedTasks", len(optimizedTasks))
 
-	// Update agent to reference the new version
-	if err := r.setAgentVersionReference(ctx, agent, agentVersion.Name); err != nil {
-		log.Error(err, "Failed to update agent's AgentVersionRef",
+	// Update agent to reference the new version with retry for conflicts
+	if err := r.setAgentVersionReferenceWithRetry(ctx, agent, agentVersion.Name); err != nil {
+		log.Error(err, "Failed to update agent's AgentVersionRef after retries",
 			"versionName", agentVersion.Name)
-		// Don't fail - the version was created successfully
-		return nil
+		return fmt.Errorf("failed to update agent to use LanguageAgentVersion %s: %w", agentVersion.Name, err)
 	}
 
 	log.Info("Successfully updated agent to use new LanguageAgentVersion",
@@ -4057,4 +4056,42 @@ func (r *LearningReconciler) setAgentVersionReference(ctx context.Context, agent
 
 	log.Info("Successfully updated agent AgentVersionRef")
 	return nil
+}
+
+// setAgentVersionReferenceWithRetry handles race conditions when updating agent version reference
+func (r *LearningReconciler) setAgentVersionReferenceWithRetry(ctx context.Context, agent *langopv1alpha1.LanguageAgent, versionName string) error {
+	log := r.Log.WithValues("agent", agent.Name, "versionName", versionName)
+	
+	maxRetries := 5
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// Fetch fresh agent resource to avoid conflicts
+		freshAgent := &langopv1alpha1.LanguageAgent{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, freshAgent); err != nil {
+			log.Error(err, "Failed to get fresh agent for version reference update", "attempt", attempt)
+			return fmt.Errorf("failed to get fresh agent: %w", err)
+		}
+
+		// Update the agent's AgentVersionRef on the fresh object
+		freshAgent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
+			Name:      versionName,
+			Namespace: agent.Namespace,
+		}
+
+		if err := r.Update(ctx, freshAgent); err != nil {
+			if apierrors.IsConflict(err) && attempt < maxRetries-1 {
+				log.V(1).Info("Resource conflict updating agent version reference, retrying", 
+					"attempt", attempt+1, "maxRetries", maxRetries)
+				// Brief sleep to avoid tight retry loop
+				time.Sleep(time.Millisecond * time.Duration(100*(attempt+1)))
+				continue
+			}
+			log.Error(err, "Failed to update agent AgentVersionRef", "attempt", attempt)
+			return fmt.Errorf("failed to update agent AgentVersionRef after %d attempts: %w", attempt+1, err)
+		}
+
+		log.Info("Successfully updated agent AgentVersionRef", "attempts", attempt+1)
+		return nil
+	}
+
+	return fmt.Errorf("failed to update agent AgentVersionRef after %d attempts", maxRetries)
 }
