@@ -400,6 +400,7 @@ rbac:
       - languagetools
       - languagemodels
       - languageagents
+      - languageagentversions
       - languagepersonas
       - languageclients
       - languageclusters
@@ -417,6 +418,7 @@ rbac:
       - languagetools/status
       - languagemodels/status
       - languageagents/status
+      - languageagentversions/status
       - languagepersonas/status
       - languageclients/status
       - languageclusters/status
@@ -430,6 +432,7 @@ rbac:
       - languagetools/finalizers
       - languagemodels/finalizers
       - languageagents/finalizers
+      - languageagentversions/finalizers
       - languagepersonas/finalizers
       - languageclients/finalizers
       - languageclusters/finalizers
