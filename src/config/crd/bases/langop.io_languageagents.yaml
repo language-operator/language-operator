@@ -952,6 +952,12 @@ spec:
                   If not specified, uses the base agent code. When learning creates
                   optimized versions, this can be set to reference specific LanguageAgentVersion resources
                 properties:
+                  lock:
+                    default: false
+                    description: |-
+                      Lock prevents automatic version updates by the learning controller
+                      When true, the learning controller will not modify this agentVersionRef
+                    type: boolean
                   name:
                     description: Name is the name of the LanguageAgentVersion
                     type: string
@@ -2528,6 +2534,23 @@ spec:
                                 May contain labels and annotations that will be copied into the PVC
                                 when creating it. No other fields are allowed and will be rejected during
                                 validation.
+                              properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                finalizers:
+                                  items:
+                                    type: string
+                                  type: array
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
                               type: object
                             spec:
                               description: |-

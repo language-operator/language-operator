@@ -4116,10 +4116,18 @@ func (r *LearningReconciler) getNextVersionNumber(ctx context.Context, agent *la
 func (r *LearningReconciler) setAgentVersionReference(ctx context.Context, agent *langopv1alpha1.LanguageAgent, versionName string) error {
 	log := r.Log.WithValues("agent", agent.Name, "versionName", versionName)
 
+	// Check if the version reference is locked
+	if agent.Spec.AgentVersionRef != nil && agent.Spec.AgentVersionRef.Lock {
+		log.Info("Agent version reference is locked, skipping automatic update",
+			"lockedVersion", agent.Spec.AgentVersionRef.Name)
+		return nil
+	}
+
 	// Update the agent's AgentVersionRef
 	agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 		Name:      versionName,
 		Namespace: agent.Namespace,
+		Lock:      false, // Default to unlocked when learning creates new versions
 	}
 
 	if err := r.Update(ctx, agent); err != nil {
@@ -4144,10 +4152,18 @@ func (r *LearningReconciler) setAgentVersionReferenceWithRetry(ctx context.Conte
 			return fmt.Errorf("failed to get fresh agent: %w", err)
 		}
 
+		// Check if the version reference is locked
+		if freshAgent.Spec.AgentVersionRef != nil && freshAgent.Spec.AgentVersionRef.Lock {
+			log.Info("Agent version reference is locked, skipping automatic update",
+				"lockedVersion", freshAgent.Spec.AgentVersionRef.Name)
+			return nil
+		}
+
 		// Update the agent's AgentVersionRef on the fresh object
 		freshAgent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 			Name:      versionName,
 			Namespace: agent.Namespace,
+			Lock:      false, // Default to unlocked when learning creates new versions
 		}
 
 		if err := r.Update(ctx, freshAgent); err != nil {

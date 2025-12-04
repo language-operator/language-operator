@@ -108,6 +108,12 @@ type AgentVersionReference struct {
 	// Namespace is the namespace of the LanguageAgentVersion (defaults to same namespace)
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
+
+	// Lock prevents automatic version updates by the learning controller
+	// When true, the learning controller will not modify this agentVersionRef
+	// +kubebuilder:default=false
+	// +optional
+	Lock bool `json:"lock,omitempty"`
 }
 
 //+kubebuilder:object:root=true
