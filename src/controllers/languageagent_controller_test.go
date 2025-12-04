@@ -815,10 +815,10 @@ func TestLanguageAgentController_OptimizedAnnotationSkipsSynthesis(t *testing.T)
 	// Create a LanguageAgentVersion v1 to simulate existing synthesis
 	// Need to calculate the expected hashes for the test agent to match controller logic
 	instructionsHash := hashString(agent.Spec.Instructions)
-	toolsHash := hashString("") // No tools in this test agent
-	modelsHash := hashString("test-model") // Based on agent.Spec.ModelRefs  
-	personaHash := hashString("") // No personas in this test
-	
+	toolsHash := hashString("")            // No tools in this test agent
+	modelsHash := hashString("test-model") // Based on agent.Spec.ModelRefs
+	personaHash := hashString("")          // No personas in this test
+
 	agentVersion := &langopv1alpha1.LanguageAgentVersion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-agent-v1",
