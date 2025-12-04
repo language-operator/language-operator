@@ -17,6 +17,7 @@ COPY src/api/ api/
 COPY src/controllers/ controllers/
 COPY src/pkg/ pkg/
 COPY scripts/validate-ruby-code.rb scripts/validate-ruby-code.rb
+COPY scripts/reconstruct-agent-code.rb scripts/reconstruct-agent-code.rb
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -39,6 +40,10 @@ RUN gem install language-operator
 # Copy AST validator wrapper script
 COPY --from=builder /workspace/scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
 RUN chmod +x /usr/local/bin/validate-ruby-code.rb
+
+# Copy agent code reconstruction script
+COPY --from=builder /workspace/scripts/reconstruct-agent-code.rb /usr/local/bin/reconstruct-agent-code.rb
+RUN chmod +x /usr/local/bin/reconstruct-agent-code.rb
 
 # Switch to langop user (created in base image)
 USER langop:langop
