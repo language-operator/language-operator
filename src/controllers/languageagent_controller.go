@@ -863,9 +863,16 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 	}
 
 	if shouldUpdateVersionRef {
+		// Preserve existing lock setting if present
+		var existingLock bool
+		if agent.Spec.AgentVersionRef != nil {
+			existingLock = agent.Spec.AgentVersionRef.Lock
+		}
+		
 		agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 			Name:      agentVersion.Name,
 			Namespace: agentVersion.Namespace,
+			Lock:      existingLock,
 		}
 		if err := r.Update(ctx, agent); err != nil {
 			log.Error(err, "Failed to update agent with AgentVersionRef", "versionName", agentVersion.Name)
