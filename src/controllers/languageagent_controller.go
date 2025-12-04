@@ -868,7 +868,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		if agent.Spec.AgentVersionRef != nil {
 			existingLock = agent.Spec.AgentVersionRef.Lock
 		}
-		
+
 		agent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 			Name:      agentVersion.Name,
 			Namespace: agentVersion.Namespace,

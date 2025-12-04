@@ -3911,8 +3911,8 @@ func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTa
 func (r *LearningReconciler) reconstructAgentCodeWithRuby(originalCode string, optimizedTasks map[string]string) (string, error) {
 	// Prepare input JSON for Ruby script
 	input := map[string]interface{}{
-		"original_code":    originalCode,
-		"optimized_tasks":  optimizedTasks,
+		"original_code":   originalCode,
+		"optimized_tasks": optimizedTasks,
 	}
 
 	inputJSON, err := json.Marshal(input)
