@@ -3430,10 +3430,19 @@ func (r *LanguageAgentReconciler) resolveCodeConfigMapName(ctx context.Context, 
 			agent.Spec.AgentVersionRef.Name)
 	}
 
-	log.FromContext(ctx).Info("Using optimized agent code from LanguageAgentVersion",
+	// Log with appropriate description based on version
+	logMsg := "Using agent code from LanguageAgentVersion"
+	if agentVersion.Spec.Version == 1 {
+		logMsg = "Using initial synthesized agent code from LanguageAgentVersion v1"
+	} else {
+		logMsg = "Using optimized agent code from LanguageAgentVersion"
+	}
+	
+	log.FromContext(ctx).Info(logMsg,
 		"agent", agent.Name,
 		"agentVersion", agentVersion.Name,
 		"version", agentVersion.Spec.Version,
+		"sourceType", agentVersion.Spec.SourceType,
 		"configMap", agentVersion.Status.ConfigMapName)
 
 	return agentVersion.Status.ConfigMapName, nil
