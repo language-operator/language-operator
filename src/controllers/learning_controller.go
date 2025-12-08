@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -3869,22 +3870,70 @@ func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *lan
 	return nil
 }
 
-// getCurrentAgentCode retrieves the current agent DSL code from the ConfigMap
+// getCurrentAgentCode retrieves the current agent DSL code from the active LanguageAgentVersion
 func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (string, error) {
-	configMapName := agent.Name
+	// Step 1: Find the current active LanguageAgentVersion
+	var activeVersion *langopv1alpha1.LanguageAgentVersion
+	var err error
+
+	// Check if agent has an explicit version reference
+	if agent.Spec.AgentVersionRef != nil && agent.Spec.AgentVersionRef.Name != "" {
+		// Use the explicitly referenced version
+		activeVersion = &langopv1alpha1.LanguageAgentVersion{}
+		err = r.Get(ctx, types.NamespacedName{
+			Name:      agent.Spec.AgentVersionRef.Name,
+			Namespace: agent.Namespace,
+		}, activeVersion)
+		
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				r.Log.Info("Referenced AgentVersion not found, falling back to latest",
+					"agent", agent.Name,
+					"referencedVersion", agent.Spec.AgentVersionRef.Name)
+			} else {
+				return "", fmt.Errorf("failed to get referenced LanguageAgentVersion %s: %w", 
+					agent.Spec.AgentVersionRef.Name, err)
+			}
+		}
+	}
+
+	// If we don't have an active version yet, find the latest one
+	if activeVersion == nil {
+		activeVersion, err = r.getLatestAgentVersion(ctx, agent)
+		if err != nil {
+			return "", fmt.Errorf("failed to get latest LanguageAgentVersion: %w", err)
+		}
+		if activeVersion == nil {
+			// No versions exist yet - return empty code
+			r.Log.Info("No LanguageAgentVersion found for agent", "agent", agent.Name)
+			return "", nil
+		}
+	}
+
+	// Step 2: Get the agent code from the version
+	if activeVersion.Spec.Code != "" {
+		// Code is stored directly in the LanguageAgentVersion spec
+		return activeVersion.Spec.Code, nil
+	}
+
+	// Step 3: Fall back to ConfigMap if code is not in spec
+	configMapName := activeVersion.Status.ConfigMapName
+	if configMapName == "" {
+		return "", fmt.Errorf("LanguageAgentVersion %s has no code in spec and no ConfigMap name in status", activeVersion.Name)
+	}
 
 	configMap := &corev1.ConfigMap{}
-	err := r.Get(ctx, types.NamespacedName{
+	err = r.Get(ctx, types.NamespacedName{
 		Name:      configMapName,
 		Namespace: agent.Namespace,
 	}, configMap)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Return empty code if ConfigMap doesn't exist yet
-			return "", nil
+			return "", fmt.Errorf("ConfigMap %s referenced by LanguageAgentVersion %s not found", 
+				configMapName, activeVersion.Name)
 		}
-		return "", fmt.Errorf("failed to get agent ConfigMap: %w", err)
+		return "", fmt.Errorf("failed to get ConfigMap %s: %w", configMapName, err)
 	}
 
 	// Look for the agent code in the ConfigMap data
@@ -3892,8 +3941,39 @@ func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *lan
 		return code, nil
 	}
 
-	// Return empty if no agent code found
-	return "", nil
+	return "", fmt.Errorf("no agent code found in ConfigMap %s", configMapName)
+}
+
+// getLatestAgentVersion finds the latest LanguageAgentVersion for the given agent
+func (r *LearningReconciler) getLatestAgentVersion(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguageAgentVersion, error) {
+	// List all LanguageAgentVersion resources for this agent
+	versionList := &langopv1alpha1.LanguageAgentVersionList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(agent.Namespace),
+		client.MatchingLabels{"langop.io/agent": agent.Name},
+	}
+
+	if err := r.List(ctx, versionList, listOpts...); err != nil {
+		return nil, fmt.Errorf("failed to list LanguageAgentVersions: %w", err)
+	}
+
+	if len(versionList.Items) == 0 {
+		return nil, nil
+	}
+
+	// Find the version with the highest version number
+	var latestVersion *langopv1alpha1.LanguageAgentVersion
+	var maxVersion int32 = -1
+
+	for i := range versionList.Items {
+		version := &versionList.Items[i]
+		if version.Spec.Version > maxVersion {
+			maxVersion = version.Spec.Version
+			latestVersion = version
+		}
+	}
+
+	return latestVersion, nil
 }
 
 // mergeOptimizedTasks merges optimized task implementations into the current agent DSL code
@@ -4030,27 +4110,32 @@ func (r *LearningReconciler) validateRubySyntax(rubyCode string) error {
 }
 
 // fallbackMergeOptimizedTasks provides fallback behavior if Ruby reconstruction fails
+// It replaces existing task definitions with optimized versions
 func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, optimizedTasks map[string]OptimizedTask) string {
 	mergedCode := currentCode
 
 	for taskName, optimized := range optimizedTasks {
-		// Generate proper Ruby task syntax with inputs/outputs schema
-		var taskDef string
-		if optimized.Inputs != "" && optimized.Outputs != "" {
-			// Format with schema for neural tasks
-			taskDef = fmt.Sprintf("task(:%s,\n       inputs: %s,\n       outputs: %s) do |inputs|\n%s\nend",
-				taskName, optimized.Inputs, optimized.Outputs, optimized.Code)
+		// Try to replace existing task definition first
+		replacedCode := r.replaceTaskDefinition(mergedCode, taskName, optimized)
+		
+		if replacedCode != mergedCode {
+			// Successfully replaced existing task
+			mergedCode = replacedCode
+			r.Log.Info("Replaced existing task definition (fallback mode)",
+				"taskName", taskName,
+				"optimizedCodeLength", len(optimized.Code),
+				"hasInputsSchema", optimized.Inputs != "",
+				"hasOutputsSchema", optimized.Outputs != "")
 		} else {
-			// Format without schema for symbolic tasks
-			taskDef = fmt.Sprintf("task :%s do |inputs|\n%s\nend", taskName, optimized.Code)
+			// Task not found, add as new task
+			taskDef := r.buildTaskDefinition(taskName, optimized)
+			mergedCode = r.insertNewTask(mergedCode, taskName, taskDef)
+			r.Log.Info("Added new optimized task (fallback mode)",
+				"taskName", taskName,
+				"optimizedCodeLength", len(optimized.Code),
+				"hasInputsSchema", optimized.Inputs != "",
+				"hasOutputsSchema", optimized.Outputs != "")
 		}
-
-		r.Log.Info("Adding optimized task (fallback mode)",
-			"taskName", taskName,
-			"optimizedCodeLength", len(optimized.Code),
-			"hasInputsSchema", optimized.Inputs != "",
-			"hasOutputsSchema", optimized.Outputs != "")
-		mergedCode = fmt.Sprintf("%s\n\n# Optimized task (fallback): %s\n%s", mergedCode, taskName, taskDef)
 	}
 
 	// Validate final syntax
@@ -4062,6 +4147,194 @@ func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, opt
 	}
 
 	return mergedCode
+}
+
+// replaceTaskDefinition attempts to replace an existing task definition with an optimized version
+func (r *LearningReconciler) replaceTaskDefinition(code, taskName string, optimized OptimizedTask) string {
+	// Look for neural task pattern: task(:taskname, ...)
+	neuralStart := fmt.Sprintf("task(:%s,", taskName)
+	if strings.Contains(code, neuralStart) {
+		return r.replaceNeuralTask(code, taskName, optimized)
+	}
+	
+	// Look for symbolic task pattern: task :taskname do
+	symbolicStart := fmt.Sprintf("task :%s do", taskName) 
+	if strings.Contains(code, symbolicStart) {
+		return r.replaceSymbolicTask(code, taskName, optimized)
+	}
+	
+	// No match found - return unchanged
+	return code
+}
+
+// replaceNeuralTask replaces a neural task (with parentheses syntax)
+func (r *LearningReconciler) replaceNeuralTask(code, taskName string, optimized OptimizedTask) string {
+	lines := strings.Split(code, "\n")
+	result := []string{}
+	i := 0
+	
+	for i < len(lines) {
+		line := lines[i]
+		
+		// Look for the start of our target task
+		if strings.Contains(line, fmt.Sprintf("task(:%s,", taskName)) {
+			// Extract indentation from this line
+			indentation := ""
+			for _, char := range line {
+				if char == ' ' || char == '\t' {
+					indentation += string(char)
+				} else {
+					break
+				}
+			}
+			
+			// Skip lines until we find the line with outputs (neural tasks don't have a do block)
+			// Neural tasks are single statements ending with )
+			for i < len(lines) && !strings.Contains(lines[i], "outputs:") {
+				i++
+			}
+			// Skip one more line to get past the outputs line
+			if i < len(lines) {
+				i++
+			}
+			
+			// Generate replacement task
+			replacement := r.buildTaskDefinitionWithIndentation(taskName, optimized, indentation)
+			result = append(result, replacement)
+		} else {
+			result = append(result, line)
+		}
+		i++
+	}
+	
+	return strings.Join(result, "\n")
+}
+
+// replaceSymbolicTask replaces a symbolic task (with do..end syntax)
+func (r *LearningReconciler) replaceSymbolicTask(code, taskName string, optimized OptimizedTask) string {
+	lines := strings.Split(code, "\n")
+	result := []string{}
+	i := 0
+	
+	for i < len(lines) {
+		line := lines[i]
+		
+		// Look for the start of our target task
+		if strings.Contains(line, fmt.Sprintf("task :%s do", taskName)) {
+			// Extract indentation from this line
+			indentation := ""
+			for _, char := range line {
+				if char == ' ' || char == '\t' {
+					indentation += string(char)
+				} else {
+					break
+				}
+			}
+			
+			// Skip lines until we find the matching end
+			depth := 1
+			i++ // Move past the task line
+			for i < len(lines) && depth > 0 {
+				if strings.Contains(strings.TrimSpace(lines[i]), " do") {
+					depth++
+				} else if strings.TrimSpace(lines[i]) == "end" {
+					depth--
+				}
+				i++
+			}
+			
+			// Generate replacement task
+			replacement := r.buildTaskDefinitionWithIndentation(taskName, optimized, indentation)
+			result = append(result, replacement)
+		} else {
+			result = append(result, line)
+		}
+		i++
+	}
+	
+	return strings.Join(result, "\n")
+}
+
+// buildTaskDefinition creates the Ruby task definition string
+func (r *LearningReconciler) buildTaskDefinition(taskName string, optimized OptimizedTask) string {
+	return r.buildTaskDefinitionWithIndentation(taskName, optimized, "  ")
+}
+
+// buildTaskDefinitionWithIndentation creates the Ruby task definition with proper indentation
+func (r *LearningReconciler) buildTaskDefinitionWithIndentation(taskName string, optimized OptimizedTask, indentation string) string {
+	if optimized.Inputs != "" && optimized.Outputs != "" {
+		// Format with schema for neural tasks
+		return fmt.Sprintf("%stask(:%s,\n%s       inputs: %s,\n%s       outputs: %s) do |inputs|\n%s\n%send",
+			indentation, taskName, indentation, optimized.Inputs, indentation, optimized.Outputs,
+			r.indentCode(optimized.Code, indentation+"  "), indentation)
+	} else {
+		// Format without schema for symbolic tasks  
+		return fmt.Sprintf("%stask :%s do |inputs|\n%s\n%send",
+			indentation, taskName, r.indentCode(optimized.Code, indentation+"  "), indentation)
+	}
+}
+
+// indentCode adds indentation to each line of code
+func (r *LearningReconciler) indentCode(code, indentation string) string {
+	lines := strings.Split(strings.TrimSpace(code), "\n")
+	indentedLines := make([]string, len(lines))
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			indentedLines[i] = "" // Keep empty lines empty
+		} else {
+			indentedLines[i] = indentation + line
+		}
+	}
+	return strings.Join(indentedLines, "\n")
+}
+
+// insertNewTask inserts a new task definition before the main block or final end
+func (r *LearningReconciler) insertNewTask(code, taskName, taskDef string) string {
+	// Try to insert before main block
+	mainPattern := `(\n\s*)(main\s+do)`
+	if strings.Contains(code, "main do") {
+		replacement := fmt.Sprintf("$1\n  # Optimized task: %s\n%s\n$1$2", taskName, taskDef)
+		return r.replaceWithPattern(code, mainPattern, replacement)
+	}
+	
+	// Try to insert before final end
+	finalEndPattern := `(\n\s*)(end\s*$)`
+	if strings.HasSuffix(strings.TrimSpace(code), "end") {
+		replacement := fmt.Sprintf("$1\n  # Optimized task: %s\n%s\n$1$2", taskName, taskDef)
+		return r.replaceWithPattern(code, finalEndPattern, replacement)
+	}
+	
+	// Fallback: append at end
+	return fmt.Sprintf("%s\n\n  # Optimized task: %s\n%s", code, taskName, taskDef)
+}
+
+// matchAndExtractIndentation checks if a pattern matches and extracts indentation
+func (r *LearningReconciler) matchAndExtractIndentation(code, pattern string) (bool, string) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		r.Log.Error(err, "Invalid regex pattern", "pattern", pattern)
+		return false, ""
+	}
+	
+	matches := re.FindStringSubmatch(code)
+	if len(matches) < 2 {
+		return false, ""
+	}
+	
+	// First captured group should be the indentation
+	indentation := matches[1]
+	return true, indentation
+}
+
+// replaceWithPattern replaces text using a regex pattern
+func (r *LearningReconciler) replaceWithPattern(code, pattern, replacement string) string {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		r.Log.Error(err, "Invalid regex pattern", "pattern", pattern)
+		return code
+	}
+	
+	return re.ReplaceAllString(code, replacement)
 }
 
 // setAgentVersionRef updates the agent's versionRef field to point to an optimized ConfigMap

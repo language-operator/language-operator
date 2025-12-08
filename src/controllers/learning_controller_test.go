@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -2027,4 +2028,396 @@ end`,
 			}
 		})
 	}
+}
+
+// TestGetCurrentAgentCode tests the improved getCurrentAgentCode function
+func TestGetCurrentAgentCode(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name           string
+		agent          *langopv1alpha1.LanguageAgent
+		agentVersions  []*langopv1alpha1.LanguageAgentVersion
+		configMaps     []*corev1.ConfigMap
+		expectedCode   string
+		expectError    bool
+	}{
+		{
+			name: "code stored directly in LanguageAgentVersion spec",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: langopv1alpha1.LanguageAgentSpec{
+					AgentVersionRef: &langopv1alpha1.AgentVersionReference{
+						Name: "test-agent-v1",
+					},
+				},
+			},
+			agentVersions: []*langopv1alpha1.LanguageAgentVersion{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v1",
+						Namespace: "default",
+						Labels: map[string]string{
+							"langop.io/agent": "test-agent",
+						},
+					},
+					Spec: langopv1alpha1.LanguageAgentVersionSpec{
+						Version: 1,
+						Code: `require 'language_operator'
+
+agent "test-agent" do
+  description "Test agent"
+  
+  task(:example_task,
+    instructions: "Do something",
+    inputs: {},
+    outputs: { result: 'string' })
+    
+  main do |inputs|
+    execute_task(:example_task)
+  end
+end`,
+					},
+				},
+			},
+			expectedCode: `require 'language_operator'
+
+agent "test-agent" do
+  description "Test agent"
+  
+  task(:example_task,
+    instructions: "Do something",
+    inputs: {},
+    outputs: { result: 'string' })
+    
+  main do |inputs|
+    execute_task(:example_task)
+  end
+end`,
+			expectError: false,
+		},
+		{
+			name: "code stored in ConfigMap referenced by LanguageAgentVersion",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: langopv1alpha1.LanguageAgentSpec{
+					AgentVersionRef: &langopv1alpha1.AgentVersionReference{
+						Name: "test-agent-v2",
+					},
+				},
+			},
+			agentVersions: []*langopv1alpha1.LanguageAgentVersion{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v2",
+						Namespace: "default",
+						Labels: map[string]string{
+							"langop.io/agent": "test-agent",
+						},
+					},
+					Spec: langopv1alpha1.LanguageAgentVersionSpec{
+						Version: 2,
+						// No code in spec, should fall back to ConfigMap
+					},
+					Status: langopv1alpha1.LanguageAgentVersionStatus{
+						ConfigMapName: "test-agent-v2",
+					},
+				},
+			},
+			configMaps: []*corev1.ConfigMap{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v2",
+						Namespace: "default",
+					},
+					Data: map[string]string{
+						"agent.rb": `require 'language_operator'
+
+agent "test-agent" do
+  description "Updated test agent"
+  
+  task(:updated_task,
+    instructions: "Do something better",
+    inputs: {},
+    outputs: { result: 'string' })
+    
+  main do |inputs|
+    execute_task(:updated_task)
+  end
+end`,
+					},
+				},
+			},
+			expectedCode: `require 'language_operator'
+
+agent "test-agent" do
+  description "Updated test agent"
+  
+  task(:updated_task,
+    instructions: "Do something better",
+    inputs: {},
+    outputs: { result: 'string' })
+    
+  main do |inputs|
+    execute_task(:updated_task)
+  end
+end`,
+			expectError: false,
+		},
+		{
+			name: "no version reference, uses latest version",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				// No AgentVersionRef - should use latest version
+			},
+			agentVersions: []*langopv1alpha1.LanguageAgentVersion{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v1",
+						Namespace: "default",
+						Labels: map[string]string{
+							"langop.io/agent": "test-agent",
+						},
+					},
+					Spec: langopv1alpha1.LanguageAgentVersionSpec{
+						Version: 1,
+						Code:    "# Version 1 code",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v3",
+						Namespace: "default",
+						Labels: map[string]string{
+							"langop.io/agent": "test-agent",
+						},
+					},
+					Spec: langopv1alpha1.LanguageAgentVersionSpec{
+						Version: 3,
+						Code:    "# Version 3 code (latest)",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-agent-v2",
+						Namespace: "default",
+						Labels: map[string]string{
+							"langop.io/agent": "test-agent",
+						},
+					},
+					Spec: langopv1alpha1.LanguageAgentVersionSpec{
+						Version: 2,
+						Code:    "# Version 2 code",
+					},
+				},
+			},
+			expectedCode: "# Version 3 code (latest)",
+			expectError:  false,
+		},
+		{
+			name: "no LanguageAgentVersion exists - returns empty code",
+			agent: &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+			},
+			agentVersions: []*langopv1alpha1.LanguageAgentVersion{},
+			expectedCode:  "",
+			expectError:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := []client.Object{tt.agent}
+			
+			// Add LanguageAgentVersions to objects
+			for _, version := range tt.agentVersions {
+				objects = append(objects, version)
+			}
+			
+			// Add ConfigMaps to objects
+			for _, cm := range tt.configMaps {
+				objects = append(objects, cm)
+			}
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			reconciler := &LearningReconciler{
+				Client: fakeClient,
+				Log:    ctrl.Log.WithName("test-learning"),
+			}
+
+			ctx := context.Background()
+			code, err := reconciler.getCurrentAgentCode(ctx, tt.agent)
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Expected no error but got: %v", err)
+				assert.Equal(t, tt.expectedCode, code, "Agent code should match expected")
+			}
+		})
+	}
+}
+
+// TestCompleteOptimizationWorkflow tests the full optimization workflow
+// to ensure it produces complete executable agent code 
+func TestCompleteOptimizationWorkflow(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, langopv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	// Create agent with a LanguageAgentVersion containing complete agent DSL
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			AgentVersionRef: &langopv1alpha1.AgentVersionReference{
+				Name: "test-agent-v1",
+			},
+		},
+	}
+
+	// Complete agent code similar to s003 example
+	completeAgentCode := `require 'language_operator'
+
+agent "test-agent" do
+  description "A test agent for optimization"
+  mode :scheduled
+  schedule "*/5 * * * *"
+
+  task(:read_data,
+    instructions: "Read some data from a file",
+    inputs: {},
+    outputs: { content: 'string', line_count: 'integer' })
+
+  task(:process_data,
+    instructions: "Process the data in some way", 
+    inputs: { content: 'string' },
+    outputs: { result: 'string' })
+
+  main do |inputs|
+    data = execute_task(:read_data)
+    result = execute_task(:process_data, inputs: { content: data[:content] })
+    { processed_result: result[:result] }
+  end
+
+  constraints do
+    max_iterations 999999
+    timeout "10m"
+  end
+
+  output do |outputs|
+    puts "Processed: #{outputs[:processed_result]}"
+  end
+end`
+
+	agentVersion := &langopv1alpha1.LanguageAgentVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent-v1",
+			Namespace: "default",
+			Labels: map[string]string{
+				"langop.io/agent": "test-agent",
+			},
+		},
+		Spec: langopv1alpha1.LanguageAgentVersionSpec{
+			Version: 1,
+			Code:    completeAgentCode,
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, agentVersion).
+		Build()
+
+	reconciler := &LearningReconciler{
+		Client: fakeClient,
+		Log:    ctrl.Log.WithName("test-learning"),
+	}
+
+	// Test 1: Verify getCurrentAgentCode retrieves complete agent structure
+	t.Run("getCurrentAgentCode_retrieves_complete_structure", func(t *testing.T) {
+		ctx := context.Background()
+		retrievedCode, err := reconciler.getCurrentAgentCode(ctx, agent)
+		
+		assert.NoError(t, err)
+		assert.Equal(t, completeAgentCode, retrievedCode)
+		
+		// Verify it contains all essential agent parts
+		assert.Contains(t, retrievedCode, "require 'language_operator'")
+		assert.Contains(t, retrievedCode, "agent \"test-agent\" do")
+		assert.Contains(t, retrievedCode, "description \"A test agent for optimization\"")
+		assert.Contains(t, retrievedCode, "mode :scheduled")
+		assert.Contains(t, retrievedCode, "schedule \"*/5 * * * *\"")
+		assert.Contains(t, retrievedCode, "main do |inputs|")
+		assert.Contains(t, retrievedCode, "constraints do")
+		assert.Contains(t, retrievedCode, "output do |outputs|")
+		
+		// Count the number of 'end' statements - should be balanced
+		endCount := len(strings.Split(retrievedCode, "end")) - 1
+		// Should have: agent end, main end, constraints end, output end = 4 ends minimum
+		assert.GreaterOrEqual(t, endCount, 4, "Should have adequate 'end' statements for complete structure")
+	})
+
+	// Test 2: Test fallback merge with complete agent structure
+	t.Run("fallback_merge_preserves_complete_structure", func(t *testing.T) {
+		// Simulate optimized tasks that would be produced by learning
+		optimizedTasks := map[string]OptimizedTask{
+			"read_data": {
+				Code:    "result = File.read('/tmp/data.txt')\n{ content: result, line_count: result.lines.count }",
+				Inputs:  "{}",
+				Outputs: `{ "content": "string", "line_count": "integer" }`,
+			},
+		}
+
+		// Test fallback merge logic
+		result := reconciler.fallbackMergeOptimizedTasks(completeAgentCode, optimizedTasks)
+
+		// The result should still be a complete, executable agent
+		assert.Contains(t, result, "require 'language_operator'")
+		assert.Contains(t, result, "agent \"test-agent\" do")
+		assert.Contains(t, result, "description \"A test agent for optimization\"")
+		assert.Contains(t, result, "mode :scheduled")
+		assert.Contains(t, result, "schedule \"*/5 * * * *\"")
+		assert.Contains(t, result, "main do |inputs|")
+		assert.Contains(t, result, "constraints do")
+		assert.Contains(t, result, "output do |outputs|")
+		
+		// Should contain the optimized task
+		assert.Contains(t, result, "File.read('/tmp/data.txt')")
+		
+		// Should NOT contain duplicate task definitions 
+		// Count occurrences of "task(:read_data" - should be exactly 1
+		taskOccurrences := len(strings.Split(result, "task(:read_data")) - 1
+		assert.Equal(t, 1, taskOccurrences, "Should have exactly 1 occurrence of read_data task, found %d", taskOccurrences)
+		
+		// Verify the task was replaced (not appended) by checking it has the new code
+		assert.Contains(t, result, "task(:read_data,")
+		assert.Contains(t, result, "inputs: {},")
+		assert.Contains(t, result, "outputs: { \"content\": \"string\", \"line_count\": \"integer\" }")
+		
+		// Original task code should be gone
+		assert.NotContains(t, result, "Read some data from a file", "Original task instructions should be replaced")
+
+		t.Logf("Complete optimized agent:\n%s", result)
+	})
 }
