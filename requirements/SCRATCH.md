@@ -32,9 +32,9 @@
 
 ### Deployment Process
 - ⚠️ **CANNOT** build/deploy operator locally from source
-- **YOU CAN ONLY DEPLOY THE FUCKING OPERATOR FROM CI**
+- **Operator deployment must go through CI pipeline only**
 - Must push changes to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
-- Use `git push` workflow, not `make operator` or local builds
+- Use `git push` workflow, not local Docker builds
 
 ### Critical Guidelines
 - **ConfigMap versioning**: Always preserve v1 (initial synthesis)

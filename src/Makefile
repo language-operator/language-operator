@@ -57,10 +57,6 @@ build: manifests generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/main.go
 
-.PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} -f Dockerfile ..
-
 .PHONY: scan
 scan: ## Scan docker image with Trivy.
 	trivy image ${IMG}
@@ -68,10 +64,6 @@ scan: ## Scan docker image with Trivy.
 .PHONY: shell
 shell: ## Run interactive shell in container.
 	docker run --rm -it ${IMG} /bin/sh
-
-.PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
 
 ##@ Helm Chart Support
 # NOTE: To deploy the operator, use the Helm chart in ../chart/

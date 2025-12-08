@@ -1,4 +1,4 @@
-.PHONY: build help k8s-install k8s-uninstall k8s-status operator test test-unit test-integration setup-hooks
+.PHONY: help k8s-status test test-unit test-integration setup-hooks
 
 QA_PROMPT := "/task test"
 ITERATE_PROMPT := "/task iterate"
@@ -25,18 +25,6 @@ qa:
 setup-hooks:
 	@./scripts/setup-hooks
 
-# Build all Docker images using the build script
-build:
-	@./scripts/build
-
-# Install the language operator to Kubernetes
-k8s-install:
-	@cd src && $(MAKE) deploy
-
-# Uninstall the language operator from Kubernetes
-k8s-uninstall:
-	@cd src && $(MAKE) undeploy
-
 # Check Kubernetes resources status
 k8s-status:
 	@echo "Language Operator Resources:"
@@ -45,9 +33,6 @@ k8s-status:
 	@echo "Operator Status:"
 	@kubectl get pods -n language-operator-system
 
-# Build and install the operator
-operator:
-	@cd src && $(MAKE) docker-build docker-push deploy
 
 # Generate CRD API documentation
 docs:
@@ -84,9 +69,7 @@ test-integration:
 help:
 	@echo "Hi :-)"
 	@echo ""
-	@echo "Build & Management:"
-	@echo "  build             - Build all Docker images"
-	@echo "  operator          - Build and deploy the language operator"
+	@echo "Development:"
 	@echo "  docs              - Generate CRD API reference documentation"
 	@echo "  setup-hooks       - Install git pre-commit hooks for code quality"
 	@echo ""
@@ -96,15 +79,9 @@ help:
 	@echo "  test-integration  - Run integration tests (fake K8s client)"
 	@echo ""
 	@echo "Kubernetes Operations:"
-	@echo "  k8s-install       - Install the language operator to Kubernetes"
-	@echo "  k8s-uninstall     - Uninstall the language operator from Kubernetes"
 	@echo "  k8s-status        - Check status of all language resources"
 	@echo ""
-	@echo "Quick Start:"
-	@echo "  1. Ensure you have a Kubernetes cluster (kind, minikube, etc.)"
-	@echo "  2. Run 'make operator' to build and deploy the operator"
-	@echo "  3. Apply LanguageCluster, LanguageAgent, and LanguageTool CRDs"
-	@echo "  4. Check status with 'make k8s-status'"
+	@echo "Note: Docker builds and deployment happen via CI/CD pipeline"
 
 fetch-synthesis-templates:
 	@echo "Fetching synthesis templates from language-operator-gem..."
