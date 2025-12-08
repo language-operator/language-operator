@@ -89,6 +89,28 @@ gem install language-operator
 aictl quickstart
 ```
 
+## Development Setup
+
+### Setting Up Git Hooks
+
+To ensure code quality, set up the pre-commit hooks:
+
+```bash
+# Run the setup script to install git hooks
+./scripts/setup-hooks
+```
+
+This installs a pre-commit hook that automatically:
+- Checks code formatting with `go fmt`
+- Runs static analysis with `go vet`  
+- Runs tests for modified packages
+- Verifies generated files are up-to-date
+
+To bypass the hook temporarily (not recommended), use:
+```bash
+git commit --no-verify
+```
+
 ## Requirements
 
 - Kubernetes 1.26+

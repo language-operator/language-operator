@@ -1,4 +1,4 @@
-.PHONY: build help k8s-install k8s-uninstall k8s-status operator test test-unit test-integration
+.PHONY: build help k8s-install k8s-uninstall k8s-status operator test test-unit test-integration setup-hooks
 
 QA_PROMPT := "/task test"
 ITERATE_PROMPT := "/task iterate"
@@ -20,6 +20,10 @@ iterate:
 # Use claude to find bugs
 qa:
 	@claude --dangerously-skip-permissions $(QA_PROMPT)
+
+# Set up git hooks for development
+setup-hooks:
+	@./scripts/setup-hooks
 
 # Build all Docker images using the build script
 build:
@@ -84,6 +88,7 @@ help:
 	@echo "  build             - Build all Docker images"
 	@echo "  operator          - Build and deploy the language operator"
 	@echo "  docs              - Generate CRD API reference documentation"
+	@echo "  setup-hooks       - Install git pre-commit hooks for code quality"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test              - Run all tests"

@@ -1,0 +1,87 @@
+#!/bin/bash
+# Setup script for git hooks in language-operator project
+
+set -e
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# Get the project root directory
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+
+if [ ! -d "$PROJECT_ROOT/.git" ]; then
+    echo -e "${RED}Error: Not in a git repository${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Setting up git hooks for language-operator...${NC}"
+
+# Create hooks directory if it doesn't exist
+mkdir -p "$PROJECT_ROOT/.git/hooks"
+
+# Copy pre-commit hook
+HOOK_SOURCE="$PROJECT_ROOT/scripts/pre-commit"
+HOOK_DEST="$PROJECT_ROOT/.git/hooks/pre-commit"
+
+if [ ! -f "$HOOK_SOURCE" ]; then
+    echo -e "${RED}Error: Pre-commit hook source not found at $HOOK_SOURCE${NC}"
+    exit 1
+fi
+
+# Backup existing hook if present
+if [ -f "$HOOK_DEST" ]; then
+    echo -e "${YELLOW}Backing up existing pre-commit hook to pre-commit.backup${NC}"
+    cp "$HOOK_DEST" "$HOOK_DEST.backup"
+fi
+
+# Install the hook
+cp "$HOOK_SOURCE" "$HOOK_DEST"
+chmod +x "$HOOK_DEST"
+
+echo -e "${GREEN}✓ Pre-commit hook installed successfully${NC}"
+
+# Check for required tools
+echo -e "${YELLOW}Checking for required tools...${NC}"
+
+MISSING_TOOLS=()
+
+if ! command -v go &> /dev/null; then
+    MISSING_TOOLS+=("go")
+fi
+
+if ! command -v gofmt &> /dev/null; then
+    MISSING_TOOLS+=("gofmt")
+fi
+
+if ! command -v git &> /dev/null; then
+    MISSING_TOOLS+=("git")
+fi
+
+if ! command -v make &> /dev/null; then
+    MISSING_TOOLS+=("make")
+fi
+
+if [ ${#MISSING_TOOLS[@]} -eq 0 ]; then
+    echo -e "${GREEN}✓ All required tools are installed${NC}"
+else
+    echo -e "${RED}Warning: The following required tools are missing:${NC}"
+    for tool in "${MISSING_TOOLS[@]}"; do
+        echo "  - $tool"
+    done
+    echo -e "${YELLOW}Please install missing tools for the pre-commit hook to work properly${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}Setup complete!${NC}"
+echo ""
+echo "The pre-commit hook will now run automatically before each commit to:"
+echo "  • Check code formatting with 'go fmt'"
+echo "  • Run static analysis with 'go vet'"
+echo "  • Run tests for modified packages"
+echo "  • Verify generated files are up-to-date"
+echo ""
+echo "To bypass the hook temporarily, use: git commit --no-verify"
+echo "To uninstall the hook, run: rm $HOOK_DEST"
