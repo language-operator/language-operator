@@ -46,6 +46,43 @@ class AgentCodeReconstructor
 
   private
 
+  # Convert JSON schema to Ruby hash syntax with proper type quoting
+  def convert_json_schema_to_ruby(json_schema)
+    return '' if json_schema.nil? || json_schema.strip.empty? || json_schema.strip == '{}'
+    
+    begin
+      # Parse JSON to get the hash structure
+      schema_hash = JSON.parse(json_schema)
+      
+      # Convert to Ruby hash syntax with quoted type values
+      ruby_pairs = schema_hash.map do |key, value|
+        quoted_value = value.is_a?(String) ? "\"#{value}\"" : value.inspect
+        "#{key}: #{quoted_value}"
+      end
+      
+      ruby_pairs.join(', ')
+    rescue JSON::ParserError
+      # If JSON parsing fails, try to extract key-value pairs manually
+      # Remove outer braces and split by commas
+      content = json_schema.gsub(/^\s*\{\s*|\s*\}\s*$/, '').strip
+      return '' if content.empty?
+      
+      # Handle simple case: "key": "value" pairs
+      pairs = content.split(/,\s*/).map do |pair|
+        if pair.match(/^\s*"?([^":]+)"?\s*:\s*"?([^"]+)"?\s*$/)
+          key = $1.strip.gsub(/^"|"$/, '')
+          value = $2.strip.gsub(/^"|"$/, '')
+          # Always quote the type value in Ruby syntax
+          "#{key}: \"#{value}\""
+        else
+          pair.strip
+        end
+      end
+      
+      pairs.join(', ')
+    end
+  end
+
   # Replace a task definition in the agent code
   def replace_task_definition(code, task_name, optimized_code, inputs = '{}', outputs = '{}')
     # Pattern for neural tasks: task(:name, instructions: "...", inputs: {...}, outputs: {...})
@@ -76,9 +113,9 @@ class AgentCodeReconstructor
     
     # Use provided inputs/outputs if available, otherwise parse from original params
     if inputs != '{}' && outputs != '{}'
-      # Use the provided schema from OptimizedTask
-      inputs_str = inputs.gsub(/[{}"]/, '').strip
-      outputs_str = outputs.gsub(/[{}"]/, '').strip  
+      # Convert JSON schema to Ruby hash syntax with proper quoting
+      inputs_str = convert_json_schema_to_ruby(inputs)
+      outputs_str = convert_json_schema_to_ruby(outputs)
     else
       # Parse the original parameters to extract inputs and outputs
       inputs_match = original_params.match(/inputs:\s*\{([^}]*)\}/)

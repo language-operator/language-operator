@@ -3884,14 +3884,14 @@ func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *lan
 			Name:      agent.Spec.AgentVersionRef.Name,
 			Namespace: agent.Namespace,
 		}, activeVersion)
-		
+
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				r.Log.Info("Referenced AgentVersion not found, falling back to latest",
 					"agent", agent.Name,
 					"referencedVersion", agent.Spec.AgentVersionRef.Name)
 			} else {
-				return "", fmt.Errorf("failed to get referenced LanguageAgentVersion %s: %w", 
+				return "", fmt.Errorf("failed to get referenced LanguageAgentVersion %s: %w",
 					agent.Spec.AgentVersionRef.Name, err)
 			}
 		}
@@ -3930,7 +3930,7 @@ func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *lan
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return "", fmt.Errorf("ConfigMap %s referenced by LanguageAgentVersion %s not found", 
+			return "", fmt.Errorf("ConfigMap %s referenced by LanguageAgentVersion %s not found",
 				configMapName, activeVersion.Name)
 		}
 		return "", fmt.Errorf("failed to get ConfigMap %s: %w", configMapName, err)
@@ -4117,7 +4117,7 @@ func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, opt
 	for taskName, optimized := range optimizedTasks {
 		// Try to replace existing task definition first
 		replacedCode := r.replaceTaskDefinition(mergedCode, taskName, optimized)
-		
+
 		if replacedCode != mergedCode {
 			// Successfully replaced existing task
 			mergedCode = replacedCode
@@ -4156,13 +4156,13 @@ func (r *LearningReconciler) replaceTaskDefinition(code, taskName string, optimi
 	if strings.Contains(code, neuralStart) {
 		return r.replaceNeuralTask(code, taskName, optimized)
 	}
-	
+
 	// Look for symbolic task pattern: task :taskname do
-	symbolicStart := fmt.Sprintf("task :%s do", taskName) 
+	symbolicStart := fmt.Sprintf("task :%s do", taskName)
 	if strings.Contains(code, symbolicStart) {
 		return r.replaceSymbolicTask(code, taskName, optimized)
 	}
-	
+
 	// No match found - return unchanged
 	return code
 }
@@ -4172,10 +4172,10 @@ func (r *LearningReconciler) replaceNeuralTask(code, taskName string, optimized 
 	lines := strings.Split(code, "\n")
 	result := []string{}
 	i := 0
-	
+
 	for i < len(lines) {
 		line := lines[i]
-		
+
 		// Look for the start of our target task
 		if strings.Contains(line, fmt.Sprintf("task(:%s,", taskName)) {
 			// Extract indentation from this line
@@ -4187,7 +4187,7 @@ func (r *LearningReconciler) replaceNeuralTask(code, taskName string, optimized 
 					break
 				}
 			}
-			
+
 			// Skip lines until we find the line with outputs (neural tasks don't have a do block)
 			// Neural tasks are single statements ending with )
 			for i < len(lines) && !strings.Contains(lines[i], "outputs:") {
@@ -4197,7 +4197,7 @@ func (r *LearningReconciler) replaceNeuralTask(code, taskName string, optimized 
 			if i < len(lines) {
 				i++
 			}
-			
+
 			// Generate replacement task
 			replacement := r.buildTaskDefinitionWithIndentation(taskName, optimized, indentation)
 			result = append(result, replacement)
@@ -4206,7 +4206,7 @@ func (r *LearningReconciler) replaceNeuralTask(code, taskName string, optimized 
 		}
 		i++
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -4215,10 +4215,10 @@ func (r *LearningReconciler) replaceSymbolicTask(code, taskName string, optimize
 	lines := strings.Split(code, "\n")
 	result := []string{}
 	i := 0
-	
+
 	for i < len(lines) {
 		line := lines[i]
-		
+
 		// Look for the start of our target task
 		if strings.Contains(line, fmt.Sprintf("task :%s do", taskName)) {
 			// Extract indentation from this line
@@ -4230,7 +4230,7 @@ func (r *LearningReconciler) replaceSymbolicTask(code, taskName string, optimize
 					break
 				}
 			}
-			
+
 			// Skip lines until we find the matching end
 			depth := 1
 			i++ // Move past the task line
@@ -4242,7 +4242,7 @@ func (r *LearningReconciler) replaceSymbolicTask(code, taskName string, optimize
 				}
 				i++
 			}
-			
+
 			// Generate replacement task
 			replacement := r.buildTaskDefinitionWithIndentation(taskName, optimized, indentation)
 			result = append(result, replacement)
@@ -4251,7 +4251,7 @@ func (r *LearningReconciler) replaceSymbolicTask(code, taskName string, optimize
 		}
 		i++
 	}
-	
+
 	return strings.Join(result, "\n")
 }
 
@@ -4263,15 +4263,66 @@ func (r *LearningReconciler) buildTaskDefinition(taskName string, optimized Opti
 // buildTaskDefinitionWithIndentation creates the Ruby task definition with proper indentation
 func (r *LearningReconciler) buildTaskDefinitionWithIndentation(taskName string, optimized OptimizedTask, indentation string) string {
 	if optimized.Inputs != "" && optimized.Outputs != "" {
+		// Convert JSON schemas to Ruby hash syntax with proper quoting
+		inputsRuby := r.convertSchemaToRuby(optimized.Inputs)
+		outputsRuby := r.convertSchemaToRuby(optimized.Outputs)
+
 		// Format with schema for neural tasks
-		return fmt.Sprintf("%stask(:%s,\n%s       inputs: %s,\n%s       outputs: %s) do |inputs|\n%s\n%send",
-			indentation, taskName, indentation, optimized.Inputs, indentation, optimized.Outputs,
+		return fmt.Sprintf("%stask(:%s,\n%s       inputs: { %s },\n%s       outputs: { %s }) do |inputs|\n%s\n%send",
+			indentation, taskName, indentation, inputsRuby, indentation, outputsRuby,
 			r.indentCode(optimized.Code, indentation+"  "), indentation)
 	} else {
-		// Format without schema for symbolic tasks  
+		// Format without schema for symbolic tasks
 		return fmt.Sprintf("%stask :%s do |inputs|\n%s\n%send",
 			indentation, taskName, r.indentCode(optimized.Code, indentation+"  "), indentation)
 	}
+}
+
+// convertSchemaToRuby converts JSON schema to Ruby hash syntax with proper type quoting
+func (r *LearningReconciler) convertSchemaToRuby(jsonSchema string) string {
+	trimmed := strings.TrimSpace(jsonSchema)
+	if jsonSchema == "" || trimmed == "{}" {
+		return ""
+	}
+
+	// Parse JSON to get the hash structure
+	var schemaMap map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonSchema), &schemaMap); err != nil {
+		// If JSON parsing fails, try to handle simple key:value pairs manually
+		content := strings.Trim(jsonSchema, "{}")
+		content = strings.TrimSpace(content)
+		if content == "" {
+			return ""
+		}
+
+		// Split by commas and convert each pair
+		pairs := strings.Split(content, ",")
+		var rubyPairs []string
+		for _, pair := range pairs {
+			pair = strings.TrimSpace(pair)
+			// Match "key": "value" or key: value patterns
+			if parts := strings.SplitN(pair, ":", 2); len(parts) == 2 {
+				key := strings.Trim(strings.TrimSpace(parts[0]), `"`)
+				value := strings.Trim(strings.TrimSpace(parts[1]), `"`)
+				rubyPairs = append(rubyPairs, fmt.Sprintf(`%s: "%s"`, key, value))
+			}
+		}
+		return strings.Join(rubyPairs, ", ")
+	}
+
+	// Convert parsed map to Ruby hash syntax with quoted type values
+	var rubyPairs []string
+	for key, value := range schemaMap {
+		var quotedValue string
+		if strValue, ok := value.(string); ok {
+			quotedValue = fmt.Sprintf(`"%s"`, strValue)
+		} else {
+			quotedValue = fmt.Sprintf("%v", value)
+		}
+		rubyPairs = append(rubyPairs, fmt.Sprintf(`%s: %s`, key, quotedValue))
+	}
+
+	return strings.Join(rubyPairs, ", ")
 }
 
 // indentCode adds indentation to each line of code
@@ -4296,14 +4347,14 @@ func (r *LearningReconciler) insertNewTask(code, taskName, taskDef string) strin
 		replacement := fmt.Sprintf("$1\n  # Optimized task: %s\n%s\n$1$2", taskName, taskDef)
 		return r.replaceWithPattern(code, mainPattern, replacement)
 	}
-	
+
 	// Try to insert before final end
 	finalEndPattern := `(\n\s*)(end\s*$)`
 	if strings.HasSuffix(strings.TrimSpace(code), "end") {
 		replacement := fmt.Sprintf("$1\n  # Optimized task: %s\n%s\n$1$2", taskName, taskDef)
 		return r.replaceWithPattern(code, finalEndPattern, replacement)
 	}
-	
+
 	// Fallback: append at end
 	return fmt.Sprintf("%s\n\n  # Optimized task: %s\n%s", code, taskName, taskDef)
 }
@@ -4315,12 +4366,12 @@ func (r *LearningReconciler) matchAndExtractIndentation(code, pattern string) (b
 		r.Log.Error(err, "Invalid regex pattern", "pattern", pattern)
 		return false, ""
 	}
-	
+
 	matches := re.FindStringSubmatch(code)
 	if len(matches) < 2 {
 		return false, ""
 	}
-	
+
 	// First captured group should be the indentation
 	indentation := matches[1]
 	return true, indentation
@@ -4333,7 +4384,7 @@ func (r *LearningReconciler) replaceWithPattern(code, pattern, replacement strin
 		r.Log.Error(err, "Invalid regex pattern", "pattern", pattern)
 		return code
 	}
-	
+
 	return re.ReplaceAllString(code, replacement)
 }
 
