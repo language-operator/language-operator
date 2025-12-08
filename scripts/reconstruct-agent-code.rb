@@ -48,9 +48,9 @@ class AgentCodeReconstructor
 
   # Replace a task definition in the agent code
   def replace_task_definition(code, task_name, optimized_code, inputs = '{}', outputs = '{}')
-    # Pattern for neural tasks: task :name, instructions: "...", inputs: {...}, outputs: {...}
-    # This pattern matches multiline task definitions with proper Ruby DSL syntax
-    task_pattern = /^(\s*)task\s+:#{Regexp.escape(task_name)}\s*,\s*\n?(.*?)(?=\n\s*(?:task\s|main\s|end\s*$|\Z))/m
+    # Pattern for neural tasks: task(:name, instructions: "...", inputs: {...}, outputs: {...})
+    # This pattern matches multiline task definitions with parentheses syntax
+    task_pattern = /^(\s*)task\s*\(\s*:#{Regexp.escape(task_name)}\s*,\s*\n?(.*?)\)\s*$/m
     
     if match = code.match(task_pattern)
       indentation = match[1]
@@ -70,6 +70,10 @@ class AgentCodeReconstructor
 
   # Build the replacement task with proper formatting
   def build_replacement_task(task_name, optimized_code, original_params, indentation, inputs = '{}', outputs = '{}')
+    # Extract the original instructions text to preserve it
+    instructions_match = original_params.match(/instructions:\s*"([^"]*)"/)
+    instructions_text = instructions_match ? instructions_match[1] : "Optimized symbolic task"
+    
     # Use provided inputs/outputs if available, otherwise parse from original params
     if inputs != '{}' && outputs != '{}'
       # Use the provided schema from OptimizedTask
@@ -90,9 +94,10 @@ class AgentCodeReconstructor
     indented_body += "\n" unless indented_body.end_with?("\n")
 
     <<~TASK.chomp
-      #{indentation}task :#{task_name},
+      #{indentation}task(:#{task_name},
+      #{indentation}     instructions: "#{instructions_text}",
       #{indentation}     inputs: { #{inputs_str} },
-      #{indentation}     outputs: { #{outputs_str} } do |inputs|
+      #{indentation}     outputs: { #{outputs_str} }) do |inputs|
       #{indented_body}#{indentation}end
     TASK
   end
