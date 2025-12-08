@@ -27,7 +27,7 @@ The Language Operator provides Custom Resources for deploying and managing AI in
 
 ```bash
 helm install language-operator ./chart \
-  --namespace language-operator-system \
+  --namespace language-operator \
   --create-namespace
 ```
 
@@ -35,7 +35,7 @@ helm install language-operator ./chart \
 
 ```bash
 helm install language-operator ./chart \
-  --namespace language-operator-system \
+  --namespace language-operator \
   --create-namespace \
   --values my-values.yaml
 ```
@@ -244,7 +244,7 @@ spec:
 
 ```bash
 helm upgrade language-operator ./chart \
-  --namespace language-operator-system \
+  --namespace language-operator \
   --values my-values.yaml
 ```
 
@@ -253,7 +253,7 @@ Check the [CHANGELOG](../CHANGELOG.md) for breaking changes between versions.
 ## Uninstalling
 
 ```bash
-helm uninstall language-operator --namespace language-operator-system
+helm uninstall language-operator --namespace language-operator
 ```
 
 **Note:** CRDs are kept by default. To remove them:
@@ -277,7 +277,7 @@ make docker-build IMG=localhost:5000/language-operator:dev
 
 # Install chart with local image
 helm install language-operator ./chart \
-  --namespace language-operator-system \
+  --namespace language-operator \
   --create-namespace \
   --set image.repository=localhost:5000/language-operator \
   --set image.tag=dev \
@@ -288,10 +288,10 @@ helm install language-operator ./chart \
 
 ```bash
 # View operator logs
-kubectl logs -n language-operator-system -l app.kubernetes.io/name=language-operator -f
+kubectl logs -n language-operator -l app.kubernetes.io/name=language-operator -f
 
 # Check operator status
-kubectl get pods -n language-operator-system
+kubectl get pods -n language-operator
 
 # Verify CRDs are installed
 kubectl get crds | grep langop.io
@@ -332,8 +332,8 @@ Each controller reconciles its resources independently with leader election for 
 
 Check events and logs:
 ```bash
-kubectl describe pod -n language-operator-system -l app.kubernetes.io/name=language-operator
-kubectl logs -n language-operator-system -l app.kubernetes.io/name=language-operator
+kubectl describe pod -n language-operator -l app.kubernetes.io/name=language-operator
+kubectl logs -n language-operator -l app.kubernetes.io/name=language-operator
 ```
 
 ### CRDs not installing
