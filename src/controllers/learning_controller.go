@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -37,6 +38,13 @@ import (
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 )
+
+// OptimizedTask contains both the optimized code and its schema information
+type OptimizedTask struct {
+	Code    string // The optimized task body code from LLM
+	Inputs  string // JSON schema for inputs
+	Outputs string // JSON schema for outputs
+}
 
 // LearningReconciler reconciles learning events and triggers re-synthesis
 type LearningReconciler struct {
@@ -276,7 +284,7 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	log.Info("Identified tasks for optimization", "agent", agent.Name, "taskCount", len(tasksToOptimize))
 
 	// Optimize each task individually and collect results
-	optimizedTasks := make(map[string]string) // taskName -> optimized Ruby code
+	optimizedTasks := make(map[string]OptimizedTask) // taskName -> optimized task with schema
 	for _, taskReq := range tasksToOptimize {
 		log.Info("Optimizing task", "task", taskReq.TaskName, "agent", agent.Name)
 
@@ -307,8 +315,12 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			"explanation", taskResponse.Explanation,
 			"codeLength", len(*taskResponse.Code))
 
-		// Store optimized task code for later application
-		optimizedTasks[taskReq.TaskName] = *taskResponse.Code
+		// Store optimized task with schema information
+		optimizedTasks[taskReq.TaskName] = OptimizedTask{
+			Code:    *taskResponse.Code,
+			Inputs:  taskReq.Inputs,
+			Outputs: taskReq.Outputs,
+		}
 	}
 
 	if len(optimizedTasks) == 0 {
@@ -3805,7 +3817,7 @@ func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, a
 }
 
 // applyOptimizedTasks merges optimized task implementations into the agent's DSL and creates a versioned ConfigMap
-func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]string, synthesizer synthesis.AgentSynthesizer) error {
+func (r *LearningReconciler) applyOptimizedTasks(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]OptimizedTask, synthesizer synthesis.AgentSynthesizer) error {
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
 
 	// Get the current agent code from the existing ConfigMap
@@ -3886,7 +3898,7 @@ func (r *LearningReconciler) getCurrentAgentCode(ctx context.Context, agent *lan
 
 // mergeOptimizedTasks merges optimized task implementations into the current agent DSL code
 // using Ruby AST parsing for proper code reconstruction
-func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTasks map[string]string) (string, error) {
+func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTasks map[string]OptimizedTask) (string, error) {
 	if len(optimizedTasks) == 0 {
 		return currentCode, nil
 	}
@@ -3908,7 +3920,7 @@ func (r *LearningReconciler) mergeOptimizedTasks(currentCode string, optimizedTa
 }
 
 // reconstructAgentCodeWithRuby uses Ruby script for AST-based code reconstruction
-func (r *LearningReconciler) reconstructAgentCodeWithRuby(originalCode string, optimizedTasks map[string]string) (string, error) {
+func (r *LearningReconciler) reconstructAgentCodeWithRuby(originalCode string, optimizedTasks map[string]OptimizedTask) (string, error) {
 	// Prepare input JSON for Ruby script
 	input := map[string]interface{}{
 		"original_code":   originalCode,
@@ -3947,6 +3959,12 @@ func (r *LearningReconciler) reconstructAgentCodeWithRuby(originalCode string, o
 		return "", fmt.Errorf("reconstruction script produced empty output")
 	}
 
+	// Validate Ruby syntax before returning
+	if err := r.validateRubySyntax(reconstructedCode); err != nil {
+		r.Log.Error(err, "Generated code has Ruby syntax errors, falling back")
+		return "", fmt.Errorf("generated code has syntax errors: %w", err)
+	}
+
 	return reconstructedCode, nil
 }
 
@@ -3973,17 +3991,74 @@ func (r *LearningReconciler) findReconstructionScript() string {
 	return "/usr/local/bin/reconstruct-agent-code.rb"
 }
 
+// validateRubySyntax checks if the given Ruby code has valid syntax using ruby -c
+func (r *LearningReconciler) validateRubySyntax(rubyCode string) error {
+	// Skip validation if Ruby is not available
+	if _, err := exec.LookPath("ruby"); err != nil {
+		r.Log.Info("Ruby not available, skipping syntax validation")
+		return nil
+	}
+
+	// Create a context with timeout for syntax checking
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Use ruby -c to check syntax
+	cmd := exec.CommandContext(ctx, "ruby", "-c")
+	cmd.Stdin = strings.NewReader(rubyCode)
+
+	// Capture stderr which contains syntax error messages
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("syntax validation timeout (>5s)")
+		}
+
+		// Extract syntax error message from stderr
+		errorMsg := strings.TrimSpace(stderr.String())
+		if errorMsg != "" {
+			return fmt.Errorf("Ruby syntax error: %s", errorMsg)
+		}
+
+		return fmt.Errorf("Ruby syntax validation failed: %w", err)
+	}
+
+	return nil
+}
+
 // fallbackMergeOptimizedTasks provides fallback behavior if Ruby reconstruction fails
-func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, optimizedTasks map[string]string) string {
+func (r *LearningReconciler) fallbackMergeOptimizedTasks(currentCode string, optimizedTasks map[string]OptimizedTask) string {
 	mergedCode := currentCode
 
-	for taskName, optimizedCode := range optimizedTasks {
-		optimizedTask := fmt.Sprintf("task :%s do |inputs|\n%s\nend", taskName, optimizedCode)
+	for taskName, optimized := range optimizedTasks {
+		// Generate proper Ruby task syntax with inputs/outputs schema
+		var taskDef string
+		if optimized.Inputs != "" && optimized.Outputs != "" {
+			// Format with schema for neural tasks
+			taskDef = fmt.Sprintf("task(:%s,\n       inputs: %s,\n       outputs: %s) do |inputs|\n%s\nend",
+				taskName, optimized.Inputs, optimized.Outputs, optimized.Code)
+		} else {
+			// Format without schema for symbolic tasks
+			taskDef = fmt.Sprintf("task :%s do |inputs|\n%s\nend", taskName, optimized.Code)
+		}
 
 		r.Log.Info("Adding optimized task (fallback mode)",
 			"taskName", taskName,
-			"optimizedCodeLength", len(optimizedCode))
-		mergedCode = fmt.Sprintf("%s\n\n# Optimized task (fallback): %s\n%s", mergedCode, taskName, optimizedTask)
+			"optimizedCodeLength", len(optimized.Code),
+			"hasInputsSchema", optimized.Inputs != "",
+			"hasOutputsSchema", optimized.Outputs != "")
+		mergedCode = fmt.Sprintf("%s\n\n# Optimized task (fallback): %s\n%s", mergedCode, taskName, taskDef)
+	}
+
+	// Validate final syntax
+	if err := r.validateRubySyntax(mergedCode); err != nil {
+		r.Log.Error(err, "Fallback code generation produced syntax errors",
+			"codeLength", len(mergedCode))
+		// Return original code if fallback also fails syntax validation
+		return currentCode
 	}
 
 	return mergedCode
@@ -3999,7 +4074,7 @@ func (r *LearningReconciler) setAgentVersionRef(ctx context.Context, agent *lang
 }
 
 // createAgentVersion creates a new LanguageAgentVersion resource with optimized code
-func (r *LearningReconciler) createAgentVersion(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]string, synthesizer synthesis.AgentSynthesizer) error {
+func (r *LearningReconciler) createAgentVersion(ctx context.Context, agent *langopv1alpha1.LanguageAgent, optimizedTasks map[string]OptimizedTask, synthesizer synthesis.AgentSynthesizer) error {
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
 
 	// Get the current agent code from the existing ConfigMap

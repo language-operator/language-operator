@@ -1876,3 +1876,155 @@ func TestLearningReconciler_mapJobToAgent(t *testing.T) {
 		})
 	}
 }
+
+// TestTaskAssembly tests the task assembly logic that was fixed for issue #96
+func TestTaskAssembly(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentCode    string
+		optimizedTasks map[string]OptimizedTask
+		expectedRuby   string
+		shouldFail     bool
+	}{
+		{
+			name:        "neural task with inputs/outputs schema",
+			currentCode: "require 'language_operator'\n\nagent 'test-agent' do\nend",
+			optimizedTasks: map[string]OptimizedTask{
+				"process_data": {
+					Code:    "result = inputs[:data].map(&:upcase)\n{ processed: result }",
+					Inputs:  `{"data": "array"}`,
+					Outputs: `{"processed": "array"}`,
+				},
+			},
+			expectedRuby: `task(:process_data,
+       inputs: {"data": "array"},
+       outputs: {"processed": "array"}) do |inputs|
+result = inputs[:data].map(&:upcase)
+{ processed: result }
+end`,
+		},
+		{
+			name:        "symbolic task without schema",
+			currentCode: "require 'language_operator'\n\nagent 'test-agent' do\nend",
+			optimizedTasks: map[string]OptimizedTask{
+				"simple_task": {
+					Code:    "puts 'hello world'\n{ result: 'done' }",
+					Inputs:  "",
+					Outputs: "",
+				},
+			},
+			expectedRuby: `task :simple_task do |inputs|
+puts 'hello world'
+{ result: 'done' }
+end`,
+		},
+		{
+			name:        "multiple tasks mixed schema types",
+			currentCode: "require 'language_operator'\n\nagent 'test-agent' do\nend",
+			optimizedTasks: map[string]OptimizedTask{
+				"neural_task": {
+					Code:    "data = fetch_data(inputs)\n{ result: data }",
+					Inputs:  `{"url": "string"}`,
+					Outputs: `{"result": "hash"}`,
+				},
+				"symbolic_task": {
+					Code:    "puts 'logging'\n{ status: 'ok' }",
+					Inputs:  "",
+					Outputs: "",
+				},
+			},
+			expectedRuby: `task(:neural_task,
+       inputs: {"url": "string"},
+       outputs: {"result": "hash"}) do |inputs|
+data = fetch_data(inputs)
+{ result: data }
+end`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reconciler := &LearningReconciler{
+				Log: ctrl.Log.WithName("test-learning"),
+			}
+
+			// Test the fallback merge function since it's the core logic being fixed
+			result := reconciler.fallbackMergeOptimizedTasks(tt.currentCode, tt.optimizedTasks)
+
+			// Verify the result contains the expected Ruby syntax
+			if !tt.shouldFail {
+				assert.Contains(t, result, tt.expectedRuby,
+					"Generated Ruby should contain properly formatted task definition")
+
+				// Verify it contains the original code too
+				assert.Contains(t, result, tt.currentCode,
+					"Result should contain original agent code")
+			}
+
+			// Log the result for debugging
+			t.Logf("Generated code:\n%s", result)
+		})
+	}
+}
+
+// TestValidateRubySyntax tests the syntax validation functionality
+func TestValidateRubySyntax(t *testing.T) {
+	reconciler := &LearningReconciler{
+		Log: ctrl.Log.WithName("test-learning"),
+	}
+
+	tests := []struct {
+		name         string
+		rubyCode     string
+		expectError  bool
+		skipIfNoRuby bool
+	}{
+		{
+			name: "valid Ruby code",
+			rubyCode: `task :example do |inputs|
+  result = inputs[:data].map(&:upcase)
+  { processed: result }
+end`,
+			expectError:  false,
+			skipIfNoRuby: true,
+		},
+		{
+			name: "invalid Ruby syntax - missing end",
+			rubyCode: `task :example do |inputs|
+  result = inputs[:data].map(&:upcase)
+  { processed: result }`,
+			expectError:  true,
+			skipIfNoRuby: true,
+		},
+		{
+			name: "invalid Ruby syntax - malformed parentheses",
+			rubyCode: `task :example do |inputs|
+  result = some_method(
+  { processed: result }
+end`,
+			expectError:  true,
+			skipIfNoRuby: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.skipIfNoRuby {
+				// Check if Ruby is available, skip if not
+				if err := reconciler.validateRubySyntax("puts 'test'"); err != nil {
+					if err.Error() == "Ruby not available, skipping syntax validation" {
+						t.Skip("Ruby not available for syntax testing")
+					}
+				}
+			}
+
+			err := reconciler.validateRubySyntax(tt.rubyCode)
+
+			if tt.expectError {
+				assert.Error(t, err, "Expected syntax error for invalid Ruby code")
+			} else {
+				assert.NoError(t, err, "Expected no error for valid Ruby code")
+			}
+		})
+	}
+}
