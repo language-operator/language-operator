@@ -5,17 +5,17 @@ ARG TARGETARCH
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+COPY src/go.mod go.mod
+COPY src/go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
 
 # Copy the go source
-COPY cmd/ cmd/
-COPY api/ api/
-COPY controllers/ controllers/
-COPY pkg/ pkg/
+COPY src/cmd/ cmd/
+COPY src/api/ api/
+COPY src/controllers/ controllers/
+COPY src/pkg/ pkg/
 COPY scripts/validate-ruby-code.rb scripts/validate-ruby-code.rb
 COPY scripts/reconstruct-agent-code.rb scripts/reconstruct-agent-code.rb
 
