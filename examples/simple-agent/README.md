@@ -132,7 +132,7 @@ If deployment fails or resources don't become ready:
 
 ```bash
 # Check operator logs for synthesis errors
-kubectl logs -n kube-system -l app.kubernetes.io/name=language-operator
+kubectl logs -n language-operator -l app.kubernetes.io/name=language-operator
 
 # Check if model is ready before agent deployment
 kubectl get languagemodel magistral-small-2509 -n demo -o jsonpath='{.status.phase}'

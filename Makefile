@@ -31,7 +31,7 @@ k8s-status:
 	@kubectl get languageclusters,languageagents,languageclients,languagetools -A
 	@echo ""
 	@echo "Operator Status:"
-	@kubectl get pods -n language-operator-system
+	@kubectl get pods -n language-operator
 
 
 # Generate CRD API documentation

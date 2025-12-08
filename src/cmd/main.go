@@ -417,23 +417,20 @@ func main() {
 	telemetryAdapter := initializeTelemetryAdapter()
 
 	if err = (&controllers.LearningReconciler{
-		Client:                      mgr.GetClient(),
-		Scheme:                      mgr.GetScheme(),
-		Log:                         learningLog,
-		Recorder:                    mgr.GetEventRecorderFor("learning-controller"),
-		ConfigMapManager:            configMapManager,
-		MetricsCollector:            metricsCollector,
-		EventProcessor:              eventProcessor,
-		TelemetryAdapter:            telemetryAdapter,
-		SuccessRateAggregator:       make(map[string]*learning.LearningSuccessRateAggregator),
-		LearningEnabled:             true,
-		LearningThreshold:           10,              // Trigger learning after 10 traces
-		LearningInterval:            5 * time.Minute, // 5 minute cooldown between attempts
-		MaxVersions:                 5,               // Keep last 5 ConfigMap versions
-		PatternConfidenceMin:        0.8,             // Require 80% confidence
-		ErrorFailureThreshold:       3,               // Re-synthesize after 3 consecutive failures
-		ErrorCooldownPeriod:         5 * time.Minute, // 5 minute cooldown for error re-synthesis
-		MaxErrorResynthesisAttempts: 3,               // Max 3 error re-synthesis attempts per task
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Log:                   learningLog,
+		Recorder:              mgr.GetEventRecorderFor("learning-controller"),
+		ConfigMapManager:      configMapManager,
+		MetricsCollector:      metricsCollector,
+		EventProcessor:        eventProcessor,
+		TelemetryAdapter:      telemetryAdapter,
+		SuccessRateAggregator: make(map[string]*learning.LearningSuccessRateAggregator),
+		LearningEnabled:       true,
+		LearningThreshold:     10,              // Trigger learning after 10 traces
+		LearningInterval:      5 * time.Minute, // 5 minute cooldown between attempts
+		MaxVersions:           5,               // Keep last 5 ConfigMap versions
+		PatternConfidenceMin:  0.8,             // Require 80% confidence
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Learning")
 		os.Exit(1)

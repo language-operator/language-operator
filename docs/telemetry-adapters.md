@@ -46,7 +46,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: signoz-credentials
-  namespace: language-operator-system
+  namespace: language-operator
 type: Opaque
 stringData:
   api-key: "your-signoz-api-key"
@@ -202,7 +202,7 @@ telemetry:
 # Create secret
 kubectl create secret generic signoz-prod-credentials \
   --from-literal=api-key="YOUR_PRODUCTION_API_KEY" \
-  -n language-operator-system
+  -n language-operator
 
 # Deploy with secure configuration
 helm upgrade language-operator ./chart \
@@ -240,27 +240,27 @@ telemetry:
 
 1. **Check Configuration:**
    ```bash
-   kubectl logs -n language-operator-system deployment/language-operator | grep telemetry
+   kubectl logs -n language-operator deployment/language-operator | grep telemetry
    ```
 
 2. **Verify Environment Variables:**
    ```bash
-   kubectl get pod -n language-operator-system -l app.kubernetes.io/name=language-operator -o yaml | grep -A 20 env:
+   kubectl get pod -n language-operator -l app.kubernetes.io/name=language-operator -o yaml | grep -A 20 env:
    ```
 
 3. **Test Connectivity:**
    ```bash
-   kubectl exec -n language-operator-system deployment/language-operator -- curl -v https://signoz.example.com/api/v1/version
+   kubectl exec -n language-operator deployment/language-operator -- curl -v https://signoz.example.com/api/v1/version
    ```
 
 ### Common Issues
 
 **❌ "SigNoz adapter requires TELEMETRY_ADAPTER_ENDPOINT"**
 - Check Helm values: `telemetry.adapter.endpoint` is set
-- Verify deployment: `kubectl describe pod -n language-operator-system`
+- Verify deployment: `kubectl describe pod -n language-operator`
 
 **❌ "SigNoz adapter requires TELEMETRY_ADAPTER_API_KEY"** 
-- Check secret exists: `kubectl get secret signoz-credentials -n language-operator-system`
+- Check secret exists: `kubectl get secret signoz-credentials -n language-operator`
 - Verify secret key: `kubectl get secret signoz-credentials -o yaml`
 
 **❌ "Failed to create SigNoz telemetry adapter"**
@@ -279,10 +279,10 @@ The operator performs periodic health checks when enabled:
 
 ```bash
 # View health check logs
-kubectl logs -n language-operator-system deployment/language-operator | grep "telemetry.*health"
+kubectl logs -n language-operator deployment/language-operator | grep "telemetry.*health"
 
 # Check adapter metrics
-kubectl port-forward -n language-operator-system service/language-operator 8443:8443
+kubectl port-forward -n language-operator service/language-operator 8443:8443
 curl localhost:8443/metrics | grep telemetry
 ```
 

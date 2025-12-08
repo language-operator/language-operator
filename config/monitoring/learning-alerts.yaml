@@ -5,7 +5,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: language-operator-learning-alerts
-  namespace: language-operator-system
+  namespace: language-operator
   labels:
     app: language-operator
     component: learning

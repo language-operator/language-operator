@@ -61,9 +61,9 @@ Configure wildcard DNS with your cloud provider:
 
 1. **Get your ingress hostname:**
    ```bash
-   kubectl get ingress -n language-operator-system
+   kubectl get ingress -n language-operator
    # Or for Gateway API:
-   kubectl get gateway -n language-operator-system
+   kubectl get gateway -n language-operator
    ```
 
 2. **Create wildcard CNAME record:**
@@ -170,7 +170,7 @@ Provide your own wildcard certificate:
 kubectl create secret tls agents-tls \
   --cert=wildcard-cert.pem \
   --key=wildcard-key.pem \
-  -n language-operator-system
+  -n language-operator
 ```
 
 ```yaml
@@ -199,7 +199,7 @@ sudo dscacheutil -flushcache  # macOS
 **2. Ingress Not Receiving Traffic**
 ```bash
 # Verify ingress configuration
-kubectl describe ingress -n language-operator-system
+kubectl describe ingress -n language-operator
 
 # Check ingress logs
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
@@ -208,7 +208,7 @@ kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
 **3. TLS Certificate Issues**
 ```bash
 # Check certificate status
-kubectl describe certificate agents-tls -n language-operator-system
+kubectl describe certificate agents-tls -n language-operator
 
 # Verify certificate covers wildcard
 openssl x509 -in cert.pem -text -noout | grep DNS
