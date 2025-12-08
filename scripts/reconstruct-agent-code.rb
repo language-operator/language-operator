@@ -24,8 +24,21 @@ class AgentCodeReconstructor
     result_code = input.original_code.dup
     
     # For each optimized task, find and replace its definition
-    input.optimized_tasks.each do |task_name, optimized_code|
-      result_code = replace_task_definition(result_code, task_name, optimized_code)
+    input.optimized_tasks.each do |task_name, optimized_task|
+      # Handle both old format (string) and new format (object with Code, Inputs, Outputs)
+      if optimized_task.is_a?(String)
+        # Old format - just the code
+        optimized_code = optimized_task
+        inputs = {}
+        outputs = {}
+      else
+        # New format - OptimizedTask object
+        optimized_code = optimized_task['Code'] || optimized_task['code'] || ''
+        inputs = optimized_task['Inputs'] || optimized_task['inputs'] || '{}'
+        outputs = optimized_task['Outputs'] || optimized_task['outputs'] || '{}'
+      end
+      
+      result_code = replace_task_definition(result_code, task_name, optimized_code, inputs, outputs)
     end
     
     result_code
@@ -34,35 +47,42 @@ class AgentCodeReconstructor
   private
 
   # Replace a task definition in the agent code
-  def replace_task_definition(code, task_name, optimized_code)
-    # Pattern for neural tasks: task(:name, instructions: "...", inputs: {...}, outputs: {...})
-    # This pattern matches the whole task definition as a single statement
-    task_pattern = /^(\s*)task\s*\(\s*:#{Regexp.escape(task_name)}\s*,\s*(.*?)\)\s*$/m
+  def replace_task_definition(code, task_name, optimized_code, inputs = '{}', outputs = '{}')
+    # Pattern for neural tasks: task :name, instructions: "...", inputs: {...}, outputs: {...}
+    # This pattern matches multiline task definitions with proper Ruby DSL syntax
+    task_pattern = /^(\s*)task\s+:#{Regexp.escape(task_name)}\s*,\s*\n?(.*?)(?=\n\s*(?:task\s|main\s|end\s*$|\Z))/m
     
     if match = code.match(task_pattern)
       indentation = match[1]
       original_params = match[2].strip
       
       # Build the new symbolic task definition to replace the neural one
-      replacement = build_replacement_task(task_name, optimized_code, original_params, indentation)
+      replacement = build_replacement_task(task_name, optimized_code, original_params, indentation, inputs, outputs)
       
-      # Replace the entire task line
+      # Replace the entire task definition
       return code.gsub(task_pattern, replacement)
     end
     
     # If we couldn't find the task, insert it as a new task
-    insert_new_task(code, task_name, optimized_code)
+    insert_new_task(code, task_name, optimized_code, inputs, outputs)
   end
 
 
   # Build the replacement task with proper formatting
-  def build_replacement_task(task_name, optimized_code, original_params, indentation)
-    # Parse the original parameters to extract inputs and outputs
-    inputs_match = original_params.match(/inputs:\s*\{([^}]*)\}/)
-    outputs_match = original_params.match(/outputs:\s*\{([^}]*)\}/)
-    
-    inputs_str = inputs_match ? inputs_match[1].strip : ''
-    outputs_str = outputs_match ? outputs_match[1].strip : ''
+  def build_replacement_task(task_name, optimized_code, original_params, indentation, inputs = '{}', outputs = '{}')
+    # Use provided inputs/outputs if available, otherwise parse from original params
+    if inputs != '{}' && outputs != '{}'
+      # Use the provided schema from OptimizedTask
+      inputs_str = inputs.gsub(/[{}"]/, '').strip
+      outputs_str = outputs.gsub(/[{}"]/, '').strip  
+    else
+      # Parse the original parameters to extract inputs and outputs
+      inputs_match = original_params.match(/inputs:\s*\{([^}]*)\}/)
+      outputs_match = original_params.match(/outputs:\s*\{([^}]*)\}/)
+      
+      inputs_str = inputs_match ? inputs_match[1].strip : ''
+      outputs_str = outputs_match ? outputs_match[1].strip : ''
+    end
     
     # Indent the body code properly (relative to the task)
     body_lines = optimized_code.strip.lines
@@ -78,27 +98,26 @@ class AgentCodeReconstructor
   end
 
   # Insert a new task when not found in original code
-  def insert_new_task(code, task_name, optimized_code)
+  def insert_new_task(code, task_name, optimized_code, inputs = '{}', outputs = '{}')
     # Find insertion point before main block or final end
     if code =~ /(\n[ \t]*)main\s+do/
       # Insert before main block
       insertion_point = $~.begin(0)
       indentation = '  ' # Standard indentation
-      # Use default empty inputs/outputs for new tasks
-      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation)}"
+      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation, inputs, outputs)}"
       code[insertion_point, 0] = new_task
       code
     elsif code =~ /\n([ \t]*)end\s*\z/
       # Insert before final end
       insertion_point = $~.begin(0)
       indentation = $1 || '  '
-      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation)}\n"
+      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation, inputs, outputs)}\n"
       code[insertion_point, 0] = new_task
       code
     else
       # Append at end
       indentation = '  '
-      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation)}"
+      new_task = "\n\n#{build_replacement_task(task_name, optimized_code, 'inputs: {}, outputs: {}', indentation, inputs, outputs)}"
       code + new_task
     end
   end
