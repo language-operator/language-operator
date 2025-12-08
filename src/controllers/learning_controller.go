@@ -65,7 +65,6 @@ type LearningReconciler struct {
 
 }
 
-
 // TaskLearningStatus tracks learning status for individual tasks
 type TaskLearningStatus struct {
 	TaskName            string    `json:"taskName"`
@@ -79,7 +78,6 @@ type TaskLearningStatus struct {
 	ErrorRate           float64   `json:"errorRate"`
 	CommonPattern       string    `json:"commonPattern"`
 	UniquePatternCount  int32     `json:"uniquePatternCount"`
-
 
 	// Execution metrics for learning status command
 	TotalExecutions      int32     `json:"totalExecutions"`
