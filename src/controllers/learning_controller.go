@@ -365,7 +365,8 @@ func (r *LearningReconciler) convertSpansToTaskTraces(spans []telemetry.Span) []
 
 	for _, span := range spans {
 		// Only process spans that represent task executions
-		if span.OperationName != "execute_task" || span.TaskName == "" {
+		// The Ruby gem sends "task_executor.execute_task" for individual task runs
+		if span.OperationName != "task_executor.execute_task" || span.TaskName == "" {
 			continue
 		}
 

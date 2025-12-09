@@ -9,6 +9,14 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Fixed span name filter to match Ruby gem's actual telemetry format**
+  - Updated `convertSpansToTaskTraces()` to filter for `task_executor.execute_task` instead of `execute_task`
+  - This was preventing the learning system from finding any task execution traces
+  - Root cause: Code expected different span name than what Ruby gem actually sends
+  - Verified actual span format from SigNoz UI: `task_executor.execute_task` with parent `agent_executor`
+  - Created issue #130 in language-operator-gem to document expected span naming convention
+  - **Critical fix**: Learning system can now properly retrieve and analyze task execution traces
+
 - **Implemented task schema extraction for learning optimization**
   - Created `extract-task-schema.rb` script to parse agent DSL and extract task definitions
   - Implemented `extractTaskSchema()` in learning controller to call Ruby script
