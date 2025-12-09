@@ -18,6 +18,7 @@ COPY src/controllers/ controllers/
 COPY src/pkg/ pkg/
 COPY scripts/validate-ruby-code.rb scripts/validate-ruby-code.rb
 COPY scripts/reconstruct-agent-code.rb scripts/reconstruct-agent-code.rb
+COPY scripts/extract-task-schema.rb scripts/extract-task-schema.rb
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
@@ -44,6 +45,10 @@ RUN chmod +x /usr/local/bin/validate-ruby-code.rb
 # Copy agent code reconstruction script
 COPY --from=builder /workspace/scripts/reconstruct-agent-code.rb /usr/local/bin/reconstruct-agent-code.rb
 RUN chmod +x /usr/local/bin/reconstruct-agent-code.rb
+
+# Copy task schema extraction script
+COPY --from=builder /workspace/scripts/extract-task-schema.rb /usr/local/bin/extract-task-schema.rb
+RUN chmod +x /usr/local/bin/extract-task-schema.rb
 
 # Switch to langop user (created in base image)
 USER langop:langop

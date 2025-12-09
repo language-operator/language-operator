@@ -1067,19 +1067,35 @@ func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, a
 			"common_pattern", commonPattern,
 			"unique_patterns", len(patterns))
 
+		// Extract task schema from current agent code
+		taskSchema, err := r.extractTaskSchema(ctx, agent, taskName)
+		if err != nil {
+			log.Error(err, "Failed to extract task schema, using defaults",
+				"task", taskName)
+			// Use defaults if extraction fails
+			taskSchema = &TaskSchema{
+				TaskName:     taskName,
+				Instructions: fmt.Sprintf("Optimize task %s based on observed execution patterns", taskName),
+				Inputs:       `{}`,
+				Outputs:      `{}`,
+				CurrentCode:  "",
+				TaskType:     "neural",
+			}
+		}
+
 		// Format traces for synthesis
 		formattedTraces := r.formatTracesForSynthesis(taskTraces)
 
 		// Extract tools used from traces
 		toolsList := r.extractToolsFromTraces(taskTraces)
 
-		// Build synthesis request from actual trace data
+		// Build synthesis request from actual trace data + extracted schema
 		tasks = append(tasks, synthesis.TaskSynthesisRequest{
 			TaskName:           taskName,
-			Instructions:       fmt.Sprintf("Optimize task %s based on observed execution patterns", taskName),
-			Inputs:             `{}`, // TODO: Extract from agent code
-			Outputs:            `{}`, // TODO: Extract from agent code
-			TaskCode:           "",   // TODO: Extract from agent code
+			Instructions:       taskSchema.Instructions,
+			Inputs:             taskSchema.Inputs,
+			Outputs:            taskSchema.Outputs,
+			TaskCode:           taskSchema.CurrentCode,
 			Traces:             formattedTraces,
 			TraceCount:         traceCount,
 			CommonPattern:      commonPattern,
@@ -1093,6 +1109,99 @@ func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, a
 
 	log.Info("Identified tasks for optimization", "count", len(tasks))
 	return tasks, nil
+}
+
+// extractTaskSchema extracts task definition (inputs, outputs, code) from agent DSL code
+func (r *LearningReconciler) extractTaskSchema(ctx context.Context, agent *langopv1alpha1.LanguageAgent, taskName string) (*TaskSchema, error) {
+	// Get current agent code
+	currentCode, err := r.getCurrentAgentCode(ctx, agent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current agent code: %w", err)
+	}
+
+	// Write agent code to temporary file
+	tmpfile, err := os.CreateTemp("", fmt.Sprintf("agent-code-%s-*.rb", agent.Name))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.WriteString(currentCode); err != nil {
+		tmpfile.Close()
+		return nil, fmt.Errorf("failed to write agent code: %w", err)
+	}
+	tmpfile.Close()
+
+	// Find the extract-task-schema.rb script
+	scriptPath := r.findExtractTaskSchemaScript()
+	if scriptPath == "" {
+		return nil, fmt.Errorf("extract-task-schema.rb script not found")
+	}
+
+	// Run the extraction script
+	cmd := exec.CommandContext(ctx, "ruby", scriptPath, taskName, tmpfile.Name())
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("task extraction failed: %s (stderr: %s)", err, stderr.String())
+	}
+
+	// Parse JSON output
+	var taskInfo struct {
+		Name         string                 `json:"name"`
+		Instructions string                 `json:"instructions"`
+		Inputs       map[string]interface{} `json:"inputs"`
+		Outputs      map[string]interface{} `json:"outputs"`
+		Code         string                 `json:"code"`
+		Type         string                 `json:"type"`
+	}
+
+	if err := json.Unmarshal(stdout.Bytes(), &taskInfo); err != nil {
+		return nil, fmt.Errorf("failed to parse task schema JSON: %w", err)
+	}
+
+	// Convert to schema format
+	inputsJSON, _ := json.Marshal(taskInfo.Inputs)
+	outputsJSON, _ := json.Marshal(taskInfo.Outputs)
+
+	return &TaskSchema{
+		TaskName:     taskInfo.Name,
+		Instructions: taskInfo.Instructions,
+		Inputs:       string(inputsJSON),
+		Outputs:      string(outputsJSON),
+		CurrentCode:  taskInfo.Code,
+		TaskType:     taskInfo.Type,
+	}, nil
+}
+
+// findExtractTaskSchemaScript locates the extract-task-schema.rb script
+func (r *LearningReconciler) findExtractTaskSchemaScript() string {
+	possiblePaths := []string{
+		"/usr/local/bin/extract-task-schema.rb",
+		"./scripts/extract-task-schema.rb",
+		"../scripts/extract-task-schema.rb",
+		filepath.Join(os.Getenv("SCRIPT_PATH"), "extract-task-schema.rb"),
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	return ""
+}
+
+// TaskSchema represents the extracted schema for a task
+type TaskSchema struct {
+	TaskName     string
+	Instructions string
+	Inputs       string // JSON
+	Outputs      string // JSON
+	CurrentCode  string
+	TaskType     string // "neural" or "symbolic"
 }
 
 // formatTracesForSynthesis converts task traces to a synthesis-friendly format

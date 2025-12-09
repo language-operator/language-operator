@@ -9,6 +9,15 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Implemented task schema extraction for learning optimization**
+  - Created `extract-task-schema.rb` script to parse agent DSL and extract task definitions
+  - Implemented `extractTaskSchema()` in learning controller to call Ruby script
+  - Now extracts real task inputs, outputs, instructions, and current code from agent
+  - Replaced TODOs/placeholders with actual task information from agent code
+  - **Critical fix**: LLM now has proper context for optimization (was using empty placeholders)
+  - Falls back gracefully to defaults if extraction fails
+  - Script installed in Docker image at `/usr/local/bin/extract-task-schema.rb`
+
 - **Completed learning system simplification cleanup (Issue #102)**
   - Removed 4 unused fields from `LearningReconciler` struct:
     - `MetricsCollector` - unused after event processing removal
