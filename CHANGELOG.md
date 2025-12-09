@@ -9,6 +9,18 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Deleted event processing and ConfigMap management code (Issue #101)**
+  - Removed 1190 lines of unused code after migration to direct SigNoz queries (Issue #100)
+  - Deleted 23 functions: event processing, job tracking, ConfigMap management, trace summarization
+  - Deleted 3 structs: `TaskLearningStatus`, `AgentExecutionSummary`, `TaskExecutionStatus`
+  - Removed Event and Job watches from SetupWithManager
+  - Result: learning_controller.go reduced from 3118 to 1928 lines (38% reduction)
+  - Benefits:
+    - Simpler codebase with single learning path
+    - No ConfigMap size management complexity
+    - No event watching overhead
+    - Easier to maintain and debug
+
 - **Simplified task identification to query SigNoz directly (Issue #100)**
   - Rewrote `identifyTasksForOptimization()` to use direct SigNoz queries (Ruby gem approach)
   - Removed ConfigMap-based learning status dependency
