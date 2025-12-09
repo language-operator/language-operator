@@ -1833,6 +1833,16 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		Value: fmt.Sprintf("language-operator-agent-%s", agent.Name),
 	})
 
+	// Enable task I/O capture for learning system
+	env = append(env, corev1.EnvVar{
+		Name:  "CAPTURE_TASK_INPUTS",
+		Value: "true",
+	})
+	env = append(env, corev1.EnvVar{
+		Name:  "CAPTURE_TASK_OUTPUTS",
+		Value: "true",
+	})
+
 	if agent.Spec.Goal != "" {
 		env = append(env, corev1.EnvVar{
 			Name:  "AGENT_GOAL",

@@ -9,6 +9,12 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Auto-inject task I/O capture env vars for learning system**
+  - Operator now automatically sets `CAPTURE_TASK_INPUTS=true` and `CAPTURE_TASK_OUTPUTS=true` in agent pods
+  - Enables learning system to extract task inputs/outputs from OpenTelemetry spans
+  - Required for task schema analysis and pattern detection
+  - Removes need for manual configuration in agent specs
+
 - **Fixed span name filter to match Ruby gem's actual telemetry format**
   - Updated `convertSpansToTaskTraces()` to filter for `task_executor.execute_task` instead of `execute_task`
   - This was preventing the learning system from finding any task execution traces
