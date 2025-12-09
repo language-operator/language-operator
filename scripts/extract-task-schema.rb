@@ -3,7 +3,6 @@
 # Extracts task definitions (inputs, outputs, code) from agent DSL code
 # Used by the learning controller to provide context for optimization
 
-require 'bundler/setup'
 require 'language_operator'
 require 'json'
 require 'tempfile'
