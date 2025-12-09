@@ -44,7 +44,6 @@ import (
 	"github.com/language-operator/language-operator/controllers"
 	"github.com/language-operator/language-operator/pkg/cni"
 	registryconfig "github.com/language-operator/language-operator/pkg/config"
-	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
@@ -402,10 +401,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup Learning controller with metrics collection
+	// Setup Learning controller
 	learningLog := ctrl.Log.WithName("controllers").WithName("Learning")
-	metricsCollector := learning.NewMetricsCollector(learningLog)
-	eventProcessor := learning.NewLearningEventProcessor(metricsCollector)
 
 	configMapManager := &synthesis.ConfigMapManager{
 		Client: mgr.GetClient(),
@@ -417,20 +414,16 @@ func main() {
 	telemetryAdapter := initializeTelemetryAdapter()
 
 	if err = (&controllers.LearningReconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		Log:                   learningLog,
-		Recorder:              mgr.GetEventRecorderFor("learning-controller"),
-		ConfigMapManager:      configMapManager,
-		MetricsCollector:      metricsCollector,
-		EventProcessor:        eventProcessor,
-		TelemetryAdapter:      telemetryAdapter,
-		SuccessRateAggregator: make(map[string]*learning.LearningSuccessRateAggregator),
-		LearningEnabled:       true,
-		LearningThreshold:     10,              // Trigger learning after 10 traces
-		LearningInterval:      5 * time.Minute, // 5 minute cooldown between attempts
-		MaxVersions:           5,               // Keep last 5 ConfigMap versions
-		PatternConfidenceMin:  0.8,             // Require 80% confidence
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  learningLog,
+		Recorder:             mgr.GetEventRecorderFor("learning-controller"),
+		ConfigMapManager:     configMapManager,
+		TelemetryAdapter:     telemetryAdapter,
+		LearningEnabled:      true,
+		LearningThreshold:    10,              // Trigger learning after 10 traces
+		LearningInterval:     5 * time.Minute, // 5 minute cooldown between attempts
+		PatternConfidenceMin: 0.8,             // Require 80% confidence
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Learning")
 		os.Exit(1)

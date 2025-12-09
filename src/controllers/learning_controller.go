@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
-	"github.com/language-operator/language-operator/pkg/learning"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
@@ -44,20 +43,15 @@ type OptimizedTask struct {
 // LearningReconciler reconciles learning events and triggers re-synthesis
 type LearningReconciler struct {
 	client.Client
-	Scheme                *runtime.Scheme
-	Log                   logr.Logger
-	Recorder              record.EventRecorder
-	ConfigMapManager      *synthesis.ConfigMapManager                        // For versioned ConfigMap management
-	MetricsCollector      *learning.MetricsCollector                         // For learning metrics collection
-	EventProcessor        *learning.LearningEventProcessor                   // For processing learning events with metrics
-	TelemetryAdapter      telemetry.TelemetryAdapter                         // For querying historical execution data
-	SuccessRateAggregator map[string]*learning.LearningSuccessRateAggregator // Per-agent success rate tracking
-	LearningEnabled       bool
-	LearningThreshold     int32         // Number of execution traces before triggering learning
-	LearningInterval      time.Duration // Minimum interval between learning attempts
-	MaxVersions           int32         // Maximum number of ConfigMap versions to keep
-	PatternConfidenceMin  float64       // Minimum confidence threshold for pattern detection
-
+	Scheme               *runtime.Scheme
+	Log                  logr.Logger
+	Recorder             record.EventRecorder
+	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
+	TelemetryAdapter     telemetry.TelemetryAdapter  // For querying historical execution data
+	LearningEnabled      bool
+	LearningThreshold    int32         // Number of execution traces before triggering learning
+	LearningInterval     time.Duration // Minimum interval between learning attempts
+	PatternConfidenceMin float64       // Minimum confidence threshold for pattern detection
 }
 
 // TaskTrace represents an execution trace for pattern detection
