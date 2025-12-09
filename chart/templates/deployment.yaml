@@ -186,6 +186,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
         volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         {{- if .Values.config.webhook.enabled }}
         - name: cert
           mountPath: {{ .Values.config.webhook.certDir }}
@@ -195,6 +197,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       volumes:
+      - name: tmp
+        emptyDir: {}
       {{- if .Values.config.webhook.enabled }}
       - name: cert
         secret:

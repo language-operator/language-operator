@@ -9,6 +9,11 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Fixed read-only filesystem preventing task schema extraction**
+  - Added emptyDir volume mount for `/tmp` in operator deployment
+  - Task schema extraction script creates temporary files to pass agent code to Ruby parser
+  - **Critical fix**: Schema extraction can now write temp files (was failing with "read-only file system")
+
 - **Fixed SigNoz Query Builder v5 response parsing**
   - Updated response structure to match actual Query Builder v5 format: `{"status":"success","data":{"type":"raw","data":{"results":[{"rows":[{"data":{...}}]}]}}}`
   - Changed field selection from `task.input.keys`/`task.output.keys` to `task.inputs`/`task.outputs`
