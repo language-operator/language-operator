@@ -9,6 +9,17 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Simplified task identification to query SigNoz directly (Issue #100)**
+  - Rewrote `identifyTasksForOptimization()` to use direct SigNoz queries (Ruby gem approach)
+  - Removed ConfigMap-based learning status dependency
+  - Now queries traces directly from SigNoz when optimization triggers
+  - Calculates pattern confidence inline from trace data
+  - Benefits:
+    - No ConfigMap persistence layer needed
+    - Real-time data from SigNoz (not cached)
+    - Simpler data flow: query → analyze → synthesize
+    - Matches Ruby gem's proven approach
+
 - **Reverted event-based learning data collection (Issue #99)**
   - Removed `processAgentExecutions()` call from Reconcile loop added in commit efb218d
   - This commit perpetuated the complex event-based approach we're simplifying
