@@ -6,6 +6,16 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+### Learning System Simplification
+
+**2025-12-09:**
+- **Reverted event-based learning data collection (Issue #99)**
+  - Removed `processAgentExecutions()` call from Reconcile loop added in commit efb218d
+  - This commit perpetuated the complex event-based approach we're simplifying
+  - Preparing codebase for direct SigNoz query approach (Issue #100)
+  - Moving to simpler Ruby gem-style pattern: query SigNoz when optimization triggers, analyze patterns, synthesize tasks
+  - No more intermediate ConfigMap persistence of learning data
+
 ### Learning System Optimization
 
 **Overview:**
