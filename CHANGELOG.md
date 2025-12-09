@@ -28,6 +28,10 @@ Fixed learning system ConfigMap explosion and excessive LLM calls by removing du
 
 - **Task Identification Improvements**
   - Replaced hardcoded task list with query-based identification from learning status
+  - **Added missing data collection**: Learning controller now calls `processAgentExecutions()` to populate learning status ConfigMap
+    - **Root Cause**: After removing event-based path, the simplified Reconcile loop never populated the ConfigMap
+    - **Fix**: Added `processAgentExecutions()` call before threshold check to process TaskCompleted events
+    - **Result**: Learning status ConfigMap now contains task execution metrics (TraceCount, PatternConfidence, etc.)
   - Tasks now identified based on:
     - Trace count >= threshold
     - Pattern confidence >= minimum

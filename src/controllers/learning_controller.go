@@ -195,6 +195,12 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		"runsPendingLearning", agent.Status.RunsPendingLearning,
 		"threshold", r.LearningThreshold)
 
+	// Process TaskCompleted events and update learning status
+	if err := r.processAgentExecutions(ctx, agent); err != nil {
+		log.Error(err, "Failed to process agent executions")
+		// Don't fail reconciliation - continue to threshold check
+	}
+
 	// Simplified learning logic: check if runsPendingLearning reaches threshold
 	if agent.Status.RunsPendingLearning >= r.LearningThreshold {
 		log.Info("Learning threshold reached, triggering optimization",
