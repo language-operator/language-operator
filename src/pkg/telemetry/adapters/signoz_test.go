@@ -319,9 +319,19 @@ func TestSignozAdapter_QuerySpans(t *testing.T) {
 
 	t.Run("Empty response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Mock Query Builder v5 response with empty results
 			response := map[string]interface{}{
+				"status": "success",
 				"data": map[string]interface{}{
-					"result": []map[string]interface{}{},
+					"type": "raw",
+					"data": map[string]interface{}{
+						"results": []map[string]interface{}{
+							{
+								"queryName": "A",
+								"rows":      []map[string]interface{}{},
+							},
+						},
+					},
 				},
 			}
 
