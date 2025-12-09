@@ -36,7 +36,9 @@ WORKDIR /app
 COPY --from=builder /workspace/manager .
 
 # Install language-operator gem for AST validation
-RUN gem install language-operator
+RUN gem install language-operator && \
+    # Fix permissions on constants.rb (gem 0.1.66 has incorrect permissions)
+    chmod 644 /usr/lib/ruby/gems/3.4.0/gems/language-operator-*/lib/language_operator/constants.rb
 
 # Copy AST validator wrapper script
 COPY --from=builder /workspace/scripts/validate-ruby-code.rb /usr/local/bin/validate-ruby-code.rb
