@@ -251,23 +251,34 @@ func TestSignozAdapter_QuerySpans(t *testing.T) {
 			assert.Equal(t, "test-api-key", r.Header.Get("SIGNOZ-API-KEY"))
 			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
-			// Mock response
+			// Mock response in Query Builder v5 format
 			response := map[string]interface{}{
+				"status": "success",
 				"data": map[string]interface{}{
-					"result": []map[string]interface{}{
-						{
-							"spanID":        "span-123",
-							"traceID":       "trace-456",
-							"parentSpanID":  "parent-789",
-							"operationName": "execute_task",
-							"timestamp":     "2025-01-01T12:00:00Z",
-							"duration":      float64(1000000000), // 1 second in nanoseconds
-							"statusCode":    float64(200),
-							"attributes": map[string]interface{}{
-								"task.name":  "fetch_user",
-								"agent.name": "test-agent",
+					"type": "raw",
+					"data": map[string]interface{}{
+						"results": []map[string]interface{}{
+							{
+								"queryName": "A",
+								"rows": []map[string]interface{}{
+									{
+										"data": map[string]interface{}{
+											"spanID":       "span-123",
+											"traceID":      "trace-456",
+											"parentSpanID": "parent-789",
+											"name":         "task_executor.execute_task",
+											"timestamp":    "2025-01-01T12:00:00Z",
+											"durationNano": float64(1000000000), // 1 second in nanoseconds
+											"statusCode":   float64(200),
+											"task.name":    "fetch_user",
+											"attributes": map[string]interface{}{
+												"agent.name": "test-agent",
+											},
+											"events": []interface{}{},
+										},
+									},
+								},
 							},
-							"events": []interface{}{},
 						},
 					},
 				},
@@ -299,7 +310,7 @@ func TestSignozAdapter_QuerySpans(t *testing.T) {
 		assert.Equal(t, "span-123", span.SpanID)
 		assert.Equal(t, "trace-456", span.TraceID)
 		assert.Equal(t, "parent-789", span.ParentSpanID)
-		assert.Equal(t, "execute_task", span.OperationName)
+		assert.Equal(t, "task_executor.execute_task", span.OperationName)
 		assert.Equal(t, "fetch_user", span.TaskName)
 		assert.True(t, span.Status)
 		assert.Equal(t, time.Second, span.Duration)
@@ -1386,7 +1397,7 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 
 		// Check selectFields - includes semantic attributes for learning system integration
 		selectFields := spec["selectFields"].([]map[string]string)
-		expectedFields := []string{"spanID", "traceID", "timestamp", "durationNano", "name", "serviceName", "task.name", "task.input.keys", "task.output.keys", "gen_ai.operation.name", "gen_ai.tool.name", "gen_ai.tool.call.arguments", "gen_ai.tool.call.result"}
+		expectedFields := []string{"spanID", "traceID", "timestamp", "durationNano", "name", "serviceName", "task.name", "task.inputs", "task.outputs", "gen_ai.operation.name", "gen_ai.tool.name", "gen_ai.tool.call.arguments", "gen_ai.tool.call.result"}
 		assert.Len(t, selectFields, len(expectedFields))
 		for i, field := range expectedFields {
 			assert.Equal(t, field, selectFields[i]["name"])
@@ -1462,25 +1473,37 @@ func TestQueryBuilderV5Response(t *testing.T) {
 			assert.Equal(t, "raw", reqPayload["requestType"])
 			assert.NotNil(t, reqPayload["compositeQuery"])
 
-			// Mock Query Builder v5 response
+			// Mock Query Builder v5 response with actual structure
+			// Structure: {"status":"success","data":{"type":"raw","data":{"results":[{"queryName":"A","rows":[{"data":{...}}]}]}}}
 			response := map[string]interface{}{
 				"status": "success",
 				"data": map[string]interface{}{
-					"resultType": "list",
-					"result": []map[string]interface{}{
-						{
-							"spanID":        "span-123",
-							"traceID":       "trace-456",
-							"parentSpanID":  "parent-789",
-							"operationName": "execute_task",
-							"timestamp":     "2025-01-01T12:00:00Z",
-							"duration":      float64(1000000000), // 1 second in nanoseconds
-							"statusCode":    float64(200),
-							"attributes": map[string]interface{}{
-								"task.name":  "fetch_user",
-								"agent.name": "test-agent",
+					"type": "raw",
+					"data": map[string]interface{}{
+						"results": []map[string]interface{}{
+							{
+								"queryName": "A",
+								"rows": []map[string]interface{}{
+									{
+										"data": map[string]interface{}{
+											"spanID":       "span-123",
+											"traceID":      "trace-456",
+											"parentSpanID": "parent-789",
+											"name":         "task_executor.execute_task",
+											"timestamp":    "2025-01-01T12:00:00Z",
+											"durationNano": float64(1000000000), // 1 second in nanoseconds
+											"statusCode":   float64(200),
+											"task.name":    "fetch_user",
+											"task.inputs":  `{"key":"value"}`,
+											"task.outputs": `{"result":"success"}`,
+											"attributes": map[string]interface{}{
+												"agent.name": "test-agent",
+											},
+											"events": []interface{}{},
+										},
+									},
+								},
 							},
-							"events": []interface{}{},
 						},
 					},
 				},
@@ -1512,10 +1535,13 @@ func TestQueryBuilderV5Response(t *testing.T) {
 		assert.Equal(t, "span-123", span.SpanID)
 		assert.Equal(t, "trace-456", span.TraceID)
 		assert.Equal(t, "parent-789", span.ParentSpanID)
-		assert.Equal(t, "execute_task", span.OperationName)
+		assert.Equal(t, "task_executor.execute_task", span.OperationName)
 		assert.Equal(t, "fetch_user", span.TaskName)
 		assert.True(t, span.Status) // Status code 200 = success
 		assert.Equal(t, 1*time.Second, span.Duration)
+		// Verify task I/O attributes are extracted
+		assert.Equal(t, `{"key":"value"}`, span.Attributes["task.inputs"])
+		assert.Equal(t, `{"result":"success"}`, span.Attributes["task.outputs"])
 	})
 
 	t.Run("Handle API errors in Query Builder v5 format", func(t *testing.T) {

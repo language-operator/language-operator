@@ -9,6 +9,14 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Fixed SigNoz Query Builder v5 response parsing**
+  - Updated response structure to match actual Query Builder v5 format: `{"status":"success","data":{"type":"raw","data":{"results":[{"rows":[{"data":{...}}]}]}}}`
+  - Changed field selection from `task.input.keys`/`task.output.keys` to `task.inputs`/`task.outputs`
+  - Fixed operation name field from `operationName` to `name` in Query Builder v5 responses
+  - Fixed duration field from `duration` to `durationNano` in Query Builder v5 responses
+  - Added extraction of top-level task and GenAI attributes from query results
+  - **Critical fix**: Learning system can now actually parse telemetry data from SigNoz (was getting zero traces due to parsing failure)
+
 - **Auto-inject task I/O capture env vars for learning system**
   - Operator now automatically sets `CAPTURE_TASK_INPUTS=true` and `CAPTURE_TASK_OUTPUTS=true` in agent pods
   - Enables learning system to extract task inputs/outputs from OpenTelemetry spans

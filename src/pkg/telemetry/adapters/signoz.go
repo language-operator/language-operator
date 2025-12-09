@@ -353,8 +353,8 @@ func (s *SignozAdapter) buildQueryBuilderV5Payload(filter telemetry.SpanFilter) 
 		{"name": "name"},
 		{"name": "serviceName"},
 		{"name": "task.name"},
-		{"name": "task.input.keys"},
-		{"name": "task.output.keys"},
+		{"name": "task.inputs"},
+		{"name": "task.outputs"},
 		{"name": "gen_ai.operation.name"},
 		{"name": "gen_ai.tool.name"},
 		{"name": "gen_ai.tool.call.arguments"},
@@ -549,12 +549,20 @@ func (s *SignozAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 //
 // This handles the new Query Builder v5 response format for trace queries.
 func (s *SignozAdapter) parseSpanResponse(respBody []byte, limit int) ([]telemetry.Span, error) {
-	// First, try to parse as Query Builder v5 response format
+	// Parse Query Builder v5 response format
+	// Structure: {"status":"success","data":{"type":"raw","data":{"results":[{"queryName":"A","rows":[{"data":{...}}]}]}}}
 	var v5Response struct {
 		Status string `json:"status"`
 		Data   struct {
-			ResultType string                   `json:"resultType"`
-			Result     []map[string]interface{} `json:"result"`
+			Type string `json:"type"`
+			Data struct {
+				Results []struct {
+					QueryName string `json:"queryName"`
+					Rows      []struct {
+						Data map[string]interface{} `json:"data"`
+					} `json:"rows"`
+				} `json:"results"`
+			} `json:"data"`
 		} `json:"data"`
 	}
 
@@ -563,22 +571,19 @@ func (s *SignozAdapter) parseSpanResponse(respBody []byte, limit int) ([]telemet
 	}
 
 	// Check if it's a successful Query Builder v5 response
-	if v5Response.Status == "success" && v5Response.Data.ResultType == "list" {
-		return s.parseV5SpanResponse(v5Response.Data.Result, limit)
+	if v5Response.Status != "success" {
+		return nil, fmt.Errorf("SigNoz returned non-success status: %s", v5Response.Status)
 	}
 
-	// Fallback: try to parse as old response format for backward compatibility
-	var legacyResponse struct {
-		Data struct {
-			Result []map[string]interface{} `json:"result"`
-		} `json:"data"`
+	// Extract rows from the nested structure
+	var rowsData []map[string]interface{}
+	if len(v5Response.Data.Data.Results) > 0 {
+		for _, row := range v5Response.Data.Data.Results[0].Rows {
+			rowsData = append(rowsData, row.Data)
+		}
 	}
 
-	if err := json.Unmarshal(respBody, &legacyResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal legacy response: %w", err)
-	}
-
-	return s.parseV5SpanResponse(legacyResponse.Data.Result, limit)
+	return s.parseV5SpanResponse(rowsData, limit)
 }
 
 // parseV5SpanResponse processes Query Builder v5 span result data.
@@ -623,7 +628,8 @@ func (s *SignozAdapter) convertRowToSpan(row map[string]interface{}) (telemetry.
 		span.ParentSpanID = parentSpanID
 	}
 
-	if operationName, ok := row["operationName"].(string); ok {
+	// Query Builder v5 returns "name" field for operation name
+	if operationName, ok := row["name"].(string); ok {
 		span.OperationName = operationName
 	}
 
@@ -635,7 +641,12 @@ func (s *SignozAdapter) convertRowToSpan(row map[string]interface{}) (telemetry.
 	}
 
 	// Parse duration and calculate end time
-	if durationNano, ok := row["duration"].(float64); ok {
+	// Query Builder v5 returns "durationNano" field
+	if durationNano, ok := row["durationNano"].(float64); ok {
+		span.Duration = time.Duration(int64(durationNano))
+		span.EndTime = span.StartTime.Add(span.Duration)
+	} else if durationNano, ok := row["duration"].(float64); ok {
+		// Fallback for older response format
 		span.Duration = time.Duration(int64(durationNano))
 		span.EndTime = span.StartTime.Add(span.Duration)
 	}
@@ -663,6 +674,30 @@ func (s *SignozAdapter) convertRowToSpan(row map[string]interface{}) (telemetry.
 				}
 			}
 		}
+	}
+
+	// Extract task-specific attributes from Query Builder v5 response
+	// These come as top-level fields when selected in the query
+	if taskName, ok := row["task.name"].(string); ok && taskName != "" {
+		span.Attributes["task.name"] = taskName
+	}
+	if taskInputs, ok := row["task.inputs"].(string); ok && taskInputs != "" {
+		span.Attributes["task.inputs"] = taskInputs
+	}
+	if taskOutputs, ok := row["task.outputs"].(string); ok && taskOutputs != "" {
+		span.Attributes["task.outputs"] = taskOutputs
+	}
+	if genAiOp, ok := row["gen_ai.operation.name"].(string); ok && genAiOp != "" {
+		span.Attributes["gen_ai.operation.name"] = genAiOp
+	}
+	if toolName, ok := row["gen_ai.tool.name"].(string); ok && toolName != "" {
+		span.Attributes["gen_ai.tool.name"] = toolName
+	}
+	if toolArgs, ok := row["gen_ai.tool.call.arguments"].(string); ok && toolArgs != "" {
+		span.Attributes["gen_ai.tool.call.arguments"] = toolArgs
+	}
+	if toolResult, ok := row["gen_ai.tool.call.result"].(string); ok && toolResult != "" {
+		span.Attributes["gen_ai.tool.call.result"] = toolResult
 	}
 
 	// Extract task name from attributes or operation name
