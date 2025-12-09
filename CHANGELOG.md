@@ -9,6 +9,14 @@ This document tracks releases of the Language Operator project.
 ### Learning System Simplification
 
 **2025-12-09:**
+- **Added workaround for language-operator gem 0.1.66 packaging issues**
+  - Gem 0.1.66 has incorrect file permissions on `lib/language_operator/constants.rb` (600 instead of 644)
+  - Gem 0.1.66 is missing required file `lib/language_operator/instrumentation/task_tracer.rb`
+  - Added chmod command in Dockerfile to fix constants.rb permissions after gem install
+  - **Note**: Task schema extraction still fails due to missing task_tracer.rb file
+  - Filed issue: https://github.com/language-operator/language-operator-gem/issues/131
+  - Learning system falls back to default task schema when extraction fails
+
 - **Fixed read-only filesystem preventing task schema extraction**
   - Added emptyDir volume mount for `/tmp` in operator deployment
   - Task schema extraction script creates temporary files to pass agent code to Ruby parser
