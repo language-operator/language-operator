@@ -97,7 +97,7 @@ spec:
         env:
         # Learning system task schema extraction - allow gem to load files from dedicated directory
         - name: LANGOP_ALLOWED_PATHS
-          value: "/app/task-schemas"
+          value: "/tmp/task-schemas"
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:

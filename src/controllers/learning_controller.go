@@ -1120,8 +1120,8 @@ func (r *LearningReconciler) extractTaskSchema(ctx context.Context, agent *lango
 		return nil, fmt.Errorf("failed to get current agent code: %w", err)
 	}
 
-	// Ensure task-schemas directory exists
-	taskSchemaDir := "/app/task-schemas"
+	// Ensure task-schemas directory exists in /tmp (writable emptyDir mount)
+	taskSchemaDir := "/tmp/task-schemas"
 	if err := os.MkdirAll(taskSchemaDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create task-schemas directory: %w", err)
 	}
