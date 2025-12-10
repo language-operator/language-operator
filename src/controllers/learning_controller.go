@@ -1120,8 +1120,14 @@ func (r *LearningReconciler) extractTaskSchema(ctx context.Context, agent *lango
 		return nil, fmt.Errorf("failed to get current agent code: %w", err)
 	}
 
-	// Write agent code to temporary file
-	tmpfile, err := os.CreateTemp("", fmt.Sprintf("agent-code-%s-*.rb", agent.Name))
+	// Ensure task-schemas directory exists
+	taskSchemaDir := "/app/task-schemas"
+	if err := os.MkdirAll(taskSchemaDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create task-schemas directory: %w", err)
+	}
+
+	// Write agent code to temporary file in dedicated directory
+	tmpfile, err := os.CreateTemp(taskSchemaDir, fmt.Sprintf("agent-code-%s-*.rb", agent.Name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
