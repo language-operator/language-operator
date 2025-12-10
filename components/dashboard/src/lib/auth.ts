@@ -74,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         // Store organizations in session for easy access
-        session.organizations = memberships.map((m) => ({
+        session.organizations = memberships.map((m: any) => ({
           id: m.organization.id,
           name: m.organization.name,
           slug: m.organization.slug,
