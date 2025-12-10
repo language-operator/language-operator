@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dashboard.fullname" . }}
+  labels:
+    {{- include "dashboard.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "dashboard.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "dashboard.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+      - name: db-migrate
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for database..."
+          until node -e "const {Client} = require('pg'); const client = new Client({connectionString: process.env.DATABASE_URL}); client.connect().then(() => { console.log('Database ready'); client.end(); process.exit(0); }).catch(err => { console.error('Database not ready:', err.message); process.exit(1); });" 2>/dev/null; do
+            sleep 2
+          done
+          echo "Running Prisma migrations..."
+          npx prisma migrate deploy
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: DATABASE_URL
+        {{- if not .Values.externalDatabase.enabled }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}-postgresql
+              key: password
+        {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: DATABASE_URL
+        {{- if not .Values.externalDatabase.enabled }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}-postgresql
+              key: password
+        {{- end }}
+        - name: NEXTAUTH_URL
+          value: {{ .Values.nextAuth.url | default (printf "http://%s" (index .Values.ingress.hosts 0).host) | quote }}
+        - name: NEXTAUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: NEXTAUTH_SECRET
+        {{- if .Values.oauth.google.clientId }}
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: GOOGLE_CLIENT_ID
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: GOOGLE_CLIENT_SECRET
+        {{- end }}
+        {{- if .Values.oauth.github.clientId }}
+        - name: GITHUB_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: GITHUB_CLIENT_ID
+        - name: GITHUB_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: GITHUB_CLIENT_SECRET
+        {{- end }}
+        - name: NEXT_PUBLIC_SAAS_MODE
+          value: {{ .Values.features.saasMode | quote }}
+        - name: NEXT_PUBLIC_EMAIL_AUTH_ENABLED
+          value: {{ .Values.features.emailAuth | quote }}
+        - name: NEXT_PUBLIC_BILLING_ENABLED
+          value: {{ .Values.features.billing | quote }}
+        - name: NEXT_PUBLIC_INVITES_ENABLED
+          value: {{ .Values.features.invites | quote }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

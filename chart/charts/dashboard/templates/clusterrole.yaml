@@ -1,0 +1,29 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "dashboard.fullname" . }}
+  labels:
+    {{- include "dashboard.labels" . | nindent 4 }}
+rules:
+# CRD access for all language-operator resources
+- apiGroups: ["langop.io"]
+  resources:
+  - languageagents
+  - languageagentversions
+  - languagemodels
+  - languagetools
+  - languagepersonas
+  - languageclusters
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# Namespace management for organizations
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "create", "update", "patch"]
+
+# Pod logs access for debugging
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list"]
+{{- end }}
