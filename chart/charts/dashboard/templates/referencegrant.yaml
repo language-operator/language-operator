@@ -1,0 +1,18 @@
+{{- if and .Values.gateway.enabled .Values.gateway.gatewayNamespace (ne .Values.gateway.gatewayNamespace .Release.Namespace) -}}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: {{ include "dashboard.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "dashboard.labels" . | nindent 4 }}
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: {{ .Values.gateway.gatewayNamespace }}
+  to:
+  - group: ""
+    kind: Service
+    name: {{ include "dashboard.fullname" . }}
+{{- end }}

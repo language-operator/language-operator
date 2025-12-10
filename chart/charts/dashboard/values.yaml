@@ -33,6 +33,24 @@ service:
   type: ClusterIP
   port: 3000
 
+# Gateway API configuration (Traefik native)
+gateway:
+  enabled: false
+  # Name of existing Gateway to attach HTTPRoute to
+  gatewayName: ""
+  # Namespace of the Gateway (if different from dashboard namespace)
+  gatewayNamespace: ""
+  # Hostname for the dashboard
+  hostname: "dashboard.example.com"
+  # TLS configuration
+  tls:
+    enabled: false
+    # Reference to TLS certificate secret
+    certificateRef:
+      name: ""
+      namespace: ""
+
+# Legacy Ingress support (deprecated, use Gateway API instead)
 ingress:
   enabled: false
   className: ""

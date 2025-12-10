@@ -693,3 +693,55 @@ personaLibrary:
     - general-assistant
     - executive-assistant
     - customer-support
+
+# Dashboard configuration
+dashboard:
+  # Enable the web dashboard
+  enabled: true
+
+  # Override dashboard subchart values
+  image:
+    repository: ghcr.io/language-operator/dashboard
+    tag: latest
+
+  # Gateway API configuration (Traefik native)
+  gateway:
+    enabled: false
+    # Name of existing Gateway to attach HTTPRoute to
+    gatewayName: ""
+    # Namespace of the Gateway (if different from dashboard namespace)
+    gatewayNamespace: ""
+    # Hostname for the dashboard
+    hostname: "dashboard.example.com"
+    # TLS configuration
+    tls:
+      enabled: false
+      # Reference to TLS certificate secret
+      certificateRef:
+        name: ""
+        namespace: ""
+
+  # PostgreSQL configuration
+  postgresql:
+    enabled: true
+    auth:
+      username: dashboard
+      database: dashboard
+      # Password auto-generated if empty
+      password: ""
+
+  # OAuth providers (optional)
+  oauth:
+    google:
+      clientId: ""
+      clientSecret: ""
+    github:
+      clientId: ""
+      clientSecret: ""
+
+  # Feature flags
+  features:
+    saasMode: false
+    emailAuth: true
+    billing: false
+    invites: true
