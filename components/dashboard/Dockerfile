@@ -46,20 +46,16 @@ RUN adduser --system --uid 1001 nextjs
 # Install runtime dependencies for Prisma
 RUN apk add --no-cache openssl
 
-# Copy Prisma files for migrations
+# Copy full node_modules for Prisma CLI and dependencies
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 # Copy Next.js standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Prisma CLI for migrations
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 USER nextjs
 
