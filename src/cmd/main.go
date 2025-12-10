@@ -414,16 +414,17 @@ func main() {
 	telemetryAdapter := initializeTelemetryAdapter()
 
 	if err = (&controllers.LearningReconciler{
-		Client:               mgr.GetClient(),
-		Scheme:               mgr.GetScheme(),
-		Log:                  learningLog,
-		Recorder:             mgr.GetEventRecorderFor("learning-controller"),
-		ConfigMapManager:     configMapManager,
-		TelemetryAdapter:     telemetryAdapter,
-		LearningEnabled:      true,
-		LearningThreshold:    10,              // Trigger learning after 10 traces
-		LearningInterval:     5 * time.Minute, // 5 minute cooldown between attempts
-		PatternConfidenceMin: 0.8,             // Require 80% confidence
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Log:                   learningLog,
+		Recorder:              mgr.GetEventRecorderFor("learning-controller"),
+		ConfigMapManager:      configMapManager,
+		TelemetryAdapter:      telemetryAdapter,
+		LearningEnabled:       true,
+		LearningThreshold:     10,              // Trigger learning after 10 traces
+		LearningInterval:      5 * time.Minute, // 5 minute cooldown between attempts
+		PatternConfidenceMin:  0.8,             // Require 80% confidence
+		VersionRetentionCount: 5,               // Keep last 5 versions, delete older ones
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Learning")
 		os.Exit(1)

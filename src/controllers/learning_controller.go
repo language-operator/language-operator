@@ -44,15 +44,16 @@ type OptimizedTask struct {
 // LearningReconciler reconciles learning events and triggers re-synthesis
 type LearningReconciler struct {
 	client.Client
-	Scheme               *runtime.Scheme
-	Log                  logr.Logger
-	Recorder             record.EventRecorder
-	ConfigMapManager     *synthesis.ConfigMapManager // For versioned ConfigMap management
-	TelemetryAdapter     telemetry.TelemetryAdapter  // For querying historical execution data
-	LearningEnabled      bool
-	LearningThreshold    int32         // Number of execution traces before triggering learning
-	LearningInterval     time.Duration // Minimum interval between learning attempts
-	PatternConfidenceMin float64       // Minimum confidence threshold for pattern detection
+	Scheme                *runtime.Scheme
+	Log                   logr.Logger
+	Recorder              record.EventRecorder
+	ConfigMapManager      *synthesis.ConfigMapManager // For versioned ConfigMap management
+	TelemetryAdapter      telemetry.TelemetryAdapter  // For querying historical execution data
+	LearningEnabled       bool
+	LearningThreshold     int32         // Number of execution traces before triggering learning
+	LearningInterval      time.Duration // Minimum interval between learning attempts
+	PatternConfidenceMin  float64       // Minimum confidence threshold for pattern detection
+	VersionRetentionCount int           // Number of old versions to keep (0 = keep all)
 }
 
 // TaskTrace represents an execution trace for pattern detection
@@ -288,6 +289,57 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 
 	log.Info("Successfully triggered agent optimization")
 	span.SetStatus(codes.Ok, "Optimization completed")
+
+	// Clean up old versions if retention is configured
+	if r.VersionRetentionCount > 0 {
+		if err := r.cleanupOldVersions(ctx, agent); err != nil {
+			log.Error(err, "Failed to cleanup old versions", "retentionCount", r.VersionRetentionCount)
+			// Don't fail optimization on cleanup errors
+		}
+	}
+
+	return nil
+}
+
+// cleanupOldVersions removes old LanguageAgentVersions beyond the retention count
+func (r *LearningReconciler) cleanupOldVersions(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+
+	// List all versions for this agent
+	versionList := &langopv1alpha1.LanguageAgentVersionList{}
+	if err := r.List(ctx, versionList, client.InNamespace(agent.Namespace), client.MatchingLabels{
+		"langop.io/agent": agent.Name,
+	}); err != nil {
+		return fmt.Errorf("failed to list versions: %w", err)
+	}
+
+	// Sort versions by version number (descending)
+	sort.Slice(versionList.Items, func(i, j int) bool {
+		return versionList.Items[i].Spec.Version > versionList.Items[j].Spec.Version
+	})
+
+	// Calculate how many to delete
+	if len(versionList.Items) <= r.VersionRetentionCount {
+		log.V(1).Info("No versions to cleanup", "total", len(versionList.Items), "retention", r.VersionRetentionCount)
+		return nil
+	}
+
+	versionsToDelete := versionList.Items[r.VersionRetentionCount:]
+	log.Info("Cleaning up old versions", "total", len(versionList.Items), "keeping", r.VersionRetentionCount, "deleting", len(versionsToDelete))
+
+	// Delete old versions
+	deletedCount := 0
+	for _, version := range versionsToDelete {
+		if err := r.Delete(ctx, &version); err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete version", "version", version.Name)
+				continue
+			}
+		}
+		deletedCount++
+	}
+
+	log.Info("Cleanup completed", "deletedCount", deletedCount)
 	return nil
 }
 
