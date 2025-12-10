@@ -108,26 +108,24 @@ features:
   billing: false
   invites: true
 
-# PostgreSQL subchart configuration
+# PostgreSQL configuration
 postgresql:
   enabled: true
   auth:
     username: dashboard
     password: ""  # Auto-generated if empty
     database: dashboard
-  primary:
-    persistence:
-      enabled: true
-      size: 10Gi
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 100m
-        memory: 256Mi
-  volumePermissions:
+  persistence:
     enabled: true
+    size: 10Gi
+    storageClass: ""  # Use default storage class
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 # External database configuration (when postgresql.enabled=false)
 externalDatabase:
