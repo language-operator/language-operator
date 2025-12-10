@@ -20,11 +20,19 @@ task_name = ARGV[0]
 agent_code_file = ARGV[1]
 
 begin
-  # Load the agent DSL
-  agent = LanguageOperator::Dsl.load_agent_file(agent_code_file)
+  # Load the agent DSL - returns an AgentRegistry
+  registry = LanguageOperator::Dsl.load_agent_file(agent_code_file)
+
+  # Get the first (and should be only) agent from the registry
+  agent = registry.all.first
+
+  if agent.nil?
+    STDERR.puts "No agent found in file"
+    exit 1
+  end
 
   # Find the task by name
-  task = agent.tasks.find { |t| t.name == task_name }
+  task = agent.tasks.find { |t| t.name == task_name || t.name.to_s == task_name }
 
   if task.nil?
     STDERR.puts "Task '#{task_name}' not found in agent"
