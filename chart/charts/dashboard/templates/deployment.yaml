@@ -35,11 +35,12 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          echo "Waiting for database..."
-          until node -e "const {Client} = require('pg'); const client = new Client({connectionString: process.env.DATABASE_URL}); client.connect().then(() => { console.log('Database ready'); client.end(); process.exit(0); }).catch(err => { console.error('Database not ready:', err.message); process.exit(1); });" 2>/dev/null; do
+          echo "Waiting for PostgreSQL to be ready..."
+          until npx prisma db execute --stdin --schema=/app/prisma/schema.prisma <<< "SELECT 1;" > /dev/null 2>&1; do
+            echo "Database not ready, retrying in 2s..."
             sleep 2
           done
-          echo "Running Prisma migrations..."
+          echo "Database ready! Running Prisma migrations..."
           npx prisma migrate deploy
         env:
         - name: DATABASE_URL
