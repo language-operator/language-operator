@@ -3,6 +3,9 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ include "dashboard.fullname" . }}
+  {{- if and .Values.gateway.gatewayNamespace (ne .Values.gateway.gatewayNamespace .Release.Namespace) }}
+  namespace: {{ .Values.gateway.gatewayNamespace }}
+  {{- end }}
   labels:
     {{- include "dashboard.labels" . | nindent 4 }}
 spec:
