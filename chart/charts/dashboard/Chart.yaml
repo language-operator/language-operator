@@ -9,4 +9,4 @@ dependencies:
   - name: postgresql
     version: "15.5.38"
     repository: https://charts.bitnami.com/bitnami
-    condition: dashboard.postgresql.enabled
+    condition: postgresql.enabled
