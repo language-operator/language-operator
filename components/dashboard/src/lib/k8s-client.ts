@@ -32,13 +32,11 @@ class KubernetesClient {
   // Core V1 API methods
 
   async listNamespaces() {
-    const response = await this.coreV1Api.listNamespace()
-    return response.body
+    return await this.coreV1Api.listNamespace()
   }
 
   async getNamespace(name: string) {
-    const response = await this.coreV1Api.readNamespace(name)
-    return response.body
+    return await this.coreV1Api.readNamespace(name)
   }
 
   async createNamespace(name: string, labels?: Record<string, string>) {
@@ -48,12 +46,11 @@ class KubernetesClient {
         labels,
       },
     }
-    const response = await this.coreV1Api.createNamespace(namespace)
-    return response.body
+    return await this.coreV1Api.createNamespace(namespace)
   }
 
   async getPodLogs(namespace: string, podName: string, tailLines: number = 100) {
-    const response = await this.coreV1Api.readNamespacedPodLog(
+    return await this.coreV1Api.readNamespacedPodLog(
       podName,
       namespace,
       undefined, // container
@@ -66,45 +63,41 @@ class KubernetesClient {
       tailLines, // tailLines
       undefined  // timestamps
     )
-    return response.body
   }
 
   // Custom Resource methods for language-operator CRDs
 
   async listLanguageAgents(namespace: string) {
-    const response = await this.customObjectsApi.listNamespacedCustomObject(
+    return await this.customObjectsApi.listNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageagents'
     )
-    return response.body
   }
 
   async getLanguageAgent(namespace: string, name: string) {
-    const response = await this.customObjectsApi.getNamespacedCustomObject(
+    return await this.customObjectsApi.getNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageagents',
       name
     )
-    return response.body
   }
 
   async createLanguageAgent(namespace: string, spec: any) {
-    const response = await this.customObjectsApi.createNamespacedCustomObject(
+    return await this.customObjectsApi.createNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageagents',
       spec
     )
-    return response.body
   }
 
   async updateLanguageAgent(namespace: string, name: string, spec: any) {
-    const response = await this.customObjectsApi.patchNamespacedCustomObject(
+    return await this.customObjectsApi.patchNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
@@ -116,198 +109,180 @@ class KubernetesClient {
       undefined,
       { headers: { 'Content-Type': 'application/merge-patch+json' } }
     )
-    return response.body
   }
 
   async deleteLanguageAgent(namespace: string, name: string) {
-    const response = await this.customObjectsApi.deleteNamespacedCustomObject(
+    return await this.customObjectsApi.deleteNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageagents',
       name
     )
-    return response.body
   }
 
   // LanguageModel methods
 
   async listLanguageModels(namespace: string) {
-    const response = await this.customObjectsApi.listNamespacedCustomObject(
+    return await this.customObjectsApi.listNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagemodels'
     )
-    return response.body
   }
 
   async getLanguageModel(namespace: string, name: string) {
-    const response = await this.customObjectsApi.getNamespacedCustomObject(
+    return await this.customObjectsApi.getNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagemodels',
       name
     )
-    return response.body
   }
 
   async createLanguageModel(namespace: string, spec: any) {
-    const response = await this.customObjectsApi.createNamespacedCustomObject(
+    return await this.customObjectsApi.createNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagemodels',
       spec
     )
-    return response.body
   }
 
   async deleteLanguageModel(namespace: string, name: string) {
-    const response = await this.customObjectsApi.deleteNamespacedCustomObject(
+    return await this.customObjectsApi.deleteNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagemodels',
       name
     )
-    return response.body
   }
 
   // LanguageTool methods
 
   async listLanguageTools(namespace: string) {
-    const response = await this.customObjectsApi.listNamespacedCustomObject(
+    return await this.customObjectsApi.listNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagetools'
     )
-    return response.body
   }
 
   async getLanguageTool(namespace: string, name: string) {
-    const response = await this.customObjectsApi.getNamespacedCustomObject(
+    return await this.customObjectsApi.getNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagetools',
       name
     )
-    return response.body
   }
 
   async createLanguageTool(namespace: string, spec: any) {
-    const response = await this.customObjectsApi.createNamespacedCustomObject(
+    return await this.customObjectsApi.createNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagetools',
       spec
     )
-    return response.body
   }
 
   async deleteLanguageTool(namespace: string, name: string) {
-    const response = await this.customObjectsApi.deleteNamespacedCustomObject(
+    return await this.customObjectsApi.deleteNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagetools',
       name
     )
-    return response.body
   }
 
   // LanguagePersona methods
 
   async listLanguagePersonas(namespace: string) {
-    const response = await this.customObjectsApi.listNamespacedCustomObject(
+    return await this.customObjectsApi.listNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagepersonas'
     )
-    return response.body
   }
 
   async getLanguagePersona(namespace: string, name: string) {
-    const response = await this.customObjectsApi.getNamespacedCustomObject(
+    return await this.customObjectsApi.getNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagepersonas',
       name
     )
-    return response.body
   }
 
   async createLanguagePersona(namespace: string, spec: any) {
-    const response = await this.customObjectsApi.createNamespacedCustomObject(
+    return await this.customObjectsApi.createNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagepersonas',
       spec
     )
-    return response.body
   }
 
   async deleteLanguagePersona(namespace: string, name: string) {
-    const response = await this.customObjectsApi.deleteNamespacedCustomObject(
+    return await this.customObjectsApi.deleteNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languagepersonas',
       name
     )
-    return response.body
   }
 
   // LanguageCluster methods
 
   async listLanguageClusters(namespace: string) {
-    const response = await this.customObjectsApi.listNamespacedCustomObject(
+    return await this.customObjectsApi.listNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageclusters'
     )
-    return response.body
   }
 
   async getLanguageCluster(namespace: string, name: string) {
-    const response = await this.customObjectsApi.getNamespacedCustomObject(
+    return await this.customObjectsApi.getNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageclusters',
       name
     )
-    return response.body
   }
 
   async createLanguageCluster(namespace: string, spec: any) {
-    const response = await this.customObjectsApi.createNamespacedCustomObject(
+    return await this.customObjectsApi.createNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageclusters',
       spec
     )
-    return response.body
   }
 
   async deleteLanguageCluster(namespace: string, name: string) {
-    const response = await this.customObjectsApi.deleteNamespacedCustomObject(
+    return await this.customObjectsApi.deleteNamespacedCustomObject(
       'langop.io',
       'v1alpha1',
       namespace,
       'languageclusters',
       name
     )
-    return response.body
   }
 }
 
