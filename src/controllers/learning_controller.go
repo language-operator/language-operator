@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -155,10 +156,17 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, reconcileErr
 		}
 
-		// Reset counter after successful optimization
-		agent.Status.RunsPendingLearning = 0
-		if err := r.Status().Update(ctx, agent); err != nil {
-			log.Error(err, "Failed to reset runsPendingLearning counter")
+		// Reset counter after successful optimization with retry on conflict
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Re-fetch the agent to get the latest version
+			if err := r.Get(ctx, req.NamespacedName, agent); err != nil {
+				return err
+			}
+			agent.Status.RunsPendingLearning = 0
+			return r.Status().Update(ctx, agent)
+		})
+		if err != nil {
+			log.Error(err, "Failed to reset runsPendingLearning counter after retries")
 			reconcileErr = fmt.Errorf("failed to reset counter: %w", err)
 			return ctrl.Result{}, reconcileErr
 		}
@@ -260,10 +268,18 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 		}
 	}
 
-	// Reset the counter after processing optimization
-	agent.Status.RunsPendingLearning = 0
-	if err := r.Status().Update(ctx, agent); err != nil {
-		log.Error(err, "Failed to reset learning counter after optimization")
+	// Reset the counter after processing optimization with retry on conflict
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Re-fetch the agent to get the latest version
+		freshAgent := &langopv1alpha1.LanguageAgent{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, freshAgent); err != nil {
+			return err
+		}
+		freshAgent.Status.RunsPendingLearning = 0
+		return r.Status().Update(ctx, freshAgent)
+	})
+	if retryErr != nil {
+		log.Error(retryErr, "Failed to reset learning counter after optimization and retries")
 	}
 
 	// Record successful optimization event
