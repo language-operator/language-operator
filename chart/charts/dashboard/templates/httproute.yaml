@@ -24,4 +24,7 @@ spec:
     backendRefs:
     - name: {{ include "dashboard.fullname" . }}
       port: {{ .Values.service.port }}
+      {{- if and .Values.gateway.gatewayNamespace (ne .Values.gateway.gatewayNamespace .Release.Namespace) }}
+      namespace: {{ .Release.Namespace }}
+      {{- end }}
 {{- end }}
