@@ -49,11 +49,13 @@ RUN apk add --no-cache openssl
 # Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
 
-# Copy full node_modules to /prisma-node_modules for init container Prisma CLI
-COPY --from=builder /app/node_modules ./prisma-node_modules
+# Copy full node_modules for both Prisma CLI (init container) and runtime
+COPY --from=builder /app/node_modules ./node_modules
 
-# Copy Next.js standalone build (includes optimized runtime node_modules)
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+# Copy Next.js build outputs
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/server.js ./server.js
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
