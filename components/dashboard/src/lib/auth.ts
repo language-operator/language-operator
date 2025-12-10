@@ -9,7 +9,7 @@ import { db } from './db'
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
-    strategy: 'database',
+    strategy: 'jwt', // Use JWT sessions instead of database sessions
   },
   pages: {
     signIn: '/login',
@@ -73,17 +73,24 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      console.log('🔧 [SESSION] Building session for user:', user?.id)
+    async jwt({ token, user }) {
+      // Store user ID in JWT token when user first logs in
+      if (user) {
+        token.sub = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      console.log('🔧 [SESSION] Building JWT session for user:', token.sub)
       
-      if (session.user) {
-        session.user.id = user.id
+      if (session.user && token.sub) {
+        session.user.id = token.sub
 
         try {
-          console.log('👥 [SESSION] Fetching organizations for user:', user.id)
+          console.log('👥 [SESSION] Fetching organizations for user:', token.sub)
           // Get user's organizations and active organization
           const memberships = await db.organizationMember.findMany({
-            where: { userId: user.id },
+            where: { userId: token.sub },
             include: {
               organization: true,
             },
