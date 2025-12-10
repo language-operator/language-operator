@@ -60,12 +60,28 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Get PostgreSQL password
+*/}}
+{{- define "dashboard.postgresqlPassword" -}}
+{{- if .Values.postgresql.auth.password }}
+{{- .Values.postgresql.auth.password }}
+{{- else }}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace (printf "%s-postgresql" (include "dashboard.fullname" .)) }}
+{{- if $secret }}
+{{- index $secret.data "password" | b64dec }}
+{{- else }}
+{{- randAlphaNum 32 }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Get the database connection URL
 */}}
 {{- define "dashboard.databaseUrl" -}}
 {{- if .Values.externalDatabase.enabled }}
 {{- printf "postgresql://%s:%s@%s:%d/%s?schema=public" .Values.externalDatabase.user .Values.externalDatabase.password .Values.externalDatabase.host (.Values.externalDatabase.port | int) .Values.externalDatabase.database }}
 {{- else }}
-{{- printf "postgresql://%s:$(POSTGRES_PASSWORD)@%s-postgresql:5432/%s?schema=public" .Values.postgresql.auth.username (include "dashboard.fullname" .) .Values.postgresql.auth.database }}
+{{- printf "postgresql://%s:%s@%s-postgresql:5432/%s?schema=public" .Values.postgresql.auth.username (include "dashboard.postgresqlPassword" .) (include "dashboard.fullname" .) .Values.postgresql.auth.database }}
 {{- end }}
 {{- end }}
