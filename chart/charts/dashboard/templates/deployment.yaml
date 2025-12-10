@@ -36,7 +36,7 @@ spec:
         args:
         - |
           echo "Waiting for PostgreSQL to be ready..."
-          until npx prisma db execute --stdin --schema=/app/prisma/schema.prisma <<< "SELECT 1;" > /dev/null 2>&1; do
+          until echo "SELECT 1;" | npx prisma db execute --stdin --schema=/app/prisma/schema.prisma > /dev/null 2>&1; do
             echo "Database not ready, retrying in 2s..."
             sleep 2
           done
