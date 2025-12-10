@@ -83,7 +83,7 @@ spec:
               key: password
         {{- end }}
         - name: NEXTAUTH_URL
-          value: {{ .Values.nextAuth.url | default (printf "http://%s" (index .Values.ingress.hosts 0).host) | quote }}
+          value: {{ .Values.nextAuth.url | default (printf "http://%s" .Values.gateway.hostname) | quote }}
         - name: NEXTAUTH_SECRET
           valueFrom:
             secretKeyRef:
