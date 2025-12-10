@@ -31,22 +31,33 @@ begin
     exit 1
   end
 
-  # Find the task by name
-  task = agent.tasks.find { |t| t.name == task_name || t.name.to_s == task_name }
+  # Find the task by name (tasks is a hash with symbol or string keys)
+  task = agent.tasks[task_name.to_sym] || agent.tasks[task_name]
 
   if task.nil?
-    STDERR.puts "Task '#{task_name}' not found in agent"
+    STDERR.puts "Task '#{task_name}' not found in agent. Available tasks: #{agent.tasks.keys.join(', ')}"
     exit 1
   end
 
+  # Determine task type
+  task_type = if task.neural? && task.symbolic?
+                "hybrid"
+              elsif task.neural?
+                "neural"
+              elsif task.symbolic?
+                "symbolic"
+              else
+                "unknown"
+              end
+
   # Extract task information
   task_info = {
-    name: task.name,
-    instructions: task.instructions || "",
-    inputs: task.inputs || {},
-    outputs: task.outputs || {},
-    code: task.code || "",
-    type: task.type || "neural" # neural or symbolic
+    name: task.name.to_s,
+    instructions: task.instructions_text || "",
+    inputs: task.inputs_schema || {},
+    outputs: task.outputs_schema || {},
+    has_code: task.symbolic?,
+    type: task_type
   }
 
   # Output as JSON
