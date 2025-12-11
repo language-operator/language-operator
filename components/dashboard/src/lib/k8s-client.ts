@@ -140,6 +140,17 @@ class KubernetesClient {
     })
   }
 
+  async updateLanguageModel(namespace: string, name: string, spec: any) {
+    return await this.customObjectsApi.patchNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languagemodels',
+      name,
+      body: spec,
+    })
+  }
+
   async deleteLanguageModel(namespace: string, name: string) {
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
@@ -177,6 +188,17 @@ class KubernetesClient {
       version: 'v1alpha1',
       namespace,
       plural: 'languagetools',
+      body: spec,
+    })
+  }
+
+  async updateLanguageTool(namespace: string, name: string, spec: any) {
+    return await this.customObjectsApi.patchNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languagetools',
+      name,
       body: spec,
     })
   }
@@ -222,6 +244,17 @@ class KubernetesClient {
     })
   }
 
+  async updateLanguagePersona(namespace: string, name: string, spec: any) {
+    return await this.customObjectsApi.patchNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languagepersonas',
+      name,
+      body: spec,
+    })
+  }
+
   async deleteLanguagePersona(namespace: string, name: string) {
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
@@ -263,12 +296,75 @@ class KubernetesClient {
     })
   }
 
+  async updateLanguageCluster(namespace: string, name: string, spec: any) {
+    return await this.customObjectsApi.patchNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageclusters',
+      name,
+      body: spec,
+    })
+  }
+
   async deleteLanguageCluster(namespace: string, name: string) {
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languageclusters',
+      name,
+    })
+  }
+
+  // LanguageAgentVersion methods
+
+  async listLanguageAgentVersions(namespace: string) {
+    return await this.customObjectsApi.listNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageagentversions',
+    })
+  }
+
+  async getLanguageAgentVersion(namespace: string, name: string) {
+    return await this.customObjectsApi.getNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageagentversions',
+      name,
+    })
+  }
+
+  async createLanguageAgentVersion(namespace: string, spec: any) {
+    return await this.customObjectsApi.createNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageagentversions',
+      body: spec,
+    })
+  }
+
+  async updateLanguageAgentVersion(namespace: string, name: string, spec: any) {
+    return await this.customObjectsApi.patchNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageagentversions',
+      name,
+      body: spec,
+    })
+  }
+
+  async deleteLanguageAgentVersion(namespace: string, name: string) {
+    return await this.customObjectsApi.deleteNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageagentversions',
       name,
     })
   }

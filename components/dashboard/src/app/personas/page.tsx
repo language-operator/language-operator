@@ -1,129 +1,277 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Users, AlertCircle, CheckCircle, User, Briefcase, GraduationCap, Heart } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { 
+  Plus, Search, Users, CheckCircle, AlertCircle, 
+  Clock, Activity, MoreHorizontal, Edit, Trash2, Eye,
+  User, Briefcase, GraduationCap, Heart, Bot
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { usePersonas, useDeletePersona } from '@/hooks/use-personas'
+import { LanguagePersona } from '@/types/persona'
+import { Skeleton } from '@/components/ui/skeleton'
+
+function formatTimeAgo(timestamp?: string) {
+  if (!timestamp) return 'Unknown'
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`
+  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  if (minutes > 0) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  return 'Just now'
+}
+
+function getToneIcon(tone?: string) {
+  if (!tone) return <User className="h-4 w-4 text-gray-500" />
+  
+  const lowerTone = tone.toLowerCase()
+  if (lowerTone.includes('professional') || lowerTone.includes('business')) {
+    return <Briefcase className="h-4 w-4 text-blue-500" />
+  } else if (lowerTone.includes('friendly') || lowerTone.includes('warm')) {
+    return <Heart className="h-4 w-4 text-pink-500" />
+  } else if (lowerTone.includes('technical') || lowerTone.includes('expert')) {
+    return <GraduationCap className="h-4 w-4 text-purple-500" />
+  } else if (lowerTone.includes('creative') || lowerTone.includes('inspiring')) {
+    return <Heart className="h-4 w-4 text-orange-500" />
+  } else {
+    return <User className="h-4 w-4 text-gray-500" />
+  }
+}
+
+interface PersonaTableProps {
+  personas: LanguagePersona[]
+  onDelete: (name: string) => void
+  isDeleting?: boolean
+}
+
+function PersonaTable({ personas, onDelete, isDeleting }: PersonaTableProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Personas ({personas.length})</CardTitle>
+        <CardDescription>Language personas in your organization</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Tone</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Usage</TableHead>
+              <TableHead>Age</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {personas.map((persona) => (
+              <TableRow key={persona.metadata.name}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-purple-500" />
+                    <Link 
+                      href={`/personas/${persona.metadata.name}`}
+                      className="hover:underline"
+                    >
+                      {persona.metadata.name}
+                    </Link>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {getToneIcon(persona.spec.tone)}
+                    <Badge variant="outline">{persona.spec.tone || 'Not specified'}</Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm max-w-xs truncate">
+                    {persona.spec.description || 'No description'}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-1">
+                    <Bot className="h-3 w-3 text-blue-500" />
+                    <span className="text-sm">
+                      {persona.status?.agentReferences?.length || 0} agents
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {formatTimeAgo(persona.metadata.creationTimestamp)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/personas/${persona.metadata.name}`}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/personas/${persona.metadata.name}/edit`}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to delete persona "${persona.metadata.name}"?`)) {
+                            onDelete(persona.metadata.name!)
+                          }
+                        }}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {personas.length === 0 && (
+          <div className="text-center py-8">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No personas found</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first language persona to get started.
+            </p>
+            <Link href="/personas/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Persona
+              </Button>
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function PersonasPage() {
-  const personas = [
-    {
-      id: 'persona-1',
-      name: 'helpful-assistant',
-      description: 'Friendly and supportive assistant that provides helpful guidance',
-      status: 'Active',
-      category: 'General',
-      icon: User,
-      personality: 'Warm, empathetic, patient',
-      tone: 'Professional but friendly',
-      specialization: 'Customer support, general assistance',
-      lastUsed: '5 minutes ago',
-      agentCount: 8,
-      namespace: 'production',
-      traits: ['helpful', 'patient', 'clear communication', 'empathetic'],
-    },
-    {
-      id: 'persona-2',
-      name: 'technical-expert',
-      description: 'Analytical and precise persona for technical tasks and code review',
-      status: 'Active',
-      category: 'Technical',
-      icon: GraduationCap,
-      personality: 'Analytical, detail-oriented, methodical',
-      tone: 'Professional and precise',
-      specialization: 'Code review, technical documentation, system analysis',
-      lastUsed: '1 hour ago',
-      agentCount: 3,
-      namespace: 'development',
-      traits: ['analytical', 'precise', 'methodical', 'logical'],
-    },
-    {
-      id: 'persona-3',
-      name: 'creative-writer',
-      description: 'Imaginative and expressive persona for content creation',
-      status: 'Active',
-      category: 'Creative',
-      icon: Heart,
-      personality: 'Creative, expressive, engaging',
-      tone: 'Conversational and inspiring',
-      specialization: 'Blog posts, marketing copy, creative content',
-      lastUsed: '3 hours ago',
-      agentCount: 2,
-      namespace: 'marketing',
-      traits: ['creative', 'expressive', 'engaging', 'inspiring'],
-    },
-    {
-      id: 'persona-4',
-      name: 'business-analyst',
-      description: 'Strategic and data-driven persona for business insights',
-      status: 'Pending',
-      category: 'Business',
-      icon: Briefcase,
-      personality: 'Strategic, data-driven, results-oriented',
-      tone: 'Professional and authoritative',
-      specialization: 'Market analysis, business strategy, reporting',
-      lastUsed: '2 days ago',
-      agentCount: 1,
-      namespace: 'business',
-      traits: ['strategic', 'analytical', 'results-oriented', 'data-driven'],
-    },
-    {
-      id: 'persona-5',
-      name: 'customer-advocate',
-      description: 'Empathetic persona focused on customer satisfaction and resolution',
-      status: 'Error',
-      category: 'Customer Service',
-      icon: Heart,
-      personality: 'Empathetic, solution-focused, diplomatic',
-      tone: 'Warm and understanding',
-      specialization: 'Customer complaints, issue resolution, relationship building',
-      lastUsed: '1 week ago',
-      agentCount: 0,
-      namespace: 'customer-service',
-      traits: ['empathetic', 'diplomatic', 'solution-focused', 'understanding'],
-    },
-  ]
+  const [search, setSearch] = useState('')
+  const [toneFilter, setToneFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<'name' | 'tone' | 'usage' | 'age'>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'Pending':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case 'Error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />
+  const { 
+    data: personasResponse, 
+    isLoading, 
+    error,
+    refetch 
+  } = usePersonas({
+    search: search || undefined,
+    tone: toneFilter !== 'all' ? [toneFilter] : undefined,
+    sortBy,
+    sortOrder,
+    limit: 100,
+  })
+
+  const deletePersona = useDeletePersona()
+
+  const personas = personasResponse?.data || []
+  const total = personasResponse?.total || 0
+
+  // Get unique tones for filter dropdown
+  const tones = Array.from(new Set(personas.map(persona => persona.spec.tone).filter(Boolean))).sort()
+
+  // Stats calculations
+  const totalAgentUsage = personas.reduce((sum, p) => sum + (p.status?.agentReferences?.length || 0), 0)
+  const personasWithTone = personas.filter(p => p.spec.tone).length
+  const personasWithExamples = personas.filter(p => p.spec.examples && p.spec.examples.length > 0).length
+
+  const handleDelete = async (name: string) => {
+    try {
+      await deletePersona.mutateAsync(name)
+      refetch()
+    } catch (error) {
+      console.error('Failed to delete persona:', error)
+      alert('Failed to delete persona. Please try again.')
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return 'bg-green-100 text-green-800'
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Error':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+  if (isLoading) {
+    return (
+      <AuthenticatedLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AuthenticatedLayout>
+    )
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'General':
-        return 'bg-blue-100 text-blue-800'
-      case 'Technical':
-        return 'bg-green-100 text-green-800'
-      case 'Creative':
-        return 'bg-purple-100 text-purple-800'
-      case 'Business':
-        return 'bg-orange-100 text-orange-800'
-      case 'Customer Service':
-        return 'bg-pink-100 text-pink-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+  if (error) {
+    return (
+      <AuthenticatedLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Failed to load personas</h3>
+            <p className="text-muted-foreground mb-4">
+              There was an error loading your language personas.
+            </p>
+            <Button onClick={() => refetch()}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    )
   }
 
   return (
@@ -133,17 +281,19 @@ export default function PersonasPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Language Personas</h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-muted-foreground">
               Define personality traits and communication styles for your agents
             </p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Persona
-          </Button>
+          <Link href="/personas/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Persona
+            </Button>
+          </Link>
         </div>
 
-        {/* Stats */}
+        {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -151,130 +301,115 @@ export default function PersonasPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{personas.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {personas.filter(p => p.status === 'Active').length}
-              </div>
+              <div className="text-2xl font-bold">{total}</div>
+              <p className="text-xs text-muted-foreground">
+                Available personas
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Agent Usage</CardTitle>
+              <Bot className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {new Set(personas.map(p => p.category)).size}
-              </div>
+              <div className="text-2xl font-bold">{totalAgentUsage}</div>
+              <p className="text-xs text-muted-foreground">
+                Agents using personas
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Using Agents</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">With Tone</CardTitle>
+              <Heart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {personas.reduce((sum, p) => sum + p.agentCount, 0)}
-              </div>
+              <div className="text-2xl font-bold">{personasWithTone}</div>
+              <p className="text-xs text-muted-foreground">
+                {total > 0 ? Math.round((personasWithTone / total) * 100) : 0}% configured
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">With Examples</CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{personasWithExamples}</div>
+              <p className="text-xs text-muted-foreground">
+                Have example prompts
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Personas List */}
-        <div className="space-y-4">
-          {personas.map((persona) => {
-            const IconComponent = persona.icon
-            return (
-              <Card key={persona.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <IconComponent className="h-6 w-6 text-pink-500 mt-1" />
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <CardTitle className="text-lg">{persona.name}</CardTitle>
-                          <Badge className={getCategoryColor(persona.category)}>
-                            {persona.category}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {persona.namespace}
-                          </Badge>
-                        </div>
-                        <CardDescription className="mt-1">
-                          {persona.description}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(persona.status)}
-                      <Badge className={getStatusColor(persona.status)}>
-                        {persona.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-600 mb-1">Personality</h4>
-                      <p className="text-sm">{persona.personality}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-600 mb-1">Tone</h4>
-                      <p className="text-sm">{persona.tone}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-600 mb-1">Specialization</h4>
-                      <p className="text-sm">{persona.specialization}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-600 mb-1">Agent Usage</h4>
-                      <p className="text-sm">{persona.agentCount} agents</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-600 mb-2">Traits</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {persona.traits.map((trait) => (
-                        <Badge key={trait} variant="outline" className="text-xs">
-                          {trait}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search personas..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              
+              <Select value={toneFilter} onValueChange={setToneFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="All Tones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tones</SelectItem>
+                  {tones.map((tone) => (
+                    <SelectItem key={tone} value={tone}>
+                      {tone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                  <div className="flex space-x-2 mt-4">
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Clone
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      View Agents
-                    </Button>
-                    <Button variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+              <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
+                const [newSortBy, newSortOrder] = value.split('-') as [typeof sortBy, typeof sortOrder]
+                setSortBy(newSortBy)
+                setSortOrder(newSortOrder)
+              }}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                  <SelectItem value="tone-asc">Tone (A-Z)</SelectItem>
+                  <SelectItem value="tone-desc">Tone (Z-A)</SelectItem>
+                  <SelectItem value="usage-desc">Usage (Most)</SelectItem>
+                  <SelectItem value="usage-asc">Usage (Least)</SelectItem>
+                  <SelectItem value="age-desc">Newest</SelectItem>
+                  <SelectItem value="age-asc">Oldest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Personas Table */}
+        <PersonaTable 
+          personas={personas} 
+          onDelete={handleDelete}
+          isDeleting={deletePersona.isPending}
+        />
       </div>
     </AuthenticatedLayout>
   )
