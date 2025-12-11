@@ -5,6 +5,7 @@ import { getKubernetesClient } from '@/lib/kubernetes'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
+import { safeValidateLanguageModel } from '@/lib/validation'
 
 // GET /api/models - List all models for user's organization
 export async function GET(request: NextRequest) {
@@ -176,11 +177,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Parse request body
-    const formData: LanguageModelFormData = await request.json()
+    // Parse and validate request body
+    const body = await request.json()
+    
+    // Basic validation
+    if (!body.name || !body.provider || !body.modelName) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, provider, modelName' },
+        { status: 400 }
+      )
+    }
+
+    const formData: LanguageModelFormData = body
 
     // Convert form data to LanguageModel CRD
-    const model: LanguageModel = {
+    const modelData: LanguageModel = {
       apiVersion: 'langop.io/v1alpha1',
       kind: 'LanguageModel',
       metadata: {
@@ -249,6 +260,23 @@ export async function POST(request: NextRequest) {
         },
       },
     }
+
+    // Validate the model CRD structure
+    const validationResult = safeValidateLanguageModel(modelData)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid model configuration',
+          details: validationResult.error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
+    const model = validationResult.data
 
     // Create model in Kubernetes
     const k8sClient = getKubernetesClient()

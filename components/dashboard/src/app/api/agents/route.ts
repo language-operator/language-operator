@@ -5,6 +5,8 @@ import { getKubernetesClient } from '@/lib/kubernetes'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageAgent, LanguageAgentListParams, LanguageAgentFormData } from '@/types/agent'
+import { validateLanguageAgent, safeValidateLanguageAgent } from '@/lib/validation'
+import { ZodError } from 'zod'
 
 // GET /api/agents - List all agents for user's organization
 export async function GET(request: NextRequest) {
@@ -170,11 +172,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    // Parse request body
-    const formData: LanguageAgentFormData = await request.json()
+    // Parse and validate request body
+    const body = await request.json()
+    
+    // Validate form data structure (you can add a form schema later)
+    if (!body.name || !body.executionMode || !body.modelName || !body.modelProvider) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, executionMode, modelName, modelProvider' },
+        { status: 400 }
+      )
+    }
+
+    const formData: LanguageAgentFormData = body
 
     // Convert form data to LanguageAgent CRD
-    const agent: LanguageAgent = {
+    const agentData: LanguageAgent = {
       apiVersion: 'langop.io/v1alpha1',
       kind: 'LanguageAgent',
       metadata: {
@@ -249,6 +261,23 @@ export async function POST(request: NextRequest) {
         },
       },
     }
+
+    // Validate the agent CRD structure
+    const validationResult = safeValidateLanguageAgent(agentData)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid agent configuration',
+          details: validationResult.error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
+    const agent = validationResult.data
 
     // Create agent in Kubernetes
     const k8sClient = getKubernetesClient()

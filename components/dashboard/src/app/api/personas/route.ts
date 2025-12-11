@@ -5,6 +5,7 @@ import { getKubernetesClient } from '@/lib/kubernetes'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
+import { safeValidateLanguagePersona } from '@/lib/validation'
 
 // GET /api/personas - List all personas for user's organization  
 export async function GET(request: NextRequest) {

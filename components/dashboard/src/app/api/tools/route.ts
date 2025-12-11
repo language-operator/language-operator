@@ -5,6 +5,7 @@ import { getKubernetesClient } from '@/lib/kubernetes'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageTool, LanguageToolListParams, LanguageToolFormData } from '@/types/tool'
+import { safeValidateLanguageTool } from '@/lib/validation'
 
 // GET /api/tools - List all tools for user's organization
 export async function GET(request: NextRequest) {

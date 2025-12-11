@@ -59,12 +59,18 @@ class KubernetesClient {
 
   // Custom Resource methods for language-operator CRDs
 
-  async listLanguageAgents(namespace: string) {
+  async listLanguageAgents(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+    continue?: string
+  }) {
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languageagents',
+      ...options,
     })
   }
 
@@ -111,12 +117,18 @@ class KubernetesClient {
 
   // LanguageModel methods
 
-  async listLanguageModels(namespace: string) {
+  async listLanguageModels(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+    continue?: string
+  }) {
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagemodels',
+      ...options,
     })
   }
 
@@ -163,12 +175,18 @@ class KubernetesClient {
 
   // LanguageTool methods
 
-  async listLanguageTools(namespace: string) {
+  async listLanguageTools(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+    continue?: string
+  }) {
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagetools',
+      ...options,
     })
   }
 
@@ -215,12 +233,18 @@ class KubernetesClient {
 
   // LanguagePersona methods
 
-  async listLanguagePersonas(namespace: string) {
+  async listLanguagePersonas(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+    continue?: string
+  }) {
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagepersonas',
+      ...options,
     })
   }
 
@@ -267,12 +291,18 @@ class KubernetesClient {
 
   // LanguageCluster methods
 
-  async listLanguageClusters(namespace: string) {
+  async listLanguageClusters(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+    continue?: string
+  }) {
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languageclusters',
+      ...options,
     })
   }
 
@@ -367,6 +397,202 @@ class KubernetesClient {
       plural: 'languageagentversions',
       name,
     })
+  }
+
+  // Helper methods for common query patterns
+
+  /**
+   * List resources in namespace with organization filtering
+   */
+  async listByOrganization(resourceType: 'agents' | 'models' | 'tools' | 'personas' | 'clusters', namespace: string, organizationId: string) {
+    const labelSelector = `langop.io/organization=${organizationId}`
+    
+    switch (resourceType) {
+      case 'agents':
+        return this.listLanguageAgents(namespace, { labelSelector })
+      case 'models':
+        return this.listLanguageModels(namespace, { labelSelector })
+      case 'tools':
+        return this.listLanguageTools(namespace, { labelSelector })
+      case 'personas':
+        return this.listLanguagePersonas(namespace, { labelSelector })
+      case 'clusters':
+        return this.listLanguageClusters(namespace, { labelSelector })
+      default:
+        throw new Error(`Unknown resource type: ${resourceType}`)
+    }
+  }
+
+  /**
+   * List resources by status phase
+   */
+  async listByPhase(resourceType: 'agents' | 'models' | 'tools' | 'personas' | 'clusters', namespace: string, phase: string) {
+    const fieldSelector = `status.phase=${phase}`
+    
+    switch (resourceType) {
+      case 'agents':
+        return this.listLanguageAgents(namespace, { fieldSelector })
+      case 'models':
+        return this.listLanguageModels(namespace, { fieldSelector })
+      case 'tools':
+        return this.listLanguageTools(namespace, { fieldSelector })
+      case 'personas':
+        return this.listLanguagePersonas(namespace, { fieldSelector })
+      case 'clusters':
+        return this.listLanguageClusters(namespace, { fieldSelector })
+      default:
+        throw new Error(`Unknown resource type: ${resourceType}`)
+    }
+  }
+
+  /**
+   * List resources created by a specific user
+   */
+  async listByCreator(resourceType: 'agents' | 'models' | 'tools' | 'personas' | 'clusters', namespace: string, userId: string) {
+    const labelSelector = `langop.io/created-by=${userId}`
+    
+    switch (resourceType) {
+      case 'agents':
+        return this.listLanguageAgents(namespace, { labelSelector })
+      case 'models':
+        return this.listLanguageModels(namespace, { labelSelector })
+      case 'tools':
+        return this.listLanguageTools(namespace, { labelSelector })
+      case 'personas':
+        return this.listLanguagePersonas(namespace, { labelSelector })
+      case 'clusters':
+        return this.listLanguageClusters(namespace, { labelSelector })
+      default:
+        throw new Error(`Unknown resource type: ${resourceType}`)
+    }
+  }
+
+  /**
+   * Get resource counts for namespace dashboard
+   */
+  async getNamespaceResourceCounts(namespace: string, organizationId?: string) {
+    const labelSelector = organizationId ? `langop.io/organization=${organizationId}` : undefined
+    const options = labelSelector ? { labelSelector } : undefined
+
+    const [agents, models, tools, personas, clusters] = await Promise.all([
+      this.listLanguageAgents(namespace, options),
+      this.listLanguageModels(namespace, options),
+      this.listLanguageTools(namespace, options),
+      this.listLanguagePersonas(namespace, options),
+      this.listLanguageClusters(namespace, options),
+    ])
+
+    return {
+      agents: (agents.body as any)?.items?.length || 0,
+      models: (models.body as any)?.items?.length || 0,
+      tools: (tools.body as any)?.items?.length || 0,
+      personas: (personas.body as any)?.items?.length || 0,
+      clusters: (clusters.body as any)?.items?.length || 0,
+    }
+  }
+
+  /**
+   * Search resources across all types in a namespace
+   */
+  async searchResources(namespace: string, query: string, organizationId?: string) {
+    const baseSelector = organizationId ? `langop.io/organization=${organizationId}` : undefined
+    const options = baseSelector ? { labelSelector: baseSelector } : undefined
+
+    const [agents, models, tools, personas, clusters] = await Promise.all([
+      this.listLanguageAgents(namespace, options),
+      this.listLanguageModels(namespace, options),
+      this.listLanguageTools(namespace, options),
+      this.listLanguagePersonas(namespace, options),
+      this.listLanguageClusters(namespace, options),
+    ])
+
+    const queryLower = query.toLowerCase()
+    const results: Array<{
+      type: string
+      name: string
+      namespace: string
+      resource: any
+    }> = []
+
+    // Filter agents by name
+    const agentItems = (agents.body as any)?.items || []
+    agentItems.forEach((agent: any) => {
+      if (agent.metadata?.name?.toLowerCase().includes(queryLower)) {
+        results.push({
+          type: 'agent',
+          name: agent.metadata.name,
+          namespace: agent.metadata.namespace,
+          resource: agent,
+        })
+      }
+    })
+
+    // Filter models by name and provider
+    const modelItems = (models.body as any)?.items || []
+    modelItems.forEach((model: any) => {
+      if (
+        model.metadata?.name?.toLowerCase().includes(queryLower) ||
+        model.spec?.provider?.toLowerCase().includes(queryLower) ||
+        model.spec?.modelName?.toLowerCase().includes(queryLower)
+      ) {
+        results.push({
+          type: 'model',
+          name: model.metadata.name,
+          namespace: model.metadata.namespace,
+          resource: model,
+        })
+      }
+    })
+
+    // Filter tools by name and type
+    const toolItems = (tools.body as any)?.items || []
+    toolItems.forEach((tool: any) => {
+      if (
+        tool.metadata?.name?.toLowerCase().includes(queryLower) ||
+        tool.spec?.type?.toLowerCase().includes(queryLower)
+      ) {
+        results.push({
+          type: 'tool',
+          name: tool.metadata.name,
+          namespace: tool.metadata.namespace,
+          resource: tool,
+        })
+      }
+    })
+
+    // Filter personas by name and tone
+    const personaItems = (personas.body as any)?.items || []
+    personaItems.forEach((persona: any) => {
+      if (
+        persona.metadata?.name?.toLowerCase().includes(queryLower) ||
+        persona.spec?.tone?.toLowerCase().includes(queryLower)
+      ) {
+        results.push({
+          type: 'persona',
+          name: persona.metadata.name,
+          namespace: persona.metadata.namespace,
+          resource: persona,
+        })
+      }
+    })
+
+    // Filter clusters by name and domain
+    const clusterItems = (clusters.body as any)?.items || []
+    clusterItems.forEach((cluster: any) => {
+      if (
+        cluster.metadata?.name?.toLowerCase().includes(queryLower) ||
+        cluster.spec?.domain?.toLowerCase().includes(queryLower)
+      ) {
+        results.push({
+          type: 'cluster',
+          name: cluster.metadata.name,
+          namespace: cluster.metadata.namespace,
+          resource: cluster,
+        })
+      }
+    })
+
+    return results
   }
 }
 

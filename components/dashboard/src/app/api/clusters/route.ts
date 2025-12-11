@@ -5,6 +5,7 @@ import { getKubernetesClient } from '@/lib/kubernetes'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageCluster, LanguageClusterListParams, LanguageClusterFormData } from '@/types/cluster'
+import { safeValidateLanguageCluster } from '@/lib/validation'
 
 // GET /api/clusters - List all clusters for user's organization
 export async function GET(request: NextRequest) {
