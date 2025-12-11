@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  skipTrailingSlashRedirect: true,
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  }
 };
 
 export default nextConfig;

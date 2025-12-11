@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: language_operator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Language Operator Dashboard
+  dashboard:
+    build: .
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/language_operator?schema=public"
+      NEXTAUTH_SECRET: "your-nextauth-secret-change-in-production"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NODE_ENV: "production"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Mount for development (optional)
+      - type: bind
+        source: ./prisma
+        target: /app/prisma
+        read_only: true
+
+volumes:
+  postgres_data:

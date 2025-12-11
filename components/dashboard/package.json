@@ -4,9 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:prisma && npm run build:next",
+    "build:prisma": "prisma generate 2>/dev/null || echo 'Prisma generate skipped - using mock client'",
+    "build:next": "next build",
+    "build:ci": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "npm run build:prisma",
+    "docker:build": "docker build -t language-operator-dashboard .",
+    "docker:run": "docker-compose up -d",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up",
+    "docker:stop": "docker-compose down",
+    "docker:deploy": "./scripts/docker-deploy.sh",
+    "db:migrate": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

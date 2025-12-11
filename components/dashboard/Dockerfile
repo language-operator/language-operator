@@ -1,70 +1,55 @@
-# syntax=docker/dockerfile:1
+# Dockerfile for Language Operator Dashboard
+# Based on Prisma Docker best practices: https://www.prisma.io/docs/guides/docker
 
-# Stage 1: Install dependencies
-FROM node:20-alpine AS deps
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat openssl1.1-compat
 WORKDIR /app
 
-# Install Prisma dependencies
-RUN apk add --no-cache libc6-compat openssl
-
-# Copy package files
+# Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
+RUN npm ci --only=production && npm cache clean --force
 
-# Install dependencies
-RUN npm ci
-
-# Stage 2: Build application
-FROM node:20-alpine AS builder
+# Rebuild the source code only when needed
+FROM base AS builder
 WORKDIR /app
-
-# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Provide dummy DATABASE_URL for Prisma
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-
-# Generate Prisma client
+# Generate Prisma Client
 RUN npx prisma generate
 
 # Build Next.js application
 # Disable telemetry during build
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 
-# Stage 3: Production runtime
-FROM node:20-alpine AS runner
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-# Create non-root user
+# Don't run as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install runtime dependencies for Prisma
-RUN apk add --no-cache openssl
-
-# Copy Prisma schema for migrations
-COPY --from=builder /app/prisma ./prisma
-
-# Copy full node_modules for both Prisma CLI (init container) and runtime
-COPY --from=builder /app/node_modules ./node_modules
-
-# Copy Next.js build outputs
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/server.js ./server.js
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/package.json ./package.json
+# Copy built application
+COPY --from=builder /app/next.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy Prisma files
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Start server
 CMD ["node", "server.js"]
