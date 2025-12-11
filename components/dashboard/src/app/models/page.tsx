@@ -46,9 +46,9 @@ function formatLatency(latency?: number) {
   return `${(latency / 1000).toFixed(1)}s`
 }
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -147,7 +147,9 @@ function ModelTable({ models, onDelete, isDeleting }: ModelTableProps) {
                     <DollarSign className="h-3 w-3 text-green-500" />
                     <span className="text-sm">
                       {formatCurrency(
-                        model.status?.metrics?.totalCost,
+                        typeof model.status?.metrics?.costMetrics?.totalCost === 'string' 
+                          ? parseFloat(model.status.metrics.costMetrics.totalCost) 
+                          : model.status?.metrics?.costMetrics?.totalCost,
                         model.spec.costTracking?.currency
                       )}
                     </span>
@@ -245,13 +247,16 @@ export default function ModelsPage() {
   const total = modelsResponse?.total || 0
 
   // Get unique providers for filter dropdown
-  const providers = Array.from(new Set(models.map(model => model.spec.provider))).sort()
+  const providers = Array.from(new Set(models.map((model: LanguageModel) => model.spec.provider))).sort() as string[]
 
   // Stats calculations
-  const healthyModels = models.filter(m => m.status?.healthy === true).length
-  const totalCost = models.reduce((sum, m) => sum + (m.status?.metrics?.totalCost || 0), 0)
+  const healthyModels = models.filter((m: LanguageModel) => m.status?.healthy === true).length
+  const totalCost = models.reduce((sum: number, m: LanguageModel) => {
+    const cost = m.status?.metrics?.costMetrics?.totalCost
+    return sum + (typeof cost === 'string' ? parseFloat(cost) : cost || 0)
+  }, 0)
   const avgLatency = models.length > 0 
-    ? models.reduce((sum, m) => sum + (m.status?.metrics?.averageLatency || 0), 0) / models.length 
+    ? models.reduce((sum: number, m: LanguageModel) => sum + (m.status?.metrics?.averageLatency || 0), 0) / models.length 
     : 0
 
   const handleDelete = async (name: string) => {

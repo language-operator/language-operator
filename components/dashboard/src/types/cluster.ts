@@ -55,6 +55,14 @@ export interface IssuerReference {
 export interface LanguageClusterStatus {
   phase?: 'Pending' | 'Ready' | 'Failed' | 'Unknown'
   conditions?: V1Condition[]
+  ingress?: {
+    ready?: boolean
+    dnsRecords?: any[]
+    [key: string]: any
+  }
+  agents?: any[]
+  agentCount?: number
+  [key: string]: any
 }
 
 // Frontend-specific types
@@ -113,7 +121,7 @@ export interface LanguageClusterListParams {
   fieldSelector?: string
   page?: number
   limit?: number
-  sortBy?: 'name' | 'domain' | 'phase' | 'age'
+  sortBy?: 'name' | 'domain' | 'phase' | 'age' | 'agents' | 'status'
   sortOrder?: 'asc' | 'desc'
   search?: string
   phase?: string[]

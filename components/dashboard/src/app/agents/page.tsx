@@ -29,9 +29,9 @@ import {
 import { useAgents, useDeleteAgent } from '@/hooks/use-agents'
 import { LanguageAgent } from '@/types/agent'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -221,7 +221,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {agents.filter(a => a.status?.phase === 'Running').length}
+                {agents.filter((a: LanguageAgent) => a.status?.phase === 'Running').length}
               </div>
             </CardContent>
           </Card>
@@ -233,7 +233,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {agents.filter(a => a.status?.phase === 'Pending').length}
+                {agents.filter((a: LanguageAgent) => a.status?.phase === 'Pending').length}
               </div>
             </CardContent>
           </Card>
@@ -245,7 +245,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {agents.filter(a => a.status?.phase === 'Failed').length}
+                {agents.filter((a: LanguageAgent) => a.status?.phase === 'Failed').length}
               </div>
             </CardContent>
           </Card>
@@ -283,7 +283,7 @@ export default function AgentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {agents.map((agent) => (
+                  {agents.map((agent: LanguageAgent) => (
                     <TableRow key={agent.metadata.name}>
                       <TableCell>
                         <div className="flex items-center space-x-3">

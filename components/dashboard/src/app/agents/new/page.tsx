@@ -54,7 +54,7 @@ const agentFormSchema = z.object({
   personaInstructions: z.string().optional(),
   
   // Tools (simplified for now)
-  selectedTools: z.array(z.string()).default([]),
+  selectedTools: z.array(z.string()),
   
   // Resources
   cpuRequest: z.string().optional(),
@@ -68,10 +68,10 @@ const agentFormSchema = z.object({
   targetCPUUtilization: z.number().min(1).max(100).optional(),
   
   // Networking
-  enableIngress: z.boolean().default(false),
+  enableIngress: z.boolean(),
   ingressHost: z.string().optional(),
   ingressPath: z.string().optional(),
-  enableTLS: z.boolean().default(false),
+  enableTLS: z.boolean(),
 })
 
 type AgentFormValues = z.infer<typeof agentFormSchema>

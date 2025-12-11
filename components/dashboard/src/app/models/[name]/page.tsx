@@ -31,9 +31,9 @@ function formatLatency(latency?: number) {
   return `${(latency / 1000).toFixed(1)}s`
 }
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -313,7 +313,7 @@ function ModelMetrics({ model }: ModelMetricsProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(metrics?.totalCost, model.spec.costTracking?.currency)}
+              {formatCurrency(typeof metrics?.costMetrics?.totalCost === 'string' ? parseFloat(metrics.costMetrics.totalCost) : metrics?.costMetrics?.totalCost, model.spec.costTracking?.currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               {model.spec.costTracking?.currency || 'USD'} total
@@ -353,21 +353,26 @@ function ModelMetrics({ model }: ModelMetricsProps) {
               <>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Cost</p>
-                  <p className="text-sm">{formatCurrency(metrics.totalCost, model.spec.costTracking?.currency)}</p>
+                  <p className="text-sm">{formatCurrency(typeof metrics?.costMetrics?.totalCost === 'string' ? parseFloat(metrics.costMetrics.totalCost) : metrics?.costMetrics?.totalCost, model.spec.costTracking?.currency)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Input Tokens</p>
-                  <p className="text-sm">{metrics.inputTokens?.toLocaleString() ?? 'N/A'}</p>
+                  <p className="text-sm">{metrics.costMetrics?.totalInputTokens?.toLocaleString() ?? 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Output Tokens</p>
-                  <p className="text-sm">{metrics.outputTokens?.toLocaleString() ?? 'N/A'}</p>
+                  <p className="text-sm">{metrics.costMetrics?.totalOutputTokens?.toLocaleString() ?? 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Cost per Request</p>
                   <p className="text-sm">
-                    {metrics.totalRequests && metrics.totalCost 
-                      ? formatCurrency(metrics.totalCost / metrics.totalRequests, model.spec.costTracking?.currency)
+                    {metrics.totalRequests && metrics.costMetrics?.totalCost 
+                      ? formatCurrency(
+                          (typeof metrics.costMetrics.totalCost === 'string' 
+                            ? parseFloat(metrics.costMetrics.totalCost) 
+                            : metrics.costMetrics.totalCost) / metrics.totalRequests, 
+                          model.spec.costTracking?.currency
+                        )
                       : 'N/A'
                     }
                   </p>

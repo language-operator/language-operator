@@ -23,6 +23,7 @@ export interface LanguagePersonaSpec {
   displayName: string
   description: string
   systemPrompt: string
+  personality?: string
   
   // Communication style
   tone?: 'professional' | 'casual' | 'friendly' | 'formal' | 'technical' | 'empathetic' | 'concise' | 'detailed'
@@ -131,6 +132,7 @@ export interface LanguagePersonaStatus {
   conditions?: V1Condition[]
   usageCount?: number
   activeAgents?: string[]
+  agentReferences?: string[]
   validationResult?: ValidationResult
   metrics?: PersonaMetrics
   lastUpdateTime?: string
@@ -152,9 +154,14 @@ export interface PersonaMetrics {
   averageResponseLength?: number
   averageToolCalls?: number
   userSatisfaction?: number
+  successRate?: string
+  lastUsed?: string
+  averageQuality?: string
+  recentFeedback?: any[]
   topTopics?: TopicFrequency[]
   topTools?: ToolFrequency[]
   ruleActivations?: Record<string, number>
+  recentActivity?: any[]
 }
 
 export interface TopicFrequency {
@@ -288,7 +295,7 @@ export interface LanguagePersonaListParams {
   fieldSelector?: string
   page?: number
   limit?: number
-  sortBy?: 'name' | 'displayName' | 'tone' | 'phase' | 'usageCount' | 'age'
+  sortBy?: 'name' | 'displayName' | 'tone' | 'phase' | 'usageCount' | 'age' | 'usage'
   sortOrder?: 'asc' | 'desc'
   search?: string
   tone?: string[]

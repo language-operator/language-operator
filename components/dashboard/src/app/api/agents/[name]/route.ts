@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 
@@ -40,7 +40,6 @@ export async function GET(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const k8sClient = getKubernetesClient()
     const agent = await k8sClient.getLanguageAgent(organization.namespace, name)
     
     if (!agent) {
@@ -96,7 +95,6 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const k8sClient = getKubernetesClient()
     
     // Add audit metadata
     if (!body.metadata) body.metadata = {}
@@ -157,7 +155,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const k8sClient = getKubernetesClient()
     await k8sClient.deleteLanguageAgent(organization.namespace, name)
     
     // Audit log

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 
 // GET /api/namespaces/[namespace]/stats - Get namespace resource statistics
-export async function GET(request: NextRequest, { params }: { params: { namespace: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
   try {
+    const resolvedParams = await params
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,22 +37,21 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
     }
 
     // Validate namespace access
-    if (params.namespace !== organization.namespace) {
+    if (resolvedParams.namespace !== organization.namespace) {
       return NextResponse.json({ error: 'Access denied to namespace' }, { status: 403 })
     }
 
-    const k8sClient = getKubernetesClient()
 
     // Get resource counts
-    const resourceCounts = await k8sClient.getNamespaceResourceCounts(params.namespace, organization.id)
+    const resourceCounts = await k8sClient.getNamespaceResourceCounts(resolvedParams.namespace, organization.id)
 
     // Get detailed statistics for each resource type
     const [agentsResponse, modelsResponse, toolsResponse, personasResponse, clustersResponse] = await Promise.all([
-      k8sClient.listByOrganization('agents', params.namespace, organization.id),
-      k8sClient.listByOrganization('models', params.namespace, organization.id),
-      k8sClient.listByOrganization('tools', params.namespace, organization.id),
-      k8sClient.listByOrganization('personas', params.namespace, organization.id),
-      k8sClient.listByOrganization('clusters', params.namespace, organization.id),
+      k8sClient.listByOrganization('agents', resolvedParams.namespace, organization.id),
+      k8sClient.listByOrganization('models', resolvedParams.namespace, organization.id),
+      k8sClient.listByOrganization('tools', resolvedParams.namespace, organization.id),
+      k8sClient.listByOrganization('personas', resolvedParams.namespace, organization.id),
+      k8sClient.listByOrganization('clusters', resolvedParams.namespace, organization.id),
     ])
 
     const agents = (agentsResponse.body as any)?.items || []
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
 
     return NextResponse.json({
       success: true,
-      namespace: params.namespace,
+      namespace: resolvedParams.namespace,
       organization: organization.name,
       timestamp: new Date().toISOString(),
       summary: resourceCounts,

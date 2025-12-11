@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageCluster, LanguageClusterListParams, LanguageClusterFormData } from '@/types/cluster'
@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       domain: url.searchParams.get('domain') || undefined,
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.listLanguageClusters(organization.namespace)
     const clusters = (response.data as any)?.items || []
 
@@ -151,7 +150,6 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.createLanguageCluster(organization.namespace, cluster)
     
     console.log(`User ${user.email} created LanguageCluster ${formData.name} in organization ${organization.name}`)

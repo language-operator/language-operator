@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageTool, LanguageToolListParams, LanguageToolFormData } from '@/types/tool'
@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       phase: url.searchParams.getAll('phase') || undefined,
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.listLanguageTools(organization.namespace)
     const tools = (response.data as any)?.items || []
 
@@ -146,7 +145,6 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.createLanguageTool(organization.namespace, tool)
     
     console.log(`User ${user.email} created LanguageTool ${formData.name} in organization ${organization.name}`)

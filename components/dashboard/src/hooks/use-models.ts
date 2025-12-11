@@ -1,17 +1,63 @@
-import { useQuery } from '@tanstack/react-query'
-import { LanguageModel } from '@/lib/kubernetes'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
 
-export function useModels() {
+export function useModels(params?: LanguageModelListParams) {
   return useQuery({
-    queryKey: ['models'],
+    queryKey: ['models', params],
     queryFn: async () => {
-      const response = await fetch('/api/models')
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.append('page', params.page.toString())
+      if (params?.limit) searchParams.append('limit', params.limit.toString())
+      if (params?.search) searchParams.append('search', params.search)
+      if (params?.provider?.length) {
+        params.provider.forEach(p => searchParams.append('provider', p))
+      }
+      if (params?.phase?.length) {
+        params.phase.forEach(p => searchParams.append('phase', p))
+      }
+      if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
+      if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+      if (params?.healthy !== undefined) searchParams.append('healthy', params.healthy.toString())
+
+      const response = await fetch(`/api/models?${searchParams}`)
       if (!response.ok) {
         throw new Error('Failed to fetch models')
       }
-      const data = await response.json()
-      return data.models as LanguageModel[]
+      return response.json()
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
+  })
+}
+
+export function useModel(name: string) {
+  return useQuery({
+    queryKey: ['models', name],
+    queryFn: async () => {
+      const response = await fetch(`/api/models/${name}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch model')
+      }
+      return response.json()
+    },
+    enabled: !!name,
+  })
+}
+
+export function useDeleteModel() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await fetch(`/api/models/${name}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete model')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['models'] })
+    },
   })
 }

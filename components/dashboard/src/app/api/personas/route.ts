@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
       phase: url.searchParams.getAll('phase') || undefined,
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.listLanguagePersonas(organization.namespace)
     const personas = (response.data as any)?.items || []
 
@@ -147,7 +146,6 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.createLanguagePersona(organization.namespace, persona)
     
     console.log(`User ${user.email} created LanguagePersona ${formData.name} in organization ${organization.name}`)

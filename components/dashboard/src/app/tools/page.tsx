@@ -32,9 +32,9 @@ import { useTools, useDeleteTool } from '@/hooks/use-tools'
 import { LanguageTool } from '@/types/tool'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -251,13 +251,13 @@ export default function ToolsPage() {
   const total = toolsResponse?.total || 0
 
   // Get unique types for filter dropdown
-  const types = Array.from(new Set(tools.map(tool => tool.spec.type))).sort()
+  const types = Array.from(new Set(tools.map((tool: LanguageTool) => tool.spec.type))).sort() as string[]
 
   // Stats calculations
-  const runningTools = tools.filter(t => t.status?.phase === 'Running').length
-  const totalInvocations = tools.reduce((sum, t) => sum + (t.status?.metrics?.invocationCount || 0), 0)
+  const runningTools = tools.filter((t: LanguageTool) => t.status?.phase === 'Running').length
+  const totalInvocations = tools.reduce((sum: number, t: LanguageTool) => sum + (t.status?.metrics?.invocationCount || 0), 0)
   const avgSuccessRate = tools.length > 0 
-    ? tools.reduce((sum, t) => {
+    ? tools.reduce((sum: number, t: LanguageTool) => {
         const rate = t.status?.metrics?.successRate
         return sum + (rate ? parseFloat(rate.replace('%', '')) : 0)
       }, 0) / tools.length 

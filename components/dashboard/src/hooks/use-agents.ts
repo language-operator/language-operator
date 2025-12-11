@@ -1,18 +1,44 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { LanguageAgent } from '@/lib/kubernetes'
+import { LanguageAgent, LanguageAgentListParams, LanguageAgentFormData } from '@/types/agent'
 
-export function useAgents() {
+export function useAgents(params?: LanguageAgentListParams) {
   return useQuery({
-    queryKey: ['agents'],
+    queryKey: ['agents', params],
     queryFn: async () => {
-      const response = await fetch('/api/agents')
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.append('page', params.page.toString())
+      if (params?.limit) searchParams.append('limit', params.limit.toString())
+      if (params?.search) searchParams.append('search', params.search)
+      if (params?.phase?.length) {
+        params.phase.forEach(p => searchParams.append('phase', p))
+      }
+      if (params?.executionMode?.length) {
+        params.executionMode.forEach(e => searchParams.append('executionMode', e))
+      }
+      if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
+      if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+
+      const response = await fetch(`/api/agents?${searchParams}`)
       if (!response.ok) {
         throw new Error('Failed to fetch agents')
       }
-      const data = await response.json()
-      return data.agents as LanguageAgent[]
+      return response.json()
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
+  })
+}
+
+export function useAgent(name: string) {
+  return useQuery({
+    queryKey: ['agents', name],
+    queryFn: async () => {
+      const response = await fetch(`/api/agents/${name}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch agent')
+      }
+      return response.json()
+    },
+    enabled: !!name,
   })
 }
 
@@ -20,7 +46,7 @@ export function useCreateAgent() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (agent: Partial<LanguageAgent>) => {
+    mutationFn: async (agent: LanguageAgentFormData) => {
       const response = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

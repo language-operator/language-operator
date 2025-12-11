@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Play, Stop, RotateCcw,
+  Edit, FileText, Trash2, Play, Square, RotateCcw,
   Activity, Zap, DollarSign, TrendingUp
 } from 'lucide-react'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
@@ -23,9 +23,9 @@ import { LanguageTool } from '@/types/tool'
 import { LanguagePersona } from '@/types/persona'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)

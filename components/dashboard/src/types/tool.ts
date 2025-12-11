@@ -22,9 +22,14 @@ export interface LanguageToolSpec {
   // Tool type and deployment
   type: 'container' | 'function' | 'webhook' | 'builtin'
   image?: string
+  description?: string
   
   // Tool definition
   schema?: ToolSchema
+  webhook?: any
+  container?: any
+  function?: any
+  security?: any
   
   // Container configuration (for container type)
   command?: string[]
@@ -73,6 +78,8 @@ export interface ToolSchema {
   // Function schema
   parameters?: ToolParameter[]
   returns?: ToolReturnType
+  inputSchema?: any
+  outputSchema?: any
   
   // Examples
   examples?: ToolExample[]
@@ -237,6 +244,7 @@ export interface LanguageToolStatus {
   metrics?: LanguageToolMetrics
   lastHealthCheck?: string
   observedGeneration?: number
+  endpointStatus?: any
 }
 
 export interface LanguageToolCondition {
@@ -253,7 +261,9 @@ export interface LanguageToolMetrics {
   successfulInvocations?: number
   failedInvocations?: number
   averageLatency?: string
+  averageDuration?: number
   successRate?: string
+  errorRate?: string
   lastInvocation?: string
 }
 

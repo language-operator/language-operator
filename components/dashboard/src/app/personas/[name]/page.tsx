@@ -17,9 +17,9 @@ import { useAgents } from '@/hooks/use-agents'
 import { LanguagePersona } from '@/types/persona'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -100,26 +100,26 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
                 </Badge>
               </div>
             </div>
-            {persona.spec.personality && (
+            {persona.spec.capabilities && persona.spec.capabilities.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Personality Traits</p>
+                <p className="text-sm font-medium text-muted-foreground">Capabilities</p>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {persona.spec.personality.map((trait, index) => (
+                  {persona.spec.capabilities.map((capability, index) => (
                     <Badge key={index} variant="outline" className="text-xs">
-                      {trait}
+                      {capability}
                     </Badge>
                   ))}
                 </div>
               </div>
             )}
-            {persona.spec.goals && persona.spec.goals.length > 0 && (
+            {persona.spec.instructions && persona.spec.instructions.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Goals</p>
+                <p className="text-sm font-medium text-muted-foreground">Instructions</p>
                 <div className="space-y-1 mt-1">
-                  {persona.spec.goals.map((goal, index) => (
+                  {persona.spec.instructions.map((instruction, index) => (
                     <div key={index} className="flex items-start space-x-2">
                       <Target className="h-3 w-3 text-blue-500 mt-0.5" />
-                      <span className="text-xs">{goal}</span>
+                      <span className="text-xs">{instruction}</span>
                     </div>
                   ))}
                 </div>
@@ -185,18 +185,18 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
       )}
 
       {/* Constraints */}
-      {persona.spec.constraints && persona.spec.constraints.length > 0 && (
+      {persona.spec.limitations && persona.spec.limitations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Behavioral Constraints</CardTitle>
+            <CardTitle>Limitations</CardTitle>
             <CardDescription>Rules and limitations for this persona</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {persona.spec.constraints.map((constraint, index) => (
+              {persona.spec.limitations.map((limitation, index) => (
                 <div key={index} className="flex items-start space-x-2 p-2 bg-yellow-50 rounded">
                   <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                  <span className="text-sm">{constraint}</span>
+                  <span className="text-sm">{limitation}</span>
                 </div>
               ))}
             </div>
@@ -205,7 +205,7 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
       )}
 
       {/* Validation Results */}
-      {persona.status?.validation && (
+      {persona.status?.validationResult && (
         <Card>
           <CardHeader>
             <CardTitle>Validation Status</CardTitle>
@@ -214,7 +214,7 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Overall Status</p>
               <div className="flex items-center space-x-2">
-                {persona.status.validation.valid ? (
+                {persona.status.validationResult.valid ? (
                   <>
                     <CheckCircle className="h-4 w-4 text-green-500" />
                     <Badge variant="default" className="bg-green-100 text-green-800">Valid</Badge>
@@ -227,11 +227,11 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
                 )}
               </div>
             </div>
-            {persona.status.validation.errors && persona.status.validation.errors.length > 0 && (
+            {persona.status.validationResult.errors && persona.status.validationResult.errors.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Validation Errors</p>
                 <div className="space-y-1 mt-1">
-                  {persona.status.validation.errors.map((error, index) => (
+                  {persona.status.validationResult.errors.map((error, index) => (
                     <div key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded">
                       {error}
                     </div>
@@ -241,7 +241,7 @@ function PersonaOverview({ persona }: PersonaOverviewProps) {
             )}
             <div>
               <p className="text-sm font-medium text-muted-foreground">Last Validated</p>
-              <p className="text-sm">{formatTimeAgo(persona.status.validation.lastValidated)}</p>
+              <p className="text-sm">{formatTimeAgo(persona.status.validationResult.validationTime)}</p>
             </div>
           </CardContent>
         </Card>
@@ -261,7 +261,7 @@ function PersonaUsage({ persona }: PersonaUsageProps) {
   })
 
   const allAgents = agentsResponse?.data || []
-  const usingAgents = allAgents.filter(agent => 
+  const usingAgents = allAgents.filter((agent: any) => 
     agent.spec.persona?.name === persona.metadata.name
   )
 
@@ -289,7 +289,7 @@ function PersonaUsage({ persona }: PersonaUsageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {persona.status?.metrics?.usageCount?.toLocaleString() || 'N/A'}
+              {persona.status?.metrics?.totalInteractions?.toLocaleString() || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
               Total invocations
@@ -322,7 +322,7 @@ function PersonaUsage({ persona }: PersonaUsageProps) {
         <CardContent>
           {usingAgents.length > 0 ? (
             <div className="space-y-3">
-              {usingAgents.map((agent) => (
+              {usingAgents.map((agent: any) => (
                 <div key={agent.metadata.name} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Bot className="h-5 w-5 text-blue-500" />

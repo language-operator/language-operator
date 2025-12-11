@@ -333,7 +333,7 @@ export default function ClusterDetailPage() {
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">DNS Records</label>
                         <div className="mt-1 space-y-1">
-                          {cluster.status.ingress.dnsRecords.map((record, index) => (
+                          {cluster.status.ingress.dnsRecords.map((record: any, index: number) => (
                             <div key={index} className="text-sm font-mono bg-muted px-2 py-1 rounded">
                               {record.type}: {record.name} → {record.value}
                             </div>
@@ -450,7 +450,7 @@ export default function ClusterDetailPage() {
                         <div className="mt-1 space-y-1">
                           {Object.entries(cluster.spec.gateway.annotations).map(([key, value]) => (
                             <div key={key} className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                              {key}: {value}
+                              {key}: {String(value)}
                             </div>
                           ))}
                         </div>
@@ -474,7 +474,7 @@ export default function ClusterDetailPage() {
                   <CardContent>
                     {cluster.status?.agents && cluster.status.agents.length > 0 ? (
                       <div className="space-y-3">
-                        {cluster.status.agents.map((agent, index) => (
+                        {cluster.status.agents.map((agent: any, index: number) => (
                           <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center space-x-3">
                               <Users className="h-4 w-4 text-blue-500" />
@@ -550,7 +550,7 @@ export default function ClusterDetailPage() {
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Conditions</label>
                         <div className="mt-1 space-y-2">
-                          {cluster.status.conditions.map((condition, index) => (
+                          {cluster.status.conditions.map((condition: any, index: number) => (
                             <div key={index} className="flex items-center justify-between p-2 border rounded">
                               <div className="flex items-center space-x-2">
                                 {condition.status === 'True' ? (
@@ -644,7 +644,7 @@ export default function ClusterDetailPage() {
                       <div className="mt-1 space-y-1">
                         {Object.entries(cluster.metadata.labels).map(([key, value]) => (
                           <div key={key} className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                            {key}: {value}
+                            {key}: {String(value)}
                           </div>
                         ))}
                       </div>
@@ -656,7 +656,7 @@ export default function ClusterDetailPage() {
                       <div className="mt-1 space-y-1">
                         {Object.entries(cluster.metadata.annotations).map(([key, value]) => (
                           <div key={key} className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                            {key}: {value}
+                            {key}: {String(value)}
                           </div>
                         ))}
                       </div>

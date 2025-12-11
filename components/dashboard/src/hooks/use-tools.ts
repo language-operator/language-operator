@@ -1,17 +1,62 @@
-import { useQuery } from '@tanstack/react-query'
-import { LanguageTool } from '@/lib/kubernetes'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { LanguageTool, LanguageToolListParams, LanguageToolFormData } from '@/types/tool'
 
-export function useTools() {
+export function useTools(params?: LanguageToolListParams) {
   return useQuery({
-    queryKey: ['tools'],
+    queryKey: ['tools', params],
     queryFn: async () => {
-      const response = await fetch('/api/tools')
+      const searchParams = new URLSearchParams()
+      if (params?.page) searchParams.append('page', params.page.toString())
+      if (params?.limit) searchParams.append('limit', params.limit.toString())
+      if (params?.search) searchParams.append('search', params.search)
+      if (params?.type?.length) {
+        params.type.forEach(t => searchParams.append('type', t))
+      }
+      if (params?.phase?.length) {
+        params.phase.forEach(p => searchParams.append('phase', p))
+      }
+      if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
+      if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
+
+      const response = await fetch(`/api/tools?${searchParams}`)
       if (!response.ok) {
         throw new Error('Failed to fetch tools')
       }
-      const data = await response.json()
-      return data.tools as LanguageTool[]
+      return response.json()
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 5000,
+  })
+}
+
+export function useTool(name: string) {
+  return useQuery({
+    queryKey: ['tools', name],
+    queryFn: async () => {
+      const response = await fetch(`/api/tools/${name}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch tool')
+      }
+      return response.json()
+    },
+    enabled: !!name,
+  })
+}
+
+export function useDeleteTool() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await fetch(`/api/tools/${name}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete tool')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tools'] })
+    },
   })
 }

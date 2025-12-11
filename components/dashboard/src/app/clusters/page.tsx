@@ -32,9 +32,9 @@ import { useClusters, useDeleteCluster } from '@/hooks/use-clusters'
 import { LanguageCluster } from '@/types/cluster'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -242,9 +242,9 @@ export default function ClustersPage() {
   const total = clustersResponse?.total || 0
 
   // Stats calculations
-  const readyClusters = clusters.filter(c => c.status?.phase === 'Ready').length
-  const totalAgents = clusters.reduce((sum, c) => sum + (c.status?.agentCount || 0), 0)
-  const healthyIngress = clusters.filter(c => c.status?.ingress?.ready === true).length
+  const readyClusters = clusters.filter((c: LanguageCluster) => c.status?.phase === 'Ready').length
+  const totalAgents = clusters.reduce((sum: number, c: LanguageCluster) => sum + (c.status?.agentCount || 0), 0)
+  const healthyIngress = clusters.filter((c: LanguageCluster) => c.status?.ingress?.ready === true).length
 
   const handleDelete = async (name: string) => {
     try {

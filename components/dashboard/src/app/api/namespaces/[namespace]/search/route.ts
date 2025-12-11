@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 
 // GET /api/namespaces/[namespace]/search - Search all resources in namespace
-export async function GET(request: NextRequest, { params }: { params: { namespace: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
   try {
+    const resolvedParams = await params
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
     }
 
     // Validate namespace access
-    if (params.namespace !== organization.namespace) {
+    if (resolvedParams.namespace !== organization.namespace) {
       return NextResponse.json({ error: 'Access denied to namespace' }, { status: 403 })
     }
 
@@ -48,7 +49,6 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
     const createdBy = url.searchParams.get('createdBy')
     const limit = parseInt(url.searchParams.get('limit') || '50')
 
-    const k8sClient = getKubernetesClient()
 
     let results: any[] = []
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       if (resourceType && ['agents', 'models', 'tools', 'personas', 'clusters'].includes(resourceType)) {
         const response = await k8sClient.listByCreator(
           resourceType as any, 
-          params.namespace, 
+          resolvedParams.namespace, 
           createdBy
         )
         const items = (response.body as any)?.items || []
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       } else {
         // Search all resource types by creator
         const promises = ['agents', 'models', 'tools', 'personas', 'clusters'].map(type =>
-          k8sClient.listByCreator(type as any, params.namespace, createdBy)
+          k8sClient.listByCreator(type as any, resolvedParams.namespace, createdBy)
         )
         const responses = await Promise.all(promises)
         responses.forEach((response, index) => {
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       if (resourceType && ['agents', 'models', 'tools', 'personas', 'clusters'].includes(resourceType)) {
         const response = await k8sClient.listByPhase(
           resourceType as any, 
-          params.namespace, 
+          resolvedParams.namespace, 
           phase
         )
         const items = (response.body as any)?.items || []
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       } else {
         // Search all resource types by phase
         const promises = ['agents', 'models', 'tools', 'personas', 'clusters'].map(type =>
-          k8sClient.listByPhase(type as any, params.namespace, phase)
+          k8sClient.listByPhase(type as any, resolvedParams.namespace, phase)
         )
         const responses = await Promise.all(promises)
         responses.forEach((response, index) => {
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       }
     } else if (query) {
       // General text search
-      results = await k8sClient.searchResources(params.namespace, query, organization.id)
+      results = await k8sClient.searchResources(resolvedParams.namespace, query, organization.id)
       
       // Filter by resource type if specified
       if (resourceType) {
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
       }
     } else {
       // List all resources in namespace
-      results = await k8sClient.searchResources(params.namespace, '', organization.id)
+      results = await k8sClient.searchResources(resolvedParams.namespace, '', organization.id)
       
       // Filter by resource type if specified
       if (resourceType) {
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest, { params }: { params: { namespac
 
     return NextResponse.json({
       success: true,
-      namespace: params.namespace,
+      namespace: resolvedParams.namespace,
       query,
       total: results.length,
       returned: limitedResults.length,

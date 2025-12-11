@@ -17,9 +17,9 @@ import { useTool, useDeleteTool } from '@/hooks/use-tools'
 import { LanguageTool } from '@/types/tool'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -163,7 +163,7 @@ function ToolOverview({ tool }: ToolOverviewProps) {
                     <div key={key} className="flex items-center space-x-2 text-xs">
                       <code className="bg-gray-100 px-1 rounded">{key}</code>
                       <span>:</span>
-                      <code className="bg-gray-100 px-1 rounded">{value}</code>
+                      <code className="bg-gray-100 px-1 rounded">{String(value)}</code>
                     </div>
                   ))}
                 </div>
@@ -195,7 +195,7 @@ function ToolOverview({ tool }: ToolOverviewProps) {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Environment Variables</p>
                 <div className="space-y-1">
-                  {tool.spec.container.env.map((env, idx) => (
+                  {tool.spec.container.env.map((env: any, idx: number) => (
                     <div key={idx} className="flex items-center space-x-2 text-xs">
                       <code className="bg-gray-100 px-1 rounded">{env.name}</code>
                       <span>=</span>

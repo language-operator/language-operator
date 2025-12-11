@@ -32,9 +32,9 @@ import { usePersonas, useDeletePersona } from '@/hooks/use-personas'
 import { LanguagePersona } from '@/types/persona'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function formatTimeAgo(timestamp?: string) {
+function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
-  const date = new Date(timestamp)
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
   const now = new Date()
   const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
@@ -219,12 +219,12 @@ export default function PersonasPage() {
   const total = personasResponse?.total || 0
 
   // Get unique tones for filter dropdown
-  const tones = Array.from(new Set(personas.map(persona => persona.spec.tone).filter(Boolean))).sort()
+  const tones = Array.from(new Set(personas.map((persona: LanguagePersona) => persona.spec.tone).filter(Boolean))).sort() as string[]
 
   // Stats calculations
-  const totalAgentUsage = personas.reduce((sum, p) => sum + (p.status?.agentReferences?.length || 0), 0)
-  const personasWithTone = personas.filter(p => p.spec.tone).length
-  const personasWithExamples = personas.filter(p => p.spec.examples && p.spec.examples.length > 0).length
+  const totalAgentUsage = personas.reduce((sum: number, p: LanguagePersona) => sum + (p.status?.agentReferences?.length || 0), 0)
+  const personasWithTone = personas.filter((p: LanguagePersona) => p.spec.tone).length
+  const personasWithExamples = personas.filter((p: LanguagePersona) => p.spec.examples && p.spec.examples.length > 0).length
 
   const handleDelete = async (name: string) => {
     try {

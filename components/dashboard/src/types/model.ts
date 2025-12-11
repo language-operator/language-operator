@@ -207,11 +207,16 @@ export interface LanguageModelMetrics {
   totalRequests?: number
   successfulRequests?: number
   failedRequests?: number
-  averageLatency?: string
+  successRate?: string
+  errorRate?: string
+  averageLatency?: number
+  p95Latency?: number
+  p99Latency?: number
   requestsPerMinute?: number
   tokensPerMinute?: number
   costMetrics?: CostMetrics
   healthScore?: number
+  regionHealth?: any[]
 }
 
 export interface CostMetrics {
@@ -311,7 +316,7 @@ export interface LanguageModelListParams {
   fieldSelector?: string
   page?: number
   limit?: number
-  sortBy?: 'name' | 'provider' | 'phase' | 'healthy' | 'requests' | 'age'
+  sortBy?: 'name' | 'provider' | 'phase' | 'healthy' | 'requests' | 'age' | 'latency' | 'health' | 'cost'
   sortOrder?: 'asc' | 'desc'
   search?: string
   provider?: string[]

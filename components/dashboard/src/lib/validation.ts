@@ -74,7 +74,7 @@ export const LanguageAgentSchema = z.object({
 // LanguageModel validation
 export const LanguageModelSpecSchema = z.object({
   provider: z.enum(['openai', 'anthropic', 'huggingface', 'azure', 'google', 'local'], {
-    errorMap: () => ({ message: "Provider must be one of: openai, anthropic, huggingface, azure, google, local" })
+    message: "Provider must be one of: openai, anthropic, huggingface, azure, google, local"
   }),
   modelName: z.string().min(1, "Model name is required"),
   apiKey: z.string().min(1, "API key is required"),
@@ -128,7 +128,7 @@ export const LanguageModelSchema = z.object({
 // LanguageTool validation
 export const LanguageToolSpecSchema = z.object({
   type: z.enum(['function', 'api', 'webhook', 'script'], {
-    errorMap: () => ({ message: "Tool type must be one of: function, api, webhook, script" })
+    message: "Tool type must be one of: function, api, webhook, script"
   }),
   name: z.string().min(1, "Tool name is required"),
   description: z.string().min(1, "Tool description is required"),

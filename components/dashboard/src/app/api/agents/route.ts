@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageAgent, LanguageAgentListParams, LanguageAgentFormData } from '@/types/agent'
@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch agents from Kubernetes
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.listLanguageAgents(organization.namespace)
     const agents = (response.data as any)?.items || []
 
@@ -268,7 +267,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Invalid agent configuration',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             path: err.path.join('.'),
             message: err.message
           }))
@@ -280,7 +279,6 @@ export async function POST(request: NextRequest) {
     const agent = validationResult.data
 
     // Create agent in Kubernetes
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.createLanguageAgent(organization.namespace, agent)
     const createdAgent = response.data as LanguageAgent
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getKubernetesClient } from '@/lib/kubernetes'
+import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
@@ -52,7 +52,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch models from Kubernetes
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.listLanguageModels(organization.namespace)
     const models = (response.data as any)?.items || []
 
@@ -267,7 +266,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Invalid model configuration',
-          details: validationResult.error.errors.map(err => ({
+          details: validationResult.error.issues.map(err => ({
             path: err.path.join('.'),
             message: err.message
           }))
@@ -279,7 +278,6 @@ export async function POST(request: NextRequest) {
     const model = validationResult.data
 
     // Create model in Kubernetes
-    const k8sClient = getKubernetesClient()
     const response = await k8sClient.createLanguageModel(organization.namespace, model)
     const createdModel = response.data as LanguageModel
 
