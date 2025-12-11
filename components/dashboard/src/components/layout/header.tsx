@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LogOut, Settings, Building2 } from 'lucide-react'
+import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
 
 export function Header() {
   const { data: session } = useSession()
@@ -28,19 +29,7 @@ export function Header() {
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-6">
       <div className="flex items-center gap-4">
-        {session?.activeOrganization && (
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-gray-500" />
-            <div>
-              <div className="text-sm font-medium">
-                {session.activeOrganization.name}
-              </div>
-              <div className="text-xs text-gray-500">
-                {session.activeOrganization.namespace}
-              </div>
-            </div>
-          </div>
-        )}
+        <OrganizationSwitcher />
       </div>
 
       <DropdownMenu>
