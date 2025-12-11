@@ -7,6 +7,7 @@ interface CreateOrganizationData {
   name: string
   slug: string
   namespace: string
+  plan: 'free' | 'pro' | 'enterprise'
 }
 
 interface UpdateOrganizationData {
@@ -63,8 +64,22 @@ export function useCreateOrganization() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create organization')
+        const errorData = await response.json()
+        
+        // Handle specific error cases
+        if (response.status === 409) {
+          throw new Error('Organization with this slug or namespace already exists')
+        } else if (response.status === 400) {
+          if (errorData.details) {
+            // Show validation errors
+            const validationErrors = errorData.details.map((detail: any) => detail.message).join(', ')
+            throw new Error(`Invalid input: ${validationErrors}`)
+          } else {
+            throw new Error(errorData.error || 'Invalid input')
+          }
+        } else {
+          throw new Error(errorData.error || 'Failed to create organization')
+        }
       }
 
       return response.json()
@@ -91,8 +106,24 @@ export function useUpdateOrganization(organizationId: string) {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to update organization')
+        const errorData = await response.json()
+        
+        // Handle specific error cases
+        if (response.status === 409) {
+          throw new Error('Organization with this slug or namespace already exists')
+        } else if (response.status === 400) {
+          if (errorData.details) {
+            // Show validation errors
+            const validationErrors = errorData.details.map((detail: any) => detail.message).join(', ')
+            throw new Error(`Invalid input: ${validationErrors}`)
+          } else {
+            throw new Error(errorData.error || 'Invalid input')
+          }
+        } else if (response.status === 403) {
+          throw new Error('Forbidden: You do not have permission to edit this organization')
+        } else {
+          throw new Error(errorData.error || 'Failed to update organization')
+        }
       }
 
       return response.json()

@@ -14,9 +14,13 @@ import {
 import { useOrganizations, useActiveOrganization } from '@/hooks/use-organizations'
 import { useOrganizationStore } from '@/store/organization-store'
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
+import { CreateOrganizationDialog } from '@/components/organization/create-organization-dialog'
+import { EditOrganizationDialog } from '@/components/organization/edit-organization-dialog'
+import type { Organization } from '@/store/organization-store'
 
 export default function OrganizationsPage() {
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null)
   
   const { data: organizations = [], isLoading } = useOrganizations()
   const { organization: activeOrganization } = useActiveOrganization()
@@ -71,7 +75,7 @@ export default function OrganizationsPage() {
           <h1 className="text-2xl font-bold">Organizations</h1>
           <p className="text-gray-600">Manage your organizations and switch between them</p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)}>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Create Organization
         </Button>
@@ -89,7 +93,7 @@ export default function OrganizationsPage() {
           <div className="flex items-center gap-4">
             <OrganizationSwitcher 
               className="w-96"
-              onCreateNew={() => setShowCreateForm(true)}
+              onCreateNew={() => setShowCreateDialog(true)}
             />
             {activeOrganization && (
               <div className="text-sm text-gray-600">
@@ -112,7 +116,7 @@ export default function OrganizationsPage() {
               <p className="text-gray-600 mb-4">
                 Create your first organization to start managing Language Operator resources
               </p>
-              <Button onClick={() => setShowCreateForm(true)}>
+              <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Organization
               </Button>
@@ -193,7 +197,7 @@ export default function OrganizationsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditingOrganization(org)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Organization
                           </DropdownMenuItem>
@@ -224,24 +228,18 @@ export default function OrganizationsPage() {
         )}
       </div>
       
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Create Organization</h2>
-            <p className="text-gray-600 mb-4">
-              Organization creation form will be implemented in the next step.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowCreateForm(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => setShowCreateForm(false)}>
-                Create
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Organization Dialog */}
+      <CreateOrganizationDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
+
+      {/* Edit Organization Dialog */}
+      <EditOrganizationDialog
+        open={!!editingOrganization}
+        onOpenChange={(open) => !open && setEditingOrganization(null)}
+        organization={editingOrganization}
+      />
     </div>
   )
 }
