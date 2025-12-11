@@ -171,7 +171,7 @@ class KubernetesClient {
 
   async getNamespaces(): Promise<string[]> {
     try {
-      const response = await this.coreApi.listNamespace()
+      const response = await this.coreApi.listNamespace({})
       return response.items.map(ns => ns.metadata?.name || '')
     } catch (error) {
       console.error('Error fetching namespaces:', error)
@@ -181,10 +181,14 @@ class KubernetesClient {
 
   async getLanguageAgents(namespace: string): Promise<LanguageAgent[]> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      // For now, return mock data until API signature is resolved
-      console.log(`Getting language agents for namespace: ${namespace}`)
-      return []
+      const response = await this.customApi.listNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageagents'
+      })
+      
+      return (response.body as any).items || []
     } catch (error) {
       console.error('Error fetching language agents:', error)
       return []
@@ -193,17 +197,14 @@ class KubernetesClient {
 
   async getLanguageModels(namespace: string): Promise<LanguageModel[]> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Getting resources for namespace: ${namespace}`)
-      // const response = await this.customApi.listNamespacedCustomObject(
-      //   'language-operator.io',
-      //   'v1alpha1', 
-      //   namespace,
-      //   'languagemodels'
-      // )
+      const response = await this.customApi.listNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagemodels'
+      })
       
-      // return (response as any).items || []
-      return []
+      return (response.body as any).items || []
     } catch (error) {
       console.error('Error fetching language models:', error)
       return []
@@ -212,17 +213,14 @@ class KubernetesClient {
 
   async getLanguageTools(namespace: string): Promise<LanguageTool[]> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Getting resources for namespace: ${namespace}`)
-      // const response = await this.customApi.listNamespacedCustomObject(
-      //   'language-operator.io',
-      //   'v1alpha1', 
-      //   namespace,
-      //   'languagetools'
-      // )
+      const response = await this.customApi.listNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagetools'
+      })
       
-      // return (response as any).items || []
-      return []
+      return (response.body as any).items || []
     } catch (error) {
       console.error('Error fetching language tools:', error)
       return []
@@ -231,17 +229,14 @@ class KubernetesClient {
 
   async getLanguagePersonas(namespace: string): Promise<LanguagePersona[]> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Getting resources for namespace: ${namespace}`)
-      // const response = await this.customApi.listNamespacedCustomObject(
-      //   'language-operator.io',
-      //   'v1alpha1', 
-      //   namespace,
-      //   'languagepersonas'
-      // )
+      const response = await this.customApi.listNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagepersonas'
+      })
       
-      // return (response as any).items || []
-      return []
+      return (response.body as any).items || []
     } catch (error) {
       console.error('Error fetching language personas:', error)
       return []
@@ -250,17 +245,14 @@ class KubernetesClient {
 
   async getLanguageClusters(namespace: string): Promise<LanguageCluster[]> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Getting resources for namespace: ${namespace}`)
-      // const response = await this.customApi.listNamespacedCustomObject(
-      //   'language-operator.io',
-      //   'v1alpha1', 
-      //   namespace,
-      //   'languageclusters'
-      // )
+      const response = await this.customApi.listNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageclusters'
+      })
       
-      // return (response as any).items || []
-      return []
+      return (response.body as any).items || []
     } catch (error) {
       console.error('Error fetching language clusters:', error)
       return []
@@ -269,9 +261,15 @@ class KubernetesClient {
 
   async createLanguageAgent(namespace: string, agent: Partial<LanguageAgent>): Promise<LanguageAgent> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Creating language agent in namespace: ${namespace}`, agent)
-      throw new Error('Kubernetes API not yet implemented')
+      const response = await this.customApi.createNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageagents',
+        body: agent
+      })
+      
+      return response.body as LanguageAgent
     } catch (error) {
       console.error('Error creating language agent:', error)
       throw error
@@ -280,9 +278,16 @@ class KubernetesClient {
 
   async updateLanguageAgent(namespace: string, name: string, agent: Partial<LanguageAgent>): Promise<LanguageAgent> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Updating language agent ${name} in namespace: ${namespace}`, agent)
-      throw new Error('Kubernetes API not yet implemented')
+      const response = await this.customApi.replaceNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageagents',
+        name,
+        body: agent
+      })
+      
+      return response.body as LanguageAgent
     } catch (error) {
       console.error('Error updating language agent:', error)
       throw error
@@ -291,9 +296,13 @@ class KubernetesClient {
 
   async deleteLanguageAgent(namespace: string, name: string): Promise<void> {
     try {
-      // TODO: Fix Kubernetes client API compatibility
-      console.log(`Deleting language agent ${name} in namespace: ${namespace}`)
-      throw new Error('Kubernetes API not yet implemented')
+      await this.customApi.deleteNamespacedCustomObject({
+        group: 'language-operator.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageagents',
+        name
+      })
     } catch (error) {
       console.error('Error deleting language agent:', error)
       throw error
