@@ -169,7 +169,7 @@ export default function OrganizationsPage() {
                         {(org._count?.invites || 0) > 0 && (
                           <div className="flex items-center gap-1">
                             <Mail className="w-4 h-4" />
-                            {org._count.invites} pending invites
+                            {org._count?.invites} pending invites
                           </div>
                         )}
                       </div>
