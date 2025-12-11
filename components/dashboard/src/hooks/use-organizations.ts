@@ -186,3 +186,135 @@ export function useActiveOrganization() {
     isLoading: !activeOrganizationId ? false : !organizationData && !activeOrganization
   }
 }
+
+// Organization members hooks
+export function useOrganizationMembers(organizationId: string) {
+  return useQuery({
+    queryKey: ['organization-members', organizationId],
+    queryFn: async () => {
+      const response = await fetch(`/api/organizations/${organizationId}/members`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization members')
+      }
+      return response.json()
+    },
+    enabled: !!organizationId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  })
+}
+
+export function useUpdateMember(organizationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
+      const response = await fetch(`/api/organizations/${organizationId}/members/${memberId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update member')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-members', organizationId] })
+      queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+    }
+  })
+}
+
+export function useRemoveMember(organizationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (memberId: string) => {
+      const response = await fetch(`/api/organizations/${organizationId}/members/${memberId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove member')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-members', organizationId] })
+      queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+    }
+  })
+}
+
+// Organization invitations hooks
+export function useOrganizationInvites(organizationId: string) {
+  return useQuery({
+    queryKey: ['organization-invites', organizationId],
+    queryFn: async () => {
+      const response = await fetch(`/api/organizations/${organizationId}/invites`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch organization invites')
+      }
+      return response.json()
+    },
+    enabled: !!organizationId,
+    staleTime: 1 * 60 * 1000, // 1 minute
+  })
+}
+
+export function useCreateInvite(organizationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ email, role }: { email: string; role: string }) => {
+      const response = await fetch(`/api/organizations/${organizationId}/invites`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, role })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send invitation')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-invites', organizationId] })
+      queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+    }
+  })
+}
+
+export function useDeleteInvite(organizationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (inviteId: string) => {
+      const response = await fetch(`/api/organizations/${organizationId}/invites/${inviteId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete invitation')
+      }
+
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-invites', organizationId] })
+      queryClient.invalidateQueries({ queryKey: ['organization', organizationId] })
+    }
+  })
+}

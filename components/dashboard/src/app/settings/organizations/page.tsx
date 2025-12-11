@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Plus, Settings, Users, Mail, MoreHorizontal, Trash2, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -201,9 +202,11 @@ export default function OrganizationsPage() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Organization
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Users className="mr-2 h-4 w-4" />
-                            Manage Members
+                          <DropdownMenuItem asChild>
+                            <Link href={`/settings/organizations/${org.id}/members`}>
+                              <Users className="mr-2 h-4 w-4" />
+                              Manage Members
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Mail className="mr-2 h-4 w-4" />
