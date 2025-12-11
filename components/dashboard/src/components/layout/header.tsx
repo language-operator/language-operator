@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { LogOut, Settings, Building2 } from 'lucide-react'
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function Header() {
   const { data: session } = useSession()
@@ -27,50 +28,53 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-white px-6">
+    <header className="flex h-16 items-center justify-between border-b bg-background px-6">
       <div className="flex items-center gap-4">
         <OrganizationSwitcher />
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger className="outline-none">
-          <Avatar>
-            <AvatarImage src={session?.user?.image || undefined} />
-            <AvatarFallback>
-              {getInitials(session?.user?.name)}
-            </AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{session?.user?.name}</p>
-              <p className="text-xs text-gray-500">{session?.user?.email}</p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <a href="/settings/organizations" className="flex items-center cursor-pointer">
-              <Building2 className="mr-2 h-4 w-4" />
-              <span>Organizations</span>
-            </a>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href="/settings/profile" className="flex items-center cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </a>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className="cursor-pointer"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Sign out</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-4">
+        <ThemeToggle />
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <Avatar>
+              <AvatarImage src={session?.user?.image || undefined} />
+              <AvatarFallback>
+                {getInitials(session?.user?.name)}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{session?.user?.name}</p>
+                <p className="text-xs text-gray-500">{session?.user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a href="/settings/organizations" className="flex items-center cursor-pointer">
+                <Building2 className="mr-2 h-4 w-4" />
+                <span>Organizations</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a href="/settings/profile" className="flex items-center cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="cursor-pointer"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sign out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }
