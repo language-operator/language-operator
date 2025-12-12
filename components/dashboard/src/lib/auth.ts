@@ -1,30 +1,13 @@
 import { NextAuthOptions } from 'next-auth'
+import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import GoogleProvider from 'next-auth/providers/google'
 import GitHubProvider from 'next-auth/providers/github'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { db } from './db'
-import { MockPrismaAdapter } from './mock-prisma-adapter'
-import { isBuildOnly, hasDatabaseUrl } from './env'
-
-// Create adapter conditionally
-let adapter: any = undefined
-
-if (isBuildOnly || !hasDatabaseUrl) {
-  console.log('Using mock adapter for build-only environment')
-  adapter = MockPrismaAdapter()
-} else {
-  try {
-    const { PrismaAdapter } = require('@next-auth/prisma-adapter')
-    adapter = PrismaAdapter(db)
-  } catch (error) {
-    console.warn('PrismaAdapter not available, using mock adapter')
-    adapter = MockPrismaAdapter()
-  }
-}
 
 export const authOptions: NextAuthOptions = {
-  adapter,
+  adapter: PrismaAdapter(db),
   session: {
     strategy: 'jwt', // Use JWT sessions instead of database sessions
   },
