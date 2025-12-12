@@ -1,8 +1,12 @@
+'use client'
+
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock } from 'lucide-react'
+import { useResourceCounts } from '@/hooks/useResourceCounts'
 
 export default function Home() {
+  const { counts, loading, error, refetch } = useResourceCounts()
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
@@ -21,9 +25,11 @@ export default function Home() {
               <Bot className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.agents || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                +2 from last week
+                {error ? 'Error loading data' : 'Active in your namespace'}
               </p>
             </CardContent>
           </Card>
@@ -34,9 +40,11 @@ export default function Home() {
               <Cpu className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.models || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                3 active, 1 pending
+                {error ? 'Error loading data' : 'Available for agents'}
               </p>
             </CardContent>
           </Card>
@@ -47,9 +55,11 @@ export default function Home() {
               <Wrench className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">8</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.tools || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                All operational
+                {error ? 'Error loading data' : 'Ready for agents'}
               </p>
             </CardContent>
           </Card>
@@ -60,9 +70,11 @@ export default function Home() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">6</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.personas || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Across 2 categories
+                {error ? 'Error loading data' : 'Personality templates'}
               </p>
             </CardContent>
           </Card>
@@ -73,9 +85,11 @@ export default function Home() {
               <Cloud className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.clusters || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Production & staging
+                {error ? 'Error loading data' : 'Deployed configurations'}
               </p>
             </CardContent>
           </Card>
