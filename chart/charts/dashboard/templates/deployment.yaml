@@ -36,12 +36,12 @@ spec:
         args:
         - |
           echo "Waiting for PostgreSQL to be ready..."
-          until npx prisma db execute --stdin --schema=/app/prisma/schema.prisma < /dev/null > /dev/null 2>&1; do
+          until npx prisma db execute --stdin < /dev/null > /dev/null 2>&1; do
             echo "Database not ready, retrying in 2s..."
             sleep 2
           done
           echo "Database ready! Running Prisma migrations..."
-          npx prisma migrate deploy --schema=/app/prisma/schema.prisma
+          npx prisma migrate deploy
         env:
         - name: DATABASE_URL
           valueFrom:
@@ -83,7 +83,7 @@ spec:
               key: password
         {{- end }}
         - name: NEXTAUTH_URL
-          value: {{ .Values.nextAuth.url | default (printf "http://%s" .Values.gateway.hostname) | quote }}
+          value: {{ .Values.nextAuth.url | default (printf "http://%s" (index .Values.ingress.hosts 0).host) | quote }}
         - name: NEXTAUTH_SECRET
           valueFrom:
             secretKeyRef:

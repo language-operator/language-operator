@@ -704,6 +704,19 @@ dashboard:
     repository: ghcr.io/language-operator/dashboard
     tag: latest
 
+  # Legacy Ingress support (for Traefik compatibility)
+  ingress:
+    enabled: true
+    className: "traefik"
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: "web"
+    hosts:
+      - host: "langop.local"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
   # Gateway API configuration (Traefik native)
   gateway:
     enabled: false
@@ -712,7 +725,7 @@ dashboard:
     # Namespace of the Gateway (if different from dashboard namespace)
     gatewayNamespace: ""
     # Hostname for the dashboard
-    hostname: "dashboard.example.com"
+    hostname: "langop.local"
     # TLS configuration
     tls:
       enabled: false
