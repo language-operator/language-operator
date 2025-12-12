@@ -40,6 +40,7 @@ import (
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/network"
 )
 
 const (
@@ -482,6 +483,8 @@ func generateEgressFromEndpoint(endpoint string) *networkingv1.NetworkPolicyEgre
 // an egress rule is automatically generated for that endpoint
 // If otelEndpoint is set, an egress rule is automatically generated for the OpenTelemetry collector
 func BuildEgressNetworkPolicy(
+	ctx context.Context,
+	client client.Client,
 	name, namespace string,
 	labels map[string]string,
 	provider, endpoint string,
@@ -628,29 +631,17 @@ func BuildEgressNetworkPolicy(
 		},
 	})
 
-	// Add CIDR-based rules for Kubernetes API server access
-	// These CIDRs are configurable via Helm chart values and environment variables
-	// Note: CIDR-based rules removed due to Cilium NetworkPolicy compatibility issues
-	// Use broad rule for external API access instead
-	if true { // Always add broad external API access rule
-		// Use empty peer list to allow all external destinations on specific ports
-		// This works better with Cilium than specific CIDR ranges
-		var apiServerPeers []networkingv1.NetworkPolicyPeer
-
-		egress = append(egress, networkingv1.NetworkPolicyEgressRule{
-			To: apiServerPeers,
-			Ports: []networkingv1.NetworkPolicyPort{
-				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
-				},
-				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
-				},
-			},
-		})
+	// Add CNI-aware rules for Kubernetes API server access
+	// Use CNI detection to generate appropriate egress rules for different CNI implementations
+	cniProvider, err := network.DetectCNI(ctx, client)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "Failed to detect CNI provider, falling back to generic")
+		cniProvider = network.CNIProviderGeneric
 	}
+
+	// Generate secure API server egress rules based on detected CNI
+	apiServerRules := network.CreateSecureAPIServerEgressRules(cniProvider)
+	egress = append(egress, apiServerRules...)
 
 	// Add user-defined egress rules
 	for _, rule := range egressRules {

@@ -466,6 +466,8 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 
 	// Build NetworkPolicy using helper from utils.go
 	networkPolicy := BuildEgressNetworkPolicy(
+		ctx,
+		r.Client,
 		tool.Name,
 		tool.Namespace,
 		labels,

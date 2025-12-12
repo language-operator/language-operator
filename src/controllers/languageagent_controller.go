@@ -1584,6 +1584,8 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 
 	// Build NetworkPolicy using helper from utils.go
 	networkPolicy := BuildEgressNetworkPolicy(
+		ctx,
+		r.Client,
 		agent.Name,
 		agent.Namespace,
 		labels,
