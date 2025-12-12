@@ -376,3 +376,156 @@ export function safeValidateLanguageCluster(data: unknown): { success: true; dat
   const result = LanguageClusterSchema.safeParse(data)
   return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
 }
+
+// Organization management validation schemas
+export const OrganizationCreateSchema = z.object({
+  name: z.string().min(1, "Organization name is required").max(100, "Organization name must be less than 100 characters"),
+  slug: z.string()
+    .min(1, "Organization slug is required")
+    .max(50, "Organization slug must be less than 50 characters")
+    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, "Organization slug must be lowercase alphanumeric with hyphens"),
+  namespace: z.string()
+    .min(1, "Kubernetes namespace is required")
+    .max(63, "Kubernetes namespace must be less than 63 characters")
+    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, "Kubernetes namespace must be lowercase alphanumeric with hyphens"),
+  description: z.string().max(500, "Description must be less than 500 characters").optional(),
+})
+
+export const OrganizationUpdateSchema = z.object({
+  name: z.string().min(1, "Organization name is required").max(100, "Organization name must be less than 100 characters").optional(),
+  description: z.string().max(500, "Description must be less than 500 characters").optional(),
+})
+
+export const InviteMemberSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: z.enum(['admin', 'member', 'viewer'], {
+    message: "Role must be one of: admin, member, viewer"
+  }),
+  message: z.string().max(500, "Invitation message must be less than 500 characters").optional(),
+})
+
+export const AcceptInviteSchema = z.object({
+  token: z.string().min(1, "Invitation token is required"),
+})
+
+export const UpdateMemberRoleSchema = z.object({
+  role: z.enum(['admin', 'member', 'viewer'], {
+    message: "Role must be one of: admin, member, viewer"
+  }),
+})
+
+// User management validation schemas
+export const UserSignupSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be less than 100 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one lowercase letter, one uppercase letter, and one number"),
+})
+
+export const UserUpdateProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters").optional(),
+  email: z.string().email("Invalid email address").optional(),
+  image: z.string().url("Invalid image URL").optional(),
+})
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be less than 100 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one lowercase letter, one uppercase letter, and one number"),
+})
+
+// Search and filter validation schemas
+export const NamespaceSearchSchema = z.object({
+  q: z.string().min(1, "Search query is required").max(100, "Search query must be less than 100 characters"),
+  type: z.enum(['agents', 'models', 'tools', 'personas', 'clusters', 'all']).optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+  organization: z.string().optional(),
+})
+
+export const NamespaceStatsSchema = z.object({
+  timeRange: z.enum(['1h', '24h', '7d', '30d']).default('24h'),
+  granularity: z.enum(['minute', 'hour', 'day']).default('hour'),
+  includeDetails: z.boolean().default(false),
+})
+
+// Common list parameters validation
+export const ListParamsSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(50),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+  search: z.string().max(100).optional(),
+})
+
+// Export validation helper functions
+export function safeValidateOrganizationCreate(data: unknown) {
+  const result = OrganizationCreateSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateOrganizationUpdate(data: unknown) {
+  const result = OrganizationUpdateSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateInviteMember(data: unknown) {
+  const result = InviteMemberSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateAcceptInvite(data: unknown) {
+  const result = AcceptInviteSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateUpdateMemberRole(data: unknown) {
+  const result = UpdateMemberRoleSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateUserSignup(data: unknown) {
+  const result = UserSignupSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateUserUpdateProfile(data: unknown) {
+  const result = UserUpdateProfileSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateChangePassword(data: unknown) {
+  const result = ChangePasswordSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateNamespaceSearch(data: unknown) {
+  const result = NamespaceSearchSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateNamespaceStats(data: unknown) {
+  const result = NamespaceStatsSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateListParams(data: unknown) {
+  const result = ListParamsSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+// Type inference for new schemas
+export type OrganizationCreate = z.infer<typeof OrganizationCreateSchema>
+export type OrganizationUpdate = z.infer<typeof OrganizationUpdateSchema>
+export type InviteMember = z.infer<typeof InviteMemberSchema>
+export type AcceptInvite = z.infer<typeof AcceptInviteSchema>
+export type UpdateMemberRole = z.infer<typeof UpdateMemberRoleSchema>
+export type UserSignup = z.infer<typeof UserSignupSchema>
+export type UserUpdateProfile = z.infer<typeof UserUpdateProfileSchema>
+export type ChangePassword = z.infer<typeof ChangePasswordSchema>
+export type NamespaceSearch = z.infer<typeof NamespaceSearchSchema>
+export type NamespaceStats = z.infer<typeof NamespaceStatsSchema>
+export type ListParams = z.infer<typeof ListParamsSchema>

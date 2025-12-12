@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { safeValidateNamespaceSearch } from '@/lib/validation'
 
 // GET /api/namespaces/[namespace]/search - Search all resources in namespace
 export async function GET(request: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
@@ -41,13 +42,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Access denied to namespace' }, { status: 403 })
     }
 
-    // Parse query parameters
+    // Parse and validate query parameters
     const url = new URL(request.url)
-    const query = url.searchParams.get('q') || ''
-    const resourceType = url.searchParams.get('type') // 'agents', 'models', 'tools', 'personas', 'clusters'
+    const searchParams = {
+      q: url.searchParams.get('q') || '',
+      type: url.searchParams.get('type') as any,
+      limit: parseInt(url.searchParams.get('limit') || '20'),
+      organization: organization.id,
+    }
+
+    // Skip validation if query is empty (list all)
+    if (searchParams.q) {
+      const validation = safeValidateNamespaceSearch(searchParams)
+      if (!validation.success) {
+        return NextResponse.json({ 
+          error: 'Invalid search parameters', 
+          details: validation.error.errors 
+        }, { status: 400 })
+      }
+    }
+
+    const query = searchParams.q
+    const resourceType = searchParams.type
     const phase = url.searchParams.get('phase')
     const createdBy = url.searchParams.get('createdBy')
-    const limit = parseInt(url.searchParams.get('limit') || '50')
+    const limit = searchParams.limit
 
 
     let results: any[] = []

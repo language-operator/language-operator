@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { safeValidateNamespaceStats } from '@/lib/validation'
 
 // GET /api/namespaces/[namespace]/stats - Get namespace resource statistics
 export async function GET(request: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
@@ -39,6 +40,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Validate namespace access
     if (resolvedParams.namespace !== organization.namespace) {
       return NextResponse.json({ error: 'Access denied to namespace' }, { status: 403 })
+    }
+
+    // Parse and validate query parameters
+    const url = new URL(request.url)
+    const statsParams = {
+      timeRange: (url.searchParams.get('timeRange') as any) || '24h',
+      granularity: (url.searchParams.get('granularity') as any) || 'hour',
+      includeDetails: url.searchParams.get('includeDetails') === 'true',
+    }
+
+    const validation = safeValidateNamespaceStats(statsParams)
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Invalid stats parameters', 
+        details: validation.error.errors 
+      }, { status: 400 })
     }
 
 
