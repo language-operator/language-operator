@@ -1,29 +1,37 @@
 # Dockerfile for Language Operator Dashboard
 # Based on Prisma Docker best practices: https://www.prisma.io/docs/guides/docker
 
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat openssl1.1-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
 RUN npm ci --only=production && npm cache clean --force
 
+# Build stage needs dev dependencies for build tools
+FROM base AS build-deps
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci && npm cache clean --force
+
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build-deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN npx prisma generate
 
 # Build Next.js application
 # Disable telemetry during build
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -47,9 +55,9 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 CMD ["node", "server.js"]
