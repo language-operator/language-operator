@@ -57,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       if (!validation.success) {
         return NextResponse.json({ 
           error: 'Invalid search parameters', 
-          details: validation.error.errors 
+          details: validation.error?.issues || 'Validation failed'
         }, { status: 400 })
       }
     }
