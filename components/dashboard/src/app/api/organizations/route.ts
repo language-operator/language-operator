@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { k8sClient } from '@/lib/k8s-client'
 import { z } from 'zod'
 
 const createOrganizationSchema = z.object({
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
     const organization = await prisma.organization.create({
       data: {
         ...validatedData,
+        plan: 'free', // Default to free plan for manually created orgs
         members: {
           create: {
             userId: user.id,
@@ -123,6 +125,14 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Create Kubernetes namespace with ResourceQuota for the organization
+    try {
+      await k8sClient.createOrganizationNamespace(validatedData.namespace, organization.id, 'free')
+    } catch (err: any) {
+      // If namespace creation fails, log but don't fail organization creation
+      console.error('Failed to create organization namespace:', err.message)
+    }
 
     return NextResponse.json({ organization }, { status: 201 })
   } catch (error) {

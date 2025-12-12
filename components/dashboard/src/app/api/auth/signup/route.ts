@@ -66,16 +66,13 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create Kubernetes namespace for the organization
+    // Create Kubernetes namespace with ResourceQuota for the organization
     try {
-      await k8sClient.createNamespace(namespace, {
-        'langop.io/organization': organization.id,
-        'langop.io/plan': 'free',
-      })
+      await k8sClient.createOrganizationNamespace(namespace, organization.id, 'free')
     } catch (err: any) {
       // If namespace creation fails, log but don't fail signup
       // (namespace might already exist)
-      console.error('Failed to create namespace:', err.message)
+      console.error('Failed to create organization namespace:', err.message)
     }
 
     return NextResponse.json(

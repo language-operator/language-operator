@@ -49,12 +49,227 @@ class KubernetesClient {
     return await this.coreV1Api.createNamespace({ body: namespace })
   }
 
+  async createOrganizationNamespace(name: string, organizationId: string, plan: string = 'free') {
+    try {
+      // Create namespace with organization labels
+      const namespaceResponse = await this.createNamespace(name, {
+        'langop.io/organization': organizationId,
+        'langop.io/plan': plan.toLowerCase(),
+        'langop.io/resource': 'namespace'
+      })
+
+      // Create ResourceQuota for the namespace
+      try {
+        await this.createResourceQuota(name, organizationId, plan)
+      } catch (quotaError: any) {
+        console.error(`Failed to create ResourceQuota for namespace ${name}:`, quotaError.message)
+        // Don't fail if quota creation fails - namespace is still functional
+      }
+
+      return namespaceResponse
+    } catch (error: any) {
+      // If namespace already exists, that's okay for our use case
+      if (error.response?.statusCode === 409) {
+        console.log(`Namespace ${name} already exists`)
+        return null
+      }
+      throw error
+    }
+  }
+
+  async deleteOrganizationNamespace(name: string) {
+    try {
+      // First delete the ResourceQuota
+      await this.deleteResourceQuota(name)
+    } catch (quotaError: any) {
+      console.error(`Failed to delete ResourceQuota for namespace ${name}:`, quotaError.message)
+      // Continue with namespace deletion even if quota deletion fails
+    }
+
+    // Then delete the namespace (this will cascade delete all resources)
+    return await this.coreV1Api.deleteNamespace({ name })
+  }
+
   async getPodLogs(namespace: string, podName: string, tailLines: number = 100) {
     return await this.coreV1Api.readNamespacedPodLog({
       name: podName,
       namespace,
       tailLines,
     })
+  }
+
+  // ResourceQuota methods for multi-tenant resource management
+
+  private getPlanBasedQuotaSpec(plan: string): Record<string, string> {
+    switch (plan.toLowerCase()) {
+      case 'free':
+        return {
+          'count/languageagents': '2',
+          'count/languagemodels': '2',
+          'count/languagetools': '5',
+          'count/languagepersonas': '3',
+          'count/languageclusters': '1',
+          'requests.cpu': '1000m',
+          'requests.memory': '2Gi',
+          'limits.cpu': '2000m',
+          'limits.memory': '4Gi'
+        }
+      case 'pro':
+        return {
+          'count/languageagents': '20',
+          'count/languagemodels': '10',
+          'count/languagetools': '50',
+          'count/languagepersonas': '20',
+          'count/languageclusters': '5',
+          'requests.cpu': '10000m',
+          'requests.memory': '20Gi',
+          'limits.cpu': '20000m',
+          'limits.memory': '40Gi'
+        }
+      case 'enterprise':
+        return {
+          'count/languageagents': '100',
+          'count/languagemodels': '50',
+          'count/languagetools': '200',
+          'count/languagepersonas': '100',
+          'count/languageclusters': '20',
+          'requests.cpu': '50000m',
+          'requests.memory': '100Gi',
+          'limits.cpu': '100000m',
+          'limits.memory': '200Gi'
+        }
+      default:
+        return this.getPlanBasedQuotaSpec('free')
+    }
+  }
+
+  async createResourceQuota(namespace: string, organizationId: string, plan: string) {
+    const quotaName = `${namespace}-quota`
+    const quotaSpec = this.getPlanBasedQuotaSpec(plan)
+
+    const resourceQuota: k8s.V1ResourceQuota = {
+      metadata: {
+        name: quotaName,
+        namespace,
+        labels: {
+          'langop.io/organization': organizationId,
+          'langop.io/plan': plan.toLowerCase(),
+          'langop.io/resource': 'quota'
+        }
+      },
+      spec: {
+        hard: quotaSpec
+      }
+    }
+
+    return await this.coreV1Api.createNamespacedResourceQuota({
+      namespace,
+      body: resourceQuota
+    })
+  }
+
+  async getResourceQuota(namespace: string, name?: string) {
+    const quotaName = name || `${namespace}-quota`
+    return await this.coreV1Api.readNamespacedResourceQuota({
+      name: quotaName,
+      namespace
+    })
+  }
+
+  async updateResourceQuota(namespace: string, plan: string, organizationId: string, name?: string) {
+    const quotaName = name || `${namespace}-quota`
+    const quotaSpec = this.getPlanBasedQuotaSpec(plan)
+
+    const resourceQuota: k8s.V1ResourceQuota = {
+      metadata: {
+        name: quotaName,
+        namespace,
+        labels: {
+          'langop.io/organization': organizationId,
+          'langop.io/plan': plan.toLowerCase(),
+          'langop.io/resource': 'quota'
+        }
+      },
+      spec: {
+        hard: quotaSpec
+      }
+    }
+
+    return await this.coreV1Api.replaceNamespacedResourceQuota({
+      name: quotaName,
+      namespace,
+      body: resourceQuota
+    })
+  }
+
+  async deleteResourceQuota(namespace: string, name?: string) {
+    const quotaName = name || `${namespace}-quota`
+    return await this.coreV1Api.deleteNamespacedResourceQuota({
+      name: quotaName,
+      namespace
+    })
+  }
+
+  async getResourceQuotaUsage(namespace: string, name?: string): Promise<{
+    quota: Record<string, string>
+    used: Record<string, string>
+    available: Record<string, string>
+    percentUsed: Record<string, number>
+  }> {
+    const quotaName = name || `${namespace}-quota`
+    
+    try {
+      const response = await this.coreV1Api.readNamespacedResourceQuota({
+        name: quotaName,
+        namespace
+      })
+
+      const quota = (response as any).body.spec?.hard || {}
+      const used = (response as any).body.status?.used || {}
+      const available: Record<string, string> = {}
+      const percentUsed: Record<string, number> = {}
+
+      // Calculate available resources and usage percentages
+      Object.keys(quota).forEach(resource => {
+        const hardLimit = this.parseResourceQuantity(quota[resource])
+        const usedAmount = this.parseResourceQuantity(used[resource] || '0')
+        
+        available[resource] = (hardLimit - usedAmount).toString()
+        percentUsed[resource] = hardLimit > 0 ? (usedAmount / hardLimit) * 100 : 0
+      })
+
+      return {
+        quota,
+        used,
+        available,
+        percentUsed
+      }
+    } catch (error) {
+      // Return empty usage if quota doesn't exist
+      return {
+        quota: {},
+        used: {},
+        available: {},
+        percentUsed: {}
+      }
+    }
+  }
+
+  private parseResourceQuantity(quantity: string): number {
+    // Simple parser for basic quantities
+    if (quantity.endsWith('m')) {
+      return parseInt(quantity.slice(0, -1))
+    }
+    if (quantity.endsWith('Gi')) {
+      return parseInt(quantity.slice(0, -2)) * 1024 * 1024 * 1024
+    }
+    if (quantity.endsWith('Mi')) {
+      return parseInt(quantity.slice(0, -2)) * 1024 * 1024
+    }
+    if (quantity.endsWith('Ki')) {
+      return parseInt(quantity.slice(0, -2)) * 1024
+    }
+    return parseInt(quantity) || 0
   }
 
   // Custom Resource methods for language-operator CRDs

@@ -42,9 +42,21 @@ export async function GET(request: NextRequest) {
       organization.id
     )
 
+    // Get quota usage information
+    let quotaUsage = null
+    try {
+      quotaUsage = await k8sClient.getResourceQuotaUsage(organization.namespace)
+    } catch (quotaError) {
+      console.error('Failed to fetch quota usage:', quotaError)
+      // Continue without quota info
+    }
+
     return NextResponse.json({
       success: true,
-      data: counts,
+      data: {
+        ...counts,
+        quota: quotaUsage
+      },
     })
 
   } catch (error) {
