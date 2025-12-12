@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/language-operator/dashboard
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   tag: "latest"
 
 imagePullSecrets: []
