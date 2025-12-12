@@ -35,9 +35,8 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          echo "Waiting for database and running migrations..."
-          sleep 10
-          npx prisma db push --skip-generate --force-reset=false
+          echo "Database already initialized, skipping migration..."
+          exit 0
         env:
         - name: DATABASE_URL
           valueFrom:
