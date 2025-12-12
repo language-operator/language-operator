@@ -14,6 +14,7 @@ type LanguageAgentSpec struct {
 	// Image is the container image to run for this agent
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$`
 	Image string `json:"image"`
 
 	// ImagePullPolicy defines when to pull the container image
@@ -45,6 +46,8 @@ type LanguageAgentSpec struct {
 	Goal string `json:"goal,omitempty"`
 
 	// Instructions provides system instructions for the agent
+	// +kubebuilder:validation:MinLength=10
+	// +kubebuilder:validation:MaxLength=10000
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
@@ -62,6 +65,7 @@ type LanguageAgentSpec struct {
 	// Schedule defines when the agent runs (cron format, for scheduled mode)
 	// Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.)
 	// +kubebuilder:validation:Pattern=`^(@(annually|yearly|monthly|weekly|daily|hourly|every_minute))|(@every\s+((\d+(\.\d+)?)(ns|us|µs|ms|s|m|h))+)|(((\*|[0-9]|[1-5][0-9]|\*\/[0-9]+)\s+){4}(\*|[0-7]|[1-7]|\*\/[0-9]+))$`
+	// +kubebuilder:validation:MaxLength=100
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 
@@ -178,9 +182,13 @@ type LanguageAgentSpec struct {
 type ModelReference struct {
 	// Name is the name of the LanguageModel
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the LanguageModel (defaults to same namespace)
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
@@ -199,9 +207,13 @@ type ModelReference struct {
 type ToolReference struct {
 	// Name is the name of the LanguageTool
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the LanguageTool (defaults to same namespace)
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
@@ -219,9 +231,13 @@ type ToolReference struct {
 type PersonaReference struct {
 	// Name is the name of the LanguagePersona
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the LanguagePersona (defaults to same namespace)
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 }

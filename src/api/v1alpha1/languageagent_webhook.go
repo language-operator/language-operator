@@ -98,6 +98,16 @@ func (a *LanguageAgent) validateSpec() error {
 		return fmt.Errorf("spec.instructions is required")
 	}
 
+	// Validate model references
+	if err := a.validateModelReferences(); err != nil {
+		return fmt.Errorf("spec.modelRefs: %w", err)
+	}
+
+	// Validate execution mode dependencies
+	if err := a.validateExecutionMode(); err != nil {
+		return fmt.Errorf("spec.executionMode: %w", err)
+	}
+
 	// Validate safety config if present
 	if a.Spec.SafetyConfig != nil {
 		if a.Spec.SafetyConfig.MaxCostPerExecution != nil && *a.Spec.SafetyConfig.MaxCostPerExecution < 0 {
@@ -247,6 +257,58 @@ func (a *LanguageAgent) estimateSynthesisCost() float64 {
 	}
 
 	return totalCost
+}
+
+// validateModelReferences validates that ModelRefs are properly configured
+func (a *LanguageAgent) validateModelReferences() error {
+	if len(a.Spec.ModelRefs) == 0 {
+		return fmt.Errorf("at least one model reference is required")
+	}
+
+	primaryCount := 0
+	for i, modelRef := range a.Spec.ModelRefs {
+		// Validate basic fields
+		if modelRef.Name == "" {
+			return fmt.Errorf("modelRefs[%d].name cannot be empty", i)
+		}
+
+		// Count primary models
+		if modelRef.Role == "primary" || modelRef.Role == "" {
+			primaryCount++
+		}
+
+		// Validate priority if set
+		if modelRef.Priority != nil && *modelRef.Priority < 0 {
+			return fmt.Errorf("modelRefs[%d].priority cannot be negative", i)
+		}
+	}
+
+	// Ensure at least one primary model
+	if primaryCount == 0 {
+		return fmt.Errorf("at least one model must have role 'primary'")
+	}
+
+	return nil
+}
+
+// validateExecutionMode validates execution mode dependencies
+func (a *LanguageAgent) validateExecutionMode() error {
+	switch a.Spec.ExecutionMode {
+	case "scheduled":
+		if a.Spec.Schedule == "" {
+			return fmt.Errorf("schedule is required when executionMode is 'scheduled'")
+		}
+	case "event-driven":
+		if len(a.Spec.EventTriggers) == 0 {
+			return fmt.Errorf("eventTriggers is required when executionMode is 'event-driven'")
+		}
+	case "autonomous", "interactive", "":
+		// These modes don't require additional configuration
+	default:
+		return fmt.Errorf("invalid executionMode %q, must be one of: autonomous, interactive, scheduled, event-driven", a.Spec.ExecutionMode)
+	}
+
+	return nil
 }
 
 // SetupWebhookWithManager sets up the webhook with the Manager
