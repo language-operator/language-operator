@@ -9,17 +9,25 @@ class KubernetesClient {
   private constructor() {
     this.kc = new k8s.KubeConfig()
 
-    // Load config based on environment
-    if (process.env.NODE_ENV === 'development') {
-      // Local development: use ~/.kube/config
-      this.kc.loadFromDefault()
-    } else {
-      // Production: use in-cluster service account
-      this.kc.loadFromCluster()
-    }
+    try {
+      // Load config based on environment
+      if (process.env.NODE_ENV === 'development') {
+        // Local development: use ~/.kube/config if available
+        this.kc.loadFromDefault()
+      } else {
+        // Production: use in-cluster service account
+        this.kc.loadFromCluster()
+      }
 
-    this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
-    this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi)
+      this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
+      this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi)
+    } catch (error) {
+      console.warn('⚠️  Kubernetes configuration not available:', error.message)
+      console.log('📝 Running in demo mode without Kubernetes connection')
+      // Create mock APIs for development
+      this.coreV1Api = null
+      this.customObjectsApi = null
+    }
   }
 
   public static getInstance(): KubernetesClient {
@@ -27,6 +35,10 @@ class KubernetesClient {
       KubernetesClient.instance = new KubernetesClient()
     }
     return KubernetesClient.instance
+  }
+
+  private isKubernetesAvailable(): boolean {
+    return this.customObjectsApi !== null && this.coreV1Api !== null
   }
 
   // Core V1 API methods
@@ -280,6 +292,14 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty agents list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -338,6 +358,14 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty models list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -396,6 +424,14 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty tools list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -454,6 +490,14 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty personas list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -512,13 +556,29 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    return await this.customObjectsApi.listNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languageclusters',
-      ...options,
-    })
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty cluster list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
+    try {
+      return await this.customObjectsApi.listNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageclusters',
+        ...options,
+      })
+    } catch (error) {
+      console.warn('⚠️  Kubernetes API call failed, switching to demo mode:', error.message)
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
   }
 
   async getLanguageCluster(namespace: string, name: string) {
@@ -565,6 +625,14 @@ class KubernetesClient {
   // LanguageAgentVersion methods
 
   async listLanguageAgentVersions(namespace: string) {
+    if (!this.isKubernetesAvailable()) {
+      console.log('📝 Demo mode: Returning empty agent-versions list')
+      return { 
+        response: { statusCode: 200 }, 
+        data: { items: [] } 
+      }
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
