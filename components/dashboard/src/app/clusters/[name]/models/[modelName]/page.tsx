@@ -87,38 +87,11 @@ function ModelOverview({ model }: ModelOverviewProps) {
           <CardHeader>
             <CardTitle>Health Status</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Overall Health</p>
-              <div className="flex items-center space-x-2">
-                {model.status?.healthy === true ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <Badge variant="default" className="bg-green-100 text-green-800">Healthy</Badge>
-                  </>
-                ) : model.status?.healthy === false ? (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                    <Badge variant="destructive">Unhealthy</Badge>
-                  </>
-                ) : (
-                  <>
-                    <Clock className="h-4 w-4 text-yellow-500" />
-                    <Badge variant="secondary">Unknown</Badge>
-                  </>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Current Phase</p>
+              <p className="text-sm font-medium text-muted-foreground">Phase</p>
               <p className="text-sm">{model.status?.phase || 'Unknown'}</p>
             </div>
-            {model.status?.lastHealthCheck && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Last Health Check</p>
-                <p className="text-sm">{formatTimeAgo(model.status.lastHealthCheck)}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -531,14 +504,8 @@ export default function ClusterModelDetailPage() {
             </Link>
             <Cpu className="h-8 w-8 text-blue-500" />
             <div>
-              <div className="flex items-center space-x-3">
+              <div>
                 <h1 className="text-3xl font-bold">{model.metadata.name}</h1>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(model)}
-                  <Badge className={getStatusColor(model)}>
-                    {model.status?.phase || 'Unknown'}
-                  </Badge>
-                </div>
               </div>
               <p className="text-muted-foreground">
                 {model.spec.provider}
