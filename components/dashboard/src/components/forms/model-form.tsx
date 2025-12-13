@@ -108,6 +108,9 @@ export function ModelForm({
 
     // Reset available models - will be fetched after credentials are provided
     setAvailableModels([])
+    
+    // Clear any validation errors when switching providers
+    setValidationError('')
 
     // All providers now go to step 2 (credentials) first
     setStep(2)
