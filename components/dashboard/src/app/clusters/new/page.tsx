@@ -47,7 +47,7 @@ export default function CreateClusterPage() {
       const result = await response.json()
       
       // Redirect to cluster details page
-      router.push(`/clusters/${result.cluster.metadata.name}`)
+      router.push(`/clusters/${result.data.metadata.name}`)
     } catch (err: any) {
       console.error('Error creating cluster:', err)
       setError(err.message || 'Failed to create cluster')

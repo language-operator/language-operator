@@ -63,7 +63,7 @@ export default function CreateToolPage() {
       const result = await response.json()
       
       // Redirect to tool details page
-      router.push(`/tools/${result.tool.metadata.name}`)
+      router.push(`/tools/${result.data.metadata.name}`)
     } catch (err: any) {
       console.error('Error creating tool:', err)
       setError(err.message || 'Failed to create tool')

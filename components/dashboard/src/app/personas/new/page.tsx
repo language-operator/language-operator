@@ -50,7 +50,7 @@ export default function CreatePersonaPage() {
       const result = await response.json()
       
       // Redirect to persona details page
-      router.push(`/personas/${result.persona.metadata.name}`)
+      router.push(`/personas/${result.data.metadata.name}`)
     } catch (err: any) {
       console.error('Error creating persona:', err)
       setError(err.message || 'Failed to create persona')

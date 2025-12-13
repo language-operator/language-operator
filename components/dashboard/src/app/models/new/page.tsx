@@ -62,7 +62,7 @@ export default function CreateModelPage() {
       const result = await response.json()
       
       // Redirect to model details page
-      router.push(`/models/${result.model.metadata.name}`)
+      router.push(`/models/${result.data.metadata.name}`)
     } catch (err: any) {
       console.error('Error creating model:', err)
       setError(err.message || 'Failed to create model')
