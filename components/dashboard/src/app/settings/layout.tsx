@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { SettingsNav } from './settings-nav'
 
 export const metadata: Metadata = {
@@ -12,11 +13,13 @@ interface SettingsLayoutProps {
 
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
-    <div className="flex flex-1 gap-6">
-      <SettingsNav />
-      <div className="flex-1">
-        {children}
+    <AuthenticatedLayout>
+      <div className="flex flex-1 gap-6">
+        <SettingsNav />
+        <div className="flex-1">
+          {children}
+        </div>
       </div>
-    </div>
+    </AuthenticatedLayout>
   )
 }

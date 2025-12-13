@@ -21,19 +21,24 @@ services:
 
   # Language Operator Dashboard
   dashboard:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
     restart: always
+    network_mode: "host"
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/language_operator?schema=public"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/language_operator?schema=public"
       NEXTAUTH_SECRET: "your-nextauth-secret-change-in-production"
       NEXTAUTH_URL: "http://localhost:3000"
-      NODE_ENV: "production"
-    ports:
-      - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      NODE_ENV: "development"
+      # Kubernetes configuration - use local kubeconfig
+      KUBECONFIG: "/root/.kube/config"
     volumes:
+      - ~/.kube:/root/.kube:ro
+      # Mount source code for development
+      - type: bind
+        source: ./src
+        target: /app/src
       # Mount for development (optional)
       - type: bind
         source: ./prisma
