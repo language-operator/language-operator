@@ -42,16 +42,38 @@ export async function GET(request: NextRequest) {
       domain: url.searchParams.get('domain') || undefined,
     }
 
-    const response = await k8sClient.listLanguageClusters(organization.namespace)
-    console.log('Clusters K8s response type:', typeof response)
-    console.log('Clusters K8s response keys:', Object.keys(response))
+    // Fetch clusters from Kubernetes with robust response handling
+    let clusters: LanguageCluster[] = []
     
-    // The Kubernetes client library returns response in .body
-    // But our demo mode returns in .data
-    const clusters = (response.body as any)?.items || (response.data as any)?.items || []
-    console.log('Found clusters count:', clusters.length)
-    if (clusters.length > 0) {
-      console.log('First cluster:', clusters[0]?.metadata?.name)
+    try {
+      console.log(`Fetching clusters from namespace: ${organization.namespace}`)
+      const response = await k8sClient.listLanguageClusters(organization.namespace)
+      
+      // Handle different response structures from k8s client
+      // Live K8s mode: { body: { items: [...] } }
+      // Demo mode: { data: { items: [] } }
+      // Error fallback: { data: { items: [] } }
+      const responseBody = (response as any)?.body
+      const responseData = (response as any)?.data
+      const responseItems = (response as any)?.items
+      
+      if (responseBody?.items && Array.isArray(responseBody.items)) {
+        clusters = responseBody.items
+        console.log(`Found ${clusters.length} clusters from Kubernetes API`)
+      } else if (responseData?.items && Array.isArray(responseData.items)) {
+        clusters = responseData.items
+        console.log(`Found ${clusters.length} clusters from demo mode`)
+      } else if (responseItems && Array.isArray(responseItems)) {
+        clusters = responseItems
+        console.log(`Found ${clusters.length} clusters from direct items`)
+      } else {
+        console.warn('No clusters array found in response structure:', Object.keys(response))
+        clusters = []
+      }
+    } catch (k8sError) {
+      console.error('Error fetching clusters from Kubernetes:', k8sError instanceof Error ? k8sError.message : String(k8sError))
+      // Graceful degradation - return empty list instead of failing
+      clusters = []
     }
 
     // Apply filtering
