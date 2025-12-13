@@ -13,9 +13,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
-      - ./prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev"]
+      test: ["CMD-SHELL", "pg_isready -U dev -d language_operator_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
