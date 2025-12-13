@@ -8,6 +8,7 @@
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
 ### Dashboard Development (Recent)
+- ✅ **Issue #121**: Complete cluster-scoped CRUD routing for Tools, Personas, and Agents - **RESOLVED** (Dec 13) - Implemented 9 missing routing files for cluster-scoped resource creation/editing, fixed TypeScript compilation errors, manually tested with Playwright
 - ✅ **Issue #115**: Settings page returns 404 error - **RESOLVED** (Dec 13) - Added missing page.tsx with redirect, fixed AuthenticatedLayout wrapper, updated Docker volume mounts
 - ✅ **Issue #114**: Cluster listing page shows incorrect data and missing clusters - **RESOLVED** (Dec 13) - Fixed API response parsing for different k8s client structures (live vs demo mode)
 
@@ -41,6 +42,9 @@
 - ✅ **ALWAYS** test implementations manually before committing  
 - ✅ **FIX** TypeScript errors before pushing
 - ✅ **VERIFY** CI builds pass before considering issues resolved
+- ✅ **CRUD COMPLETENESS** - Use 8-point routing checklist (see requirements/development-standards.md)
+- ✅ **CLUSTER-SCOPED TESTING** - Manually verify `/clusters/[name]/{resource}/new` workflows
+- ✅ **NO FALSE COMPLETION** - 80% backend work ≠ 100% complete (missing cluster routes cause 404s)
 
 ## Recently Resolved (Context for future issues)
 - **Dashboard TypeScript compilation**: Multiple fixes for null safety, error handling
