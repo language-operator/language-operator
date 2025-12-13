@@ -78,7 +78,10 @@ export function Sidebar() {
               const href = item.href === '' 
                 ? `/clusters/${selectedCluster}` 
                 : `/clusters/${selectedCluster}${item.href}`
-              const isActive = pathname === href
+              // Use exact match for Dashboard, prefix match for sub-routes
+              const isActive = item.href === '' 
+                ? pathname === href 
+                : pathname.startsWith(href)
               return (
                 <Link
                   key={item.name}
