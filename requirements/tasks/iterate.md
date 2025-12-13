@@ -5,7 +5,7 @@
 Please read the following context files:
 
 * Persona: requirements/personas/go-engineer.md
-* Feature Spec: requirements/proposals/dsl-v1.md
+* Feature Spec: requirements/proposals/nextjs-dashboard.md
 * Scratch: requirements/SCRATCH.md
 
 ## Persona
@@ -27,8 +27,7 @@ Follow these directions closely:
 9. **CRITICAL:** Poll CI using the `gh` command to monitor tests.  Fix failing tests before proceeding.
 10. Add resolution details as a comment on the GitHub issue.
 11. Resolve the GitHub issue.
-
-Consider if you need to update requirements/SCRATCH.md for the next run.
+12. Consider if you need to update requirements/SCRATCH.md for the next run.
 
 ## Output
 

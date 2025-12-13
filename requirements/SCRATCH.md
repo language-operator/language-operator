@@ -1,59 +1,54 @@
 # Agent Memory Bank
 
-## Current Outstanding Issues (Nov 26, 2025)
+## Current Focus Areas (Dec 13, 2025)
 
-### Priority 1: Validation Pipeline Foundation
-- ✅ **Issue #51**: Synthesis pipeline ignores schema validation failures - **RESOLVED** (Nov 26) - Fixed inconsistent error handling
-- ✅ **Issue #72**: Synthesis validator continues after validation failure - **RESOLVED** (Nov 26) - Fixed schema validation error collection
-
-### Priority 2: Security & Configuration (Current Sprint)
-- ✅ **Issue #74**: Registry whitelist bypass via operator-config version field - **RESOLVED** (Nov 26) - Added strict ConfigMap validation
-- ✅ **Issue #52**: ConfigMap version validation allows zero/negative versions - **RESOLVED** (Nov 26) - Added CurrentVersion validation in learning controller
-
-### Priority 3: Resource Lifecycle Management (Nov 29)  
-- ✅ **Issue #84**: Deleting clusters leaves orphans - **RESOLVED** (Nov 27) - Added finalizer cleanup for LanguageCluster controller
-- ✅ **Issue #71**: Learning controller status update failures - **RESOLVED** (Nov 26) - Fixed JSON serialization, ConfigMap size validation, and status data rotation
-- ✅ **Issue #68**: Telemetry adapter configuration validation failures - **RESOLVED** (Nov 26) - Added strict URL validation to prevent runtime failures
-- ✅ **Issue #53**: IPv6 registry validation bracket handling failures - **RESOLVED** (Nov 26) - Invalid bug report, implementation is complete and working
-- ✅ **Issue #79**: Remove unused utility functions from controllers - **RESOLVED** (Nov 26) - Removed MergeLabels() function, 10 lines dead code cleanup
-- ✅ **Issue #87**: SigNoz API compatibility issue preventing learning system trace queries - **RESOLVED** (Nov 27) - Updated adapter for Query Builder v5 format, fixed SigNoz v0.103.0 compatibility
-- ✅ **Issue #89**: DSL synthesis generates invalid Ruby syntax for task definitions - **RESOLVED** (Nov 29) - Fixed template syntax by adding parentheses around neural task arguments
-- ✅ **Issue #92**: Agent ServiceAccount missing events creation permissions for telemetry - **RESOLVED** (Dec 01) - Added agents Role and RoleBinding for event creation permissions
-- ✅ **Issue #88**: Learning status data collection integration gap - **RESOLVED** (Dec 01) - Implemented event-driven learning system with TaskCompleted event processing
+### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
-- 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
+- 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**  
+- **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Lower Priority: Security Edge Cases (Backlog)
-- ✅ **Issue #76**: IPv6 registry validation bypass (malformed addresses) - **RESOLVED** (Nov 26) - Fixed bracket validation in image registry parser
-- ✅ **Issue #65**: IPv6 registry parsing vulnerability - **INVALID** (Nov 26) - Comprehensive security analysis confirmed no vulnerability exists
-- **Issue #55**: Telemetry adapter endpoint validation panics
+### Dashboard Development (Recent)
+- ✅ **Issue #115**: Settings page returns 404 error - **RESOLVED** (Dec 13) - Added missing page.tsx with redirect, fixed AuthenticatedLayout wrapper, updated Docker volume mounts
+- ✅ **Issue #114**: Cluster listing page shows incorrect data and missing clusters - **RESOLVED** (Dec 13) - Fixed API response parsing for different k8s client structures (live vs demo mode)
 
-## Key Implementation Context
+### Recent Issue Patterns (Nov-Dec 2025)
+- **TypeScript Compilation**: Multiple fixes for strict mode compliance, null safety, error type handling
+- **Dashboard API Integration**: Response parsing inconsistencies between demo/live Kubernetes modes
+- **PostCSS/Tailwind**: Version compatibility issues (v4 syntax on v3 tooling)
+- **Docker Development**: Volume mount configuration for live file updates
 
-### Deployment Process
-- ⚠️ **CANNOT** build/deploy operator locally from source
-- **Operator deployment must go through CI pipeline only**
-- Must push changes to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
-- Use `git push` workflow, not local Docker builds
+## Critical Development Context
 
-### Critical Guidelines
-- **ConfigMap versioning**: Always preserve v1 (initial synthesis)
-- **Gateway API**: ReferenceGrant auto-creation for cross-namespace refs
-- **Testing**: Always run with race detection enabled
-- **Code Style**: Use generic `ReconcileHelper[T]` pattern for new controllers
-- **Command Safety**: DO NOT run commands without checking they exist first
+### Deployment Constraints
+- ⚠️ **Operator deployment**: CI pipeline only, no local Docker builds
+- **Workflow**: Push to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
+- **Dashboard**: Can run locally with `npm run dev` for frontend development
+
+### Next.js Dashboard Architecture
+- **API Routes**: `/api/clusters`, `/api/models`, etc. proxy to Kubernetes client
+- **Response Handling**: Support both `{ body: { items: [...] } }` (live K8s) and `{ data: { items: [] } }` (demo mode)
+- **Error Patterns**: Use `error instanceof Error` checks, avoid implicit any types
+- **Testing**: Manual testing required, playwright available for UI testing
+
+### Key Technical Patterns
+- **k8s-client.ts**: Handles demo mode fallbacks, null safety for API objects
+- **ReconcileHelper[T]**: Standard pattern for new controllers (Go backend)
+- **TypeScript**: Strict mode compliance, explicit error handling
+- **CSS**: Use Tailwind v3 syntax, proper PostCSS configuration
 
 ### Development Standards
-- ❌ **NEVER** implement fake/stub algorithms or placeholder functions
-- ✅ **ALWAYS** implement real, working algorithms from the start
-- ✅ **TEST** all implementations thoroughly to ensure they work
-- ✅ **PREFER** minimal working implementations over fake stubs
+- ❌ **NEVER** implement stub/fake algorithms
+- ✅ **ALWAYS** test implementations manually before committing  
+- ✅ **FIX** TypeScript errors before pushing
+- ✅ **VERIFY** CI builds pass before considering issues resolved
 
-## Recent Completions Summary
-- **Phase 1 Complete**: Core platform infrastructure delivered
-- **Phase 2 Progress**: Resolved 20 critical issues (memory leaks, race conditions, security vulnerabilities, DSL syntax)
-- **DSL Synthesis Fix (Nov 29)**: Fixed critical Ruby syntax error in task definitions, unblocking agent synthesis pipeline
-- **Resource Lifecycle (Nov 27)**: Fixed LanguageCluster orphaned resource cleanup with finalizer implementation
-- **Controller Optimization**: Extracted common pattern, eliminated ~150 lines duplicate code
-- **Dead Code Cleanup (Nov 26)**: Removed 398 lines of unused code from cmd/main.go, eliminated duplicate registry loading logic
-- **Next Optimization**: Learning controller migration to ReconcileHelper pattern (15+ lines reduction, standardization)
+## Recently Resolved (Context for future issues)
+- **Dashboard TypeScript compilation**: Multiple fixes for null safety, error handling
+- **CSS build issues**: PostCSS plugin updates, Tailwind v3/v4 compatibility
+- **API response parsing**: Consistent handling across demo/live K8s environments
+- **Docker volume configuration**: Live reload in development environment
+
+## Completed Phases
+- **Phase 1**: Core platform infrastructure (Go backend, CRDs, controllers)
+- **Phase 2**: 20+ critical issues resolved (security, lifecycle, validation)
+- **Phase 3**: Dashboard development and TypeScript modernization (ongoing)

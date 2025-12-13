@@ -77,39 +77,12 @@ export async function POST(request: NextRequest) {
       console.warn('Failed to fetch models from endpoint:', error)
     }
 
-    // If we couldn't fetch models, return common fallbacks based on provider
+    // If we couldn't fetch models, return an error response instead of fake data
     if (models.length === 0) {
-      switch (provider) {
-        case 'openai-compatible':
-          models = [
-            'llama3:8b',
-            'llama3:70b', 
-            'phi3:14b',
-            'codellama:7b',
-            'mistral:7b',
-            'qwen2:7b'
-          ]
-          break
-        case 'openai':
-          models = [
-            'gpt-4',
-            'gpt-4-turbo',
-            'gpt-3.5-turbo',
-            'gpt-4o',
-            'gpt-4o-mini'
-          ]
-          break
-        case 'anthropic':
-          models = [
-            'claude-3-opus-20240229',
-            'claude-3-sonnet-20240229',
-            'claude-3-haiku-20240307',
-            'claude-3-5-sonnet-20241022'
-          ]
-          break
-        default:
-          models = ['custom-model']
-      }
+      return NextResponse.json(
+        { error: 'Failed to discover models from the API endpoint. Please verify the endpoint URL and credentials are correct.' },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json({

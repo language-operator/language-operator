@@ -102,67 +102,85 @@ export function ModelForm({
       ...prev,
       provider: providerId,
       endpoint: provider.endpoint,
-      model: '' // Reset model when provider changes
+      model: '', // Reset model when provider changes
+      apiKey: '' // Reset API key when provider changes
     }))
 
-    // Load known models for this provider
-    const knownModels = KNOWN_MODELS[providerId as keyof typeof KNOWN_MODELS] || []
-    setAvailableModels(knownModels)
+    // Reset available models - will be fetched after credentials are provided
+    setAvailableModels([])
 
-    // For openai-compatible, stay on step 2 to get endpoint first
-    // For others, go to step 3 (model selection)
-    if (provider.requiresEndpoint) {
-      setStep(2)
-    } else {
-      setStep(3)
-    }
+    // All providers now go to step 2 (credentials) first
+    setStep(2)
   }
 
-  const handleEndpointSet = async () => {
-    if (!formData.endpoint.trim()) {
-      setValidationError('Endpoint is required')
-      return
+  const handleCredentialsSet = async () => {
+    setValidationError('')
+    
+    // Validate based on provider type
+    if (formData.provider === 'openai-compatible') {
+      if (!formData.endpoint.trim()) {
+        setValidationError('Endpoint is required')
+        return
+      }
+      try {
+        new URL(formData.endpoint)
+      } catch {
+        setValidationError('Invalid endpoint URL')
+        return
+      }
+    } else {
+      // OpenAI and Anthropic require API key
+      if (!formData.apiKey.trim()) {
+        setValidationError('API key is required')
+        return
+      }
     }
 
-    try {
-      new URL(formData.endpoint)
-    } catch {
-      setValidationError('Invalid endpoint URL')
-      return
-    }
-
-    // Try to fetch available models from the endpoint
+    // Try to fetch available models using the provided credentials
     await fetchAvailableModels()
     setStep(3)
   }
 
   const fetchAvailableModels = async () => {
-    if (!formData.endpoint) return
+    // For all providers, we need either endpoint or default endpoints
+    const endpoint = formData.endpoint || 
+      (formData.provider === 'openai' ? 'https://api.openai.com/v1' :
+       formData.provider === 'anthropic' ? 'https://api.anthropic.com/v1' : '')
+
+    if (!endpoint) return
 
     setFetchingModels(true)
     try {
-      // This would typically call your API to fetch models from the endpoint
-      // For now, we'll simulate with some common models
       const response = await fetch(`/api/models/discover`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          endpoint: formData.endpoint,
-          provider: formData.provider 
+          endpoint: endpoint,
+          provider: formData.provider,
+          apiKey: formData.apiKey
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         setAvailableModels(data.models || [])
+        console.log(`Found ${data.models?.length || 0} models for ${formData.provider}`)
       } else {
-        // Fallback to known models if discovery fails
-        setAvailableModels(['llama3:8b', 'phi3:14b', 'codellama:7b', 'mistral:7b'])
+        const errorData = await response.json()
+        console.warn('Model discovery failed:', errorData.error)
+        setAvailableModels([])
+        
+        if (response.status === 401) {
+          setValidationError('Invalid API key or credentials')
+        } else {
+          setValidationError(`Failed to discover models: ${errorData.error || 'Unknown error'}`)
+        }
+        return
       }
     } catch (err) {
       console.warn('Failed to fetch models:', err)
-      // Fallback to common models
-      setAvailableModels(['llama3:8b', 'phi3:14b', 'codellama:7b', 'mistral:7b'])
+      setAvailableModels([])
+      setValidationError('Failed to connect to API endpoint. Please check the URL and try again.')
     } finally {
       setFetchingModels(false)
     }
@@ -257,46 +275,96 @@ export function ModelForm({
     </Card>
   )
 
-  const renderEndpointStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>Configure Connection</CardTitle>
-        <CardDescription>
-          Enter the API endpoint and credentials for your provider
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="endpoint">API Endpoint *</Label>
-          <Input
-            id="endpoint"
-            value={formData.endpoint}
-            onChange={(e) => setFormData(prev => ({ ...prev, endpoint: e.target.value }))}
-            placeholder="http://localhost:11434/v1"
-            className="font-mono"
-          />
-          <p className="text-sm text-muted-foreground">
-            Common endpoints: Ollama (http://localhost:11434/v1), vLLM (/v1), LM Studio (/v1)
-          </p>
-        </div>
+  const renderCredentialsStep = () => {
+    const provider = PROVIDERS.find(p => p.id === formData.provider)
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Configure {provider?.name}</CardTitle>
+          <CardDescription>
+            Enter your {provider?.name} credentials to discover available models
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* API Key field - required for OpenAI and Anthropic */}
+          {(formData.provider === 'openai' || formData.provider === 'anthropic') && (
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">API Key *</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                value={formData.apiKey}
+                onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+                placeholder={
+                  formData.provider === 'openai' ? 'sk-...' :
+                  formData.provider === 'anthropic' ? 'sk-ant-...' : ''
+                }
+                className="font-mono"
+              />
+              <p className="text-sm text-muted-foreground">
+                {formData.provider === 'openai' && 'Get your API key from platform.openai.com'}
+                {formData.provider === 'anthropic' && 'Get your API key from console.anthropic.com'}
+              </p>
+            </div>
+          )}
 
-        <div className="space-y-2">
-          <Label htmlFor="apiKey">API Key</Label>
-          <Input
-            id="apiKey"
-            type="password"
-            value={formData.apiKey}
-            onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
-            placeholder="Leave empty if not required"
-            className="font-mono"
-          />
-          <p className="text-sm text-muted-foreground">
-            Most local providers don't require an API key
-          </p>
-        </div>
-        
-        {displayError && (
-          <Alert variant="destructive">
+          {/* Optional endpoint override for OpenAI/Anthropic */}
+          {(formData.provider === 'openai' || formData.provider === 'anthropic') && (
+            <div className="space-y-2">
+              <Label htmlFor="endpoint">Endpoint (Optional)</Label>
+              <Input
+                id="endpoint"
+                value={formData.endpoint}
+                onChange={(e) => setFormData(prev => ({ ...prev, endpoint: e.target.value }))}
+                placeholder={
+                  formData.provider === 'openai' ? 'https://api.openai.com/v1' :
+                  formData.provider === 'anthropic' ? 'https://api.anthropic.com/v1' : ''
+                }
+                className="font-mono"
+              />
+              <p className="text-sm text-muted-foreground">
+                Leave empty to use the default endpoint
+              </p>
+            </div>
+          )}
+
+          {/* Endpoint field - required for openai-compatible */}
+          {formData.provider === 'openai-compatible' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="endpoint">API Endpoint *</Label>
+                <Input
+                  id="endpoint"
+                  value={formData.endpoint}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endpoint: e.target.value }))}
+                  placeholder="http://localhost:11434/v1"
+                  className="font-mono"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Common endpoints: Ollama (http://localhost:11434/v1), vLLM (/v1), LM Studio (/v1)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">API Key (Optional)</Label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+                  placeholder="Leave empty if not required"
+                  className="font-mono"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Most local providers don't require an API key
+                </p>
+              </div>
+            </>
+          )}
+          
+          {displayError && (
+            <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{displayError}</AlertDescription>
           </Alert>
@@ -306,7 +374,7 @@ export function ModelForm({
           <Button variant="outline" onClick={() => setStep(1)}>
             Back
           </Button>
-          <Button onClick={handleEndpointSet} disabled={fetchingModels}>
+          <Button onClick={handleCredentialsSet} disabled={fetchingModels}>
             {fetchingModels ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -319,7 +387,7 @@ export function ModelForm({
         </div>
       </CardContent>
     </Card>
-  )
+  )}
 
   const handleModelSelect = (modelName: string) => {
     // Generate a default name from the model name
@@ -346,38 +414,65 @@ export function ModelForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="model">Available Models</Label>
-          <Select 
-            value={formData.model} 
-            onValueChange={handleModelSelect}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {availableModels.length > 0 ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="model">Available Models ({availableModels.length})</Label>
+              <Select 
+                value={formData.model} 
+                onValueChange={handleModelSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model} value={model}>
+                      {model}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="custom-model">Or enter custom model name</Label>
-          <Input
-            id="custom-model"
-            value={formData.model}
-            onChange={(e) => handleModelSelect(e.target.value)}
-            placeholder="custom-model-name"
-            className="font-mono"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom-model">Or enter custom model name</Label>
+              <Input
+                id="custom-model"
+                value={formData.model}
+                onChange={(e) => handleModelSelect(e.target.value)}
+                placeholder="custom-model-name"
+                className="font-mono"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No models were discovered from the API endpoint. Please enter a model name manually below.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="manual-model">Model Name *</Label>
+              <Input
+                id="manual-model"
+                value={formData.model}
+                onChange={(e) => handleModelSelect(e.target.value)}
+                placeholder="Enter the exact model name (e.g., gpt-4, llama3:8b)"
+                className="font-mono"
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                Enter the exact model name as expected by your API endpoint
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setStep(formData.provider === 'openai-compatible' ? 2 : 1)}>
+          <Button variant="outline" onClick={() => setStep(2)}>
             Back
           </Button>
           <Button onClick={() => setStep(4)} disabled={!formData.model.trim()}>
@@ -459,7 +554,7 @@ export function ModelForm({
   return (
     <div className="space-y-6">
       {step === 1 && renderProviderStep()}
-      {step === 2 && renderEndpointStep()}
+      {step === 2 && renderCredentialsStep()}
       {step === 3 && renderModelStep()}
       {step === 4 && renderDetailsStep()}
     </div>
