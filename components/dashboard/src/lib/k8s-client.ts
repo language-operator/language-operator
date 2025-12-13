@@ -11,7 +11,29 @@ class KubernetesClient {
 
     try {
       // Load config based on environment
-      if (process.env.NODE_ENV === 'development') {
+      if (process.env.KUBERNETES_SERVER_URL && process.env.KUBERNETES_TOKEN) {
+        // Environment variable configuration
+        const cluster = {
+          name: 'env-cluster',
+          server: process.env.KUBERNETES_SERVER_URL,
+          skipTLSVerify: process.env.KUBERNETES_SKIP_TLS_VERIFY === 'true',
+        }
+        const user = {
+          name: 'env-user',
+          token: process.env.KUBERNETES_TOKEN,
+        }
+        const context = {
+          name: 'env-context',
+          user: user.name,
+          cluster: cluster.name,
+        }
+        this.kc.loadFromOptions({
+          clusters: [cluster],
+          users: [user],
+          contexts: [context],
+          currentContext: context.name,
+        })
+      } else if (process.env.NODE_ENV === 'development') {
         // Local development: use ~/.kube/config if available
         this.kc.loadFromDefault()
       } else {

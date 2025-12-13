@@ -30,6 +30,10 @@ services:
       NEXTAUTH_SECRET: "dev-secret-not-for-production"
       NEXTAUTH_URL: "http://localhost:3001"
       NODE_ENV: "development"
+      # Kubernetes configuration (optional - for connecting to real cluster)
+      # KUBERNETES_SERVER_URL: "https://your-cluster-url"
+      # KUBERNETES_TOKEN: "your-service-account-token"
+      # KUBERNETES_SKIP_TLS_VERIFY: "false"
     ports:
       - "3001:3000"
     depends_on:
@@ -41,6 +45,11 @@ services:
         target: /app
       - /app/node_modules
       - /app/.next
+      # Mount kubeconfig for local development (optional)
+      - type: bind
+        source: ~/.kube/config
+        target: /app/.kube/config
+        read_only: true
     command: sh -c "npx prisma generate && npm run dev"
 
 volumes:
