@@ -9,22 +9,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Brain, Zap, DollarSign, AlertCircle, Server } from 'lucide-react'
+import { Brain, Zap, DollarSign, AlertCircle, Server, RefreshCw } from 'lucide-react'
 
 const PROVIDERS = [
-  { id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1' },
-  { id: 'anthropic', name: 'Anthropic', endpoint: 'https://api.anthropic.com/v1' },
-  { id: 'ollama', name: 'Ollama', endpoint: 'http://localhost:11434/v1' },
-  { id: 'openai-compatible', name: 'OpenAI Compatible', endpoint: '' },
-  { id: 'custom', name: 'Custom Provider', endpoint: '' }
+  { id: 'openai', name: 'OpenAI', endpoint: 'https://api.openai.com/v1', requiresEndpoint: false },
+  { id: 'anthropic', name: 'Anthropic', endpoint: 'https://api.anthropic.com/v1', requiresEndpoint: false },
+  { id: 'openai-compatible', name: 'Local/OpenAI Compatible', endpoint: '', requiresEndpoint: true },
 ]
 
-const SAMPLE_MODELS = {
-  openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  anthropic: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
-  ollama: ['llama3', 'codellama', 'mistral'],
-  'openai-compatible': ['qwen3-coder:30b', 'llama3:8b', 'phi3:14b'],
-  custom: []
+const KNOWN_MODELS = {
+  openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo', 'gpt-4o', 'gpt-4o-mini'],
+  anthropic: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'],
+  'openai-compatible': ['llama3:8b', 'llama3:70b', 'phi3:14b', 'codellama:7b', 'mistral:7b'],
 }
 
 export interface ModelFormData {
@@ -63,6 +59,9 @@ export function ModelForm({
   onCancel,
   isEdit = false 
 }: ModelFormProps) {
+  const [step, setStep] = useState(1)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [fetchingModels, setFetchingModels] = useState(false)
   const [formData, setFormData] = useState<ModelFormData>({
     name: '',
     provider: '',
@@ -89,29 +88,83 @@ export function ModelForm({
   useEffect(() => {
     if (initialData) {
       setFormData(prev => ({ ...prev, ...initialData }))
+      if (initialData.provider) {
+        setStep(2) // Skip to model selection if we have provider
+      }
     }
   }, [initialData])
 
-  const handleInputChange = (field: keyof ModelFormData, value: string | number | boolean) => {
+  const handleProviderChange = (providerId: string) => {
+    const provider = PROVIDERS.find(p => p.id === providerId)
+    if (!provider) return
+
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      provider: providerId,
+      endpoint: provider.endpoint,
+      model: '' // Reset model when provider changes
     }))
-    
-    // Auto-set endpoint when provider changes
-    if (field === 'provider' && typeof value === 'string') {
-      const provider = PROVIDERS.find(p => p.id === value)
-      if (provider?.endpoint) {
-        setFormData(prev => ({
-          ...prev,
-          endpoint: provider.endpoint
-        }))
-      }
+
+    // Load known models for this provider
+    const knownModels = KNOWN_MODELS[providerId as keyof typeof KNOWN_MODELS] || []
+    setAvailableModels(knownModels)
+
+    // For openai-compatible, stay on step 2 to get endpoint first
+    // For others, go to step 3 (model selection)
+    if (provider.requiresEndpoint) {
+      setStep(2)
+    } else {
+      setStep(3)
     }
-    
-    // Clear validation error when user starts typing
-    if (validationError) {
-      setValidationError('')
+  }
+
+  const handleEndpointSet = async () => {
+    if (!formData.endpoint.trim()) {
+      setValidationError('Endpoint is required')
+      return
+    }
+
+    try {
+      new URL(formData.endpoint)
+    } catch {
+      setValidationError('Invalid endpoint URL')
+      return
+    }
+
+    // Try to fetch available models from the endpoint
+    await fetchAvailableModels()
+    setStep(3)
+  }
+
+  const fetchAvailableModels = async () => {
+    if (!formData.endpoint) return
+
+    setFetchingModels(true)
+    try {
+      // This would typically call your API to fetch models from the endpoint
+      // For now, we'll simulate with some common models
+      const response = await fetch(`/api/models/discover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          endpoint: formData.endpoint,
+          provider: formData.provider 
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableModels(data.models || [])
+      } else {
+        // Fallback to known models if discovery fails
+        setAvailableModels(['llama3:8b', 'phi3:14b', 'codellama:7b', 'mistral:7b'])
+      }
+    } catch (err) {
+      console.warn('Failed to fetch models:', err)
+      // Fallback to common models
+      setAvailableModels(['llama3:8b', 'phi3:14b', 'codellama:7b', 'mistral:7b'])
+    } finally {
+      setFetchingModels(false)
     }
   }
 
@@ -170,21 +223,178 @@ export function ModelForm({
     await onSubmit(formData)
   }
 
-  const selectedProvider = PROVIDERS.find(p => p.id === formData.provider)
-  const availableModels = formData.provider ? SAMPLE_MODELS[formData.provider as keyof typeof SAMPLE_MODELS] || [] : []
   const displayError = error || validationError
 
-  return (
+  const renderProviderStep = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Choose Provider</CardTitle>
+        <CardDescription>
+          Select your AI model provider
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4">
+          {PROVIDERS.map((provider) => (
+            <Button
+              key={provider.id}
+              variant="outline"
+              className="justify-start h-16 text-left"
+              onClick={() => handleProviderChange(provider.id)}
+            >
+              <div>
+                <div className="font-semibold">{provider.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {provider.id === 'openai' && 'GPT-4, GPT-3.5, and more'}
+                  {provider.id === 'anthropic' && 'Claude 3 models'}
+                  {provider.id === 'openai-compatible' && 'Ollama, vLLM, and other compatible APIs'}
+                </div>
+              </div>
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const renderEndpointStep = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configure Connection</CardTitle>
+        <CardDescription>
+          Enter the API endpoint and credentials for your provider
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="endpoint">API Endpoint *</Label>
+          <Input
+            id="endpoint"
+            value={formData.endpoint}
+            onChange={(e) => setFormData(prev => ({ ...prev, endpoint: e.target.value }))}
+            placeholder="http://localhost:11434/v1"
+            className="font-mono"
+          />
+          <p className="text-sm text-muted-foreground">
+            Common endpoints: Ollama (http://localhost:11434/v1), vLLM (/v1), LM Studio (/v1)
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="apiKey">API Key</Label>
+          <Input
+            id="apiKey"
+            type="password"
+            value={formData.apiKey}
+            onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+            placeholder="Leave empty if not required"
+            className="font-mono"
+          />
+          <p className="text-sm text-muted-foreground">
+            Most local providers don't require an API key
+          </p>
+        </div>
+        
+        {displayError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{displayError}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setStep(1)}>
+            Back
+          </Button>
+          <Button onClick={handleEndpointSet} disabled={fetchingModels}>
+            {fetchingModels ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Discovering Models...
+              </>
+            ) : (
+              'Continue'
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const handleModelSelect = (modelName: string) => {
+    // Generate a default name from the model name
+    const defaultName = modelName
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')  // Replace invalid chars with hyphens
+      .replace(/-+/g, '-')          // Collapse multiple hyphens
+      .replace(/^-|-$/g, '')        // Remove leading/trailing hyphens
+      .slice(0, 63)                 // Kubernetes name limit
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      model: modelName,
+      name: prev.name || defaultName  // Only set if name is empty
+    }))
+  }
+
+  const renderModelStep = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Select Model</CardTitle>
+        <CardDescription>
+          Choose from available models
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="model">Available Models</Label>
+          <Select 
+            value={formData.model} 
+            onValueChange={handleModelSelect}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="custom-model">Or enter custom model name</Label>
+          <Input
+            id="custom-model"
+            value={formData.model}
+            onChange={(e) => handleModelSelect(e.target.value)}
+            placeholder="custom-model-name"
+            className="font-mono"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setStep(formData.provider === 'openai-compatible' ? 2 : 1)}>
+            Back
+          </Button>
+          <Button onClick={() => setStep(4)} disabled={!formData.model.trim()}>
+            Continue
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const renderDetailsStep = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Brain className="h-5 w-5" />
-            <span>Basic Information</span>
-          </CardTitle>
+          <CardTitle>Model Details</CardTitle>
           <CardDescription>
-            Configure the basic settings for your language model
+            Configure the final details for your model
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,22 +403,15 @@ export function ModelForm({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="my-model"
               className="font-mono"
               disabled={isEdit || isLoading}
               required
             />
-            {isEdit && (
-              <p className="text-sm text-muted-foreground">
-                Name cannot be changed after creation
-              </p>
-            )}
-            {!isEdit && (
-              <p className="text-sm text-muted-foreground">
-                Must be lowercase alphanumeric with hyphens, max 63 characters
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Must be lowercase alphanumeric with hyphens, max 63 characters
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -216,257 +419,9 @@ export function ModelForm({
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Description of this model's capabilities..."
               rows={3}
-              disabled={isLoading}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Provider Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Server className="h-5 w-5" />
-            <span>Provider Configuration</span>
-          </CardTitle>
-          <CardDescription>
-            Configure the model provider and endpoint
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provider *</Label>
-            <Select 
-              value={formData.provider} 
-              onValueChange={(value) => handleInputChange('provider', value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROVIDERS.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="model">Model Identifier *</Label>
-            <div className="flex space-x-2">
-              <Input
-                id="model"
-                value={formData.model}
-                onChange={(e) => handleInputChange('model', e.target.value)}
-                placeholder="gpt-4"
-                className="font-mono flex-1"
-                disabled={isLoading}
-                required
-              />
-              {availableModels.length > 0 && (
-                <Select 
-                  value={formData.model} 
-                  onValueChange={(value) => handleInputChange('model', value)}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Common" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableModels.map((model) => (
-                      <SelectItem key={model} value={model}>
-                        {model}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="endpoint">API Endpoint *</Label>
-            <Input
-              id="endpoint"
-              value={formData.endpoint}
-              onChange={(e) => handleInputChange('endpoint', e.target.value)}
-              placeholder="https://api.openai.com/v1"
-              className="font-mono"
-              disabled={isLoading}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="apiKey">API Key</Label>
-            <Input
-              id="apiKey"
-              type="password"
-              value={formData.apiKey}
-              onChange={(e) => handleInputChange('apiKey', e.target.value)}
-              placeholder="sk-..."
-              className="font-mono"
-              disabled={isLoading}
-            />
-            <p className="text-sm text-muted-foreground">
-              Leave empty to use organization-level API key
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Model Parameters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5" />
-            <span>Model Parameters</span>
-          </CardTitle>
-          <CardDescription>
-            Configure generation parameters and limits
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="maxTokens">Max Tokens</Label>
-              <Input
-                id="maxTokens"
-                type="number"
-                value={formData.maxTokens}
-                onChange={(e) => handleInputChange('maxTokens', parseInt(e.target.value) || 0)}
-                min={1}
-                max={32768}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contextWindow">Context Window</Label>
-              <Input
-                id="contextWindow"
-                type="number"
-                value={formData.contextWindow}
-                onChange={(e) => handleInputChange('contextWindow', parseInt(e.target.value) || 0)}
-                min={1}
-                max={1000000}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="temperature">Temperature</Label>
-              <Input
-                id="temperature"
-                type="number"
-                step="0.1"
-                value={formData.temperature}
-                onChange={(e) => handleInputChange('temperature', parseFloat(e.target.value) || 0)}
-                min={0}
-                max={2}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="topP">Top P</Label>
-              <Input
-                id="topP"
-                type="number"
-                step="0.1"
-                value={formData.topP}
-                onChange={(e) => handleInputChange('topP', parseFloat(e.target.value) || 0)}
-                min={0}
-                max={1}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Cost Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <DollarSign className="h-5 w-5" />
-            <span>Cost Configuration</span>
-          </CardTitle>
-          <CardDescription>
-            Configure pricing for usage tracking
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="costPerInputToken">Cost per Input Token (USD)</Label>
-              <Input
-                id="costPerInputToken"
-                type="number"
-                step="0.000001"
-                value={formData.costPerInputToken}
-                onChange={(e) => handleInputChange('costPerInputToken', parseFloat(e.target.value) || 0)}
-                min={0}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="costPerOutputToken">Cost per Output Token (USD)</Label>
-              <Input
-                id="costPerOutputToken"
-                type="number"
-                step="0.000001"
-                value={formData.costPerOutputToken}
-                onChange={(e) => handleInputChange('costPerOutputToken', parseFloat(e.target.value) || 0)}
-                min={0}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>
-            Additional model configuration
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Model</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow this model to be used by agents
-              </p>
-            </div>
-            <Switch
-              checked={formData.enabled}
-              onCheckedChange={(checked) => handleInputChange('enabled', checked)}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Require Approval</Label>
-              <p className="text-sm text-muted-foreground">
-                Require admin approval before using this model
-              </p>
-            </div>
-            <Switch
-              checked={formData.requireApproval}
-              onCheckedChange={(checked) => handleInputChange('requireApproval', checked)}
-              disabled={isLoading}
             />
           </div>
         </CardContent>
@@ -481,19 +436,32 @@ export function ModelForm({
       )}
 
       {/* Actions */}
-      <div className="flex justify-end space-x-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          Cancel
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep(3)}>
+          Back
         </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Model' : 'Create Model')}
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Creating...' : 'Create Model'}
+          </Button>
+        </div>
       </div>
     </form>
+  )
+
+  if (isEdit) {
+    return renderDetailsStep() // For editing, show full form
+  }
+
+  return (
+    <div className="space-y-6">
+      {step === 1 && renderProviderStep()}
+      {step === 2 && renderEndpointStep()}
+      {step === 3 && renderModelStep()}
+      {step === 4 && renderDetailsStep()}
+    </div>
   )
 }

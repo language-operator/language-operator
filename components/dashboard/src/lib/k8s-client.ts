@@ -3,8 +3,8 @@ import * as k8s from '@kubernetes/client-node'
 class KubernetesClient {
   private static instance: KubernetesClient
   private kc: k8s.KubeConfig
-  private coreV1Api: k8s.CoreV1Api
-  private customObjectsApi: k8s.CustomObjectsApi
+  private coreV1Api: k8s.CoreV1Api | null
+  private customObjectsApi: k8s.CustomObjectsApi | null
 
   private constructor() {
     this.kc = new k8s.KubeConfig()
@@ -66,14 +66,23 @@ class KubernetesClient {
   // Core V1 API methods
 
   async listNamespaces() {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.listNamespace({})
   }
 
   async getNamespace(name: string) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.readNamespace({ name })
   }
 
   async createNamespace(name: string, labels?: Record<string, string>) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     const namespace: k8s.V1Namespace = {
       metadata: {
         name,
@@ -121,10 +130,16 @@ class KubernetesClient {
     }
 
     // Then delete the namespace (this will cascade delete all resources)
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.deleteNamespace({ name })
   }
 
   async getPodLogs(namespace: string, podName: string, tailLines: number = 100) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.readNamespacedPodLog({
       name: podName,
       namespace,
@@ -196,6 +211,9 @@ class KubernetesClient {
       }
     }
 
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.createNamespacedResourceQuota({
       namespace,
       body: resourceQuota
@@ -203,6 +221,9 @@ class KubernetesClient {
   }
 
   async getResourceQuota(namespace: string, name?: string) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     const quotaName = name || `${namespace}-quota`
     return await this.coreV1Api.readNamespacedResourceQuota({
       name: quotaName,
@@ -229,6 +250,9 @@ class KubernetesClient {
       }
     }
 
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.coreV1Api.replaceNamespacedResourceQuota({
       name: quotaName,
       namespace,
@@ -237,6 +261,9 @@ class KubernetesClient {
   }
 
   async deleteResourceQuota(namespace: string, name?: string) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
     const quotaName = name || `${namespace}-quota`
     return await this.coreV1Api.deleteNamespacedResourceQuota({
       name: quotaName,
@@ -253,6 +280,14 @@ class KubernetesClient {
     const quotaName = name || `${namespace}-quota`
     
     try {
+      if (!this.coreV1Api) {
+        return {
+          quota: {},
+          used: {},
+          available: {},
+          percentUsed: {}
+        }
+      }
       const response = await this.coreV1Api.readNamespacedResourceQuota({
         name: quotaName,
         namespace
@@ -322,6 +357,10 @@ class KubernetesClient {
       }
     }
     
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -332,6 +371,9 @@ class KubernetesClient {
   }
 
   async getLanguageAgent(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -342,6 +384,9 @@ class KubernetesClient {
   }
 
   async createLanguageAgent(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -352,6 +397,9 @@ class KubernetesClient {
   }
 
   async updateLanguageAgent(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -363,6 +411,9 @@ class KubernetesClient {
   }
 
   async deleteLanguageAgent(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -388,6 +439,10 @@ class KubernetesClient {
       }
     }
     
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -398,6 +453,9 @@ class KubernetesClient {
   }
 
   async getLanguageModel(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -408,6 +466,9 @@ class KubernetesClient {
   }
 
   async createLanguageModel(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -418,6 +479,9 @@ class KubernetesClient {
   }
 
   async updateLanguageModel(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -429,6 +493,9 @@ class KubernetesClient {
   }
 
   async deleteLanguageModel(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -454,6 +521,10 @@ class KubernetesClient {
       }
     }
     
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -464,6 +535,9 @@ class KubernetesClient {
   }
 
   async getLanguageTool(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -474,6 +548,9 @@ class KubernetesClient {
   }
 
   async createLanguageTool(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -484,6 +561,9 @@ class KubernetesClient {
   }
 
   async updateLanguageTool(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -495,6 +575,9 @@ class KubernetesClient {
   }
 
   async deleteLanguageTool(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -520,6 +603,10 @@ class KubernetesClient {
       }
     }
     
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -530,6 +617,9 @@ class KubernetesClient {
   }
 
   async getLanguagePersona(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -540,6 +630,9 @@ class KubernetesClient {
   }
 
   async createLanguagePersona(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -550,6 +643,9 @@ class KubernetesClient {
   }
 
   async updateLanguagePersona(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -561,6 +657,9 @@ class KubernetesClient {
   }
 
   async deleteLanguagePersona(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -587,6 +686,9 @@ class KubernetesClient {
     }
     
     try {
+      if (!this.customObjectsApi) {
+        throw new Error('Kubernetes API not available')
+      }
       return await this.customObjectsApi.listNamespacedCustomObject({
         group: 'langop.io',
         version: 'v1alpha1',
@@ -595,7 +697,7 @@ class KubernetesClient {
         ...options,
       })
     } catch (error) {
-      console.warn('⚠️  Kubernetes API call failed, switching to demo mode:', error.message)
+      console.warn('⚠️  Kubernetes API call failed, switching to demo mode:', error instanceof Error ? error.message : String(error))
       return { 
         response: { statusCode: 200 }, 
         data: { items: [] } 
@@ -604,6 +706,9 @@ class KubernetesClient {
   }
 
   async getLanguageCluster(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -614,6 +719,9 @@ class KubernetesClient {
   }
 
   async createLanguageCluster(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -624,6 +732,9 @@ class KubernetesClient {
   }
 
   async updateLanguageCluster(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -635,6 +746,9 @@ class KubernetesClient {
   }
 
   async deleteLanguageCluster(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -655,6 +769,10 @@ class KubernetesClient {
       }
     }
     
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    
     return await this.customObjectsApi.listNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -664,6 +782,9 @@ class KubernetesClient {
   }
 
   async getLanguageAgentVersion(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.getNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -674,6 +795,9 @@ class KubernetesClient {
   }
 
   async createLanguageAgentVersion(namespace: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.createNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -684,6 +808,9 @@ class KubernetesClient {
   }
 
   async updateLanguageAgentVersion(namespace: string, name: string, spec: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
@@ -695,6 +822,9 @@ class KubernetesClient {
   }
 
   async deleteLanguageAgentVersion(namespace: string, name: string) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
     return await this.customObjectsApi.deleteNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',

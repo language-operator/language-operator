@@ -52,37 +52,125 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch models from Kubernetes
-    const response = await k8sClient.listLanguageModels(organization.namespace)
-    const models = (response.data as any)?.items || []
+    console.log('Fetching models from namespace:', organization.namespace)
+    
+    // Test kubectl access
+    console.log('Testing direct kubectl access...')
+    try {
+      const { execSync } = require('child_process')
+      const kubectlResult = execSync(`kubectl get languagemodels -n ${organization.namespace} -o json`, { encoding: 'utf8' })
+      console.log('Direct kubectl result:', kubectlResult.substring(0, 500) + '...')
+    } catch (kubectlError) {
+      console.log('Direct kubectl failed:', kubectlError instanceof Error ? kubectlError.message : String(kubectlError))
+    }
+    let models = []
+    try {
+      // TEMPORARY: Use kubectl directly to test 
+      console.log('=== Testing kubectl directly ===')
+      try {
+        const { execSync } = require('child_process')
+        const kubectlResult = execSync(`kubectl get languagemodels -n ${organization.namespace} -o json`, { 
+          encoding: 'utf8',
+          cwd: '/app'
+        })
+        console.log('Direct kubectl result:', kubectlResult.substring(0, 1000))
+        const kubectlData = JSON.parse(kubectlResult)
+        console.log('Direct kubectl items count:', kubectlData.items?.length || 0)
+      } catch (kubectlError) {
+        console.log('Direct kubectl failed:', kubectlError instanceof Error ? kubectlError.message : String(kubectlError))
+      }
+      console.log('=== End kubectl test ===')
+
+      const response = await k8sClient.listLanguageModels(organization.namespace)
+      console.log('K8s response type:', typeof response)
+      console.log('K8s response keys:', Object.keys(response))
+      console.log('Full K8s response:', JSON.stringify(response, null, 2))
+      
+      // Handle different response structures
+      let rawItems = null
+      if (response.body && typeof response.body === 'object') {
+        console.log('Using response.body, keys:', Object.keys(response.body))
+        rawItems = (response.body as any)?.items
+      } else if (response.data && typeof response.data === 'object') {
+        console.log('Using response.data, keys:', Object.keys(response.data))
+        rawItems = (response.data as any)?.items
+      } else {
+        console.log('Direct response check - response type:', typeof response)
+        if (Array.isArray(response)) {
+          rawItems = response
+        } else if ((response as any)?.items) {
+          rawItems = (response as any).items
+        }
+      }
+      
+      models = rawItems || []
+      
+      console.log('Raw items type:', typeof rawItems)
+      console.log('Raw items length:', rawItems?.length)
+      console.log('Extracted models count:', models.length)
+      if (models.length > 0) {
+        console.log('First model structure:', JSON.stringify(models[0], null, 2))
+      } else {
+        console.log('No models found - debugging full response:', JSON.stringify(response, null, 2))
+      }
+    } catch (k8sError) {
+      console.error('Kubernetes API error:', k8sError)
+      throw k8sError
+    }
 
     // Apply client-side filtering
+    console.log('Before filtering - models count:', models.length)
+    console.log('Filter params:', params)
+    
     let filteredModels = models.filter((model: LanguageModel) => {
+      console.log('Filtering model:', model.metadata?.name, {
+        hasMetadata: !!model.metadata,
+        hasSpec: !!model.spec,
+        provider: model.spec?.provider,
+        phase: model.status?.phase
+      })
+      
       // Search filter
       if (params.search) {
         const searchLower = params.search.toLowerCase()
         const nameMatch = model.metadata.name?.toLowerCase().includes(searchLower)
         const providerMatch = model.spec.provider?.toLowerCase().includes(searchLower)
         const modelNameMatch = model.spec.modelName?.toLowerCase().includes(searchLower)
-        if (!nameMatch && !providerMatch && !modelNameMatch) return false
+        if (!nameMatch && !providerMatch && !modelNameMatch) {
+          console.log('Filtered out by search:', model.metadata?.name)
+          return false
+        }
       }
 
       // Provider filter
       if (params.provider && params.provider.length > 0) {
-        if (!params.provider.includes(model.spec.provider)) return false
+        if (!params.provider.includes(model.spec.provider)) {
+          console.log('Filtered out by provider:', model.metadata?.name, model.spec.provider)
+          return false
+        }
       }
 
       // Phase filter
       if (params.phase && params.phase.length > 0) {
-        if (!params.phase.includes(model.status?.phase || '')) return false
+        if (!params.phase.includes(model.status?.phase || '')) {
+          console.log('Filtered out by phase:', model.metadata?.name, model.status?.phase)
+          return false
+        }
       }
 
       // Healthy filter
       if (params.healthy !== undefined) {
-        if (model.status?.healthy !== params.healthy) return false
+        if (model.status?.healthy !== params.healthy) {
+          console.log('Filtered out by healthy:', model.metadata?.name, model.status?.healthy)
+          return false
+        }
       }
 
+      console.log('Model passed all filters:', model.metadata?.name)
       return true
     })
+    
+    console.log('After filtering - models count:', filteredModels.length)
 
     // Sort models
     filteredModels.sort((a: LanguageModel, b: LanguageModel) => {
@@ -291,8 +379,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating model:', error)
+    console.error('Error details:', error instanceof Error ? error.message : error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to create model' },
+      { 
+        error: 'Failed to create model',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

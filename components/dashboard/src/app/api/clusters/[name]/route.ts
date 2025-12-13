@@ -43,7 +43,7 @@ export async function GET(
 
     const organization = user.memberships[0].organization
     const namespace = organization.namespace
-    const cluster = await k8sClient.getLanguageCluster(name, namespace)
+    const cluster = await k8sClient.getLanguageCluster(namespace, name)
     
     if (!cluster) {
       return NextResponse.json({ error: 'Cluster not found' }, { status: 404 })
@@ -87,13 +87,13 @@ export async function PATCH(
     const namespace = organization.namespace
 
     // Get existing cluster
-    const existingCluster = await k8sClient.getLanguageCluster(name, namespace)
+    const existingCluster = await k8sClient.getLanguageCluster(namespace, name)
     if (!existingCluster) {
       return NextResponse.json({ error: 'Cluster not found' }, { status: 404 })
     }
 
     // Update the cluster
-    const updatedCluster = await k8sClient.updateLanguageCluster(name, namespace, {
+    const updatedCluster = await k8sClient.updateLanguageCluster(namespace, name, {
       metadata: {
         ...existingCluster.metadata,
         annotations: {
@@ -156,13 +156,13 @@ export async function DELETE(
     const namespace = organization.namespace
 
     // Check if cluster exists
-    const existingCluster = await k8sClient.getLanguageCluster(name, namespace)
+    const existingCluster = await k8sClient.getLanguageCluster(namespace, name)
     if (!existingCluster) {
       return NextResponse.json({ error: 'Cluster not found' }, { status: 404 })
     }
 
     // Delete the cluster
-    await k8sClient.deleteLanguageCluster(name, namespace)
+    await k8sClient.deleteLanguageCluster(namespace, name)
 
     // Log the deletion for audit trail
     console.log(`Cluster deleted: ${name} by ${session.user.email} in ${namespace}`)

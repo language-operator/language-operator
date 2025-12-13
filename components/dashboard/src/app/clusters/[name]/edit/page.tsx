@@ -87,10 +87,10 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
           spec: {
             domain: formData.domain || undefined,
             ingress: {
-              enabled: formData.enableIngress,
+              enabled: formData.enableTLS, // Use enableTLS as a proxy for ingress
             },
             networkPolicies: {
-              enabled: formData.enableNetworkPolicies,
+              enabled: true, // Default to enabled
             },
           },
         }),
@@ -123,8 +123,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
       name: cluster.metadata.name,
       domain: cluster.spec.domain || '',
       description: cluster.spec.description || '',
-      enableIngress: cluster.spec.ingress?.enabled ?? true,
-      enableNetworkPolicies: cluster.spec.networkPolicies?.enabled ?? true,
+      enableTLS: cluster.spec.ingress?.enabled ?? true,
     }
   }
 

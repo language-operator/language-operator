@@ -25,17 +25,18 @@ services:
       context: .
       target: build-deps
     restart: always
+    network_mode: host
     environment:
-      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+      DATABASE_URL: "postgresql://dev:dev@localhost:5433/language_operator_dev?schema=public"
       NEXTAUTH_SECRET: "dev-secret-not-for-production"
       NEXTAUTH_URL: "http://localhost:3001"
       NODE_ENV: "development"
+      # Kubeconfig path for K3s cluster
+      KUBECONFIG: "/root/.kube/config"
       # Kubernetes configuration (optional - for connecting to real cluster)
       # KUBERNETES_SERVER_URL: "https://your-cluster-url"
       # KUBERNETES_TOKEN: "your-service-account-token"
       # KUBERNETES_SKIP_TLS_VERIFY: "false"
-    ports:
-      - "3001:3000"
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -45,12 +46,12 @@ services:
         target: /app
       - /app/node_modules
       - /app/.next
-      # Mount kubeconfig for local development (optional)
+      # Mount kubeconfig for K3s cluster access
       - type: bind
-        source: ~/.kube/config
-        target: /app/.kube/config
+        source: /home/james/.kube/config
+        target: /root/.kube/config
         read_only: true
-    command: sh -c "npx prisma generate && npm run dev"
+    command: sh -c "mkdir -p /root/.kube && npx prisma generate && npm run dev"
 
 volumes:
   postgres_dev_data:

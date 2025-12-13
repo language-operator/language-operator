@@ -33,7 +33,8 @@ export function useCluster(name: string) {
       if (!response.ok) {
         throw new Error('Failed to fetch cluster')
       }
-      return response.json()
+      const data = await response.json()
+      return data.cluster // Extract cluster from the response wrapper
     },
     enabled: !!name,
   })

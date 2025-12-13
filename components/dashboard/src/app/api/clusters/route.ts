@@ -43,7 +43,16 @@ export async function GET(request: NextRequest) {
     }
 
     const response = await k8sClient.listLanguageClusters(organization.namespace)
-    const clusters = (response.data as any)?.items || []
+    console.log('Clusters K8s response type:', typeof response)
+    console.log('Clusters K8s response keys:', Object.keys(response))
+    
+    // The Kubernetes client library returns response in .body
+    // But our demo mode returns in .data
+    const clusters = (response.body as any)?.items || (response.data as any)?.items || []
+    console.log('Found clusters count:', clusters.length)
+    if (clusters.length > 0) {
+      console.log('First cluster:', clusters[0]?.metadata?.name)
+    }
 
     // Apply filtering
     let filteredClusters = clusters.filter((cluster: LanguageCluster) => {
@@ -153,10 +162,11 @@ export async function POST(request: NextRequest) {
     const response = await k8sClient.createLanguageCluster(organization.namespace, cluster)
     
     console.log(`User ${user.email} created LanguageCluster ${formData.name} in organization ${organization.name}`)
+    console.log('K8s API response structure:', JSON.stringify(response, null, 2))
 
     return NextResponse.json({
       success: true,
-      data: response.data,
+      data: response.data || response, // Handle different response structures
     })
 
   } catch (error) {

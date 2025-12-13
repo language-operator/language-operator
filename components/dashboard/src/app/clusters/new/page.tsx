@@ -26,16 +26,9 @@ export default function CreateClusterPage() {
         body: JSON.stringify({
           name: formData.name,
           domain: formData.domain || undefined,
-          description: formData.description || undefined,
-          spec: {
-            domain: formData.domain || undefined,
-            ingress: {
-              enabled: formData.enableIngress,
-            },
-            networkPolicies: {
-              enabled: formData.enableNetworkPolicies,
-            },
-          },
+          gatewayName: formData.gatewayName || undefined,
+          ingressClassName: formData.ingressClassName || undefined,
+          enableTLS: formData.enableTLS,
         }),
       })
 
@@ -46,8 +39,11 @@ export default function CreateClusterPage() {
 
       const result = await response.json()
       
+      console.log('Create cluster response:', result)
+      
       // Redirect to cluster details page
-      router.push(`/clusters/${result.data.metadata.name}`)
+      const clusterName = result.data?.metadata?.name || formData.name
+      router.push(`/clusters/${clusterName}`)
     } catch (err: any) {
       console.error('Error creating cluster:', err)
       setError(err.message || 'Failed to create cluster')

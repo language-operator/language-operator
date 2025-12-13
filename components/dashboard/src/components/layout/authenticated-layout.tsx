@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
+import { ClusterProvider } from '@/contexts/cluster-context'
 
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
@@ -29,14 +30,16 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          {children}
-        </main>
+    <ClusterProvider>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </ClusterProvider>
   )
 }

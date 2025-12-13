@@ -73,21 +73,25 @@ export const LanguageAgentSchema = z.object({
 
 // LanguageModel validation
 export const LanguageModelSpecSchema = z.object({
-  provider: z.enum(['openai', 'anthropic', 'huggingface', 'azure', 'google', 'local'], {
-    message: "Provider must be one of: openai, anthropic, huggingface, azure, google, local"
+  provider: z.enum(['openai', 'anthropic', 'openai-compatible', 'azure', 'bedrock', 'vertex', 'custom'], {
+    message: "Provider must be one of: openai, anthropic, openai-compatible, azure, bedrock, vertex, custom"
   }),
   modelName: z.string().min(1, "Model name is required"),
-  apiKey: z.string().min(1, "API key is required"),
-  endpoint: z.string().url().optional(),
-  config: z.object({
+  endpoint: z.string().optional(),
+  apiKeySecretRef: z.object({
+    name: z.string(),
+    namespace: z.string().optional(),
+    key: z.string().optional(),
+  }).optional(),
+  configuration: z.object({
     maxTokens: z.number().int().min(1).max(100000).optional(),
     temperature: z.number().min(0).max(2).optional(),
     topP: z.number().min(0).max(1).optional(),
-    presencePenalty: z.number().min(-2).max(2).optional(),
     frequencyPenalty: z.number().min(-2).max(2).optional(),
+    presencePenalty: z.number().min(-2).max(2).optional(),
     timeout: z.number().int().min(1).max(3600).optional(),
   }).optional(),
-  rateLimit: z.object({
+  rateLimits: z.object({
     requestsPerMinute: z.number().int().min(1).max(10000).optional(),
     tokensPerMinute: z.number().int().min(1).max(1000000).optional(),
   }).optional(),

@@ -14,8 +14,9 @@ export interface ClusterFormData {
   name: string
   domain: string
   description: string
-  enableIngress: boolean
-  enableNetworkPolicies: boolean
+  enableTLS: boolean
+  gatewayName?: string
+  ingressClassName?: string
 }
 
 interface ClusterFormProps {
@@ -39,8 +40,9 @@ export function ClusterForm({
     name: '',
     domain: '',
     description: '',
-    enableIngress: true,
-    enableNetworkPolicies: true,
+    enableTLS: true,
+    gatewayName: '',
+    ingressClassName: '',
     ...initialData
   })
 
@@ -186,49 +188,52 @@ export function ClusterForm({
             </p>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="gatewayName">Gateway Name (Optional)</Label>
+            <Input
+              id="gatewayName"
+              value={formData.gatewayName}
+              onChange={(e) => handleInputChange('gatewayName', e.target.value)}
+              placeholder="my-gateway"
+              className="font-mono"
+              disabled={isLoading}
+            />
+            <p className="text-sm text-muted-foreground">
+              Name of the Gateway API gateway to use
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ingressClassName">Ingress Class Name (Optional)</Label>
+            <Input
+              id="ingressClassName"
+              value={formData.ingressClassName}
+              onChange={(e) => handleInputChange('ingressClassName', e.target.value)}
+              placeholder="nginx"
+              className="font-mono"
+              disabled={isLoading}
+            />
+            <p className="text-sm text-muted-foreground">
+              Fallback ingress class when Gateway API is not available
+            </p>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Enable Ingress</Label>
+              <Label>Enable TLS</Label>
               <p className="text-sm text-muted-foreground">
-                Allow external HTTP access to agents
+                Enable TLS/SSL encryption for secure connections
               </p>
             </div>
             <Switch
-              checked={formData.enableIngress}
-              onCheckedChange={(checked) => handleInputChange('enableIngress', checked)}
+              checked={formData.enableTLS}
+              onCheckedChange={(checked) => handleInputChange('enableTLS', checked)}
               disabled={isLoading}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Security Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
-            <span>Security Configuration</span>
-          </CardTitle>
-          <CardDescription>
-            Configure security policies for your cluster
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Network Policies</Label>
-              <p className="text-sm text-muted-foreground">
-                Restrict network traffic between agents
-              </p>
-            </div>
-            <Switch
-              checked={formData.enableNetworkPolicies}
-              onCheckedChange={(checked) => handleInputChange('enableNetworkPolicies', checked)}
-              disabled={isLoading}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Error Display */}
       {displayError && (
