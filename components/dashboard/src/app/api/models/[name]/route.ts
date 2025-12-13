@@ -64,7 +64,7 @@ export async function GET(
       return NextResponse.json({ error: 'Model not found' }, { status: 404 })
     }
     
-    return NextResponse.json({ model })
+    return NextResponse.json({ data: model })
   } catch (error) {
     console.error('Error fetching model:', error)
     return NextResponse.json(
@@ -132,7 +132,7 @@ export async function PATCH(
     // Log the update for audit trail
     console.log(`Model updated: ${name} by ${session.user.email} in ${namespace}`)
 
-    return NextResponse.json({ model: updatedModel })
+    return NextResponse.json({ data: updatedModel })
   } catch (error) {
     console.error('Error updating model:', error)
     
