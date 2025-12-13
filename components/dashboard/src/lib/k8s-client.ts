@@ -44,7 +44,7 @@ class KubernetesClient {
       this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
       this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi)
     } catch (error) {
-      console.warn('⚠️  Kubernetes configuration not available:', error.message)
+      console.warn('⚠️  Kubernetes configuration not available:', error instanceof Error ? error.message : String(error))
       console.log('📝 Running in demo mode without Kubernetes connection')
       // Create mock APIs for development
       this.coreV1Api = null
