@@ -4,9 +4,36 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
+  const router = useRouter()
+
+  const hasClusters = !loading && !error && (counts?.clusters || 0) > 0
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'cluster':
+        router.push('/clusters/new')
+        break
+      case 'agent':
+        if (hasClusters) {
+          router.push('/agents/new')
+        }
+        break
+      case 'model':
+        if (hasClusters) {
+          router.push('/clusters/new') // For now, redirect to cluster creation to add models
+        }
+        break
+      case 'tool':
+        if (hasClusters) {
+          router.push('/tools/new')
+        }
+        break
+    }
+  }
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
@@ -239,35 +266,69 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                <Bot className="h-8 w-8 text-blue-500 mb-2" />
-                <span className="text-sm font-medium">Create Agent</span>
-                <span className="text-xs text-gray-500 text-center mt-1">
-                  Build a new AI agent
-                </span>
-              </div>
-              
-              <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                <Cpu className="h-8 w-8 text-green-500 mb-2" />
-                <span className="text-sm font-medium">Add Model</span>
-                <span className="text-xs text-gray-500 text-center mt-1">
-                  Connect to LLM provider
-                </span>
-              </div>
-              
-              <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                <Wrench className="h-8 w-8 text-purple-500 mb-2" />
-                <span className="text-sm font-medium">Configure Tool</span>
-                <span className="text-xs text-gray-500 text-center mt-1">
-                  Add capabilities to agents
-                </span>
-              </div>
-              
-              <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+              {/* Deploy Cluster - Always enabled, shown first */}
+              <div 
+                className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => handleQuickAction('cluster')}
+              >
                 <Cloud className="h-8 w-8 text-orange-500 mb-2" />
                 <span className="text-sm font-medium">Deploy Cluster</span>
                 <span className="text-xs text-gray-500 text-center mt-1">
-                  Expose agents via HTTP
+                  Create cluster for agents
+                </span>
+              </div>
+              
+              {/* Create Agent - Disabled without clusters */}
+              <div 
+                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                  hasClusters 
+                    ? 'hover:bg-gray-50 cursor-pointer' 
+                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                }`}
+                onClick={() => handleQuickAction('agent')}
+              >
+                <Bot className={`h-8 w-8 mb-2 ${hasClusters ? 'text-blue-500' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                  Create Agent
+                </span>
+                <span className="text-xs text-gray-500 text-center mt-1">
+                  {hasClusters ? 'Build a new AI agent' : 'Deploy a cluster first'}
+                </span>
+              </div>
+              
+              {/* Add Model - Disabled without clusters */}
+              <div 
+                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                  hasClusters 
+                    ? 'hover:bg-gray-50 cursor-pointer' 
+                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                }`}
+                onClick={() => handleQuickAction('model')}
+              >
+                <Cpu className={`h-8 w-8 mb-2 ${hasClusters ? 'text-green-500' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                  Add Model
+                </span>
+                <span className="text-xs text-gray-500 text-center mt-1">
+                  {hasClusters ? 'Connect to LLM provider' : 'Deploy a cluster first'}
+                </span>
+              </div>
+              
+              {/* Configure Tool - Disabled without clusters */}
+              <div 
+                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                  hasClusters 
+                    ? 'hover:bg-gray-50 cursor-pointer' 
+                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                }`}
+                onClick={() => handleQuickAction('tool')}
+              >
+                <Wrench className={`h-8 w-8 mb-2 ${hasClusters ? 'text-purple-500' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                  Configure Tool
+                </span>
+                <span className="text-xs text-gray-500 text-center mt-1">
+                  {hasClusters ? 'Add capabilities to agents' : 'Deploy a cluster first'}
                 </span>
               </div>
             </div>
