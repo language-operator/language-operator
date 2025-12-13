@@ -14,9 +14,9 @@ Adopt the `requirements/personas/:persona.md` persona while executing these inst
 
 ## Instructions
 
-- Using the Playright MCP tool, perform manual QA of this application.
-- Use the `gh` command to select issues labeled "bug", so you do not file a duplicate issue.
+- Using the Playright MCP tool, perform manual QA of this application.  The Docker Compose environment should be reachable at localhost:3000.
 - Find up to 5 bugs that a user of this gem is likely to encounter.
+- Use the `gh` command to select issues labeled "bug", so you do not file a duplicate issue.
 - Using the `gh` command, file issues against this repository (language-operator/language-operator) labeled "bug".
 
 ## Output
