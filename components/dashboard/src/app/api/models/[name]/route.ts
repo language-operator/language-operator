@@ -58,7 +58,7 @@ export async function GET(
 
     const organization = user.memberships[0].organization
     const namespace = organization.namespace
-    const model = await k8sClient.getLanguageModel(name, namespace)
+    const model = await k8sClient.getLanguageModel(namespace, name)
     
     if (!model) {
       return NextResponse.json({ error: 'Model not found' }, { status: 404 })
@@ -103,13 +103,13 @@ export async function PATCH(
     const namespace = organization.namespace
 
     // Get existing model
-    const existingModel = await k8sClient.getLanguageModel(name, namespace)
+    const existingModel = await k8sClient.getLanguageModel(namespace, name)
     if (!existingModel) {
       return NextResponse.json({ error: 'Model not found' }, { status: 404 })
     }
 
     // Update the model
-    const updatedModel = await k8sClient.updateLanguageModel(name, namespace, {
+    const updatedModel = await k8sClient.updateLanguageModel(namespace, name, {
       metadata: {
         ...existingModel.metadata,
         annotations: {
@@ -176,13 +176,13 @@ export async function DELETE(
     const namespace = organization.namespace
 
     // Check if model exists
-    const existingModel = await k8sClient.getLanguageModel(name, namespace)
+    const existingModel = await k8sClient.getLanguageModel(namespace, name)
     if (!existingModel) {
       return NextResponse.json({ error: 'Model not found' }, { status: 404 })
     }
 
     // Delete the model
-    await k8sClient.deleteLanguageModel(name, namespace)
+    await k8sClient.deleteLanguageModel(namespace, name)
 
     // Log the deletion for audit trail
     console.log(`Model deleted: ${name} by ${session.user.email} in ${namespace}`)
