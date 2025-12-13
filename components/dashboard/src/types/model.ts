@@ -71,6 +71,7 @@ export interface ModelConfiguration {
   frequencyPenalty?: number
   presencePenalty?: number
   stopSequences?: string[]
+  timeoutMs?: number
   additionalParameters?: Record<string, string>
 }
 
