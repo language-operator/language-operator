@@ -23,7 +23,7 @@ services:
   dashboard-dev:
     build:
       context: .
-      target: deps
+      target: build-deps
     restart: always
     environment:
       DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
@@ -41,7 +41,7 @@ services:
         target: /app
       - /app/node_modules
       - /app/.next
-    command: npm run dev
+    command: sh -c "npx prisma generate && npm run dev"
 
 volumes:
   postgres_dev_data:
