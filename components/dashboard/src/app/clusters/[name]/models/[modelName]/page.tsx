@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Brain, AlertCircle, CheckCircle, Clock, ArrowLeft, 
+  Cpu, AlertCircle, CheckCircle, Clock, ArrowLeft, 
   Edit, FileText, Trash2, Activity, Zap, DollarSign, 
   TrendingUp, Globe, Shield, Key, Settings
 } from 'lucide-react'
@@ -154,6 +154,12 @@ function ModelOverview({ model }: ModelOverviewProps) {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Top P</p>
                     <p className="text-sm">{model.spec.configuration.topP}</p>
+                  </div>
+                )}
+                {model.spec.configuration.timeoutMs && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Timeout</p>
+                    <p className="text-sm">{model.spec.configuration.timeoutMs}ms</p>
                   </div>
                 )}
               </>
@@ -523,24 +529,19 @@ export default function ClusterModelDetailPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <Brain className="h-8 w-8 text-blue-500" />
+            <Cpu className="h-8 w-8 text-blue-500" />
             <div>
               <div className="flex items-center space-x-3">
                 <h1 className="text-3xl font-bold">{model.metadata.name}</h1>
                 <div className="flex items-center space-x-2">
                   {getStatusIcon(model)}
                   <Badge className={getStatusColor(model)}>
-                    {model.status?.healthy === true 
-                      ? 'Healthy' 
-                      : model.status?.healthy === false 
-                      ? 'Unhealthy' 
-                      : 'Unknown'
-                    }
+                    {model.status?.phase || 'Unknown'}
                   </Badge>
                 </div>
               </div>
               <p className="text-muted-foreground">
-                {model.spec.provider} • {model.spec.modelName} • {clusterName} cluster
+                {model.spec.provider}
               </p>
             </div>
           </div>
