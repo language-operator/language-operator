@@ -37,8 +37,8 @@ export default function ClusterTools() {
       const catalogData = await catalogResponse.json()
       setCatalog(catalogData)
 
-      // Fetch installed tools for this specific cluster
-      const toolsResponse = await fetch(`/api/clusters/${clusterName}/tools`)
+      // Fetch installed tools (API will determine namespace from session)
+      const toolsResponse = await fetch(`/api/tools`)
       if (toolsResponse.ok) {
         const toolsData = await toolsResponse.json()
         setInstalledTools(toolsData.data || [])
