@@ -16,16 +16,21 @@ interface Persona {
     creationTimestamp: string
   }
   spec: {
-    role: string
+    displayName: string
+    description: string
     systemPrompt: string
-    traits: string[]
-    examples?: Array<{input: string, output: string}>
-    parameters?: {
-      temperature?: number
-      maxTokens?: number
-    }
-    enabled?: boolean
-    requireApproval?: boolean
+    tone?: string
+    language?: string
+    version?: string
+    capabilities?: string[]
+    limitations?: string[]
+    instructions?: string[]
+    examples?: Array<{
+      input: string
+      output: string
+      context?: string
+      tags?: string[]
+    }>
   }
   status: {
     phase: string
@@ -78,27 +83,34 @@ export default function EditPersonaPage({ params }: { params: Promise<{ name: st
     setError('')
 
     try {
+      const payload = {
+        spec: {
+          displayName: formData.displayName,
+          description: formData.description,
+          systemPrompt: formData.systemPrompt,
+          ...(formData.tone && { tone: formData.tone }),
+          ...(formData.language && { language: formData.language }),
+          ...(formData.version && { version: formData.version }),
+          ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
+          ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
+          ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
+          ...(formData.examples && formData.examples.length > 0 && { 
+            examples: formData.examples.map(ex => ({
+              input: ex.input,
+              output: ex.output,
+              ...(ex.context && { context: ex.context }),
+              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
+            }))
+          }),
+        }
+      }
+
       const response = await fetch(`/api/personas/${personaName}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          role: formData.role === 'custom' ? formData.customRole : formData.role,
-          description: formData.description || undefined,
-          spec: {
-            role: formData.role === 'custom' ? formData.customRole : formData.role,
-            systemPrompt: formData.systemPrompt,
-            traits: formData.traits,
-            examples: formData.examples.filter(ex => ex.input.trim() && ex.output.trim()),
-            parameters: {
-              temperature: formData.temperature,
-              maxTokens: formData.maxTokens,
-            },
-            enabled: formData.enabled,
-            requireApproval: formData.requireApproval,
-          },
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -124,25 +136,19 @@ export default function EditPersonaPage({ params }: { params: Promise<{ name: st
   const getInitialFormData = (): Partial<PersonaFormData> | undefined => {
     if (!persona) return undefined
 
-    // Determine if it's a custom role by checking against known roles
-    const knownRoles = ['assistant', 'analyst', 'developer', 'writer', 'researcher', 'teacher', 'consultant', 'support']
-    const isCustomRole = !knownRoles.includes(persona.spec.role)
-
     return {
       name: persona.metadata.name,
-      role: isCustomRole ? 'custom' : persona.spec.role,
-      customRole: isCustomRole ? persona.spec.role : '',
-      description: '', // Personas don't have description in current schema
-      systemPrompt: persona.spec.systemPrompt,
-      traits: persona.spec.traits || [],
-      examples: persona.spec.examples || [
-        { input: '', output: '' },
-        { input: '', output: '' }
-      ],
-      temperature: persona.spec.parameters?.temperature || 0.7,
-      maxTokens: persona.spec.parameters?.maxTokens || 2048,
-      enabled: persona.spec.enabled ?? true,
-      requireApproval: persona.spec.requireApproval ?? false,
+      displayName: persona.spec.displayName || '',
+      description: persona.spec.description || '',
+      systemPrompt: persona.spec.systemPrompt || '',
+      tone: persona.spec.tone || '',
+      language: persona.spec.language || '',
+      version: persona.spec.version || '',
+      capabilities: persona.spec.capabilities || [],
+      limitations: persona.spec.limitations || [],
+      instructions: persona.spec.instructions || [],
+      examples: persona.spec.examples || [],
+      traits: [], // Legacy field, not used anymore
     }
   }
 

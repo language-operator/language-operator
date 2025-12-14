@@ -18,18 +18,26 @@ export default function CreateClusterPersonaPage() {
 
     try {
       const payload = {
+        spec: {
+          displayName: formData.displayName,
+          description: formData.description,
+          systemPrompt: formData.systemPrompt,
+          ...(formData.tone && { tone: formData.tone }),
+          ...(formData.language && { language: formData.language }),
+          ...(formData.version && { version: formData.version }),
+          ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
+          ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
+          ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
+          ...(formData.examples && formData.examples.length > 0 && { 
+            examples: formData.examples.map(ex => ({
+              input: ex.input,
+              output: ex.output,
+              ...(ex.context && { context: ex.context }),
+              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
+            }))
+          }),
+        },
         name: formData.name,
-        displayName: formData.displayName, // Required by CRD
-        role: formData.role, // UI-only field
-        customRole: formData.customRole,
-        description: formData.description, // Required by CRD
-        systemPrompt: formData.systemPrompt, // Required by CRD
-        tone: formData.traits.length > 0 ? formData.traits[0] : undefined, // Map traits to tone (optional)
-        examples: formData.examples,
-        temperature: formData.temperature,
-        maxTokens: formData.maxTokens,
-        enabled: formData.enabled,
-        requireApproval: formData.requireApproval,
       }
       
       console.log('Sending payload:', payload)

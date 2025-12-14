@@ -24,21 +24,26 @@ export default function CreatePersonaPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
-          role: formData.role === 'custom' ? formData.customRole : formData.role,
-          description: formData.description || undefined,
           spec: {
-            role: formData.role === 'custom' ? formData.customRole : formData.role,
+            displayName: formData.displayName,
+            description: formData.description,
             systemPrompt: formData.systemPrompt,
-            traits: formData.traits,
-            examples: formData.examples.filter(ex => ex.input.trim() && ex.output.trim()),
-            parameters: {
-              temperature: formData.temperature,
-              maxTokens: formData.maxTokens,
-            },
-            enabled: formData.enabled,
-            requireApproval: formData.requireApproval,
+            ...(formData.tone && { tone: formData.tone }),
+            ...(formData.language && { language: formData.language }),
+            ...(formData.version && { version: formData.version }),
+            ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
+            ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
+            ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
+            ...(formData.examples && formData.examples.length > 0 && { 
+              examples: formData.examples.map(ex => ({
+                input: ex.input,
+                output: ex.output,
+                ...(ex.context && { context: ex.context }),
+                ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
+              }))
+            }),
           },
+          name: formData.name,
         }),
       })
 

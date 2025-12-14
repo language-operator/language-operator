@@ -7,21 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Users, Brain, MessageSquare, AlertCircle, Settings } from 'lucide-react'
+import { Users, Brain, MessageSquare, AlertCircle, Target, BookOpen } from 'lucide-react'
 
-const PERSONA_ROLES = [
-  { id: 'assistant', name: 'General Assistant', description: 'Helpful, general-purpose assistant' },
-  { id: 'analyst', name: 'Data Analyst', description: 'Data analysis and insights specialist' },
-  { id: 'developer', name: 'Software Developer', description: 'Programming and development expert' },
-  { id: 'writer', name: 'Content Writer', description: 'Creative and technical writing specialist' },
-  { id: 'researcher', name: 'Researcher', description: 'Research and information gathering expert' },
-  { id: 'teacher', name: 'Teacher', description: 'Educational and training specialist' },
-  { id: 'consultant', name: 'Business Consultant', description: 'Strategic business advice expert' },
-  { id: 'support', name: 'Customer Support', description: 'Customer service and support specialist' },
-  { id: 'custom', name: 'Custom Role', description: 'Define your own specialized role' }
-]
 
 const PERSONALITY_TRAITS = [
   { id: 'professional', name: 'Professional', description: 'Formal, business-oriented tone' },
@@ -64,16 +52,16 @@ const SAMPLE_PERSONAS = {
 export interface PersonaFormData {
   name: string
   displayName: string // Required by CRD
-  role: string // UI-only field, not mapped to CRD
-  customRole: string
   description: string // Required by CRD
   systemPrompt: string // Required by CRD
   traits: string[] // UI-only, maps to optional tone field
-  examples: Array<{input: string, output: string}>
-  temperature: number
-  maxTokens: number
-  enabled: boolean
-  requireApproval: boolean
+  tone: string // Optional by CRD
+  language: string // Optional by CRD  
+  version: string // Optional by CRD
+  capabilities: string[] // Optional by CRD
+  limitations: string[] // Optional by CRD
+  instructions: string[] // Optional by CRD
+  examples: Array<{input: string, output: string, context?: string, tags?: string[]}>
 }
 
 interface PersonaFormProps {
@@ -96,19 +84,19 @@ export function PersonaForm({
   const [formData, setFormData] = useState<PersonaFormData>({
     name: '',
     displayName: '',
-    role: '',
-    customRole: '',
     description: '',
     systemPrompt: '',
     traits: [],
+    tone: '',
+    language: '',
+    version: '',
+    capabilities: [],
+    limitations: [],
+    instructions: [],
     examples: [
-      { input: '', output: '' },
-      { input: '', output: '' }
+      { input: '', output: '', context: '', tags: [] },
+      { input: '', output: '', context: '', tags: [] }
     ],
-    temperature: 0.7,
-    maxTokens: 2048,
-    enabled: true,
-    requireApproval: false,
     ...initialData
   })
 
@@ -126,17 +114,6 @@ export function PersonaForm({
       ...prev,
       [field]: value
     }))
-
-    // Auto-populate fields when role changes
-    if (field === 'role' && value in SAMPLE_PERSONAS) {
-      const sample = SAMPLE_PERSONAS[value as keyof typeof SAMPLE_PERSONAS]
-      setFormData(prev => ({
-        ...prev,
-        systemPrompt: prev.systemPrompt || sample.systemPrompt,
-        traits: prev.traits.length === 0 ? sample.traits : prev.traits,
-        examples: prev.examples.every(ex => !ex.input && !ex.output) ? sample.examples : prev.examples
-      }))
-    }
     
     // Clear validation error when user starts typing
     if (validationError) {
@@ -144,14 +121,6 @@ export function PersonaForm({
     }
   }
 
-  const handleTraitToggle = (traitId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      traits: prev.traits.includes(traitId)
-        ? prev.traits.filter(t => t !== traitId)
-        : [...prev.traits, traitId]
-    }))
-  }
 
   const updateExample = (index: number, field: 'input' | 'output', value: string) => {
     setFormData(prev => ({
@@ -165,7 +134,7 @@ export function PersonaForm({
   const addExample = () => {
     setFormData(prev => ({
       ...prev,
-      examples: [...prev.examples, { input: '', output: '' }]
+      examples: [...prev.examples, { input: '', output: '', context: '', tags: [] }]
     }))
   }
 
@@ -176,6 +145,87 @@ export function PersonaForm({
         examples: prev.examples.filter((_, i) => i !== index)
       }))
     }
+  }
+
+  const updateExampleContext = (index: number, context: string) => {
+    setFormData(prev => ({
+      ...prev,
+      examples: prev.examples.map((ex, i) => 
+        i === index ? { ...ex, context } : ex
+      )
+    }))
+  }
+
+  const updateExampleTags = (index: number, tags: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      examples: prev.examples.map((ex, i) => 
+        i === index ? { ...ex, tags } : ex
+      )
+    }))
+  }
+
+  const addCapability = () => {
+    setFormData(prev => ({
+      ...prev,
+      capabilities: [...prev.capabilities, '']
+    }))
+  }
+
+  const removeCapability = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      capabilities: prev.capabilities.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateCapability = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      capabilities: prev.capabilities.map((cap, i) => i === index ? value : cap)
+    }))
+  }
+
+  const addLimitation = () => {
+    setFormData(prev => ({
+      ...prev,
+      limitations: [...prev.limitations, '']
+    }))
+  }
+
+  const removeLimitation = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      limitations: prev.limitations.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateLimitation = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      limitations: prev.limitations.map((lim, i) => i === index ? value : lim)
+    }))
+  }
+
+  const addInstruction = () => {
+    setFormData(prev => ({
+      ...prev,
+      instructions: [...prev.instructions, '']
+    }))
+  }
+
+  const removeInstruction = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      instructions: prev.instructions.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateInstruction = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      instructions: prev.instructions.map((inst, i) => i === index ? value : inst)
+    }))
   }
 
   const validateForm = () => {
@@ -218,15 +268,7 @@ export function PersonaForm({
     }
 
     // UI-only validations (not CRD requirements)
-    if (!formData.role) {
-      setValidationError('Persona role is required')
-      return false
-    }
-
-    if (formData.role === 'custom' && !formData.customRole.trim()) {
-      setValidationError('Custom role description is required')
-      return false
-    }
+    // All remaining validations are optional
 
     // Note: Personality traits (tone) are optional per CRD spec
 
@@ -244,7 +286,6 @@ export function PersonaForm({
     await onSubmit(formData)
   }
 
-  const selectedRole = PERSONA_ROLES.find(r => r.id === formData.role)
   const displayError = error || validationError
 
   return (
@@ -284,47 +325,7 @@ export function PersonaForm({
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="role">Role *</Label>
-            <Select 
-              value={formData.role} 
-              onValueChange={(value) => handleInputChange('role', value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select persona role" />
-              </SelectTrigger>
-              <SelectContent>
-                {PERSONA_ROLES.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>
-                    <div>
-                      <div className="font-medium">{role.name}</div>
-                      <div className="text-sm text-muted-foreground">{role.description}</div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedRole && (
-              <p className="text-sm text-muted-foreground">
-                {selectedRole.description}
-              </p>
-            )}
-          </div>
 
-          {formData.role === 'custom' && (
-            <div className="space-y-2">
-              <Label htmlFor="customRole">Custom Role *</Label>
-              <Input
-                id="customRole"
-                value={formData.customRole}
-                onChange={(e) => handleInputChange('customRole', e.target.value)}
-                placeholder="Specialized Expert"
-                disabled={isLoading}
-                required
-              />
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name *</Label>
@@ -388,27 +389,184 @@ export function PersonaForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Personality Traits</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {PERSONALITY_TRAITS.map((trait) => (
-                <div
-                  key={trait.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    formData.traits.includes(trait.id)
-                      ? 'border-primary bg-primary/5'
-                      : 'border-gray-200 hover:border-gray-300'
-                  } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => !isLoading && handleTraitToggle(trait.id)}
-                >
-                  <div className="font-medium text-sm">{trait.name}</div>
-                  <div className="text-xs text-muted-foreground">{trait.description}</div>
-                </div>
-              ))}
-            </div>
+            <Label htmlFor="tone">Tone</Label>
+            <Select value={formData.tone} onValueChange={(value) => handleInputChange('tone', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a tone (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="friendly">Friendly</SelectItem>
+                <SelectItem value="concise">Concise</SelectItem>
+                <SelectItem value="detailed">Detailed</SelectItem>
+                <SelectItem value="creative">Creative</SelectItem>
+                <SelectItem value="analytical">Analytical</SelectItem>
+                <SelectItem value="empathetic">Empathetic</SelectItem>
+                <SelectItem value="authoritative">Authoritative</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-sm text-muted-foreground">
-              Optional traits that describe this persona's communication style (defaults to professional tone)
+              The overall tone and communication style for this persona
             </p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="language">Language</Label>
+              <Input
+                id="language"
+                value={formData.language}
+                onChange={(e) => handleInputChange('language', e.target.value)}
+                placeholder="English"
+                disabled={isLoading}
+              />
+              <p className="text-sm text-muted-foreground">
+                Primary language for responses
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="version">Version</Label>
+              <Input
+                id="version"
+                value={formData.version}
+                onChange={(e) => handleInputChange('version', e.target.value)}
+                placeholder="1.0.0"
+                disabled={isLoading}
+              />
+              <p className="text-sm text-muted-foreground">
+                Version identifier for this persona
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Capabilities and Limitations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Target className="h-5 w-5" />
+            <span>Capabilities & Limitations</span>
+          </CardTitle>
+          <CardDescription>
+            Define what this persona can and cannot do
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label>Capabilities</Label>
+            {formData.capabilities.map((capability, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={capability}
+                  onChange={(e) => updateCapability(index, e.target.value)}
+                  placeholder="Describe a capability..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeCapability(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addCapability}
+              disabled={isLoading}
+            >
+              Add Capability
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              List the specific capabilities this persona possesses
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Limitations</Label>
+            {formData.limitations.map((limitation, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={limitation}
+                  onChange={(e) => updateLimitation(index, e.target.value)}
+                  placeholder="Describe a limitation..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeLimitation(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addLimitation}
+              disabled={isLoading}
+            >
+              Add Limitation
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              List the specific limitations of this persona
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <BookOpen className="h-5 w-5" />
+            <span>Instructions</span>
+          </CardTitle>
+          <CardDescription>
+            Additional specific instructions for this persona
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {formData.instructions.map((instruction, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <Textarea
+                value={instruction}
+                onChange={(e) => updateInstruction(index, e.target.value)}
+                placeholder="Add an instruction..."
+                rows={2}
+                disabled={isLoading}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => removeInstruction(index)}
+                disabled={isLoading}
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={addInstruction}
+            disabled={isLoading}
+          >
+            Add Instruction
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Detailed instructions that supplement the system prompt
+          </p>
         </CardContent>
       </Card>
 
@@ -425,7 +583,7 @@ export function PersonaForm({
         </CardHeader>
         <CardContent className="space-y-4">
           {formData.examples.map((example, index) => (
-            <div key={index} className="space-y-2 p-4 border rounded-lg">
+            <div key={index} className="space-y-3 p-4 border rounded-lg">
               <div className="flex items-center justify-between">
                 <Label>Example {index + 1}</Label>
                 {formData.examples.length > 1 && (
@@ -440,6 +598,18 @@ export function PersonaForm({
                   </Button>
                 )}
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`context-${index}`}>Context (optional)</Label>
+                <Input
+                  id={`context-${index}`}
+                  value={example.context || ''}
+                  onChange={(e) => updateExampleContext(index, e.target.value)}
+                  placeholder="Context for this example..."
+                  disabled={isLoading}
+                />
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor={`input-${index}`}>User Input</Label>
                 <Input
@@ -450,6 +620,7 @@ export function PersonaForm({
                   disabled={isLoading}
                 />
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor={`output-${index}`}>Expected Response</Label>
                 <Textarea
@@ -457,9 +628,23 @@ export function PersonaForm({
                   value={example.output}
                   onChange={(e) => updateExample(index, 'output', e.target.value)}
                   placeholder="How the persona should respond..."
-                  rows={2}
+                  rows={3}
                   disabled={isLoading}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`tags-${index}`}>Tags (optional)</Label>
+                <Input
+                  id={`tags-${index}`}
+                  value={example.tags?.join(', ') || ''}
+                  onChange={(e) => updateExampleTags(index, e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
+                  placeholder="tag1, tag2, tag3"
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comma-separated tags for categorizing this example
+                </p>
               </div>
             </div>
           ))}
@@ -475,92 +660,7 @@ export function PersonaForm({
       </Card>
 
       {/* Parameters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Settings className="h-5 w-5" />
-            <span>Generation Parameters</span>
-          </CardTitle>
-          <CardDescription>
-            Configure how the persona generates responses
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="temperature">Temperature</Label>
-              <Input
-                id="temperature"
-                type="number"
-                step="0.1"
-                value={formData.temperature}
-                onChange={(e) => handleInputChange('temperature', parseFloat(e.target.value) || 0)}
-                min={0}
-                max={2}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Lower = more focused, Higher = more creative
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="maxTokens">Max Tokens</Label>
-              <Input
-                id="maxTokens"
-                type="number"
-                value={formData.maxTokens}
-                onChange={(e) => handleInputChange('maxTokens', parseInt(e.target.value) || 0)}
-                min={1}
-                max={8192}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Maximum response length
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-          <CardDescription>
-            Additional persona configuration
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Persona</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow this persona to be used by agents
-              </p>
-            </div>
-            <Switch
-              checked={formData.enabled}
-              onCheckedChange={(checked) => handleInputChange('enabled', checked)}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Require Approval</Label>
-              <p className="text-sm text-muted-foreground">
-                Require admin approval before using this persona
-              </p>
-            </div>
-            <Switch
-              checked={formData.requireApproval}
-              onCheckedChange={(checked) => handleInputChange('requireApproval', checked)}
-              disabled={isLoading}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Error Display */}
       {displayError && (

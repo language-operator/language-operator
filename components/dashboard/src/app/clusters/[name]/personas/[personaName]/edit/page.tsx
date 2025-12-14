@@ -56,7 +56,14 @@ export default function EditClusterPersonaPage() {
           ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
           ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
           ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
-          ...(formData.examples && formData.examples.length > 0 && { examples: formData.examples }),
+          ...(formData.examples && formData.examples.length > 0 && { 
+            examples: formData.examples.map(ex => ({
+              input: ex.input,
+              output: ex.output,
+              ...(ex.context && { context: ex.context }),
+              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
+            }))
+          }),
         }
       }
       

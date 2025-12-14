@@ -6,23 +6,33 @@ import { db } from '@/lib/db'
 import { z } from 'zod'
 
 const updatePersonaSchema = z.object({
-  role: z.string().optional(),
-  description: z.string().optional(),
   spec: z.object({
-    role: z.string().optional(),
-    systemPrompt: z.string().min(20).optional(),
-    traits: z.array(z.string()).min(1).optional(),
+    description: z.string().optional(),
+    displayName: z.string().optional(),
+    systemPrompt: z.string().optional(),
+    tone: z.string().optional(),
+    language: z.string().optional(),
+    version: z.string().optional(),
+    capabilities: z.array(z.string()).optional(),
+    limitations: z.array(z.string()).optional(),
+    instructions: z.array(z.string()).optional(),
     examples: z.array(z.object({
-      input: z.string(),
-      output: z.string()
+      input: z.string().min(1, "Example input is required"),
+      output: z.string().min(1, "Example output is required"),
+      context: z.string().optional(),
+      tags: z.array(z.string()).optional(),
     })).optional(),
-    parameters: z.object({
-      temperature: z.number().min(0).max(2).optional(),
-      maxTokens: z.number().int().min(1).max(8192).optional(),
+    constraints: z.array(z.string()).optional(),
+    vocabulary: z.object({
+      preferred: z.array(z.string()).optional(),
+      forbidden: z.array(z.string()).optional(),
     }).optional(),
-    enabled: z.boolean().optional(),
-    requireApproval: z.boolean().optional(),
-  }).optional()
+    responseFormat: z.object({
+      structure: z.enum(['freeform', 'structured', 'json', 'markdown']).optional(),
+      maxLength: z.number().int().min(1).max(10000).optional(),
+      includeMetadata: z.boolean().optional(),
+    }).optional(),
+  })
 })
 
 // GET /api/personas/[name] - Get a specific persona
@@ -79,7 +89,10 @@ export async function PATCH(
     }
 
     const body = await request.json()
+    console.log('PATCH body received:', JSON.stringify(body, null, 2))
+    
     const validatedData = updatePersonaSchema.parse(body)
+    console.log('Validation successful, validated data:', JSON.stringify(validatedData, null, 2))
     
     const user = await db.user.findUnique({
       where: { email: session.user.email },
@@ -94,13 +107,15 @@ export async function PATCH(
     const namespace = organization.namespace
 
     // Get existing persona
+    console.log('Fetching existing persona:', name, 'in namespace:', namespace)
     const existingPersona = await k8sClient.getLanguagePersona(namespace, name)
     if (!existingPersona) {
       return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
     }
+    console.log('Existing persona:', JSON.stringify(existingPersona, null, 2))
 
-    // Update the persona
-    const updatedPersona = await k8sClient.updateLanguagePersona(name, namespace, {
+    // Build update payload
+    const updatePayload = {
       metadata: {
         ...existingPersona.metadata,
         annotations: {
@@ -112,9 +127,12 @@ export async function PATCH(
       spec: {
         ...existingPersona.spec,
         ...validatedData.spec,
-        role: validatedData.role || validatedData.spec?.role || existingPersona.spec.role,
       }
-    })
+    }
+    console.log('Update payload:', JSON.stringify(updatePayload, null, 2))
+
+    // Update the persona
+    const updatedPersona = await k8sClient.updateLanguagePersona(namespace, name, updatePayload)
 
     // Log the update for audit trail
     console.log(`Persona updated: ${name} by ${session.user.email} in ${namespace}`)
@@ -169,7 +187,7 @@ export async function DELETE(
     }
 
     // Delete the persona
-    await k8sClient.deleteLanguagePersona(name, namespace)
+    await k8sClient.deleteLanguagePersona(namespace, name)
 
     // Log the deletion for audit trail
     console.log(`Persona deleted: ${name} by ${session.user.email} in ${namespace}`)

@@ -222,7 +222,7 @@ export const LanguageToolSchema = z.object({
   status: LanguageToolStatusSchema.optional(),
 })
 
-// LanguagePersona validation matching CRD spec (lines 352-356 + tone field)
+// LanguagePersona validation matching CRD spec
 export const LanguagePersonaSpecSchema = z.object({
   // Required fields per CRD spec
   description: z.string().min(1, "Description is required"),
@@ -230,11 +230,17 @@ export const LanguagePersonaSpecSchema = z.object({
   systemPrompt: z.string().min(1, "System prompt is required"),
   
   // Optional fields
-  tone: z.string().optional(), // Optional with default: "professional" per CRD
+  tone: z.string().optional(),
+  language: z.string().optional(),
+  version: z.string().optional(),
+  capabilities: z.array(z.string()).optional(),
+  limitations: z.array(z.string()).optional(),
+  instructions: z.array(z.string()).optional(),
   examples: z.array(z.object({
     input: z.string().min(1, "Example input is required"),
     output: z.string().min(1, "Example output is required"),
     context: z.string().optional(),
+    tags: z.array(z.string()).optional(),
   })).optional(),
   constraints: z.array(z.string()).optional(),
   vocabulary: z.object({

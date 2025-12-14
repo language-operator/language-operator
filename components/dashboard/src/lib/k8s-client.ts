@@ -664,17 +664,25 @@ class KubernetesClient {
     })
   }
 
-  async updateLanguagePersona(namespace: string, name: string, spec: any) {
+  async updateLanguagePersona(namespace: string, name: string, persona: any) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
-    return await this.customObjectsApi.patchNamespacedCustomObject({
+    
+    // For replaceNamespacedCustomObject, we need to include kind and apiVersion
+    const completePersona = {
+      kind: 'LanguagePersona',
+      apiVersion: 'langop.io/v1alpha1',
+      ...persona,
+    }
+    
+    return await this.customObjectsApi.replaceNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagepersonas',
       name,
-      body: spec,
+      body: completePersona,
     })
   }
 
