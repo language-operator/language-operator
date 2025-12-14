@@ -917,12 +917,31 @@ class KubernetesClient {
       this.listLanguageClusters(namespace, options),
     ])
 
+    // Handle different response structures from k8s client
+    // Live K8s mode: { body: { items: [...] } }
+    // Demo mode: { data: { items: [] } }
+    // Error fallback: { data: { items: [] } }
+    const getItemsLength = (response: any): number => {
+      const responseBody = response?.body
+      const responseData = response?.data
+      const responseItems = response?.items
+      
+      if (responseBody?.items && Array.isArray(responseBody.items)) {
+        return responseBody.items.length
+      } else if (responseData?.items && Array.isArray(responseData.items)) {
+        return responseData.items.length
+      } else if (responseItems && Array.isArray(responseItems)) {
+        return responseItems.length
+      }
+      return 0
+    }
+
     return {
-      agents: (agents.body as any)?.items?.length || 0,
-      models: (models.body as any)?.items?.length || 0,
-      tools: (tools.body as any)?.items?.length || 0,
-      personas: (personas.body as any)?.items?.length || 0,
-      clusters: (clusters.body as any)?.items?.length || 0,
+      agents: getItemsLength(agents),
+      models: getItemsLength(models),
+      tools: getItemsLength(tools),
+      personas: getItemsLength(personas),
+      clusters: getItemsLength(clusters),
     }
   }
 

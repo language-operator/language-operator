@@ -37,9 +37,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get resource counts from Kubernetes
+    // Note: Don't filter by organization ID to match the behavior of /api/clusters
+    // which shows all clusters in the namespace regardless of organization labels
     const counts = await k8sClient.getNamespaceResourceCounts(
-      organization.namespace, 
-      organization.id
+      organization.namespace
     )
 
     // Get quota usage information
