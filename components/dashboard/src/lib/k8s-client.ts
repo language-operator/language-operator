@@ -883,7 +883,6 @@ class KubernetesClient {
 
     // Handle different response structures from k8s client
     // Live K8s mode: { body: { items: [...] } }
-    // Demo mode: { data: { items: [] } }
     // Error fallback: { data: { items: [] } }
     const getItemsLength = (response: any): number => {
       const responseBody = response?.body

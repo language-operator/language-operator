@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
       
       // Handle different response structures from k8s client
       // Live K8s mode: { body: { items: [...] } }
-      // Demo mode: { data: { items: [] } }
       // Error fallback: { data: { items: [] } }
       const responseBody = (response as any)?.body
       const responseData = (response as any)?.data
@@ -62,7 +61,7 @@ export async function GET(request: NextRequest) {
         console.log(`Found ${clusters.length} clusters from Kubernetes API`)
       } else if (responseData?.items && Array.isArray(responseData.items)) {
         clusters = responseData.items
-        console.log(`Found ${clusters.length} clusters from demo mode`)
+        console.log(`Found ${clusters.length} clusters from response data`)
       } else if (responseItems && Array.isArray(responseItems)) {
         clusters = responseItems
         console.log(`Found ${clusters.length} clusters from direct items`)
