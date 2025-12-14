@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Trash2, Play, Pause } from 'lucide-react'
-import { useTool } from '@/hooks/use-tools'
+import { useQuery } from '@tanstack/react-query'
 
 export default function ClusterToolDetailPage() {
   const router = useRouter()
@@ -14,8 +14,20 @@ export default function ClusterToolDetailPage() {
   const clusterName = params?.name as string
   const toolName = params?.toolName as string
 
-  const { data: toolResponse, isLoading } = useTool(toolName)
-  const tool = toolResponse?.tool
+  // Use cluster-scoped API endpoint for tool details
+  const { data: toolResponse, isLoading } = useQuery({
+    queryKey: ['cluster-tool', clusterName, toolName],
+    queryFn: async () => {
+      const response = await fetch(`/api/clusters/${clusterName}/tools/${toolName}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch tool')
+      }
+      return response.json()
+    },
+    enabled: !!clusterName && !!toolName,
+    refetchInterval: 5000,
+  })
+  const tool = toolResponse?.data
 
   const handleEdit = () => {
     router.push(`/clusters/${clusterName}/tools/${toolName}/edit`)
@@ -27,7 +39,7 @@ export default function ClusterToolDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/tools/${toolName}`, {
+      const response = await fetch(`/api/clusters/${clusterName}/tools/${toolName}`, {
         method: 'DELETE',
       })
 
