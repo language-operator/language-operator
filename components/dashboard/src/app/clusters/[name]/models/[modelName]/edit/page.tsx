@@ -43,21 +43,66 @@ export default function ClusterEditModelPage() {
             model: formData.model,
             endpoint: formData.endpoint,
             apiKey: formData.apiKey || undefined,
+            timeout: formData.timeout,
             parameters: {
               maxTokens: formData.maxTokens,
               temperature: formData.temperature,
               topP: formData.topP,
               frequencyPenalty: formData.frequencyPenalty,
               presencePenalty: formData.presencePenalty,
+              stopSequences: formData.stopSequences,
+              additionalParameters: formData.additionalParameters,
             },
             contextWindow: formData.contextWindow,
             cost: {
               inputTokens: formData.costPerInputToken,
               outputTokens: formData.costPerOutputToken,
-              currency: 'USD'
+              currency: formData.currency || 'USD'
             },
             enabled: formData.enabled,
             requireApproval: formData.requireApproval,
+            // Enterprise features
+            caching: formData.cachingEnabled ? {
+              backend: formData.cachingBackend,
+              ttl: formData.cachingTtl,
+              maxSize: formData.cachingMaxSize
+            } : undefined,
+            loadBalancing: formData.loadBalancingEnabled ? {
+              strategy: formData.loadBalancingStrategy,
+              endpoints: formData.loadBalancingEndpoints,
+              healthCheck: formData.healthCheckEnabled ? {
+                interval: formData.healthCheckInterval,
+                timeout: formData.healthCheckTimeout,
+                healthyThreshold: formData.healthCheckHealthyThreshold,
+                unhealthyThreshold: formData.healthCheckUnhealthyThreshold
+              } : undefined
+            } : undefined,
+            observability: {
+              logging: {
+                level: formData.logLevel,
+                logRequests: formData.logRequests,
+                logResponses: formData.logResponses
+              },
+              metrics: formData.metricsEnabled,
+              tracing: formData.tracingEnabled
+            },
+            rateLimiting: {
+              requestsPerMinute: formData.requestsPerMinute,
+              tokensPerMinute: formData.tokensPerMinute,
+              concurrentRequests: formData.concurrentRequests
+            },
+            retryPolicy: {
+              maxAttempts: formData.retryMaxAttempts,
+              initialBackoff: formData.retryInitialBackoff,
+              maxBackoff: formData.retryMaxBackoff,
+              backoffMultiplier: formData.retryBackoffMultiplier,
+              retryableStatusCodes: formData.retryableStatusCodes
+            },
+            security: {
+              egress: formData.egress
+            },
+            regions: formData.regions,
+            fallbacks: formData.fallbacks
           },
         }),
       })
@@ -98,6 +143,41 @@ export default function ClusterEditModelPage() {
     costPerOutputToken: model.spec.costTracking?.outputTokenCost || 0.0,
     enabled: model.spec.enabled !== false,
     requireApproval: model.spec.requireApproval || false,
+    
+    // Enterprise features from existing model
+    timeout: model.spec.timeout || '5m',
+    stopSequences: model.spec.configuration?.stopSequences || [],
+    additionalParameters: model.spec.configuration?.additionalParameters || {},
+    cachingEnabled: !!model.spec.caching,
+    cachingBackend: model.spec.caching?.backend || 'memory',
+    cachingTtl: model.spec.caching?.ttl || '5m',
+    cachingMaxSize: model.spec.caching?.maxSize || 100,
+    currency: model.spec.costTracking?.currency || 'USD',
+    loadBalancingEnabled: !!model.spec.loadBalancing,
+    loadBalancingStrategy: model.spec.loadBalancing?.strategy || 'round-robin',
+    loadBalancingEndpoints: model.spec.loadBalancing?.endpoints || [],
+    healthCheckEnabled: !!model.spec.loadBalancing?.healthCheck,
+    healthCheckInterval: model.spec.loadBalancing?.healthCheck?.interval || '30s',
+    healthCheckTimeout: model.spec.loadBalancing?.healthCheck?.timeout || '5s',
+    healthCheckHealthyThreshold: model.spec.loadBalancing?.healthCheck?.healthyThreshold || 2,
+    healthCheckUnhealthyThreshold: model.spec.loadBalancing?.healthCheck?.unhealthyThreshold || 3,
+    fallbacks: model.spec.fallbacks || [],
+    logLevel: model.spec.observability?.logging?.level || 'info',
+    logRequests: model.spec.observability?.logging?.logRequests !== false,
+    logResponses: model.spec.observability?.logging?.logResponses || false,
+    metricsEnabled: model.spec.observability?.metrics !== false,
+    tracingEnabled: model.spec.observability?.tracing || false,
+    requestsPerMinute: model.spec.rateLimiting?.requestsPerMinute,
+    tokensPerMinute: model.spec.rateLimiting?.tokensPerMinute,
+    concurrentRequests: model.spec.rateLimiting?.concurrentRequests,
+    regions: model.spec.regions || [],
+    retryMaxAttempts: model.spec.retryPolicy?.maxAttempts || 3,
+    retryInitialBackoff: model.spec.retryPolicy?.initialBackoff || '1s',
+    retryMaxBackoff: model.spec.retryPolicy?.maxBackoff || '30s',
+    retryBackoffMultiplier: model.spec.retryPolicy?.backoffMultiplier || 2,
+    retryableStatusCodes: model.spec.retryPolicy?.retryableStatusCodes || [429, 500, 502, 503, 504],
+    egress: model.spec.security?.egress || [],
+    
     // Note: We don't populate apiKey for security reasons
   } : undefined
 
@@ -159,7 +239,7 @@ export default function ClusterEditModelPage() {
         </div>
 
         {/* Form */}
-        <div className="max-w-2xl">
+        <div className="max-w-4xl">
           <ModelForm
             initialData={initialData}
             isLoading={isLoading}
