@@ -798,6 +798,24 @@ class KubernetesClient {
     })
   }
 
+  // Events API
+  async listEvents(namespace: string, options: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+  } = {}) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
+    
+    return await this.coreV1Api.listNamespacedEvent({
+      namespace,
+      labelSelector: options.labelSelector,
+      fieldSelector: options.fieldSelector,
+      limit: options.limit || 50, // Default to last 50 events
+    })
+  }
+
   // Helper methods for common query patterns
 
   /**
