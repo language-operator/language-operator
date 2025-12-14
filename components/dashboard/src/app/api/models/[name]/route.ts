@@ -156,7 +156,9 @@ export async function PUT(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
+    console.log('🔥 PUT /api/models/[name] - Starting model update')
     const { name } = await params
+    console.log('🔥 Model name:', name)
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -184,6 +186,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Model not found' }, { status: 404 })
     }
 
+    console.log('🔥 About to call replaceLanguageModel with namespace:', namespace, 'name:', name)
     // Replace the model using PUT semantics
     const updatedModel = await k8sClient.replaceLanguageModel(namespace, name, {
       metadata: {
@@ -210,7 +213,8 @@ export async function PUT(
 
     return NextResponse.json({ data: updatedModel })
   } catch (error) {
-    console.error('Error updating model via PUT:', error)
+    console.error('🔥 Error updating model via PUT:', error)
+    console.error('🔥 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(

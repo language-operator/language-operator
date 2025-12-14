@@ -496,13 +496,21 @@ class KubernetesClient {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
+    
+    // For replaceNamespacedCustomObject, we need to include kind and apiVersion
+    const completeModel = {
+      kind: 'LanguageModel',
+      apiVersion: 'langop.io/v1alpha1',
+      ...model,
+    }
+    
     return await this.customObjectsApi.replaceNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagemodels',
       name,
-      body: model,
+      body: completeModel,
     })
   }
 
