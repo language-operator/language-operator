@@ -19,11 +19,12 @@ export default function CreateClusterPersonaPage() {
     try {
       const payload = {
         name: formData.name,
-        role: formData.role,
+        displayName: formData.displayName, // Required by CRD
+        role: formData.role, // UI-only field
         customRole: formData.customRole,
-        description: formData.description,
-        systemPrompt: formData.systemPrompt,
-        traits: formData.traits,
+        description: formData.description, // Required by CRD
+        systemPrompt: formData.systemPrompt, // Required by CRD
+        tone: formData.traits.length > 0 ? formData.traits[0] : undefined, // Map traits to tone (optional)
         examples: formData.examples,
         temperature: formData.temperature,
         maxTokens: formData.maxTokens,

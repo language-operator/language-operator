@@ -63,11 +63,12 @@ const SAMPLE_PERSONAS = {
 
 export interface PersonaFormData {
   name: string
-  role: string
+  displayName: string // Required by CRD
+  role: string // UI-only field, not mapped to CRD
   customRole: string
-  description: string
-  systemPrompt: string
-  traits: string[]
+  description: string // Required by CRD
+  systemPrompt: string // Required by CRD
+  traits: string[] // UI-only, maps to optional tone field
   examples: Array<{input: string, output: string}>
   temperature: number
   maxTokens: number
@@ -94,6 +95,7 @@ export function PersonaForm({
 }: PersonaFormProps) {
   const [formData, setFormData] = useState<PersonaFormData>({
     name: '',
+    displayName: '',
     role: '',
     customRole: '',
     description: '',
@@ -194,13 +196,14 @@ export function PersonaForm({
       return false
     }
 
-    if (!formData.role) {
-      setValidationError('Persona role is required')
+    // CRD required field validation
+    if (!formData.displayName.trim()) {
+      setValidationError('Display name is required')
       return false
     }
 
-    if (formData.role === 'custom' && !formData.customRole.trim()) {
-      setValidationError('Custom role description is required')
+    if (!formData.description.trim()) {
+      setValidationError('Description is required')
       return false
     }
 
@@ -214,10 +217,18 @@ export function PersonaForm({
       return false
     }
 
-    if (formData.traits.length === 0) {
-      setValidationError('At least one personality trait is required')
+    // UI-only validations (not CRD requirements)
+    if (!formData.role) {
+      setValidationError('Persona role is required')
       return false
     }
+
+    if (formData.role === 'custom' && !formData.customRole.trim()) {
+      setValidationError('Custom role description is required')
+      return false
+    }
+
+    // Note: Personality traits (tone) are optional per CRD spec
 
     setValidationError('')
     return true
@@ -316,7 +327,22 @@ export function PersonaForm({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="displayName">Display Name *</Label>
+            <Input
+              id="displayName"
+              value={formData.displayName}
+              onChange={(e) => handleInputChange('displayName', e.target.value)}
+              placeholder="Helpful Assistant"
+              disabled={isLoading}
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              Human-readable name for this persona
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -324,7 +350,11 @@ export function PersonaForm({
               placeholder="A brief description of this persona's purpose..."
               rows={3}
               disabled={isLoading}
+              required
             />
+            <p className="text-sm text-muted-foreground">
+              Brief description of this persona's role and capabilities
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -358,7 +388,7 @@ export function PersonaForm({
           </div>
 
           <div className="space-y-2">
-            <Label>Personality Traits *</Label>
+            <Label>Personality Traits</Label>
             <div className="grid grid-cols-2 gap-2">
               {PERSONALITY_TRAITS.map((trait) => (
                 <div
@@ -376,7 +406,7 @@ export function PersonaForm({
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Select traits that describe this persona's communication style
+              Optional traits that describe this persona's communication style (defaults to professional tone)
             </p>
           </div>
         </CardContent>

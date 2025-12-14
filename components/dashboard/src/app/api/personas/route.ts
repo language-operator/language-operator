@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
     }
 
     const response = await k8sClient.listLanguagePersonas(organization.namespace)
-    const personas = (response.data as any)?.items || []
+    // Fix: Response is direct from k8s API, not wrapped in { data: ... }
+    const personas = (response as any)?.body?.items || (response as any)?.items || []
 
     // Apply filtering
     let filteredPersonas = personas.filter((persona: LanguagePersona) => {
