@@ -122,54 +122,60 @@ export default function ClusterPersonas() {
               /* Personas Grid */
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {clusterPersonas.map((persona: any) => (
-                  <Card key={persona.metadata.name} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
-                          {persona.spec.displayName || persona.metadata.name}
-                        </CardTitle>
-                        <Badge className={getStatusColor(persona.status?.phase)}>
-                          {persona.status?.phase || 'Unknown'}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {persona.spec.description || 'No description provided'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {persona.spec.tone && (
-                          <div className="flex items-center space-x-2 text-sm">
-                            <Palette className="h-4 w-4 text-gray-500" />
-                            <Badge className={getToneColor(persona.spec.tone)} variant="secondary">
-                              {persona.spec.tone}
-                            </Badge>
-                          </div>
-                        )}
-                        
-                        {persona.spec.systemPrompt && (
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <MessageCircle className="h-4 w-4" />
-                              <span>System Prompt</span>
+                  <Link 
+                    key={persona.metadata.name} 
+                    href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
+                    className="block"
+                  >
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">
+                            {persona.spec.displayName || persona.metadata.name}
+                          </CardTitle>
+                          <Badge className={getStatusColor(persona.status?.phase)}>
+                            {persona.status?.phase || 'Unknown'}
+                          </Badge>
+                        </div>
+                        <CardDescription>
+                          {persona.spec.description || 'No description provided'}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {persona.spec.tone && (
+                            <div className="flex items-center space-x-2 text-sm">
+                              <Palette className="h-4 w-4 text-gray-500" />
+                              <Badge className={getToneColor(persona.spec.tone)} variant="secondary">
+                                {persona.spec.tone}
+                              </Badge>
                             </div>
-                            <p className="text-xs text-gray-600 line-clamp-2">
-                              {persona.spec.systemPrompt}
-                            </p>
-                          </div>
-                        )}
+                          )}
+                          
+                          {persona.spec.systemPrompt && (
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                <MessageCircle className="h-4 w-4" />
+                                <span>System Prompt</span>
+                              </div>
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {persona.spec.systemPrompt}
+                              </p>
+                            </div>
+                          )}
 
-                        <div className="pt-2 border-t">
-                          <div className="text-xs text-gray-500 flex items-center space-x-1">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              Created: {new Date(persona.metadata.creationTimestamp).toLocaleDateString()}
-                            </span>
+                          <div className="pt-2 border-t">
+                            <div className="text-xs text-gray-500 flex items-center space-x-1">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                Created: {new Date(persona.metadata.creationTimestamp).toLocaleDateString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             )}

@@ -49,7 +49,7 @@ export async function GET(
 
     const organization = user.memberships[0].organization
     const namespace = organization.namespace
-    const persona = await k8sClient.getLanguagePersona(name, namespace)
+    const persona = await k8sClient.getLanguagePersona(namespace, name)
     
     if (!persona) {
       return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
@@ -94,7 +94,7 @@ export async function PATCH(
     const namespace = organization.namespace
 
     // Get existing persona
-    const existingPersona = await k8sClient.getLanguagePersona(name, namespace)
+    const existingPersona = await k8sClient.getLanguagePersona(namespace, name)
     if (!existingPersona) {
       return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
     }
@@ -163,7 +163,7 @@ export async function DELETE(
     const namespace = organization.namespace
 
     // Check if persona exists
-    const existingPersona = await k8sClient.getLanguagePersona(name, namespace)
+    const existingPersona = await k8sClient.getLanguagePersona(namespace, name)
     if (!existingPersona) {
       return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
     }
