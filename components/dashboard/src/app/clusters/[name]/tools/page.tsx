@@ -112,7 +112,6 @@ export default function ClusterTools() {
 
     return (
       <Card 
-        key={toolId} 
         className={`flex flex-col h-full ${
           isInstalled && installedTool 
             ? 'border-green-200 bg-green-50/50 cursor-pointer hover:bg-green-50/70 hover:border-green-300 transition-colors' 
