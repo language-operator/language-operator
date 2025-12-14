@@ -93,15 +93,55 @@ export async function GET(request: NextRequest) {
       return true
     })
 
+    // Calculate agent counts for each cluster
+    const clustersWithAgentCounts = await Promise.all(
+      filteredClusters.map(async (cluster: LanguageCluster) => {
+        try {
+          // Query agents for this cluster using organization filtering
+          const agentsResponse = await k8sClient.listLanguageAgents(organization.namespace, {
+            labelSelector: `langop.io/organization=${organization.id}`
+          })
+
+          // Handle different response structures from k8s client
+          const allAgents = (agentsResponse as any)?.body?.items || 
+                           (agentsResponse as any)?.data?.items || 
+                           (agentsResponse as any)?.items || 
+                           []
+
+          // Calculate agent count for this cluster
+          const agentCount = allAgents.length
+
+          // Return cluster with computed agentCount
+          return {
+            ...cluster,
+            status: {
+              ...cluster.status,
+              agentCount
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching agent count for cluster ${cluster.metadata.name}:`, error)
+          // Return cluster with 0 agents on error
+          return {
+            ...cluster,
+            status: {
+              ...cluster.status,
+              agentCount: 0
+            }
+          }
+        }
+      })
+    )
+
     // Sort and paginate
     const startIndex = ((params.page || 1) - 1) * (params.limit || 50)
     const endIndex = startIndex + (params.limit || 50)
-    const paginatedClusters = filteredClusters.slice(startIndex, endIndex)
+    const paginatedClusters = clustersWithAgentCounts.slice(startIndex, endIndex)
 
     return NextResponse.json({
       success: true,
       data: paginatedClusters,
-      total: filteredClusters.length,
+      total: clustersWithAgentCounts.length,
       page: params.page || 1,
       limit: params.limit || 50,
     })
