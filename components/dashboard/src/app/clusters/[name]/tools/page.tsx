@@ -41,7 +41,16 @@ export default function ClusterTools() {
       const toolsResponse = await fetch(`/api/tools`)
       if (toolsResponse.ok) {
         const toolsData = await toolsResponse.json()
-        setInstalledTools(toolsData.data || [])
+        // Convert LanguageTool objects to InstalledTool format
+        const adaptedTools = (toolsData.data || []).map((tool: any) => ({
+          name: tool.metadata.name,
+          catalogName: tool.metadata.labels?.['langop.io/catalog-name'] || tool.metadata.name,
+          status: {
+            phase: tool.status?.phase || 'Unknown',
+            message: tool.status?.conditions?.[0]?.message || ''
+          }
+        }))
+        setInstalledTools(adaptedTools)
       }
     } catch (err) {
       console.error('Error fetching data:', err)
