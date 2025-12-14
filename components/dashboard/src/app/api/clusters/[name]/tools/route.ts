@@ -55,17 +55,10 @@ export async function GET(
     // Handle different response structures from k8s client
     const allTools = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
-    // Filter tools that belong to this specific cluster
-    // Tools are associated with clusters via metadata labels or cluster reference
-    const clusterTools = allTools.filter((tool: LanguageTool) => {
-      // Check if tool has cluster association in metadata labels
-      const toolCluster = tool.metadata?.labels?.['langop.io/cluster'] || 
-                         tool.metadata?.labels?.['cluster']
-      
-      // If no cluster association, treat as available for all clusters (for now)
-      // In the future, this logic can be refined based on actual cluster-tool relationships
-      return !toolCluster || toolCluster === clusterName
-    })
+    // For now, show all tools from the organization namespace as available to any cluster
+    // In the future, this can be refined to filter by actual cluster-tool relationships
+    // when cluster-scoping is fully implemented in the CRD spec
+    const clusterTools = allTools
 
     // Apply search filtering 
     let filteredTools = clusterTools.filter((tool: LanguageTool) => {
