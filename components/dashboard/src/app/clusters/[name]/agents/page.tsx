@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,42 +8,42 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Bot, Plus, Activity, Clock, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { useAgents } from '@/hooks/use-agents'
+import { LanguageAgent } from '@/types/agent'
 
 export default function ClusterAgents() {
   const params = useParams()
   const router = useRouter()
   const clusterName = params?.name as string
   
-  // For now, fetch all agents and filter client-side
-  // TODO: Update API to support cluster/namespace filtering
-  const { data: agentsResponse, isLoading, error } = useAgents({ limit: 100 })
-  const allAgents = agentsResponse?.data || []
-  
-  // Debug logging
-  console.log('Agents response:', agentsResponse)
-  console.log('All agents:', allAgents)
-  console.log('Error:', error)
-  console.log('Is loading:', isLoading)
-  
-  // Manual test API call
-  React.useEffect(() => {
-    console.log('Agents page mounted, triggering test API call...')
-    fetch('/api/agents?limit=5')
-      .then(res => {
-        console.log('Manual API response status:', res.status)
-        return res.json()
-      })
-      .then(data => {
-        console.log('Manual API response data:', data)
-      })
-      .catch(err => {
-        console.error('Manual API call error:', err)
-      })
-  }, [])
-  
-  // For now, show all agents (TODO: implement proper cluster-scoped filtering)
-  const clusterAgents = allAgents
+  const [agents, setAgents] = useState<LanguageAgent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchAgents()
+  }, [clusterName])
+
+  const fetchAgents = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch agents for this cluster using cluster-scoped API
+      const agentsResponse = await fetch(`/api/clusters/${clusterName}/agents`)
+      if (!agentsResponse.ok) {
+        throw new Error('Failed to fetch agents')
+      }
+      const agentsData = await agentsResponse.json()
+      setAgents(agentsData.data || [])
+    } catch (err) {
+      console.error('Error fetching agents:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load agents')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const clusterAgents = agents
 
   const getStatusColor = (phase?: string) => {
     switch (phase) {
@@ -109,7 +109,7 @@ export default function ClusterAgents() {
         </div>
 
         {/* Loading State */}
-        {isLoading && (
+        {loading && (
           <Card>
             <CardContent className="flex items-center justify-center py-16">
               <div className="text-center">
@@ -127,14 +127,14 @@ export default function ClusterAgents() {
               <div className="text-center">
                 <Bot className="h-8 w-8 mx-auto mb-4 text-red-400" />
                 <p className="text-red-600 mb-2">Failed to load agents</p>
-                <p className="text-gray-600 text-sm">{error.message}</p>
+                <p className="text-gray-600 text-sm">{error}</p>
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Agents List */}
-        {!isLoading && !error && (
+        {!loading && !error && (
           <>
             {clusterAgents.length === 0 ? (
               /* Empty State */

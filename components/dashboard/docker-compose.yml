@@ -29,7 +29,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://dev:dev@localhost:5433/language_operator_dev?schema=public"
       NEXTAUTH_SECRET: "dev-secret-not-for-production"
-      NEXTAUTH_URL: "http://localhost:3001"
+      NEXTAUTH_URL: "http://localhost:3000"
       NODE_ENV: "development"
       # Kubeconfig path for K3s cluster
       KUBECONFIG: "/root/.kube/config"
