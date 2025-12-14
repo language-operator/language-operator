@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Trash2, Play, Pause } from 'lucide-react'
-import { useTools } from '@/hooks/use-tools'
+import { useTool } from '@/hooks/use-tools'
 
 export default function ClusterToolDetailPage() {
   const router = useRouter()
@@ -14,8 +14,8 @@ export default function ClusterToolDetailPage() {
   const clusterName = params?.name as string
   const toolName = params?.toolName as string
 
-  const { data: tools, isLoading } = useTools()
-  const tool = tools?.find((t: any) => t.metadata.name === toolName)
+  const { data: toolResponse, isLoading } = useTool(toolName)
+  const tool = toolResponse?.tool
 
   const handleEdit = () => {
     router.push(`/clusters/${clusterName}/tools/${toolName}/edit`)
