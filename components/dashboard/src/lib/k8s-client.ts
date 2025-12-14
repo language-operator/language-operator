@@ -44,11 +44,8 @@ class KubernetesClient {
       this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
       this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi)
     } catch (error) {
-      console.warn('⚠️  Kubernetes configuration not available:', error instanceof Error ? error.message : String(error))
-      console.log('📝 Running in demo mode without Kubernetes connection')
-      // Create mock APIs for development
-      this.coreV1Api = null
-      this.customObjectsApi = null
+      console.error('❌ Failed to configure Kubernetes client:', error instanceof Error ? error.message : String(error))
+      throw new Error('Kubernetes configuration is required')
     }
   }
 
@@ -59,9 +56,6 @@ class KubernetesClient {
     return KubernetesClient.instance
   }
 
-  private isKubernetesAvailable(): boolean {
-    return this.customObjectsApi !== null && this.coreV1Api !== null
-  }
 
   // Core V1 API methods
 
@@ -281,12 +275,7 @@ class KubernetesClient {
     
     try {
       if (!this.coreV1Api) {
-        return {
-          quota: {},
-          used: {},
-          available: {},
-          percentUsed: {}
-        }
+        throw new Error('Kubernetes API not available')
       }
       const response = await this.coreV1Api.readNamespacedResourceQuota({
         name: quotaName,
@@ -349,14 +338,6 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty agents list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
-    
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
@@ -431,14 +412,6 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty models list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
-    
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
@@ -535,14 +508,6 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty tools list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
-    
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
@@ -617,14 +582,6 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty personas list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
-    
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
@@ -707,32 +664,17 @@ class KubernetesClient {
     limit?: number
     continue?: string
   }) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty cluster list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
     }
     
-    try {
-      if (!this.customObjectsApi) {
-        throw new Error('Kubernetes API not available')
-      }
-      return await this.customObjectsApi.listNamespacedCustomObject({
-        group: 'langop.io',
-        version: 'v1alpha1',
-        namespace,
-        plural: 'languageclusters',
-        ...options,
-      })
-    } catch (error) {
-      console.warn('⚠️  Kubernetes API call failed, switching to demo mode:', error instanceof Error ? error.message : String(error))
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
+    return await this.customObjectsApi.listNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languageclusters',
+      ...options,
+    })
   }
 
   async getLanguageCluster(namespace: string, name: string) {
@@ -791,14 +733,6 @@ class KubernetesClient {
   // LanguageAgentVersion methods
 
   async listLanguageAgentVersions(namespace: string) {
-    if (!this.isKubernetesAvailable()) {
-      console.log('📝 Demo mode: Returning empty agent-versions list')
-      return { 
-        response: { statusCode: 200 }, 
-        data: { items: [] } 
-      }
-    }
-    
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }

@@ -1,49 +1,57 @@
 version: '3.8'
 
 services:
-  # Database
-  postgres:
+  # Database for development
+  postgres-dev:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: language_operator
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: language_operator_dev
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U dev -d language_operator_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Language Operator Dashboard
-  dashboard:
-    build: 
+  # Development dashboard (with hot reload)
+  dashboard-dev:
+    build:
       context: .
-      dockerfile: Dockerfile.dev
+      target: build-deps
     restart: always
-    network_mode: "host"
+    network_mode: host
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/language_operator?schema=public"
-      NEXTAUTH_SECRET: "your-nextauth-secret-change-in-production"
-      NEXTAUTH_URL: "http://localhost:3000"
+      DATABASE_URL: "postgresql://dev:dev@localhost:5433/language_operator_dev?schema=public"
+      NEXTAUTH_SECRET: "dev-secret-not-for-production"
+      NEXTAUTH_URL: "http://localhost:3001"
       NODE_ENV: "development"
-      # Kubernetes configuration - use local kubeconfig
+      # Kubeconfig path for K3s cluster
       KUBECONFIG: "/root/.kube/config"
+      # Kubernetes configuration (optional - for connecting to real cluster)
+      # KUBERNETES_SERVER_URL: "https://your-cluster-url"
+      # KUBERNETES_TOKEN: "your-service-account-token"
+      # KUBERNETES_SKIP_TLS_VERIFY: "false"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
     volumes:
-      - ~/.kube:/root/.kube:ro
-      # Mount source code for development
       - type: bind
-        source: ./src
-        target: /app/src
-      # Mount for development (optional)
+        source: ./
+        target: /app
+      - /app/node_modules
+      - /app/.next
+      # Mount kubeconfig for K3s cluster access
       - type: bind
-        source: ./prisma
-        target: /app/prisma
+        source: /home/james/.kube/config
+        target: /root/.kube/config
         read_only: true
+    command: sh -c "mkdir -p /root/.kube && npx prisma generate && npm run dev"
 
 volumes:
-  postgres_data:
+  postgres_dev_data:
