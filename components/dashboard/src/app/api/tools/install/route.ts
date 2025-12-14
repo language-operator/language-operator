@@ -3,16 +3,30 @@ import { fetchToolCatalog, getToolById, transformCatalogEntryToLanguageTool } fr
 import { k8sClient } from '@/lib/k8s-client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/permissions'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      include: { memberships: { include: { organization: true } } },
+    })
+
+    if (!user || user.memberships.length === 0) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    }
+
+    const organization = user.memberships[0].organization
     
-    if (!session?.activeOrganization?.namespace) {
-      return NextResponse.json(
-        { error: 'No active organization found' },
-        { status: 401 }
-      )
+    const hasPermission = await requirePermission(user.id, organization.id, 'create')
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -26,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use the user's organization namespace
-    const namespace = session.activeOrganization.namespace
+    const namespace = organization.namespace
 
     // Fetch the tool from catalog
     const catalog = await fetchToolCatalog()
@@ -41,6 +55,22 @@ export async function POST(request: NextRequest) {
 
     // Transform catalog entry to LanguageTool CRD
     const languageTool = transformCatalogEntryToLanguageTool(tool, namespace, clusterName)
+    
+    // Add organization and user labels
+    if (!languageTool.metadata) {
+      languageTool.metadata = {}
+    }
+    if (!languageTool.metadata.labels) {
+      languageTool.metadata.labels = {}
+    }
+    languageTool.metadata.labels['langop.io/organization'] = organization.id
+    languageTool.metadata.labels['langop.io/created-by'] = user.id
+    
+    if (!languageTool.metadata.annotations) {
+      languageTool.metadata.annotations = {}
+    }
+    languageTool.metadata.annotations['langop.io/created-by-email'] = user.email!
+    languageTool.metadata.annotations['langop.io/created-at'] = new Date().toISOString()
 
     try {
       // Apply the LanguageTool CRD to Kubernetes
@@ -53,7 +83,7 @@ export async function POST(request: NextRequest) {
       })
     } catch (k8sError: any) {
       // Check if tool already exists
-      if (k8sError.response?.statusCode === 409) {
+      if (k8sError.code === 409 || k8sError.response?.statusCode === 409) {
         return NextResponse.json(
           { error: 'Tool already installed' },
           { status: 409 }
