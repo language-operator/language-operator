@@ -1,6 +1,6 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -85,8 +85,45 @@ export default function ClusterTools() {
     isInstalled: boolean
     installedTool?: InstalledTool
     clusterName: string
-  }) => (
-    <Card key={toolId} className={`flex flex-col h-full ${isInstalled && installedTool ? 'border-green-200 bg-green-50/50' : ''}`}>
+  }) => {
+    const router = useRouter()
+
+    const handleCardClick = (event: React.MouseEvent) => {
+      // Only make installed tools clickable
+      if (!isInstalled || !installedTool) return
+      
+      // Don't navigate if clicking on buttons or other interactive elements
+      const target = event.target as HTMLElement
+      if (target.closest('button') || target.closest('a')) {
+        return
+      }
+      
+      router.push(`/clusters/${clusterName}/tools/${installedTool.name}`)
+    }
+
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+      if (!isInstalled || !installedTool) return
+      
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        router.push(`/clusters/${clusterName}/tools/${installedTool.name}`)
+      }
+    }
+
+    return (
+      <Card 
+        key={toolId} 
+        className={`flex flex-col h-full ${
+          isInstalled && installedTool 
+            ? 'border-green-200 bg-green-50/50 cursor-pointer hover:bg-green-50/70 hover:border-green-300 transition-colors' 
+            : ''
+        }`}
+        onClick={handleCardClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={isInstalled && installedTool ? 0 : -1}
+        role={isInstalled && installedTool ? 'button' : undefined}
+        aria-label={isInstalled && installedTool ? `View details for ${tool.displayName}` : undefined}
+      >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -150,10 +187,20 @@ export default function ClusterTools() {
                     </span>
                   )}
                 </div>
-                <Button variant="outline" size="sm" disabled>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled
+                  onClick={(e) => e.stopPropagation()}
+                >
                   Configure
                 </Button>
-                <Button variant="destructive" size="sm" disabled>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  disabled
+                  onClick={(e) => e.stopPropagation()}
+                >
                   Remove
                 </Button>
               </>
@@ -188,7 +235,8 @@ export default function ClusterTools() {
         </div>
       </CardContent>
     </Card>
-  )
+    )
+  }
 
   const filteredTools = catalog?.tools
     ? Object.entries(catalog.tools).filter(([_, tool]) => {
