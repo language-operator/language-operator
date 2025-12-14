@@ -16,6 +16,7 @@ import {
   Settings
 } from 'lucide-react'
 import { useCluster } from '@/hooks/use-clusters'
+import { useResourceCounts } from '@/hooks/useResourceCounts'
 import Link from 'next/link'
 
 function formatTimeAgo(timestamp?: string) {
@@ -38,6 +39,7 @@ export default function ClusterDashboard() {
   const clusterName = params?.name as string
   
   const { data: cluster, isLoading, error } = useCluster(clusterName)
+  const { counts, loading: countsLoading } = useResourceCounts()
 
   if (isLoading) {
     return (
@@ -193,7 +195,9 @@ export default function ClusterDashboard() {
               <Cpu className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">
+                {countsLoading ? '-' : counts?.models || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Language models in this cluster
               </p>
@@ -205,7 +209,9 @@ export default function ClusterDashboard() {
               <Wrench className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">
+                {countsLoading ? '-' : counts?.tools || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Available tools
               </p>
@@ -217,7 +223,9 @@ export default function ClusterDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">
+                {countsLoading ? '-' : counts?.personas || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Configured personas
               </p>
@@ -229,7 +237,9 @@ export default function ClusterDashboard() {
               <Bot className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">
+                {countsLoading ? '-' : counts?.agents || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Running agents
               </p>
