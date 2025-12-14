@@ -150,6 +150,82 @@ export async function PATCH(
   }
 }
 
+// PUT /api/models/[name] - Update a specific model (full replace)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  try {
+    const { name } = await params
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const validatedData = updateModelSchema.parse(body)
+    
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      include: { memberships: { include: { organization: true } } },
+    })
+
+    if (!user || user.memberships.length === 0) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    }
+
+    const organization = user.memberships[0].organization
+    const namespace = organization.namespace
+
+    // Get existing model
+    const existingModel = await k8sClient.getLanguageModel(namespace, name)
+    if (!existingModel) {
+      return NextResponse.json({ error: 'Model not found' }, { status: 404 })
+    }
+
+    // Replace the model using PUT semantics
+    const updatedModel = await k8sClient.replaceLanguageModel(namespace, name, {
+      metadata: {
+        ...existingModel.metadata,
+        annotations: {
+          ...existingModel.metadata.annotations,
+          'langop.io/updated-at': new Date().toISOString(),
+          'langop.io/updated-by': session.user.email || 'unknown'
+        }
+      },
+      spec: {
+        ...existingModel.spec,
+        ...validatedData.spec,
+        provider: validatedData.provider || validatedData.spec?.provider || existingModel.spec.provider,
+        model: validatedData.model || validatedData.spec?.model || existingModel.spec.model,
+        endpoint: validatedData.endpoint || validatedData.spec?.endpoint || existingModel.spec.endpoint,
+        ...(validatedData.apiKey !== undefined && { apiKey: validatedData.apiKey }),
+        ...(validatedData.spec?.apiKey !== undefined && { apiKey: validatedData.spec.apiKey }),
+      }
+    })
+
+    // Log the update for audit trail
+    console.log(`Model updated via PUT: ${name} by ${session.user.email} in ${namespace}`)
+
+    return NextResponse.json({ data: updatedModel })
+  } catch (error) {
+    console.error('Error updating model via PUT:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: error.issues },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE /api/models/[name] - Delete a specific model
 export async function DELETE(
   request: NextRequest,

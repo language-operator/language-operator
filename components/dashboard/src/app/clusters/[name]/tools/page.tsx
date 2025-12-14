@@ -52,8 +52,135 @@ export default function ClusterTools() {
   }
 
   const isToolInstalled = (toolName: string) => {
-    return installedTools.some(tool => tool.catalogName === toolName || tool.name === toolName)
+    return installedTools.some(tool => 
+      tool.catalogName === toolName || 
+      tool.name === toolName || 
+      tool.metadata?.name === toolName
+    )
   }
+
+  const getCatalogEntryForInstalledTool = (installedTool: InstalledTool) => {
+    if (!catalog?.tools) return null
+    const toolName = installedTool.catalogName || installedTool.metadata?.name || installedTool.name
+    return Object.entries(catalog.tools).find(([id, _]) => id === toolName)?.[1] || null
+  }
+
+  const ToolCard = ({ 
+    toolId, 
+    tool, 
+    isInstalled, 
+    installedTool, 
+    clusterName 
+  }: {
+    toolId: string
+    tool: ToolCatalogEntry
+    isInstalled: boolean
+    installedTool?: InstalledTool
+    clusterName: string
+  }) => (
+    <Card key={toolId} className={`flex flex-col h-full ${isInstalled && installedTool ? 'border-green-200 bg-green-50/50' : ''}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-lg">{tool.displayName}</CardTitle>
+            <CardDescription className="text-sm text-gray-500 mt-1">{toolId}</CardDescription>
+            <CardDescription className="mt-1 line-clamp-2">
+              {tool.description}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col flex-1">
+        <div className="space-y-3 flex-1">
+          {/* Tool metadata */}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="text-xs">
+              {tool.type.toUpperCase()}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              {tool.deploymentMode}
+            </Badge>
+            {tool.authRequired && (
+              <Badge variant="outline" className="text-xs">
+                <Shield className="h-3 w-3 mr-1" />
+                Auth Required
+              </Badge>
+            )}
+          </div>
+
+          {/* Features */}
+          <div className="text-xs text-gray-600 space-y-1">
+            {tool.rbac && (
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                <span>RBAC configured</span>
+              </div>
+            )}
+            {tool.egress && (
+              <div className="flex items-center gap-1">
+                <Network className="h-3 w-3" />
+                <span>Network policies defined</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions/Status - anchored to bottom */}
+        <div className="flex gap-2 pt-3 mt-auto">
+            {isInstalled && installedTool ? (
+              <>
+                <div className="flex-1 flex items-center gap-2">
+                  <Badge 
+                    variant={installedTool.status.phase === 'Ready' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {installedTool.status.phase}
+                  </Badge>
+                  {installedTool.status.message && (
+                    <span className="text-xs text-gray-500 truncate">
+                      {installedTool.status.message}
+                    </span>
+                  )}
+                </div>
+                <Button variant="outline" size="sm" disabled>
+                  Configure
+                </Button>
+                <Button variant="destructive" size="sm" disabled>
+                  Remove
+                </Button>
+              </>
+            ) : (
+              <>
+                {isInstalled ? (
+                  <Button disabled className="flex-1" size="sm">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Installed
+                  </Button>
+                ) : (
+                  <Button asChild className="flex-1" size="sm">
+                    <Link href={`/clusters/${clusterName}/tools/install/${toolId}`}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Install
+                    </Link>
+                  </Button>
+                )}
+                {tool.homepage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a href={tool.homepage} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </>
+            )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   const filteredTools = catalog?.tools
     ? Object.entries(catalog.tools).filter(([_, tool]) => {
@@ -136,31 +263,21 @@ export default function ClusterTools() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Installed Tools</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {installedTools.map((tool) => (
-                <Card key={tool.name} className="border-green-200 bg-green-50/50">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{tool.name}</CardTitle>
-                        <Badge className="mt-2 bg-green-600">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Installed
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm text-gray-600">
-                      Status: <span className="font-medium">{tool.status.phase}</span>
-                    </div>
-                    {tool.status.message && (
-                      <div className="text-sm text-gray-500 mt-1">
-                        {tool.status.message}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              {installedTools.map((installedTool) => {
+                const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
+                if (!catalogEntry) return null
+                const toolId = installedTool.catalogName || installedTool.metadata?.name || installedTool.name
+                return (
+                  <ToolCard
+                    key={installedTool.name}
+                    toolId={toolId}
+                    tool={catalogEntry}
+                    isInstalled={true}
+                    installedTool={installedTool}
+                    clusterName={clusterName}
+                  />
+                )
+              })}
             </div>
           </div>
         )}
@@ -185,81 +302,13 @@ export default function ClusterTools() {
               {filteredTools.map(([toolId, tool]) => {
                 const installed = isToolInstalled(toolId)
                 return (
-                  <Card key={toolId} className={installed ? 'opacity-75' : ''}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{tool.displayName}</CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2">
-                            {tool.description}
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {/* Tool metadata */}
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {tool.type.toUpperCase()}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {tool.deploymentMode}
-                          </Badge>
-                          {tool.authRequired && (
-                            <Badge variant="outline" className="text-xs">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Auth Required
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Features */}
-                        <div className="text-xs text-gray-600 space-y-1">
-                          {tool.rbac && (
-                            <div className="flex items-center gap-1">
-                              <Shield className="h-3 w-3" />
-                              <span>RBAC configured</span>
-                            </div>
-                          )}
-                          {tool.egress && (
-                            <div className="flex items-center gap-1">
-                              <Network className="h-3 w-3" />
-                              <span>Network policies defined</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 pt-2">
-                          {installed ? (
-                            <Button disabled className="flex-1" size="sm">
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Installed
-                            </Button>
-                          ) : (
-                            <Button asChild className="flex-1" size="sm">
-                              <Link href={`/clusters/${clusterName}/tools/install/${toolId}`}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Install
-                              </Link>
-                            </Button>
-                          )}
-                          {tool.homepage && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <a href={tool.homepage} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ToolCard
+                    key={toolId}
+                    toolId={toolId}
+                    tool={tool}
+                    isInstalled={installed}
+                    clusterName={clusterName}
+                  />
                 )
               })}
             </div>
