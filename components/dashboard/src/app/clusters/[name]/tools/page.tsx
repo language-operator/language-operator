@@ -54,14 +54,13 @@ export default function ClusterTools() {
   const isToolInstalled = (toolName: string) => {
     return installedTools.some(tool => 
       tool.catalogName === toolName || 
-      tool.name === toolName || 
-      tool.metadata?.name === toolName
+      tool.name === toolName
     )
   }
 
   const getCatalogEntryForInstalledTool = (installedTool: InstalledTool) => {
     if (!catalog?.tools) return null
-    const toolName = installedTool.catalogName || installedTool.metadata?.name || installedTool.name
+    const toolName = installedTool.catalogName || installedTool.name
     return Object.entries(catalog.tools).find(([id, _]) => id === toolName)?.[1] || null
   }
 
@@ -266,7 +265,7 @@ export default function ClusterTools() {
               {installedTools.map((installedTool) => {
                 const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
                 if (!catalogEntry) return null
-                const toolId = installedTool.catalogName || installedTool.metadata?.name || installedTool.name
+                const toolId = installedTool.catalogName || installedTool.name
                 return (
                   <ToolCard
                     key={installedTool.name}

@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
         image: 'ghcr.io/langop/language-agent:latest',
         
         // Required: Model references 
-        modelRefs: formData.selectedModels.map(modelName => ({ 
+        modelRefs: (formData.selectedModels || []).map(modelName => ({ 
           name: modelName,
           namespace: organization.namespace 
         })),

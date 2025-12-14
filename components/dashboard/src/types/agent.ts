@@ -19,6 +19,9 @@ export interface LanguageAgentList {
 }
 
 export interface LanguageAgentSpec {
+  // Required: Container image for the agent
+  image?: string
+  
   // Primary instructions for agent behavior
   instructions?: string
   

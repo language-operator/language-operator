@@ -59,7 +59,7 @@ export const LanguageAgentSpecSchema = z.object({
     name: z.string(),
     provider: z.string().optional(),
     endpoint: z.string().optional(),
-    parameters: z.record(z.any()).optional(),
+    parameters: z.record(z.string(), z.any()).optional(),
   }).optional(),
   persona: z.object({
     name: z.string(),

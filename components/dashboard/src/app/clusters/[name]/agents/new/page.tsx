@@ -119,7 +119,7 @@ export default function CreateClusterAgentPage() {
   const onSubmit = async (values: AgentFormValues) => {
     try {
       // Get the first selected model for legacy API compatibility
-      const firstModel = availableModels.find(m => values.selectedModels.includes(m.metadata.name))
+      const firstModel = availableModels.find((m: any) => values.selectedModels.includes(m.metadata.name))
       console.log('First model data:', firstModel)
       
       const formData: LanguageAgentFormData = {

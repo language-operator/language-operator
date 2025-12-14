@@ -99,17 +99,9 @@ export function transformCatalogEntryToLanguageTool(
       image: entry.image,
       deploymentMode: entry.deploymentMode,
       ...(entry.port && { port: entry.port }),
-    },
-  }
-
-  // Add cluster reference if provided
-  if (clusterName) {
-    languageTool.spec.clusterRef = clusterName
-  }
-
-  // Add egress rules if defined
-  if (entry.egress) {
-    languageTool.spec.egress = entry.egress
+      ...(clusterName && { clusterRef: clusterName }),
+      ...(entry.egress && { egress: entry.egress }),
+    } as any,
   }
 
   return languageTool
