@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useAgents } from '@/hooks/use-agents'
 
 export default function ClusterAgents() {
   const params = useParams()
+  const router = useRouter()
   const clusterName = params?.name as string
   
   // For now, fetch all agents and filter client-side
@@ -68,6 +69,23 @@ export default function ClusterAgents() {
         return <Clock className="h-4 w-4" />
       default:
         return <Bot className="h-4 w-4" />
+    }
+  }
+
+  const handleAgentCardClick = (agentName: string) => (event: React.MouseEvent) => {
+    // Don't navigate if clicking on buttons or other interactive elements
+    const target = event.target as HTMLElement
+    if (target.closest('button') || target.closest('a')) {
+      return
+    }
+    
+    router.push(`/clusters/${clusterName}/agents/${agentName}`)
+  }
+
+  const handleAgentCardKeyDown = (agentName: string) => (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      router.push(`/clusters/${clusterName}/agents/${agentName}`)
     }
   }
 
@@ -140,7 +158,15 @@ export default function ClusterAgents() {
               /* Agents Grid */
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {clusterAgents.map((agent: any) => (
-                  <Card key={agent.metadata.name} className="hover:shadow-md transition-shadow">
+                  <Card 
+                    key={agent.metadata.name} 
+                    className="hover:shadow-md hover:bg-gray-50/50 transition-all cursor-pointer"
+                    onClick={handleAgentCardClick(agent.metadata.name)}
+                    onKeyDown={handleAgentCardKeyDown(agent.metadata.name)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`View details for agent ${agent.metadata.name}`}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">{agent.metadata.name}</CardTitle>
