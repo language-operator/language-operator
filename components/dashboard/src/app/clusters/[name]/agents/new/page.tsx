@@ -32,161 +32,84 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { useCreateAgent } from '@/hooks/use-agents'
+import { useModels } from '@/hooks/use-models'
+import { useTools } from '@/hooks/use-tools'
+import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgentFormData, LanguageAgent } from '@/types/agent'
 import { useToast } from '@/hooks/use-toast'
 
-// Form validation schema
+// Simplified form validation schema - only 5 essential fields
 const agentFormSchema = z.object({
+  instructions: z.string()
+    .min(1, 'Goal is required')
+    .min(10, 'Goal must be at least 10 characters')
+    .max(5000, 'Goal must be less than 5000 characters'),
   name: z.string()
     .min(1, 'Name is required')
     .max(253, 'Name must be 253 characters or less')
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Name must be a valid Kubernetes resource name'),
-  executionMode: z.enum(['worker', 'server', 'hybrid']),
-  replicas: z.number().min(1, 'At least 1 replica is required').max(10, 'Maximum 10 replicas allowed'),
-  
-  // Model configuration
-  modelName: z.string().min(1, 'Model name is required'),
-  modelProvider: z.string().optional(),
-  modelEndpoint: z.string().optional(),
-  
-  // Persona configuration (optional)
-  personaName: z.string().optional(),
-  personaTone: z.string().optional(),
-  personaInstructions: z.string().optional(),
-  
-  // Tools (simplified for now)
+  selectedModels: z.array(z.string()).min(1, 'At least one model must be selected'),
   selectedTools: z.array(z.string()),
-  
-  // Resources
-  cpuRequest: z.string().optional(),
-  memoryRequest: z.string().optional(),
-  cpuLimit: z.string().optional(),
-  memoryLimit: z.string().optional(),
-  
-  // Scaling
-  minReplicas: z.number().min(1).optional(),
-  maxReplicas: z.number().min(1).optional(),
-  targetCPUUtilization: z.number().min(1).max(100).optional(),
-  
-  // Networking
-  enableIngress: z.boolean(),
-  ingressHost: z.string().optional(),
-  ingressPath: z.string().optional(),
-  enableTLS: z.boolean(),
+  selectedPersona: z.string().optional(),
 })
 
 type AgentFormValues = z.infer<typeof agentFormSchema>
 
-// Available tools
-const availableTools = [
-  'web-search',
-  'calculator',
-  'file-reader',
-  'image-generator',
-  'code-interpreter',
-  'database-query',
-]
+// Data fetching hooks - will be implemented next
+// Models, tools, and personas will be fetched from cluster APIs
 
 export default function CreateClusterAgentPage() {
   const router = useRouter()
   const params = useParams()
   const clusterName = params?.name as string
   
-  const [activeTab, setActiveTab] = useState('basic')
   const [showYamlPreview, setShowYamlPreview] = useState(false)
   const { toast } = useToast()
   
   const createAgent = useCreateAgent()
   
+  // Fetch available data for dropdowns
+  const { data: modelsResponse, isLoading: isLoadingModels } = useModels()
+  const { data: toolsResponse, isLoading: isLoadingTools } = useTools()
+  const { data: personasResponse, isLoading: isLoadingPersonas } = usePersonas()
+  
+  // Extract data from API responses
+  const availableModels = modelsResponse?.data || []
+  const availableTools = toolsResponse?.data || []
+  const availablePersonas = personasResponse?.data || []
+  
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),
     defaultValues: {
+      instructions: '',
       name: '',
-      executionMode: 'worker',
-      replicas: 1,
-      modelName: '',
-      modelProvider: '',
-      modelEndpoint: '',
-      personaName: '',
-      personaTone: '',
-      personaInstructions: '',
+      selectedModels: availableModels.length > 0 ? [availableModels[0].metadata.name] : [],
       selectedTools: [],
-      cpuRequest: '100m',
-      memoryRequest: '128Mi',
-      cpuLimit: '500m',
-      memoryLimit: '512Mi',
-      minReplicas: 1,
-      maxReplicas: 3,
-      targetCPUUtilization: 70,
-      enableIngress: false,
-      ingressHost: '',
-      ingressPath: '/',
-      enableTLS: false,
+      selectedPersona: 'none',
     },
   })
 
   const watchedValues = form.watch()
 
-  // Generate YAML preview
+  // Generate simplified YAML preview
   const generateYamlPreview = (values: AgentFormValues): string => {
     const agent: Partial<LanguageAgent> = {
       apiVersion: 'langop.io/v1alpha1',
       kind: 'LanguageAgent',
       metadata: {
         name: values.name || 'example-agent',
-        namespace: 'default',
+        namespace: clusterName ? `cluster-${clusterName}` : 'default',
       },
       spec: {
-        executionMode: values.executionMode,
-        replicas: values.replicas,
-        model: {
-          name: values.modelName,
-          ...(values.modelProvider && { provider: values.modelProvider }),
-          ...(values.modelEndpoint && { endpoint: values.modelEndpoint }),
-        },
-        ...(values.personaName && {
-          persona: {
-            name: values.personaName,
-            ...(values.personaTone && { tone: values.personaTone }),
-            ...(values.personaInstructions && { instructions: values.personaInstructions }),
-          },
-        }),
+        instructions: values.instructions,
+        executionMode: 'autonomous',
+        modelRefs: values.selectedModels.length > 0 ? values.selectedModels.map(name => ({ name })) : [],
         ...(values.selectedTools.length > 0 && {
-          tools: values.selectedTools.map(name => ({ name })),
+          toolRefs: values.selectedTools.map(name => ({ name })),
         }),
-        ...(values.cpuRequest || values.memoryRequest || values.cpuLimit || values.memoryLimit) && {
-          resources: {
-            ...(values.cpuRequest || values.memoryRequest) && {
-              requests: {
-                ...(values.cpuRequest && { cpu: values.cpuRequest }),
-                ...(values.memoryRequest && { memory: values.memoryRequest }),
-              },
-            },
-            ...(values.cpuLimit || values.memoryLimit) && {
-              limits: {
-                ...(values.cpuLimit && { cpu: values.cpuLimit }),
-                ...(values.memoryLimit && { memory: values.memoryLimit }),
-              },
-            },
-          },
-        },
-        ...(values.minReplicas || values.maxReplicas || values.targetCPUUtilization) && {
-          scaling: {
-            ...(values.minReplicas && { minReplicas: values.minReplicas }),
-            ...(values.maxReplicas && { maxReplicas: values.maxReplicas }),
-            ...(values.targetCPUUtilization && { targetCPUUtilization: values.targetCPUUtilization }),
-          },
-        },
-        ...(values.enableIngress) && {
-          networking: {
-            ingress: {
-              enabled: true,
-              ...(values.ingressHost && { host: values.ingressHost }),
-              ...(values.ingressPath && { path: values.ingressPath }),
-              tls: values.enableTLS,
-            },
-          },
-        },
+        ...(values.selectedPersona && values.selectedPersona !== 'none' && {
+          personaRefs: [{ name: values.selectedPersona }],
+        }),
       },
     }
     
@@ -195,31 +118,31 @@ export default function CreateClusterAgentPage() {
 
   const onSubmit = async (values: AgentFormValues) => {
     try {
+      // Get the first selected model for legacy API compatibility
+      const firstModel = availableModels.find(m => values.selectedModels.includes(m.metadata.name))
+      console.log('First model data:', firstModel)
+      
       const formData: LanguageAgentFormData = {
+        instructions: values.instructions,
         name: values.name,
-        namespace: '',
-        executionMode: values.executionMode,
-        replicas: values.replicas,
-        modelName: values.modelName,
-        modelProvider: values.modelProvider,
-        modelEndpoint: values.modelEndpoint,
-        personaName: values.personaName,
-        personaTone: values.personaTone,
-        personaInstructions: values.personaInstructions,
+        namespace: clusterName ? `cluster-${clusterName}` : 'default',
+        selectedModels: values.selectedModels,
         selectedTools: values.selectedTools,
-        cpuRequest: values.cpuRequest,
-        memoryRequest: values.memoryRequest,
-        cpuLimit: values.cpuLimit,
-        memoryLimit: values.memoryLimit,
-        minReplicas: values.minReplicas,
-        maxReplicas: values.maxReplicas,
-        targetCPUUtilization: values.targetCPUUtilization,
-        enableIngress: values.enableIngress,
-        ingressHost: values.ingressHost,
-        ingressPath: values.ingressPath,
-        enableTLS: values.enableTLS,
+        selectedPersona: values.selectedPersona === 'none' ? undefined : values.selectedPersona,
+        // Legacy fields for API compatibility
+        executionMode: 'autonomous',
+        replicas: 1,
+        modelName: values.selectedModels[0] || '',
+        modelProvider: firstModel?.spec?.provider || '',
+        modelEndpoint: firstModel?.spec?.endpoint || '',
+        modelParameters: firstModel?.spec?.parameters || {},
+        personaName: values.selectedPersona === 'none' ? '' : values.selectedPersona || '',
+        personaInstructions: values.instructions,
+        // Cluster reference for cluster-scoped agents
+        clusterRef: clusterName || '',
       }
 
+      console.log('Submitting form data:', formData)
       await createAgent.mutateAsync(formData)
       
       toast({
@@ -286,528 +209,180 @@ export default function CreateClusterAgentPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Form */}
+          {/* Simplified Single-Column Form */}
           <div className={showYamlPreview ? "lg:col-span-2" : "lg:col-span-3"}>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="basic">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Basic
-                    </TabsTrigger>
-                    <TabsTrigger value="model">
-                      <Bot className="h-4 w-4 mr-2" />
-                      Model & Tools
-                    </TabsTrigger>
-                    <TabsTrigger value="resources">
-                      <Zap className="h-4 w-4 mr-2" />
-                      Resources
-                    </TabsTrigger>
-                    <TabsTrigger value="networking">
-                      <Network className="h-4 w-4 mr-2" />
-                      Network
-                    </TabsTrigger>
-                  </TabsList>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Agent Configuration</CardTitle>
+                    <CardDescription>
+                      Define your language agent with instructions, models, tools, and persona
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Instructions - Primary field */}
+                    <FormField
+                      control={form.control}
+                      name="instructions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-lg font-semibold">Goal *</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Enter the goal for your agent (e.g., 'Write a short story', 'Analyze customer feedback', 'Generate test cases')..."
+                              className="min-h-[120px] text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            The specific goal or task you want this agent to accomplish
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Basic Configuration */}
-                  <TabsContent value="basic" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Basic Configuration</CardTitle>
-                        <CardDescription>
-                          Set up the basic parameters for your language agent
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Agent Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="my-agent" {...field} />
-                              </FormControl>
-                              <FormDescription>
-                                Must be a valid Kubernetes resource name (lowercase, numbers, hyphens)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                    {/* Agent Name */}
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Agent Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="my-agent" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Must be a valid Kubernetes resource name (lowercase, numbers, hyphens)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                        <FormField
-                          control={form.control}
-                          name="executionMode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Execution Mode</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select execution mode" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="worker">Worker</SelectItem>
-                                  <SelectItem value="server">Server</SelectItem>
-                                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormDescription>
-                                Worker: Process tasks from queue. Server: Handle HTTP requests. Hybrid: Both.
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="replicas"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Replicas</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  type="number" 
-                                  min="1" 
-                                  max="10" 
-                                  {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                Number of agent instances to run (1-10)
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Model & Tools Configuration */}
-                  <TabsContent value="model" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Model Configuration</CardTitle>
-                        <CardDescription>
-                          Configure the language model for your agent
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="modelName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Model Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="gpt-4" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="modelProvider"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Provider (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="openai" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="modelEndpoint"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Endpoint (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="https://api.openai.com/v1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Persona Configuration</CardTitle>
-                        <CardDescription>
-                          Optional personality and behavior settings
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="personaName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Persona Name (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="helpful-assistant" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="personaTone"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Tone (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="helpful, professional" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="personaInstructions"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Instructions (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="You are a helpful assistant that..."
-                                  className="min-h-[100px]"
-                                  {...field} 
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Tools Configuration</CardTitle>
-                        <CardDescription>
-                          Select tools and capabilities for your agent
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div>
-                            <FormLabel>Available Tools</FormLabel>
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              {availableTools.map((tool) => (
-                                <div
-                                  key={tool}
-                                  className="flex items-center justify-between p-2 border rounded-lg"
-                                >
-                                  <span className="text-sm">{tool}</span>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={watchedValues.selectedTools.includes(tool) ? "default" : "outline"}
-                                    onClick={() => {
-                                      if (watchedValues.selectedTools.includes(tool)) {
-                                        removeTool(tool)
+                    {/* Models Multi-select */}
+                    <FormField
+                      control={form.control}
+                      name="selectedModels"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Models *</FormLabel>
+                          <FormDescription>
+                            Select one or more models for your agent
+                          </FormDescription>
+                          {isLoadingModels ? (
+                            <div className="text-sm text-muted-foreground">Loading available models...</div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2 mt-2">
+                              {availableModels.map((model: any) => (
+                                <div key={model.metadata.name} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={field.value.includes(model.metadata.name)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        field.onChange([...field.value, model.metadata.name])
                                       } else {
-                                        addTool(tool)
+                                        field.onChange(field.value.filter(name => name !== model.metadata.name))
                                       }
                                     }}
-                                  >
-                                    {watchedValues.selectedTools.includes(tool) ? (
-                                      <X className="h-3 w-3" />
-                                    ) : (
-                                      <Plus className="h-3 w-3" />
-                                    )}
-                                  </Button>
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">{model.metadata.name}</div>
+                                    <div className="text-sm text-muted-foreground">{model.spec.provider} - {model.spec.modelName}</div>
+                                  </div>
                                 </div>
                               ))}
-                            </div>
-                          </div>
-
-                          {watchedValues.selectedTools.length > 0 && (
-                            <div>
-                              <FormLabel>Selected Tools</FormLabel>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {watchedValues.selectedTools.map((tool) => (
-                                  <Badge key={tool} variant="default" className="text-xs">
-                                    {tool}
-                                    <button
-                                      type="button"
-                                      onClick={() => removeTool(tool)}
-                                      className="ml-2 text-xs"
-                                    >
-                                      ×
-                                    </button>
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Resources Configuration */}
-                  <TabsContent value="resources" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Resource Limits</CardTitle>
-                        <CardDescription>
-                          Configure CPU and memory resources
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="cpuRequest"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>CPU Request</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="100m" {...field} />
-                                </FormControl>
-                                <FormDescription>e.g., 100m, 0.5, 1</FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="cpuLimit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>CPU Limit</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="500m" {...field} />
-                                </FormControl>
-                                <FormDescription>e.g., 500m, 1, 2</FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="memoryRequest"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Memory Request</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="128Mi" {...field} />
-                                </FormControl>
-                                <FormDescription>e.g., 128Mi, 1Gi</FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="memoryLimit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Memory Limit</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="512Mi" {...field} />
-                                </FormControl>
-                                <FormDescription>e.g., 512Mi, 2Gi</FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Auto Scaling</CardTitle>
-                        <CardDescription>
-                          Configure automatic scaling behavior
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="minReplicas"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Min Replicas</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="maxReplicas"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Max Replicas</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min="1"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="targetCPUUtilization"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Target CPU %</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min="1" 
-                                    max="100"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Networking Configuration */}
-                  <TabsContent value="networking" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Ingress Configuration</CardTitle>
-                        <CardDescription>
-                          Configure external access to your agent
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="enableIngress"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <FormLabel className="text-base">
-                                  Enable Ingress
-                                </FormLabel>
-                                <FormDescription>
-                                  Expose your agent via HTTP/HTTPS
-                                </FormDescription>
-                              </div>
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-
-                        {watchedValues.enableIngress && (
-                          <>
-                            <div className="grid grid-cols-2 gap-4">
-                              <FormField
-                                control={form.control}
-                                name="ingressHost"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Host</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="my-agent.example.com" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-
-                              <FormField
-                                control={form.control}
-                                name="ingressPath"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Path</FormLabel>
-                                    <FormControl>
-                                      <Input placeholder="/" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-
-                            <FormField
-                              control={form.control}
-                              name="enableTLS"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                  <div className="space-y-0.5">
-                                    <FormLabel className="text-base">
-                                      Enable TLS
-                                    </FormLabel>
-                                    <FormDescription>
-                                      Use HTTPS with automatic certificate
-                                    </FormDescription>
-                                  </div>
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                </FormItem>
+                              {availableModels.length === 0 && (
+                                <div className="text-sm text-muted-foreground">No models available in this cluster</div>
                               )}
-                            />
-                          </>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                {/* Submit Buttons */}
+                    {/* Tools Multi-select */}
+                    <FormField
+                      control={form.control}
+                      name="selectedTools"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tools</FormLabel>
+                          <FormDescription>
+                            Select tools and capabilities for your agent
+                          </FormDescription>
+                          {isLoadingTools ? (
+                            <div className="text-sm text-muted-foreground">Loading available tools...</div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              {availableTools.map((tool: any) => (
+                                <div key={tool.metadata.name} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={field.value.includes(tool.metadata.name)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        field.onChange([...field.value, tool.metadata.name])
+                                      } else {
+                                        field.onChange(field.value.filter(name => name !== tool.metadata.name))
+                                      }
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="font-medium">{tool.metadata.name}</div>
+                                  </div>
+                                </div>
+                              ))}
+                              {availableTools.length === 0 && (
+                                <div className="text-sm text-muted-foreground">No tools available in this cluster</div>
+                              )}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Persona Single Select */}
+                    <FormField
+                      control={form.control}
+                      name="selectedPersona"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Persona</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="None" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {isLoadingPersonas ? (
+                                <SelectItem value="loading" disabled>Loading personas...</SelectItem>
+                              ) : (
+                                availablePersonas.map((persona: any) => (
+                                  <SelectItem key={persona.metadata.name} value={persona.metadata.name}>
+                                    {persona.metadata.name}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Optional personality configuration for your agent
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+
+                  {/* Form Actions */}
+                </Card>
+
+                {/* Form Actions */}
                 <div className="flex items-center justify-between">
                   <Button 
                     type="button" 

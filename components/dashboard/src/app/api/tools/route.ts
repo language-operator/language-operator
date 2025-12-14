@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
     }
 
     const response = await k8sClient.listLanguageTools(organization.namespace)
-    const tools = (response.data as any)?.items || []
+    
+    // Handle different response structures from k8s client
+    const tools = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
     // Apply filtering and sorting (similar to agents pattern)
     let filteredTools = tools.filter((tool: LanguageTool) => {

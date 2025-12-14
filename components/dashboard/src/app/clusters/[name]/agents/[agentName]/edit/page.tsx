@@ -37,7 +37,7 @@ const agentFormSchema = z.object({
     .min(1, 'Name is required')
     .max(253, 'Name must be 253 characters or less')
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Name must be a valid Kubernetes resource name'),
-  executionMode: z.enum(['worker', 'server', 'hybrid']),
+  executionMode: z.enum(['autonomous', 'interactive', 'scheduled', 'event-driven']),
   replicas: z.number().min(1, 'At least 1 replica is required').max(10, 'Maximum 10 replicas allowed'),
   
   // Model configuration
@@ -101,7 +101,7 @@ export default function EditClusterAgentPage() {
     resolver: zodResolver(agentFormSchema),
     defaultValues: {
       name: '',
-      executionMode: 'worker',
+      executionMode: 'autonomous',
       replicas: 1,
       modelName: '',
       modelProvider: '',

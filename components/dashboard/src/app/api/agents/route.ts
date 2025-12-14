@@ -53,8 +53,32 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch agents from Kubernetes
+    console.log('Fetching agents from namespace:', organization.namespace)
     const response = await k8sClient.listLanguageAgents(organization.namespace)
-    const agents = (response.data as any)?.items || []
+    console.log('K8s response type:', typeof response)
+    console.log('K8s response keys:', Object.keys(response))
+    console.log('Full K8s response:', JSON.stringify(response, null, 2))
+    
+    // Handle different response structures from k8s client
+    // Live K8s mode: { items: [...] } (direct response)
+    // Legacy modes: { body: { items: [...] } } or { data: { items: [] } }
+    let agents = []
+    try {
+      const rawItems = response.items || response.body?.items || response.data?.items || []
+      agents = Array.isArray(rawItems) ? rawItems : []
+      console.log('Direct response check - response type:', typeof response)
+      console.log('Raw items type:', typeof rawItems)
+      console.log('Raw items length:', rawItems?.length)
+      console.log('Extracted agents count:', agents.length)
+      if (agents.length > 0) {
+        console.log('First agent structure:', JSON.stringify(agents[0], null, 2))
+      } else {
+        console.log('No agents found - debugging full response:', JSON.stringify(response, null, 2))
+      }
+    } catch (k8sError) {
+      console.error('Error extracting agents from K8s response:', k8sError)
+      agents = []
+    }
 
     // Apply client-side filtering (in production, you'd want server-side filtering)
     let filteredAgents = agents.filter((agent: LanguageAgent) => {
@@ -73,7 +97,7 @@ export async function GET(request: NextRequest) {
 
       // Execution mode filter
       if (params.executionMode && params.executionMode.length > 0) {
-        if (!params.executionMode.includes(agent.spec.executionMode)) return false
+        if (!params.executionMode.includes(agent.spec.executionMode || 'autonomous')) return false
       }
 
       return true
@@ -174,17 +198,17 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json()
     
-    // Validate form data structure (you can add a form schema later)
-    if (!body.name || !body.executionMode || !body.modelName || !body.modelProvider) {
+    // Validate required fields as per CRD specification
+    if (!body.name || !body.selectedModels || !Array.isArray(body.selectedModels) || body.selectedModels.length === 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, executionMode, modelName, modelProvider' },
+        { error: 'Missing required fields: name and at least one selectedModel' },
         { status: 400 }
       )
     }
 
     const formData: LanguageAgentFormData = body
 
-    // Convert form data to LanguageAgent CRD
+    // Convert form data to LanguageAgent CRD matching the Go specification
     const agentData: LanguageAgent = {
       apiVersion: 'langop.io/v1alpha1',
       kind: 'LanguageAgent',
@@ -201,63 +225,35 @@ export async function POST(request: NextRequest) {
         },
       },
       spec: {
-        executionMode: formData.executionMode,
-        replicas: formData.replicas,
-        model: {
-          name: formData.modelName,
-          provider: formData.modelProvider,
-          endpoint: formData.modelEndpoint,
-          parameters: formData.modelParameters,
-        },
-        ...(formData.personaName && {
-          persona: {
-            name: formData.personaName,
-            tone: formData.personaTone,
-            instructions: formData.personaInstructions,
-          },
+        // Required: Container image for the agent
+        image: 'ghcr.io/langop/language-agent:latest',
+        
+        // Required: Model references 
+        modelRefs: formData.selectedModels.map(modelName => ({ 
+          name: modelName,
+          namespace: organization.namespace 
+        })),
+        
+        // Optional fields
+        ...(formData.clusterRef && { clusterRef: formData.clusterRef }),
+        ...(formData.instructions && { instructions: formData.instructions }),
+        executionMode: formData.executionMode || 'autonomous',
+        replicas: formData.replicas || 1,
+        // Tool references using CRD structure
+        ...(formData.selectedTools && formData.selectedTools.length > 0 && {
+          toolRefs: formData.selectedTools.map(toolName => ({ 
+            name: toolName,
+            namespace: organization.namespace 
+          })),
         }),
-        ...(formData.selectedTools.length > 0 && {
-          tools: formData.selectedTools.map(toolName => ({ name: toolName })),
+        
+        // Persona references using CRD structure  
+        ...(formData.selectedPersona && formData.selectedPersona !== 'none' && {
+          personaRefs: [{ 
+            name: formData.selectedPersona,
+            namespace: organization.namespace 
+          }],
         }),
-        ...(formData.cpuRequest || formData.memoryRequest || formData.cpuLimit || formData.memoryLimit) && {
-          resources: {
-            ...(formData.cpuRequest || formData.memoryRequest) && {
-              requests: {
-                ...(formData.cpuRequest && { cpu: formData.cpuRequest }),
-                ...(formData.memoryRequest && { memory: formData.memoryRequest }),
-              },
-            },
-            ...(formData.cpuLimit || formData.memoryLimit) && {
-              limits: {
-                ...(formData.cpuLimit && { cpu: formData.cpuLimit }),
-                ...(formData.memoryLimit && { memory: formData.memoryLimit }),
-              },
-            },
-          },
-        },
-        ...(formData.minReplicas || formData.maxReplicas || formData.targetCPUUtilization) && {
-          scaling: {
-            minReplicas: formData.minReplicas,
-            maxReplicas: formData.maxReplicas,
-            targetCPUUtilization: formData.targetCPUUtilization,
-          },
-        },
-        ...(formData.nodeSelector && Object.keys(formData.nodeSelector).length > 0) && {
-          nodeSelector: formData.nodeSelector,
-        },
-        ...(formData.tolerations && formData.tolerations.length > 0) && {
-          tolerations: formData.tolerations,
-        },
-        ...(formData.enableIngress) && {
-          networking: {
-            ingress: {
-              enabled: true,
-              host: formData.ingressHost,
-              path: formData.ingressPath || '/',
-              tls: formData.enableTLS,
-            },
-          },
-        },
       },
     }
 

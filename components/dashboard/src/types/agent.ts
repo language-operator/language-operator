@@ -19,17 +19,26 @@ export interface LanguageAgentList {
 }
 
 export interface LanguageAgentSpec {
-  // Execution configuration
-  executionMode: 'worker' | 'server' | 'hybrid'
+  // Primary instructions for agent behavior
+  instructions?: string
+  
+  // Execution configuration - matches CRD enum
+  executionMode?: 'autonomous' | 'interactive' | 'scheduled' | 'event-driven'
   replicas?: number
   
-  // Model configuration
-  model: LanguageModelConfig
+  // Model references - matches CRD structure (optional for backward compatibility)
+  modelRefs?: ModelReference[]
   
-  // Persona configuration
+  // Tool references - matches CRD structure
+  toolRefs?: ToolReference[]
+  
+  // Persona references - matches CRD structure  
+  personaRefs?: PersonaReference[]
+  
+  // Legacy fields for backward compatibility
+  model?: LanguageModelConfig
+  models?: LanguageModelConfig[]
   persona?: LanguagePersonaConfig
-  
-  // Tools configuration
   tools?: LanguageToolConfig[]
   
   // Resource management
@@ -50,6 +59,27 @@ export interface LanguageAgentSpec {
   networking?: NetworkingConfig
 }
 
+// CRD-matching reference types
+export interface ModelReference {
+  name: string
+  namespace?: string
+  role?: 'primary' | 'fallback' | 'reasoning' | 'tool-calling' | 'summarization'
+  priority?: number
+}
+
+export interface ToolReference {
+  name: string
+  namespace?: string
+  enabled?: boolean
+  requireApproval?: boolean
+}
+
+export interface PersonaReference {
+  name: string
+  namespace?: string
+}
+
+// Legacy model config for backward compatibility
 export interface LanguageModelConfig {
   name: string
   provider?: string
@@ -152,47 +182,42 @@ export interface CostMetrics {
   billingPeriod?: string
 }
 
-// Frontend-specific types
+// Frontend-specific types - simplified for new form structure
 export interface LanguageAgentFormData {
+  // Primary fields matching simplified form
+  instructions?: string
   name: string
   namespace: string
-  executionMode: 'worker' | 'server' | 'hybrid'
-  replicas: number
+  selectedModels?: string[]
+  selectedTools?: string[]
+  selectedPersona?: string
   
-  // Model selection
-  modelName: string
+  // Legacy/backward compatibility fields (optional)
+  executionMode?: 'autonomous' | 'interactive' | 'scheduled' | 'event-driven'
+  replicas?: number
+  modelName?: string
   modelProvider?: string
   modelEndpoint?: string
   modelParameters?: Record<string, any>
-  
-  // Persona selection
   personaName?: string
   personaTone?: string
   personaInstructions?: string
   
-  // Tools selection
-  selectedTools: string[]
-  
-  // Resources
+  // Resource fields for legacy forms
   cpuRequest?: string
   memoryRequest?: string
   cpuLimit?: string
   memoryLimit?: string
-  
-  // Scaling
   minReplicas?: number
   maxReplicas?: number
   targetCPUUtilization?: number
-  
-  // Advanced
   nodeSelector?: Record<string, string>
   tolerations?: V1Toleration[]
-  
-  // Networking
   enableIngress?: boolean
   ingressHost?: string
   ingressPath?: string
   enableTLS?: boolean
+  clusterRef?: string
 }
 
 export interface LanguageAgentListItem {

@@ -108,9 +108,9 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Model Reference</p>
               <div className="flex items-center space-x-2">
-                <p className="text-sm">{agent.spec.model.name}</p>
+                <p className="text-sm">{agent.spec.model?.name}</p>
                 {referencedModel ? (
-                  <Link href={`/clusters/${clusterName}/models/${agent.spec.model.name}`}>
+                  <Link href={`/clusters/${clusterName}/models/${agent.spec.model?.name}`}>
                     <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                       View Model →
                     </Badge>

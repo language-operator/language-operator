@@ -117,9 +117,9 @@ function AgentOverview({ agent }: AgentOverviewProps) {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Model Reference</p>
               <div className="flex items-center space-x-2">
-                <p className="text-sm">{agent.spec.model.name}</p>
+                <p className="text-sm">{agent.spec.model?.name}</p>
                 {referencedModel ? (
-                  <Link href={`/models/${agent.spec.model.name}`}>
+                  <Link href={`/models/${agent.spec.model?.name}`}>
                     <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                       View Model →
                     </Badge>
@@ -270,8 +270,8 @@ function AgentOverview({ agent }: AgentOverviewProps) {
                 {referencedModel ? (
                   <>
                     <CheckCircle className="h-4 w-4 text-green-500" />
-                    <Link href={`/models/${agent.spec.model.name}`} className="text-sm hover:underline">
-                      {agent.spec.model.name}
+                    <Link href={`/models/${agent.spec.model?.name}`} className="text-sm hover:underline">
+                      {agent.spec.model?.name}
                     </Link>
                     <Badge variant={referencedModel.status?.healthy ? 'default' : 'destructive'} className="text-xs">
                       {referencedModel.status?.healthy ? 'Healthy' : 'Unhealthy'}
@@ -280,7 +280,7 @@ function AgentOverview({ agent }: AgentOverviewProps) {
                 ) : (
                   <>
                     <AlertCircle className="h-4 w-4 text-red-500" />
-                    <span className="text-sm text-muted-foreground">{agent.spec.model.name} (Not Found)</span>
+                    <span className="text-sm text-muted-foreground">{agent.spec.model?.name} (Not Found)</span>
                   </>
                 )}
               </div>

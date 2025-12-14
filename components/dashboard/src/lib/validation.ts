@@ -18,30 +18,57 @@ const KubernetesMetadataSchema = z.object({
   finalizers: z.array(z.string()).optional(),
 })
 
-// LanguageAgent validation
+// LanguageAgent validation matching the Go CRD specification
 export const LanguageAgentSpecSchema = z.object({
-  model: z.string().min(1, "Model reference is required"),
-  persona: z.string().optional(),
-  tools: z.array(z.string()).optional(),
-  cluster: z.string().optional(),
-  config: z.object({
-    maxTokens: z.number().int().min(1).max(100000).optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    systemPrompt: z.string().optional(),
-    enableStreaming: z.boolean().optional(),
-    timeout: z.number().int().min(1).max(3600).optional(),
+  // Required fields per CRD
+  image: z.string().min(1, "Container image is required"),
+  modelRefs: z.array(z.object({
+    name: z.string().min(1, "Model name is required"),
+    namespace: z.string().optional(),
+    role: z.enum(['primary', 'fallback', 'reasoning', 'tool-calling', 'summarization']).optional(),
+    priority: z.number().int().optional(),
+  })).min(1, "At least one model reference is required"),
+  
+  // Optional fields
+  clusterRef: z.string().optional(),
+  instructions: z.string().min(10).max(10000).optional(),
+  goal: z.string().optional(),
+  executionMode: z.enum(['autonomous', 'interactive', 'scheduled', 'event-driven']).optional(),
+  replicas: z.number().int().min(0).max(100).optional(),
+  
+  // Tool and persona references
+  toolRefs: z.array(z.object({
+    name: z.string().min(1, "Tool name is required"),
+    namespace: z.string().optional(),
+    enabled: z.boolean().optional(),
+    requireApproval: z.boolean().optional(),
+  })).optional(),
+  
+  personaRefs: z.array(z.object({
+    name: z.string().min(1, "Persona name is required"),
+    namespace: z.string().optional(),
+  })).optional(),
+  
+  // Additional CRD fields
+  timeout: z.string().regex(/^[0-9]+(ns|us|µs|ms|s|m|h)$/).optional(),
+  maxIterations: z.number().int().min(1).max(1000).optional(),
+  schedule: z.string().optional(),
+  
+  // Legacy fields for backward compatibility
+  model: z.object({
+    name: z.string(),
+    provider: z.string().optional(),
+    endpoint: z.string().optional(),
+    parameters: z.record(z.any()).optional(),
   }).optional(),
-  replicas: z.number().int().min(0).max(100).default(1),
-  resources: z.object({
-    requests: z.object({
-      cpu: z.string().optional(),
-      memory: z.string().optional(),
-    }).optional(),
-    limits: z.object({
-      cpu: z.string().optional(),
-      memory: z.string().optional(),
-    }).optional(),
+  persona: z.object({
+    name: z.string(),
+    tone: z.string().optional(),
+    instructions: z.string().optional(),
   }).optional(),
+  tools: z.array(z.object({
+    name: z.string(),
+  })).optional(),
 })
 
 export const LanguageAgentStatusSchema = z.object({
@@ -64,7 +91,7 @@ export const LanguageAgentStatusSchema = z.object({
 })
 
 export const LanguageAgentSchema = z.object({
-  apiVersion: z.string().default('language.operator.io/v1'),
+  apiVersion: z.string().default('langop.io/v1alpha1'),
   kind: z.string().default('LanguageAgent'),
   metadata: KubernetesMetadataSchema,
   spec: LanguageAgentSpecSchema,

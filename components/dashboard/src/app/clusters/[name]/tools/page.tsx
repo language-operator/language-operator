@@ -4,12 +4,107 @@ import { useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Wrench, Plus } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Wrench, Download, CheckCircle, Search, ExternalLink, Shield, Network } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { ToolCatalog, ToolCatalogEntry, InstalledTool } from '@/types/tool-catalog'
 
 export default function ClusterTools() {
   const params = useParams()
   const clusterName = params?.name as string
+  const [catalog, setCatalog] = useState<ToolCatalog | null>(null)
+  const [installedTools, setInstalledTools] = useState<InstalledTool[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    fetchData()
+  }, [clusterName])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch catalog
+      const catalogResponse = await fetch('/api/tools/catalog')
+      if (!catalogResponse.ok) {
+        throw new Error('Failed to fetch tool catalog')
+      }
+      const catalogData = await catalogResponse.json()
+      setCatalog(catalogData)
+
+      // Fetch installed tools (API will determine namespace from session)
+      const toolsResponse = await fetch(`/api/tools`)
+      if (toolsResponse.ok) {
+        const toolsData = await toolsResponse.json()
+        setInstalledTools(toolsData.data || [])
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load tools')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isToolInstalled = (toolName: string) => {
+    return installedTools.some(tool => tool.catalogName === toolName || tool.name === toolName)
+  }
+
+  const filteredTools = catalog?.tools
+    ? Object.entries(catalog.tools).filter(([_, tool]) => {
+        const query = searchQuery.toLowerCase()
+        return (
+          tool.name.toLowerCase().includes(query) ||
+          tool.displayName.toLowerCase().includes(query) ||
+          tool.description.toLowerCase().includes(query)
+        )
+      })
+    : []
+
+  if (loading) {
+    return (
+      <AuthenticatedLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading tool catalog...</p>
+          </div>
+        </div>
+      </AuthenticatedLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AuthenticatedLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Tools</h1>
+            <p className="text-gray-600 mt-1">
+              Official tools for the {clusterName} cluster
+            </p>
+          </div>
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Wrench className="h-16 w-16 text-red-500 mb-4" />
+              <CardTitle className="text-xl mb-2">Error Loading Tools</CardTitle>
+              <CardDescription className="text-center max-w-md">
+                {error}
+              </CardDescription>
+              <Button onClick={fetchData} className="mt-4">
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </AuthenticatedLayout>
+    )
+  }
 
   return (
     <AuthenticatedLayout>
@@ -17,36 +112,159 @@ export default function ClusterTools() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Tools</h1>
+            <h1 className="text-3xl font-bold">Tools Catalog</h1>
             <p className="text-gray-600 mt-1">
-              Available tools in the {clusterName} cluster
+              Browse and install official tools for the {clusterName} cluster
             </p>
           </div>
-          <Button asChild>
-            <Link href={`/clusters/${clusterName}/tools/new`}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Tool
-            </Link>
-          </Button>
         </div>
 
-        {/* Empty State */}
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Wrench className="h-16 w-16 text-gray-400 mb-4" />
-            <CardTitle className="text-xl mb-2">No tools yet</CardTitle>
-            <CardDescription className="text-center max-w-md mb-6">
-              Tools extend the capabilities of agents by providing specific functions 
-              and integrations. Add your first tool to get started.
-            </CardDescription>
-            <Button asChild>
-              <Link href={`/clusters/${clusterName}/tools/new`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Tool
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search tools by name or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Installed Tools Section */}
+        {installedTools.length > 0 && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Installed Tools</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {installedTools.map((tool) => (
+                <Card key={tool.name} className="border-green-200 bg-green-50/50">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{tool.name}</CardTitle>
+                        <Badge className="mt-2 bg-green-600">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Installed
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-gray-600">
+                      Status: <span className="font-medium">{tool.status.phase}</span>
+                    </div>
+                    {tool.status.message && (
+                      <div className="text-sm text-gray-500 mt-1">
+                        {tool.status.message}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Available Tools Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Available Tools</h2>
+          {filteredTools.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Wrench className="h-16 w-16 text-gray-400 mb-4" />
+                <CardTitle className="text-xl mb-2">No tools found</CardTitle>
+                <CardDescription className="text-center max-w-md">
+                  {searchQuery
+                    ? `No tools match your search "${searchQuery}"`
+                    : 'No tools available in the catalog'}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTools.map(([toolId, tool]) => {
+                const installed = isToolInstalled(toolId)
+                return (
+                  <Card key={toolId} className={installed ? 'opacity-75' : ''}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg">{tool.displayName}</CardTitle>
+                          <CardDescription className="mt-1 line-clamp-2">
+                            {tool.description}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {/* Tool metadata */}
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {tool.type.toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {tool.deploymentMode}
+                          </Badge>
+                          {tool.authRequired && (
+                            <Badge variant="outline" className="text-xs">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Auth Required
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Features */}
+                        <div className="text-xs text-gray-600 space-y-1">
+                          {tool.rbac && (
+                            <div className="flex items-center gap-1">
+                              <Shield className="h-3 w-3" />
+                              <span>RBAC configured</span>
+                            </div>
+                          )}
+                          {tool.egress && (
+                            <div className="flex items-center gap-1">
+                              <Network className="h-3 w-3" />
+                              <span>Network policies defined</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2">
+                          {installed ? (
+                            <Button disabled className="flex-1" size="sm">
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Installed
+                            </Button>
+                          ) : (
+                            <Button asChild className="flex-1" size="sm">
+                              <Link href={`/clusters/${clusterName}/tools/install/${toolId}`}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Install
+                              </Link>
+                            </Button>
+                          )}
+                          {tool.homepage && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                            >
+                              <a href={tool.homepage} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </AuthenticatedLayout>
   )
