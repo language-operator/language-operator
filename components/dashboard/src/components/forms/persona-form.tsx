@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Users, Brain, MessageSquare, AlertCircle, Target, BookOpen } from 'lucide-react'
+import { Users, Brain, MessageSquare, AlertCircle, Target, BookOpen, Database, Shield, Settings, Workflow, FileText, Share2 } from 'lucide-react'
 
 
 const PERSONALITY_TRAITS = [
@@ -49,6 +49,15 @@ const SAMPLE_PERSONAS = {
   }
 }
 
+// Knowledge source types from CRD
+export type KnowledgeSourceType = 'url' | 'document' | 'database' | 'api' | 'vector-store'
+
+// Tool usage strategy from CRD  
+export type ToolUsageStrategy = 'conservative' | 'balanced' | 'aggressive' | 'minimal'
+
+// Response format types from CRD
+export type ResponseFormatType = 'text' | 'markdown' | 'json' | 'structured' | 'list' | 'table'
+
 export interface PersonaFormData {
   name: string
   displayName: string // Required by CRD
@@ -62,6 +71,62 @@ export interface PersonaFormData {
   limitations: string[] // Optional by CRD
   instructions: string[] // Optional by CRD
   examples: Array<{input: string, output: string, context?: string, tags?: string[]}>
+  
+  // Missing CRD features
+  knowledgeSources: Array<{
+    name: string
+    type: KnowledgeSourceType
+    enabled: boolean
+    url?: string
+    query?: string
+    priority: number
+    secretRef?: {
+      name: string
+      namespace?: string
+      key: string
+    }
+  }>
+  
+  constraints: {
+    maxResponseTokens?: number
+    maxToolCalls?: number
+    maxKnowledgeQueries?: number
+    responseTimeout?: string
+    requireDocumentation: boolean
+    blockedTopics: string[]
+    allowedDomains: string[]
+  }
+  
+  rules: Array<{
+    name: string
+    condition: string
+    action: string
+    description?: string
+    enabled: boolean
+    priority: number
+  }>
+  
+  responseFormat: {
+    type: ResponseFormatType
+    includeConfidence: boolean
+    includeSources: boolean
+    maxLength?: number
+    template?: string
+    schema?: string
+  }
+  
+  toolPreferences: {
+    strategy: ToolUsageStrategy
+    alwaysConfirm: boolean
+    explainToolUse: boolean
+    preferredTools: string[]
+    avoidTools: string[]
+  }
+  
+  parentPersona?: {
+    name: string
+    namespace?: string
+  }
 }
 
 interface PersonaFormProps {
@@ -97,6 +162,26 @@ export function PersonaForm({
       { input: '', output: '', context: '', tags: [] },
       { input: '', output: '', context: '', tags: [] }
     ],
+    // New CRD features with defaults
+    knowledgeSources: [],
+    constraints: {
+      requireDocumentation: false,
+      blockedTopics: [],
+      allowedDomains: []
+    },
+    rules: [],
+    responseFormat: {
+      type: 'text',
+      includeConfidence: false,
+      includeSources: false
+    },
+    toolPreferences: {
+      strategy: 'balanced',
+      alwaysConfirm: false,
+      explainToolUse: true,
+      preferredTools: [],
+      avoidTools: []
+    },
     ...initialData
   })
 
@@ -225,6 +310,196 @@ export function PersonaForm({
     setFormData(prev => ({
       ...prev,
       instructions: prev.instructions.map((inst, i) => i === index ? value : inst)
+    }))
+  }
+
+  // Knowledge Sources helpers
+  const addKnowledgeSource = () => {
+    setFormData(prev => ({
+      ...prev,
+      knowledgeSources: [...prev.knowledgeSources, {
+        name: '',
+        type: 'url',
+        enabled: true,
+        priority: 100
+      }]
+    }))
+  }
+
+  const removeKnowledgeSource = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      knowledgeSources: prev.knowledgeSources.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateKnowledgeSource = (index: number, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      knowledgeSources: prev.knowledgeSources.map((ks, i) => 
+        i === index ? { ...ks, [field]: value } : ks
+      )
+    }))
+  }
+
+  // Rules helpers
+  const addRule = () => {
+    setFormData(prev => ({
+      ...prev,
+      rules: [...prev.rules, {
+        name: '',
+        condition: '',
+        action: '',
+        description: '',
+        enabled: true,
+        priority: 100
+      }]
+    }))
+  }
+
+  const removeRule = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      rules: prev.rules.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateRule = (index: number, field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      rules: prev.rules.map((rule, i) => 
+        i === index ? { ...rule, [field]: value } : rule
+      )
+    }))
+  }
+
+  // Constraints helpers  
+  const addBlockedTopic = () => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        blockedTopics: [...prev.constraints.blockedTopics, '']
+      }
+    }))
+  }
+
+  const removeBlockedTopic = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        blockedTopics: prev.constraints.blockedTopics.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const updateBlockedTopic = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        blockedTopics: prev.constraints.blockedTopics.map((topic, i) => 
+          i === index ? value : topic
+        )
+      }
+    }))
+  }
+
+  const addAllowedDomain = () => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        allowedDomains: [...prev.constraints.allowedDomains, '']
+      }
+    }))
+  }
+
+  const removeAllowedDomain = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        allowedDomains: prev.constraints.allowedDomains.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const updateAllowedDomain = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        allowedDomains: prev.constraints.allowedDomains.map((domain, i) => 
+          i === index ? value : domain
+        )
+      }
+    }))
+  }
+
+  // Tool Preferences helpers
+  const addPreferredTool = () => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        preferredTools: [...prev.toolPreferences.preferredTools, '']
+      }
+    }))
+  }
+
+  const removePreferredTool = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        preferredTools: prev.toolPreferences.preferredTools.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const updatePreferredTool = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        preferredTools: prev.toolPreferences.preferredTools.map((tool, i) => 
+          i === index ? value : tool
+        )
+      }
+    }))
+  }
+
+  const addAvoidTool = () => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        avoidTools: [...prev.toolPreferences.avoidTools, '']
+      }
+    }))
+  }
+
+  const removeAvoidTool = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        avoidTools: prev.toolPreferences.avoidTools.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const updateAvoidTool = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      toolPreferences: {
+        ...prev.toolPreferences,
+        avoidTools: prev.toolPreferences.avoidTools.map((tool, i) => 
+          i === index ? value : tool
+        )
+      }
     }))
   }
 
@@ -659,8 +934,623 @@ export function PersonaForm({
         </CardContent>
       </Card>
 
-      {/* Parameters */}
+      {/* Knowledge Sources */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Database className="h-5 w-5" />
+            <span>Knowledge Sources</span>
+          </CardTitle>
+          <CardDescription>
+            External knowledge bases this persona can access
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {formData.knowledgeSources.map((source, index) => (
+            <div key={index} className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label>Knowledge Source {index + 1}</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeKnowledgeSource(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Name *</Label>
+                  <Input
+                    value={source.name}
+                    onChange={(e) => updateKnowledgeSource(index, 'name', e.target.value)}
+                    placeholder="Knowledge source name..."
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Type *</Label>
+                  <Select 
+                    value={source.type} 
+                    onValueChange={(value) => updateKnowledgeSource(index, 'type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="url">URL</SelectItem>
+                      <SelectItem value="document">Document</SelectItem>
+                      <SelectItem value="database">Database</SelectItem>
+                      <SelectItem value="api">API</SelectItem>
+                      <SelectItem value="vector-store">Vector Store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>URL</Label>
+                <Input
+                  value={source.url || ''}
+                  onChange={(e) => updateKnowledgeSource(index, 'url', e.target.value)}
+                  placeholder="https://example.com/api"
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Input
+                    type="number"
+                    value={source.priority}
+                    onChange={(e) => updateKnowledgeSource(index, 'priority', parseInt(e.target.value) || 100)}
+                    placeholder="100"
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={source.enabled}
+                      onChange={(e) => updateKnowledgeSource(index, 'enabled', e.target.checked)}
+                      disabled={isLoading}
+                    />
+                    <span>Enabled</span>
+                  </Label>
+                </div>
+              </div>
+            </div>
+          ))}
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={addKnowledgeSource}
+            disabled={isLoading}
+          >
+            Add Knowledge Source
+          </Button>
+        </CardContent>
+      </Card>
 
+      {/* Constraints */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Shield className="h-5 w-5" />
+            <span>Safety & Constraints</span>
+          </CardTitle>
+          <CardDescription>
+            Operational limits and safety controls
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Max Response Tokens</Label>
+              <Input
+                type="number"
+                value={formData.constraints.maxResponseTokens || ''}
+                onChange={(e) => handleInputChange('constraints', {
+                  ...formData.constraints,
+                  maxResponseTokens: parseInt(e.target.value) || undefined
+                })}
+                placeholder="2000"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Max Tool Calls</Label>
+              <Input
+                type="number"
+                value={formData.constraints.maxToolCalls || ''}
+                onChange={(e) => handleInputChange('constraints', {
+                  ...formData.constraints,
+                  maxToolCalls: parseInt(e.target.value) || undefined
+                })}
+                placeholder="5"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Response Timeout</Label>
+              <Input
+                value={formData.constraints.responseTimeout || ''}
+                onChange={(e) => handleInputChange('constraints', {
+                  ...formData.constraints,
+                  responseTimeout: e.target.value
+                })}
+                placeholder="30s"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={formData.constraints.requireDocumentation}
+                  onChange={(e) => handleInputChange('constraints', {
+                    ...formData.constraints,
+                    requireDocumentation: e.target.checked
+                  })}
+                  disabled={isLoading}
+                />
+                <span>Require Documentation</span>
+              </Label>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>Blocked Topics</Label>
+            {formData.constraints.blockedTopics.map((topic, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={topic}
+                  onChange={(e) => updateBlockedTopic(index, e.target.value)}
+                  placeholder="Topic to block..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeBlockedTopic(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addBlockedTopic}
+              disabled={isLoading}
+            >
+              Add Blocked Topic
+            </Button>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>Allowed Domains</Label>
+            {formData.constraints.allowedDomains.map((domain, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={domain}
+                  onChange={(e) => updateAllowedDomain(index, e.target.value)}
+                  placeholder="example.com"
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeAllowedDomain(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addAllowedDomain}
+              disabled={isLoading}
+            >
+              Add Allowed Domain
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rules */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Workflow className="h-5 w-5" />
+            <span>Behavioral Rules</span>
+          </CardTitle>
+          <CardDescription>
+            Conditional behaviors and logic rules
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {formData.rules.map((rule, index) => (
+            <div key={index} className="space-y-3 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Label>Rule {index + 1}</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeRule(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Name *</Label>
+                  <Input
+                    value={rule.name}
+                    onChange={(e) => updateRule(index, 'name', e.target.value)}
+                    placeholder="Rule name..."
+                    disabled={isLoading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Input
+                    type="number"
+                    value={rule.priority}
+                    onChange={(e) => updateRule(index, 'priority', parseInt(e.target.value) || 100)}
+                    placeholder="100"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Condition *</Label>
+                <Textarea
+                  value={rule.condition}
+                  onChange={(e) => updateRule(index, 'condition', e.target.value)}
+                  placeholder="when user asks about..."
+                  rows={2}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Action *</Label>
+                <Textarea
+                  value={rule.action}
+                  onChange={(e) => updateRule(index, 'action', e.target.value)}
+                  placeholder="respond with..."
+                  rows={2}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={rule.description || ''}
+                  onChange={(e) => updateRule(index, 'description', e.target.value)}
+                  placeholder="What this rule does..."
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={rule.enabled}
+                    onChange={(e) => updateRule(index, 'enabled', e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <span>Enabled</span>
+                </Label>
+              </div>
+            </div>
+          ))}
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={addRule}
+            disabled={isLoading}
+          >
+            Add Rule
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Response Format */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="h-5 w-5" />
+            <span>Response Format</span>
+          </CardTitle>
+          <CardDescription>
+            Configure how responses should be structured
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Response Type</Label>
+              <Select 
+                value={formData.responseFormat.type} 
+                onValueChange={(value) => handleInputChange('responseFormat', {
+                  ...formData.responseFormat,
+                  type: value as ResponseFormatType
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="markdown">Markdown</SelectItem>
+                  <SelectItem value="json">JSON</SelectItem>
+                  <SelectItem value="structured">Structured</SelectItem>
+                  <SelectItem value="list">List</SelectItem>
+                  <SelectItem value="table">Table</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Max Length</Label>
+              <Input
+                type="number"
+                value={formData.responseFormat.maxLength || ''}
+                onChange={(e) => handleInputChange('responseFormat', {
+                  ...formData.responseFormat,
+                  maxLength: parseInt(e.target.value) || undefined
+                })}
+                placeholder="1000"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.responseFormat.includeConfidence}
+                onChange={(e) => handleInputChange('responseFormat', {
+                  ...formData.responseFormat,
+                  includeConfidence: e.target.checked
+                })}
+                disabled={isLoading}
+              />
+              <span>Include Confidence Scores</span>
+            </Label>
+            
+            <Label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.responseFormat.includeSources}
+                onChange={(e) => handleInputChange('responseFormat', {
+                  ...formData.responseFormat,
+                  includeSources: e.target.checked
+                })}
+                disabled={isLoading}
+              />
+              <span>Include Sources</span>
+            </Label>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Response Template</Label>
+            <Textarea
+              value={formData.responseFormat.template || ''}
+              onChange={(e) => handleInputChange('responseFormat', {
+                ...formData.responseFormat,
+                template: e.target.value
+              })}
+              placeholder="Custom response template..."
+              rows={3}
+              disabled={isLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tool Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Settings className="h-5 w-5" />
+            <span>Tool Preferences</span>
+          </CardTitle>
+          <CardDescription>
+            Configure how this persona uses tools
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Usage Strategy</Label>
+              <Select 
+                value={formData.toolPreferences.strategy} 
+                onValueChange={(value) => handleInputChange('toolPreferences', {
+                  ...formData.toolPreferences,
+                  strategy: value as ToolUsageStrategy
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="conservative">Conservative</SelectItem>
+                  <SelectItem value="balanced">Balanced</SelectItem>
+                  <SelectItem value="aggressive">Aggressive</SelectItem>
+                  <SelectItem value="minimal">Minimal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.toolPreferences.alwaysConfirm}
+                onChange={(e) => handleInputChange('toolPreferences', {
+                  ...formData.toolPreferences,
+                  alwaysConfirm: e.target.checked
+                })}
+                disabled={isLoading}
+              />
+              <span>Always Confirm Tool Use</span>
+            </Label>
+            
+            <Label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={formData.toolPreferences.explainToolUse}
+                onChange={(e) => handleInputChange('toolPreferences', {
+                  ...formData.toolPreferences,
+                  explainToolUse: e.target.checked
+                })}
+                disabled={isLoading}
+              />
+              <span>Explain Tool Usage</span>
+            </Label>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>Preferred Tools</Label>
+            {formData.toolPreferences.preferredTools.map((tool, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={tool}
+                  onChange={(e) => updatePreferredTool(index, e.target.value)}
+                  placeholder="Tool name..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removePreferredTool(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addPreferredTool}
+              disabled={isLoading}
+            >
+              Add Preferred Tool
+            </Button>
+          </div>
+          
+          <div className="space-y-3">
+            <Label>Tools to Avoid</Label>
+            {formData.toolPreferences.avoidTools.map((tool, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={tool}
+                  onChange={(e) => updateAvoidTool(index, e.target.value)}
+                  placeholder="Tool name..."
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeAvoidTool(index)}
+                  disabled={isLoading}
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addAvoidTool}
+              disabled={isLoading}
+            >
+              Add Tool to Avoid
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Parent Persona */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Share2 className="h-5 w-5" />
+            <span>Persona Inheritance</span>
+          </CardTitle>
+          <CardDescription>
+            Inherit behaviors from another persona
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Parent Persona Name</Label>
+              <Input
+                value={formData.parentPersona?.name || ''}
+                onChange={(e) => handleInputChange('parentPersona', 
+                  e.target.value ? {
+                    ...formData.parentPersona,
+                    name: e.target.value
+                  } : undefined
+                )}
+                placeholder="parent-persona-name"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Namespace (optional)</Label>
+              <Input
+                value={formData.parentPersona?.namespace || ''}
+                onChange={(e) => handleInputChange('parentPersona', 
+                  formData.parentPersona ? {
+                    ...formData.parentPersona,
+                    namespace: e.target.value
+                  } : undefined
+                )}
+                placeholder="Leave empty for same namespace"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            This persona will inherit capabilities and behaviors from the specified parent persona
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Error Display */}
       {displayError && (

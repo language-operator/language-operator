@@ -36,6 +36,37 @@ export default function CreateClusterPersonaPage() {
             ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
           }))
         }),
+        // New CRD features
+        ...(formData.knowledgeSources && formData.knowledgeSources.length > 0 && { 
+          knowledgeSources: formData.knowledgeSources.filter(ks => ks.name && ks.type)
+        }),
+        ...(formData.constraints && (
+          formData.constraints.maxResponseTokens ||
+          formData.constraints.maxToolCalls ||
+          formData.constraints.responseTimeout ||
+          formData.constraints.requireDocumentation ||
+          formData.constraints.blockedTopics.length > 0 ||
+          formData.constraints.allowedDomains.length > 0
+        ) && { constraints: formData.constraints }),
+        ...(formData.rules && formData.rules.length > 0 && { 
+          rules: formData.rules.filter(rule => rule.name && rule.condition && rule.action)
+        }),
+        ...(formData.responseFormat && (
+          formData.responseFormat.type !== 'text' ||
+          formData.responseFormat.includeConfidence ||
+          formData.responseFormat.includeSources ||
+          formData.responseFormat.maxLength ||
+          formData.responseFormat.template ||
+          formData.responseFormat.schema
+        ) && { responseFormat: formData.responseFormat }),
+        ...(formData.toolPreferences && (
+          formData.toolPreferences.strategy !== 'balanced' ||
+          formData.toolPreferences.alwaysConfirm ||
+          !formData.toolPreferences.explainToolUse ||
+          formData.toolPreferences.preferredTools.length > 0 ||
+          formData.toolPreferences.avoidTools.length > 0
+        ) && { toolPreferences: formData.toolPreferences }),
+        ...(formData.parentPersona && formData.parentPersona.name && { parentPersona: formData.parentPersona }),
       }
       
       console.log('Sending payload:', payload)
