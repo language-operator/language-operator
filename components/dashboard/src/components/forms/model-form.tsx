@@ -543,7 +543,7 @@ export function ModelForm({
             Cancel
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Creating...' : 'Create Model'}
+            {isLoading ? (isEdit ? 'Updating...' : 'Creating...') : (isEdit ? 'Update Model' : 'Create Model')}
           </Button>
         </div>
       </div>
