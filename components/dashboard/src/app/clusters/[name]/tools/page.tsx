@@ -37,8 +37,8 @@ export default function ClusterTools() {
       const catalogData = await catalogResponse.json()
       setCatalog(catalogData)
 
-      // Fetch installed tools (API will determine namespace from session)
-      const toolsResponse = await fetch(`/api/tools`)
+      // Fetch installed tools for this specific cluster
+      const toolsResponse = await fetch(`/api/clusters/${clusterName}/tools`)
       if (toolsResponse.ok) {
         const toolsData = await toolsResponse.json()
         setInstalledTools(toolsData.data || [])
@@ -192,6 +192,19 @@ export default function ClusterTools() {
       })
     : []
 
+  // Filter installed tools by search query as well
+  const filteredInstalledTools = installedTools.filter(installedTool => {
+    const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
+    if (!catalogEntry) return false
+    const query = searchQuery.toLowerCase()
+    return (
+      catalogEntry.name.toLowerCase().includes(query) ||
+      catalogEntry.displayName.toLowerCase().includes(query) ||
+      catalogEntry.description.toLowerCase().includes(query) ||
+      installedTool.name.toLowerCase().includes(query)
+    )
+  })
+
   if (loading) {
     return (
       <AuthenticatedLayout>
@@ -258,11 +271,11 @@ export default function ClusterTools() {
         </div>
 
         {/* Installed Tools Section */}
-        {installedTools.length > 0 && (
+        {filteredInstalledTools.length > 0 && (
           <div>
             <h2 className="text-xl font-semibold mb-4">Installed Tools</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {installedTools.map((installedTool) => {
+              {filteredInstalledTools.map((installedTool) => {
                 const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
                 if (!catalogEntry) return null
                 const toolId = installedTool.catalogName || installedTool.name
