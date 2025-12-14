@@ -1,14 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ClusterSelectionModal } from '@/components/cluster-selection-modal'
 import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useRouter } from 'next/navigation'
 
+type QuickActionType = 'agent' | 'model' | 'tool'
+
 export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
   const router = useRouter()
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    actionType: QuickActionType | null
+  }>({ isOpen: false, actionType: null })
 
   const hasClusters = !loading && !error && (counts?.clusters || 0) > 0
 
@@ -19,19 +27,60 @@ export default function Home() {
         break
       case 'agent':
         if (hasClusters) {
-          router.push('/agents/new')
+          setModalState({ isOpen: true, actionType: 'agent' })
         }
         break
       case 'model':
         if (hasClusters) {
-          router.push('/clusters/new') // For now, redirect to cluster creation to add models
+          setModalState({ isOpen: true, actionType: 'model' })
         }
         break
       case 'tool':
         if (hasClusters) {
-          router.push('/tools/new')
+          setModalState({ isOpen: true, actionType: 'tool' })
         }
         break
+    }
+  }
+
+  const handleClusterSelect = (clusterName: string) => {
+    const { actionType } = modalState
+    
+    switch (actionType) {
+      case 'agent':
+        router.push(`/clusters/${clusterName}/agents/new`)
+        break
+      case 'model':
+        router.push(`/clusters/${clusterName}/models/new`)
+        break
+      case 'tool':
+        router.push(`/clusters/${clusterName}/tools/new`)
+        break
+    }
+  }
+
+  const getModalProps = () => {
+    switch (modalState.actionType) {
+      case 'agent':
+        return {
+          actionTitle: 'Create Language Agent',
+          actionDescription: 'Create a new AI agent to handle tasks and process requests.'
+        }
+      case 'model':
+        return {
+          actionTitle: 'Add Language Model',
+          actionDescription: 'Connect a new language model provider for your agents to use.'
+        }
+      case 'tool':
+        return {
+          actionTitle: 'Configure Tool',
+          actionDescription: 'Add new capabilities and tools that agents can use to complete tasks.'
+        }
+      default:
+        return {
+          actionTitle: 'Quick Action',
+          actionDescription: 'Select a cluster to continue.'
+        }
     }
   }
   return (
@@ -335,6 +384,17 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cluster Selection Modal */}
+      {modalState.actionType && (
+        <ClusterSelectionModal
+          isOpen={modalState.isOpen}
+          onClose={() => setModalState({ isOpen: false, actionType: null })}
+          onClusterSelect={handleClusterSelect}
+          actionType={modalState.actionType}
+          {...getModalProps()}
+        />
+      )}
     </AuthenticatedLayout>
   )
 }
