@@ -6,6 +6,9 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import yaml from 'js-yaml'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -187,7 +190,7 @@ export default function CreateClusterAgentPage() {
       },
     }
     
-    return JSON.stringify(agent, null, 2)
+    return yaml.dump(agent)
   }
 
   const onSubmit = async (values: AgentFormValues) => {
@@ -844,9 +847,18 @@ export default function CreateClusterAgentPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-xs bg-muted p-4 rounded-lg overflow-auto max-h-[600px]">
+                  <SyntaxHighlighter
+                    language="yaml"
+                    style={oneDark}
+                    customStyle={{
+                      margin: 0,
+                      borderRadius: '0.5rem',
+                      fontSize: '0.75rem',
+                      maxHeight: '600px'
+                    }}
+                  >
                     {generateYamlPreview(watchedValues)}
-                  </pre>
+                  </SyntaxHighlighter>
                 </CardContent>
               </Card>
             </div>

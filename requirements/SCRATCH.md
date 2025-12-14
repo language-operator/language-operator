@@ -8,6 +8,12 @@
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
 ### Dashboard Development (Recent)
+- ✅ **Issue #126**: Dashboard counts API returns incorrect cluster count (0 vs 1) - **RESOLVED** (Dec 14) - Fixed k8s client response parsing to handle both live and demo modes correctly
+- ✅ **Issue #120**: Dashboard Quick Actions are non-functional - **RESOLVED** (Dec 14) - Implemented cluster-aware Quick Actions with modal selection, now routes to cluster-scoped creation pages
+- ✅ **Issue #119**: Model edit form shows 'Create Model' instead of 'Update Model' button - **RESOLVED** (Dec 14) - Fixed button text conditional logic in ModelForm component
+- ✅ **Issue #118**: Agents creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly
+- ✅ **Issue #117**: Personas creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly  
+- ✅ **Issue #116**: Tools creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly
 - ✅ **Issue #121**: Complete cluster-scoped CRUD routing for Tools, Personas, and Agents - **RESOLVED** (Dec 13) - Implemented 9 missing routing files for cluster-scoped resource creation/editing, fixed TypeScript compilation errors, manually tested with Playwright
 - ✅ **Issue #115**: Settings page returns 404 error - **RESOLVED** (Dec 13) - Added missing page.tsx with redirect, fixed AuthenticatedLayout wrapper, updated Docker volume mounts
 - ✅ **Issue #114**: Cluster listing page shows incorrect data and missing clusters - **RESOLVED** (Dec 13) - Fixed API response parsing for different k8s client structures (live vs demo mode)
