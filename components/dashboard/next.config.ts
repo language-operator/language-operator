@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   generateBuildId: async () => {
     return 'build-' + Date.now()
-  }
+  },
+  transpilePackages: ['react-syntax-highlighter']
 };
 
 export default nextConfig;
