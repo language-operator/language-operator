@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 export interface WatchEvent {
@@ -25,6 +25,8 @@ export interface UseWatchOptions {
   cluster?: string // For filtering agents by cluster
 }
 
+let watchInstanceCounter = 0
+
 export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
   const {
     enabled = true,
@@ -35,6 +37,8 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
     cluster
   } = options
 
+  // Create unique instance ID for debugging
+  const instanceId = useMemo(() => ++watchInstanceCounter, [])
   const [isConnected, setIsConnected] = useState(false)
   const [lastEvent, setLastEvent] = useState<WatchEvent | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
@@ -68,10 +72,16 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
   const connect = useCallback(() => {
     if (!enabled) return
 
+    // Prevent duplicate connections
+    if (eventSourceRef.current?.readyState === EventSource.OPEN) {
+      console.log(`⚠️ [${instanceId}] EventSource already connected, skipping duplicate connection`)
+      return
+    }
+
     cleanup()
 
     const url = buildUrl()
-    console.log(`🔗 Connecting to watch stream: ${url}`)
+    console.log(`🔗 [${instanceId}] Connecting to watch stream: ${url}`)
 
     try {
       const eventSource = new EventSource(url)
@@ -118,12 +128,22 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
       })
 
       eventSource.addEventListener('error', (event) => {
-        const errorData = JSON.parse((event as any).data || '{}')
-        console.error('Watch error event:', errorData)
-        setConnectionError(errorData.message || 'Watch error')
-        
-        if (onError) {
-          onError(new Error(errorData.message || 'Watch error'))
+        try {
+          const errorData = JSON.parse((event as any).data || '{}')
+          console.error('Watch error event:', errorData)
+          setConnectionError(errorData.message || 'Watch error')
+          
+          if (onError) {
+            onError(new Error(errorData.message || 'Watch error'))
+          }
+        } catch (err) {
+          // Error events may not have parseable data
+          console.error('Watch error event (no data):', event)
+          setConnectionError('Watch connection error')
+          
+          if (onError) {
+            onError(new Error('Watch connection error'))
+          }
         }
       })
 
@@ -138,9 +158,9 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           onError(new Error(errorMessage))
         }
         
-        // Attempt reconnect with exponential backoff, max 10 attempts
-        if (reconnectCount < 10) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectCount), 30000) // Max 30 seconds
+        // Attempt reconnect with exponential backoff, max 5 attempts
+        if (reconnectCount < 5) {
+          const delay = Math.min(5000 * Math.pow(1.5, reconnectCount), 60000) // Start at 5s, max 60 seconds
           console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectCount + 1})`)
           
           setReconnectCount(prev => prev + 1)
@@ -151,7 +171,7 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           }, delay)
         } else {
           console.error('❌ Max reconnection attempts reached, stopping reconnects')
-          setConnectionError('Connection failed after multiple attempts')
+          setConnectionError('Connection failed after multiple attempts. Refresh page to retry.')
         }
       }
 
@@ -167,7 +187,7 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
         onError(error instanceof Error ? error : new Error('Connection failed'))
       }
     }
-  }, [enabled, buildUrl, queryKey, onEvent, onConnection, onError, cleanup, reconnectCount])
+  }, [enabled, buildUrl, queryKey, cleanup]) // Remove callback dependencies to prevent re-connections
 
   // Start/stop watching based on enabled flag
   useEffect(() => {
@@ -179,7 +199,7 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
 
     // Cleanup on unmount
     return cleanup
-  }, [enabled, connect, cleanup])
+  }, [enabled]) // Simplified dependencies
 
   // Handle page visibility changes to reconnect when page becomes visible
   useEffect(() => {

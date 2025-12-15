@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
                   timestamp: new Date().toISOString()
                 }, 'error')
                 
-                setTimeout(startWatch, 5000)
+                setTimeout(startWatch, 15000)
               }
             )
           } catch (error) {

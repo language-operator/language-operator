@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
                   timestamp: new Date().toISOString()
                 }, 'error')
                 
-                // Try to reconnect after a delay
-                setTimeout(startWatch, 5000)
+                // Try to reconnect after a longer delay to avoid flapping
+                setTimeout(startWatch, 15000)
               }
             )
           } catch (error) {
