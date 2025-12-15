@@ -20,7 +20,7 @@ interface UpdateOrganizationData {
 export function useOrganizations() {
   const { data: session } = useSession()
   const queryClient = useQueryClient()
-  const { setOrganizations, setLoading, setError } = useOrganizationStore()
+  const { setOrganizations, setLoading, setError, initializeActiveOrganization } = useOrganizationStore()
 
   return useQuery({
     queryKey: ['organizations'],
@@ -33,6 +33,10 @@ export function useOrganizations() {
         }
         const data = await response.json()
         setOrganizations(data.organizations)
+        
+        // Initialize active organization after setting organizations
+        initializeActiveOrganization()
+        
         setError(null)
         return data.organizations as Organization[]
       } catch (error) {

@@ -62,6 +62,7 @@ interface OrganizationStore {
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
+  initializeActiveOrganization: () => void
 
   // Member management
   updateMembers: (organizationId: string, members: OrganizationMember[]) => void
@@ -198,7 +199,29 @@ export const useOrganizationStore = create<OrganizationStore>()(
               }
             : org
         )
-      }))
+      })),
+
+      // Initialize active organization from persisted data on app startup
+      initializeActiveOrganization: () => {
+        const { activeOrganizationId, organizations } = get()
+        
+        // If we have a stored active organization ID but no active organization in memory,
+        // or if the active organization doesn't exist in the current organizations list,
+        // try to set it from the organizations list
+        if (activeOrganizationId && organizations.length > 0) {
+          const foundOrg = organizations.find(org => org.id === activeOrganizationId)
+          if (foundOrg) {
+            // Organization found in list, we're good
+            return
+          }
+        }
+        
+        // If no active organization is set, or the stored one doesn't exist anymore,
+        // default to the first available organization
+        if (organizations.length > 0 && !activeOrganizationId) {
+          set({ activeOrganizationId: organizations[0].id })
+        }
+      }
     }),
     {
       name: 'organization-store',

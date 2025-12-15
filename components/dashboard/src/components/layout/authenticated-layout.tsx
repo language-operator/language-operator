@@ -6,10 +6,14 @@ import { useEffect } from 'react'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
 import { ClusterProvider } from '@/contexts/cluster-context'
+import { useOrganizations } from '@/hooks/use-organizations'
 
 export function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  
+  // Load organizations on app startup to initialize active organization
+  useOrganizations()
 
   useEffect(() => {
     if (status === 'unauthenticated') {
