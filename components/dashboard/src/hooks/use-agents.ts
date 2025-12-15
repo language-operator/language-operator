@@ -44,11 +44,37 @@ export function useAgent(name: string, clusterName?: string) {
       
       const response = await fetch(endpoint)
       if (!response.ok) {
-        throw new Error('Failed to fetch agent')
+        // Parse error response for better error handling
+        let errorMessage = 'Failed to fetch agent'
+        let errorData: any = null
+        
+        try {
+          errorData = await response.json()
+          errorMessage = errorData.error || errorData.details || errorMessage
+        } catch {
+          // If JSON parsing fails, use status-based message
+          if (response.status === 404) {
+            errorMessage = `Agent "${name}" not found${clusterName ? ` in cluster "${clusterName}"` : ''}`
+          }
+        }
+        
+        // Create error object with additional context
+        const error = new Error(errorMessage) as any
+        error.status = response.status
+        error.data = errorData
+        throw error
       }
       return response.json()
     },
     enabled: !!name,
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 or other client errors
+      if (error?.status >= 400 && error?.status < 500) {
+        return false
+      }
+      // Use default retry logic for server errors
+      return failureCount < 3
+    },
   })
 }
 

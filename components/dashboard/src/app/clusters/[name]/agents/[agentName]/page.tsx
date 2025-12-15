@@ -18,6 +18,7 @@ import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgent } from '@/types/agent'
 import { Skeleton } from '@/components/ui/skeleton'
+import { NotFound } from '@/components/ui/not-found'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -499,21 +500,18 @@ export default function ClusterAgentDetailPage() {
   }
 
   if (error || !agent) {
+    // Determine if it's a 404 error or other error type
+    const is404Error = error && (error as any)?.status === 404
+    const errorMessage = error ? (error as Error).message : `Agent "${agentName}" could not be found in cluster "${clusterName}".`
+    
     return (
       <AuthenticatedLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Agent not found</h3>
-            <p className="text-muted-foreground mb-4">
-              The agent "{agentName}" could not be found in cluster "{clusterName}".
-            </p>
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Agents
-            </Button>
-          </div>
-        </div>
+        <NotFound
+          title={is404Error ? 'Agent Not Found' : 'Error Loading Agent'}
+          message={errorMessage}
+          onBack={handleBack}
+          backLabel="Back to Agents"
+        />
       </AuthenticatedLayout>
     )
   }
