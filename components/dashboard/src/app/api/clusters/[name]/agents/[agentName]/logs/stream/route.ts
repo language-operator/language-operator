@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Find the pod for this agent
     const pods = await k8sClient.listPods(organization.namespace, {
-      labelSelector: `langop.io/agent=${agentName}`
+      labelSelector: `app.kubernetes.io/name=${agentName}`
     })
 
     // Handle different response structures from k8s client

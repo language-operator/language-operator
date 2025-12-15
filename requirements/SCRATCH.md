@@ -7,7 +7,19 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**  
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Dashboard Development (Recent)
+### Dashboard Development (Recent)  
+- ✅ **Issue #155**: Agent creation API fails with multiple 404 errors - **RESOLVED** (Dec 15) - Eliminated all 404 errors in agent creation workflow by implementing proper cluster-scoped API endpoints. Added POST handler to /api/clusters/[name]/agents/, updated React hooks (useCreateAgent, useTools) to use cluster-scoped URLs, and fixed agent creation form to pass cluster context. Tools now load correctly (5 tools vs "No tools available"), form validation works properly, and agent creation reaches server without 404 errors.
+- ✅ **Issue #157**: YAML preview displays invalid resource configuration - **RESOLVED** (Dec 15) - Enhanced YAML preview validation UX with visual feedback: red styling for "YAML Preview" header when validation fails, disabled Create Agent button when errors present, and real-time onChange validation. Manually tested with both valid and invalid configurations
+- ✅ **Issue #153**: Agent creation page causes application-wide build failure - **RESOLVED** (Dec 15) - Fixed Next.js 16/Turbopack module resolution for react-syntax-highlighter by adding transpilePackages configuration. Agent creation page now loads properly with full YAML syntax highlighting functionality instead of critical Module not found errors
+- ✅ **Issue #148**: Organization selection state not persisting across page navigation - **RESOLVED** (Dec 15) - Enhanced organization store with initializeActiveOrganization method, updated useOrganizations hook to initialize after loading, and added organization loading in AuthenticatedLayout on app startup. Organization selection now properly persists across page refreshes and navigation
+- ✅ **Issue #149**: Agent details page displays empty content with 404 errors - **RESOLVED** (Dec 14) - Created cluster-scoped agent details API endpoint and updated React hooks, agent details pages now display full content with working Edit/Delete functionality and eliminated console 404 errors
+- ✅ **Issue #150**: Agent count inconsistencies across cluster dashboard and agents page - **RESOLVED** (Dec 14) - Automatically fixed by Issue #151 agent count improvements, cluster dashboard now correctly shows "2" agents matching the agents page display
+- ✅ **Issue #151**: Clusters overview displays incorrect agent counts systemically - **RESOLVED** (Dec 14) - Enhanced clusters API to dynamically calculate agent counts by querying LanguageAgent resources instead of relying on unpopulated cluster.status.agentCount field, now shows accurate "Total Agents: 2" and "synth - 2 agents"  
+- ✅ **Issue #152**: Recent Activity displays data from inaccessible clusters and namespaces - **RESOLVED** (Dec 14) - Created Kubernetes events-based Recent Activity API to replace hardcoded "production" references, added proper permission filtering by organization membership, implemented real-time activity data with loading/error states
+- ✅ **Issue #145**: Tools page generates 404 errors and shows inconsistent data - **NOT REPRODUCIBLE** (Dec 14) - Investigated thoroughly but could not reproduce reported 404 errors or data inconsistencies. Tools page working correctly with proper API responses and consistent data display between dashboard and tools catalog
+- ✅ **Issue #143**: Dashboard displays incorrect resource counts for cluster components - **RESOLVED** (Dec 14) - Created missing agents API endpoint, fixed agents page to use cluster-scoped API, updated organization labels for stale resources, and corrected docker-compose NEXTAUTH_URL port configuration
+- ✅ **Issue #146**: Tool installation fails with 500 Internal Server Error - **RESOLVED** (Dec 14) - Fixed authentication pattern in tool installation API to use proper database lookup instead of non-existent session.activeOrganization.namespace, added proper permission checks and organization labeling, improved 409 error handling
+- ✅ **Issue #147**: Personas count inconsistency between dashboard and personas page - **RESOLVED** (Dec 14) - Fixed dashboard counts API to filter by organization ID and updated cluster dashboard page to use useResourceCounts hook instead of hardcoded zeros, now shows accurate resource counts
 - ✅ **Issue #133**: Agent tiles not clickable - cannot access detail pages with edit/delete options - **RESOLVED** (Dec 14) - Made agent tiles clickable with navigation to detail pages, added hover effects, keyboard accessibility, and proper ARIA labels for screen readers
 - ✅ **Issue #135**: React warning: Tools list items missing unique 'key' props - **RESOLVED** (Dec 14) - Removed incorrect key prop from ToolCard component, React keys should only be set by parent components
 - ✅ **Issue #136**: Tool detail pages crash with 'tools?.find is not a function' error - **RESOLVED** (Dec 14) - Fixed JavaScript crash AND implemented complete tool detail functionality with cluster-scoped API endpoint, proper data display, and working Edit/Delete buttons
@@ -36,7 +48,7 @@
 ### Deployment Constraints
 - ⚠️ **Operator deployment**: CI pipeline only, no local Docker builds
 - **Workflow**: Push to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
-- **Dashboard**: Can run locally with `npm run dev` for frontend development
+- **Dashboard**: Use docker compose in components/dashboard.  It runs Postgres and exposes the app at port 3000, which has hot-reloading capabilities.  It is the preferred development server, and you can log in with "james@theryans.io" and "password123"
 
 ### Next.js Dashboard Architecture
 - **API Routes**: `/api/clusters`, `/api/models`, etc. proxy to Kubernetes client
@@ -45,7 +57,7 @@
 - **Testing**: Manual testing required, playwright available for UI testing
 
 ### Key Technical Patterns
-- **k8s-client.ts**: Handles demo mode fallbacks, null safety for API objects
+- **k8s-client.ts**: Handles fallbacks, null safety for API objects
 - **ReconcileHelper[T]**: Standard pattern for new controllers (Go backend)
 - **TypeScript**: Strict mode compliance, explicit error handling
 - **CSS**: Use Tailwind v3 syntax, proper PostCSS configuration
