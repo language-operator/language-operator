@@ -6,6 +6,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { Bot, Plus, Activity, Clock, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { LanguageAgent } from '@/types/agent'
@@ -93,20 +94,20 @@ export default function ClusterAgents() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Agents</h1>
-            <p className="text-gray-600 mt-1">
-              AI agents running in the {clusterName} cluster
-            </p>
-          </div>
-          <Button asChild>
-            <Link href={`/clusters/${clusterName}/agents/new`}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Agent
-            </Link>
-          </Button>
-        </div>
+        <ResourceHeader
+          icon={Bot}
+          iconColor="text-blue-500"
+          title="Agents"
+          subtitle={`AI agents running in the ${clusterName} cluster (${clusterAgents.length} agents)`}
+          actions={
+            <Button asChild>
+              <Link href={`/clusters/${clusterName}/agents/new`}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Agent
+              </Link>
+            </Button>
+          }
+        />
 
         {/* Loading State */}
         {loading && (

@@ -5,6 +5,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { 
   Bot, 
   Cpu, 
@@ -13,7 +14,8 @@ import {
   Activity,
   ExternalLink,
   Edit,
-  Settings
+  Settings,
+  BarChart3
 } from 'lucide-react'
 import { useCluster } from '@/hooks/use-clusters'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
@@ -83,26 +85,26 @@ export default function ClusterDashboard() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Cluster Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{cluster.metadata?.name}</h1>
-            <p className="text-gray-600 mt-1">
-              Created {formatTimeAgo(cluster.metadata?.creationTimestamp)}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Badge className={getStatusColor(cluster.status?.phase)}>
-              <Activity className="h-3 w-3 mr-1" />
-              {cluster.status?.phase || 'Unknown'}
-            </Badge>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/clusters/${clusterName}/settings`}>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <ResourceHeader
+          icon={BarChart3}
+          iconColor="text-blue-500"
+          title={cluster.metadata?.name || ''}
+          subtitle={`Created ${formatTimeAgo(cluster.metadata?.creationTimestamp)}`}
+          actions={
+            <>
+              <Badge className={getStatusColor(cluster.status?.phase)}>
+                <Activity className="h-3 w-3 mr-1" />
+                {cluster.status?.phase || 'Unknown'}
+              </Badge>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/clusters/${clusterName}/settings`}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Link>
+              </Button>
+            </>
+          }
+        />
 
         {/* Cluster Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -159,27 +161,27 @@ export default function ClusterDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/models`}>
+                  <Link href={`/clusters/${clusterName}/models/new`}>
                     <Cpu className="h-6 w-6 mb-2" />
-                    Models
+                    Create Model
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/tools`}>
+                  <Link href={`/clusters/${clusterName}/tools/new`}>
                     <Wrench className="h-6 w-6 mb-2" />
-                    Tools
+                    Create Tool
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/personas`}>
+                  <Link href={`/clusters/${clusterName}/personas/new`}>
                     <Users className="h-6 w-6 mb-2" />
-                    Personas
+                    Create Persona
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/agents`}>
+                  <Link href={`/clusters/${clusterName}/agents/new`}>
                     <Bot className="h-6 w-6 mb-2" />
-                    Agents
+                    Create Agent
                   </Link>
                 </Button>
               </div>
@@ -189,62 +191,70 @@ export default function ClusterDashboard() {
 
         {/* Resource Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Models</CardTitle>
-              <Cpu className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {countsLoading ? '-' : counts?.models || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Language models in this cluster
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tools</CardTitle>
-              <Wrench className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {countsLoading ? '-' : counts?.tools || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Available tools
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Personas</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {countsLoading ? '-' : counts?.personas || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Configured personas
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Agents</CardTitle>
-              <Bot className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {countsLoading ? '-' : counts?.agents || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Running agents
-              </p>
-            </CardContent>
-          </Card>
+          <Link href={`/clusters/${clusterName}/models`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Models</CardTitle>
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {countsLoading ? '-' : counts?.models || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Language models in this cluster
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={`/clusters/${clusterName}/tools`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Tools</CardTitle>
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {countsLoading ? '-' : counts?.tools || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Available tools
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={`/clusters/${clusterName}/personas`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Personas</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {countsLoading ? '-' : counts?.personas || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Configured personas
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={`/clusters/${clusterName}/agents`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Agents</CardTitle>
+                <Bot className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {countsLoading ? '-' : counts?.agents || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Running agents
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       </div>
     </AuthenticatedLayout>

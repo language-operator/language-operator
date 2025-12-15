@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { Wrench, Download, CheckCircle, Search, ExternalLink, Shield, Network } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -37,8 +38,8 @@ export default function ClusterTools() {
       const catalogData = await catalogResponse.json()
       setCatalog(catalogData)
 
-      // Fetch installed tools (API will determine namespace from session)
-      const toolsResponse = await fetch(`/api/tools`)
+      // Fetch installed tools for this cluster
+      const toolsResponse = await fetch(`/api/clusters/${clusterName}/tools`)
       if (toolsResponse.ok) {
         const toolsData = await toolsResponse.json()
         // Convert LanguageTool objects to InstalledTool format
@@ -305,14 +306,12 @@ export default function ClusterTools() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Tools Catalog</h1>
-            <p className="text-gray-600 mt-1">
-              Browse and install official tools for the {clusterName} cluster
-            </p>
-          </div>
-        </div>
+        <ResourceHeader
+          icon={Wrench}
+          iconColor="text-blue-500"
+          title="Tools"
+          subtitle={`Browse and install official tools for the ${clusterName} cluster`}
+        />
 
         {/* Search */}
         <div className="relative">

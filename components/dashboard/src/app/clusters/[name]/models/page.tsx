@@ -6,6 +6,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { Cpu, Plus, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useModels } from '@/hooks/use-models'
@@ -72,20 +73,20 @@ export default function ClusterModels() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Models</h1>
-            <p className="text-gray-600 mt-1">
-              Language models in the {clusterName} cluster ({clusterModels.length} models)
-            </p>
-          </div>
-          <Button asChild>
-            <Link href={`/clusters/${clusterName}/models/new`}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Model
-            </Link>
-          </Button>
-        </div>
+        <ResourceHeader
+          icon={Cpu}
+          iconColor="text-blue-500"
+          title="Models"
+          subtitle={`Language models in the ${clusterName} cluster (${clusterModels.length} models)`}
+          actions={
+            <Button asChild>
+              <Link href={`/clusters/${clusterName}/models/new`}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Model
+              </Link>
+            </Button>
+          }
+        />
 
         {/* Models List or Empty State */}
         {clusterModels.length === 0 ? (
