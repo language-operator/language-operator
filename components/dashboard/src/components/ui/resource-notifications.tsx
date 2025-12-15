@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { CheckCircle, AlertCircle, XCircle, Plus, Trash2, Edit } from 'lucide-react'
 import { WatchEvent } from '@/hooks/use-watch'
@@ -16,6 +16,18 @@ export function useResourceNotifications({
   enabled = true, 
   showAllEvents = false 
 }: ResourceNotificationProps) {
+  // Track if we're in the initial sync period to avoid showing notifications for existing resources
+  const initialSyncRef = useRef(true)
+  const seenResourcesRef = useRef(new Set<string>())
+  
+  // Allow notifications for new resources after a delay (initial sync typically completes within 2-3 seconds)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      initialSyncRef.current = false
+    }, 3000) // Wait 3 seconds before showing ADDED notifications
+    
+    return () => clearTimeout(timer)
+  }, [])
   
   const handleEvent = (event: WatchEvent) => {
     if (!enabled) return
@@ -25,6 +37,28 @@ export function useResourceNotifications({
       
       const resourceName = event.data?.metadata?.name || 'Unknown'
       const resourceType = event.resource || 'Resource'
+      const resourceKey = `${resourceType}-${resourceName}`
+      
+      // Skip ADDED events during initial sync period to avoid showing notifications for existing resources
+      if (event.type === 'ADDED' && initialSyncRef.current) {
+        seenResourcesRef.current.add(resourceKey)
+        return
+      }
+      
+      // For ADDED events after initial sync, only show if we haven't seen this resource before
+      if (event.type === 'ADDED' && seenResourcesRef.current.has(resourceKey)) {
+        return
+      }
+      
+      // Track new resources
+      if (event.type === 'ADDED') {
+        seenResourcesRef.current.add(resourceKey)
+      }
+      
+      // Remove from tracking when deleted
+      if (event.type === 'DELETED') {
+        seenResourcesRef.current.delete(resourceKey)
+      }
       
       // Determine if we should show this event
       const shouldShow = showAllEvents || 
