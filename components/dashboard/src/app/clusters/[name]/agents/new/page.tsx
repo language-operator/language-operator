@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
@@ -80,6 +80,7 @@ export default function CreateClusterAgentPage() {
   
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),
+    mode: 'onChange',
     defaultValues: {
       instructions: '',
       name: '',
@@ -88,6 +89,8 @@ export default function CreateClusterAgentPage() {
       selectedPersona: 'none',
     },
   })
+
+  const { formState } = form
 
   const watchedValues = form.watch()
 
@@ -394,7 +397,7 @@ export default function CreateClusterAgentPage() {
                   
                   <Button 
                     type="submit" 
-                    disabled={createAgent.isPending}
+                    disabled={createAgent.isPending || !formState.isValid}
                     className="ml-auto"
                   >
                     {createAgent.isPending ? (
@@ -416,7 +419,9 @@ export default function CreateClusterAgentPage() {
             <div className="lg:col-span-1">
               <Card className="sticky top-6">
                 <CardHeader>
-                  <CardTitle className="text-sm">YAML Preview</CardTitle>
+                  <CardTitle className={`text-sm ${!formState.isValid ? 'text-red-500' : ''}`}>
+                    YAML Preview
+                  </CardTitle>
                   <CardDescription>
                     Generated Kubernetes resource definition
                   </CardDescription>
