@@ -117,8 +117,8 @@ export default function EditClusterPersonaPage() {
             backLabel="Back to Personas"
             icon={Users}
             iconColor="text-blue-500"
-            title={<Skeleton className="h-6 w-48" />}
-            subtitle={<Skeleton className="h-4 w-64" />}
+            title="Loading..."
+            subtitle="Loading persona details..."
           />
           <Skeleton className="h-96 w-full" />
         </div>

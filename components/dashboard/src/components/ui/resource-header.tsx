@@ -17,7 +17,7 @@ interface ResourceHeaderProps {
   iconBgColor?: string
   
   /** Title and subtitle */
-  title: string
+  title: string | React.ReactNode
   subtitle?: string
   
   /** Right-side actions */

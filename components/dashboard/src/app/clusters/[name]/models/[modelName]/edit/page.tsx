@@ -191,8 +191,8 @@ export default function ClusterEditModelPage() {
             backLabel="Back to Models"
             icon={Cpu}
             iconColor="text-blue-500"
-            title={<Skeleton className="h-6 w-48" />}
-            subtitle={<Skeleton className="h-4 w-32" />}
+            title="Loading..."
+            subtitle="Loading model details..."
           />
           <Skeleton className="h-64 w-full" />
         </div>

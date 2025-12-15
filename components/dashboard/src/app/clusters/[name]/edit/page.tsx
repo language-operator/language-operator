@@ -122,7 +122,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     return {
       name: cluster.metadata.name,
       domain: cluster.spec.domain || '',
-      enableTLS: cluster.spec.ingressConfig?.tls?.enabled ?? true,
+      enableTLS: cluster.spec.ingress?.enabled ?? true,
     }
   }
 
