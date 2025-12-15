@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, Settings, Users, Mail, MoreHorizontal, Trash2, Edit } from 'lucide-react'
+import { Plus, Settings, Users, MoreHorizontal, Trash2, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,9 +12,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useOrganizations, useActiveOrganization } from '@/hooks/use-organizations'
 import { useOrganizationStore } from '@/store/organization-store'
-import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
 import { CreateOrganizationDialog } from '@/components/organization/create-organization-dialog'
 import { EditOrganizationDialog } from '@/components/organization/edit-organization-dialog'
 import type { Organization } from '@/store/organization-store'
@@ -41,6 +48,7 @@ export default function OrganizationsPage() {
         return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
     }
   }
+
 
   if (isLoading) {
     return (
@@ -82,154 +90,120 @@ export default function OrganizationsPage() {
         </Button>
       </div>
 
-      {/* Active Organization Switcher */}
+
+      {/* Organizations Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Current Organization</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Active Organizations
+          </CardTitle>
           <CardDescription>
-            Switch between organizations to manage different projects and teams
+            Manage your organizations and their settings
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <OrganizationSwitcher 
-              className="w-96"
-              onCreateNew={() => setShowCreateDialog(true)}
-            />
-            {activeOrganization && (
-              <div className="text-sm text-gray-600">
-                All Kubernetes resources will be scoped to the <strong>{activeOrganization.namespace}</strong> namespace
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Organizations List */}
-      <div className="grid gap-4">
-        {organizations.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Settings className="w-6 h-6 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No organizations</h3>
-              <p className="text-gray-600 mb-4">
-                Create your first organization to start managing Language Operator resources
-              </p>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Organization
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          organizations.map((org) => {
-            const userMembership = org.members?.find(member => 
-              // This would need to match against current user
-              member.role
-            )
-            
-            const isActive = activeOrganization?.id === org.id
-            
-            return (
-              <Card key={org.id} className={isActive ? 'ring-2 ring-blue-500' : ''}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">{org.name}</h3>
-                        {isActive && (
-                          <Badge variant="default" className="bg-blue-100 text-blue-800">
-                            Active
-                          </Badge>
-                        )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Namespace</TableHead>
+                <TableHead># Members</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead className="w-[70px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {organizations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <Settings className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold mb-2">No organizations</h3>
+                      <p className="text-gray-600 mb-4">
+                        Create your first organization to start managing Language Operator resources
+                      </p>
+                      <Button onClick={() => setShowCreateDialog(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Organization
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                organizations.map((org) => {
+                  const userMembership = org.members?.find(member => 
+                    // This would need to match against current user
+                    member.role
+                  )
+                  
+                  const isActive = activeOrganization?.id === org.id
+                  
+                  return (
+                    <TableRow key={org.id} className={isActive ? 'bg-blue-50' : ''}>
+                      <TableCell>
+                        <div className="font-medium flex items-center gap-2">
+                          {org.name}
+                          {isActive && (
+                            <Badge variant="default" className="bg-blue-100 text-blue-800">
+                              Selected
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {org.namespace || org.slug}
+                      </TableCell>
+                      <TableCell>
+                        {org._count?.members || 0}
+                      </TableCell>
+                      <TableCell>
                         {userMembership && (
                           <Badge 
                             variant="secondary" 
                             className={getRoleBadgeColor(userMembership.role)}
                           >
-                            {userMembership.role}
+                            {userMembership.role.charAt(0).toUpperCase() + userMembership.role.slice(1)}
                           </Badge>
                         )}
-                        <Badge variant="outline" className="capitalize">
-                          {org.plan}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <div>
-                          <span className="font-medium">Namespace:</span> {org.namespace}
-                        </div>
-                        <div>
-                          <span className="font-medium">Slug:</span> {org.slug}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4" />
-                          {org._count?.members || 0} members
-                        </div>
-                        {(org._count?.invites || 0) > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-4 h-4" />
-                            {org._count?.invites} pending invites
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {!isActive && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setActiveOrganization(org.id)}
-                        >
-                          Switch to
-                        </Button>
-                      )}
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditingOrganization(org)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Organization
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/settings/organizations/${org.id}/members`}>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setActiveOrganization(org.id)}>
                               <Users className="mr-2 h-4 w-4" />
-                              Manage Members
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Manage Invites
-                          </DropdownMenuItem>
-                          {userMembership?.role === 'owner' && (
-                            <>
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Organization
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
+                              Switch to Organization
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingOrganization(org)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Organization
+                            </DropdownMenuItem>
+                            {userMembership?.role === 'owner' && (
+                              <>
+                                <DropdownMenuItem className="text-red-600">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Organization
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       
       {/* Create Organization Dialog */}
       <CreateOrganizationDialog
