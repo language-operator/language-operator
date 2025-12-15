@@ -184,7 +184,7 @@ export async function POST(
         replicas: agentData.replicas || 1,
         
         // Required fields based on existing agent structure
-        image: 'ghcr.io/langop/language-agent:latest',
+        image: 'ghcr.io/language-operator/agent:latest',
         imagePullPolicy: 'IfNotPresent',
         clusterRef: clusterName,
         backoffLimit: 3,
