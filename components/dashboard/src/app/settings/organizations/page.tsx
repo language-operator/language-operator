@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Plus, Settings, Users, MoreHorizontal, Trash2, Edit } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import {
   Table,
   TableBody,
@@ -29,6 +31,8 @@ import type { Organization } from '@/store/organization-store'
 export default function OrganizationsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null)
+  const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   const { data: organizations = [], isLoading } = useOrganizations()
   const { organization: activeOrganization } = useActiveOrganization()
@@ -46,6 +50,37 @@ export default function OrganizationsPage() {
         return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
       default:
         return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+    }
+  }
+
+  const handleDeleteOrganization = async (organization: Organization) => {
+    if (!organization) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/organizations/${organization.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete organization')
+      }
+
+      toast.success('Organization deleted successfully')
+      
+      // If this was the active organization, clear it
+      if (activeOrganization?.id === organization.id) {
+        setActiveOrganization(null)
+      }
+      
+      // Close the dialog and refresh the list (react-query will handle this)
+      setDeletingOrganization(null)
+    } catch (error) {
+      console.error('Error deleting organization:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to delete organization')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -187,7 +222,10 @@ export default function OrganizationsPage() {
                             </DropdownMenuItem>
                             {userMembership?.role === 'owner' && (
                               <>
-                                <DropdownMenuItem className="text-red-600">
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => setDeletingOrganization(org)}
+                                >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   Delete Organization
                                 </DropdownMenuItem>
@@ -217,6 +255,44 @@ export default function OrganizationsPage() {
         onOpenChange={(open) => !open && setEditingOrganization(null)}
         organization={editingOrganization}
       />
+
+      {/* Delete Organization Dialog */}
+      <AlertDialog 
+        open={!!deletingOrganization} 
+        onOpenChange={(open) => !open && setDeletingOrganization(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Organization</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{deletingOrganization?.name}</strong>? 
+              This will permanently delete the organization and all associated resources including:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All clusters and agents</li>
+                <li>All models and tools</li>
+                <li>All personas and workflows</li>
+                <li>The Kubernetes namespace and its contents</li>
+                <li>All member access and invitations</li>
+              </ul>
+              <p className="mt-2 font-medium text-destructive">
+                This action cannot be undone.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingOrganization && handleDeleteOrganization(deletingOrganization)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Organization'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

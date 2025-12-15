@@ -25,7 +25,6 @@ export function useModels(params?: LanguageModelListParams) {
       }
       return response.json()
     },
-    refetchInterval: 5000,
   })
 }
 

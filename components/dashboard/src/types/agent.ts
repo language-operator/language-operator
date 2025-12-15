@@ -21,6 +21,7 @@ export interface LanguageAgentList {
 export interface LanguageAgentSpec {
   // Required: Container image for the agent
   image?: string
+  imagePullPolicy?: 'Always' | 'IfNotPresent' | 'Never'
   
   // Primary instructions for agent behavior
   instructions?: string
@@ -37,6 +38,19 @@ export interface LanguageAgentSpec {
   
   // Persona references - matches CRD structure  
   personaRefs?: PersonaReference[]
+  
+  // Required fields from CRD
+  clusterRef?: string
+  backoffLimit?: number
+  maxIterations?: number
+  timeout?: string
+  restartPolicy?: 'OnFailure' | 'Always' | 'Never'
+  
+  // Agent version reference
+  agentVersionRef?: AgentVersionReference
+  
+  // Workspace configuration
+  workspace?: WorkspaceConfig
   
   // Legacy fields for backward compatibility
   model?: LanguageModelConfig
@@ -80,6 +94,19 @@ export interface ToolReference {
 export interface PersonaReference {
   name: string
   namespace?: string
+}
+
+export interface AgentVersionReference {
+  name: string
+  namespace?: string
+  lock?: boolean
+}
+
+export interface WorkspaceConfig {
+  enabled?: boolean
+  size?: string
+  accessMode?: 'ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany'
+  mountPath?: string
 }
 
 // Legacy model config for backward compatibility

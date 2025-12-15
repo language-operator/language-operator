@@ -64,14 +64,9 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
           <div className="flex items-center gap-2 overflow-hidden">
             <Building2 className="h-4 w-4 flex-shrink-0" />
             {activeOrganization ? (
-              <div className="flex flex-col items-start overflow-hidden">
-                <span className="font-medium truncate">
-                  {activeOrganization.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {activeOrganization.namespace}
-                </span>
-              </div>
+              <span className="font-medium truncate">
+                {activeOrganization.name}
+              </span>
             ) : (
               <span className="text-muted-foreground">Select organization...</span>
             )}
@@ -104,24 +99,17 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
                 onSelect={() => handleOrganizationSwitch(org.id)}
               >
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
-                  <div className="flex flex-col items-start overflow-hidden flex-1">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="font-medium truncate">{org.name}</span>
-                      {userMembership && (
-                        <Badge 
-                          variant="secondary" 
-                          className={cn("text-xs px-1.5 py-0", getRoleBadgeColor(userMembership.role))}
-                        >
-                          {userMembership.role}
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {org.namespace}
-                    </span>
-                  </div>
+                  <span className="font-medium truncate">{org.name}</span>
+                  {userMembership && (
+                    <Badge 
+                      variant="secondary" 
+                      className={cn("text-xs px-1.5 py-0", getRoleBadgeColor(userMembership.role))}
+                    >
+                      {userMembership.role}
+                    </Badge>
+                  )}
                   {isActive && (
-                    <Check className="h-4 w-4 flex-shrink-0" />
+                    <Check className="h-4 w-4 flex-shrink-0 ml-auto" />
                   )}
                 </div>
               </DropdownMenuItem>

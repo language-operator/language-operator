@@ -21,7 +21,6 @@ export function usePersonas(params?: LanguagePersonaListParams) {
       }
       return response.json()
     },
-    refetchInterval: 5000,
   })
 }
 

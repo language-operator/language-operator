@@ -88,12 +88,28 @@ class KubernetesClient {
 
   async createOrganizationNamespace(name: string, organizationId: string, plan: string = 'free') {
     try {
-      // Create namespace with organization labels
-      const namespaceResponse = await this.createNamespace(name, {
-        'langop.io/organization': organizationId,
-        'langop.io/plan': plan.toLowerCase(),
-        'langop.io/resource': 'namespace'
-      })
+      // Create namespace with enhanced organization labels and annotations
+      if (!this.coreV1Api) {
+        throw new Error('Kubernetes API not available')
+      }
+      
+      const namespace: k8s.V1Namespace = {
+        metadata: {
+          name,
+          labels: {
+            'langop.io/organization-id': organizationId,
+            'langop.io/managed-by': 'dashboard',
+            'langop.io/type': 'organization',
+            'langop.io/plan': plan.toLowerCase()
+          },
+          annotations: {
+            'langop.io/created-at': new Date().toISOString(),
+            'langop.io/namespace-type': 'uuid-based'
+          }
+        }
+      }
+      
+      const namespaceResponse = await this.coreV1Api.createNamespace({ body: namespace })
 
       // Create ResourceQuota for the namespace
       try {
@@ -130,14 +146,55 @@ class KubernetesClient {
     return await this.coreV1Api.deleteNamespace({ name })
   }
 
-  async getPodLogs(namespace: string, podName: string, tailLines: number = 100) {
+  async getPodLogs(namespace: string, podName: string, options?: {
+    tailLines?: number
+    timestamps?: boolean
+    sinceSeconds?: number
+  }) {
     if (!this.coreV1Api) {
       throw new Error('Kubernetes API not available')
     }
     return await this.coreV1Api.readNamespacedPodLog({
       name: podName,
       namespace,
-      tailLines,
+      tailLines: options?.tailLines || 100,
+      timestamps: options?.timestamps || false,
+      sinceSeconds: options?.sinceSeconds,
+    })
+  }
+
+  async listPods(namespace: string, options?: {
+    labelSelector?: string
+    fieldSelector?: string
+    limit?: number
+  }) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
+    return await this.coreV1Api.listNamespacedPod({
+      namespace,
+      labelSelector: options?.labelSelector,
+      fieldSelector: options?.fieldSelector,
+      limit: options?.limit,
+    })
+  }
+
+  async streamPodLogs(namespace: string, podName: string, options?: {
+    follow?: boolean
+    tailLines?: number
+    timestamps?: boolean
+  }) {
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
+    
+    // Use the log method that returns a stream
+    return await this.coreV1Api.readNamespacedPodLog({
+      name: podName,
+      namespace,
+      follow: options?.follow || false,
+      tailLines: options?.tailLines || 10,
+      timestamps: options?.timestamps || false,
     })
   }
 
@@ -195,7 +252,7 @@ class KubernetesClient {
         name: quotaName,
         namespace,
         labels: {
-          'langop.io/organization': organizationId,
+          'langop.io/organization-id': organizationId,
           'langop.io/plan': plan.toLowerCase(),
           'langop.io/resource': 'quota'
         }
@@ -234,7 +291,7 @@ class KubernetesClient {
         name: quotaName,
         namespace,
         labels: {
-          'langop.io/organization': organizationId,
+          'langop.io/organization-id': organizationId,
           'langop.io/plan': plan.toLowerCase(),
           'langop.io/resource': 'quota'
         }
@@ -822,21 +879,38 @@ class KubernetesClient {
    * List resources in namespace with organization filtering
    */
   async listByOrganization(resourceType: 'agents' | 'models' | 'tools' | 'personas' | 'clusters', namespace: string, organizationId: string) {
-    const labelSelector = `langop.io/organization=${organizationId}`
+    // Try new label format first, fallback to old format for legacy resources
+    const newLabelSelector = `langop.io/organization-id=${organizationId}`
+    const oldLabelSelector = `langop.io/organization=${organizationId}`
     
-    switch (resourceType) {
-      case 'agents':
-        return this.listLanguageAgents(namespace, { labelSelector })
-      case 'models':
-        return this.listLanguageModels(namespace, { labelSelector })
-      case 'tools':
-        return this.listLanguageTools(namespace, { labelSelector })
-      case 'personas':
-        return this.listLanguagePersonas(namespace, { labelSelector })
-      case 'clusters':
-        return this.listLanguageClusters(namespace, { labelSelector })
-      default:
-        throw new Error(`Unknown resource type: ${resourceType}`)
+    const listMethod = {
+      agents: this.listLanguageAgents.bind(this),
+      models: this.listLanguageModels.bind(this),
+      tools: this.listLanguageTools.bind(this),
+      personas: this.listLanguagePersonas.bind(this),
+      clusters: this.listLanguageClusters.bind(this)
+    }[resourceType]
+    
+    if (!listMethod) {
+      throw new Error(`Unknown resource type: ${resourceType}`)
+    }
+    
+    try {
+      // First try with new label format
+      const result = await listMethod(namespace, { labelSelector: newLabelSelector })
+      const items = (result as any)?.body?.items || (result as any)?.data?.items || (result as any)?.items || []
+      
+      // If we found resources, return them
+      if (items.length > 0) {
+        return result
+      }
+      
+      // If no resources found with new label, try old label format as fallback
+      return await listMethod(namespace, { labelSelector: oldLabelSelector })
+      
+    } catch (error) {
+      // If new label fails, try old label format
+      return await listMethod(namespace, { labelSelector: oldLabelSelector })
     }
   }
 
@@ -888,7 +962,7 @@ class KubernetesClient {
    * Get resource counts for namespace dashboard
    */
   async getNamespaceResourceCounts(namespace: string, organizationId?: string) {
-    const labelSelector = organizationId ? `langop.io/organization=${organizationId}` : undefined
+    const labelSelector = organizationId ? `langop.io/organization-id=${organizationId}` : undefined
     const options = labelSelector ? { labelSelector } : undefined
 
     const [agents, models, tools, personas, clusters] = await Promise.all([
@@ -930,7 +1004,7 @@ class KubernetesClient {
    * Search resources across all types in a namespace
    */
   async searchResources(namespace: string, query: string, organizationId?: string) {
-    const baseSelector = organizationId ? `langop.io/organization=${organizationId}` : undefined
+    const baseSelector = organizationId ? `langop.io/organization-id=${organizationId}` : undefined
     const options = baseSelector ? { labelSelector: baseSelector } : undefined
 
     const [agents, models, tools, personas, clusters] = await Promise.all([

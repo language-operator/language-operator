@@ -3,13 +3,21 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { k8sClient } from '@/lib/k8s-client'
+import { generateOrganizationNamespace } from '@/lib/namespace-utils'
 import { z } from 'zod'
 
 const createOrganizationSchema = z.object({
-  name: z.string().min(1).max(100),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
-  namespace: z.string().min(1).max(63).regex(/^[a-z0-9-]+$/)
+  name: z.string().min(1).max(100)
 })
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+}
 
 export async function GET() {
   try {
@@ -81,28 +89,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check if slug is unique
-    const existingOrg = await prisma.organization.findFirst({
-      where: {
-        OR: [
-          { slug: validatedData.slug },
-          { namespace: validatedData.namespace }
-        ]
-      }
-    })
+    // Generate slug from name
+    let slug = generateSlug(validatedData.name)
+    let slugAttempts = 0
+    const maxSlugAttempts = 10
 
-    if (existingOrg) {
+    // Ensure slug uniqueness
+    while (slugAttempts < maxSlugAttempts) {
+      const existingOrg = await prisma.organization.findFirst({
+        where: { slug: slug }
+      })
+
+      if (!existingOrg) {
+        break
+      }
+
+      // Add a number suffix if slug already exists
+      slugAttempts++
+      slug = `${generateSlug(validatedData.name)}-${slugAttempts}`
+    }
+
+    if (slugAttempts >= maxSlugAttempts) {
       return NextResponse.json(
-        { error: 'Organization slug or namespace already exists' },
-        { status: 409 }
+        { error: 'Failed to generate unique organization identifier. Please try again.' },
+        { status: 500 }
+      )
+    }
+
+    // Generate a unique UUID-based namespace
+    let namespace: string
+    let namespaceAttempts = 0
+    const maxAttempts = 10
+
+    do {
+      namespace = generateOrganizationNamespace()
+      const existingNamespace = await prisma.organization.findUnique({
+        where: { namespace }
+      })
+      
+      if (!existingNamespace) {
+        break
+      }
+      
+      namespaceAttempts++
+    } while (namespaceAttempts < maxAttempts)
+
+    if (namespaceAttempts >= maxAttempts) {
+      return NextResponse.json(
+        { error: 'Failed to generate unique namespace. Please try again.' },
+        { status: 500 }
       )
     }
 
     // Create organization with user as owner
     const organization = await prisma.organization.create({
       data: {
-        ...validatedData,
-        plan: 'free', // Default to free plan for manually created orgs
+        name: validatedData.name,
+        slug: slug,
+        namespace: namespace,
+        plan: 'free', // Default to free plan
         members: {
           create: {
             userId: user.id,
@@ -128,7 +173,7 @@ export async function POST(request: NextRequest) {
 
     // Create Kubernetes namespace with ResourceQuota for the organization
     try {
-      await k8sClient.createOrganizationNamespace(validatedData.namespace, organization.id, 'free')
+      await k8sClient.createOrganizationNamespace(namespace, organization.id, organization.plan)
     } catch (err: any) {
       // If namespace creation fails, log but don't fail organization creation
       console.error('Failed to create organization namespace:', err.message)

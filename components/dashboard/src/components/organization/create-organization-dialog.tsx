@@ -29,8 +29,10 @@ export function CreateOrganizationDialog({
           // Close the dialog
           onOpenChange(false)
           
-          // Switch to the newly created organization
-          setActiveOrganization(response.organization.id)
+          // Switch to the newly created organization if requested
+          if (data.switchToNew) {
+            setActiveOrganization(response.organization.id)
+          }
           
           // Show success toast
           toast.success('Organization created successfully!')
@@ -71,8 +73,7 @@ export function CreateOrganizationDialog({
         <DialogHeader>
           <DialogTitle>Create Organization</DialogTitle>
           <DialogDescription>
-            Create a new organization to manage your Language Operator resources.
-            Each organization gets its own Kubernetes namespace.
+            What is the organization's name?
           </DialogDescription>
         </DialogHeader>
         

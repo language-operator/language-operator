@@ -1,9 +1,10 @@
 'use client'
 
-import { useParams } from 'next/navigation'
+import { useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Settings, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useOrganization } from '@/hooks/use-organizations'
 
 interface OrganizationLayoutProps {
@@ -12,10 +13,26 @@ interface OrganizationLayoutProps {
 
 export default function OrganizationLayout({ children }: OrganizationLayoutProps) {
   const params = useParams()
+  const pathname = usePathname()
   const organizationId = params.id as string
   
   const { data: organizationData, isLoading } = useOrganization(organizationId)
   const organization = organizationData?.organization
+
+  const tabs = [
+    {
+      name: 'General',
+      href: `/settings/organizations/${organizationId}`,
+      icon: Settings,
+      current: pathname === `/settings/organizations/${organizationId}`
+    },
+    {
+      name: 'Members',
+      href: `/settings/organizations/${organizationId}/members`,
+      icon: Users,
+      current: pathname === `/settings/organizations/${organizationId}/members`
+    }
+  ]
 
   return (
     <div className="space-y-6">
@@ -43,6 +60,32 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
           <div className="space-y-2">
             <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
             <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+          </div>
+        )}
+
+        {/* Tabs Navigation */}
+        {organization && (
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <Link
+                    key={tab.name}
+                    href={tab.href}
+                    className={cn(
+                      'flex items-center py-2 px-1 border-b-2 text-sm font-medium',
+                      tab.current
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {tab.name}
+                  </Link>
+                )
+              })}
+            </nav>
           </div>
         )}
       </div>

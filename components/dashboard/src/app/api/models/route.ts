@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
         name: formData.name,
         namespace: organization.namespace,
         labels: {
-          'langop.io/organization': organization.id,
+          'langop.io/organization-id': organization.id,
           'langop.io/created-by': user.id,
         },
         annotations: {

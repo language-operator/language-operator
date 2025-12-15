@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { k8sClient } from '@/lib/k8s-client'
 import { z } from 'zod'
 
 const updateOrganizationSchema = z.object({
@@ -203,10 +204,27 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Get organization details before deletion to clean up namespace
+    const organization = await prisma.organization.findUnique({
+      where: { id }
+    })
+
+    if (!organization) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
     // Delete organization (cascading deletes will handle members and invites)
     await prisma.organization.delete({
       where: { id }
     })
+
+    // Clean up Kubernetes namespace
+    try {
+      await k8sClient.deleteOrganizationNamespace(organization.namespace)
+    } catch (k8sError: any) {
+      // Log but don't fail deletion if namespace cleanup fails
+      console.warn(`Warning: Failed to delete namespace ${organization.namespace}:`, k8sError.message)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

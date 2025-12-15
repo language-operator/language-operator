@@ -37,6 +37,7 @@ import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgentFormData, LanguageAgent } from '@/types/agent'
 import { useToast } from '@/hooks/use-toast'
+import { kubernetesNameValidation } from '@/lib/validation'
 
 // Simplified form validation schema - only 5 essential fields
 const agentFormSchema = z.object({
@@ -44,10 +45,7 @@ const agentFormSchema = z.object({
     .min(1, 'Goal is required')
     .min(10, 'Goal must be at least 10 characters')
     .max(5000, 'Goal must be less than 5000 characters'),
-  name: z.string()
-    .min(1, 'Name is required')
-    .max(253, 'Name must be 253 characters or less')
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Name must be a valid Kubernetes resource name'),
+  name: kubernetesNameValidation,
   selectedModels: z.array(z.string()).min(1, 'At least one model must be selected'),
   selectedTools: z.array(z.string()),
   selectedPersona: z.string().optional(),

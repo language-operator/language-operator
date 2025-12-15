@@ -21,14 +21,12 @@ export interface RecentActivityResponse {
 
 export interface UseRecentActivityOptions {
   limit?: number
-  refetchInterval?: number
   enabled?: boolean
 }
 
 export function useRecentActivity(options: UseRecentActivityOptions = {}) {
   const { 
     limit = 10, 
-    refetchInterval = 30000, // Refetch every 30 seconds
     enabled = true 
   } = options
 
@@ -45,9 +43,8 @@ export function useRecentActivity(options: UseRecentActivityOptions = {}) {
       }
       return response.json()
     },
-    refetchInterval,
     enabled,
-    staleTime: 10000, // Consider data stale after 10 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - activity updates via events now
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   })
 }

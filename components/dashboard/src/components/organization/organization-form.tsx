@@ -6,22 +6,14 @@ import { z } from 'zod'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator'
 
 // Organization form schema matching the API validation
 const organizationFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(100, 'Name must be 100 characters or less'),
-  slug: z.string()
-    .min(1, 'Slug is required')
-    .max(50, 'Slug must be 50 characters or less')
-    .regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
-  namespace: z.string()
-    .min(1, 'Namespace is required')
-    .max(63, 'Namespace must be 63 characters or less')
-    .regex(/^[a-z0-9-]+$/, 'Namespace must contain only lowercase letters, numbers, and hyphens'),
-  plan: z.enum(['free', 'pro', 'enterprise'], 'Please select a plan')
+  switchToNew: z.boolean().optional().default(false)
 })
 
 export type OrganizationFormData = z.infer<typeof organizationFormSchema>
@@ -34,13 +26,10 @@ interface OrganizationFormProps {
   mode: 'create' | 'edit'
 }
 
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single
-    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+const nameConfig = {
+  dictionaries: [adjectives, animals],
+  separator: ' ',
+  style: 'capital'
 }
 
 export function OrganizationForm({
@@ -50,49 +39,26 @@ export function OrganizationForm({
   isLoading = false,
   mode
 }: OrganizationFormProps) {
-  const [isAutoGenerating, setIsAutoGenerating] = useState(mode === 'create')
+  const [funnyName, setFunnyName] = useState('')
 
   const form = useForm<OrganizationFormData>({
     resolver: zodResolver(organizationFormSchema),
     defaultValues: {
       name: initialData?.name || '',
-      slug: initialData?.slug || '',
-      namespace: initialData?.namespace || '',
-      plan: initialData?.plan || 'free'
+      switchToNew: false
     }
   })
 
   const { watch, setValue, formState: { errors } } = form
-  const nameValue = watch('name')
-  const slugValue = watch('slug')
 
-  // Auto-generate slug and namespace when name changes (only in create mode or if user hasn't manually edited)
+  // Generate a funny default name on component mount
   useEffect(() => {
-    if (mode === 'create' && isAutoGenerating && nameValue) {
-      const newSlug = generateSlug(nameValue)
-      setValue('slug', newSlug)
-      setValue('namespace', newSlug)
+    if (mode === 'create' && !initialData?.name) {
+      const generatedName = uniqueNamesGenerator(nameConfig)
+      setFunnyName(generatedName)
+      setValue('name', generatedName)
     }
-  }, [nameValue, setValue, mode, isAutoGenerating])
-
-  // Auto-generate namespace when slug changes (if auto-generating)
-  useEffect(() => {
-    if (isAutoGenerating && slugValue) {
-      setValue('namespace', slugValue)
-    }
-  }, [slugValue, setValue, isAutoGenerating])
-
-  const handleSlugChange = (value: string) => {
-    // If user manually edits slug, disable auto-generation
-    setIsAutoGenerating(false)
-    setValue('slug', value)
-  }
-
-  const handleNamespaceChange = (value: string) => {
-    // If user manually edits namespace, disable auto-generation
-    setIsAutoGenerating(false)
-    setValue('namespace', value)
-  }
+  }, [mode, initialData?.name, setValue])
 
   return (
     <Form {...form}>
@@ -102,11 +68,9 @@ export function OrganizationForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Organization Name</FormLabel>
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="My Organization"
                   disabled={isLoading}
                 />
               </FormControl>
@@ -117,73 +81,20 @@ export function OrganizationForm({
 
         <FormField
           control={form.control}
-          name="slug"
+          name="switchToNew"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Slug</FormLabel>
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
               <FormControl>
-                <Input
-                  {...field}
-                  placeholder="my-organization"
-                  disabled={isLoading}
-                  onChange={(e) => handleSlugChange(e.target.value)}
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
                 />
               </FormControl>
-              <FormMessage />
-              {mode === 'create' && (
-                <p className="text-xs text-gray-600">
-                  Used in URLs and API endpoints. {isAutoGenerating ? 'Auto-generated from name.' : 'Edit to customize.'}
-                </p>
-              )}
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="namespace"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Kubernetes Namespace</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  placeholder="my-organization"
-                  disabled={isLoading}
-                  onChange={(e) => handleNamespaceChange(e.target.value)}
-                />
-              </FormControl>
-              <FormMessage />
-              <p className="text-xs text-gray-600">
-                Kubernetes namespace for this organization's resources. {isAutoGenerating ? 'Auto-generated from slug.' : 'Edit to customize.'}
-              </p>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="plan"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Plan</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={isLoading}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a plan" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
+              <div className="space-y-1 leading-none">
+                <FormLabel className="text-sm">
+                  Switch to new organization
+                </FormLabel>
+              </div>
             </FormItem>
           )}
         />

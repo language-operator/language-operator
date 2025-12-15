@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AnimatedStatus } from '@/components/ui/animated-status'
 import {
   Table,
   TableBody,
@@ -19,7 +20,8 @@ import {
 import { 
   Plus, Search, Server, CheckCircle, AlertCircle, 
   Clock, Globe, Shield, Users, MoreHorizontal, 
-  Edit, Trash2, Eye, Network, Activity
+  Edit, Trash2, Eye, Activity, Bot, 
+  Link as LinkIcon, Cloud
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -29,6 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useClusters, useDeleteCluster } from '@/hooks/use-clusters'
+import { useWatchClusters } from '@/hooks/use-watch'
+import { useResourceNotifications } from '@/components/ui/resource-notifications'
 import { LanguageCluster } from '@/types/cluster'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -54,42 +58,11 @@ interface ClusterTableProps {
 }
 
 function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
-  const getStatusIcon = (cluster: LanguageCluster) => {
-    const phase = cluster.status?.phase
-    if (phase === 'Ready') {
-      return <CheckCircle className="h-4 w-4 text-green-500" />
-    } else if (phase === 'Pending') {
-      return <Clock className="h-4 w-4 text-yellow-500" />
-    } else if (phase === 'Failed') {
-      return <AlertCircle className="h-4 w-4 text-red-500" />
-    } else {
-      return <AlertCircle className="h-4 w-4 text-gray-500" />
-    }
-  }
-
   const getStatusBadge = (cluster: LanguageCluster) => {
     const phase = cluster.status?.phase || 'Unknown'
-    if (phase === 'Ready') {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Ready</Badge>
-    } else if (phase === 'Pending') {
-      return <Badge variant="secondary">Pending</Badge>
-    } else if (phase === 'Failed') {
-      return <Badge variant="destructive">Failed</Badge>
-    } else {
-      return <Badge variant="secondary">{phase}</Badge>
-    }
+    return <AnimatedStatus status={phase} size="sm" />
   }
 
-  const getIngressStatusBadge = (cluster: LanguageCluster) => {
-    const ingressReady = cluster.status?.ingress?.ready
-    if (ingressReady === true) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Healthy</Badge>
-    } else if (ingressReady === false) {
-      return <Badge variant="destructive">Failed</Badge>
-    } else {
-      return <Badge variant="secondary">Configuring</Badge>
-    }
-  }
 
   return (
     <Card>
@@ -103,8 +76,7 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Domain</TableHead>
-              <TableHead>Agents Count</TableHead>
-              <TableHead>Ingress Status</TableHead>
+              <TableHead>Agents</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Age</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -115,7 +87,7 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
               <TableRow key={cluster.metadata.name}>
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-2">
-                    <Server className="h-4 w-4 text-orange-500" />
+                    <Cloud className="h-4 w-4 text-blue-500" />
                     <Link 
                       href={`/clusters/${cluster.metadata.name}`}
                       className="hover:underline"
@@ -126,7 +98,7 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
-                    <Globe className="h-3 w-3 text-blue-500" />
+                    <LinkIcon className="h-3 w-3 text-blue-500" />
                     <span className="text-sm font-mono">
                       {cluster.spec.domain || 'No domain configured'}
                     </span>
@@ -134,23 +106,14 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-1">
-                    <Users className="h-3 w-3 text-purple-500" />
+                    <Bot className="h-3 w-3 text-purple-500" />
                     <span className="text-sm">
-                      {cluster.status?.agentCount || 0} agents
+                      {cluster.status?.agentCount || 0}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Network className="h-3 w-3 text-green-500" />
-                    {getIngressStatusBadge(cluster)}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(cluster)}
-                    {getStatusBadge(cluster)}
-                  </div>
+                  {getStatusBadge(cluster)}
                 </TableCell>
                 <TableCell>
                   <span className="text-sm text-muted-foreground">
@@ -199,7 +162,7 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
         </Table>
         {clusters.length === 0 && (
           <div className="text-center py-8">
-            <Server className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Cloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No clusters found</h3>
             <p className="text-muted-foreground mb-4">
               Create your first language cluster to get started.
@@ -236,6 +199,21 @@ export default function ClustersPage() {
     limit: 100,
   })
 
+  // Enable real-time cluster updates with notifications
+  const handleWatchEvent = useResourceNotifications({
+    onEvent: (event) => {
+      console.log('🔄 Cluster update:', event.type, event.data?.metadata?.name)
+      // React Query cache is automatically invalidated by the watch hook
+    },
+    enabled: true,
+    showAllEvents: false // Only show important events like creation, deletion, status changes
+  })
+
+  useWatchClusters({
+    enabled: process.env.NODE_ENV !== 'development', // Disable in dev to avoid loops
+    onEvent: handleWatchEvent
+  })
+
   const deleteCluster = useDeleteCluster()
 
   const clusters = clustersResponse?.data || []
@@ -244,7 +222,6 @@ export default function ClustersPage() {
   // Stats calculations
   const readyClusters = clusters.filter((c: LanguageCluster) => c.status?.phase === 'Ready').length
   const totalAgents = clusters.reduce((sum: number, c: LanguageCluster) => sum + (c.status?.agentCount || 0), 0)
-  const healthyIngress = clusters.filter((c: LanguageCluster) => c.status?.ingress?.ready === true).length
 
   const handleDelete = async (name: string) => {
     try {
@@ -314,11 +291,11 @@ export default function ClustersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Clusters</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
+              <Cloud className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{total}</div>
@@ -344,7 +321,7 @@ export default function ClustersPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Bot className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalAgents}</div>
@@ -354,18 +331,6 @@ export default function ClustersPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Healthy Ingress</CardTitle>
-              <Network className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{healthyIngress}</div>
-              <p className="text-xs text-muted-foreground">
-                Working endpoints
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Filters */}

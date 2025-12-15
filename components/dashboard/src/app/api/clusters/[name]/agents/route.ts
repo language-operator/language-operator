@@ -172,21 +172,66 @@ export async function POST(
         name: agentData.name,
         namespace: organization.namespace,
         labels: {
-          'organization.langop.io/id': organization.id,
-          'cluster.langop.io/name': clusterName,
+          'langop.io/organization-id': organization.id,
+        },
+        annotations: {
+          'langop.io/created-by-email': user.email,
         },
       },
       spec: {
         instructions: agentData.instructions,
         executionMode: agentData.executionMode || 'autonomous',
         replicas: agentData.replicas || 1,
-        modelRefs: agentData.selectedModels?.map((name: string) => ({ name })) || [],
+        
+        // Required fields based on existing agent structure
+        image: 'ghcr.io/langop/language-agent:latest',
+        imagePullPolicy: 'IfNotPresent',
+        clusterRef: clusterName,
+        backoffLimit: 3,
+        maxIterations: 50,
+        timeout: '10m',
+        restartPolicy: 'OnFailure',
+        
+        // Model references with namespace and role
+        modelRefs: agentData.selectedModels?.map((name: string) => ({ 
+          name,
+          namespace: organization.namespace,
+          role: 'primary' as const
+        })) || [],
+        
+        // Tool references with namespace
         ...(agentData.selectedTools?.length > 0 && {
-          toolRefs: agentData.selectedTools.map((name: string) => ({ name })),
+          toolRefs: agentData.selectedTools.map((name: string) => ({ 
+            name,
+            namespace: organization.namespace 
+          })),
         }),
+        
+        // Persona references with namespace  
         ...(agentData.selectedPersona && agentData.selectedPersona !== 'none' && {
-          personaRefs: [{ name: agentData.selectedPersona }],
+          personaRefs: [{ 
+            name: agentData.selectedPersona,
+            namespace: organization.namespace 
+          }],
         }),
+        
+        // Default workspace configuration
+        workspace: {
+          enabled: true,
+          size: '10Gi',
+          accessMode: 'ReadWriteOnce',
+          mountPath: '/workspace',
+        },
+        
+        // Empty resources (let defaults apply)
+        resources: {},
+        
+        // Agent version reference (auto-generated name)
+        agentVersionRef: {
+          name: `${agentData.name}-v1`,
+          namespace: organization.namespace,
+          lock: false,
+        },
       },
     }
 

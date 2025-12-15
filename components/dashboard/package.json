@@ -15,7 +15,8 @@
     "docker:deploy": "./scripts/docker-deploy.sh",
     "db:migrate": "prisma db push",
     "db:generate": "prisma generate",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "migrate:namespaces": "npx tsx src/scripts/migrate-organization-namespaces.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -41,6 +42,7 @@
     "clsx": "^2.1.1",
     "js-yaml": "^4.1.1",
     "lucide-react": "^0.556.0",
+    "nanoid": "^5.1.6",
     "next": "16.0.8",
     "next-auth": "^4.24.13",
     "next-themes": "^0.4.6",
@@ -51,6 +53,7 @@
     "recharts": "^3.5.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
+    "unique-names-generator": "^4.7.1",
     "zod": "^4.1.13",
     "zustand": "^5.0.9"
   },
@@ -66,6 +69,7 @@
     "postcss": "^8.5.6",
     "prisma": "6.19.0",
     "tailwindcss": "^3.4.19",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

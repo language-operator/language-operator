@@ -69,13 +69,15 @@ model Organization {
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
-  namespace   String   @unique  // Kubernetes namespace for this org
+  namespace   String   @unique  // UUID-based Kubernetes namespace (org-xxxxxxxx format)
   plan        String   @default("free")  // free, pro, enterprise
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   members     OrganizationMember[]
   invites     OrganizationInvite[]
+
+  @@index([namespace])
 }
 
 // Organization membership with role-based access control

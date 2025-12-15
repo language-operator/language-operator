@@ -73,7 +73,7 @@ export async function GET(
     }
 
     // Verify agent belongs to user's organization
-    const agentOrgLabel = agent.metadata?.labels?.['langop.io/organization']
+    const agentOrgLabel = agent.metadata?.labels?.['langop.io/organization-id']
     if (agentOrgLabel && agentOrgLabel !== organization.id) {
       return NextResponse.json({ 
         error: 'Agent not found',

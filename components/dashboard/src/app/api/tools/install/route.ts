@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     if (!languageTool.metadata.labels) {
       languageTool.metadata.labels = {}
     }
-    languageTool.metadata.labels['langop.io/organization'] = organization.id
+    languageTool.metadata.labels['langop.io/organization-id'] = organization.id
     languageTool.metadata.labels['langop.io/created-by'] = user.id
     
     if (!languageTool.metadata.annotations) {

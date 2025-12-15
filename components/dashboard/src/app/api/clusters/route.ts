@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     
     try {
       console.log(`Fetching clusters from namespace: ${organization.namespace}`)
-      const response = await k8sClient.listLanguageClusters(organization.namespace)
+      const response = await k8sClient.listByOrganization('clusters', organization.namespace, organization.id)
       
       // Handle different response structures from k8s client
       // Live K8s mode: { body: { items: [...] } }
@@ -97,10 +97,8 @@ export async function GET(request: NextRequest) {
     const clustersWithAgentCounts = await Promise.all(
       filteredClusters.map(async (cluster: LanguageCluster) => {
         try {
-          // Query agents for this cluster using organization filtering
-          const agentsResponse = await k8sClient.listLanguageAgents(organization.namespace, {
-            labelSelector: `langop.io/organization=${organization.id}`
-          })
+          // Query agents for this cluster using organization filtering with backwards compatibility
+          const agentsResponse = await k8sClient.listByOrganization('agents', organization.namespace, organization.id)
 
           // Handle different response structures from k8s client
           const allAgents = (agentsResponse as any)?.body?.items || 
@@ -185,7 +183,7 @@ export async function POST(request: NextRequest) {
         name: formData.name,
         namespace: organization.namespace,
         labels: {
-          'langop.io/organization': organization.id,
+          'langop.io/organization-id': organization.id,
           'langop.io/created-by': user.id,
         },
         annotations: {

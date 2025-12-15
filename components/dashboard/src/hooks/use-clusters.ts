@@ -21,7 +21,6 @@ export function useClusters(params?: LanguageClusterListParams) {
       }
       return response.json()
     },
-    refetchInterval: 5000,
   })
 }
 
@@ -53,7 +52,41 @@ export function useDeleteCluster() {
       }
       return response.json()
     },
-    onSuccess: () => {
+    onMutate: async (clusterName: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['clusters'] })
+      
+      // Snapshot the previous value
+      const previousClusters = queryClient.getQueryData(['clusters'])
+      
+      // Optimistically update the cache by removing the cluster
+      queryClient.setQueryData(['clusters'], (old: any) => {
+        if (!old?.data) return old
+        
+        return {
+          ...old,
+          data: old.data.filter((cluster: any) => cluster.metadata.name !== clusterName),
+          total: Math.max(0, old.total - 1)
+        }
+      })
+      
+      // Return context object with snapshot
+      return { previousClusters }
+    },
+    onError: (err, clusterName, context) => {
+      // If mutation fails, rollback to previous state
+      if (context?.previousClusters) {
+        queryClient.setQueryData(['clusters'], context.previousClusters)
+      }
+      console.error('Failed to delete cluster:', err)
+    },
+    onSuccess: (data, clusterName) => {
+      // Update any individual cluster queries
+      queryClient.removeQueries({ queryKey: ['clusters', clusterName] })
+      console.log(`✅ Cluster ${clusterName} deleted successfully`)
+    },
+    onSettled: () => {
+      // Always refetch after mutation, regardless of success or failure
       queryClient.invalidateQueries({ queryKey: ['clusters'] })
     },
   })

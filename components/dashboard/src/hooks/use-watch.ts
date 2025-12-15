@@ -1,0 +1,249 @@
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+
+export interface WatchEvent {
+  type: 'ADDED' | 'MODIFIED' | 'DELETED' | 'ERROR'
+  resource: string
+  data: any
+  timestamp: string
+  resourceVersion?: string
+  cluster?: string
+}
+
+export interface WatchConnection {
+  type: 'connected' | 'heartbeat' | 'error'
+  timestamp: string
+  activeWatches?: number
+}
+
+export interface UseWatchOptions {
+  enabled?: boolean
+  onEvent?: (event: WatchEvent) => void
+  onConnection?: (connection: WatchConnection) => void
+  onError?: (error: Error) => void
+  queryKey?: string[]
+  cluster?: string // For filtering agents by cluster
+}
+
+export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
+  const {
+    enabled = true,
+    onEvent,
+    onConnection,
+    onError,
+    queryKey,
+    cluster
+  } = options
+
+  const [isConnected, setIsConnected] = useState(false)
+  const [lastEvent, setLastEvent] = useState<WatchEvent | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [reconnectCount, setReconnectCount] = useState(0)
+  
+  const eventSourceRef = useRef<EventSource | null>(null)
+  const queryClient = useQueryClient()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Build URL with query parameters
+  const buildUrl = useCallback(() => {
+    const url = new URL(endpoint, window.location.origin)
+    if (cluster) {
+      url.searchParams.set('cluster', cluster)
+    }
+    return url.toString()
+  }, [endpoint, cluster])
+
+  const cleanup = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+    setIsConnected(false)
+  }, [])
+
+  const connect = useCallback(() => {
+    if (!enabled) return
+
+    cleanup()
+
+    const url = buildUrl()
+    console.log(`🔗 Connecting to watch stream: ${url}`)
+
+    try {
+      const eventSource = new EventSource(url)
+      eventSourceRef.current = eventSource
+
+      eventSource.addEventListener('connection', (event) => {
+        const connectionData: WatchConnection = JSON.parse(event.data)
+        console.log('📡 Watch connected:', connectionData)
+        setIsConnected(true)
+        setConnectionError(null)
+        setReconnectCount(0)
+        
+        if (onConnection) {
+          onConnection(connectionData)
+        }
+      })
+
+      eventSource.addEventListener('resource-update', (event) => {
+        try {
+          const watchEvent: WatchEvent = JSON.parse(event.data)
+          console.log(`📡 Resource update: ${watchEvent.type} ${watchEvent.resource} - ${watchEvent.data?.metadata?.name}`)
+          
+          setLastEvent(watchEvent)
+          
+          // Invalidate relevant React Query cache
+          if (queryKey) {
+            queryClient.invalidateQueries({ queryKey })
+          }
+          
+          // Call custom event handler
+          if (onEvent) {
+            onEvent(watchEvent)
+          }
+        } catch (error) {
+          console.error('Failed to parse watch event:', error)
+        }
+      })
+
+      eventSource.addEventListener('heartbeat', (event) => {
+        const heartbeatData = JSON.parse(event.data)
+        if (onConnection) {
+          onConnection(heartbeatData)
+        }
+      })
+
+      eventSource.addEventListener('error', (event) => {
+        const errorData = JSON.parse((event as any).data || '{}')
+        console.error('Watch error event:', errorData)
+        setConnectionError(errorData.message || 'Watch error')
+        
+        if (onError) {
+          onError(new Error(errorData.message || 'Watch error'))
+        }
+      })
+
+      eventSource.onerror = (error) => {
+        console.error('EventSource error:', error)
+        setIsConnected(false)
+        
+        const errorMessage = 'Connection lost. Attempting to reconnect...'
+        setConnectionError(errorMessage)
+        
+        if (onError) {
+          onError(new Error(errorMessage))
+        }
+        
+        // Attempt reconnect with exponential backoff, max 10 attempts
+        if (reconnectCount < 10) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectCount), 30000) // Max 30 seconds
+          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectCount + 1})`)
+          
+          setReconnectCount(prev => prev + 1)
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (enabled) {
+              connect()
+            }
+          }, delay)
+        } else {
+          console.error('❌ Max reconnection attempts reached, stopping reconnects')
+          setConnectionError('Connection failed after multiple attempts')
+        }
+      }
+
+      eventSource.onopen = () => {
+        console.log('📡 Watch stream opened')
+      }
+
+    } catch (error) {
+      console.error('Failed to create EventSource:', error)
+      setConnectionError('Failed to establish connection')
+      
+      if (onError) {
+        onError(error instanceof Error ? error : new Error('Connection failed'))
+      }
+    }
+  }, [enabled, buildUrl, queryKey, onEvent, onConnection, onError, cleanup, reconnectCount])
+
+  // Start/stop watching based on enabled flag
+  useEffect(() => {
+    if (enabled) {
+      connect()
+    } else {
+      cleanup()
+    }
+
+    // Cleanup on unmount
+    return cleanup
+  }, [enabled, connect, cleanup])
+
+  // Handle page visibility changes to reconnect when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && enabled && !isConnected) {
+        console.log('🔄 Page visible, reconnecting watch...')
+        connect()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [enabled, isConnected, connect])
+
+  const reconnect = useCallback(() => {
+    setReconnectCount(0)
+    connect()
+  }, [connect])
+
+  return {
+    isConnected,
+    lastEvent,
+    connectionError,
+    reconnectCount,
+    reconnect,
+    cleanup
+  }
+}
+
+// Resource-specific watch hooks
+
+export function useWatchClusters(options: Omit<UseWatchOptions, 'queryKey'> = {}) {
+  return useWatch('/api/watch/clusters', {
+    ...options,
+    queryKey: ['clusters']
+  })
+}
+
+export function useWatchAgents(options: Omit<UseWatchOptions, 'queryKey'> & { clusterName?: string } = {}) {
+  const { clusterName, ...watchOptions } = options
+  return useWatch('/api/watch/agents', {
+    ...watchOptions,
+    queryKey: ['agents', clusterName],
+    cluster: clusterName || undefined
+  })
+}
+
+export function useWatchModels(options: Omit<UseWatchOptions, 'queryKey'> = {}) {
+  return useWatch('/api/watch/models', {
+    ...options,
+    queryKey: ['models']
+  })
+}
+
+export function useWatchTools(options: Omit<UseWatchOptions, 'queryKey'> = {}) {
+  return useWatch('/api/watch/tools', {
+    ...options,
+    queryKey: ['tools']
+  })
+}
+
+export function useWatchPersonas(options: Omit<UseWatchOptions, 'queryKey'> = {}) {
+  return useWatch('/api/watch/personas', {
+    ...options,
+    queryKey: ['personas']
+  })
+}

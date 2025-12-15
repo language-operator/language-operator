@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Fetch recent events from organization's namespace
     const eventsResponse = await k8sClient.listEvents(organization.namespace, {
       limit: Math.min(limit, 50), // Cap at 50 for performance
-      labelSelector: `langop.io/organization=${organization.id}`,
+      labelSelector: `langop.io/organization-id=${organization.id}`,
       // Sort by creation timestamp descending (most recent first)
     })
 

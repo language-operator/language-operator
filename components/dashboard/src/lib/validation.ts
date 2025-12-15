@@ -3,7 +3,7 @@ import { z } from 'zod'
 // Common Kubernetes metadata schema
 const KubernetesMetadataSchema = z.object({
   name: z.string().min(1).max(253).regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, {
-    message: "Name must be lowercase alphanumeric with hyphens, starting and ending with alphanumeric"
+    message: "Name must be lowercase letters, numbers, and hyphens only (e.g., my-agent-v1). Cannot start or end with hyphen."
   }),
   namespace: z.string().min(1).max(63).regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, {
     message: "Namespace must be lowercase alphanumeric with hyphens"
@@ -354,6 +354,15 @@ export const LanguageClusterSchema = z.object({
   spec: LanguageClusterSpecSchema,
   status: LanguageClusterStatusSchema.optional(),
 })
+
+// Export Kubernetes name validation for reuse in form schemas
+export const kubernetesNameValidation = z.string()
+  .min(1, 'Name is required')
+  .max(253, 'Name must be 253 characters or less')
+  .regex(
+    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 
+    'Name must be lowercase letters, numbers, and hyphens only (e.g., my-agent-v1). Cannot start or end with hyphen.'
+  )
 
 // Export all schemas for easy access
 export const CRDSchemas = {

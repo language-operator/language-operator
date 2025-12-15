@@ -6,6 +6,10 @@ import { cn } from '@/lib/utils'
 
 const settingsNavigation = [
   {
+    name: 'Users',
+    href: '/settings/users'
+  },
+  {
     name: 'Organizations',
     href: '/settings/organizations'
   },

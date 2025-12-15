@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp
+  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal
 } from 'lucide-react'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
 import { useModels } from '@/hooks/use-models'
@@ -292,6 +292,438 @@ interface AgentMetricsProps {
   agent: LanguageAgent
 }
 
+interface AgentCodeProps {
+  agent: LanguageAgent
+  clusterName: string
+}
+
+function AgentCode({ agent, clusterName }: AgentCodeProps) {
+  const [agentVersion, setAgentVersion] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch the LanguageAgentVersion referenced by the agent
+  useEffect(() => {
+    const fetchAgentVersion = async () => {
+      if (!agent.spec.agentVersionRef) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const url = `/api/clusters/${clusterName}/agent-versions/${agent.spec.agentVersionRef.name}`
+        console.log('Fetching agent version from:', url)
+        
+        const response = await fetch(url)
+        console.log('Response status:', response.status, response.statusText)
+        
+        if (!response.ok) {
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          throw new Error(`Failed to fetch agent version: ${response.status} ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        console.log('Agent version data:', data)
+        setAgentVersion(data.data)
+      } catch (err) {
+        console.error('Error fetching agent version:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load agent version')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAgentVersion()
+  }, [agent.spec.agentVersionRef, clusterName])
+
+  const synthesisInfo = agent.status?.synthesisInfo
+  const isSynthesized = agent.status?.conditions?.some(
+    (condition: any) => condition.type === 'Synthesized' && condition.status === 'True'
+  )
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading synthesized code...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Code Synthesis Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Code Synthesis Status</CardTitle>
+          <CardDescription>
+            Status and metadata of code synthesis for this agent
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Synthesis Status</p>
+              <Badge variant={isSynthesized ? 'default' : 'secondary'}>
+                {isSynthesized ? 'Code Synthesized' : 'Not Synthesized'}
+              </Badge>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Last Synthesis</p>
+              <p className="text-sm">
+                {synthesisInfo?.lastSynthesisTime 
+                  ? formatTimeAgo(synthesisInfo.lastSynthesisTime)
+                  : 'Never'
+                }
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Synthesis Model</p>
+              <p className="text-sm">
+                {synthesisInfo?.synthesisModel || 'N/A'}
+              </p>
+            </div>
+          </div>
+          
+          {synthesisInfo && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid gap-4 md:grid-cols-4 text-sm">
+                <div>
+                  <p className="font-medium text-muted-foreground">Duration</p>
+                  <p>{synthesisInfo.synthesisDuration ? `${synthesisInfo.synthesisDuration.toFixed(2)}s` : 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Attempts</p>
+                  <p>{synthesisInfo.synthesisAttempts || 0}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Code Hash</p>
+                  <p className="font-mono text-xs">{synthesisInfo.codeHash?.substring(0, 12) || 'N/A'}...</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Instructions Hash</p>
+                  <p className="font-mono text-xs">{synthesisInfo.instructionsHash?.substring(0, 12) || 'N/A'}...</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Synthesized Code */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code className="h-5 w-5" />
+            Synthesized Agent Code
+          </CardTitle>
+          <CardDescription>
+            Ruby DSL code synthesized for this agent's execution logic
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <div className="text-center py-16">
+              <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Code</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">{error}</p>
+            </div>
+          ) : agentVersion?.spec?.code ? (
+            <div className="border rounded-lg">
+              <div className="bg-muted p-3 border-b">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm">Agent Definition (Ruby DSL)</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">Ruby</Badge>
+                    <Badge variant="outline">v{agentVersion.spec.version || 1}</Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4">
+                <pre className="text-sm bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap">
+                  <code>{agentVersion.spec.code}</code>
+                </pre>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <Code className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Code Synthesized</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                This agent hasn't been synthesized yet. Code will appear here
+                after the synthesis process completes successfully.
+              </p>
+              {agent.spec.agentVersionRef && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Agent Version Reference: {agent.spec.agentVersionRef.name}
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Agent Version Details */}
+      {agentVersion && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Agent Version Details</CardTitle>
+            <CardDescription>
+              Metadata and information about the synthesized agent version
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Version Name</p>
+                <p className="text-sm font-mono">{agentVersion.metadata.name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Created</p>
+                <p className="text-sm">{formatTimeAgo(agentVersion.metadata.creationTimestamp)}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Source Type</p>
+                <Badge variant="outline">{agentVersion.spec.sourceType || 'manual'}</Badge>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <Badge variant={agentVersion.status?.phase === 'Ready' ? 'default' : 'secondary'}>
+                  {agentVersion.status?.phase || 'Unknown'}
+                </Badge>
+              </div>
+            </div>
+            
+            {agentVersion.spec.description && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-muted-foreground">Description</p>
+                <p className="text-sm">{agentVersion.spec.description}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+interface AgentLogsProps {
+  agent: LanguageAgent
+  clusterName: string
+}
+
+function AgentLogs({ agent, clusterName }: AgentLogsProps) {
+  const [logs, setLogs] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const logsEndRef = useRef<HTMLDivElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
+
+  const scrollToBottom = () => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [logs])
+
+  useEffect(() => {
+    fetchInitialLogs()
+    return () => {
+      // Cleanup on unmount
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+      }
+    }
+  }, [agent.metadata.name, clusterName])
+
+  const fetchInitialLogs = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch logs: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      const logLines = data.logs ? data.logs.split('\n').filter((line: string) => line.trim()) : []
+      setLogs(logLines)
+    } catch (err) {
+      console.error('Error fetching initial logs:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load logs')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const startStreaming = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+    }
+
+    setIsStreaming(true)
+    setError(null)
+    
+    const eventSource = new EventSource(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs/stream`)
+    eventSourceRef.current = eventSource
+
+    eventSource.onmessage = (event) => {
+      const newLog = event.data
+      if (newLog && newLog.trim()) {
+        setLogs(prev => [...prev, newLog])
+      }
+    }
+
+    eventSource.onerror = (error) => {
+      console.error('EventSource error:', error)
+      setError('Connection lost. Click "Start Streaming" to reconnect.')
+      setIsStreaming(false)
+      eventSource.close()
+    }
+  }
+
+  const stopStreaming = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+    setIsStreaming(false)
+  }
+
+  const clearLogs = () => {
+    setLogs([])
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading logs...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Log Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                Agent Logs
+              </CardTitle>
+              <CardDescription>
+                Real-time logs from the agent pod
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearLogs}
+                disabled={logs.length === 0}
+              >
+                Clear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchInitialLogs}
+              >
+                Refresh
+              </Button>
+              {isStreaming ? (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={stopStreaming}
+                >
+                  Stop Streaming
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={startStreaming}
+                >
+                  Start Streaming
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Error Display */}
+      {error && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">{error}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Log Output */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="bg-black text-green-400 font-mono text-sm h-96 overflow-y-auto p-4">
+            {logs.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No logs available
+              </div>
+            ) : (
+              <div>
+                {logs.map((log, index) => (
+                  <div key={index} className="whitespace-pre-wrap break-words">
+                    {log}
+                  </div>
+                ))}
+                <div ref={logsEndRef} />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Streaming Status */}
+      {isStreaming && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-green-600">
+              <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
+              <span className="text-sm">Streaming logs in real-time</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
 function AgentMetrics({ agent }: AgentMetricsProps) {
   const metrics = agent.status?.metrics
 
@@ -565,11 +997,21 @@ export default function ClusterAgentDetailPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="metrics">Metrics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <AgentOverview agent={agent} clusterName={clusterName} />
+          </TabsContent>
+
+          <TabsContent value="code" className="space-y-6">
+            <AgentCode agent={agent} clusterName={clusterName} />
+          </TabsContent>
+
+          <TabsContent value="logs" className="space-y-6">
+            <AgentLogs agent={agent} clusterName={clusterName} />
           </TabsContent>
 
           <TabsContent value="metrics" className="space-y-6">

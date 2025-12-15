@@ -29,7 +29,6 @@ export function useTools(params?: LanguageToolListParams & { clusterName?: strin
       }
       return response.json()
     },
-    refetchInterval: 5000,
   })
 }
 

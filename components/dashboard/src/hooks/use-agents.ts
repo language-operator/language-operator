@@ -29,7 +29,6 @@ export function useAgents(params?: LanguageAgentListParams & { clusterName?: str
       }
       return response.json()
     },
-    refetchInterval: 5000,
   })
 }
 
@@ -153,8 +152,63 @@ export function useDeleteAgent(clusterName?: string) {
       
       return response.json()
     },
-    onSuccess: () => {
+    onMutate: async (agentName: string) => {
+      // Cancel any outgoing refetches  
+      await queryClient.cancelQueries({ queryKey: ['agents'] })
+      
+      // Snapshot the previous value
+      const previousAgents = queryClient.getQueryData(['agents'])
+      const previousClusterAgents = clusterName ? 
+        queryClient.getQueryData(['agents', clusterName]) : null
+      
+      // Optimistically update the general agents cache
+      queryClient.setQueryData(['agents'], (old: any) => {
+        if (!old?.data) return old
+        
+        return {
+          ...old,
+          data: old.data.filter((agent: any) => agent.metadata.name !== agentName),
+          total: Math.max(0, old.total - 1)
+        }
+      })
+      
+      // Optimistically update cluster-specific agents cache
+      if (clusterName) {
+        queryClient.setQueryData(['agents', clusterName], (old: any) => {
+          if (!old?.data) return old
+          
+          return {
+            ...old,
+            data: old.data.filter((agent: any) => agent.metadata.name !== agentName),
+            total: Math.max(0, old.total - 1)
+          }
+        })
+      }
+      
+      return { previousAgents, previousClusterAgents }
+    },
+    onError: (err, agentName, context) => {
+      // Rollback on error
+      if (context?.previousAgents) {
+        queryClient.setQueryData(['agents'], context.previousAgents)
+      }
+      if (context?.previousClusterAgents && clusterName) {
+        queryClient.setQueryData(['agents', clusterName], context.previousClusterAgents)
+      }
+      console.error('Failed to delete agent:', err)
+    },
+    onSuccess: (data, agentName) => {
+      // Remove individual agent queries
+      queryClient.removeQueries({ queryKey: ['agents', clusterName, agentName] })
+      queryClient.removeQueries({ queryKey: ['agent', agentName] })
+      console.log(`✅ Agent ${agentName} deleted successfully`)
+    },
+    onSettled: () => {
+      // Always refetch after mutation
       queryClient.invalidateQueries({ queryKey: ['agents'] })
+      if (clusterName) {
+        queryClient.invalidateQueries({ queryKey: ['agents', clusterName] })
+      }
     },
   })
 }

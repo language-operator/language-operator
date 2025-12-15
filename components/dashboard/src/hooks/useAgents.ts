@@ -101,8 +101,7 @@ export function useAgents(params: LanguageAgentListParams = {}) {
   return useQuery({
     queryKey: ['agents', params],
     queryFn: () => fetchAgents(params),
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    staleTime: 1000, // Consider data stale after 1 second
+    staleTime: 5 * 60 * 1000, // 5 minutes - use real-time updates instead
   })
 }
 
@@ -111,8 +110,7 @@ export function useAgent(name: string, enabled: boolean = true) {
     queryKey: ['agent', name],
     queryFn: () => fetchAgent(name),
     enabled: enabled && !!name,
-    refetchInterval: 5000, // Real-time updates for agent details
-    staleTime: 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes - use real-time updates instead
   })
 }
 

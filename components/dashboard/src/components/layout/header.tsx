@@ -13,9 +13,20 @@ import {
 import { LogOut, Settings, Building2 } from 'lucide-react'
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { ConnectionStatus } from '@/components/ui/connection-status'
+import { useWatchClusters } from '@/hooks/use-watch'
 
 export function Header() {
   const { data: session } = useSession()
+
+  // Connect to cluster watch for connection status (disabled in dev if no K8s)
+  const isDev = process.env.NODE_ENV === 'development'
+  const watchStatus = useWatchClusters({ 
+    enabled: !isDev, // Disable in development to avoid connection loops
+    onEvent: (event) => {
+      console.log('Header received watch event:', event.type, event.resource)
+    }
+  })
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '?'
@@ -34,6 +45,13 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
+        <ConnectionStatus
+          isConnected={watchStatus.isConnected}
+          lastEvent={watchStatus.lastEvent}
+          connectionError={watchStatus.connectionError}
+          reconnectCount={watchStatus.reconnectCount}
+          onReconnect={watchStatus.reconnect}
+        />
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">

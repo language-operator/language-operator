@@ -87,6 +87,25 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub
 
         try {
+          // Get fresh user data from database
+          console.log('👤 [SESSION] Fetching fresh user data for:', token.sub)
+          const user = await db.user.findUnique({
+            where: { id: token.sub },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          })
+
+          if (user) {
+            // Update session with fresh user data
+            session.user.name = user.name
+            session.user.email = user.email
+            session.user.image = user.image
+          }
+
           console.log('👥 [SESSION] Fetching organizations for user:', token.sub)
           // Get user's organizations and active organization
           const memberships = await db.organizationMember.findMany({

@@ -12,8 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 1000, // 5 seconds
-            refetchInterval: 5 * 1000, // Refetch every 5 seconds for real-time feel
+            staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh longer since we have real-time updates
+            retry: 3, // Retry failed requests
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
           },
         },
       })
