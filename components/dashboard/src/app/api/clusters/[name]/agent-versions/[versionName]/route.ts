@@ -13,6 +13,8 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { name: clusterName, versionName } = await params
+  
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
@@ -34,8 +36,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (!hasPermission) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
-
-    const { name: clusterName, versionName } = await params
 
     console.log(`Fetching LanguageAgentVersion ${versionName} from namespace ${organization.namespace}`)
 
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if ((error as any)?.response?.statusCode === 404) {
       return NextResponse.json({ 
         error: 'Agent version not found',
-        message: `LanguageAgentVersion "${params.versionName}" not found` 
+        message: `LanguageAgentVersion "${versionName}" not found` 
       }, { status: 404 })
     }
 

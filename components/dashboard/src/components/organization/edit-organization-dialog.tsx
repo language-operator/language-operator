@@ -27,7 +27,9 @@ export function EditOrganizationDialog({
     setIsLoading(true)
     
     try {
-      updateOrganization.mutate(data, {
+      updateOrganization.mutate({ 
+        name: data.name
+      }, {
         onSuccess: () => {
           // Close the dialog
           onOpenChange(false)
@@ -73,10 +75,7 @@ export function EditOrganizationDialog({
   }
 
   const initialData: Partial<OrganizationFormData> = {
-    name: organization.name,
-    slug: organization.slug,
-    namespace: organization.namespace,
-    plan: organization.plan as 'free' | 'pro' | 'enterprise'
+    name: organization.name
   }
 
   return (

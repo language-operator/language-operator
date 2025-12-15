@@ -222,7 +222,7 @@ export function useWatchAgents(options: Omit<UseWatchOptions, 'queryKey'> & { cl
   const { clusterName, ...watchOptions } = options
   return useWatch('/api/watch/agents', {
     ...watchOptions,
-    queryKey: ['agents', clusterName],
+    queryKey: ['agents', clusterName || ''],
     cluster: clusterName || undefined
   })
 }

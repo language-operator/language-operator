@@ -186,6 +186,16 @@ export interface LanguageAgentStatus {
   lastExecution?: string
   metrics?: LanguageAgentMetrics
   observedGeneration?: number
+  synthesisInfo?: SynthesisInfo
+}
+
+export interface SynthesisInfo {
+  lastSynthesisTime?: string
+  synthesisModel?: string
+  synthesisDuration?: number
+  synthesisAttempts?: number
+  codeHash?: string
+  instructionsHash?: string
 }
 
 export interface LanguageAgentCondition {

@@ -83,30 +83,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               tailLines: 10 // Start with last 10 lines
             })
 
-            // Handle the stream
-            if (logStream && typeof logStream.on === 'function') {
-              logStream.on('data', (chunk: Buffer) => {
-                const lines = chunk.toString().split('\\n').filter(line => line.trim())
-                
-                lines.forEach(line => {
-                  if (line.trim()) {
-                    const sseData = `data: ${line}\\n\\n`
-                    controller.enqueue(encoder.encode(sseData))
-                  }
-                })
+            // Handle the response - kubernetes client returns a string
+            if (typeof logStream === 'string') {
+              const lines = logStream.split('\n').filter(line => line.trim())
+              lines.forEach(line => {
+                if (line.trim()) {
+                  const sseData = `data: ${line}\n\n`
+                  controller.enqueue(encoder.encode(sseData))
+                }
               })
-
-              logStream.on('error', (error: any) => {
-                console.error('Log stream error:', error)
-                const sseError = `data: [ERROR] Log stream error: ${error.message}\\n\\n`
-                controller.enqueue(encoder.encode(sseError))
-                controller.close()
-              })
-
-              logStream.on('end', () => {
-                console.log('Log stream ended')
-                controller.close()
-              })
+              controller.close()
             } else {
               // Fallback: poll for logs periodically
               const pollLogs = async () => {

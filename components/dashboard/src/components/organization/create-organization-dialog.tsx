@@ -24,7 +24,16 @@ export function CreateOrganizationDialog({
     setIsLoading(true)
     
     try {
-      createOrganization(data, {
+      // Transform form data to match API requirements
+      const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      const namespace = `org-${slug}`
+      
+      createOrganization({
+        name: data.name,
+        slug: slug,
+        namespace: namespace,
+        plan: 'free' as const
+      }, {
         onSuccess: (response) => {
           // Close the dialog
           onOpenChange(false)

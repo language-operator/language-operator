@@ -13,7 +13,7 @@ import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generato
 // Organization form schema matching the API validation
 const organizationFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required').max(100, 'Name must be 100 characters or less'),
-  switchToNew: z.boolean().optional().default(false)
+  switchToNew: z.boolean()
 })
 
 export type OrganizationFormData = z.infer<typeof organizationFormSchema>
@@ -29,7 +29,7 @@ interface OrganizationFormProps {
 const nameConfig = {
   dictionaries: [adjectives, animals],
   separator: ' ',
-  style: 'capital'
+  style: 'capital' as const
 }
 
 export function OrganizationForm({

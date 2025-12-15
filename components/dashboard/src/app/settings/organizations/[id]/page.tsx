@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { useOrganization } from '@/hooks/use-organizations'
-import { useActiveOrganization } from '@/hooks/use-active-organization'
+import { useOrganization, useActiveOrganization } from '@/hooks/use-organizations'
+import { useOrganizationStore } from '@/store/organization-store'
 import { toast } from 'sonner'
 import { Trash2 } from 'lucide-react'
 
@@ -19,7 +19,8 @@ export default function OrganizationSettingsPage() {
   const organization = organizationData?.organization
   const userRole = organizationData?.userRole
   
-  const { activeOrganization, setActiveOrganization } = useActiveOrganization()
+  const { organization: activeOrganization } = useActiveOrganization()
+  const { setActiveOrganization } = useOrganizationStore()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDeleteOrganization = async () => {
