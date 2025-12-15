@@ -185,7 +185,7 @@ export async function POST(
         
         // Required fields based on existing agent structure
         image: 'ghcr.io/language-operator/agent:latest',
-        imagePullPolicy: 'IfNotPresent',
+        imagePullPolicy: 'Always',
         clusterRef: clusterName,
         backoffLimit: 3,
         maxIterations: 50,
