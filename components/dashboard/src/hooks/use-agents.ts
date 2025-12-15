@@ -28,11 +28,16 @@ export function useAgents(params?: LanguageAgentListParams) {
   })
 }
 
-export function useAgent(name: string) {
+export function useAgent(name: string, clusterName?: string) {
   return useQuery({
-    queryKey: ['agents', name],
+    queryKey: ['agents', clusterName, name],
     queryFn: async () => {
-      const response = await fetch(`/api/agents/${name}`)
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = clusterName 
+        ? `/api/clusters/${clusterName}/agents/${name}`
+        : `/api/agents/${name}`
+      
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch agent')
       }
@@ -88,12 +93,17 @@ export function useUpdateAgent() {
   })
 }
 
-export function useDeleteAgent() {
+export function useDeleteAgent(clusterName?: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (name: string) => {
-      const response = await fetch(`/api/agents/${name}`, {
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = clusterName 
+        ? `/api/clusters/${clusterName}/agents/${name}`
+        : `/api/agents/${name}`
+      
+      const response = await fetch(endpoint, {
         method: 'DELETE',
       })
       

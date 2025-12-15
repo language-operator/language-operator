@@ -424,8 +424,8 @@ export default function ClusterAgentDetailPage() {
   const agentName = params?.agentName as string
   const [activeTab, setActiveTab] = useState('overview')
   
-  const { data: agentResponse, isLoading, error } = useAgent(agentName)
-  const deleteAgent = useDeleteAgent()
+  const { data: agentResponse, isLoading, error } = useAgent(agentName, clusterName)
+  const deleteAgent = useDeleteAgent(clusterName)
 
   const agent = agentResponse?.data
 
