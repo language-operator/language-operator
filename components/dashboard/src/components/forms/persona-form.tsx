@@ -194,10 +194,75 @@ export function PersonaForm({
     }
   }, [initialData])
 
+  // Helper function to validate and sanitize numeric inputs
+  const validateNumericInput = (value: string, min: number, max: number): number | undefined => {
+    if (!value.trim()) return undefined
+    
+    const num = parseInt(value, 10)
+    
+    // Check for invalid number or extreme values
+    if (isNaN(num) || num < min || num > max) {
+      return undefined
+    }
+    
+    return num
+  }
+
   const handleInputChange = (field: keyof PersonaFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }))
+    
+    // Clear validation error when user starts typing
+    if (validationError) {
+      setValidationError('')
+    }
+  }
+
+  // Specialized handler for constraints with validation
+  const handleConstraintNumericChange = (field: 'maxResponseTokens' | 'maxToolCalls' | 'maxKnowledgeQueries', value: string) => {
+    // Store the raw value for immediate feedback
+    let numericValue: number | undefined = undefined
+    
+    if (value.trim()) {
+      const parsed = parseInt(value, 10)
+      if (!isNaN(parsed)) {
+        numericValue = parsed
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      constraints: {
+        ...prev.constraints,
+        [field]: numericValue
+      }
+    }))
+    
+    // Clear validation error when user starts typing
+    if (validationError) {
+      setValidationError('')
+    }
+  }
+
+  // Specialized handler for response format max length
+  const handleResponseFormatNumericChange = (field: 'maxLength', value: string) => {
+    let numericValue: number | undefined = undefined
+    
+    if (value.trim()) {
+      const parsed = parseInt(value, 10)
+      if (!isNaN(parsed)) {
+        numericValue = parsed
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      responseFormat: {
+        ...prev.responseFormat,
+        [field]: numericValue
+      }
     }))
     
     // Clear validation error when user starts typing
@@ -540,6 +605,63 @@ export function PersonaForm({
     if (formData.systemPrompt.length < 20) {
       setValidationError('System prompt must be at least 20 characters')
       return false
+    }
+
+    // Numeric validation for constraints
+    if (formData.constraints.maxResponseTokens !== undefined) {
+      if (formData.constraints.maxResponseTokens < 1 || formData.constraints.maxResponseTokens > 100000) {
+        setValidationError('Max Response Tokens must be between 1 and 100,000')
+        return false
+      }
+    }
+
+    if (formData.constraints.maxToolCalls !== undefined) {
+      if (formData.constraints.maxToolCalls < 1 || formData.constraints.maxToolCalls > 50) {
+        setValidationError('Max Tool Calls must be between 1 and 50')
+        return false
+      }
+    }
+
+    if (formData.constraints.maxKnowledgeQueries !== undefined) {
+      if (formData.constraints.maxKnowledgeQueries < 1 || formData.constraints.maxKnowledgeQueries > 20) {
+        setValidationError('Max Knowledge Queries must be between 1 and 20')
+        return false
+      }
+    }
+
+    // Validate response timeout format
+    if (formData.constraints.responseTimeout && formData.constraints.responseTimeout.trim()) {
+      const timeoutRegex = /^\d+[smh]$/
+      if (!timeoutRegex.test(formData.constraints.responseTimeout)) {
+        setValidationError('Response Timeout must be in format like "30s", "5m", or "1h"')
+        return false
+      }
+    }
+
+    // Validate response format max length
+    if (formData.responseFormat.maxLength !== undefined) {
+      if (formData.responseFormat.maxLength < 1 || formData.responseFormat.maxLength > 50000) {
+        setValidationError('Response Format Max Length must be between 1 and 50,000')
+        return false
+      }
+    }
+
+    // Validate knowledge source priorities
+    for (let i = 0; i < formData.knowledgeSources.length; i++) {
+      const source = formData.knowledgeSources[i]
+      if (source.priority < 1 || source.priority > 1000) {
+        setValidationError(`Knowledge Source ${i + 1} priority must be between 1 and 1,000`)
+        return false
+      }
+    }
+
+    // Validate rule priorities
+    for (let i = 0; i < formData.rules.length; i++) {
+      const rule = formData.rules[i]
+      if (rule.priority < 1 || rule.priority > 1000) {
+        setValidationError(`Rule ${i + 1} priority must be between 1 and 1,000`)
+        return false
+      }
     }
 
     // UI-only validations (not CRD requirements)
@@ -1007,11 +1129,19 @@ export function PersonaForm({
                   <Label>Priority</Label>
                   <Input
                     type="number"
+                    min="1"
+                    max="1000"
                     value={source.priority}
-                    onChange={(e) => updateKnowledgeSource(index, 'priority', parseInt(e.target.value) || 100)}
-                    placeholder="100"
+                    onChange={(e) => {
+                      const validatedValue = validateNumericInput(e.target.value, 1, 1000) || 100
+                      updateKnowledgeSource(index, 'priority', validatedValue)
+                    }}
+                    placeholder="100 (1-1000)"
                     disabled={isLoading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Priority order (1-1000)
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
@@ -1056,28 +1186,32 @@ export function PersonaForm({
               <Label>Max Response Tokens</Label>
               <Input
                 type="number"
+                min="1"
+                max="100000"
                 value={formData.constraints.maxResponseTokens || ''}
-                onChange={(e) => handleInputChange('constraints', {
-                  ...formData.constraints,
-                  maxResponseTokens: parseInt(e.target.value) || undefined
-                })}
-                placeholder="2000"
+                onChange={(e) => handleConstraintNumericChange('maxResponseTokens', e.target.value)}
+                placeholder="2000 (max: 100,000)"
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Maximum tokens in response (1-100,000)
+              </p>
             </div>
             
             <div className="space-y-2">
               <Label>Max Tool Calls</Label>
               <Input
                 type="number"
+                min="1"
+                max="50"
                 value={formData.constraints.maxToolCalls || ''}
-                onChange={(e) => handleInputChange('constraints', {
-                  ...formData.constraints,
-                  maxToolCalls: parseInt(e.target.value) || undefined
-                })}
-                placeholder="5"
+                onChange={(e) => handleConstraintNumericChange('maxToolCalls', e.target.value)}
+                placeholder="5 (max: 50)"
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Maximum tool calls per request (1-50)
+              </p>
             </div>
           </div>
           
@@ -1090,9 +1224,12 @@ export function PersonaForm({
                   ...formData.constraints,
                   responseTimeout: e.target.value
                 })}
-                placeholder="30s"
+                placeholder="30s, 5m, or 1h"
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Format: 30s (seconds), 5m (minutes), 1h (hours)
+              </p>
             </div>
             
             <div className="space-y-2">
@@ -1217,11 +1354,19 @@ export function PersonaForm({
                   <Label>Priority</Label>
                   <Input
                     type="number"
+                    min="1"
+                    max="1000"
                     value={rule.priority}
-                    onChange={(e) => updateRule(index, 'priority', parseInt(e.target.value) || 100)}
-                    placeholder="100"
+                    onChange={(e) => {
+                      const validatedValue = validateNumericInput(e.target.value, 1, 1000) || 100
+                      updateRule(index, 'priority', validatedValue)
+                    }}
+                    placeholder="100 (1-1000)"
                     disabled={isLoading}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Rule priority (1-1000)
+                  </p>
                 </div>
               </div>
               
@@ -1321,14 +1466,16 @@ export function PersonaForm({
               <Label>Max Length</Label>
               <Input
                 type="number"
+                min="1"
+                max="50000"
                 value={formData.responseFormat.maxLength || ''}
-                onChange={(e) => handleInputChange('responseFormat', {
-                  ...formData.responseFormat,
-                  maxLength: parseInt(e.target.value) || undefined
-                })}
-                placeholder="1000"
+                onChange={(e) => handleResponseFormatNumericChange('maxLength', e.target.value)}
+                placeholder="1000 (max: 50,000)"
                 disabled={isLoading}
               />
+              <p className="text-xs text-muted-foreground">
+                Maximum response length in characters (1-50,000)
+              </p>
             </div>
           </div>
           
