@@ -764,7 +764,9 @@ class KubernetesClient {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
-    return await this.customObjectsApi.patchNamespacedCustomObject({
+    
+    // Use replaceNamespacedCustomObject instead of patch to avoid patch format issues
+    return await this.customObjectsApi.replaceNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,

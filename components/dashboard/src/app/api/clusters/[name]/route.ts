@@ -7,7 +7,6 @@ import { z } from 'zod'
 
 const updateClusterSchema = z.object({
   domain: z.string().optional(),
-  description: z.string().optional(),
   spec: z.object({
     domain: z.string().optional(),
     ingress: z.object({

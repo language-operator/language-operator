@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Cpu } from 'lucide-react'
 import { useModel } from '@/hooks/use-models'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import Link from 'next/link'
 
 export default function ClusterEditModelPage() {
@@ -185,13 +186,14 @@ export default function ClusterEditModelPage() {
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-8 w-8" />
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/models`}
+            backLabel="Back to Models"
+            icon={Cpu}
+            iconColor="text-blue-500"
+            title={<Skeleton className="h-6 w-48" />}
+            subtitle={<Skeleton className="h-4 w-32" />}
+          />
           <Skeleton className="h-64 w-full" />
         </div>
       </AuthenticatedLayout>
@@ -201,19 +203,15 @@ export default function ClusterEditModelPage() {
   if (!model) {
     return (
       <AuthenticatedLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h3 className="text-lg font-medium mb-2">Model not found</h3>
-            <p className="text-muted-foreground mb-4">
-              The model "{modelName}" could not be found in cluster "{clusterName}".
-            </p>
-            <Link href={`/clusters/${clusterName}/models`}>
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Models
-              </Button>
-            </Link>
-          </div>
+        <div className="space-y-6">
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/models`}
+            backLabel="Back to Models"
+            icon={Cpu}
+            iconColor="text-blue-500"
+            title="Model Not Found"
+            subtitle={`The model "${modelName}" could not be found in cluster "${clusterName}"`}
+          />
         </div>
       </AuthenticatedLayout>
     )
@@ -223,23 +221,17 @@ export default function ClusterEditModelPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Link href={`/clusters/${clusterName}/models/${modelName}`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Model
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Model: {model.metadata.name}</h1>
-            <p className="text-muted-foreground">
-              Update the configuration for this model in the {clusterName} cluster
-            </p>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/models/${modelName}`}
+          backLabel="Back to Model"
+          icon={Cpu}
+          iconColor="text-blue-500"
+          title={`Edit Model: ${model.metadata.name}`}
+          subtitle={`Update the configuration for this model in the ${clusterName} cluster`}
+        />
 
         {/* Form */}
-        <div className="max-w-4xl">
+        <div>
           <ModelForm
             initialData={initialData}
             isLoading={isLoading}

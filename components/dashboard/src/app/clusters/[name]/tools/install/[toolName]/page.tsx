@@ -19,6 +19,8 @@ import {
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ToolCatalogEntry } from '@/types/tool-catalog'
+import { ResourceHeader } from '@/components/ui/resource-header'
+import { Wrench } from 'lucide-react'
 
 export default function InstallToolPage() {
   const params = useParams()
@@ -142,22 +144,15 @@ export default function InstallToolPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/clusters/${clusterName}/tools`}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Link>
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold">Install {tool.displayName}</h1>
-            <p className="text-gray-600 mt-1">
-              Review tool details before installing to {clusterName} cluster
-            </p>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/tools`}
+          backLabel="Back to Tools"
+          icon={Wrench}
+          title={`Install ${tool.displayName}`}
+          subtitle={`Review tool details before installing to ${clusterName} cluster`}
+        />
 
         {/* Success Message */}
         {success && (

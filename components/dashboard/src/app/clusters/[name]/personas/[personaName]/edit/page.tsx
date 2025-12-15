@@ -6,8 +6,9 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { PersonaForm, PersonaFormData } from '@/components/forms/persona-form'
 import { usePersona } from '@/hooks/use-personas'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ResourceHeader } from '@/components/ui/resource-header'
 
 export default function EditClusterPersonaPage() {
   const router = useRouter()
@@ -106,23 +107,19 @@ export default function EditClusterPersonaPage() {
     router.push(`/clusters/${clusterName}/personas/${personaName}`)
   }
 
-  const handleBack = () => {
-    router.push(`/clusters/${clusterName}/personas`)
-  }
 
   if (isLoadingPersona) {
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          </div>
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/personas`}
+            backLabel="Back to Personas"
+            icon={Users}
+            iconColor="text-blue-500"
+            title={<Skeleton className="h-6 w-48" />}
+            subtitle={<Skeleton className="h-4 w-64" />}
+          />
           <Skeleton className="h-96 w-full" />
         </div>
       </AuthenticatedLayout>
@@ -133,17 +130,14 @@ export default function EditClusterPersonaPage() {
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Persona Not Found</h1>
-              <p className="text-muted-foreground mt-1">
-                The persona "{personaName}" was not found in cluster "{clusterName}"
-              </p>
-            </div>
-          </div>
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/personas`}
+            backLabel="Back to Personas"
+            icon={Users}
+            iconColor="text-blue-500"
+            title="Persona Not Found"
+            subtitle={`The persona "${personaName}" was not found in cluster "${clusterName}"`}
+          />
         </div>
       </AuthenticatedLayout>
     )
@@ -153,17 +147,14 @@ export default function EditClusterPersonaPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="icon" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Language Persona</h1>
-            <p className="text-muted-foreground mt-1">
-              Edit "{persona.spec.displayName || persona.metadata.name}" in the {clusterName} cluster
-            </p>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/personas`}
+          backLabel="Back to Personas"
+          icon={Users}
+          iconColor="text-blue-500"
+          title="Edit Language Persona"
+          subtitle={`Edit "${persona.spec.displayName || persona.metadata.name}" in the ${clusterName} cluster`}
+        />
 
         {/* Form */}
         <div className="max-w-4xl">

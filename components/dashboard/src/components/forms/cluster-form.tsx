@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Server, Globe, Shield, AlertCircle } from 'lucide-react'
@@ -13,7 +12,6 @@ import { Server, Globe, Shield, AlertCircle } from 'lucide-react'
 export interface ClusterFormData {
   name: string
   domain: string
-  description: string
   enableTLS: boolean
   gatewayName?: string
   ingressClassName?: string
@@ -39,7 +37,6 @@ export function ClusterForm({
   const [formData, setFormData] = useState<ClusterFormData>({
     name: '',
     domain: '',
-    description: '',
     enableTLS: true,
     gatewayName: '',
     ingressClassName: '',
@@ -147,17 +144,6 @@ export function ClusterForm({
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Description of this cluster's purpose..."
-              rows={3}
-              disabled={isLoading}
-            />
-          </div>
         </CardContent>
       </Card>
 

@@ -5,8 +5,9 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Trash2, Play, Pause } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Play, Pause, Wrench } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { ResourceHeader } from '@/components/ui/resource-header'
 
 export default function ClusterToolDetailPage() {
   const router = useRouter()
@@ -100,30 +101,25 @@ export default function ClusterToolDetailPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">{tool.metadata.name}</h1>
-              <p className="text-muted-foreground mt-1">
-                Language Tool in {clusterName} cluster
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={handleEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/tools`}
+          backLabel="Back to Tools"
+          icon={Wrench}
+          title={tool.metadata.name}
+          subtitle={`Language Tool in ${clusterName} cluster`}
+          actions={
+            <>
+              <Button variant="outline" onClick={handleEdit}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </>
+          }
+        />
 
         {/* Tool Details */}
         <div className="grid gap-6">

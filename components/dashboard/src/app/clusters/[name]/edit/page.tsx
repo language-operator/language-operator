@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Server } from 'lucide-react'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 
@@ -83,7 +84,6 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
         },
         body: JSON.stringify({
           domain: formData.domain || undefined,
-          description: formData.description || undefined,
           spec: {
             domain: formData.domain || undefined,
             ingress: {
@@ -122,8 +122,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     return {
       name: cluster.metadata.name,
       domain: cluster.spec.domain || '',
-      description: cluster.spec.description || '',
-      enableTLS: cluster.spec.ingress?.enabled ?? true,
+      enableTLS: cluster.spec.ingressConfig?.tls?.enabled ?? true,
     }
   }
 
@@ -155,18 +154,13 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Link href="/clusters">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Clusters
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Edit Cluster</h1>
-              <p className="text-muted-foreground">Failed to load cluster</p>
-            </div>
-          </div>
+          <ResourceHeader
+            backHref="/clusters"
+            backLabel="Back to Clusters"
+            icon={Server}
+            title="Edit Cluster"
+            subtitle="Failed to load cluster"
+          />
 
           <div className="max-w-2xl">
             <div className="text-center py-12">
@@ -186,20 +180,13 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Link href={`/clusters/${clusterName}`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Cluster
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Cluster</h1>
-            <p className="text-muted-foreground">
-              Update settings for cluster "{clusterName}"
-            </p>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}`}
+          backLabel="Back to Cluster"
+          icon={Server}
+          title="Edit Cluster"
+          subtitle={`Update settings for cluster "${clusterName}"`}
+        />
 
         {/* Form */}
         <div className="max-w-2xl">

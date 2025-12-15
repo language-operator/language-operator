@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { usePersona, useDeletePersona } from '@/hooks/use-personas'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ResourceHeader } from '@/components/ui/resource-header'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -130,48 +131,43 @@ export default function ClusterPersonaDetailPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Users className="h-8 w-8 text-purple-500" />
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-3xl font-bold">
-                  {persona.spec.displayName || persona.metadata.name}
-                </h1>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(persona)}
-                  <Badge className={getStatusColor(persona)}>
-                    {persona.status?.phase || 'Unknown'}
-                  </Badge>
-                </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/personas`}
+          backLabel="Back to Personas"
+          icon={Users}
+          iconColor="text-blue-500"
+          title={
+            <div className="flex items-center space-x-3">
+              <span>{persona.spec.displayName || persona.metadata.name}</span>
+              <div className="flex items-center space-x-2">
+                {getStatusIcon(persona)}
+                <Badge className={getStatusColor(persona)}>
+                  {persona.status?.phase || 'Unknown'}
+                </Badge>
               </div>
-              <p className="text-muted-foreground">
-                Language Persona • {clusterName} cluster
-              </p>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline"
-              onClick={() => router.push(`/clusters/${clusterName}/personas/${personaName}/edit`)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={handleDeletePersona}
-              disabled={deletePersona.isPending}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {deletePersona.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-        </div>
+          }
+          subtitle={`Language Persona • ${clusterName} cluster`}
+          actions={
+            <>
+              <Button 
+                variant="outline"
+                onClick={() => router.push(`/clusters/${clusterName}/personas/${personaName}/edit`)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleDeletePersona}
+                disabled={deletePersona.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deletePersona.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </>
+          }
+        />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

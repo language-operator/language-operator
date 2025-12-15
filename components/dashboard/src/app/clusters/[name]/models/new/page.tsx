@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
+import { ResourceHeader } from '@/components/ui/resource-header'
+import { Cpu } from 'lucide-react'
 
 export default function CreateClusterModelPage() {
   const router = useRouter()
@@ -76,12 +78,13 @@ export default function CreateClusterModelPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Create Language Model</h1>
-          <p className="text-muted-foreground mt-1">
-            Add a new language model to the {clusterName} cluster
-          </p>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/models`}
+          backLabel="Back to Models"
+          icon={Cpu}
+          title="Create Language Model"
+          subtitle={`Add a new language model to the ${clusterName} cluster`}
+        />
 
         {/* Form */}
         <div className="max-w-2xl">
