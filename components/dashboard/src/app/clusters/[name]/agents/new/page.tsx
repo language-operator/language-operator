@@ -66,11 +66,11 @@ export default function CreateClusterAgentPage() {
   const [showYamlPreview, setShowYamlPreview] = useState(false)
   const { toast } = useToast()
   
-  const createAgent = useCreateAgent()
+  const createAgent = useCreateAgent(clusterName)
   
   // Fetch available data for dropdowns
   const { data: modelsResponse, isLoading: isLoadingModels } = useModels()
-  const { data: toolsResponse, isLoading: isLoadingTools } = useTools()
+  const { data: toolsResponse, isLoading: isLoadingTools } = useTools({ clusterName })
   const { data: personasResponse, isLoading: isLoadingPersonas } = usePersonas()
   
   // Extract data from API responses

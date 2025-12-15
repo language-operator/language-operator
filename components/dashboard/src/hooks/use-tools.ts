@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { LanguageTool, LanguageToolListParams, LanguageToolFormData } from '@/types/tool'
 
-export function useTools(params?: LanguageToolListParams) {
+export function useTools(params?: LanguageToolListParams & { clusterName?: string }) {
   return useQuery({
-    queryKey: ['tools', params],
+    queryKey: ['tools', params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -18,7 +18,12 @@ export function useTools(params?: LanguageToolListParams) {
       if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
 
-      const response = await fetch(`/api/tools?${searchParams}`)
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = params?.clusterName 
+        ? `/api/clusters/${params.clusterName}/tools?${searchParams}`
+        : `/api/tools?${searchParams}` // Legacy fallback for non-cluster contexts
+
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch tools')
       }

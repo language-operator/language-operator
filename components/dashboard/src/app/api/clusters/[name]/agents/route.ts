@@ -129,3 +129,81 @@ export async function GET(
     }, { status: 500 })
   }
 }
+
+// POST /api/clusters/[name]/agents - Create new agent for specific cluster
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+      include: { memberships: { include: { organization: true } } },
+    })
+
+    if (!user || user.memberships.length === 0) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
+    }
+
+    const organization = user.memberships[0].organization
+    
+    const hasPermission = await requirePermission(user.id, organization.id, 'create')
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    const { name: clusterName } = await params
+    if (!clusterName) {
+      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
+    }
+
+    const agentData = await request.json()
+    
+    // Transform LanguageAgentFormData to LanguageAgent CRD format
+    const agentCrd: LanguageAgent = {
+      apiVersion: 'langop.io/v1alpha1',
+      kind: 'LanguageAgent',
+      metadata: {
+        name: agentData.name,
+        namespace: organization.namespace,
+        labels: {
+          'organization.langop.io/id': organization.id,
+          'cluster.langop.io/name': clusterName,
+        },
+      },
+      spec: {
+        instructions: agentData.instructions,
+        executionMode: agentData.executionMode || 'autonomous',
+        replicas: agentData.replicas || 1,
+        modelRefs: agentData.selectedModels?.map((name: string) => ({ name })) || [],
+        ...(agentData.selectedTools?.length > 0 && {
+          toolRefs: agentData.selectedTools.map((name: string) => ({ name })),
+        }),
+        ...(agentData.selectedPersona && agentData.selectedPersona !== 'none' && {
+          personaRefs: [{ name: agentData.selectedPersona }],
+        }),
+      },
+    }
+
+    // Create the agent using k8s client
+    const result = await k8sClient.createLanguageAgent(organization.namespace, agentCrd)
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      message: `Agent "${agentData.name}" created successfully in cluster "${clusterName}"`,
+    })
+
+  } catch (error) {
+    console.error('Error creating agent:', error)
+    return NextResponse.json({ 
+      error: 'Failed to create agent',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}

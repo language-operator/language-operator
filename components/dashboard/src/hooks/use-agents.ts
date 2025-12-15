@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { LanguageAgent, LanguageAgentListParams, LanguageAgentFormData } from '@/types/agent'
 
-export function useAgents(params?: LanguageAgentListParams) {
+export function useAgents(params?: LanguageAgentListParams & { clusterName?: string }) {
   return useQuery({
-    queryKey: ['agents', params],
+    queryKey: ['agents', params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -18,7 +18,12 @@ export function useAgents(params?: LanguageAgentListParams) {
       if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
 
-      const response = await fetch(`/api/agents?${searchParams}`)
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = params?.clusterName 
+        ? `/api/clusters/${params.clusterName}/agents?${searchParams}`
+        : `/api/agents?${searchParams}` // Legacy fallback for non-cluster contexts
+
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch agents')
       }
@@ -47,25 +52,34 @@ export function useAgent(name: string, clusterName?: string) {
   })
 }
 
-export function useCreateAgent() {
+export function useCreateAgent(clusterName?: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (agent: LanguageAgentFormData) => {
-      const response = await fetch('/api/agents', {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for agent creation')
+      }
+
+      const response = await fetch(`/api/clusters/${clusterName}/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
       })
       
       if (!response.ok) {
-        throw new Error('Failed to create agent')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || 'Failed to create agent')
       }
       
       return response.json()
     },
     onSuccess: () => {
+      // Invalidate both general and cluster-specific queries
       queryClient.invalidateQueries({ queryKey: ['agents'] })
+      if (clusterName) {
+        queryClient.invalidateQueries({ queryKey: ['agents', clusterName] })
+      }
     },
   })
 }
