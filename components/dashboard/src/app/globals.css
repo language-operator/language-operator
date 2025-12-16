@@ -138,3 +138,21 @@
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+
+@keyframes terminalCursor {
+  0%, 50% { color: #22c55e; opacity: 1; }
+  51%, 100% { color: #000000; opacity: 0; }
+}
+
+@keyframes terminalCursorDark {
+  0%, 50% { color: #22c55e; opacity: 1; }
+  51%, 100% { color: #ffffff; opacity: 0; }
+}
+
+.terminal-cursor {
+  animation: terminalCursor 1s ease-in-out infinite;
+}
+
+.dark .terminal-cursor {
+  animation: terminalCursorDark 1s ease-in-out infinite;
+}

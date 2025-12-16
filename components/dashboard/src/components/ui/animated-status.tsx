@@ -22,6 +22,7 @@ export function AnimatedStatus({
     
     switch (normalizedStatus) {
       case 'ready':
+      case 'running':
         return {
           variant: 'default' as const,
           icon: CheckCircle,

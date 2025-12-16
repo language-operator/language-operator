@@ -81,7 +81,7 @@ export default function ClusterDashboard() {
           subtitle="LanguageCluster"
           actions={
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/clusters/${clusterName}/settings`}>
+              <Link href={`/clusters/${clusterName}/edit`}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Link>
