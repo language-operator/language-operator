@@ -176,10 +176,10 @@ export default function ClusterTools() {
               <>
                 <div className="flex-1 flex items-center gap-2">
                   <Badge 
-                    variant={installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'default' : 'secondary'}
-                    className={`text-xs ${installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'bg-green-100 text-green-800 border-green-200' : ''}`}
+                    variant={['Ready', 'Running'].includes(installedTool.status.phase) ? 'default' : 'secondary'}
+                    className={`text-xs ${['Ready', 'Running'].includes(installedTool.status.phase) ? 'bg-green-100 text-green-800 border-green-200' : ''}`}
                   >
-                    {installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'Installed' : installedTool.status.phase}
+                    {['Ready', 'Running'].includes(installedTool.status.phase) ? 'Installed' : installedTool.status.phase}
                   </Badge>
                   {installedTool.status.message && (
                     <span className="text-xs text-gray-500 truncate">

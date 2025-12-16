@@ -74,7 +74,7 @@ export default function ClusterPersonas() {
   const tones = React.useMemo(() => {
     const uniqueTones = Array.from(new Set(
       allPersonas.map((persona: any) => persona.spec.tone).filter(Boolean)
-    ))
+    )) as string[]
     return uniqueTones.sort()
   }, [allPersonas])
 

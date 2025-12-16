@@ -167,9 +167,9 @@ export default function ClusterDashboard() {
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/tools/new`}>
+                  <Link href={`/clusters/${clusterName}/tools`}>
                     <Wrench className="h-6 w-6 mb-2" />
-                    Create Tool
+                    Install Tool
                   </Link>
                 </Button>
                 <Button variant="outline" className="h-20 flex-col" asChild>

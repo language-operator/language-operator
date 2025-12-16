@@ -97,7 +97,7 @@ export default function ClusterModels() {
   const providers = React.useMemo(() => {
     const uniqueProviders = Array.from(new Set(
       allModels.map((model: any) => model.spec.provider).filter(Boolean)
-    ))
+    )) as string[]
     return uniqueProviders.sort()
   }, [allModels])
 

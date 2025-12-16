@@ -98,7 +98,7 @@ export default function ClusterAgents() {
   const executionModes = React.useMemo(() => {
     const uniqueModes = Array.from(new Set(
       agents.map((agent: any) => agent.spec.executionMode || 'autonomous')
-    ))
+    )) as string[]
     return uniqueModes.sort()
   }, [agents])
 
