@@ -107,6 +107,7 @@ export interface WorkspaceConfig {
   size?: string
   accessMode?: 'ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany'
   mountPath?: string
+  storageClassName?: string
 }
 
 // Legacy model config for backward compatibility

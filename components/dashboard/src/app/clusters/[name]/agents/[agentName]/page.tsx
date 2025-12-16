@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical, FileCode, Copy, Check
+  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical, FileCode, Copy, Check, FolderOpen,
+  Home, ScrollText, BarChart3
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -23,6 +24,7 @@ import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgent } from '@/types/agent'
 import { Skeleton } from '@/components/ui/skeleton'
 import { NotFound } from '@/components/ui/not-found'
+import { AgentWorkspace } from '@/components/workspace/agent-workspace'
 // Simple ANSI code converter
 function convertAnsiToHtml(text: string): string {
   if (!text) return text;
@@ -1099,12 +1101,28 @@ export default function ClusterAgentDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col space-y-2">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="code">Code</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+            <TabsTrigger value="overview">
+              <Home className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="code">
+              <Code className="w-4 h-4 mr-2" />
+              Code
+            </TabsTrigger>
+            <TabsTrigger value="workspace">
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Workspace
+            </TabsTrigger>
+            <TabsTrigger value="logs">
+              <ScrollText className="w-4 h-4 mr-2" />
+              Logs
+            </TabsTrigger>
+            <TabsTrigger value="metrics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Metrics
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -1113,6 +1131,23 @@ export default function ClusterAgentDetailPage() {
 
           <TabsContent value="code" className="space-y-6">
             <AgentCode agent={agent} clusterName={clusterName} />
+          </TabsContent>
+
+          <TabsContent value="workspace" className="flex-1 flex flex-col mt-0">
+            {agent?.spec?.workspace?.enabled ? (
+              <AgentWorkspace agent={agent} clusterName={clusterName} />
+            ) : (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <FolderOpen className="w-16 h-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Workspace Not Enabled</h3>
+                  <p className="text-muted-foreground text-center max-w-md">
+                    This agent doesn't have workspace storage enabled. 
+                    Enable workspace in the agent configuration to access files.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="logs" className="flex-1 flex flex-col">
