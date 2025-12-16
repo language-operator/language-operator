@@ -115,7 +115,7 @@ export default function ClusterTools() {
       <Card 
         className={`flex flex-col h-full ${
           isInstalled && installedTool 
-            ? 'border-green-200 bg-green-50/50 cursor-pointer hover:bg-green-50/70 hover:border-green-300 transition-colors' 
+            ? 'cursor-pointer hover:shadow-md hover:border-gray-300 transition-all' 
             : ''
         }`}
         onClick={handleCardClick}
@@ -176,38 +176,22 @@ export default function ClusterTools() {
               <>
                 <div className="flex-1 flex items-center gap-2">
                   <Badge 
-                    variant={installedTool.status.phase === 'Ready' ? 'default' : 'secondary'}
-                    className="text-xs"
+                    variant={installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'default' : 'secondary'}
+                    className={`text-xs ${installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'bg-green-100 text-green-800 border-green-200' : ''}`}
                   >
-                    {installedTool.status.phase}
+                    {installedTool.status.phase === 'Ready' || installedTool.status.phase === 'Running' ? 'Installed' : installedTool.status.phase}
                   </Badge>
                   {installedTool.status.message && (
                     <span className="text-xs text-gray-500 truncate">
-                      {installedTool.status.message}
+                      {installedTool.status.message.replace('Image registry is in whitelist', 'approved registry')}
                     </span>
                   )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  disabled
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Configure
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  disabled
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Remove
-                </Button>
               </>
             ) : (
               <>
                 {isInstalled ? (
-                  <Button disabled className="flex-1" size="sm">
+                  <Button disabled className="flex-1 bg-green-100 text-green-800 border-green-200 hover:bg-green-100" size="sm">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Installed
                   </Button>
@@ -310,7 +294,7 @@ export default function ClusterTools() {
           icon={Wrench}
           iconColor="text-blue-500"
           title="Tools"
-          subtitle={`Browse and install official tools for the ${clusterName} cluster`}
+          subtitle="Agents use MCP-compatible tools to perform work"
         />
 
         {/* Search */}

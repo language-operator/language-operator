@@ -89,7 +89,7 @@ export default function ClusterDashboard() {
           icon={BarChart3}
           iconColor="text-blue-500"
           title={cluster.metadata?.name || ''}
-          subtitle={`Created ${formatTimeAgo(cluster.metadata?.creationTimestamp)}`}
+          subtitle="LanguageCluster"
           actions={
             <>
               <Badge className={getStatusColor(cluster.status?.phase)}>

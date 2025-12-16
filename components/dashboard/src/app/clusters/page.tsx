@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { AnimatedStatus } from '@/components/ui/animated-status'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import {
   Table,
   TableBody,
@@ -105,12 +106,14 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-1">
-                    <Bot className="h-3 w-3 text-purple-500" />
-                    <span className="text-sm">
-                      {cluster.status?.agentCount || 0}
-                    </span>
-                  </div>
+                  <Link href={`/clusters/${cluster.metadata.name}/agents`}>
+                    <div className="flex items-center space-x-1 hover:text-primary cursor-pointer">
+                      <Bot className="h-3 w-3 text-purple-500" />
+                      <span className="text-sm">
+                        {cluster.status?.agentCount || 0}
+                      </span>
+                    </div>
+                  </Link>
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(cluster)}
@@ -275,63 +278,21 @@ export default function ClustersPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Language Clusters</h1>
-            <p className="text-muted-foreground">
-              Manage deployments and HTTP endpoints for your agents
-            </p>
-          </div>
-          <Link href="/clusters/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Cluster
-            </Button>
-          </Link>
-        </div>
+        <ResourceHeader
+          icon={Cloud}
+          iconColor="text-blue-500"
+          title="Clusters"
+          subtitle="Logical groups of agents, tools, and models"
+          actions={
+            <Link href="/clusters/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Cluster
+              </Button>
+            </Link>
+          }
+        />
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clusters</CardTitle>
-              <Cloud className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{total}</div>
-              <p className="text-xs text-muted-foreground">
-                All clusters
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ready Clusters</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{readyClusters}</div>
-              <p className="text-xs text-muted-foreground">
-                {total > 0 ? Math.round((readyClusters / total) * 100) : 0}% operational
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
-              <Bot className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalAgents}</div>
-              <p className="text-xs text-muted-foreground">
-                Deployed agents
-              </p>
-            </CardContent>
-          </Card>
-
-        </div>
 
         {/* Filters */}
         <Card>

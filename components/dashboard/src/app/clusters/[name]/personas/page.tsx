@@ -1,25 +1,82 @@
 'use client'
 
+import React from 'react'
 import { useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ResourceHeader } from '@/components/ui/resource-header'
-import { Users, Plus, MessageCircle, Palette, Clock } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Users, Plus, MessageCircle, Palette, Clock, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { usePersonas } from '@/hooks/use-personas'
+
+function formatTimeAgo(timestamp?: string | Date) {
+  if (!timestamp) return 'Unknown'
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`
+  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  if (minutes > 0) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  return 'Just now'
+}
 
 export default function ClusterPersonas() {
   const params = useParams()
   const clusterName = params?.name as string
+  const [search, setSearch] = React.useState('')
+  const [toneFilter, setToneFilter] = React.useState<string>('all')
   
   // Fetch all personas and filter client-side (TODO: implement server-side filtering by namespace)
   const { data: personasResponse, isLoading, error } = usePersonas({ limit: 100 })
   const allPersonas = personasResponse?.data || []
   
-  // For now, show all personas (TODO: implement proper cluster-scoped filtering)
-  const clusterPersonas = allPersonas
+  // Filter personas based on search and tone
+  const filteredPersonas = allPersonas.filter((persona: any) => {
+    const searchQuery = search.toLowerCase()
+    const matchesSearch = !search || 
+      persona.metadata.name.toLowerCase().includes(searchQuery) ||
+      (persona.spec.displayName || '').toLowerCase().includes(searchQuery) ||
+      (persona.spec.description || '').toLowerCase().includes(searchQuery)
+    
+    const matchesTone = toneFilter === 'all' || 
+      (persona.spec.tone || '').toLowerCase() === toneFilter.toLowerCase()
+    
+    return matchesSearch && matchesTone
+  })
+  
+  // For now, show filtered personas (TODO: implement proper cluster-scoped filtering)
+  const clusterPersonas = filteredPersonas
+  
+  // Get unique tones for filter dropdown
+  const tones = React.useMemo(() => {
+    const uniqueTones = Array.from(new Set(
+      allPersonas.map((persona: any) => persona.spec.tone).filter(Boolean)
+    ))
+    return uniqueTones.sort()
+  }, [allPersonas])
 
   const getStatusColor = (phase?: string) => {
     switch (phase) {
@@ -62,7 +119,7 @@ export default function ClusterPersonas() {
           icon={Users}
           iconColor="text-blue-500"
           title="Personas"
-          subtitle={`AI personas configured for the ${clusterName} cluster (${clusterPersonas.length} personas)`}
+          subtitle="Personalities and preferences agents can use to influence their behavior"
           actions={
             <Button asChild>
               <Link href={`/clusters/${clusterName}/personas/new`}>
@@ -72,6 +129,42 @@ export default function ClusterPersonas() {
             </Button>
           }
         />
+
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search personas..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              
+              <Select value={toneFilter} onValueChange={setToneFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="All Tones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tones</SelectItem>
+                  {tones.map((tone) => (
+                    <SelectItem key={tone} value={tone}>
+                      {tone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Loading State */}
         {isLoading && (
@@ -120,65 +213,103 @@ export default function ClusterPersonas() {
                 </CardContent>
               </Card>
             ) : (
-              /* Personas Grid */
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {clusterPersonas.map((persona: any) => (
-                  <Link 
-                    key={persona.metadata.name} 
-                    href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
-                    className="block"
-                  >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">
-                            {persona.spec.displayName || persona.metadata.name}
-                          </CardTitle>
-                          <Badge className={getStatusColor(persona.status?.phase)}>
-                            {persona.status?.phase || 'Unknown'}
-                          </Badge>
-                        </div>
-                        <CardDescription>
-                          {persona.spec.description || 'No description provided'}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {persona.spec.tone && (
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Palette className="h-4 w-4 text-gray-500" />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personas ({clusterPersonas.length})</CardTitle>
+                  <CardDescription>Language personas in this cluster</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Tone</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Age</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clusterPersonas.map((persona: any) => (
+                        <TableRow key={persona.metadata.name}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center space-x-2">
+                              <Users className="h-4 w-4 text-blue-500" />
+                              <Link 
+                                href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
+                                className="hover:underline"
+                              >
+                                {persona.spec.displayName || persona.metadata.name}
+                              </Link>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {persona.spec.description || 'No description provided'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {persona.spec.tone ? (
                               <Badge className={getToneColor(persona.spec.tone)} variant="secondary">
                                 {persona.spec.tone}
                               </Badge>
-                            </div>
-                          )}
-                          
-                          {persona.spec.systemPrompt && (
-                            <div className="space-y-1">
-                              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                <MessageCircle className="h-4 w-4" />
-                                <span>System Prompt</span>
-                              </div>
-                              <p className="text-xs text-gray-600 line-clamp-2">
-                                {persona.spec.systemPrompt}
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="pt-2 border-t">
-                            <div className="text-xs text-gray-500 flex items-center space-x-1">
-                              <Clock className="h-3 w-3" />
-                              <span>
-                                Created: {new Date(persona.metadata.creationTimestamp).toLocaleDateString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(persona.status?.phase)}>
+                              {persona.status?.phase || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimeAgo(persona.metadata.creationTimestamp)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/clusters/${clusterName}/personas/${persona.metadata.name}/edit`}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete persona "${persona.spec.displayName || persona.metadata.name}"?`)) {
+                                      // TODO: Add delete functionality
+                                      console.log('Delete persona:', persona.metadata.name)
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             )}
           </>
         )}

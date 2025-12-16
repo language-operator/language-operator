@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal
+  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical
 } from 'lucide-react'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
 import { useModels } from '@/hooks/use-models'
@@ -101,13 +102,13 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Basic Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Basic Information - Full Width */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Name</p>
               <p className="text-sm">{agent.metadata.name}</p>
@@ -125,71 +126,90 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
               <Badge variant="secondary">{agent.spec.executionMode}</Badge>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Replicas</p>
-              <p className="text-sm">
-                {agent.status?.activeReplicas ?? 0} / {agent.spec.replicas ?? 1}
-              </p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-muted-foreground">Created</p>
               <p className="text-sm">{formatTimeAgo(agent.metadata.creationTimestamp)}</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Models, Tools, and Persona - Second Row */}
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Model Configuration</CardTitle>
+            <CardTitle>Models</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Model Reference</p>
-              <div className="flex items-center space-x-2">
-                <p className="text-sm">{agent.spec.model?.name}</p>
+          <CardContent>
+            {agent.spec.model?.name ? (
+              <div className="flex flex-wrap gap-2">
                 {referencedModel ? (
-                  <Link href={`/clusters/${clusterName}/models/${agent.spec.model?.name}`}>
+                  <Link href={`/clusters/${clusterName}/models/${agent.spec.model.name}`}>
                     <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
-                      View Model →
+                      {agent.spec.model.name}
                     </Badge>
                   </Link>
                 ) : (
-                  <Badge variant="destructive">Not Found</Badge>
+                  <Badge variant="destructive">
+                    {agent.spec.model.name}
+                  </Badge>
                 )}
               </div>
-            </div>
-            {referencedModel && (
-              <>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Provider</p>
-                  <p className="text-sm">{referencedModel.spec.provider}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Model Name</p>
-                  <p className="text-sm">{referencedModel.spec.modelName}</p>
-                </div>
-                {referencedModel.spec.endpoint && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
-                    <p className="text-sm font-mono text-xs">{referencedModel.spec.endpoint}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <Badge variant={referencedModel.status?.healthy ? 'default' : 'destructive'}>
-                    {referencedModel.status?.healthy ? 'Healthy' : 'Unhealthy'}
-                  </Badge>
-                </div>
-              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">None</p>
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Persona and Tools */}
-      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Persona Configuration</CardTitle>
+            <CardTitle>Tools</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {agent.spec.tools && agent.spec.tools.length > 0 ? (
+              <div className="space-y-3">
+                {agent.spec.tools.map((toolRef, index) => {
+                  const referencedTool = allTools.find((tool: any) => tool.metadata.name === toolRef.name)
+                  
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium">{toolRef.name}</p>
+                          {referencedTool ? (
+                            <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
+                              <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer text-xs">
+                                View →
+                              </Badge>
+                            </Link>
+                          ) : (
+                            <Badge variant="destructive" className="text-xs">Not Found</Badge>
+                          )}
+                        </div>
+                        {referencedTool && (
+                          <div className="mt-1">
+                            <p className="text-xs text-muted-foreground">Type: {referencedTool.spec.type}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant={referencedTool.status?.phase === 'Running' ? 'default' : 'secondary'} className="text-xs">
+                                {referencedTool.status?.phase || 'Unknown'}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <Badge variant="outline">Configured</Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">None</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Persona</CardTitle>
           </CardHeader>
           <CardContent>
             {agent.spec.persona ? (
@@ -231,54 +251,7 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No persona configured</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tools Configuration ({agent.spec.tools?.length || 0})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {agent.spec.tools && agent.spec.tools.length > 0 ? (
-              <div className="space-y-3">
-                {agent.spec.tools.map((toolRef, index) => {
-                  const referencedTool = allTools.find((tool: any) => tool.metadata.name === toolRef.name)
-                  
-                  return (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium">{toolRef.name}</p>
-                          {referencedTool ? (
-                            <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
-                              <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer text-xs">
-                                View →
-                              </Badge>
-                            </Link>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs">Not Found</Badge>
-                          )}
-                        </div>
-                        {referencedTool && (
-                          <div className="mt-1">
-                            <p className="text-xs text-muted-foreground">Type: {referencedTool.spec.type}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant={referencedTool.status?.phase === 'Running' ? 'default' : 'secondary'} className="text-xs">
-                                {referencedTool.status?.phase || 'Unknown'}
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <Badge variant="outline">Configured</Badge>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No tools configured</p>
+              <p className="text-sm text-muted-foreground">None</p>
             )}
           </CardContent>
         </Card>
@@ -308,9 +281,6 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                     ) : (
                       <Clock className="h-4 w-4 text-yellow-500" />
                     )}
-                    <Badge variant={condition.status === 'True' ? 'default' : 'secondary'}>
-                      {condition.status}
-                    </Badge>
                   </div>
                 </div>
               ))}
@@ -666,9 +636,9 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full space-y-6">
       {/* Log Controls */}
-      <Card>
+      <Card className="flex-shrink-0">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -720,7 +690,7 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
 
       {/* Error Display */}
       {error && (
-        <Card>
+        <Card className="flex-shrink-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-red-600">
               <AlertCircle className="h-4 w-4" />
@@ -731,9 +701,9 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       )}
 
       {/* Log Output */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="bg-black text-white font-mono text-sm h-96 overflow-y-auto p-4">
+      <Card className="flex-1 flex flex-col min-h-0">
+        <CardContent className="p-0 flex-1 flex flex-col">
+          <div className="bg-black text-white font-mono text-sm flex-1 overflow-y-auto p-4">
             {logs.length === 0 ? (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No logs available
@@ -997,7 +967,7 @@ export default function ClusterAgentDetailPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="space-y-6">
+      <div className="flex flex-col h-full space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -1016,7 +986,7 @@ export default function ClusterAgentDetailPage() {
                 </div>
               </div>
               <p className="text-muted-foreground">
-                Language Agent • {clusterName} cluster
+                LanguageAgent
               </p>
             </div>
           </div>
@@ -1029,19 +999,28 @@ export default function ClusterAgentDetailPage() {
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            <Button 
-              variant="destructive"
-              onClick={handleDeleteAgent}
-              disabled={deleteAgent.isPending}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {deleteAgent.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={handleDeleteAgent}
+                  disabled={deleteAgent.isPending}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleteAgent.isPending ? 'Deleting...' : 'Delete Agent'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col space-y-6">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="code">Code</TabsTrigger>
@@ -1057,7 +1036,7 @@ export default function ClusterAgentDetailPage() {
             <AgentCode agent={agent} clusterName={clusterName} />
           </TabsContent>
 
-          <TabsContent value="logs" className="space-y-6">
+          <TabsContent value="logs" className="flex-1 flex flex-col">
             <AgentLogs agent={agent} clusterName={clusterName} />
           </TabsContent>
 

@@ -5,9 +5,10 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Trash2, Play, Pause, Wrench } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Play, Pause, Wrench, MoreVertical } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { ResourceHeader } from '@/components/ui/resource-header'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 export default function ClusterToolDetailPage() {
   const router = useRouter()
@@ -106,17 +107,29 @@ export default function ClusterToolDetailPage() {
           backLabel="Back to Tools"
           icon={Wrench}
           title={tool.metadata.name}
-          subtitle={`Language Tool in ${clusterName} cluster`}
+          subtitle="LanguageTool"
           actions={
             <>
               <Button variant="outline" onClick={handleEdit}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={handleDelete}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Tool
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           }
         />

@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { 
   Cpu, AlertCircle, CheckCircle, Clock, ArrowLeft, 
   Edit, FileText, Trash2, Activity, Zap, DollarSign, 
-  TrendingUp, Globe, Shield, Key, Settings
+  TrendingUp, Globe, Shield, Key, Settings, MoreVertical
 } from 'lucide-react'
 import { useModel, useDeleteModel } from '@/hooks/use-models'
 import { LanguageModel } from '@/types/model'
@@ -508,7 +509,7 @@ export default function ClusterModelDetailPage() {
                 <h1 className="text-3xl font-bold">{model.metadata.name}</h1>
               </div>
               <p className="text-muted-foreground">
-                {model.spec.provider}
+                LanguageModel
               </p>
             </div>
           </div>
@@ -520,14 +521,23 @@ export default function ClusterModelDetailPage() {
                 Edit
               </Button>
             </Link>
-            <Button 
-              variant="destructive"
-              onClick={handleDeleteModel}
-              disabled={deleteModel.isPending}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              {deleteModel.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={handleDeleteModel}
+                  disabled={deleteModel.isPending}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleteModel.isPending ? 'Deleting...' : 'Delete Model'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

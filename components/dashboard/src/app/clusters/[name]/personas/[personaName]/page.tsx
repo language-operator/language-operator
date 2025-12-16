@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Users, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, Trash2, MessageCircle, Palette, BookOpen, Target
+  Edit, Trash2, MessageCircle, Palette, BookOpen, Target, MoreVertical
 } from 'lucide-react'
 import { usePersona, useDeletePersona } from '@/hooks/use-personas'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResourceHeader } from '@/components/ui/resource-header'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -147,7 +148,7 @@ export default function ClusterPersonaDetailPage() {
               </div>
             </div>
           }
-          subtitle={`Language Persona • ${clusterName} cluster`}
+          subtitle="LanguagePersona"
           actions={
             <>
               <Button 
@@ -157,14 +158,23 @@ export default function ClusterPersonaDetailPage() {
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
-              <Button 
-                variant="destructive"
-                onClick={handleDeletePersona}
-                disabled={deletePersona.isPending}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deletePersona.isPending ? 'Deleting...' : 'Delete'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem 
+                    onClick={handleDeletePersona}
+                    disabled={deletePersona.isPending}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deletePersona.isPending ? 'Deleting...' : 'Delete Persona'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           }
         />

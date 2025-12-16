@@ -53,11 +53,13 @@ export function ResourceHeader({
         
         {/* Resource Icon */}
         {iconBgColor ? (
-          <div className={cn('flex items-center justify-center w-12 h-12 rounded-lg', iconBgColor)}>
+          <div className={cn('flex items-center justify-center w-12 h-12 rounded-lg pl-4 pr-2', iconBgColor)}>
             <Icon className={cn('h-6 w-6', iconColor)} />
           </div>
         ) : (
-          <Icon className={cn('h-8 w-8', iconColor)} />
+          <div className="pl-4 pr-2">
+            <Icon className={cn('h-8 w-8', iconColor)} />
+          </div>
         )}
         
         {/* Title and Subtitle */}

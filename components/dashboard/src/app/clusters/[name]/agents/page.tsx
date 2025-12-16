@@ -6,10 +6,42 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ResourceHeader } from '@/components/ui/resource-header'
-import { Bot, Plus, Activity, Clock, Zap } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Bot, Plus, Activity, Clock, Zap, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { LanguageAgent } from '@/types/agent'
+
+function formatTimeAgo(timestamp?: string | Date) {
+  if (!timestamp) return 'Unknown'
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`
+  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`
+  if (minutes > 0) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`
+  return 'Just now'
+}
 
 export default function ClusterAgents() {
   const params = useParams()
@@ -19,6 +51,8 @@ export default function ClusterAgents() {
   const [agents, setAgents] = useState<LanguageAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [executionModeFilter, setExecutionModeFilter] = useState<string>('all')
 
   useEffect(() => {
     fetchAgents()
@@ -44,7 +78,29 @@ export default function ClusterAgents() {
     }
   }
 
-  const clusterAgents = agents
+  // Filter agents based on search and execution mode
+  const filteredAgents = agents.filter((agent: any) => {
+    const searchQuery = search.toLowerCase()
+    const matchesSearch = !search || 
+      agent.metadata.name.toLowerCase().includes(searchQuery) ||
+      (agent.spec.displayName || '').toLowerCase().includes(searchQuery) ||
+      (agent.spec.description || '').toLowerCase().includes(searchQuery)
+    
+    const matchesExecutionMode = executionModeFilter === 'all' || 
+      (agent.spec.executionMode || 'autonomous').toLowerCase() === executionModeFilter.toLowerCase()
+    
+    return matchesSearch && matchesExecutionMode
+  })
+  
+  const clusterAgents = filteredAgents
+  
+  // Get unique execution modes for filter dropdown
+  const executionModes = React.useMemo(() => {
+    const uniqueModes = Array.from(new Set(
+      agents.map((agent: any) => agent.spec.executionMode || 'autonomous')
+    ))
+    return uniqueModes.sort()
+  }, [agents])
 
   const getStatusColor = (phase?: string) => {
     switch (phase) {
@@ -73,22 +129,6 @@ export default function ClusterAgents() {
     }
   }
 
-  const handleAgentCardClick = (agentName: string) => (event: React.MouseEvent) => {
-    // Don't navigate if clicking on buttons or other interactive elements
-    const target = event.target as HTMLElement
-    if (target.closest('button') || target.closest('a')) {
-      return
-    }
-    
-    router.push(`/clusters/${clusterName}/agents/${agentName}`)
-  }
-
-  const handleAgentCardKeyDown = (agentName: string) => (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      router.push(`/clusters/${clusterName}/agents/${agentName}`)
-    }
-  }
 
   return (
     <AuthenticatedLayout>
@@ -98,7 +138,7 @@ export default function ClusterAgents() {
           icon={Bot}
           iconColor="text-blue-500"
           title="Agents"
-          subtitle={`AI agents running in the ${clusterName} cluster (${clusterAgents.length} agents)`}
+          subtitle="Natural language-based goals and automations"
           actions={
             <Button asChild>
               <Link href={`/clusters/${clusterName}/agents/new`}>
@@ -108,6 +148,42 @@ export default function ClusterAgents() {
             </Button>
           }
         />
+
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search agents..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              
+              <Select value={executionModeFilter} onValueChange={setExecutionModeFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="All Modes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modes</SelectItem>
+                  {executionModes.map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Loading State */}
         {loading && (
@@ -156,76 +232,118 @@ export default function ClusterAgents() {
                 </CardContent>
               </Card>
             ) : (
-              /* Agents Grid */
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {clusterAgents.map((agent: any) => (
-                  <Card 
-                    key={agent.metadata.name} 
-                    className="hover:shadow-md hover:bg-gray-50/50 transition-all cursor-pointer"
-                    onClick={handleAgentCardClick(agent.metadata.name)}
-                    onKeyDown={handleAgentCardKeyDown(agent.metadata.name)}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`View details for agent ${agent.metadata.name}`}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{agent.metadata.name}</CardTitle>
-                        <Badge className={getStatusColor(agent.status?.phase)}>
-                          {agent.status?.phase || 'Unknown'}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {agent.spec.instructions || agent.spec.goal || 'No goal specified'}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          {getExecutionModeIcon(agent.spec.executionMode)}
-                          <span className="capitalize">{agent.spec.executionMode || 'autonomous'}</span>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-500">Models:</div>
-                          <div className="flex flex-wrap gap-1">
-                            {(agent.spec.modelRefs || []).map((modelRef: any) => (
-                              <Badge key={modelRef.name} variant="outline" className="text-xs">
-                                {modelRef.name}
-                              </Badge>
-                            ))}
-                            {/* Legacy support */}
-                            {agent.spec.model && (
-                              <Badge variant="outline" className="text-xs">
-                                {agent.spec.model.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {(agent.spec.toolRefs?.length > 0 || agent.spec.tools?.length > 0) && (
-                          <div className="space-y-1">
-                            <div className="text-sm text-gray-500">Tools:</div>
+              /* Agents Table */
+              <Card>
+                <CardHeader>
+                  <CardTitle>Agents ({clusterAgents.length})</CardTitle>
+                  <CardDescription>Language agents in this cluster</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Mode</TableHead>
+                        <TableHead>Models</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Age</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clusterAgents.map((agent: any) => (
+                        <TableRow key={agent.metadata.name}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center space-x-2">
+                              <Bot className="h-4 w-4 text-blue-500" />
+                              <Link 
+                                href={`/clusters/${clusterName}/agents/${agent.metadata.name}`}
+                                className="hover:underline"
+                              >
+                                {agent.metadata.name}
+                              </Link>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-1">
+                              {getExecutionModeIcon(agent.spec.executionMode)}
+                              <span className="text-sm capitalize">
+                                {agent.spec.executionMode || 'autonomous'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {(agent.spec.toolRefs || agent.spec.tools || []).map((toolRef: any) => (
-                                <Badge key={toolRef.name} variant="outline" className="text-xs">
-                                  {toolRef.name}
+                              {(agent.spec.modelRefs || []).slice(0, 2).map((modelRef: any) => (
+                                <Badge key={modelRef.name} variant="outline" className="text-xs">
+                                  {modelRef.name}
                                 </Badge>
                               ))}
+                              {/* Legacy support */}
+                              {agent.spec.model && (
+                                <Badge variant="outline" className="text-xs">
+                                  {agent.spec.model.name}
+                                </Badge>
+                              )}
+                              {(agent.spec.modelRefs?.length || 0) > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{(agent.spec.modelRefs?.length || 0) - 2}
+                                </Badge>
+                              )}
                             </div>
-                          </div>
-                        )}
-
-                        <div className="pt-2 border-t">
-                          <div className="text-xs text-gray-500">
-                            Created: {new Date(agent.metadata.creationTimestamp).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(agent.status?.phase)}>
+                              {agent.status?.phase || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {formatTimeAgo(agent.metadata.creationTimestamp)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/clusters/${clusterName}/agents/${agent.metadata.name}`}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/clusters/${clusterName}/agents/${agent.metadata.name}/edit`}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to delete agent "${agent.metadata.name}"?`)) {
+                                      // TODO: Add delete functionality
+                                      console.log('Delete agent:', agent.metadata.name)
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             )}
           </>
         )}
