@@ -9,10 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical
+  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical, FileCode, Copy, Check
 } from 'lucide-react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
 import { useModels } from '@/hooks/use-models'
 import { useTools } from '@/hooks/use-tools'
@@ -79,25 +82,36 @@ interface AgentOverviewProps {
 
 function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
   const { data: modelsResponse } = useModels({})
-  const { data: toolsResponse } = useTools({})
+  const { data: toolsResponse } = useTools({ clusterName })
   const { data: personasResponse } = usePersonas({})
 
   const allModels = modelsResponse?.data || []
   const allTools = toolsResponse?.data || []
   const allPersonas = personasResponse?.data || []
 
+  // Handle both old format (spec.model) and new format (spec.modelRefs)
   const referencedModel = agent.spec.model?.name 
     ? allModels.find((model: any) => model.metadata.name === agent.spec.model?.name)
+    : agent.spec.modelRefs?.[0]?.name
+    ? allModels.find((model: any) => model.metadata.name === agent.spec.modelRefs?.[0]?.name)
     : null
 
+  // Handle both old format (spec.tools) and new format (spec.toolRefs)
   const referencedTools = agent.spec.tools
     ? agent.spec.tools.map((toolRef) => 
         allTools.find((tool: any) => tool.metadata.name === toolRef.name)
       ).filter(Boolean)
+    : agent.spec.toolRefs
+    ? agent.spec.toolRefs.map((toolRef) => 
+        allTools.find((tool: any) => tool.metadata.name === toolRef.name)
+      ).filter(Boolean)
     : []
 
-  const referencedPersona = agent.spec.persona?.name
+  // Handle both old format (spec.persona) and new format (spec.personaRefs)
+  const referencedPersona = agent.spec.persona?.name 
     ? allPersonas.find((persona: any) => persona.metadata.name === agent.spec.persona?.name)
+    : agent.spec.personaRefs?.[0]?.name
+    ? allPersonas.find((persona: any) => persona.metadata.name === agent.spec.personaRefs?.[0]?.name)
     : null
 
   return (
@@ -140,19 +154,43 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <CardTitle>Models</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.spec.model?.name ? (
+            {agent.spec.model?.name || agent.spec.modelRefs?.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {referencedModel ? (
-                  <Link href={`/clusters/${clusterName}/models/${agent.spec.model.name}`}>
-                    <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
-                      {agent.spec.model.name}
-                    </Badge>
-                  </Link>
-                ) : (
-                  <Badge variant="destructive">
-                    {agent.spec.model.name}
-                  </Badge>
+                {/* Handle old format (spec.model) */}
+                {agent.spec.model?.name && (
+                  <>
+                    {referencedModel ? (
+                      <Link href={`/clusters/${clusterName}/models/${agent.spec.model.name}`}>
+                        <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                          {agent.spec.model.name}
+                        </Badge>
+                      </Link>
+                    ) : (
+                      <Badge variant="destructive">
+                        {agent.spec.model.name}
+                      </Badge>
+                    )}
+                  </>
                 )}
+                {/* Handle new format (spec.modelRefs) */}
+                {agent.spec.modelRefs?.map((modelRef, index) => {
+                  const foundModel = allModels.find((model: any) => model.metadata.name === modelRef.name)
+                  return (
+                    <div key={index}>
+                      {foundModel ? (
+                        <Link href={`/clusters/${clusterName}/models/${modelRef.name}`}>
+                          <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                            {modelRef.name}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="destructive">
+                          {modelRef.name}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">None</p>
@@ -165,38 +203,43 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <CardTitle>Tools</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.spec.tools && agent.spec.tools.length > 0 ? (
-              <div className="space-y-3">
-                {agent.spec.tools.map((toolRef, index) => {
+            {(agent.spec.tools && agent.spec.tools.length > 0) || (agent.spec.toolRefs && agent.spec.toolRefs.length > 0) ? (
+              <div className="flex flex-wrap gap-2">
+                {/* Handle old format (spec.tools) */}
+                {agent.spec.tools?.map((toolRef, index) => {
                   const referencedTool = allTools.find((tool: any) => tool.metadata.name === toolRef.name)
-                  
                   return (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium">{toolRef.name}</p>
-                          {referencedTool ? (
-                            <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
-                              <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer text-xs">
-                                View →
-                              </Badge>
-                            </Link>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs">Not Found</Badge>
-                          )}
-                        </div>
-                        {referencedTool && (
-                          <div className="mt-1">
-                            <p className="text-xs text-muted-foreground">Type: {referencedTool.spec.type}</p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant={referencedTool.status?.phase === 'Running' ? 'default' : 'secondary'} className="text-xs">
-                                {referencedTool.status?.phase || 'Unknown'}
-                              </Badge>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <Badge variant="outline">Configured</Badge>
+                    <div key={`old-${index}`}>
+                      {referencedTool ? (
+                        <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
+                          <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                            {toolRef.name}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="destructive">
+                          {toolRef.name}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
+                {/* Handle new format (spec.toolRefs) */}
+                {agent.spec.toolRefs?.map((toolRef, index) => {
+                  const referencedTool = allTools.find((tool: any) => tool.metadata.name === toolRef.name)
+                  return (
+                    <div key={`new-${index}`}>
+                      {referencedTool ? (
+                        <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
+                          <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                            {toolRef.name}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="destructive">
+                          {toolRef.name}
+                        </Badge>
+                      )}
                     </div>
                   )
                 })}
@@ -212,43 +255,43 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <CardTitle>Persona</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.spec.persona ? (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Persona Reference</p>
-                  <div className="flex items-center space-x-2">
-                    <p className="text-sm">{agent.spec.persona.name}</p>
+            {agent.spec.persona?.name || agent.spec.personaRefs?.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {/* Handle old format (spec.persona) */}
+                {agent.spec.persona?.name && (
+                  <>
                     {referencedPersona ? (
                       <Link href={`/clusters/${clusterName}/personas/${agent.spec.persona.name}`}>
                         <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
-                          View Persona →
+                          {agent.spec.persona.name}
                         </Badge>
                       </Link>
                     ) : (
-                      <Badge variant="destructive">Not Found</Badge>
-                    )}
-                  </div>
-                </div>
-                {referencedPersona && (
-                  <>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Display Name</p>
-                      <p className="text-sm">{referencedPersona.spec.displayName}</p>
-                    </div>
-                    {referencedPersona.spec.tone && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Tone</p>
-                        <Badge variant="secondary">{referencedPersona.spec.tone}</Badge>
-                      </div>
-                    )}
-                    {referencedPersona.spec.description && (
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Description</p>
-                        <p className="text-sm">{referencedPersona.spec.description}</p>
-                      </div>
+                      <Badge variant="destructive">
+                        {agent.spec.persona.name}
+                      </Badge>
                     )}
                   </>
                 )}
+                {/* Handle new format (spec.personaRefs) */}
+                {agent.spec.personaRefs?.map((personaRef, index) => {
+                  const foundPersona = allPersonas.find((persona: any) => persona.metadata.name === personaRef.name)
+                  return (
+                    <div key={index}>
+                      {foundPersona ? (
+                        <Link href={`/clusters/${clusterName}/personas/${personaRef.name}`}>
+                          <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                            {personaRef.name}
+                          </Badge>
+                        </Link>
+                      ) : (
+                        <Badge variant="destructive">
+                          {personaRef.name}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">None</p>
@@ -873,6 +916,10 @@ export default function ClusterAgentDetailPage() {
   const clusterName = params?.name as string
   const agentName = params?.agentName as string
   const [activeTab, setActiveTab] = useState('overview')
+  const [yamlModalOpen, setYamlModalOpen] = useState(false)
+  const [yamlContent, setYamlContent] = useState('')
+  const [yamlLoading, setYamlLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   
   const { data: agentResponse, isLoading, error } = useAgent(agentName, clusterName)
   const deleteAgent = useDeleteAgent(clusterName)
@@ -927,6 +974,34 @@ export default function ClusterAgentDetailPage() {
 
   const handleBack = () => {
     router.push(`/clusters/${clusterName}/agents`)
+  }
+
+  const handleViewYaml = async () => {
+    setYamlModalOpen(true)
+    setYamlLoading(true)
+    try {
+      const response = await fetch(`/api/clusters/${clusterName}/agents/${agentName}/yaml`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch YAML')
+      }
+      const yaml = await response.text()
+      setYamlContent(yaml)
+    } catch (error) {
+      console.error('Error fetching YAML:', error)
+      setYamlContent('Error loading YAML content')
+    } finally {
+      setYamlLoading(false)
+    }
+  }
+
+  const handleCopyYaml = async () => {
+    try {
+      await navigator.clipboard.writeText(yamlContent)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy YAML:', error)
+    }
   }
 
   if (isLoading) {
@@ -1006,6 +1081,10 @@ export default function ClusterAgentDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleViewYaml}>
+                  <FileCode className="h-4 w-4 mr-2" />
+                  View YAML
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleDeleteAgent}
                   disabled={deleteAgent.isPending}
@@ -1045,6 +1124,77 @@ export default function ClusterAgentDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* YAML Modal */}
+      <Dialog open={yamlModalOpen} onOpenChange={setYamlModalOpen}>
+        <DialogContent className="w-[85vw] !max-w-[85vw] max-h-[85vh] flex flex-col sm:!max-w-[85vw] md:!max-w-[85vw] lg:!max-w-[85vw]">
+          <DialogHeader>
+            <DialogTitle>LanguageAgent YAML</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 min-h-0 flex flex-col">
+            {yamlLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="border rounded-lg flex-1 min-h-0 flex flex-col">
+                <div className="bg-muted p-3 border-b flex justify-between items-center">
+                  <span className="font-medium text-sm">
+                    {agent?.metadata.name || agentName}.yaml
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyYaml}
+                    disabled={!yamlContent || yamlContent.startsWith('Error')}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  {yamlContent.startsWith('Error') ? (
+                    <div className="p-4 text-red-600 font-mono text-sm">
+                      {yamlContent}
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      language="yaml"
+                      style={oneLight}
+                      customStyle={{
+                        margin: 0,
+                        padding: '1rem',
+                        background: 'transparent',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.5',
+                        height: '100%',
+                        overflow: 'auto'
+                      }}
+                      codeTagProps={{
+                        style: {
+                          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                        }
+                      }}
+                    >
+                      {yamlContent}
+                    </SyntaxHighlighter>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AuthenticatedLayout>
   )
 }

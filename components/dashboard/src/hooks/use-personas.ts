@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
 
-export function usePersonas(params?: LanguagePersonaListParams) {
+export function usePersonas(params?: LanguagePersonaListParams & { clusterName?: string }) {
   return useQuery({
-    queryKey: ['personas', params],
+    queryKey: ['personas', params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -15,7 +15,12 @@ export function usePersonas(params?: LanguagePersonaListParams) {
       if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
 
-      const response = await fetch(`/api/personas?${searchParams}`)
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = params?.clusterName 
+        ? `/api/clusters/${params.clusterName}/personas?${searchParams}`
+        : `/api/personas?${searchParams}` // Legacy fallback for non-cluster contexts
+
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch personas')
       }

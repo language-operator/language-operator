@@ -9,12 +9,15 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Users, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, Trash2, MessageCircle, Palette, BookOpen, Target, MoreVertical
+  Edit, Trash2, MessageCircle, Palette, BookOpen, Target, MoreVertical, FileCode, Copy, Check
 } from 'lucide-react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { usePersona, useDeletePersona } from '@/hooks/use-personas'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -37,6 +40,10 @@ export default function ClusterPersonaDetailPage() {
   const clusterName = params?.name as string
   const personaName = params?.personaName as string
   const [activeTab, setActiveTab] = useState('overview')
+  const [yamlModalOpen, setYamlModalOpen] = useState(false)
+  const [yamlContent, setYamlContent] = useState('')
+  const [yamlLoading, setYamlLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   
   const { data: personaResponse, isLoading, error } = usePersona(personaName)
   const deletePersona = useDeletePersona()
@@ -87,6 +94,34 @@ export default function ClusterPersonaDetailPage() {
 
   const handleBack = () => {
     router.push(`/clusters/${clusterName}/personas`)
+  }
+
+  const handleViewYaml = async () => {
+    setYamlModalOpen(true)
+    setYamlLoading(true)
+    try {
+      const response = await fetch(`/api/clusters/${clusterName}/personas/${personaName}/yaml`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch YAML')
+      }
+      const yaml = await response.text()
+      setYamlContent(yaml)
+    } catch (error) {
+      console.error('Error fetching YAML:', error)
+      setYamlContent('Error loading YAML content')
+    } finally {
+      setYamlLoading(false)
+    }
+  }
+
+  const handleCopyYaml = async () => {
+    try {
+      await navigator.clipboard.writeText(yamlContent)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy YAML:', error)
+    }
   }
 
   if (isLoading) {
@@ -165,6 +200,10 @@ export default function ClusterPersonaDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleViewYaml}>
+                    <FileCode className="h-4 w-4 mr-2" />
+                    View YAML
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={handleDeletePersona}
                     disabled={deletePersona.isPending}
@@ -399,6 +438,77 @@ export default function ClusterPersonaDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* YAML Modal */}
+      <Dialog open={yamlModalOpen} onOpenChange={setYamlModalOpen}>
+        <DialogContent className="w-[85vw] !max-w-[85vw] max-h-[85vh] flex flex-col sm:!max-w-[85vw] md:!max-w-[85vw] lg:!max-w-[85vw]">
+          <DialogHeader>
+            <DialogTitle>LanguagePersona YAML</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 min-h-0 flex flex-col">
+            {yamlLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="border rounded-lg flex-1 min-h-0 flex flex-col">
+                <div className="bg-muted p-3 border-b flex justify-between items-center">
+                  <span className="font-medium text-sm">
+                    {persona?.metadata.name || personaName}.yaml
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyYaml}
+                    disabled={!yamlContent || yamlContent.startsWith('Error')}
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  {yamlContent.startsWith('Error') ? (
+                    <div className="p-4 text-red-600 font-mono text-sm">
+                      {yamlContent}
+                    </div>
+                  ) : (
+                    <SyntaxHighlighter
+                      language="yaml"
+                      style={oneLight}
+                      customStyle={{
+                        margin: 0,
+                        padding: '1rem',
+                        background: 'transparent',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.5',
+                        height: '100%',
+                        overflow: 'auto'
+                      }}
+                      codeTagProps={{
+                        style: {
+                          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                        }
+                      }}
+                    >
+                      {yamlContent}
+                    </SyntaxHighlighter>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AuthenticatedLayout>
   )
 }

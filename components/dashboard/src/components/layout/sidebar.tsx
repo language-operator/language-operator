@@ -23,10 +23,10 @@ const globalNavigation = [
 
 const clusterNavigation = [
   { name: 'Dashboard', href: '', icon: BarChart3 }, // Will be prefixed with /clusters/[name]
-  { name: 'Models', href: '/models', icon: Cpu },
+  { name: 'Agents', href: '/agents', icon: Bot },
   { name: 'Tools', href: '/tools', icon: Wrench },
   { name: 'Personas', href: '/personas', icon: Users },
-  { name: 'Agents', href: '/agents', icon: Bot },
+  { name: 'Models', href: '/models', icon: Cpu },
 ]
 
 export function Sidebar() {

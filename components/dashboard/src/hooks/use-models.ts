@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
 
-export function useModels(params?: LanguageModelListParams) {
+export function useModels(params?: LanguageModelListParams & { clusterName?: string }) {
   return useQuery({
-    queryKey: ['models', params],
+    queryKey: ['models', params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -19,7 +19,12 @@ export function useModels(params?: LanguageModelListParams) {
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
       if (params?.healthy !== undefined) searchParams.append('healthy', params.healthy.toString())
 
-      const response = await fetch(`/api/models?${searchParams}`)
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = params?.clusterName 
+        ? `/api/clusters/${params.clusterName}/models?${searchParams}`
+        : `/api/models?${searchParams}` // Legacy fallback for non-cluster contexts
+
+      const response = await fetch(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch models')
       }
