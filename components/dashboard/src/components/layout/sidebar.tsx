@@ -35,8 +35,13 @@ export function Sidebar() {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-gray-50 dark:bg-gray-900">
-      <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Language Operator</h1>
+      <div className="flex h-16 items-center border-b px-3">
+        <div className="px-3 py-2 font-mono text-sm w-full">
+          <span className="text-black dark:text-white font-bold tracking-wide">
+            LANGUAGE OPERATOR{' '}
+            <span className="animate-pulse">█</span>
+          </span>
+        </div>
       </div>
       
       {/* Cluster Selector */}

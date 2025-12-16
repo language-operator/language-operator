@@ -1162,7 +1162,7 @@ export default function ClusterAgentDetailPage() {
                     )}
                   </Button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-auto">
                   {yamlContent.startsWith('Error') ? (
                     <div className="p-4 text-red-600 font-mono text-sm">
                       {yamlContent}

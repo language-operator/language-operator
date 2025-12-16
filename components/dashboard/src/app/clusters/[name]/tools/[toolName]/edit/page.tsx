@@ -12,7 +12,7 @@ export default function EditClusterToolPage() {
   const clusterName = params?.name as string
   const toolName = params?.toolName as string
   
-  const { data: tools, isLoading: isLoadingTools } = useTools()
+  const { data: tools, isLoading: isLoadingTools } = useTools({ clusterName })
   const tool = tools?.find((t: any) => t.metadata.name === toolName)
   
   const [isLoading, setIsLoading] = useState(false)
