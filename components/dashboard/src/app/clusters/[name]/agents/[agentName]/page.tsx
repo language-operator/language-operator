@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -19,6 +19,42 @@ import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgent } from '@/types/agent'
 import { Skeleton } from '@/components/ui/skeleton'
 import { NotFound } from '@/components/ui/not-found'
+// Simple ANSI code converter
+function convertAnsiToHtml(text: string): string {
+  if (!text) return text;
+  
+  // Basic ANSI color mappings
+  const ansiToClass: { [key: string]: string } = {
+    '\x1b[30m': '<span class="ansi-black-fg">',      // Black
+    '\x1b[31m': '<span class="ansi-red-fg">',        // Red  
+    '\x1b[32m': '<span class="ansi-green-fg">',      // Green
+    '\x1b[33m': '<span class="ansi-yellow-fg">',     // Yellow
+    '\x1b[34m': '<span class="ansi-blue-fg">',       // Blue
+    '\x1b[35m': '<span class="ansi-magenta-fg">',    // Magenta
+    '\x1b[36m': '<span class="ansi-cyan-fg">',       // Cyan
+    '\x1b[37m': '<span class="ansi-white-fg">',      // White
+    '\x1b[90m': '<span class="ansi-bright-black-fg">', // Bright Black (Gray)
+    '\x1b[91m': '<span class="ansi-bright-red-fg">',   // Bright Red
+    '\x1b[92m': '<span class="ansi-bright-green-fg">', // Bright Green
+    '\x1b[93m': '<span class="ansi-bright-yellow-fg">', // Bright Yellow
+    '\x1b[94m': '<span class="ansi-bright-blue-fg">',  // Bright Blue
+    '\x1b[95m': '<span class="ansi-bright-magenta-fg">', // Bright Magenta
+    '\x1b[96m': '<span class="ansi-bright-cyan-fg">',  // Bright Cyan
+    '\x1b[97m': '<span class="ansi-bright-white-fg">', // Bright White
+    '\x1b[1;36m': '<span class="ansi-bold ansi-cyan-fg">', // Bold Cyan
+    '\x1b[1m': '<span class="ansi-bold">',             // Bold
+    '\x1b[0m': '</span>',                              // Reset
+  };
+  
+  let result = text;
+  
+  // Replace ANSI codes with HTML spans
+  Object.entries(ansiToClass).forEach(([code, replacement]) => {
+    result = result.split(code).join(replacement);
+  });
+  
+  return result;
+}
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -529,6 +565,13 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   const [isStreaming, setIsStreaming] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  
+  // Memoize ANSI converter for performance
+  const convertLogsToHtml = useMemo(() => {
+    return (logLines: string[]): string[] => {
+      return logLines.map(line => convertAnsiToHtml(line))
+    }
+  }, [])
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -690,7 +733,7 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       {/* Log Output */}
       <Card>
         <CardContent className="p-0">
-          <div className="bg-black text-green-400 font-mono text-sm h-96 overflow-y-auto p-4">
+          <div className="bg-black text-white font-mono text-sm h-96 overflow-y-auto p-4">
             {logs.length === 0 ? (
               <div className="flex items-center justify-center h-full text-gray-500">
                 No logs available
@@ -698,9 +741,13 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
             ) : (
               <div>
                 {logs.map((log, index) => (
-                  <div key={index} className="whitespace-pre-wrap break-words">
-                    {log}
-                  </div>
+                  <div 
+                    key={index} 
+                    className="whitespace-pre-wrap break-words"
+                    dangerouslySetInnerHTML={{ 
+                      __html: convertAnsiToHtml(log) 
+                    }}
+                  />
                 ))}
                 <div ref={logsEndRef} />
               </div>

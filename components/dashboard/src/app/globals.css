@@ -86,3 +86,53 @@
     color: hsl(var(--foreground));
   }
 }
+
+/* ANSI Color Classes for Terminal Logs */
+.ansi-black-fg { color: #000000; }
+.ansi-red-fg { color: #ff0000; }
+.ansi-green-fg { color: #00ff00; }
+.ansi-yellow-fg { color: #ffff00; }
+.ansi-blue-fg { color: #0000ff; }
+.ansi-magenta-fg { color: #ff00ff; }
+.ansi-cyan-fg { color: #00ffff; }
+.ansi-white-fg { color: #ffffff; }
+.ansi-bright-black-fg { color: #808080; }
+.ansi-bright-red-fg { color: #ff8080; }
+.ansi-bright-green-fg { color: #80ff80; }
+.ansi-bright-yellow-fg { color: #ffff80; }
+.ansi-bright-blue-fg { color: #8080ff; }
+.ansi-bright-magenta-fg { color: #ff80ff; }
+.ansi-bright-cyan-fg { color: #80ffff; }
+.ansi-bright-white-fg { color: #ffffff; }
+
+.ansi-black-bg { background-color: #000000; }
+.ansi-red-bg { background-color: #800000; }
+.ansi-green-bg { background-color: #008000; }
+.ansi-yellow-bg { background-color: #808000; }
+.ansi-blue-bg { background-color: #000080; }
+.ansi-magenta-bg { background-color: #800080; }
+.ansi-cyan-bg { background-color: #008080; }
+.ansi-white-bg { background-color: #c0c0c0; }
+.ansi-bright-black-bg { background-color: #808080; }
+.ansi-bright-red-bg { background-color: #ff0000; }
+.ansi-bright-green-bg { background-color: #00ff00; }
+.ansi-bright-yellow-bg { background-color: #ffff00; }
+.ansi-bright-blue-bg { background-color: #0000ff; }
+.ansi-bright-magenta-bg { background-color: #ff00ff; }
+.ansi-bright-cyan-bg { background-color: #00ffff; }
+.ansi-bright-white-bg { background-color: #ffffff; }
+
+/* ANSI text styles */
+.ansi-bold { font-weight: bold; }
+.ansi-dim { opacity: 0.5; }
+.ansi-italic { font-style: italic; }
+.ansi-underline { text-decoration: underline; }
+.ansi-blink { animation: blink 1s linear infinite; }
+.ansi-reverse { 
+  filter: invert(100%);
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
