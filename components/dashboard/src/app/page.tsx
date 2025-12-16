@@ -1,12 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClusterSelectionModal } from '@/components/cluster-selection-modal'
-import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock } from 'lucide-react'
+import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock, ExternalLink, Settings } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
+import { useClusters } from '@/hooks/use-clusters'
+import { useAgents } from '@/hooks/useAgents'
+import { ClusterStatusBadge, AgentStatusBadge } from '@/components/ui/resource-status-badge'
 import { useRouter } from 'next/navigation'
 
 type QuickActionType = 'agent' | 'model' | 'tool'
@@ -14,6 +18,8 @@ type QuickActionType = 'agent' | 'model' | 'tool'
 export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useRecentActivity({ limit: 4 })
+  const { data: clustersData, isLoading: clustersLoading, error: clustersError } = useClusters({ limit: 5 })
+  const { data: agentsData, isLoading: agentsLoading, error: agentsError } = useAgents({ limit: 5 })
   const router = useRouter()
   const [modalState, setModalState] = useState<{
     isOpen: boolean
@@ -133,70 +139,10 @@ export default function Home() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Language Agents</CardTitle>
-              <Bot className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : error ? '0' : counts?.agents || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {error ? 'Error loading data' : 'Active in your namespace'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Language Models</CardTitle>
-              <Cpu className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : error ? '0' : counts?.models || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {error ? 'Error loading data' : 'Available for agents'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Language Tools</CardTitle>
-              <Wrench className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : error ? '0' : counts?.tools || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {error ? 'Error loading data' : 'Ready for agents'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Language Personas</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {loading ? '...' : error ? '0' : counts?.personas || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {error ? 'Error loading data' : 'Personality templates'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Language Clusters</CardTitle>
+              <CardTitle className="text-sm font-medium">Clusters</CardTitle>
               <Cloud className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -204,79 +150,153 @@ export default function Home() {
                 {loading ? '...' : error ? '0' : counts?.clusters || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {error ? 'Error loading data' : 'Deployed configurations'}
+                {error ? 'Error loading data' : 'LanguageClusters'}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Health</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Agents</CardTitle>
+              <Bot className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">99.2%</div>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.agents || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                30-day uptime
+                {error ? 'Error loading data' : 'LanguageAgents'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tools</CardTitle>
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.tools || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {error ? 'Error loading data' : 'LanguageTools'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Models</CardTitle>
+              <Cpu className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.models || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {error ? 'Error loading data' : 'LanguageModels'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Personas</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loading ? '...' : error ? '0' : counts?.personas || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {error ? 'Error loading data' : 'LanguagePersonas'}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Activity and Quick Actions */}
+        {/* Active Resources */}
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Recent Activity
+                <Cloud className="h-5 w-5" />
+                Clusters
               </CardTitle>
               <CardDescription>
-                Latest changes to your resources
+                Logical groups of agents, tools, and models
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {activityLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-start space-x-3">
-                      <div className="h-5 w-5 bg-gray-200 rounded mt-0.5 animate-pulse" />
-                      <div className="flex-1 min-w-0">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                        <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+              {clustersLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-6 w-6 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
                       </div>
+                      <div className="h-3 bg-gray-100 rounded animate-pulse w-16" />
                     </div>
                   ))}
                 </div>
-              ) : activityError ? (
-                <div className="text-center py-8">
-                  <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Failed to load recent activity</p>
+              ) : clustersError ? (
+                <div className="text-center py-4">
+                  <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Failed to load clusters</p>
                 </div>
-              ) : !recentActivity?.data || recentActivity.data.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No recent activity</p>
-                  <p className="text-xs text-gray-400 mt-1">Activity will appear here when you start using your resources</p>
+              ) : !clustersData?.data || clustersData.data.length === 0 ? (
+                <div className="text-center py-4">
+                  <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No clusters deployed</p>
+                  <p className="text-xs text-gray-400 mt-1">Deploy your first cluster to get started</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {recentActivity.data.map((activity) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      {getActivityIcon(activity.type, activity.action)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {activity.message}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {formatTimestamp(activity.timestamp)}
-                          {activity.namespace && activity.namespace !== 'default' && (
-                            <span className="text-gray-400"> in {activity.namespace} namespace</span>
-                          )}
-                        </p>
+                <div className="space-y-3">
+                  {clustersData.data.slice(0, 5).map((cluster: any) => (
+                    <div key={cluster.metadata.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/clusters/${cluster.metadata.name}`} className="text-sm font-medium truncate hover:text-blue-600 hover:underline">
+                            {cluster.metadata.name}
+                          </Link>
+                          <div className="mt-1">
+                            <ClusterStatusBadge cluster={cluster} size="sm" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Link href={`/clusters/${cluster.metadata.name}/agents`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="Agents">
+                            <Bot className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
+                        <Link href={`/clusters/${cluster.metadata.name}/tools`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="Tools">
+                            <Wrench className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
+                        <Link href={`/clusters/${cluster.metadata.name}/models`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="Models">
+                            <Cpu className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
+                        <Link href={`/clusters/${cluster.metadata.name}/personas`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="Personas">
+                            <Users className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
                       </div>
                     </div>
                   ))}
+                  {clustersData.data.length > 5 && (
+                    <div className="pt-2 border-t">
+                      <Link href="/clusters" className="text-xs text-blue-600 hover:text-blue-800">
+                        View all {clustersData.data.length} clusters →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -285,55 +305,69 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                System Status
+                <Bot className="h-5 w-5" />
+                Agents
               </CardTitle>
               <CardDescription>
-                Current health of your infrastructure
+                Natural language-based goals and automations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">API Gateway</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-green-600">Healthy</span>
-                  </div>
+              {agentsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-6 w-6 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
+                      </div>
+                      <div className="h-3 bg-gray-100 rounded animate-pulse w-16" />
+                    </div>
+                  ))}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">PostgreSQL Database</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-green-600">Connected</span>
-                  </div>
+              ) : agentsError ? (
+                <div className="text-center py-4">
+                  <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Failed to load agents</p>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Language Clusters</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
-                    <span className="text-sm text-yellow-600">Scaling</span>
-                  </div>
+              ) : !agentsData?.data || agentsData.data.length === 0 ? (
+                <div className="text-center py-4">
+                  <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No agents deployed</p>
+                  <p className="text-xs text-gray-400 mt-1">Create your first agent to get started</p>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Kubernetes API</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-green-600">Available</span>
-                  </div>
+              ) : (
+                <div className="space-y-3">
+                  {agentsData.data.slice(0, 5).map((agent: any) => (
+                    <div key={agent.metadata.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`} className="text-sm font-medium truncate hover:text-blue-600 hover:underline">
+                            {agent.metadata.name}
+                          </Link>
+                          <div className="mt-1">
+                            <AgentStatusBadge agent={agent} size="sm" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="View Agent">
+                            <ExternalLink className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {agentsData.data.length > 5 && (
+                    <div className="pt-2 border-t">
+                      <Link href="/agents" className="text-xs text-blue-600 hover:text-blue-800">
+                        View all {agentsData.data.length} agents →
+                      </Link>
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Monitoring</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm text-green-600">Active</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -414,6 +448,64 @@ export default function Home() {
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Recent Activity
+            </CardTitle>
+            <CardDescription>
+              Latest changes to your resources
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {activityLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-start space-x-3">
+                    <div className="h-5 w-5 bg-gray-200 rounded mt-0.5 animate-pulse" />
+                    <div className="flex-1 min-w-0">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
+                      <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activityError ? (
+              <div className="text-center py-8">
+                <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Failed to load recent activity</p>
+              </div>
+            ) : !recentActivity?.data || recentActivity.data.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No recent activity</p>
+                <p className="text-xs text-gray-400 mt-1">Activity will appear here when you start using your resources</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.data.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    {getActivityIcon(activity.type, activity.action)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.message}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formatTimestamp(activity.timestamp)}
+                        {activity.namespace && activity.namespace !== 'default' && (
+                          <span className="text-gray-400"> in {activity.namespace} namespace</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

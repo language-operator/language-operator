@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ResourceHeader } from '@/components/ui/resource-header'
+import { ClusterStatusBadge } from '@/components/ui/resource-status-badge'
 import { 
   Bot, 
   Cpu, 
@@ -68,18 +69,6 @@ export default function ClusterDashboard() {
     )
   }
 
-  const getStatusColor = (phase?: string) => {
-    switch (phase) {
-      case 'Ready':
-        return 'bg-green-100 text-green-800'
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Failed':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
 
   return (
     <AuthenticatedLayout>
@@ -91,18 +80,12 @@ export default function ClusterDashboard() {
           title={cluster.metadata?.name || ''}
           subtitle="LanguageCluster"
           actions={
-            <>
-              <Badge className={getStatusColor(cluster.status?.phase)}>
-                <Activity className="h-3 w-3 mr-1" />
-                {cluster.status?.phase || 'Unknown'}
-              </Badge>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/clusters/${clusterName}/settings`}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Link>
-              </Button>
-            </>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/clusters/${clusterName}/settings`}>
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Link>
+            </Button>
           }
         />
 
@@ -143,9 +126,7 @@ export default function ClusterDashboard() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
                 <dd className="mt-1">
-                  <Badge className={getStatusColor(cluster.status?.phase)}>
-                    {cluster.status?.phase || 'Unknown'}
-                  </Badge>
+                  <ClusterStatusBadge cluster={cluster} />
                 </dd>
               </div>
             </CardContent>
