@@ -154,7 +154,7 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <CardTitle>Models</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.spec.model?.name || agent.spec.modelRefs?.length > 0 ? (
+            {agent.spec.model?.name || (agent.spec.modelRefs && agent.spec.modelRefs.length > 0) ? (
               <div className="flex flex-wrap gap-2">
                 {/* Handle old format (spec.model) */}
                 {agent.spec.model?.name && (
@@ -255,7 +255,7 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
             <CardTitle>Persona</CardTitle>
           </CardHeader>
           <CardContent>
-            {agent.spec.persona?.name || agent.spec.personaRefs?.length > 0 ? (
+            {agent.spec.persona?.name || (agent.spec.personaRefs && agent.spec.personaRefs.length > 0) ? (
               <div className="flex flex-wrap gap-2">
                 {/* Handle old format (spec.persona) */}
                 {agent.spec.persona?.name && (
