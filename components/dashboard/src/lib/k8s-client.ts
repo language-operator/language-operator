@@ -5,9 +5,13 @@ class KubernetesClient {
   private kc: k8s.KubeConfig
   private coreV1Api: k8s.CoreV1Api | null
   private customObjectsApi: k8s.CustomObjectsApi | null
+  private batchV1Api: k8s.BatchV1Api | null
 
   private constructor() {
     this.kc = new k8s.KubeConfig()
+    this.coreV1Api = null
+    this.customObjectsApi = null
+    this.batchV1Api = null
 
     try {
       // Load config based on environment
@@ -43,6 +47,7 @@ class KubernetesClient {
 
       this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
       this.customObjectsApi = this.kc.makeApiClient(k8s.CustomObjectsApi)
+      this.batchV1Api = this.kc.makeApiClient(k8s.BatchV1Api)
     } catch (error) {
       console.error('❌ Failed to configure Kubernetes client:', error instanceof Error ? error.message : String(error))
       throw new Error('Kubernetes configuration is required')
@@ -1105,6 +1110,59 @@ class KubernetesClient {
     })
 
     return results
+  }
+
+  // Jobs management
+  async createJob(namespace: string, job: any) {
+    if (!this.batchV1Api) {
+      throw new Error('Kubernetes client not initialized')
+    }
+
+    try {
+      const response = await this.batchV1Api.createNamespacedJob({
+        namespace,
+        body: job,
+      })
+      console.log(`✅ Job created successfully: ${job.metadata.name}`)
+      return response
+    } catch (error) {
+      console.error(`❌ Failed to create Job ${job.metadata.name}:`, error)
+      throw error
+    }
+  }
+
+  async getJob(namespace: string, name: string) {
+    if (!this.batchV1Api) {
+      throw new Error('Kubernetes client not initialized')
+    }
+
+    try {
+      const response = await this.batchV1Api.readNamespacedJob({
+        namespace,
+        name,
+      })
+      return response
+    } catch (error) {
+      console.error(`❌ Failed to get Job ${name}:`, error)
+      throw error
+    }
+  }
+
+  async listJobs(namespace: string, options?: { labelSelector?: string }) {
+    if (!this.batchV1Api) {
+      throw new Error('Kubernetes client not initialized')
+    }
+
+    try {
+      const response = await this.batchV1Api.listNamespacedJob({
+        namespace,
+        ...(options?.labelSelector && { labelSelector: options.labelSelector }),
+      })
+      return response
+    } catch (error) {
+      console.error(`❌ Failed to list Jobs in namespace ${namespace}:`, error)
+      throw error
+    }
   }
 }
 
