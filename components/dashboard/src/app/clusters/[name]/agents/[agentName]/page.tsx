@@ -1303,7 +1303,7 @@ export default function ClusterAgentDetailPage() {
             <AgentCode agent={agent} clusterName={clusterName} />
           </TabsContent>
 
-          <TabsContent value="workspace" className="flex-1 flex flex-col mt-0">
+          <TabsContent value="workspace" className="mt-0">
             {agent?.spec?.workspace?.enabled ? (
               <AgentWorkspace agent={agent} clusterName={clusterName} />
             ) : (
