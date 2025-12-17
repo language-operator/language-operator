@@ -1156,7 +1156,7 @@ class KubernetesClient {
     try {
       // Get the existing CronJob
       const cronJobResponse = await this.getCronJob(namespace, cronJobName)
-      const cronJob = cronJobResponse.body || cronJobResponse.data || cronJobResponse
+      const cronJob = (cronJobResponse as any)?.body || (cronJobResponse as any)?.data || cronJobResponse
       
       if (!cronJob?.spec?.jobTemplate) {
         throw new Error(`CronJob ${cronJobName} does not have a valid job template`)
