@@ -109,12 +109,17 @@ export function useCreateAgent(clusterName?: string) {
   })
 }
 
-export function useUpdateAgent() {
+export function useUpdateAgent(clusterName?: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async ({ name, agent }: { name: string; agent: Partial<LanguageAgent> }) => {
-      const response = await fetch(`/api/agents/${name}`, {
+      // Use cluster-scoped API if cluster name is provided
+      const endpoint = clusterName 
+        ? `/api/clusters/${clusterName}/agents/${name}`
+        : `/api/agents/${name}`
+      
+      const response = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
@@ -127,7 +132,11 @@ export function useUpdateAgent() {
       return response.json()
     },
     onSuccess: () => {
+      // Invalidate both general and cluster-specific queries
       queryClient.invalidateQueries({ queryKey: ['agents'] })
+      if (clusterName) {
+        queryClient.invalidateQueries({ queryKey: ['agents', clusterName] })
+      }
     },
   })
 }

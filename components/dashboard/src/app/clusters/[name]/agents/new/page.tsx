@@ -1,14 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import yaml from 'js-yaml'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { 
-  ArrowLeft, Bot, Save, Eye, Plus, X, 
+  ArrowLeft, Bot, Save, Plus, X, 
   Settings, Zap, Network
 } from 'lucide-react'
 import {
@@ -61,7 +58,6 @@ export default function CreateClusterAgentPage() {
   const params = useParams()
   const clusterName = params?.name as string
   
-  const [showYamlPreview, setShowYamlPreview] = useState(false)
   const { toast } = useToast()
   
   const createAgent = useCreateAgent(clusterName)
@@ -90,32 +86,6 @@ export default function CreateClusterAgentPage() {
 
   const { formState } = form
 
-  const watchedValues = form.watch()
-
-  // Generate simplified YAML preview
-  const generateYamlPreview = (values: AgentFormValues): string => {
-    const agent: Partial<LanguageAgent> = {
-      apiVersion: 'langop.io/v1alpha1',
-      kind: 'LanguageAgent',
-      metadata: {
-        name: values.name || 'example-agent',
-        namespace: clusterName ? `cluster-${clusterName}` : 'default',
-      },
-      spec: {
-        instructions: values.instructions,
-        executionMode: 'autonomous',
-        modelRefs: values.selectedModels.length > 0 ? values.selectedModels.map(name => ({ name })) : [],
-        ...(values.selectedTools.length > 0 && {
-          toolRefs: values.selectedTools.map(name => ({ name })),
-        }),
-        ...(values.selectedPersona && values.selectedPersona !== 'none' && {
-          personaRefs: [{ name: values.selectedPersona }],
-        }),
-      },
-    }
-    
-    return yaml.dump(agent)
-  }
 
   const onSubmit = async (values: AgentFormValues) => {
     try {
@@ -196,22 +166,11 @@ export default function CreateClusterAgentPage() {
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowYamlPreview(!showYamlPreview)}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              {showYamlPreview ? 'Hide' : 'Show'} YAML
-            </Button>
-          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6">
           {/* Simplified Single-Column Form */}
-          <div className={showYamlPreview ? "lg:col-span-2" : "lg:col-span-3"}>
+          <div>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <Card>
@@ -412,35 +371,6 @@ export default function CreateClusterAgentPage() {
             </Form>
           </div>
 
-          {/* YAML Preview */}
-          {showYamlPreview && (
-            <div className="lg:col-span-1">
-              <Card className="sticky top-6">
-                <CardHeader>
-                  <CardTitle className={`text-sm ${!formState.isValid ? 'text-red-500' : ''}`}>
-                    YAML Preview
-                  </CardTitle>
-                  <CardDescription>
-                    Generated Kubernetes resource definition
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SyntaxHighlighter
-                    language="yaml"
-                    style={oneDark}
-                    customStyle={{
-                      margin: 0,
-                      borderRadius: '0.5rem',
-                      fontSize: '0.75rem',
-                      maxHeight: '600px'
-                    }}
-                  >
-                    {generateYamlPreview(watchedValues)}
-                  </SyntaxHighlighter>
-                </CardContent>
-              </Card>
-            </div>
-          )}
         </div>
       </div>
     </AuthenticatedLayout>

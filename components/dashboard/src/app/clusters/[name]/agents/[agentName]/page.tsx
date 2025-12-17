@@ -130,14 +130,6 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
               <p className="text-sm">{agent.metadata.name}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Cluster</p>
-              <p className="text-sm">{clusterName}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Namespace</p>
-              <p className="text-sm">{agent.metadata.namespace}</p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-muted-foreground">Execution Mode</p>
               <Badge variant="secondary">{agent.spec.executionMode}</Badge>
             </div>
@@ -149,7 +141,21 @@ function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
         </CardContent>
       </Card>
 
-      {/* Models, Tools, and Persona - Second Row */}
+      {/* Goal - Prominent Full Width Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Goal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <p className="text-base leading-relaxed">
+              {agent.spec.instructions || 'No goal specified'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Models, Tools, and Persona - Third Row */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -500,10 +506,26 @@ function AgentCode({ agent, clusterName }: AgentCodeProps) {
                   </div>
                 </div>
               </div>
-              <div className="p-4">
-                <pre className="text-sm bg-gray-50 p-4 rounded overflow-x-auto whitespace-pre-wrap">
-                  <code>{agentVersion.spec.code}</code>
-                </pre>
+              <div className="p-0">
+                <SyntaxHighlighter
+                  language="ruby"
+                  style={oneLight}
+                  customStyle={{
+                    margin: 0,
+                    padding: '1rem',
+                    background: 'transparent',
+                    fontSize: '0.875rem',
+                    lineHeight: '1.5',
+                    borderRadius: '0 0 0.5rem 0.5rem',
+                  }}
+                  codeTagProps={{
+                    style: {
+                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                    }
+                  }}
+                >
+                  {agentVersion.spec.code}
+                </SyntaxHighlighter>
               </div>
             </div>
           ) : (
@@ -1119,10 +1141,6 @@ export default function ClusterAgentDetailPage() {
               <ScrollText className="w-4 h-4 mr-2" />
               Logs
             </TabsTrigger>
-            <TabsTrigger value="metrics">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Metrics
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -1152,10 +1170,6 @@ export default function ClusterAgentDetailPage() {
 
           <TabsContent value="logs" className="flex-1 flex flex-col">
             <AgentLogs agent={agent} clusterName={clusterName} />
-          </TabsContent>
-
-          <TabsContent value="metrics" className="space-y-6">
-            <AgentMetrics agent={agent} />
           </TabsContent>
         </Tabs>
       </div>
