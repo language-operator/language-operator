@@ -1276,7 +1276,7 @@ export default function ClusterAgentDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList>
+          <TabsList className="mb-4">
             <TabsTrigger value="overview">
               <Home className="w-4 h-4 mr-2" />
               Overview
