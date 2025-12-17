@@ -259,6 +259,17 @@ export interface LanguageAgentFormData {
   ingressPath?: string
   enableTLS?: boolean
   clusterRef?: string
+  
+  // Network policy fields
+  egressRules?: Array<{
+    description?: string
+    dns?: string[]
+    cidr?: string
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
 }
 
 export interface LanguageAgentListItem {
