@@ -42,8 +42,8 @@ rules:
   resources: ["events"]
   verbs: ["get", "list", "create"]
 
-# Job access for manual agent execution
+# Job and CronJob access for manual agent execution
 - apiGroups: ["batch"]
-  resources: ["jobs"]
+  resources: ["jobs", "cronjobs"]
   verbs: ["get", "list", "create", "delete"]
 {{- end }}
