@@ -22,15 +22,20 @@ rules:
   resources: ["namespaces"]
   verbs: ["get", "list", "create", "update", "patch"]
 
-# Pod logs access for debugging
+# Pod access for debugging and workspace file management
 - apiGroups: [""]
-  resources: ["pods", "pods/log"]
-  verbs: ["get", "list"]
+  resources: ["pods", "pods/log", "pods/exec"]
+  verbs: ["get", "list", "create", "delete"]
 
 # ResourceQuota management for organization plan enforcement
 - apiGroups: [""]
   resources: ["resourcequotas"]
   verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+# PersistentVolumeClaim access for workspace file management
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list"]
 
 # Events access for audit logging and status information
 - apiGroups: [""]
