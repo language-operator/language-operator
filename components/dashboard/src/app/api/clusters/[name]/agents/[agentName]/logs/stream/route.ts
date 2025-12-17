@@ -36,8 +36,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { name: clusterName, agentName } = await params
+    const url = new URL(request.url)
+    const podName = url.searchParams.get('podName')
 
-    console.log(`Starting log stream for agent ${agentName} in cluster ${clusterName}`)
+    console.log(`Starting log stream for agent ${agentName} in cluster ${clusterName}${podName ? `, pod ${podName}` : ''}`)
 
     // Find the pod for this agent
     const pods = await k8sClient.listPods(organization.namespace, {
@@ -60,11 +62,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return new Response('No pods found for this agent', { status: 404 })
     }
 
-    // Get the most recent pod
-    const pod = podList.sort((a, b) => 
-      new Date(b.metadata.creationTimestamp).getTime() - 
-      new Date(a.metadata.creationTimestamp).getTime()
-    )[0]
+    // Select the appropriate pod
+    let pod
+    if (podName) {
+      // Find the specific pod requested
+      pod = podList.find(p => p.metadata.name === podName)
+      if (!pod) {
+        return new Response(`Pod "${podName}" not found for agent ${agentName}`, { status: 404 })
+      }
+    } else {
+      // Default behavior: get the most recent running pod, or most recent if none running
+      const runningPods = podList.filter(p => p.status?.phase === 'Running')
+      if (runningPods.length > 0) {
+        pod = runningPods.sort((a, b) => 
+          new Date(b.metadata.creationTimestamp).getTime() - 
+          new Date(a.metadata.creationTimestamp).getTime()
+        )[0]
+      } else {
+        pod = podList.sort((a, b) => 
+          new Date(b.metadata.creationTimestamp).getTime() - 
+          new Date(a.metadata.creationTimestamp).getTime()
+        )[0]
+      }
+    }
 
     console.log(`Streaming logs from pod: ${pod.metadata.name}`)
 

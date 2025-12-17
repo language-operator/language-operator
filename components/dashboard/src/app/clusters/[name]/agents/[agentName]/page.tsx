@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, Terminal, MoreVertical, FileCode, Copy, Check, FolderOpen,
+  Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, MoreVertical, FileCode, Copy, Check, FolderOpen,
   Home, ScrollText, BarChart3
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -600,6 +601,9 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [pods, setPods] = useState<any[]>([])
+  const [selectedPod, setSelectedPod] = useState<string>('')
+  const [podsLoading, setPodsLoading] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   
@@ -619,7 +623,7 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   }, [logs])
 
   useEffect(() => {
-    fetchInitialLogs()
+    fetchPods()
     return () => {
       // Cleanup on unmount
       if (eventSourceRef.current) {
@@ -628,12 +632,48 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
     }
   }, [agent.metadata.name, clusterName])
 
+  useEffect(() => {
+    // Fetch logs when selected pod changes
+    if (selectedPod) {
+      fetchInitialLogs()
+    }
+  }, [selectedPod])
+
+  const fetchPods = async () => {
+    try {
+      setPodsLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/pods`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pods: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      setPods(data.data || [])
+      
+      // Auto-select the recommended pod
+      if (data.recommendedPod && data.data.length > 0) {
+        setSelectedPod(data.recommendedPod)
+      }
+    } catch (err) {
+      console.error('Error fetching pods:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load pods')
+    } finally {
+      setPodsLoading(false)
+    }
+  }
+
   const fetchInitialLogs = async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs`)
+      const url = selectedPod 
+        ? `/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs?podName=${selectedPod}`
+        : `/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs`
+      
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error(`Failed to fetch logs: ${response.status} ${response.statusText}`)
       }
@@ -657,7 +697,11 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
     setIsStreaming(true)
     setError(null)
     
-    const eventSource = new EventSource(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs/stream`)
+    const url = selectedPod 
+      ? `/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs/stream?podName=${selectedPod}`
+      : `/api/clusters/${clusterName}/agents/${agent.metadata.name}/logs/stream`
+    
+    const eventSource = new EventSource(url)
     eventSourceRef.current = eventSource
 
     eventSource.onmessage = (event) => {
@@ -708,14 +752,74 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       <Card className="flex-shrink-0">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Terminal className="h-5 w-5" />
-                Agent Logs
-              </CardTitle>
-              <CardDescription>
-                Real-time logs from the agent pod
-              </CardDescription>
+            <div className="flex-1">
+              {/* Pod Selection */}
+              <div>
+                <Select
+                  value={selectedPod}
+                  onValueChange={(value) => {
+                    setSelectedPod(value)
+                    // Stop streaming when switching pods
+                    if (isStreaming) {
+                      stopStreaming()
+                    }
+                    // Clear existing logs
+                    setLogs([])
+                  }}
+                  disabled={podsLoading || pods.length === 0}
+                >
+                  <SelectTrigger className="min-w-96">
+                    <SelectValue placeholder={podsLoading ? "Loading pods..." : "Select a pod"} />
+                  </SelectTrigger>
+                  <SelectContent className="min-w-96">
+                    {pods.map((pod) => {
+                      const formatTimeAgo = (timestamp: string) => {
+                        const date = new Date(timestamp)
+                        const now = new Date()
+                        const diff = now.getTime() - date.getTime()
+                        const minutes = Math.floor(diff / 60000)
+                        const hours = Math.floor(diff / 3600000)
+                        const days = Math.floor(diff / 86400000)
+                        
+                        if (days > 0) return `${days}d ago`
+                        if (hours > 0) return `${hours}h ago`
+                        if (minutes > 0) return `${minutes}m ago`
+                        return 'Just now'
+                      }
+                      
+                      const getStatusColor = (status: string) => {
+                        switch (status) {
+                          case 'Running': return 'text-green-600'
+                          case 'Succeeded': return 'text-blue-600'
+                          case 'Failed': return 'text-red-600'
+                          case 'Pending': return 'text-yellow-600'
+                          default: return 'text-gray-600'
+                        }
+                      }
+
+                      return (
+                        <SelectItem key={pod.name} value={pod.name}>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-mono text-sm">{pod.name}</span>
+                            <div className="flex items-center gap-2 ml-4">
+                              <Badge variant="outline" className={`${getStatusColor(pod.status)} text-xs`}>
+                                {pod.status}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTimeAgo(pod.creationTimestamp)}
+                              </span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+                
+                {pods.length === 0 && !podsLoading && (
+                  <span className="text-sm text-muted-foreground">No pods found</span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button

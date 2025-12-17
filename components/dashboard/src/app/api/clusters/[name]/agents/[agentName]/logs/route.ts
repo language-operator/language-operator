@@ -36,8 +36,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { name: clusterName, agentName } = await params
+    const searchParams = new URL(request.url).searchParams
+    const podName = searchParams.get('podName')
 
-    console.log(`Fetching logs for agent ${agentName} in cluster ${clusterName}, namespace ${organization.namespace}`)
+    console.log(`Fetching logs for agent ${agentName} in cluster ${clusterName}, namespace ${organization.namespace}${podName ? `, pod ${podName}` : ''}`)
 
     // Find the pod for this agent
     const pods = await k8sClient.listPods(organization.namespace, {
@@ -65,11 +67,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       })
     }
 
-    // Get the most recent pod (in case there are multiple)
-    const pod = podList.sort((a, b) => 
-      new Date(b.metadata.creationTimestamp).getTime() - 
-      new Date(a.metadata.creationTimestamp).getTime()
-    )[0]
+    // Select the appropriate pod
+    let pod
+    if (podName) {
+      // Find the specific pod requested
+      pod = podList.find(p => p.metadata.name === podName)
+      if (!pod) {
+        return NextResponse.json({
+          error: `Pod "${podName}" not found`,
+          message: `Pod "${podName}" not found for agent ${agentName}`
+        }, { status: 404 })
+      }
+    } else {
+      // Default behavior: get the most recent running pod, or most recent if none running
+      const runningPods = podList.filter(p => p.status?.phase === 'Running')
+      if (runningPods.length > 0) {
+        pod = runningPods.sort((a, b) => 
+          new Date(b.metadata.creationTimestamp).getTime() - 
+          new Date(a.metadata.creationTimestamp).getTime()
+        )[0]
+      } else {
+        pod = podList.sort((a, b) => 
+          new Date(b.metadata.creationTimestamp).getTime() - 
+          new Date(a.metadata.creationTimestamp).getTime()
+        )[0]
+      }
+    }
 
     console.log(`Getting logs from pod: ${pod.metadata.name}`)
 

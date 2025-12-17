@@ -1,13 +1,14 @@
 # Agent Memory Bank
 
-## Current Focus Areas (Dec 14, 2025)
+## Current Focus Areas (Dec 16, 2025)
 
 ### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**  
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Dashboard Development (Recent)  
+### Dashboard Development (Recent)
+- ✅ **Issue #166**: Cluster Settings page returns 404 - **RESOLVED** (Dec 16) - Fixed Settings button on cluster detail pages to correctly link to existing edit page (/clusters/[name]/edit) instead of non-existent /settings route. Simple one-line change resolved user navigation issue, manually tested with Playwright, all CI tests passing.  
 - ✅ **Issue #155**: Agent creation API fails with multiple 404 errors - **RESOLVED** (Dec 15) - Eliminated all 404 errors in agent creation workflow by implementing proper cluster-scoped API endpoints. Added POST handler to /api/clusters/[name]/agents/, updated React hooks (useCreateAgent, useTools) to use cluster-scoped URLs, and fixed agent creation form to pass cluster context. Tools now load correctly (5 tools vs "No tools available"), form validation works properly, and agent creation reaches server without 404 errors.
 - ✅ **Issue #157**: YAML preview displays invalid resource configuration - **RESOLVED** (Dec 15) - Enhanced YAML preview validation UX with visual feedback: red styling for "YAML Preview" header when validation fails, disabled Create Agent button when errors present, and real-time onChange validation. Manually tested with both valid and invalid configurations
 - ✅ **Issue #153**: Agent creation page causes application-wide build failure - **RESOLVED** (Dec 15) - Fixed Next.js 16/Turbopack module resolution for react-syntax-highlighter by adding transpilePackages configuration. Agent creation page now loads properly with full YAML syntax highlighting functionality instead of critical Module not found errors
