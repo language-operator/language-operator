@@ -72,74 +72,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').toLowerCase()
     const jobName = `${agentName}-manual-${timestamp}`
 
-    // Create manual execution Job based on the agent's configuration
-    const job = {
-      apiVersion: 'batch/v1',
-      kind: 'Job',
-      metadata: {
-        name: jobName,
-        namespace: organization.namespace,
-        labels: {
-          'app.kubernetes.io/name': agentName,
-          'app.kubernetes.io/instance': agentName,
-          'app.kubernetes.io/component': 'agent',
-          'app.kubernetes.io/managed-by': 'language-operator',
-          'langop.io/agent-name': agentName,
-          'langop.io/execution-type': 'manual'
-        },
-        annotations: {
-          'langop.io/manual-execution': 'true',
-          'langop.io/executed-by': user.id,
-          'langop.io/executed-at': new Date().toISOString()
-        }
-      },
-      spec: {
-        backoffLimit: 1, // Only try once for manual executions
-        template: {
-          metadata: {
-            labels: {
-              'app.kubernetes.io/name': agentName,
-              'app.kubernetes.io/instance': agentName,
-              'app.kubernetes.io/component': 'agent',
-              'langop.io/agent-name': agentName,
-              'langop.io/execution-type': 'manual'
-            }
-          },
-          spec: {
-            restartPolicy: 'Never',
-            containers: [
-              {
-                name: 'agent',
-                image: agentData.spec.image || 'ghcr.io/language-operator/agent:latest',
-                env: [
-                  {
-                    name: 'AGENT_NAME',
-                    value: agentName
-                  },
-                  {
-                    name: 'AGENT_NAMESPACE', 
-                    value: organization.namespace
-                  },
-                  {
-                    name: 'EXECUTION_TYPE',
-                    value: 'manual'
-                  },
-                  // Copy environment variables from agent spec if they exist
-                  ...(agentData.spec.env || [])
-                ],
-                // Copy resource limits from agent spec if they exist
-                ...(agentData.spec.resources && { resources: agentData.spec.resources })
-              }
-            ],
-            // Copy serviceAccount from agent spec if it exists
-            ...(agentData.spec.serviceAccountName && { serviceAccountName: agentData.spec.serviceAccountName })
-          }
-        }
-      }
-    }
-
-    // Create the Job in Kubernetes
-    const createdJob = await k8sClient.createJob(organization.namespace, job)
+    // Create manual execution Job from the agent's CronJob
+    const createdJob = await k8sClient.createJobFromCronJob(organization.namespace, agentName, jobName)
     
     console.log(`Manual execution Job created: ${jobName}`)
 

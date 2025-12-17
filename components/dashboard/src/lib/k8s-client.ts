@@ -1131,6 +1131,70 @@ class KubernetesClient {
     }
   }
 
+  async getCronJob(namespace: string, name: string) {
+    if (!this.batchV1Api) {
+      throw new Error('Kubernetes client not initialized')
+    }
+
+    try {
+      const response = await this.batchV1Api.readNamespacedCronJob({
+        name,
+        namespace,
+      })
+      return response
+    } catch (error) {
+      console.error(`❌ Failed to get CronJob ${name}:`, error)
+      throw error
+    }
+  }
+
+  async createJobFromCronJob(namespace: string, cronJobName: string, jobName: string) {
+    if (!this.batchV1Api) {
+      throw new Error('Kubernetes client not initialized')
+    }
+
+    try {
+      // Get the existing CronJob
+      const cronJobResponse = await this.getCronJob(namespace, cronJobName)
+      const cronJob = cronJobResponse.body || cronJobResponse.data || cronJobResponse
+      
+      if (!cronJob?.spec?.jobTemplate) {
+        throw new Error(`CronJob ${cronJobName} does not have a valid job template`)
+      }
+
+      // Extract the job template and create a new Job
+      const jobTemplate = cronJob.spec.jobTemplate
+      const job = {
+        apiVersion: 'batch/v1',
+        kind: 'Job',
+        metadata: {
+          name: jobName,
+          namespace,
+          labels: {
+            ...(jobTemplate.metadata?.labels || {}),
+            'langop.io/execution-type': 'manual'
+          },
+          annotations: {
+            ...(jobTemplate.metadata?.annotations || {}),
+            'langop.io/manual-execution': 'true',
+            'langop.io/created-from-cronjob': cronJobName
+          }
+        },
+        spec: jobTemplate.spec
+      }
+
+      const response = await this.batchV1Api.createNamespacedJob({
+        namespace,
+        body: job,
+      })
+      console.log(`✅ Job created from CronJob: ${jobName} (from ${cronJobName})`)
+      return response
+    } catch (error) {
+      console.error(`❌ Failed to create Job from CronJob ${cronJobName}:`, error)
+      throw error
+    }
+  }
+
   async getJob(namespace: string, name: string) {
     if (!this.batchV1Api) {
       throw new Error('Kubernetes client not initialized')
