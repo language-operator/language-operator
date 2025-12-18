@@ -118,6 +118,12 @@ export function validateClusterRef(
   const resourceName = resource.metadata?.name || 'unknown'
   const resourceType = resource.kind || 'Resource'
 
+  // If resource has clusterRef, it must match expected cluster
+  if (resourceClusterRef && resourceClusterRef !== expectedClusterName) {
+    // Always throw an error for mismatched clusterRef - this resource belongs to a different cluster
+    throw new OrphanedResourceError(resourceType, resourceName, resourceClusterRef)
+  }
+  
   // Check if clusterRef is required
   if (options.requireClusterRef && !resourceClusterRef) {
     throw new InvalidClusterNameError(
@@ -125,17 +131,10 @@ export function validateClusterRef(
       `${resourceType} '${resourceName}' is missing required clusterRef field`
     )
   }
-
-  // If resource has clusterRef, it must match expected cluster
-  if (resourceClusterRef && resourceClusterRef !== expectedClusterName) {
-    if (options.allowOrphanedResources) {
-      console.warn(
-        `Resource ${resourceType}/${resourceName} has clusterRef '${resourceClusterRef}' ` +
-        `but is being accessed via cluster '${expectedClusterName}'`
-      )
-    } else {
-      throw new OrphanedResourceError(resourceType, resourceName, resourceClusterRef)
-    }
+  
+  // If resource has no clusterRef and allowOrphanedResources is false, exclude it
+  if (!resourceClusterRef && !options.allowOrphanedResources) {
+    throw new OrphanedResourceError(resourceType, resourceName, 'none')
   }
 }
 

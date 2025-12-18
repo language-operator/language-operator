@@ -9,7 +9,7 @@ import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock, ExternalLi
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useClusters } from '@/hooks/use-clusters'
-import { useAgents } from '@/hooks/useAgents'
+import { useAggregatedAgents } from '@/hooks/use-aggregated-agents'
 import { ClusterStatusBadge, AgentStatusBadge } from '@/components/ui/resource-status-badge'
 import { useRouter } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useRecentActivity({ limit: 4 })
   const { data: clustersData, isLoading: clustersLoading, error: clustersError } = useClusters({ limit: 5 })
-  const { data: agentsData, isLoading: agentsLoading, error: agentsError } = useAgents({ limit: 5 })
+  const { data: agentsData, isLoading: agentsLoading, error: agentsError } = useAggregatedAgents(5)
   const router = useRouter()
   const [modalState, setModalState] = useState<{
     isOpen: boolean
@@ -342,7 +342,7 @@ export default function Home() {
                     <div key={agent.metadata.name} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 min-w-0 flex-1">
                         <div className="min-w-0 flex-1">
-                          <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`} className="text-sm font-medium truncate hover:text-blue-600 hover:underline">
+                          <Link href={`/clusters/${agent.spec?.clusterRef || agent.metadata.namespace}/agents/${agent.metadata.name}`} className="text-sm font-medium truncate hover:text-blue-600 hover:underline">
                             {agent.metadata.name}
                           </Link>
                           <div className="mt-1">
@@ -351,7 +351,7 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`}>
+                        <Link href={`/clusters/${agent.spec?.clusterRef || agent.metadata.namespace}/agents/${agent.metadata.name}`}>
                           <button className="p-1 hover:bg-gray-100 rounded" title="View Agent">
                             <ExternalLink className="h-4 w-4 text-gray-500" />
                           </button>
