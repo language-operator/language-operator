@@ -94,6 +94,7 @@ export default function CreateClusterModelPage() {
             error={error}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
+            clusterName={clusterName}
           />
         </div>
       </div>

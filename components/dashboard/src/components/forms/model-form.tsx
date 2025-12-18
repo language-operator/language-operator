@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { fetchWithOrganization } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -151,6 +152,7 @@ interface ModelFormProps {
   onSubmit: (data: ModelFormData) => Promise<void>
   onCancel: () => void
   isEdit?: boolean
+  clusterName?: string  // Add clusterName for cluster-scoped operations
 }
 
 export function ModelForm({ 
@@ -159,7 +161,8 @@ export function ModelForm({
   error, 
   onSubmit, 
   onCancel,
-  isEdit = false 
+  isEdit = false,
+  clusterName
 }: ModelFormProps) {
   const [step, setStep] = useState(1)
   const [currentTab, setCurrentTab] = useState('basic') // Only used in edit mode
@@ -289,7 +292,12 @@ export function ModelForm({
 
     setFetchingModels(true)
     try {
-      const response = await fetch(`/api/models/discover`, {
+      // Use cluster-scoped endpoint if clusterName is provided, otherwise use legacy endpoint
+      const apiEndpoint = clusterName 
+        ? `/api/clusters/${clusterName}/models/discover`
+        : `/api/models/discover`
+      
+      const response = await fetchWithOrganization(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

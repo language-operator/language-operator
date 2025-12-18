@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useClusters } from '@/hooks/use-clusters'
 import { useAgents } from '@/hooks/use-agents'
 import { fetchWithOrganization } from '@/lib/api-client'
+import { LanguageCluster } from '@/types/cluster'
 
 export function useAggregatedAgents(limit?: number) {
   // First get all clusters
@@ -9,14 +10,14 @@ export function useAggregatedAgents(limit?: number) {
   const clusters = clustersData?.data || []
 
   return useQuery({
-    queryKey: ['aggregated-agents', limit, clusters.map(c => c.metadata.name)],
+    queryKey: ['aggregated-agents', limit, clusters.map((c: LanguageCluster) => c.metadata.name)],
     queryFn: async () => {
       if (!clusters.length) {
         return { data: [], total: 0 }
       }
 
       // Fetch agents from each cluster
-      const agentPromises = clusters.map(async (cluster) => {
+      const agentPromises = clusters.map(async (cluster: LanguageCluster) => {
         try {
           const response = await fetchWithOrganization(`/api/clusters/${cluster.metadata.name}/agents?limit=${limit || 50}`)
           if (!response.ok) {

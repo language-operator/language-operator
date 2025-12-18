@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
 import { ArrowLeft, Cpu } from 'lucide-react'
 import { useModel } from '@/hooks/use-models'
+import { fetchWithOrganization } from '@/lib/api-client'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import Link from 'next/link'
@@ -27,7 +28,7 @@ export default function ClusterEditModelPage() {
     setError('')
 
     try {
-      const response = await fetch(`/api/models/${modelName}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${modelName}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -239,6 +240,7 @@ export default function ClusterEditModelPage() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             isEdit={true}
+            clusterName={clusterName}
           />
         </div>
       </div>
