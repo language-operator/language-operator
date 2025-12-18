@@ -16,6 +16,10 @@ type LanguageModelSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	ModelName string `json:"modelName"`
 
+	// ClusterRef references a LanguageCluster to deploy this model into
+	// +optional
+	ClusterRef string `json:"clusterRef,omitempty"`
+
 	// Endpoint is the API endpoint URL (required for openai-compatible, azure, custom)
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`

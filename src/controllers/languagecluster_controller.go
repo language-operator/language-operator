@@ -50,6 +50,8 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;delete
+//+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;delete
+//+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 
@@ -302,6 +304,42 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 			if err := r.Delete(ctx, &tool, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 				if client.IgnoreNotFound(err) != nil {
 					log.Error(err, "Failed to delete tool", "tool", tool.Name)
+					// Continue with other resources, don't fail completely
+				}
+			}
+		}
+	}
+
+	// Delete all LanguageModels that reference this cluster
+	modelList := &langopv1alpha1.LanguageModelList{}
+	if err := r.List(ctx, modelList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list models in namespace %s: %w", namespace, err)
+	}
+
+	for _, model := range modelList.Items {
+		if model.Spec.ClusterRef == clusterName {
+			log.Info("Deleting model", "model", model.Name, "cluster", clusterName)
+			if err := r.Delete(ctx, &model, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+				if client.IgnoreNotFound(err) != nil {
+					log.Error(err, "Failed to delete model", "model", model.Name)
+					// Continue with other resources, don't fail completely
+				}
+			}
+		}
+	}
+
+	// Delete all LanguagePersonas that reference this cluster
+	personaList := &langopv1alpha1.LanguagePersonaList{}
+	if err := r.List(ctx, personaList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list personas in namespace %s: %w", namespace, err)
+	}
+
+	for _, persona := range personaList.Items {
+		if persona.Spec.ClusterRef == clusterName {
+			log.Info("Deleting persona", "persona", persona.Name, "cluster", clusterName)
+			if err := r.Delete(ctx, &persona, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+				if client.IgnoreNotFound(err) != nil {
+					log.Error(err, "Failed to delete persona", "persona", persona.Name)
 					// Continue with other resources, don't fail completely
 				}
 			}

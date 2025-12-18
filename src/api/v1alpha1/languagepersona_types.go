@@ -21,6 +21,10 @@ type LanguagePersonaSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	SystemPrompt string `json:"systemPrompt"`
 
+	// ClusterRef references a LanguageCluster to deploy this persona into
+	// +optional
+	ClusterRef string `json:"clusterRef,omitempty"`
+
 	// Instructions provides additional behavioral guidelines
 	// +optional
 	Instructions []string `json:"instructions,omitempty"`
