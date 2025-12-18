@@ -25,6 +25,9 @@ export interface LanguagePersonaSpec {
   systemPrompt: string
   personality?: string
   
+  // Cluster reference for scoping
+  clusterRef?: string
+  
   // Communication style
   tone?: 'professional' | 'casual' | 'friendly' | 'formal' | 'technical' | 'empathetic' | 'concise' | 'detailed'
   language?: string

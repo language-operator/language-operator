@@ -4,27 +4,15 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 import { LanguageCluster, LanguageClusterListParams, LanguageClusterFormData } from '@/types/cluster'
 import { safeValidateLanguageCluster } from '@/lib/validation'
 
 // GET /api/clusters - List all clusters for user's organization
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
@@ -153,21 +141,8 @@ export async function GET(request: NextRequest) {
 // POST /api/clusters - Create a new cluster
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     const hasPermission = await requirePermission(user.id, organization.id, 'create')
     if (!hasPermission) {

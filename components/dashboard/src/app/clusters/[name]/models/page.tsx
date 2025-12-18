@@ -49,9 +49,11 @@ export default function ClusterModels() {
   const [search, setSearch] = React.useState('')
   const [providerFilter, setProviderFilter] = React.useState<string>('all')
   
-  // For now, fetch all models and filter client-side
-  // TODO: Update API to support cluster/namespace filtering
-  const { data: modelsResponse, isLoading, error } = useModels({ limit: 100 })
+  // Use cluster-specific API endpoint
+  const { data: modelsResponse, isLoading, error } = useModels({ 
+    clusterName, 
+    limit: 100 
+  })
   const allModels = modelsResponse?.data || []
   
   // Debug logging

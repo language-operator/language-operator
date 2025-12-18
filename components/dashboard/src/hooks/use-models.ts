@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchWithOrganization } from '@/lib/api-client'
+import { useOrganizationStore } from '@/store/organization-store'
 import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
 
 export function useModels(params?: LanguageModelListParams & { clusterName?: string }) {
+  const { activeOrganizationId } = useOrganizationStore()
+  
   return useQuery({
-    queryKey: ['models', params?.clusterName, params],
+    queryKey: ['models', activeOrganizationId, params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -24,7 +28,7 @@ export function useModels(params?: LanguageModelListParams & { clusterName?: str
         ? `/api/clusters/${params.clusterName}/models?${searchParams}`
         : `/api/models?${searchParams}` // Legacy fallback for non-cluster contexts
 
-      const response = await fetch(endpoint)
+      const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch models')
       }

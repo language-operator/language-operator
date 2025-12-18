@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
+import { getUserOrganization } from '@/lib/organization-context'
 import { z } from 'zod'
 
 const updateClusterSchema = z.object({
@@ -25,22 +26,9 @@ export async function GET(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
     
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
     const cluster = await k8sClient.getLanguageCluster(namespace, name)
     
@@ -71,16 +59,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const body = await request.json()
     const validatedData = updateClusterSchema.parse(body)
     const namespace = organization.namespace
@@ -142,16 +122,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
 
     // Check if cluster exists

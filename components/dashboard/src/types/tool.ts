@@ -24,6 +24,9 @@ export interface LanguageToolSpec {
   image?: string
   description?: string
   
+  // Cluster reference for scoping
+  clusterRef?: string
+  
   // Tool definition
   schema?: ToolSchema
   webhook?: any

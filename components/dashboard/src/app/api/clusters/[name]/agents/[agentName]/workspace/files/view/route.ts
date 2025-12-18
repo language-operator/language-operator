@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 import { workspaceManager } from '@/lib/workspace-manager'
 import { WorkspaceError, VIEWABLE_FILE_EXTENSIONS } from '@/types/workspace'
 
@@ -12,21 +13,8 @@ export async function GET(
   { params }: { params: Promise<{ name: string; agentName: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 
 interface RouteParams {
   params: Promise<{
@@ -14,21 +15,8 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return new Response('Unauthorized', { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return new Response('No organization found', { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {

@@ -53,5 +53,25 @@ services:
         read_only: true
     command: sh -c "mkdir -p /root/.kube && npx prisma generate && npm run dev"
 
+  # Prisma Studio for database management
+  prisma-studio:
+    build:
+      context: .
+      target: build-deps
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+    ports:
+      - "5555:5555"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./
+        target: /app
+      - /app/node_modules
+    command: sh -c "npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0"
+
 volumes:
   postgres_dev_data:

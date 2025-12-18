@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 import { LanguageTool, LanguageToolListParams } from '@/types/tool'
 
 // GET /api/clusters/[name]/tools - List all tools for specific cluster
@@ -12,21 +13,8 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
@@ -55,10 +43,11 @@ export async function GET(
     // Handle different response structures from k8s client
     const allTools = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
-    // For now, show all tools from the organization namespace as available to any cluster
-    // In the future, this can be refined to filter by actual cluster-tool relationships
-    // when cluster-scoping is fully implemented in the CRD spec
-    const clusterTools = allTools
+    // Filter tools to only show those that belong to this specific cluster
+    // Tools are cluster-scoped by having clusterRef set to the cluster name
+    const clusterTools = allTools.filter((tool: LanguageTool) => {
+      return tool.spec.clusterRef === clusterName
+    })
 
     // Apply search filtering 
     let filteredTools = clusterTools.filter((tool: LanguageTool) => {

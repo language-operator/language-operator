@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import { db } from '@/lib/db'
 import { k8sClient } from '@/lib/k8s-client'
+import { generateOrganizationNamespace } from '@/lib/namespace-utils'
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +49,31 @@ export async function POST(req: NextRequest) {
 
     // Create default organization for the user
     const orgSlug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')
-    const namespace = `org-${orgSlug}`
+    
+    // Generate a unique UUID-based namespace
+    let namespace: string
+    let namespaceAttempts = 0
+    const maxAttempts = 10
+
+    do {
+      namespace = generateOrganizationNamespace()
+      const existingNamespace = await db.organization.findUnique({
+        where: { namespace }
+      })
+      
+      if (!existingNamespace) {
+        break
+      }
+      
+      namespaceAttempts++
+    } while (namespaceAttempts < maxAttempts)
+
+    if (namespaceAttempts >= maxAttempts) {
+      return NextResponse.json(
+        { error: 'Failed to generate unique namespace. Please try again.' },
+        { status: 500 }
+      )
+    }
 
     // Create organization
     const organization = await db.organization.create({

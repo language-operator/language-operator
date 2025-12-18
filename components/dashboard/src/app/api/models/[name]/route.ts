@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 import { z } from 'zod'
 
 const updateModelSchema = z.object({
@@ -41,22 +43,8 @@ export async function GET(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
     const model = await k8sClient.getLanguageModel(namespace, name)
     
@@ -81,26 +69,13 @@ export async function PATCH(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
+    const namespace = organization.namespace
 
+    // Parse and validate request body
     const body = await request.json()
     const validatedData = updateModelSchema.parse(body)
-    
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
-    const namespace = organization.namespace
 
     // Get existing model
     const existingModel = await k8sClient.getLanguageModel(namespace, name)
@@ -115,7 +90,7 @@ export async function PATCH(
         annotations: {
           ...existingModel.metadata.annotations,
           'langop.io/updated-at': new Date().toISOString(),
-          'langop.io/updated-by': session.user.email || 'unknown'
+          'langop.io/updated-by': user.email || 'unknown'
         }
       },
       spec: {
@@ -130,7 +105,7 @@ export async function PATCH(
     })
 
     // Log the update for audit trail
-    console.log(`Model updated: ${name} by ${session.user.email} in ${namespace}`)
+    console.log(`Model updated: ${name} by ${user.email} in ${namespace}`)
 
     return NextResponse.json({ data: updatedModel })
   } catch (error) {
@@ -159,26 +134,13 @@ export async function PUT(
     console.log('🔥 PUT /api/models/[name] - Starting model update')
     const { name } = await params
     console.log('🔥 Model name:', name)
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
+    const namespace = organization.namespace
 
+    // Parse and validate request body
     const body = await request.json()
     const validatedData = updateModelSchema.parse(body)
-    
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
-    const namespace = organization.namespace
 
     // Get existing model
     const existingModel = await k8sClient.getLanguageModel(namespace, name)
@@ -194,7 +156,7 @@ export async function PUT(
         annotations: {
           ...existingModel.metadata.annotations,
           'langop.io/updated-at': new Date().toISOString(),
-          'langop.io/updated-by': session.user.email || 'unknown'
+          'langop.io/updated-by': user.email || 'unknown'
         }
       },
       spec: {
@@ -209,7 +171,7 @@ export async function PUT(
     })
 
     // Log the update for audit trail
-    console.log(`Model updated via PUT: ${name} by ${session.user.email} in ${namespace}`)
+    console.log(`Model updated via PUT: ${name} by ${user.email} in ${namespace}`)
 
     return NextResponse.json({ data: updatedModel })
   } catch (error) {
@@ -237,22 +199,8 @@ export async function DELETE(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
 
     // Check if model exists
@@ -265,7 +213,7 @@ export async function DELETE(
     await k8sClient.deleteLanguageModel(namespace, name)
 
     // Log the deletion for audit trail
-    console.log(`Model deleted: ${name} by ${session.user.email} in ${namespace}`)
+    console.log(`Model deleted: ${name} by ${user.email} in ${namespace}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

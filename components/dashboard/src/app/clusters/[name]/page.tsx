@@ -42,7 +42,7 @@ export default function ClusterDashboard() {
   const clusterName = params?.name as string
   
   const { data: cluster, isLoading, error } = useCluster(clusterName)
-  const { counts, loading: countsLoading } = useResourceCounts()
+  const { counts, loading: countsLoading } = useResourceCounts(clusterName)
 
   if (isLoading) {
     return (
@@ -141,30 +141,42 @@ export default function ClusterDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/models/new`}>
-                    <Cpu className="h-6 w-6 mb-2" />
-                    Create Model
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/tools`}>
-                    <Wrench className="h-6 w-6 mb-2" />
-                    Install Tool
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/personas/new`}>
-                    <Users className="h-6 w-6 mb-2" />
-                    Create Persona
-                  </Link>
-                </Button>
-                <Button variant="outline" className="h-20 flex-col" asChild>
-                  <Link href={`/clusters/${clusterName}/agents/new`}>
-                    <Bot className="h-6 w-6 mb-2" />
-                    Create Agent
-                  </Link>
-                </Button>
+                <Link href={`/clusters/${clusterName}/models/new`}>
+                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Cpu className="h-8 w-8 text-green-500 mb-2" />
+                    <span className="text-sm font-medium">Create Model</span>
+                    <span className="text-xs text-gray-500 text-center mt-1">
+                      Connect to LLM provider
+                    </span>
+                  </div>
+                </Link>
+                <Link href={`/clusters/${clusterName}/tools`}>
+                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Wrench className="h-8 w-8 text-purple-500 mb-2" />
+                    <span className="text-sm font-medium">Install Tool</span>
+                    <span className="text-xs text-gray-500 text-center mt-1">
+                      Add capabilities to agents
+                    </span>
+                  </div>
+                </Link>
+                <Link href={`/clusters/${clusterName}/personas/new`}>
+                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Users className="h-8 w-8 text-rose-500 mb-2" />
+                    <span className="text-sm font-medium">Create Persona</span>
+                    <span className="text-xs text-gray-500 text-center mt-1">
+                      Define agent behavior
+                    </span>
+                  </div>
+                </Link>
+                <Link href={`/clusters/${clusterName}/agents/new`}>
+                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <Bot className="h-8 w-8 text-blue-500 mb-2" />
+                    <span className="text-sm font-medium">Create Agent</span>
+                    <span className="text-xs text-gray-500 text-center mt-1">
+                      Build a new AI agent
+                    </span>
+                  </div>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -183,7 +195,7 @@ export default function ClusterDashboard() {
                   {countsLoading ? '-' : counts?.models || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Language models in this cluster
+                  LanguageModels
                 </p>
               </CardContent>
             </Card>
@@ -199,7 +211,7 @@ export default function ClusterDashboard() {
                   {countsLoading ? '-' : counts?.tools || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Available tools
+                  LanguageTools
                 </p>
               </CardContent>
             </Card>
@@ -215,7 +227,7 @@ export default function ClusterDashboard() {
                   {countsLoading ? '-' : counts?.personas || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Configured personas
+                  LanguagePersonas
                 </p>
               </CardContent>
             </Card>
@@ -231,7 +243,7 @@ export default function ClusterDashboard() {
                   {countsLoading ? '-' : counts?.agents || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Running agents
+                  LanguageAgents
                 </p>
               </CardContent>
             </Card>

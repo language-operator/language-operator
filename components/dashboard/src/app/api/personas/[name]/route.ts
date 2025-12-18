@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 import { z } from 'zod'
 
 const updatePersonaSchema = z.object({
@@ -42,22 +44,8 @@ export async function GET(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
     const persona = await k8sClient.getLanguagePersona(namespace, name)
     
@@ -82,29 +70,13 @@ export async function PATCH(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
-
-    const body = await request.json()
-    console.log('PATCH body received:', JSON.stringify(body, null, 2))
-    
-    const validatedData = updatePersonaSchema.parse(body)
-    console.log('Validation successful, validated data:', JSON.stringify(validatedData, null, 2))
-    
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validatedData = updatePersonaSchema.parse(body)
 
     // Get existing persona
     console.log('Fetching existing persona:', name, 'in namespace:', namespace)
@@ -121,7 +93,7 @@ export async function PATCH(
         annotations: {
           ...existingPersona.metadata.annotations,
           'langop.io/updated-at': new Date().toISOString(),
-          'langop.io/updated-by': session.user.email || 'unknown'
+          'langop.io/updated-by': user.email || 'unknown'
         }
       },
       spec: {
@@ -135,7 +107,7 @@ export async function PATCH(
     const updatedPersona = await k8sClient.updateLanguagePersona(namespace, name, updatePayload)
 
     // Log the update for audit trail
-    console.log(`Persona updated: ${name} by ${session.user.email} in ${namespace}`)
+    console.log(`Persona updated: ${name} by ${user.email} in ${namespace}`)
 
     return NextResponse.json({ persona: updatedPersona })
   } catch (error) {
@@ -162,22 +134,8 @@ export async function DELETE(
 ) {
   try {
     const { name } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized - no organization' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { memberships: { include: { organization: true } } },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     const namespace = organization.namespace
 
     // Check if persona exists
@@ -190,7 +148,7 @@ export async function DELETE(
     await k8sClient.deleteLanguagePersona(namespace, name)
 
     // Log the deletion for audit trail
-    console.log(`Persona deleted: ${name} by ${session.user.email} in ${namespace}`)
+    console.log(`Persona deleted: ${name} by ${user.email} in ${namespace}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { fetchWithOrganization } from '@/lib/api-client'
+import { useOrganizationStore } from '@/store/organization-store'
 
 export interface ResourceCounts {
   agents: number
@@ -15,17 +17,23 @@ export interface UseResourceCountsReturn {
   refetch: () => Promise<void>
 }
 
-export function useResourceCounts(): UseResourceCountsReturn {
+export function useResourceCounts(clusterName?: string): UseResourceCountsReturn {
   const [counts, setCounts] = useState<ResourceCounts | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { activeOrganizationId } = useOrganizationStore()
 
   const fetchCounts = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/dashboard/counts')
+      // Use cluster-specific endpoint if cluster name is provided
+      const endpoint = clusterName 
+        ? `/api/clusters/${clusterName}/counts`
+        : '/api/dashboard/counts'
+      
+      const response = await fetchWithOrganization(endpoint)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -50,7 +58,7 @@ export function useResourceCounts(): UseResourceCountsReturn {
 
   useEffect(() => {
     fetchCounts()
-  }, [])
+  }, [clusterName, activeOrganizationId])
 
   return {
     counts,

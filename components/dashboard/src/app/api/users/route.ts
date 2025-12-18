@@ -19,8 +19,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all users with their organization memberships
+    // First, get the current user's organization memberships to determine which organizations they can see users for
+    const currentUserMemberships = await prisma.organizationMember.findMany({
+      where: {
+        user: {
+          email: session.user.email
+        }
+      },
+      select: {
+        organizationId: true
+      }
+    })
+
+    if (currentUserMemberships.length === 0) {
+      return NextResponse.json({ error: 'User not found in any organization' }, { status: 403 })
+    }
+
+    const organizationIds = currentUserMemberships.map(m => m.organizationId)
+
+    // Get only users that belong to the same organizations as the current user
     const users = await prisma.user.findMany({
+      where: {
+        memberships: {
+          some: {
+            organizationId: {
+              in: organizationIds
+            }
+          }
+        }
+      },
       select: {
         id: true,
         name: true,
@@ -29,6 +56,11 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         updatedAt: true,
         memberships: {
+          where: {
+            organizationId: {
+              in: organizationIds
+            }
+          },
           include: {
             organization: {
               select: {

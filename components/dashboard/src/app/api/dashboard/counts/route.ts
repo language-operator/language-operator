@@ -4,31 +4,13 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
+import { getUserOrganization } from '@/lib/organization-context'
 
 // GET /api/dashboard/counts - Get resource counts for dashboard
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user's current organization
-    const user = await db.user.findUnique({
-      where: { email: session.user.email },
-      include: { 
-        memberships: { 
-          include: { organization: true } 
-        } 
-      },
-    })
-
-    if (!user || user.memberships.length === 0) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    // Use the first organization (in a real app, you'd have org selection logic)
-    const organization = user.memberships[0].organization
+    // Get user's selected organization (replaces broken memberships[0] pattern)
+    const { user, organization, userRole } = await getUserOrganization(request)
     
     // Check permissions
     const hasPermission = await requirePermission(user.id, organization.id, 'view')

@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchWithOrganization } from '@/lib/api-client'
+import { useOrganizationStore } from '@/store/organization-store'
 import { LanguageTool, LanguageToolListParams, LanguageToolFormData } from '@/types/tool'
 
 export function useTools(params?: LanguageToolListParams & { clusterName?: string }) {
+  const { activeOrganizationId } = useOrganizationStore()
+  
   return useQuery({
-    queryKey: ['tools', params?.clusterName, params],
+    queryKey: ['tools', activeOrganizationId, params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -23,7 +27,7 @@ export function useTools(params?: LanguageToolListParams & { clusterName?: strin
         ? `/api/clusters/${params.clusterName}/tools?${searchParams}`
         : `/api/tools?${searchParams}` // Legacy fallback for non-cluster contexts
 
-      const response = await fetch(endpoint)
+      const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch tools')
       }

@@ -24,6 +24,9 @@ export interface LanguageModelSpec {
   modelName: string
   endpoint?: string
   
+  // Cluster reference for scoping
+  clusterRef?: string
+  
   // API Key configuration
   apiKeySecretRef?: SecretReference
   

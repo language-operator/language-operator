@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchWithOrganization } from '@/lib/api-client'
+import { useOrganizationStore } from '@/store/organization-store'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
 
 export function usePersonas(params?: LanguagePersonaListParams & { clusterName?: string }) {
+  const { activeOrganizationId } = useOrganizationStore()
+  
   return useQuery({
-    queryKey: ['personas', params?.clusterName, params],
+    queryKey: ['personas', activeOrganizationId, params?.clusterName, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
@@ -20,7 +24,7 @@ export function usePersonas(params?: LanguagePersonaListParams & { clusterName?:
         ? `/api/clusters/${params.clusterName}/personas?${searchParams}`
         : `/api/personas?${searchParams}` // Legacy fallback for non-cluster contexts
 
-      const response = await fetch(endpoint)
+      const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
         throw new Error('Failed to fetch personas')
       }
