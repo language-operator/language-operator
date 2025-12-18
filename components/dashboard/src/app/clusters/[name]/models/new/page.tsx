@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Cpu } from 'lucide-react'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export default function CreateClusterModelPage() {
   const router = useRouter()
@@ -36,7 +37,7 @@ export default function CreateClusterModelPage() {
       
       console.log('Sending payload:', payload)
       
-      const response = await fetch(`/api/clusters/${clusterName}/models`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

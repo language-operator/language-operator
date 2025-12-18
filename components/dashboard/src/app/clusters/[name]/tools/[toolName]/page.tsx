@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Trash2, Play, Pause, Wrench, MoreVertical, FileCode, Copy, Check } from 'lucide-react'
+import { fetchWithOrganization } from '@/lib/api-client'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useQuery } from '@tanstack/react-query'
@@ -28,7 +29,7 @@ export default function ClusterToolDetailPage() {
   const { data: toolResponse, isLoading } = useQuery({
     queryKey: ['cluster-tool', clusterName, toolName],
     queryFn: async () => {
-      const response = await fetch(`/api/clusters/${clusterName}/tools/${toolName}`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools/${toolName}`)
       if (!response.ok) {
         throw new Error('Failed to fetch tool')
       }
@@ -49,7 +50,7 @@ export default function ClusterToolDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/clusters/${clusterName}/tools/${toolName}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools/${toolName}`, {
         method: 'DELETE',
       })
 
@@ -72,7 +73,7 @@ export default function ClusterToolDetailPage() {
     setYamlModalOpen(true)
     setYamlLoading(true)
     try {
-      const response = await fetch(`/api/clusters/${clusterName}/tools/${toolName}/yaml`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools/${toolName}/yaml`)
       if (!response.ok) {
         throw new Error('Failed to fetch YAML')
       }

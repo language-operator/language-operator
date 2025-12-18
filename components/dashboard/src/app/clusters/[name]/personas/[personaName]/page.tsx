@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { fetchWithOrganization } from '@/lib/api-client'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -100,7 +101,7 @@ export default function ClusterPersonaDetailPage() {
     setYamlModalOpen(true)
     setYamlLoading(true)
     try {
-      const response = await fetch(`/api/clusters/${clusterName}/personas/${personaName}/yaml`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas/${personaName}/yaml`)
       if (!response.ok) {
         throw new Error('Failed to fetch YAML')
       }

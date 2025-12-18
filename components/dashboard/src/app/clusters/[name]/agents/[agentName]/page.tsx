@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { fetchWithOrganization } from '@/lib/api-client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -644,7 +645,7 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       setPodsLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/pods`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/pods`)
       if (!response.ok) {
         throw new Error(`Failed to fetch pods: ${response.status} ${response.statusText}`)
       }
@@ -1110,7 +1111,7 @@ export default function ClusterAgentDetailPage() {
     setYamlModalOpen(true)
     setYamlLoading(true)
     try {
-      const response = await fetch(`/api/clusters/${clusterName}/agents/${agentName}/yaml`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/agents/${agentName}/yaml`)
       if (!response.ok) {
         throw new Error('Failed to fetch YAML')
       }
@@ -1145,7 +1146,7 @@ export default function ClusterAgentDetailPage() {
       setIsExecuting(true)
       setShowExecuteDialog(false)
       
-      const response = await fetch(`/api/clusters/${clusterName}/agents/${agentName}/execute`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/agents/${agentName}/execute`, {
         method: 'POST',
       })
       

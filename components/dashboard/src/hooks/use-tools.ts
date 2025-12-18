@@ -45,7 +45,7 @@ export function useTool(name: string, clusterName: string) {
         throw new Error('Cluster name is required to fetch tool')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/tools/${name}`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools/${name}`)
       if (!response.ok) {
         throw new Error('Failed to fetch tool')
       }
@@ -64,7 +64,7 @@ export function useDeleteTool(clusterName: string) {
         throw new Error('Cluster name is required for tool deletion')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/tools/${name}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools/${name}`, {
         method: 'DELETE',
       })
       if (!response.ok) {

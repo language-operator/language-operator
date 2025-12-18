@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react'
 import { ToolCatalogEntry } from '@/types/tool-catalog'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Wrench } from 'lucide-react'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export default function InstallToolPage() {
   const params = useParams()
@@ -71,7 +72,7 @@ export default function InstallToolPage() {
       setInstalling(true)
       setError(null)
 
-      const response = await fetch('/api/tools/install', {
+      const response = await fetchWithOrganization('/api/tools/install', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

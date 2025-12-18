@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useClusters } from '@/hooks/use-clusters'
 import { useAgents } from '@/hooks/use-agents'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export function useAggregatedAgents(limit?: number) {
   // First get all clusters
@@ -17,7 +18,7 @@ export function useAggregatedAgents(limit?: number) {
       // Fetch agents from each cluster
       const agentPromises = clusters.map(async (cluster) => {
         try {
-          const response = await fetch(`/api/clusters/${cluster.metadata.name}/agents?limit=${limit || 50}`)
+          const response = await fetchWithOrganization(`/api/clusters/${cluster.metadata.name}/agents?limit=${limit || 50}`)
           if (!response.ok) {
             console.warn(`Failed to fetch agents from cluster ${cluster.metadata.name}`)
             return []

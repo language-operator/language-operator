@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { PersonaForm, PersonaFormData } from '@/components/forms/persona-form'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export default function CreateClusterPersonaPage() {
   const router = useRouter()
@@ -74,7 +75,7 @@ export default function CreateClusterPersonaPage() {
       
       console.log('Sending payload:', payload)
       
-      const response = await fetch(`/api/clusters/${clusterName}/personas`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

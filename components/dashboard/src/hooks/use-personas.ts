@@ -42,7 +42,7 @@ export function usePersona(name: string, clusterName: string) {
         throw new Error('Cluster name is required to fetch persona')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/personas/${name}`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas/${name}`)
       if (!response.ok) {
         throw new Error('Failed to fetch persona')
       }
@@ -61,7 +61,7 @@ export function useDeletePersona(clusterName: string) {
         throw new Error('Cluster name is required for persona deletion')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/personas/${name}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas/${name}`, {
         method: 'DELETE',
       })
       if (!response.ok) {

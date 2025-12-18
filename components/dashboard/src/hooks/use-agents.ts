@@ -47,7 +47,7 @@ export function useAgent(name: string, clusterName: string) {
       
       const endpoint = `/api/clusters/${clusterName}/agents/${name}`
       
-      const response = await fetch(endpoint)
+      const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
         // Parse error response for better error handling
         let errorMessage = 'Failed to fetch agent'
@@ -92,7 +92,7 @@ export function useCreateAgent(clusterName: string) {
         throw new Error('Cluster name is required for agent creation')
       }
 
-      const response = await fetch(`/api/clusters/${clusterName}/agents`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
@@ -124,7 +124,7 @@ export function useUpdateAgent(clusterName: string) {
       
       const endpoint = `/api/clusters/${clusterName}/agents/${name}`
       
-      const response = await fetch(endpoint, {
+      const response = await fetchWithOrganization(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
@@ -155,7 +155,7 @@ export function useDeleteAgent(clusterName: string) {
       
       const endpoint = `/api/clusters/${clusterName}/agents/${name}`
       
-      const response = await fetch(endpoint, {
+      const response = await fetchWithOrganization(endpoint, {
         method: 'DELETE',
       })
       

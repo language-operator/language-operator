@@ -8,6 +8,7 @@ import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
 import { ArrowLeft, Server } from 'lucide-react'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { fetchWithOrganization } from '@/lib/api-client'
 import Link from 'next/link'
 
 interface Cluster {
@@ -55,7 +56,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     const fetchCluster = async () => {
       setIsLoadingCluster(true)
       try {
-        const response = await fetch(`/api/clusters/${clusterName}`)
+        const response = await fetchWithOrganization(`/api/clusters/${clusterName}`)
         if (!response.ok) {
           throw new Error('Failed to fetch cluster')
         }
@@ -77,7 +78,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     setError('')
 
     try {
-      const response = await fetch(`/api/clusters/${clusterName}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

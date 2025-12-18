@@ -46,7 +46,7 @@ export function useModel(name: string, clusterName: string) {
         throw new Error('Cluster name is required to fetch model')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/models/${name}`)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${name}`)
       if (!response.ok) {
         throw new Error('Failed to fetch model')
       }
@@ -65,7 +65,7 @@ export function useDeleteModel(clusterName: string) {
         throw new Error('Cluster name is required for model deletion')
       }
       
-      const response = await fetch(`/api/clusters/${clusterName}/models/${name}`, {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${name}`, {
         method: 'DELETE',
       })
       if (!response.ok) {

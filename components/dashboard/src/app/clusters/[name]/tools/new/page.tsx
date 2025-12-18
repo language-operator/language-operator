@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { ToolForm, ToolFormData } from '@/components/forms/tool-form'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export default function CreateClusterToolPage() {
   const router = useRouter()
@@ -35,7 +36,7 @@ export default function CreateClusterToolPage() {
       
       console.log('Sending payload:', payload)
       
-      const response = await fetch('/api/tools', {
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/tools`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

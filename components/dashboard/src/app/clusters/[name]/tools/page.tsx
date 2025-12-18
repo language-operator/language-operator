@@ -11,6 +11,7 @@ import { Wrench, Download, CheckCircle, Search, ExternalLink, Shield, Network } 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ToolCatalog, ToolCatalogEntry, InstalledTool } from '@/types/tool-catalog'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 export default function ClusterTools() {
   const params = useParams()
@@ -39,7 +40,7 @@ export default function ClusterTools() {
       setCatalog(catalogData)
 
       // Fetch installed tools for this cluster
-      const toolsResponse = await fetch(`/api/clusters/${clusterName}/tools`)
+      const toolsResponse = await fetchWithOrganization(`/api/clusters/${clusterName}/tools`)
       if (toolsResponse.ok) {
         const toolsData = await toolsResponse.json()
         // Convert LanguageTool objects to InstalledTool format
