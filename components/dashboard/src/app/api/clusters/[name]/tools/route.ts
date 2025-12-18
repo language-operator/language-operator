@@ -5,6 +5,7 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { filterByClusterRef } from '@/lib/cluster-utils'
 import { LanguageTool, LanguageToolListParams } from '@/types/tool'
 
 // GET /api/clusters/[name]/tools - List all tools for specific cluster
@@ -45,9 +46,7 @@ export async function GET(
 
     // Filter tools to only show those that belong to this specific cluster
     // Tools are cluster-scoped by having clusterRef set to the cluster name
-    const clusterTools = allTools.filter((tool: LanguageTool) => {
-      return tool.spec.clusterRef === clusterName
-    })
+    const clusterTools = filterByClusterRef(allTools, clusterName) as LanguageTool[]
 
     // Apply search filtering 
     let filteredTools = clusterTools.filter((tool: LanguageTool) => {

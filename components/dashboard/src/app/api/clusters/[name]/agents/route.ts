@@ -5,6 +5,7 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { filterByClusterRef } from '@/lib/cluster-utils'
 import { LanguageAgent, LanguageAgentListParams } from '@/types/agent'
 
 // GET /api/clusters/[name]/agents - List all agents for specific cluster
@@ -45,9 +46,7 @@ export async function GET(
 
     // Filter agents to only show those that belong to this specific cluster
     // Agents are cluster-scoped by having clusterRef set to the cluster name
-    const clusterAgents = allAgents.filter((agent: LanguageAgent) => {
-      return agent.spec.clusterRef === clusterName
-    })
+    const clusterAgents = filterByClusterRef(allAgents, clusterName) as LanguageAgent[]
 
     // Apply search filtering 
     let filteredAgents = clusterAgents.filter((agent: LanguageAgent) => {

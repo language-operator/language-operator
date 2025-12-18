@@ -5,6 +5,7 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { filterByClusterRef } from '@/lib/cluster-utils'
 import { LanguageModel, LanguageModelListParams } from '@/types/model'
 
 // GET /api/clusters/[name]/models - List models for a specific cluster
@@ -65,16 +66,8 @@ export async function GET(
       models = rawItems || []
       
       // Filter models that belong to this specific cluster
-      // Models are cluster-scoped by having clusterRef property or label indicating which cluster they belong to
-      models = models.filter((model: LanguageModel) => {
-        // Check for clusterRef in spec (preferred approach)
-        if (model.spec.clusterRef) {
-          return model.spec.clusterRef === clusterName
-        }
-        // Fallback: check for cluster label (legacy approach)
-        const clusterLabel = model.metadata?.labels?.['langop.io/cluster']
-        return clusterLabel === clusterName
-      })
+      // Models are cluster-scoped by having clusterRef property
+      models = filterByClusterRef(models, clusterName) as LanguageModel[]
       
       console.log(`Found ${models.length} models for cluster ${clusterName}`)
     } catch (k8sError) {

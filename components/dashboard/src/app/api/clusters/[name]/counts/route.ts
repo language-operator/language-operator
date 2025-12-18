@@ -5,6 +5,7 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { filterByClusterRef } from '@/lib/cluster-utils'
 
 // GET /api/clusters/[name]/counts - Get resource counts for a specific cluster
 export async function GET(
@@ -68,8 +69,7 @@ export async function GET(
 async function getClusterSpecificCounts(namespace: string, clusterName: string, allCounts: any) {
   try {
     // For models, agents, tools, and personas - count only those that belong to this cluster
-    // Resources belong to a cluster if they have the 'langop.io/cluster' label set to the cluster name
-    // If no cluster label is present, they're available to all clusters
+    // Resources belong to a cluster if they have spec.clusterRef set to the cluster name
     
     const clusterCounts = {
       models: 0,
@@ -94,14 +94,7 @@ async function getClusterSpecificCounts(namespace: string, clusterName: string, 
         models = (modelsResponse as any).items
       }
 
-      clusterCounts.models = models.filter((model: any) => {
-        // Check for clusterRef in spec (preferred) or fallback to label
-        if (model.spec?.clusterRef) {
-          return model.spec.clusterRef === clusterName
-        }
-        const clusterLabel = model.metadata?.labels?.['langop.io/cluster']
-        return clusterLabel === clusterName
-      }).length
+      clusterCounts.models = filterByClusterRef(models, clusterName).length
 
     } catch (modelsError) {
       console.error('Error counting models:', modelsError)
@@ -122,9 +115,7 @@ async function getClusterSpecificCounts(namespace: string, clusterName: string, 
         agents = (agentsResponse as any).items
       }
 
-      clusterCounts.agents = agents.filter((agent: any) => {
-        return agent.spec?.clusterRef === clusterName
-      }).length
+      clusterCounts.agents = filterByClusterRef(agents, clusterName).length
 
     } catch (agentsError) {
       console.error('Error counting agents:', agentsError)
@@ -145,9 +136,7 @@ async function getClusterSpecificCounts(namespace: string, clusterName: string, 
         tools = (toolsResponse as any).items
       }
 
-      clusterCounts.tools = tools.filter((tool: any) => {
-        return tool.spec?.clusterRef === clusterName
-      }).length
+      clusterCounts.tools = filterByClusterRef(tools, clusterName).length
 
     } catch (toolsError) {
       console.error('Error counting tools:', toolsError)
@@ -168,9 +157,7 @@ async function getClusterSpecificCounts(namespace: string, clusterName: string, 
         personas = (personasResponse as any).items
       }
 
-      clusterCounts.personas = personas.filter((persona: any) => {
-        return persona.spec?.clusterRef === clusterName
-      }).length
+      clusterCounts.personas = filterByClusterRef(personas, clusterName).length
 
     } catch (personasError) {
       console.error('Error counting personas:', personasError)

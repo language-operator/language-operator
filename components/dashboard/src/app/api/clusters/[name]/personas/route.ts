@@ -5,6 +5,7 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { filterByClusterRef } from '@/lib/cluster-utils'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
 
 // GET /api/clusters/[name]/personas - List personas for a specific cluster
@@ -45,9 +46,7 @@ export async function GET(
 
     // Filter personas to only show those that belong to this specific cluster
     // Personas are cluster-scoped by having clusterRef set to the cluster name
-    const clusterPersonas = allPersonas.filter((persona: LanguagePersona) => {
-      return persona.spec.clusterRef === clusterName
-    })
+    const clusterPersonas = filterByClusterRef(allPersonas, clusterName) as LanguagePersona[]
 
     // Apply search filtering 
     let filteredPersonas = clusterPersonas.filter((persona: LanguagePersona) => {
