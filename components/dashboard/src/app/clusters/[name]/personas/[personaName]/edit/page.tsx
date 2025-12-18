@@ -16,7 +16,7 @@ export default function EditClusterPersonaPage() {
   const clusterName = params?.name as string
   const personaName = params?.personaName as string
   
-  const { data: personaResponse, isLoading: isLoadingPersona, error } = usePersona(personaName)
+  const { data: personaResponse, isLoading: isLoadingPersona, error } = usePersona(personaName, clusterName)
   const persona = personaResponse?.persona
   
   const [isLoading, setIsLoading] = useState(false)

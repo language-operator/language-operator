@@ -63,9 +63,9 @@ export default function CreateClusterAgentPage() {
   const createAgent = useCreateAgent(clusterName)
   
   // Fetch available data for dropdowns
-  const { data: modelsResponse, isLoading: isLoadingModels } = useModels()
+  const { data: modelsResponse, isLoading: isLoadingModels } = useModels({ clusterName })
   const { data: toolsResponse, isLoading: isLoadingTools } = useTools({ clusterName })
-  const { data: personasResponse, isLoading: isLoadingPersonas } = usePersonas()
+  const { data: personasResponse, isLoading: isLoadingPersonas } = usePersonas({ clusterName })
   
   // Extract data from API responses
   const availableModels = modelsResponse?.data || []

@@ -45,8 +45,8 @@ export default function ClusterPersonaDetailPage() {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   
-  const { data: personaResponse, isLoading, error } = usePersona(personaName)
-  const deletePersona = useDeletePersona()
+  const { data: personaResponse, isLoading, error } = usePersona(personaName, clusterName)
+  const deletePersona = useDeletePersona(clusterName)
 
   const persona = personaResponse?.persona
 

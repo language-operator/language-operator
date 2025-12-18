@@ -50,7 +50,7 @@ export default function ClusterPersonas() {
   const [toneFilter, setToneFilter] = React.useState<string>('all')
   
   // Fetch all personas and filter client-side (TODO: implement server-side filtering by namespace)
-  const { data: personasResponse, isLoading, error } = usePersonas({ limit: 100 })
+  const { data: personasResponse, isLoading, error } = usePersonas({ clusterName, limit: 100 })
   const allPersonas = personasResponse?.data || []
   
   // Filter personas based on search and tone

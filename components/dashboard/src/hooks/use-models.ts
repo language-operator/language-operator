@@ -3,12 +3,16 @@ import { fetchWithOrganization } from '@/lib/api-client'
 import { useOrganizationStore } from '@/store/organization-store'
 import { LanguageModel, LanguageModelListParams, LanguageModelFormData } from '@/types/model'
 
-export function useModels(params?: LanguageModelListParams & { clusterName?: string }) {
+export function useModels(params: LanguageModelListParams & { clusterName: string }) {
   const { activeOrganizationId } = useOrganizationStore()
   
   return useQuery({
-    queryKey: ['models', activeOrganizationId, params?.clusterName, params],
+    queryKey: ['models', activeOrganizationId, params.clusterName, params],
     queryFn: async () => {
+      if (!params.clusterName) {
+        throw new Error('Cluster name is required to fetch models')
+      }
+
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
       if (params?.limit) searchParams.append('limit', params.limit.toString())
@@ -23,10 +27,7 @@ export function useModels(params?: LanguageModelListParams & { clusterName?: str
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
       if (params?.healthy !== undefined) searchParams.append('healthy', params.healthy.toString())
 
-      // Use cluster-scoped API if cluster name is provided
-      const endpoint = params?.clusterName 
-        ? `/api/clusters/${params.clusterName}/models?${searchParams}`
-        : `/api/models?${searchParams}` // Legacy fallback for non-cluster contexts
+      const endpoint = `/api/clusters/${params.clusterName}/models?${searchParams}`
 
       const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
@@ -37,26 +38,34 @@ export function useModels(params?: LanguageModelListParams & { clusterName?: str
   })
 }
 
-export function useModel(name: string) {
+export function useModel(name: string, clusterName: string) {
   return useQuery({
-    queryKey: ['models', name],
+    queryKey: ['models', clusterName, name],
     queryFn: async () => {
-      const response = await fetch(`/api/models/${name}`)
+      if (!clusterName) {
+        throw new Error('Cluster name is required to fetch model')
+      }
+      
+      const response = await fetch(`/api/clusters/${clusterName}/models/${name}`)
       if (!response.ok) {
         throw new Error('Failed to fetch model')
       }
       return response.json()
     },
-    enabled: !!name,
+    enabled: !!name && !!clusterName,
   })
 }
 
-export function useDeleteModel() {
+export function useDeleteModel(clusterName: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (name: string) => {
-      const response = await fetch(`/api/models/${name}`, {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for model deletion')
+      }
+      
+      const response = await fetch(`/api/clusters/${clusterName}/models/${name}`, {
         method: 'DELETE',
       })
       if (!response.ok) {
@@ -66,6 +75,7 @@ export function useDeleteModel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['models'] })
+      queryClient.invalidateQueries({ queryKey: ['models', clusterName] })
     },
   })
 }

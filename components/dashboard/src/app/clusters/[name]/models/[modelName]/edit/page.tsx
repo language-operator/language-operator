@@ -19,7 +19,7 @@ export default function ClusterEditModelPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const { data: modelResponse, isLoading: isLoadingModel } = useModel(modelName)
+  const { data: modelResponse, isLoading: isLoadingModel } = useModel(modelName, clusterName)
   const model = modelResponse?.data
 
   const handleSubmit = async (formData: ModelFormData) => {

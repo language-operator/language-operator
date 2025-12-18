@@ -84,9 +84,9 @@ interface AgentOverviewProps {
 }
 
 function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
-  const { data: modelsResponse } = useModels({})
+  const { data: modelsResponse } = useModels({ clusterName })
   const { data: toolsResponse } = useTools({ clusterName })
-  const { data: personasResponse } = usePersonas({})
+  const { data: personasResponse } = usePersonas({ clusterName })
 
   const allModels = modelsResponse?.data || []
   const allTools = toolsResponse?.data || []

@@ -420,8 +420,8 @@ export default function ClusterModelDetailPage() {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   
-  const { data: modelResponse, isLoading, error } = useModel(modelName)
-  const deleteModel = useDeleteModel()
+  const { data: modelResponse, isLoading, error } = useModel(modelName, clusterName)
+  const deleteModel = useDeleteModel(clusterName)
 
   const model = modelResponse?.data
 

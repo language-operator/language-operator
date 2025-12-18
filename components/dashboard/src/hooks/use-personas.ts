@@ -3,12 +3,16 @@ import { fetchWithOrganization } from '@/lib/api-client'
 import { useOrganizationStore } from '@/store/organization-store'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
 
-export function usePersonas(params?: LanguagePersonaListParams & { clusterName?: string }) {
+export function usePersonas(params: LanguagePersonaListParams & { clusterName: string }) {
   const { activeOrganizationId } = useOrganizationStore()
   
   return useQuery({
-    queryKey: ['personas', activeOrganizationId, params?.clusterName, params],
+    queryKey: ['personas', activeOrganizationId, params.clusterName, params],
     queryFn: async () => {
+      if (!params.clusterName) {
+        throw new Error('Cluster name is required to fetch personas')
+      }
+
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.append('page', params.page.toString())
       if (params?.limit) searchParams.append('limit', params.limit.toString())
@@ -19,10 +23,7 @@ export function usePersonas(params?: LanguagePersonaListParams & { clusterName?:
       if (params?.sortBy) searchParams.append('sortBy', params.sortBy)
       if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder)
 
-      // Use cluster-scoped API if cluster name is provided
-      const endpoint = params?.clusterName 
-        ? `/api/clusters/${params.clusterName}/personas?${searchParams}`
-        : `/api/personas?${searchParams}` // Legacy fallback for non-cluster contexts
+      const endpoint = `/api/clusters/${params.clusterName}/personas?${searchParams}`
 
       const response = await fetchWithOrganization(endpoint)
       if (!response.ok) {
@@ -33,26 +34,34 @@ export function usePersonas(params?: LanguagePersonaListParams & { clusterName?:
   })
 }
 
-export function usePersona(name: string) {
+export function usePersona(name: string, clusterName: string) {
   return useQuery({
-    queryKey: ['personas', name],
+    queryKey: ['personas', clusterName, name],
     queryFn: async () => {
-      const response = await fetch(`/api/personas/${name}`)
+      if (!clusterName) {
+        throw new Error('Cluster name is required to fetch persona')
+      }
+      
+      const response = await fetch(`/api/clusters/${clusterName}/personas/${name}`)
       if (!response.ok) {
         throw new Error('Failed to fetch persona')
       }
       return response.json()
     },
-    enabled: !!name,
+    enabled: !!name && !!clusterName,
   })
 }
 
-export function useDeletePersona() {
+export function useDeletePersona(clusterName: string) {
   const queryClient = useQueryClient()
   
   return useMutation({
     mutationFn: async (name: string) => {
-      const response = await fetch(`/api/personas/${name}`, {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for persona deletion')
+      }
+      
+      const response = await fetch(`/api/clusters/${clusterName}/personas/${name}`, {
         method: 'DELETE',
       })
       if (!response.ok) {
@@ -62,6 +71,7 @@ export function useDeletePersona() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personas'] })
+      queryClient.invalidateQueries({ queryKey: ['personas', clusterName] })
     },
   })
 }

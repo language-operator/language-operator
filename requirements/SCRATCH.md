@@ -1,6 +1,6 @@
 # Agent Memory Bank
 
-## Current Focus Areas (Dec 16, 2025)
+## Current Focus Areas (Dec 18, 2025)
 
 ### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
@@ -8,6 +8,8 @@
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
 ### Dashboard Development (Recent)
+- ✅ **Issue #171**: Add comprehensive error handling to cluster-scoped APIs - **RESOLVED** (Dec 18) - Created centralized error handling utilities (api-error-handler.ts) and cluster validation helpers (cluster-validation.ts). Updated all 5 cluster-scoped APIs with standardized error responses, proper HTTP status codes, input validation, and graceful Kubernetes API failure handling. Implemented consistent error format with debug context, cluster existence validation, and orphaned resource detection. TypeScript compilation successful, all acceptance criteria met.
+- ✅ **Issue #170**: Standardize cluster filtering logic across all APIs - **RESOLVED** (Dec 18) - Created reusable filterByClusterRef utility function and standardized all cluster-scoped APIs to use only spec.clusterRef for filtering, eliminating inconsistent fallback logic. Updated 5 API routes (models, agents, tools, personas, counts) to use unified filtering mechanism. Manually tested filtering behavior, all CI tests passing. Eliminates maintenance burden of supporting multiple filtering approaches.
 - ✅ **Issue #166**: Cluster Settings page returns 404 - **RESOLVED** (Dec 16) - Fixed Settings button on cluster detail pages to correctly link to existing edit page (/clusters/[name]/edit) instead of non-existent /settings route. Simple one-line change resolved user navigation issue, manually tested with Playwright, all CI tests passing.  
 - ✅ **Issue #155**: Agent creation API fails with multiple 404 errors - **RESOLVED** (Dec 15) - Eliminated all 404 errors in agent creation workflow by implementing proper cluster-scoped API endpoints. Added POST handler to /api/clusters/[name]/agents/, updated React hooks (useCreateAgent, useTools) to use cluster-scoped URLs, and fixed agent creation form to pass cluster context. Tools now load correctly (5 tools vs "No tools available"), form validation works properly, and agent creation reaches server without 404 errors.
 - ✅ **Issue #157**: YAML preview displays invalid resource configuration - **RESOLVED** (Dec 15) - Enhanced YAML preview validation UX with visual feedback: red styling for "YAML Preview" header when validation fails, disabled Create Agent button when errors present, and real-time onChange validation. Manually tested with both valid and invalid configurations
