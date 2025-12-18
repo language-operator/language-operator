@@ -78,6 +78,10 @@ spec:
                 required:
                 - name
                 type: object
+              clusterRef:
+                description: ClusterRef references a LanguageCluster to deploy this
+                  model into
+                type: string
               caching:
                 description: Caching defines response caching configuration
                 properties:

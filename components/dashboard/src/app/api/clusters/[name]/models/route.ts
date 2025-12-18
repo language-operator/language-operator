@@ -179,3 +179,95 @@ export async function GET(
     return createErrorResponse(error, 'Failed to fetch cluster models')
   }
 }
+
+// POST /api/clusters/[name]/models - Create a new model for a specific cluster
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  try {
+    // Get user's selected organization
+    const { user, organization, userRole } = await getUserOrganization(request)
+    
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
+    // Check permissions
+    const hasPermission = await requirePermission(user.id, organization.id, 'create')
+    if (!hasPermission) {
+      throw createPermissionDeniedError('create models', 'cluster-scoped models', userRole)
+    }
+
+    const { name: clusterName } = await params
+    
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+    
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
+
+    const body = await request.json()
+    
+    // Validate required fields
+    if (!body.name) {
+      return createErrorResponse(
+        new Error('Model name is required'),
+        'Invalid request data'
+      )
+    }
+    
+    if (!body.provider) {
+      return createErrorResponse(
+        new Error('Provider is required'),
+        'Invalid request data'
+      )
+    }
+    
+    if (!body.modelName) {
+      return createErrorResponse(
+        new Error('Model name is required'),
+        'Invalid request data'
+      )
+    }
+
+    // Create model spec with clusterRef automatically set
+    const modelSpec = {
+      apiVersion: 'langop.io/v1alpha1',
+      kind: 'LanguageModel',
+      metadata: {
+        name: body.name,
+        namespace: organization.namespace,
+      },
+      spec: {
+        clusterRef: clusterName, // Automatically set clusterRef to the cluster name
+        provider: body.provider,
+        modelName: body.modelName,
+        endpoint: body.endpoint,
+        ...(body.apiKeySecretName && { 
+          apiKeySecretName: body.apiKeySecretName,
+          apiKeySecretKey: body.apiKeySecretKey || 'api-key'
+        }),
+        ...(body.temperature !== undefined && { temperature: body.temperature }),
+        ...(body.maxTokens !== undefined && { maxTokens: body.maxTokens }),
+        ...(body.topP !== undefined && { topP: body.topP }),
+      }
+    }
+
+    console.log(`Creating model ${body.name} for cluster ${clusterName} in namespace:`, organization.namespace)
+    
+    // Create the model in Kubernetes
+    const response = await handleKubernetesOperation(
+      'create model',
+      k8sClient.createLanguageModel(organization.namespace, modelSpec)
+    )
+    
+    console.log(`Model ${body.name} created successfully for cluster ${clusterName}`)
+
+    return createSuccessResponse(response, 'Model created successfully')
+
+  } catch (error) {
+    console.error('Error creating cluster model:', error)
+    return createErrorResponse(error, 'Failed to create cluster model')
+  }
+}

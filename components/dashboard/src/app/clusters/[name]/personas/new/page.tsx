@@ -28,14 +28,17 @@ export default function CreateClusterPersonaPage() {
         ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
         ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
         ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
-        ...(formData.examples && formData.examples.length > 0 && { 
-          examples: formData.examples.map(ex => ({
-            input: ex.input,
-            output: ex.output,
-            ...(ex.context && { context: ex.context }),
-            ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
-          }))
-        }),
+        ...(formData.examples && formData.examples.length > 0 && (() => {
+          const validExamples = formData.examples.filter(ex => ex.input && ex.output)
+          return validExamples.length > 0 ? {
+            examples: validExamples.map(ex => ({
+              input: ex.input,
+              output: ex.output,
+              ...(ex.context && { context: ex.context }),
+              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
+            }))
+          } : {}
+        })()),
         // New CRD features
         ...(formData.knowledgeSources && formData.knowledgeSources.length > 0 && { 
           knowledgeSources: formData.knowledgeSources.filter(ks => ks.name && ks.type)
@@ -71,7 +74,7 @@ export default function CreateClusterPersonaPage() {
       
       console.log('Sending payload:', payload)
       
-      const response = await fetch('/api/personas', {
+      const response = await fetch(`/api/clusters/${clusterName}/personas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

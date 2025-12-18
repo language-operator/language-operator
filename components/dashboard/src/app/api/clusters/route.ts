@@ -94,8 +94,11 @@ export async function GET(request: NextRequest) {
                            (agentsResponse as any)?.items || 
                            []
 
-          // Calculate agent count for this cluster
-          const agentCount = allAgents.length
+          // Calculate agent count for this cluster - filter by clusterRef
+          const clusterAgents = allAgents.filter((agent: any) => 
+            agent.spec?.clusterRef === cluster.metadata.name
+          )
+          const agentCount = clusterAgents.length
 
           // Return cluster with computed agentCount
           return {

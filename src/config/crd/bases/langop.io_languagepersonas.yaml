@@ -65,6 +65,10 @@ spec:
                 items:
                   type: string
                 type: array
+              clusterRef:
+                description: ClusterRef references a LanguageCluster to deploy this
+                  persona into
+                type: string
               constraints:
                 description: Constraints define operational constraints
                 properties:

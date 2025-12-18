@@ -36,7 +36,7 @@ export default function CreateClusterModelPage() {
       
       console.log('Sending payload:', payload)
       
-      const response = await fetch('/api/models', {
+      const response = await fetch(`/api/clusters/${clusterName}/models`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

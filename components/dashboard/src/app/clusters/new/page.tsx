@@ -7,29 +7,25 @@ import { Button } from '@/components/ui/button'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Cloud } from 'lucide-react'
+import { useApiClient } from '@/lib/api-client'
 
 export default function CreateClusterPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const apiClient = useApiClient()
 
   const handleSubmit = async (formData: ClusterFormData) => {
     setIsLoading(true)
     setError('')
 
     try {
-      const response = await fetch('/api/clusters', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          domain: formData.domain || undefined,
-          gatewayName: formData.gatewayName || undefined,
-          ingressClassName: formData.ingressClassName || undefined,
-          enableTLS: formData.enableTLS,
-        }),
+      const response = await apiClient.post('/clusters', {
+        name: formData.name,
+        domain: formData.domain || undefined,
+        gatewayName: formData.gatewayName || undefined,
+        ingressClassName: formData.ingressClassName || undefined,
+        enableTLS: formData.enableTLS,
       })
 
       if (!response.ok) {

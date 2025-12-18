@@ -56,27 +56,7 @@ export default function ClusterModels() {
   })
   const allModels = modelsResponse?.data || []
   
-  // Debug logging
-  console.log('Models response:', modelsResponse)
-  console.log('All models:', allModels)
-  console.log('Error:', error)
-  console.log('Is loading:', isLoading)
   
-  // Manual test API call
-  React.useEffect(() => {
-    console.log('Models page mounted, triggering test API call...')
-    fetch('/api/models?limit=5')
-      .then(res => {
-        console.log('Manual API response status:', res.status)
-        return res.json()
-      })
-      .then(data => {
-        console.log('Manual API response data:', data)
-      })
-      .catch(err => {
-        console.error('Manual API call error:', err)
-      })
-  }, [])
   
   // Filter models based on search and provider
   const filteredModels = allModels.filter((model: any) => {
