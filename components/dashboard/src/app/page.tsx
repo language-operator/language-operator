@@ -9,7 +9,8 @@ import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock, ExternalLi
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useClusters } from '@/hooks/use-clusters'
-import { ClusterStatusBadge } from '@/components/ui/resource-status-badge'
+import { useAgents } from '@/hooks/useAgents'
+import { ClusterStatusBadge, AgentStatusBadge } from '@/components/ui/resource-status-badge'
 import { useRouter } from 'next/navigation'
 
 type QuickActionType = 'agent' | 'model' | 'tool'
@@ -18,6 +19,7 @@ export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useRecentActivity({ limit: 4 })
   const { data: clustersData, isLoading: clustersLoading, error: clustersError } = useClusters({ limit: 5 })
+  const { data: agentsData, isLoading: agentsLoading, error: agentsError } = useAgents({ limit: 5 })
   const router = useRouter()
   const [modalState, setModalState] = useState<{
     isOpen: boolean
@@ -215,7 +217,7 @@ export default function Home() {
         </div>
 
         {/* Active Resources */}
-        <div className="grid gap-6 md:grid-cols-1">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -292,6 +294,75 @@ export default function Home() {
                     <div className="pt-2 border-t">
                       <Link href="/clusters" className="text-xs text-blue-600 hover:text-blue-800">
                         View all {clustersData.data.length} clusters →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-5 w-5" />
+                Agents
+              </CardTitle>
+              <CardDescription>
+                Natural language-based goals and automations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {agentsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-6 w-6 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
+                      </div>
+                      <div className="h-3 bg-gray-100 rounded animate-pulse w-16" />
+                    </div>
+                  ))}
+                </div>
+              ) : agentsError ? (
+                <div className="text-center py-4">
+                  <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Failed to load agents</p>
+                </div>
+              ) : !agentsData?.data || agentsData.data.length === 0 ? (
+                <div className="text-center py-4">
+                  <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No agents deployed</p>
+                  <p className="text-xs text-gray-400 mt-1">Create your first agent to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {agentsData.data.slice(0, 5).map((agent: any) => (
+                    <div key={agent.metadata.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`} className="text-sm font-medium truncate hover:text-blue-600 hover:underline">
+                            {agent.metadata.name}
+                          </Link>
+                          <div className="mt-1">
+                            <AgentStatusBadge agent={agent} size="sm" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Link href={`/clusters/${agent.metadata.namespace}/agents/${agent.metadata.name}`}>
+                          <button className="p-1 hover:bg-gray-100 rounded" title="View Agent">
+                            <ExternalLink className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {agentsData.data.length > 5 && (
+                    <div className="pt-2 border-t">
+                      <Link href="/agents" className="text-xs text-blue-600 hover:text-blue-800">
+                        View all {agentsData.data.length} agents →
                       </Link>
                     </div>
                   )}
