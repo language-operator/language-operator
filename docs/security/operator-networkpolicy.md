@@ -14,11 +14,23 @@ The language-operator deployment requires network egress access to function prop
 
 ## When Is This Needed?
 
-You need this NetworkPolicy if:
+You need NetworkPolicy configurations if:
+
+### Operator Issues
 - Your cluster enforces NetworkPolicy rules by default
 - You see connection timeout errors in operator logs when synthesis operations occur
 - Agent creation with `instructions` field fails with network errors
 - Self-healing operations fail to synthesize corrected code
+
+### Dashboard Issues  
+- Dashboard fails to load model names ("fetch model names" fails)
+- Model creation forms are empty or show connection errors
+- API calls to external providers timeout
+
+### Model Issues
+- LanguageModel resources show "NetworkPolicyError" in status conditions
+- Model pods cannot reach their provider endpoints (OpenAI, Anthropic, etc.)
+- Connection timeouts when models try to access external APIs
 
 ## Quick Fix
 
@@ -357,8 +369,155 @@ kubectl logs -n kube-system -l app.kubernetes.io/name=language-operator | grep -
 - [Operator Installation](../../chart/README.md) - Helm chart configuration
 - [Synthesis Architecture](../../requirements/ARCHITECTURE.md) - How code synthesis works
 
+## Dashboard NetworkPolicy (Auto-Configured)
+
+Starting with v0.1.50+, the dashboard Helm chart automatically creates a NetworkPolicy when deployed on clusters with NetworkPolicy enforcement (Cilium, Calico, etc.).
+
+### Dashboard Configuration
+
+The dashboard needs external access to fetch model names from provider APIs. This is automatically configured via:
+
+```yaml
+# Configured in chart/charts/dashboard/values.yaml
+networkPolicy:
+  enabled: true                    # Auto-detects CNI capability
+  allowExternalHTTPS: true         # Required for model provider APIs
+  allowExternalHTTP: false         # Usually not needed
+  allowedCIDRs: []                # Optional: restrict to specific networks
+```
+
+### Dashboard NetworkPolicy Template
+
+The auto-generated NetworkPolicy allows:
+- ✅ Internal cluster communication (for Kubernetes API, PostgreSQL)
+- ✅ DNS resolution (kube-dns in kube-system namespace) 
+- ✅ External HTTPS access (for OpenAI, Anthropic, Google, etc.)
+- ❌ External HTTP access (disabled by default for security)
+- ❌ All other external traffic
+
+### Troubleshooting Dashboard Issues
+
+If model names don't load in the dashboard:
+
+1. **Check NetworkPolicy exists:**
+   ```bash
+   kubectl get networkpolicy -n language-operator language-operator-dashboard
+   ```
+
+2. **Verify dashboard pods are selected:**
+   ```bash
+   kubectl get pods -n language-operator -l app.kubernetes.io/name=dashboard --show-labels
+   ```
+
+3. **Check dashboard logs for network errors:**
+   ```bash
+   kubectl logs -n language-operator -l app.kubernetes.io/name=dashboard | grep -i "network\|timeout\|connection"
+   ```
+
+4. **Test external connectivity from dashboard pod:**
+   ```bash
+   kubectl exec -n language-operator deploy/language-operator-dashboard -- curl -I https://api.openai.com
+   ```
+
+## LanguageModel NetworkPolicy (Auto-Configured)
+
+Starting with v0.1.50+, LanguageModel controllers automatically configure NetworkPolicy egress rules for known providers.
+
+### Supported Providers (Auto-Configured)
+
+The following providers are automatically configured with appropriate egress rules:
+
+| Provider | Default Endpoint | Auto-Configured |
+|----------|------------------|-----------------|
+| `openai` | `https://api.openai.com` | ✅ |
+| `anthropic` | `https://api.anthropic.com` | ✅ |
+| `google` | `https://generativelanguage.googleapis.com` | ✅ |
+| `groq` | `https://api.groq.com` | ✅ |
+| `together` | `https://api.together.xyz` | ✅ |
+| `cohere` | `https://api.cohere.ai` | ✅ |
+| `mistral` | `https://api.mistral.ai` | ✅ |
+| `perplexity` | `https://api.perplexity.ai` | ✅ |
+| `fireworks` | `https://api.fireworks.ai` | ✅ |
+| `azure` | Customer-specific | Manual config required |
+| `bedrock` | Region-specific | Manual config required |
+| `vertex` | Region-specific | Manual config required |
+| `ollama` | Local | No external egress needed |
+
+### Manual Egress Configuration
+
+For providers requiring custom configuration (Azure, Bedrock, custom endpoints):
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: my-azure-model
+spec:
+  provider: azure
+  endpoint: "https://my-resource.openai.azure.com"
+  egress:
+  - description: "Azure OpenAI endpoint"
+    to:
+      cidr: "20.42.65.0/24"  # Resolve: nslookup my-resource.openai.azure.com
+    ports:
+    - protocol: TCP
+      port: 443
+```
+
+### Troubleshooting Model Issues
+
+If LanguageModel creation fails with network errors:
+
+1. **Check model status conditions:**
+   ```bash
+   kubectl get languagemodel my-model -o yaml | grep -A 10 conditions
+   ```
+
+2. **Look for NetworkPolicyError:**
+   ```bash
+   kubectl describe languagemodel my-model | grep -A 5 NetworkPolicy
+   ```
+
+3. **Verify NetworkPolicy was created:**
+   ```bash
+   kubectl get networkpolicy -n my-namespace my-model
+   ```
+
+4. **Test connectivity from model pod:**
+   ```bash
+   kubectl exec -n my-namespace deploy/my-model -- curl -I https://api.openai.com
+   ```
+
+## Cilium-Specific Considerations
+
+### Cilium Network Policy Enforcement
+
+Cilium enforces NetworkPolicy rules by default when policies exist. Key considerations:
+
+- **DNS Resolution**: Cilium supports DNS-based policies, but IP-based policies are more reliable
+- **Policy Ordering**: Cilium uses a whitelist model - traffic is denied unless explicitly allowed
+- **Debugging**: Use `cilium monitor` to trace network policy decisions
+
+### Debugging with Cilium
+
+1. **Check CNI detection:**
+   ```bash
+   kubectl get pods -n kube-system | grep cilium
+   kubectl logs -n kube-system ds/cilium | grep -i networkpolicy
+   ```
+
+2. **Monitor policy enforcement:**
+   ```bash
+   kubectl exec -n kube-system ds/cilium -- cilium monitor --type policy-verdict
+   ```
+
+3. **Validate policy syntax:**
+   ```bash
+   kubectl exec -n kube-system ds/cilium -- cilium policy validate /path/to/policy.yaml
+   ```
+
 ## Future Enhancement
 
-This NetworkPolicy will eventually be auto-generated by the Helm chart or managed by the operator itself. Track progress in the project backlog.
+Dashboard and model NetworkPolicy auto-configuration is available starting with v0.1.50. For older versions, manual NetworkPolicy configuration is required following the examples above.
 
 Until then, this manual configuration provides the necessary network access for operator functionality.

@@ -387,10 +387,29 @@ func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 // These endpoints are automatically added to NetworkPolicy egress rules so users don't need
 // to manually configure network access for standard provider APIs
 var providerDefaultEndpoints = map[string][]string{
-	"openai":    {"https://api.openai.com"},
-	"anthropic": {"https://api.anthropic.com"},
-	// Note: bedrock and vertex use cloud provider endpoints that vary by region
-	// and are typically accessible via VPC endpoints or default cloud egress
+	"openai":     {"https://api.openai.com"},
+	"anthropic":  {"https://api.anthropic.com"},
+	"google":     {"https://generativelanguage.googleapis.com"},
+	"groq":       {"https://api.groq.com"},
+	"together":   {"https://api.together.xyz"},
+	"cohere":     {"https://api.cohere.ai"},
+	"mistral":    {"https://api.mistral.ai"},
+	"perplexity": {"https://api.perplexity.ai"},
+	"fireworks":  {"https://api.fireworks.ai"},
+
+	// Azure OpenAI uses customer-specific endpoints, so no default
+	// "azure": varies by customer deployment region and resource name
+
+	// AWS Bedrock uses region-specific endpoints, typically accessible via VPC
+	// "bedrock": varies by AWS region (bedrock-runtime.{region}.amazonaws.com)
+
+	// Vertex AI uses region-specific endpoints, typically accessible via Google Cloud VPC
+	// "vertex": varies by Google Cloud region
+
+	// Local providers typically don't need external egress
+	"ollama": {}, // Local inference, no external endpoints
+	"vllm":   {}, // Local inference, no external endpoints
+	"tgi":    {}, // Text Generation Inference, typically local
 }
 
 // generateEgressFromEndpoint parses an endpoint URL and generates a NetworkPolicy egress rule

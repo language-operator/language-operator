@@ -135,3 +135,34 @@ externalDatabase:
   user: dashboard
   password: ""
   database: dashboard
+
+# NetworkPolicy configuration for network isolation
+networkPolicy:
+  # Enable NetworkPolicy creation
+  # Auto-detects if CNI supports NetworkPolicy enforcement (Cilium, Calico, etc.)
+  enabled: true
+  
+  # Allow external HTTPS access for model provider APIs
+  # Required for dashboard to fetch available models from providers like OpenAI, Anthropic
+  allowExternalHTTPS: true
+  
+  # Allow external HTTP access (usually not needed for production APIs)
+  allowExternalHTTP: false
+  
+  # Optional: Restrict egress to specific CIDR blocks
+  # Useful for air-gapped environments or corporate network restrictions
+  allowedCIDRs: []
+  # Examples:
+  # - "10.0.0.0/8"       # Private networks
+  # - "172.16.0.0/12"    # Private networks  
+  # - "192.168.0.0/16"   # Private networks
+  # - "0.0.0.0/0"        # All internet (not recommended)
+  
+  # Optional: Allow specific provider endpoints (future enhancement)
+  # This will be expanded to support DNS-to-IP resolution
+  allowedEndpoints: []
+  # Examples:
+  # - cidr: "104.18.0.0/15"  # Cloudflare (example for api.openai.com)
+  #   port: 443
+  # - cidr: "13.107.42.14/32" # Example specific IP
+  #   port: 443

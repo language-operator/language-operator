@@ -1,0 +1,74 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dashboard.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "dashboard.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "dashboard.selectorLabels" . | nindent 6 }}
+  policyTypes:
+  - Egress
+  egress:
+  # Allow internal cluster communication (for Kubernetes API, other services)
+  - to: []
+    # Allow all internal cluster traffic (same cluster networking)
+  
+  # Allow DNS resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # Allow external HTTPS access for model provider APIs
+  # This is required for dashboard to fetch available models from providers
+  {{- if .Values.networkPolicy.allowExternalHTTPS }}
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  {{- end }}
+  
+  # Allow external HTTP access (for some APIs that don't use HTTPS)
+  {{- if .Values.networkPolicy.allowExternalHTTP }}
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  {{- end }}
+  
+  # Allow specific CIDR blocks if configured
+  {{- range .Values.networkPolicy.allowedCIDRs }}
+  - to:
+    - ipBlock:
+        cidr: {{ . }}
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+  {{- end }}
+  
+  # Allow specific provider endpoints if configured
+  {{- range .Values.networkPolicy.allowedEndpoints }}
+  - to:
+    - ipBlock:
+        # Note: In production, these should be resolved to actual IP ranges
+        # For now, this is a placeholder for future DNS-to-IP resolution
+        cidr: {{ .cidr }}
+    ports:
+    - protocol: TCP
+      port: {{ .port | default 443 }}
+  {{- end }}
+{{- end }}
