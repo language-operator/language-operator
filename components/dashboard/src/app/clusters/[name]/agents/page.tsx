@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ResourceHeader } from '@/components/ui/resource-header'
+import { EventsActivity } from '@/components/ui/events-activity'
 import {
   Table,
   TableBody,
@@ -345,6 +346,18 @@ export default function ClusterAgents() {
                   </Table>
                 </CardContent>
               </Card>
+            )}
+            
+            {/* Agent Events - Show events related to agents in this cluster */}
+            {!loading && !error && clusterAgents.length > 0 && (
+              <EventsActivity
+                title="Agent Events"
+                description="Real-time events for agents in this cluster"
+                clusterName={clusterName}
+                resourceType="agent"
+                limit={6}
+                showNamespace={false}
+              />
             )}
           </>
         )}

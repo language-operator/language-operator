@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClusterSelectionModal } from '@/components/cluster-selection-modal'
+import { EventsActivity } from '@/components/ui/events-activity'
 import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock, ExternalLink, Settings } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
-import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useClusters } from '@/hooks/use-clusters'
 import { useAggregatedAgents } from '@/hooks/use-aggregated-agents'
 import { ClusterStatusBadge, AgentStatusBadge } from '@/components/ui/resource-status-badge'
@@ -17,7 +17,6 @@ type QuickActionType = 'agent' | 'model' | 'tool'
 
 export default function Home() {
   const { counts, loading, error, refetch } = useResourceCounts()
-  const { data: recentActivity, isLoading: activityLoading, error: activityError } = useRecentActivity({ limit: 4 })
   const { data: clustersData, isLoading: clustersLoading, error: clustersError } = useClusters({ limit: 5 })
   const { data: agentsData, isLoading: agentsLoading, error: agentsError } = useAggregatedAgents(5)
   const router = useRouter()
@@ -92,42 +91,6 @@ export default function Home() {
     }
   }
 
-  const getActivityIcon = (type: string, action: string) => {
-    const iconClass = "h-5 w-5 mt-0.5"
-    
-    if (action === 'failed') return <Activity className={`${iconClass} text-red-500`} />
-    
-    switch (type) {
-      case 'agent':
-        return <Bot className={`${iconClass} text-blue-500`} />
-      case 'model':
-        return <Cpu className={`${iconClass} text-green-500`} />
-      case 'tool':
-        return <Wrench className={`${iconClass} text-purple-500`} />
-      case 'persona':
-        return <Users className={`${iconClass} text-indigo-500`} />
-      case 'cluster':
-        return <Cloud className={`${iconClass} text-orange-500`} />
-      default:
-        return <Activity className={`${iconClass} text-gray-500`} />
-    }
-  }
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} minutes ago`
-    } else if (diffInMinutes < 1440) { // 24 hours
-      const hours = Math.floor(diffInMinutes / 60)
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`
-    } else {
-      const days = Math.floor(diffInMinutes / 1440)
-      return `${days} day${days > 1 ? 's' : ''} ago`
-    }
-  }
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
@@ -451,63 +414,13 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Recent Activity
-            </CardTitle>
-            <CardDescription>
-              Latest changes to your resources
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-start space-x-3">
-                    <div className="h-5 w-5 bg-gray-200 rounded mt-0.5 animate-pulse" />
-                    <div className="flex-1 min-w-0">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                      <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : activityError ? (
-              <div className="text-center py-8">
-                <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Failed to load recent activity</p>
-              </div>
-            ) : !recentActivity?.data || recentActivity.data.length === 0 ? (
-              <div className="text-center py-8">
-                <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No recent activity</p>
-                <p className="text-xs text-gray-400 mt-1">Activity will appear here when you start using your resources</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {recentActivity.data.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    {getActivityIcon(activity.type, activity.action)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">
-                        {activity.message}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formatTimestamp(activity.timestamp)}
-                        {activity.namespace && activity.namespace !== 'default' && (
-                          <span className="text-gray-400"> in {activity.namespace} namespace</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Recent Events */}
+        <EventsActivity
+          title="Recent Events"
+          description="Real-time Kubernetes events across all resources"
+          limit={8}
+          showNamespace={true}
+        />
       </div>
 
       {/* Cluster Selection Modal */}

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { ClusterStatusBadge } from '@/components/ui/resource-status-badge'
+import { ClusterEventsActivity } from '@/components/ui/events-activity'
 import { 
   Bot, 
   Cpu, 
@@ -249,6 +250,12 @@ export default function ClusterDashboard() {
             </Card>
           </Link>
         </div>
+
+        {/* Cluster Events */}
+        <ClusterEventsActivity 
+          clusterName={clusterName}
+          limit={10}
+        />
       </div>
     </AuthenticatedLayout>
   )

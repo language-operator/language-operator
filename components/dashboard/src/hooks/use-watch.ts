@@ -267,3 +267,27 @@ export function useWatchPersonas(options: Omit<UseWatchOptions, 'queryKey'> = {}
     queryKey: ['personas']
   })
 }
+
+export function useWatchEvents(options: Omit<UseWatchOptions, 'queryKey'> & { 
+  clusterName?: string
+  resourceType?: string
+  resourceName?: string
+  namespace?: string
+} = {}) {
+  const { clusterName, resourceType, resourceName, namespace, ...watchOptions } = options
+  
+  // Build query parameters for the watch endpoint
+  const buildEndpoint = () => {
+    const url = new URL('/api/watch/events', window.location.origin)
+    if (clusterName) url.searchParams.set('cluster', clusterName)
+    if (resourceType) url.searchParams.set('resourceType', resourceType)
+    if (resourceName) url.searchParams.set('resourceName', resourceName)
+    if (namespace) url.searchParams.set('namespace', namespace)
+    return url.pathname + url.search
+  }
+  
+  return useWatch(buildEndpoint(), {
+    ...watchOptions,
+    queryKey: ['events', clusterName ?? '', resourceType ?? '', resourceName ?? '', namespace ?? '']
+  })
+}
