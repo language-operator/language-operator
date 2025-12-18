@@ -6,6 +6,8 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { filterByClusterRef } from '@/lib/cluster-utils'
+import { validateClusterExists, validateResourceBelongsToCluster } from '@/lib/cluster-validation'
+import { createErrorResponse, createSuccessResponse, handleKubernetesOperation, validateClusterNameFormat, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
 import { LanguageTool, LanguageToolListParams } from '@/types/tool'
 
 // GET /api/clusters/[name]/tools - List all tools for specific cluster
@@ -14,18 +16,25 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('view tools', 'cluster-scoped tools', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+    
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
 
     const url = new URL(request.url)
     const queryParams: LanguageToolListParams = {
@@ -38,15 +47,22 @@ export async function GET(
       phase: url.searchParams.getAll('phase') || undefined,
     }
 
-    // Fetch all tools from organization namespace
-    const response = await k8sClient.listLanguageTools(organization.namespace)
+    // Fetch all tools from organization namespace with proper error handling
+    const response = await handleKubernetesOperation(
+      'list tools',
+      k8sClient.listLanguageTools(organization.namespace)
+    )
     
     // Handle different response structures from k8s client
     const allTools = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
     // Filter tools to only show those that belong to this specific cluster
-    // Tools are cluster-scoped by having clusterRef set to the cluster name
-    const clusterTools = filterByClusterRef(allTools, clusterName) as LanguageTool[]
+    // Uses validation to handle orphaned resources gracefully
+    const clusterTools = validateResourceBelongsToCluster(
+      allTools, 
+      clusterName, 
+      { allowOrphanedResources: true }
+    ) as LanguageTool[]
 
     // Apply search filtering 
     let filteredTools = clusterTools.filter((tool: LanguageTool) => {
@@ -94,9 +110,7 @@ export async function GET(
     const endIndex = startIndex + (queryParams.limit || 50)
     const paginatedTools = filteredTools.slice(startIndex, endIndex)
 
-    return NextResponse.json({
-      success: true,
-      data: paginatedTools,
+    return createSuccessResponse(paginatedTools, undefined, {
       total: filteredTools.length,
       page: queryParams.page || 1,
       limit: queryParams.limit || 50,
@@ -105,9 +119,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching cluster tools:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch tools for cluster',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to fetch tools for cluster')
   }
 }

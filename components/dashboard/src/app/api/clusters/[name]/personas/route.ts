@@ -6,6 +6,9 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { filterByClusterRef } from '@/lib/cluster-utils'
+import { validateClusterForResourceCreation, validateClusterExists, validateResourceBelongsToCluster } from '@/lib/cluster-validation'
+import { createErrorResponse, createSuccessResponse, handleKubernetesOperation, validateClusterNameFormat, ApiError, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
+import { safeValidateLanguagePersona } from '@/lib/validation'
 import { LanguagePersona, LanguagePersonaListParams, LanguagePersonaFormData } from '@/types/persona'
 
 // GET /api/clusters/[name]/personas - List personas for a specific cluster
@@ -14,18 +17,25 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('view personas', 'cluster-scoped personas', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+    
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
 
     const url = new URL(request.url)
     const queryParams: LanguagePersonaListParams = {
@@ -38,15 +48,22 @@ export async function GET(
       phase: url.searchParams.getAll('phase') || undefined,
     }
 
-    // Fetch all personas from organization namespace
-    const response = await k8sClient.listLanguagePersonas(organization.namespace)
+    // Fetch all personas from organization namespace with proper error handling
+    const response = await handleKubernetesOperation(
+      'list personas',
+      k8sClient.listLanguagePersonas(organization.namespace)
+    )
     
     // Handle different response structures from k8s client
     const allPersonas = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
     // Filter personas to only show those that belong to this specific cluster
-    // Personas are cluster-scoped by having clusterRef set to the cluster name
-    const clusterPersonas = filterByClusterRef(allPersonas, clusterName) as LanguagePersona[]
+    // Uses validation to handle orphaned resources gracefully
+    const clusterPersonas = validateResourceBelongsToCluster(
+      allPersonas, 
+      clusterName, 
+      { allowOrphanedResources: true }
+    ) as LanguagePersona[]
 
     // Apply search filtering 
     let filteredPersonas = clusterPersonas.filter((persona: LanguagePersona) => {
@@ -96,9 +113,7 @@ export async function GET(
     const endIndex = startIndex + (queryParams.limit || 50)
     const paginatedPersonas = filteredPersonas.slice(startIndex, endIndex)
 
-    return NextResponse.json({
-      success: true,
-      data: paginatedPersonas,
+    return createSuccessResponse(paginatedPersonas, undefined, {
       total: filteredPersonas.length,
       page: queryParams.page || 1,
       limit: queryParams.limit || 50,
@@ -107,10 +122,7 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching cluster personas:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch personas for cluster',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to fetch personas for cluster')
   }
 }
 
@@ -120,18 +132,23 @@ export async function POST(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     const hasPermission = await requirePermission(user.id, organization.id, 'create')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('create personas', 'cluster-scoped personas', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format and existence
+    validateClusterNameFormat(clusterName)
+    await validateClusterForResourceCreation(organization.namespace, clusterName, organization.id, 'LanguagePersona')
 
     const formData: LanguagePersonaFormData = await request.json()
     
@@ -173,20 +190,31 @@ export async function POST(
       },
     }
 
-    // Create the persona using k8s client
-    const result = await k8sClient.createLanguagePersona(organization.namespace, persona)
+    // Validate the complete persona CRD structure
+    const validationResult = safeValidateLanguagePersona(persona)
+    if (!validationResult.success) {
+      throw new ApiError(
+        'Invalid persona configuration',
+        'VALIDATION_ERROR',
+        400,
+        'Persona data does not match required schema',
+        { validationErrors: validationResult.error.issues }
+      )
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-      message: `Persona "${formData.name}" created successfully in cluster "${clusterName}"`,
-    })
+    // Create the persona using k8s client with proper error handling
+    const result = await handleKubernetesOperation(
+      'create persona',
+      k8sClient.createLanguagePersona(organization.namespace, persona)
+    )
+
+    return createSuccessResponse(
+      result,
+      `Persona "${formData.name}" created successfully in cluster "${clusterName}"`
+    )
 
   } catch (error) {
     console.error('Error creating persona:', error)
-    return NextResponse.json({ 
-      error: 'Failed to create persona',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to create persona')
   }
 }

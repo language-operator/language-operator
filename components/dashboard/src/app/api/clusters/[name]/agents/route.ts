@@ -6,6 +6,9 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { filterByClusterRef } from '@/lib/cluster-utils'
+import { validateClusterForResourceCreation, validateClusterExists, validateResourceBelongsToCluster } from '@/lib/cluster-validation'
+import { createErrorResponse, createSuccessResponse, handleKubernetesOperation, validateClusterNameFormat, ApiError, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
+import { validateClusterName, safeValidateLanguageAgent } from '@/lib/validation'
 import { LanguageAgent, LanguageAgentListParams } from '@/types/agent'
 
 // GET /api/clusters/[name]/agents - List all agents for specific cluster
@@ -14,18 +17,25 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('view agents', 'cluster-scoped agents', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+    
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
 
     const url = new URL(request.url)
     const queryParams: LanguageAgentListParams = {
@@ -38,15 +48,22 @@ export async function GET(
       executionMode: url.searchParams.getAll('executionMode') || undefined,
     }
 
-    // Fetch all agents from organization namespace
-    const response = await k8sClient.listLanguageAgents(organization.namespace)
+    // Fetch all agents from organization namespace with proper error handling
+    const response = await handleKubernetesOperation(
+      'list agents',
+      k8sClient.listLanguageAgents(organization.namespace)
+    )
     
     // Handle different response structures from k8s client
     const allAgents = (response as any)?.items || (response.data as any)?.items || (response.body as any)?.items || []
 
     // Filter agents to only show those that belong to this specific cluster
-    // Agents are cluster-scoped by having clusterRef set to the cluster name
-    const clusterAgents = filterByClusterRef(allAgents, clusterName) as LanguageAgent[]
+    // Uses validation to handle orphaned resources gracefully
+    const clusterAgents = validateResourceBelongsToCluster(
+      allAgents, 
+      clusterName, 
+      { allowOrphanedResources: true }
+    ) as LanguageAgent[]
 
     // Apply search filtering 
     let filteredAgents = clusterAgents.filter((agent: LanguageAgent) => {
@@ -100,9 +117,7 @@ export async function GET(
     const endIndex = startIndex + (queryParams.limit || 50)
     const paginatedAgents = filteredAgents.slice(startIndex, endIndex)
 
-    return NextResponse.json({
-      success: true,
-      data: paginatedAgents,
+    return createSuccessResponse(paginatedAgents, undefined, {
       total: filteredAgents.length,
       page: queryParams.page || 1,
       limit: queryParams.limit || 50,
@@ -111,10 +126,7 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching cluster agents:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch agents for cluster',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to fetch agents for cluster')
   }
 }
 
@@ -124,18 +136,23 @@ export async function POST(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     const hasPermission = await requirePermission(user.id, organization.id, 'create')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('create agents', 'cluster-scoped agents', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format and existence
+    validateClusterNameFormat(clusterName)
+    await validateClusterForResourceCreation(organization.namespace, clusterName, organization.id, 'LanguageAgent')
 
     const agentData = await request.json()
     
@@ -210,20 +227,31 @@ export async function POST(
       },
     }
 
-    // Create the agent using k8s client
-    const result = await k8sClient.createLanguageAgent(organization.namespace, agentCrd)
+    // Validate the complete agent CRD structure
+    const validationResult = safeValidateLanguageAgent(agentCrd)
+    if (!validationResult.success) {
+      throw new ApiError(
+        'Invalid agent configuration',
+        'VALIDATION_ERROR',
+        400,
+        'Agent data does not match required schema',
+        { validationErrors: validationResult.error.issues }
+      )
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-      message: `Agent "${agentData.name}" created successfully in cluster "${clusterName}"`,
-    })
+    // Create the agent using k8s client with proper error handling
+    const result = await handleKubernetesOperation(
+      'create agent',
+      k8sClient.createLanguageAgent(organization.namespace, agentCrd)
+    )
+
+    return createSuccessResponse(
+      result,
+      `Agent "${agentData.name}" created successfully in cluster "${clusterName}"`
+    )
 
   } catch (error) {
     console.error('Error creating agent:', error)
-    return NextResponse.json({ 
-      error: 'Failed to create agent',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to create agent')
   }
 }

@@ -6,6 +6,8 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { filterByClusterRef } from '@/lib/cluster-utils'
+import { validateClusterExists, validateResourceBelongsToCluster } from '@/lib/cluster-validation'
+import { createErrorResponse, createSuccessResponse, handleKubernetesOperation, validateClusterNameFormat, createAuthenticationRequiredError, createPermissionDeniedError, KubernetesError } from '@/lib/api-error-handler'
 import { LanguageModel, LanguageModelListParams } from '@/types/model'
 
 // GET /api/clusters/[name]/models - List models for a specific cluster
@@ -14,19 +16,26 @@ export async function GET(
   { params }: { params: Promise<{ name: string }> }
 ) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
     
+    if (!user?.id) {
+      throw createAuthenticationRequiredError()
+    }
+
     // Check permissions
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+      throw createPermissionDeniedError('view models', 'cluster-scoped models', userRole)
     }
 
     const { name: clusterName } = await params
-    if (!clusterName) {
-      return NextResponse.json({ error: 'Cluster name is required' }, { status: 400 })
-    }
+    
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+    
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
 
     // Parse query parameters
     const url = new URL(request.url)
@@ -42,41 +51,39 @@ export async function GET(
       healthy: url.searchParams.get('healthy') === 'true' ? true : url.searchParams.get('healthy') === 'false' ? false : undefined,
     }
 
-    // Fetch models from Kubernetes namespace
+    // Fetch models from Kubernetes namespace with proper error handling
     console.log(`Fetching models for cluster ${clusterName} from namespace:`, organization.namespace)
     
-    let models = []
-    try {
-      const response = await k8sClient.listLanguageModels(organization.namespace)
-      
-      // Handle different response structures
-      let rawItems = null
-      if (response.body && typeof response.body === 'object') {
-        rawItems = (response.body as any)?.items
-      } else if (response.data && typeof response.data === 'object') {
-        rawItems = (response.data as any)?.items
-      } else {
-        if (Array.isArray(response)) {
-          rawItems = response
-        } else if ((response as any)?.items) {
-          rawItems = (response as any).items
-        }
+    const response = await handleKubernetesOperation(
+      'list models',
+      k8sClient.listLanguageModels(organization.namespace)
+    )
+    
+    // Handle different response structures
+    let rawItems = null
+    if (response.body && typeof response.body === 'object') {
+      rawItems = (response.body as any)?.items
+    } else if (response.data && typeof response.data === 'object') {
+      rawItems = (response.data as any)?.items
+    } else {
+      if (Array.isArray(response)) {
+        rawItems = response
+      } else if ((response as any)?.items) {
+        rawItems = (response as any).items
       }
-      
-      models = rawItems || []
-      
-      // Filter models that belong to this specific cluster
-      // Models are cluster-scoped by having clusterRef property
-      models = filterByClusterRef(models, clusterName) as LanguageModel[]
-      
-      console.log(`Found ${models.length} models for cluster ${clusterName}`)
-    } catch (k8sError) {
-      console.error('Kubernetes API error:', k8sError)
-      return NextResponse.json(
-        { error: 'Failed to fetch models from Kubernetes' },
-        { status: 500 }
-      )
     }
+    
+    const allModels = rawItems || []
+    
+    // Filter models that belong to this specific cluster
+    // Uses validation to handle orphaned resources gracefully
+    const models = validateResourceBelongsToCluster(
+      allModels, 
+      clusterName, 
+      { allowOrphanedResources: true }
+    ) as LanguageModel[]
+    
+    console.log(`Found ${models.length} models for cluster ${clusterName}`)
 
     // Apply client-side filtering
     let filteredModels = models.filter((model: LanguageModel) => {
@@ -160,9 +167,7 @@ export async function GET(
     const endIndex = startIndex + (listParams.limit || 50)
     const paginatedModels = filteredModels.slice(startIndex, endIndex)
 
-    return NextResponse.json({
-      success: true,
-      data: paginatedModels,
+    return createSuccessResponse(paginatedModels, undefined, {
       total: filteredModels.length,
       page: listParams.page || 1,
       limit: listParams.limit || 50,
@@ -171,9 +176,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching cluster models:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch cluster models' },
-      { status: 500 }
-    )
+    return createErrorResponse(error, 'Failed to fetch cluster models')
   }
 }

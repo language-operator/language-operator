@@ -364,6 +364,54 @@ export const kubernetesNameValidation = z.string()
     'Name must be lowercase letters, numbers, and hyphens only (e.g., my-agent-v1). Cannot start or end with hyphen.'
   )
 
+// Cluster name validation with specific error messages
+export const clusterNameValidation = z.string()
+  .min(1, 'Cluster name is required')
+  .max(253, 'Cluster name must be 253 characters or less')
+  .regex(
+    /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 
+    'Cluster name must be lowercase letters, numbers, and hyphens only. Cannot start or end with hyphen.'
+  )
+
+// Query parameter validation schemas
+export const ClusterScopedListParamsSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(50),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+  search: z.string().max(100).optional(),
+  clusterName: clusterNameValidation.optional(),
+})
+
+// Cluster-scoped resource creation validation
+export const ClusterResourceCreateParamsSchema = z.object({
+  clusterName: clusterNameValidation,
+})
+
+// Error context validation
+export const ApiErrorContextSchema = z.object({
+  clusterName: z.string().optional(),
+  namespace: z.string().optional(),
+  resourceType: z.string().optional(),
+  resourceName: z.string().optional(),
+  operation: z.string().optional(),
+  userRole: z.string().optional(),
+}).optional()
+
+// Cluster validation schemas
+export const ClusterValidationSchema = z.object({
+  exists: z.boolean(),
+  accessible: z.boolean(),
+  phase: z.enum(['Pending', 'Ready', 'Failed', 'Scaling']).optional(),
+})
+
+// Resource filtering validation
+export const ResourceFilterParamsSchema = z.object({
+  clusterRef: clusterNameValidation.optional(),
+  allowOrphanedResources: z.boolean().default(false),
+  requireClusterRef: z.boolean().default(false),
+})
+
 // Export all schemas for easy access
 export const CRDSchemas = {
   LanguageAgent: LanguageAgentSchema,
@@ -567,6 +615,31 @@ export function safeValidateListParams(data: unknown) {
   return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
 }
 
+// Cluster validation helper functions
+export function safeValidateClusterName(data: unknown) {
+  const result = clusterNameValidation.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateClusterScopedListParams(data: unknown) {
+  const result = ClusterScopedListParamsSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateClusterResourceCreateParams(data: unknown) {
+  const result = ClusterResourceCreateParamsSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateResourceFilterParams(data: unknown) {
+  const result = ResourceFilterParamsSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function validateClusterName(clusterName: unknown): string {
+  return clusterNameValidation.parse(clusterName)
+}
+
 // Type inference for new schemas
 export type OrganizationCreate = z.infer<typeof OrganizationCreateSchema>
 export type OrganizationUpdate = z.infer<typeof OrganizationUpdateSchema>
@@ -579,3 +652,10 @@ export type ChangePassword = z.infer<typeof ChangePasswordSchema>
 export type NamespaceSearch = z.infer<typeof NamespaceSearchSchema>
 export type NamespaceStats = z.infer<typeof NamespaceStatsSchema>
 export type ListParams = z.infer<typeof ListParamsSchema>
+
+// New validation types
+export type ClusterScopedListParams = z.infer<typeof ClusterScopedListParamsSchema>
+export type ClusterResourceCreateParams = z.infer<typeof ClusterResourceCreateParamsSchema>
+export type ResourceFilterParams = z.infer<typeof ResourceFilterParamsSchema>
+export type ClusterValidation = z.infer<typeof ClusterValidationSchema>
+export type ApiErrorContext = z.infer<typeof ApiErrorContextSchema>
