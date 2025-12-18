@@ -1013,12 +1013,226 @@ export function ModelForm({
               Network Security
             </CardTitle>
             <CardDescription>
-              Configure network egress rules and security policies
+              Configure network egress rules for external API access. Required when using Cilium NetworkPolicy enforcement.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center py-8 text-muted-foreground">
-              Network security configuration will be implemented in the next iteration.
+            <Alert>
+              <Network className="h-4 w-4" />
+              <AlertDescription>
+                Egress rules control which external endpoints this model can access. 
+                Only configure rules for external APIs - cluster-internal communication is always allowed.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Egress Rules</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newRule = {
+                      description: "",
+                      to: { dns: [], cidr: "" },
+                      ports: [443]
+                    }
+                    const newEgress = addEgressRule(formData.egress || [], newRule)
+                    setFormData(prev => ({ ...prev, egress: newEgress }))
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rule
+                </Button>
+              </div>
+
+              {(formData.egress || []).length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No egress rules configured</p>
+                  <p className="text-sm">Click "Add Rule" to configure external access</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(formData.egress || []).map((rule, index) => (
+                    <Card key={index} className="border-l-4 border-l-blue-500">
+                      <CardContent className="pt-4">
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2 flex-1">
+                              <Label htmlFor={`rule-description-${index}`}>Description</Label>
+                              <Input
+                                id={`rule-description-${index}`}
+                                value={rule.description}
+                                onChange={(e) => {
+                                  const newEgress = [...(formData.egress || [])]
+                                  newEgress[index] = { ...newEgress[index], description: e.target.value }
+                                  setFormData(prev => ({ ...prev, egress: newEgress }))
+                                }}
+                                placeholder="e.g., Allow OpenAI API access"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="ml-2"
+                              onClick={() => {
+                                const newEgress = removeEgressRule(formData.egress || [], index)
+                                setFormData(prev => ({ ...prev, egress: newEgress }))
+                              }}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor={`rule-dns-${index}`}>DNS Names</Label>
+                              <Input
+                                id={`rule-dns-${index}`}
+                                value={(rule.to.dns || []).join(', ')}
+                                onChange={(e) => {
+                                  const dnsNames = e.target.value
+                                    .split(',')
+                                    .map(name => name.trim())
+                                    .filter(name => name.length > 0)
+                                  const newEgress = [...(formData.egress || [])]
+                                  newEgress[index] = { 
+                                    ...newEgress[index], 
+                                    to: { ...newEgress[index].to, dns: dnsNames }
+                                  }
+                                  setFormData(prev => ({ ...prev, egress: newEgress }))
+                                }}
+                                placeholder="api.openai.com, *.azure.com"
+                                className="font-mono"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Comma-separated. Use * for wildcards.
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`rule-cidr-${index}`}>CIDR Block</Label>
+                              <Input
+                                id={`rule-cidr-${index}`}
+                                value={rule.to.cidr || ''}
+                                onChange={(e) => {
+                                  const newEgress = [...(formData.egress || [])]
+                                  newEgress[index] = { 
+                                    ...newEgress[index], 
+                                    to: { ...newEgress[index].to, cidr: e.target.value }
+                                  }
+                                  setFormData(prev => ({ ...prev, egress: newEgress }))
+                                }}
+                                placeholder="192.168.1.0/24"
+                                className="font-mono"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                For local networks. Use DNS for cloud APIs.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`rule-ports-${index}`}>Ports</Label>
+                            <Input
+                              id={`rule-ports-${index}`}
+                              value={(rule.ports || []).join(', ')}
+                              onChange={(e) => {
+                                const ports = e.target.value
+                                  .split(',')
+                                  .map(port => parseInt(port.trim()))
+                                  .filter(port => !isNaN(port) && port > 0 && port < 65536)
+                                const newEgress = [...(formData.egress || [])]
+                                newEgress[index] = { ...newEgress[index], ports }
+                                setFormData(prev => ({ ...prev, egress: newEgress }))
+                              }}
+                              placeholder="443, 80"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Comma-separated port numbers. Use 443 for HTTPS, 80 for HTTP.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <Separator />
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Common Patterns</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const openaiRule = {
+                          description: "Allow OpenAI API access",
+                          to: { dns: ["api.openai.com"] },
+                          ports: [443]
+                        }
+                        const newEgress = addEgressRule(formData.egress || [], openaiRule)
+                        setFormData(prev => ({ ...prev, egress: newEgress }))
+                      }}
+                    >
+                      + OpenAI
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const anthropicRule = {
+                          description: "Allow Anthropic API access",
+                          to: { dns: ["api.anthropic.com"] },
+                          ports: [443]
+                        }
+                        const newEgress = addEgressRule(formData.egress || [], anthropicRule)
+                        setFormData(prev => ({ ...prev, egress: newEgress }))
+                      }}
+                    >
+                      + Anthropic
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const azureRule = {
+                          description: "Allow Azure OpenAI API access",
+                          to: { dns: ["*.openai.azure.com"] },
+                          ports: [443]
+                        }
+                        const newEgress = addEgressRule(formData.egress || [], azureRule)
+                        setFormData(prev => ({ ...prev, egress: newEgress }))
+                      }}
+                    >
+                      + Azure OpenAI
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const bedrockRule = {
+                          description: "Allow AWS Bedrock API access",
+                          to: { dns: ["bedrock-runtime.*.amazonaws.com"] },
+                          ports: [443]
+                        }
+                        const newEgress = addEgressRule(formData.egress || [], bedrockRule)
+                        setFormData(prev => ({ ...prev, egress: newEgress }))
+                      }}
+                    >
+                      + AWS Bedrock
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

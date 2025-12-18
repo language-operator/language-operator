@@ -518,13 +518,24 @@ class KubernetesClient {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
+    
+    // Create a merge patch for the spec field only (CRDs don't support strategic merge)
+    const patch = {
+      spec: spec.spec
+    }
+    
     return await this.customObjectsApi.patchNamespacedCustomObject({
       group: 'langop.io',
       version: 'v1alpha1',
       namespace,
       plural: 'languagemodels',
       name,
-      body: spec,
+      body: patch,
+      options: {
+        headers: {
+          'Content-Type': 'application/merge-patch+json'
+        }
+      }
     })
   }
 

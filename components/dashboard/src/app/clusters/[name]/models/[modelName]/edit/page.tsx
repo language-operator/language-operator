@@ -100,9 +100,12 @@ export default function ClusterEditModelPage() {
               backoffMultiplier: formData.retryBackoffMultiplier,
               retryableStatusCodes: formData.retryableStatusCodes
             },
-            security: {
-              egress: formData.egress
-            },
+            egress: formData.egress?.map(rule => ({
+              ...rule,
+              ports: rule.ports?.map(port => 
+                typeof port === 'number' ? { port, protocol: 'TCP' } : port
+              )
+            })),
             regions: formData.regions,
             fallbacks: formData.fallbacks
           },
@@ -178,7 +181,12 @@ export default function ClusterEditModelPage() {
     retryMaxBackoff: model.spec.retryPolicy?.maxBackoff || '30s',
     retryBackoffMultiplier: model.spec.retryPolicy?.backoffMultiplier || 2,
     retryableStatusCodes: model.spec.retryPolicy?.retryableStatusCodes || [429, 500, 502, 503, 504],
-    egress: model.spec.security?.egress || [],
+    egress: model.spec.egress?.map(rule => ({
+      ...rule,
+      ports: rule.ports?.map(port => 
+        typeof port === 'object' && port.port ? port.port : port
+      )
+    })) || [],
     
     // Note: We don't populate apiKey for security reasons
   } : undefined
