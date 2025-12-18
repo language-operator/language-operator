@@ -40,7 +40,7 @@ rules:
 # Events access for audit logging and status information
 - apiGroups: [""]
   resources: ["events"]
-  verbs: ["get", "list", "create"]
+  verbs: ["get", "list", "watch", "create"]
 
 # Job and CronJob access for manual agent execution
 - apiGroups: ["batch"]
