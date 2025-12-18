@@ -35,8 +35,12 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          echo "Database already initialized, skipping migration..."
-          exit 0
+          echo "Running database migrations..."
+          echo "Generating Prisma client..."
+          npx prisma generate
+          echo "Deploying migrations..."
+          npx prisma migrate deploy
+          echo "Database migrations completed successfully"
         env:
         - name: DATABASE_URL
           valueFrom:
