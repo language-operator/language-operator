@@ -33,8 +33,8 @@ services:
       NODE_ENV: "development"
       # Kubeconfig path for K3s cluster
       KUBECONFIG: "/root/.kube/config"
-      # Kubernetes configuration (optional - for connecting to real cluster)
-      # KUBERNETES_SERVER_URL: "https://your-cluster-url"
+      # Kubernetes configuration (for connecting to real cluster)
+      KUBERNETES_SERVER_URL: "https://dl4:6443"
       # KUBERNETES_TOKEN: "your-service-account-token"
       # KUBERNETES_SKIP_TLS_VERIFY: "false"
     depends_on:

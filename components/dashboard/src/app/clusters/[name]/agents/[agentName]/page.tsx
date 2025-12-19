@@ -1329,7 +1329,7 @@ export default function ClusterAgentDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="mb-4">
+          <TabsList className="mb-0">
             <TabsTrigger value="overview">
               <Home className="w-4 h-4 mr-2" />
               Overview
