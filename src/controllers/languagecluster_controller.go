@@ -25,10 +25,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -54,6 +57,7 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -136,6 +140,20 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			"RBACError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after RBAC error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	// Ensure NetworkPolicy exists for agent communication
+	if err := r.reconcileNetworkPolicy(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile NetworkPolicy")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+			"NetworkPolicyError", err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after NetworkPolicy error")
 		}
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -263,6 +281,160 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	}
 
 	log.V(1).Info("Successfully reconciled agent RBAC", "cluster", cluster.Name, "namespace", namespace)
+	return nil
+}
+
+// reconcileNetworkPolicy ensures the NetworkPolicy for agent communication exists
+func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	namespace := cluster.Namespace
+
+	log.V(1).Info("Reconciling NetworkPolicy", "cluster", cluster.Name, "namespace", namespace)
+
+	// Build egress rules starting with K8s API server access
+	tcpProtocol := corev1.ProtocolTCP
+	egressRules := []networkingv1.NetworkPolicyEgressRule{
+		{
+			// Allow access to Kubernetes API server via service discovery (kubernetes.default.svc)
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					// Target the default namespace where the kubernetes service exists
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": "default",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &tcpProtocol,
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
+				},
+			},
+		},
+	}
+
+	// Add user-defined network policies
+	for _, rule := range cluster.Spec.NetworkPolicies {
+		if rule.To != nil {
+			egressRule := networkingv1.NetworkPolicyEgressRule{}
+
+			// Convert langop NetworkPeer to k8s NetworkPolicyPeer
+			peer := networkingv1.NetworkPolicyPeer{}
+
+			if rule.To.CIDR != "" {
+				peer.IPBlock = &networkingv1.IPBlock{
+					CIDR: rule.To.CIDR,
+				}
+			}
+
+			if rule.To.DNS != nil && len(rule.To.DNS) > 0 {
+				// For DNS rules, we need to resolve to CIDR blocks or use FQDN policies
+				// For now, we'll add a permissive rule for DNS traffic
+				peer.IPBlock = &networkingv1.IPBlock{
+					CIDR: "0.0.0.0/0",
+				}
+			}
+
+			if rule.To.Service != nil {
+				serviceNamespace := rule.To.Service.Namespace
+				if serviceNamespace == "" {
+					serviceNamespace = namespace
+				}
+				peer.NamespaceSelector = &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"name": serviceNamespace,
+					},
+				}
+			}
+
+			if rule.To.Group != "" {
+				peer.PodSelector = &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"langop.io/group": rule.To.Group,
+					},
+				}
+			}
+
+			if rule.To.PodSelector != nil {
+				peer.PodSelector = rule.To.PodSelector
+			}
+
+			if rule.To.NamespaceSelector != nil {
+				peer.NamespaceSelector = rule.To.NamespaceSelector
+			}
+
+			egressRule.To = []networkingv1.NetworkPolicyPeer{peer}
+
+			// Convert ports
+			if len(rule.Ports) > 0 {
+				for _, port := range rule.Ports {
+					protocol := corev1.ProtocolTCP
+					if port.Protocol != "" {
+						protocol = corev1.Protocol(port.Protocol)
+					}
+					egressRule.Ports = append(egressRule.Ports, networkingv1.NetworkPolicyPort{
+						Protocol: &protocol,
+						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+					})
+				}
+			}
+
+			egressRules = append(egressRules, egressRule)
+		}
+	}
+
+	// Create NetworkPolicy
+	networkPolicy := &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-agents", cluster.Name),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       "language-operator",
+				"app.kubernetes.io/managed-by": "language-operator",
+				"app.kubernetes.io/component":  "agent-network-policy",
+				"langop.io/cluster":            cluster.Name,
+			},
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"langop.io/cluster": cluster.Name,
+				},
+			},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
+			},
+			Egress: egressRules,
+		},
+	}
+
+	// Set cluster as owner so NetworkPolicy gets cleaned up when cluster is deleted
+	if err := controllerutil.SetControllerReference(cluster, networkPolicy, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference for NetworkPolicy: %w", err)
+	}
+
+	// Create or update the NetworkPolicy
+	if err := r.Create(ctx, networkPolicy); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("failed to create NetworkPolicy: %w", err)
+		}
+		// NetworkPolicy already exists, update it if needed
+		existingNetworkPolicy := &networkingv1.NetworkPolicy{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existingNetworkPolicy); err != nil {
+			return fmt.Errorf("failed to get existing NetworkPolicy: %w", err)
+		}
+		existingNetworkPolicy.Spec = networkPolicy.Spec
+		if err := r.Update(ctx, existingNetworkPolicy); err != nil {
+			return fmt.Errorf("failed to update NetworkPolicy: %w", err)
+		}
+		log.V(1).Info("Updated existing NetworkPolicy", "namespace", namespace)
+	} else {
+		log.Info("Created NetworkPolicy", "namespace", namespace, "name", networkPolicy.Name)
+	}
+
+	log.V(1).Info("Successfully reconciled NetworkPolicy", "cluster", cluster.Name, "namespace", namespace)
 	return nil
 }
 

@@ -36,6 +36,10 @@ type LanguageClusterSpec struct {
 	// IngressConfig defines ingress/gateway configuration for the cluster
 	// +optional
 	IngressConfig *IngressConfig `json:"ingressConfig,omitempty"`
+
+	// NetworkPolicies defines egress network policies for agents in this cluster
+	// +optional
+	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 }
 
 // IngressConfig defines ingress/gateway configuration
