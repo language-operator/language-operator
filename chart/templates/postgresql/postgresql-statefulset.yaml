@@ -1,3 +1,4 @@
+{{- if .Values.dashboard.enabled }}
 {{- if .Values.dashboard.postgresql.enabled }}
 apiVersion: v1
 kind: Service
@@ -103,4 +104,5 @@ spec:
         - name: data
           emptyDir: {}
   {{- end }}
+{{- end }}
 {{- end }}

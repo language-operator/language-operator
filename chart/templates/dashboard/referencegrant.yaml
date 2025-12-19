@@ -1,3 +1,4 @@
+{{- if .Values.dashboard.enabled }}
 {{- if and .Values.dashboard.gateway.enabled .Values.dashboard.gateway.gatewayNamespace (ne .Values.dashboard.gateway.gatewayNamespace .Release.Namespace) -}}
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
@@ -15,4 +16,5 @@ spec:
   - group: ""
     kind: Service
     name: {{ include "dashboard.fullname" . }}
+{{- end }}
 {{- end }}
