@@ -1690,8 +1690,21 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 			},
 		}
 
-		// Add resource requirements if specified
-		container.Resources = tool.Spec.Resources
+		// Add resource requirements if specified, otherwise use sensible defaults for tool containers
+		if tool.Spec.Resources.Requests == nil && tool.Spec.Resources.Limits == nil {
+			container.Resources = corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+			}
+		} else {
+			container.Resources = tool.Spec.Resources
+		}
 
 		// Mount workspace if agent has workspace enabled
 		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
