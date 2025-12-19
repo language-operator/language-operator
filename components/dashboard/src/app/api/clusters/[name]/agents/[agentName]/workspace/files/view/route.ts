@@ -146,6 +146,10 @@ function getLanguageFromExtension(extension?: string): string {
     'dockerfile': 'dockerfile',
     'makefile': 'makefile',
     'gitignore': 'gitignore',
+    'bas': 'basic',
+    'basic': 'basic',
+    'qb': 'basic',
+    'vb': 'vbnet',
   }
   
   return languageMap[extension.toLowerCase()] || 'text'
@@ -181,6 +185,10 @@ function getMimeTypeFromExtension(extension?: string): string {
     'sql': 'text/x-sql',
     'sh': 'text/x-shellscript',
     'bash': 'text/x-shellscript',
+    'bas': 'text/x-basic',
+    'basic': 'text/x-basic',
+    'qb': 'text/x-basic',
+    'vb': 'text/vb',
   }
   
   return mimeTypeMap[extension.toLowerCase()] || 'text/plain'

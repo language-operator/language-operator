@@ -63,6 +63,7 @@ export const VIEWABLE_FILE_EXTENSIONS = [
   '.jsx', '.tsx', '.py', '.rb', '.go', '.rs', '.java', '.c', '.cpp', '.h', '.hpp',
   '.sh', '.bash', '.zsh', '.fish', '.sql', '.toml', '.ini', '.conf', '.cfg',
   '.log', '.csv', '.env', '.gitignore', '.dockerignore', '.makefile', '.dockerfile',
+  '.bas', '.basic', '.qb', '.vb',
 ] as const
 
 // Files to hide from workspace browser for security
