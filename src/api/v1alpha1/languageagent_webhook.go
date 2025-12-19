@@ -23,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/robfig/cron/v3"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,6 +46,20 @@ func (a *LanguageAgent) Default() {
 			Size:       "10Gi",
 			AccessMode: "ReadWriteOnce",
 			MountPath:  "/workspace",
+		}
+	}
+
+	// Default resources if not specified
+	if a.Spec.Resources.Requests == nil && a.Spec.Resources.Limits == nil {
+		a.Spec.Resources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1000m"),
+				corev1.ResourceMemory: resource.MustParse("2Gi"),
+			},
 		}
 	}
 }
