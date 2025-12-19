@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { ClusterStatusBadge } from '@/components/ui/resource-status-badge'
 import { ClusterEventsActivity } from '@/components/ui/events-activity'
+import { LoadingBoundary, ClusterDashboardSkeleton } from '@/components/ui/loading-boundary'
 import { 
   Bot, 
   Cpu, 
@@ -43,7 +44,7 @@ export default function ClusterDashboard() {
   const clusterName = params?.name as string
   
   const { data: cluster, isLoading, error } = useCluster(clusterName)
-  const { counts, loading: countsLoading } = useResourceCounts(clusterName)
+  const { counts, loading: countsLoading, isStale } = useResourceCounts(clusterName)
 
   if (isLoading) {
     return (
@@ -73,22 +74,27 @@ export default function ClusterDashboard() {
 
   return (
     <AuthenticatedLayout>
-      <div className="space-y-6">
-        {/* Cluster Header */}
-        <ResourceHeader
-          icon={BarChart3}
-          iconColor="text-blue-500"
-          title={cluster.metadata?.name || ''}
-          subtitle="LanguageCluster"
-          actions={
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/clusters/${clusterName}/edit`}>
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Link>
-            </Button>
-          }
-        />
+      <LoadingBoundary 
+        fallback={<ClusterDashboardSkeleton />}
+        timeout={15000}
+        onTimeout={() => console.warn('Cluster dashboard taking longer than expected to load')}
+      >
+        <div className="space-y-6">
+          {/* Cluster Header */}
+          <ResourceHeader
+            icon={BarChart3}
+            iconColor="text-blue-500"
+            title={cluster.metadata?.name || ''}
+            subtitle="LanguageCluster"
+            actions={
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/clusters/${clusterName}/edit`}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Link>
+              </Button>
+            }
+          />
 
         {/* Cluster Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,8 +198,15 @@ export default function ClusterDashboard() {
                 <Cpu className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {countsLoading ? '-' : counts?.models || 0}
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {countsLoading ? '-' : counts?.models || 0}
+                  </div>
+                  {isStale && (
+                    <div className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                      Updating...
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   LanguageModels
@@ -208,8 +221,15 @@ export default function ClusterDashboard() {
                 <Wrench className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {countsLoading ? '-' : counts?.tools || 0}
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {countsLoading ? '-' : counts?.tools || 0}
+                  </div>
+                  {isStale && (
+                    <div className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                      Updating...
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   LanguageTools
@@ -224,8 +244,15 @@ export default function ClusterDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {countsLoading ? '-' : counts?.personas || 0}
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {countsLoading ? '-' : counts?.personas || 0}
+                  </div>
+                  {isStale && (
+                    <div className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                      Updating...
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   LanguagePersonas
@@ -240,8 +267,15 @@ export default function ClusterDashboard() {
                 <Bot className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {countsLoading ? '-' : counts?.agents || 0}
+                <div className="flex items-center justify-between">
+                  <div className="text-2xl font-bold">
+                    {countsLoading ? '-' : counts?.agents || 0}
+                  </div>
+                  {isStale && (
+                    <div className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded">
+                      Updating...
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   LanguageAgents
@@ -251,12 +285,13 @@ export default function ClusterDashboard() {
           </Link>
         </div>
 
-        {/* Cluster Events */}
-        <ClusterEventsActivity 
-          clusterName={clusterName}
-          limit={10}
-        />
-      </div>
+          {/* Cluster Events */}
+          <ClusterEventsActivity 
+            clusterName={clusterName}
+            limit={10}
+          />
+        </div>
+      </LoadingBoundary>
     </AuthenticatedLayout>
   )
 }

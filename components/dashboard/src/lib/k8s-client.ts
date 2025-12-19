@@ -1,11 +1,17 @@
 import * as k8s from '@kubernetes/client-node'
 
+interface RequestOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
 class KubernetesClient {
   private static instance: KubernetesClient
   private kc: k8s.KubeConfig
   private coreV1Api: k8s.CoreV1Api | null
   private customObjectsApi: k8s.CustomObjectsApi | null
   private batchV1Api: k8s.BatchV1Api | null
+  private readonly DEFAULT_TIMEOUT = 10000 // 10 seconds
 
   private constructor() {
     this.kc = new k8s.KubeConfig()
@@ -59,6 +65,34 @@ class KubernetesClient {
       KubernetesClient.instance = new KubernetesClient()
     }
     return KubernetesClient.instance
+  }
+
+  /**
+   * Wrap Kubernetes API calls with timeout and cancellation support
+   */
+  private async withTimeout<T>(
+    operation: () => Promise<T>,
+    options: RequestOptions = {}
+  ): Promise<T> {
+    const timeout = options.timeout || this.DEFAULT_TIMEOUT
+    
+    return Promise.race([
+      operation(),
+      new Promise<never>((_, reject) => {
+        const timeoutId = setTimeout(
+          () => reject(new Error(`Operation timed out after ${timeout}ms`)),
+          timeout
+        )
+        
+        // Cancel timeout if request is aborted
+        if (options.signal) {
+          options.signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId)
+            reject(new Error('Request was cancelled'))
+          })
+        }
+      })
+    ])
   }
 
 
@@ -399,18 +433,21 @@ class KubernetesClient {
     fieldSelector?: string
     limit?: number
     continue?: string
-  }) {
+  }, requestOptions: RequestOptions = {}) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
     
-    return await this.customObjectsApi.listNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languageagents',
-      ...options,
-    })
+    return await this.withTimeout(
+      () => this.customObjectsApi!.listNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageagents',
+        ...options,
+      }),
+      requestOptions
+    )
   }
 
   async getLanguageAgent(namespace: string, name: string) {
@@ -474,18 +511,21 @@ class KubernetesClient {
     fieldSelector?: string
     limit?: number
     continue?: string
-  }) {
+  }, requestOptions: RequestOptions = {}) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
     
-    return await this.customObjectsApi.listNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languagemodels',
-      ...options,
-    })
+    return await this.withTimeout(
+      () => this.customObjectsApi!.listNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagemodels',
+        ...options,
+      }),
+      requestOptions
+    )
   }
 
   async getLanguageModel(namespace: string, name: string) {
@@ -576,18 +616,21 @@ class KubernetesClient {
     fieldSelector?: string
     limit?: number
     continue?: string
-  }) {
+  }, requestOptions: RequestOptions = {}) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
     
-    return await this.customObjectsApi.listNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languagetools',
-      ...options,
-    })
+    return await this.withTimeout(
+      () => this.customObjectsApi!.listNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagetools',
+        ...options,
+      }),
+      requestOptions
+    )
   }
 
   async getLanguageTool(namespace: string, name: string) {
@@ -650,18 +693,21 @@ class KubernetesClient {
     fieldSelector?: string
     limit?: number
     continue?: string
-  }) {
+  }, requestOptions: RequestOptions = {}) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
     
-    return await this.customObjectsApi.listNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languagepersonas',
-      ...options,
-    })
+    return await this.withTimeout(
+      () => this.customObjectsApi!.listNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagepersonas',
+        ...options,
+      }),
+      requestOptions
+    )
   }
 
   async getLanguagePersona(namespace: string, name: string) {
@@ -746,17 +792,20 @@ class KubernetesClient {
     })
   }
 
-  async getLanguageCluster(namespace: string, name: string) {
+  async getLanguageCluster(namespace: string, name: string, options: RequestOptions = {}) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
     }
-    return await this.customObjectsApi.getNamespacedCustomObject({
-      group: 'langop.io',
-      version: 'v1alpha1',
-      namespace,
-      plural: 'languageclusters',
-      name,
-    })
+    return await this.withTimeout(
+      () => this.customObjectsApi!.getNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languageclusters',
+        name,
+      }),
+      options
+    )
   }
 
   async createLanguageCluster(namespace: string, spec: any) {
