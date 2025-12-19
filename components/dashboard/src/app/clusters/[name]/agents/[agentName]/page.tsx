@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
   Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, MoreVertical, FileCode, Copy, Check, FolderOpen,
-  Home, ScrollText, BarChart3, Play
+  Home, ScrollText, BarChart3, Play, ArrowDown, ChevronDown
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -605,7 +605,10 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   const [pods, setPods] = useState<any[]>([])
   const [selectedPod, setSelectedPod] = useState<string>('')
   const [podsLoading, setPodsLoading] = useState(false)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [userScrolledUp, setUserScrolledUp] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const logsContainerRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   
   // Memoize ANSI converter for performance
@@ -617,11 +620,35 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
 
   const scrollToBottom = () => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setIsAtBottom(true)
+    setUserScrolledUp(false)
   }
 
+  const checkScrollPosition = () => {
+    if (logsContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 10
+      setIsAtBottom(isNearBottom)
+    }
+  }
+
+  const handleScroll = () => {
+    checkScrollPosition()
+    if (logsContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 10
+      if (!isNearBottom) {
+        setUserScrolledUp(true)
+      }
+    }
+  }
+
+  // Only auto-scroll if user is at bottom and hasn't scrolled up
   useEffect(() => {
-    scrollToBottom()
-  }, [logs])
+    if (isAtBottom && !userScrolledUp) {
+      scrollToBottom()
+    }
+  }, [logs, isAtBottom, userScrolledUp])
 
   useEffect(() => {
     fetchPods()
@@ -636,6 +663,9 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   useEffect(() => {
     // Fetch logs when selected pod changes
     if (selectedPod) {
+      // Reset scroll state when switching pods
+      setIsAtBottom(true)
+      setUserScrolledUp(false)
       fetchInitialLogs()
     }
   }, [selectedPod])
@@ -682,6 +712,11 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       const data = await response.json()
       const logLines = data.logs ? data.logs.split('\n').filter((line: string) => line.trim()) : []
       setLogs(logLines)
+      
+      // Check scroll position after logs are loaded
+      setTimeout(() => {
+        checkScrollPosition()
+      }, 100)
     } catch (err) {
       console.error('Error fetching initial logs:', err)
       setError(err instanceof Error ? err.message : 'Failed to load logs')
@@ -730,6 +765,8 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
 
   const clearLogs = () => {
     setLogs([])
+    setIsAtBottom(true)
+    setUserScrolledUp(false)
   }
 
   if (loading) {
@@ -748,7 +785,7 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
   }
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="space-y-6">
       {/* Log Controls */}
       <Card className="flex-shrink-0">
         <CardHeader>
@@ -823,6 +860,17 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {!isAtBottom && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={scrollToBottom}
+                  className="animate-pulse"
+                >
+                  <ChevronDown className="h-4 w-4 mr-1" />
+                  Scroll to Bottom
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -873,11 +921,15 @@ function AgentLogs({ agent, clusterName }: AgentLogsProps) {
       )}
 
       {/* Log Output */}
-      <Card className="flex-1 flex flex-col min-h-0">
-        <CardContent className="p-0 flex-1 flex flex-col">
-          <div className="bg-black text-white font-mono text-sm flex-1 overflow-y-auto p-4">
+      <Card>
+        <CardContent className="p-0">
+          <div 
+            ref={logsContainerRef}
+            className="bg-black text-white font-mono text-sm max-h-[60vh] overflow-y-auto p-4"
+            onScroll={handleScroll}
+          >
             {logs.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-32 text-gray-500">
                 No logs available
               </div>
             ) : (
@@ -1210,7 +1262,7 @@ export default function ClusterAgentDetailPage() {
 
   return (
     <AuthenticatedLayout>
-      <div className="flex flex-col h-full space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -1276,7 +1328,7 @@ export default function ClusterAgentDetailPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="mb-4">
             <TabsTrigger value="overview">
               <Home className="w-4 h-4 mr-2" />
@@ -1321,7 +1373,7 @@ export default function ClusterAgentDetailPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="logs" className="flex-1 flex flex-col">
+          <TabsContent value="logs" className="space-y-6">
             <AgentLogs agent={agent} clusterName={clusterName} />
           </TabsContent>
         </Tabs>
