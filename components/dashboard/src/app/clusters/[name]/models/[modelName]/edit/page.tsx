@@ -100,9 +100,9 @@ export default function ClusterEditModelPage() {
               backoffMultiplier: formData.retryBackoffMultiplier,
               retryableStatusCodes: formData.retryableStatusCodes
             },
-            egress: formData.egress?.map(rule => ({
+            egress: formData.egress?.map((rule: any) => ({
               ...rule,
-              ports: rule.ports?.map(port => 
+              ports: rule.ports?.map((port: any) => 
                 typeof port === 'number' ? { port, protocol: 'TCP' } : port
               )
             })),
@@ -181,9 +181,9 @@ export default function ClusterEditModelPage() {
     retryMaxBackoff: model.spec.retryPolicy?.maxBackoff || '30s',
     retryBackoffMultiplier: model.spec.retryPolicy?.backoffMultiplier || 2,
     retryableStatusCodes: model.spec.retryPolicy?.retryableStatusCodes || [429, 500, 502, 503, 504],
-    egress: model.spec.egress?.map(rule => ({
+    egress: model.spec.egress?.map((rule: any) => ({
       ...rule,
-      ports: rule.ports?.map(port => 
+      ports: rule.ports?.map((port: any) => 
         typeof port === 'object' && port.port ? port.port : port
       )
     })) || [],

@@ -29,7 +29,7 @@ const updateModelSchema = z.object({
       frequencyPenalty: z.number().optional(),
       presencePenalty: z.number().optional(),
       stopSequences: z.array(z.string()).optional(),
-      additionalParameters: z.record(z.any()).optional(),
+      additionalParameters: z.record(z.string(), z.any()).optional(),
     }).optional(),
     contextWindow: z.number().optional(),
     cost: z.object({

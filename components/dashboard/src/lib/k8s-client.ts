@@ -531,11 +531,6 @@ class KubernetesClient {
       plural: 'languagemodels',
       name,
       body: patch,
-      options: {
-        headers: {
-          'Content-Type': 'application/merge-patch+json'
-        }
-      }
     })
   }
 
