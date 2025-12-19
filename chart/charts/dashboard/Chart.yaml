@@ -1,6 +1,0 @@
-apiVersion: v2
-name: dashboard
-description: Language Operator Web Dashboard
-type: application
-version: 0.1.15
-appVersion: "0.1.1"

@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "dashboard.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
+  {{- if not .Values.dashboard.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
@@ -30,8 +30,8 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
       - name: db-migrate
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
         command: ['sh', '-c']
         args:
         - |
@@ -47,7 +47,7 @@ spec:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: DATABASE_URL
-        {{- if not .Values.externalDatabase.enabled }}
+        {{- if not .Values.dashboard.externalDatabase.enabled }}
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -58,8 +58,8 @@ spec:
       - name: {{ .Chart.Name }}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 12 }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
         ports:
         - name: http
           containerPort: 3000
@@ -74,7 +74,7 @@ spec:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: DATABASE_URL
-        {{- if not .Values.externalDatabase.enabled }}
+        {{- if not .Values.dashboard.externalDatabase.enabled }}
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -82,13 +82,13 @@ spec:
               key: password
         {{- end }}
         - name: NEXTAUTH_URL
-          value: {{ .Values.nextAuth.url | default (printf "http://%s" (index .Values.ingress.hosts 0).host) | quote }}
+          value: {{ .Values.dashboard.nextAuth.url | default (printf "http://%s" (index .Values.dashboard.ingress.hosts 0).host) | quote }}
         - name: NEXTAUTH_SECRET
           valueFrom:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: NEXTAUTH_SECRET
-        {{- if .Values.oauth.google.clientId }}
+        {{- if .Values.dashboard.oauth.google.clientId }}
         - name: GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:
@@ -100,7 +100,7 @@ spec:
               name: {{ include "dashboard.fullname" . }}
               key: GOOGLE_CLIENT_SECRET
         {{- end }}
-        {{- if .Values.oauth.github.clientId }}
+        {{- if .Values.dashboard.oauth.github.clientId }}
         - name: GITHUB_CLIENT_ID
           valueFrom:
             secretKeyRef:
@@ -113,13 +113,13 @@ spec:
               key: GITHUB_CLIENT_SECRET
         {{- end }}
         - name: NEXT_PUBLIC_SAAS_MODE
-          value: {{ .Values.features.saasMode | quote }}
+          value: {{ .Values.dashboard.features.saasMode | quote }}
         - name: NEXT_PUBLIC_EMAIL_AUTH_ENABLED
-          value: {{ .Values.features.emailAuth | quote }}
+          value: {{ .Values.dashboard.features.emailAuth | quote }}
         - name: NEXT_PUBLIC_BILLING_ENABLED
-          value: {{ .Values.features.billing | quote }}
+          value: {{ .Values.dashboard.features.billing | quote }}
         - name: NEXT_PUBLIC_INVITES_ENABLED
-          value: {{ .Values.features.invites | quote }}
+          value: {{ .Values.dashboard.features.invites | quote }}
         livenessProbe:
           httpGet:
             path: /

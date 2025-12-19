@@ -1,4 +1,4 @@
-{{- if and .Values.gateway.enabled .Values.gateway.gatewayNamespace (ne .Values.gateway.gatewayNamespace .Release.Namespace) -}}
+{{- if and .Values.dashboard.gateway.enabled .Values.dashboard.gateway.gatewayNamespace (ne .Values.dashboard.gateway.gatewayNamespace .Release.Namespace) -}}
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -10,7 +10,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: {{ .Values.gateway.gatewayNamespace }}
+    namespace: {{ .Values.dashboard.gateway.gatewayNamespace }}
   to:
   - group: ""
     kind: Service

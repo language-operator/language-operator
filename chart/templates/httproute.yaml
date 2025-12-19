@@ -1,0 +1,30 @@
+{{- if .Values.dashboard.gateway.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "dashboard.fullname" . }}
+  {{- if and .Values.dashboard.gateway.gatewayNamespace (ne .Values.dashboard.gateway.gatewayNamespace .Release.Namespace) }}
+  namespace: {{ .Values.dashboard.gateway.gatewayNamespace }}
+  {{- end }}
+  labels:
+    {{- include "dashboard.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+  - name: {{ .Values.dashboard.gateway.gatewayName }}
+    {{- if .Values.dashboard.gateway.gatewayNamespace }}
+    namespace: {{ .Values.dashboard.gateway.gatewayNamespace }}
+    {{- end }}
+  hostnames:
+  - {{ .Values.dashboard.gateway.hostname | quote }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: {{ include "dashboard.fullname" . }}
+      port: {{ .Values.dashboard.service.port }}
+      {{- if and .Values.dashboard.gateway.gatewayNamespace (ne .Values.dashboard.gateway.gatewayNamespace .Release.Namespace) }}
+      namespace: {{ .Release.Namespace }}
+      {{- end }}
+{{- end }}

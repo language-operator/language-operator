@@ -1,4 +1,4 @@
-{{- if .Values.networkPolicy.enabled }}
+{{- if .Values.dashboard.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -33,12 +33,12 @@ spec:
   
   # Allow full egress for model discovery (local models, custom endpoints)
   # This enables the dashboard to discover models from any endpoint without NetworkPolicy expertise
-  {{- if .Values.networkPolicy.allowModelDiscovery }}
+  {{- if .Values.dashboard.networkPolicy.allowModelDiscovery }}
   - to: []
     # Allow all protocols and ports for model discovery
   {{- else }}
   # Restrictive mode: only allow specific external access
-  {{- if .Values.networkPolicy.allowExternalHTTPS }}
+  {{- if .Values.dashboard.networkPolicy.allowExternalHTTPS }}
   - to: []
     ports:
     - protocol: TCP
@@ -46,7 +46,7 @@ spec:
   {{- end }}
   
   # Allow external HTTP access (for some APIs that don't use HTTPS)
-  {{- if .Values.networkPolicy.allowExternalHTTP }}
+  {{- if .Values.dashboard.networkPolicy.allowExternalHTTP }}
   - to: []
     ports:
     - protocol: TCP
@@ -55,7 +55,7 @@ spec:
   {{- end }}
   
   # Allow specific CIDR blocks if configured
-  {{- range .Values.networkPolicy.allowedCIDRs }}
+  {{- range .Values.dashboard.networkPolicy.allowedCIDRs }}
   - to:
     - ipBlock:
         cidr: {{ . }}
@@ -67,7 +67,7 @@ spec:
   {{- end }}
   
   # Allow specific provider endpoints if configured
-  {{- range .Values.networkPolicy.allowedEndpoints }}
+  {{- range .Values.dashboard.networkPolicy.allowedEndpoints }}
   - to:
     - ipBlock:
         # Note: In production, these should be resolved to actual IP ranges

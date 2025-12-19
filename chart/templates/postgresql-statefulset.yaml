@@ -1,4 +1,4 @@
-{{- if .Values.postgresql.enabled }}
+{{- if .Values.dashboard.postgresql.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -48,14 +48,14 @@ spec:
               protocol: TCP
           env:
             - name: POSTGRES_USER
-              value: {{ .Values.postgresql.auth.username | quote }}
+              value: {{ .Values.dashboard.postgresql.auth.username | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dashboard.fullname" . }}-postgresql
                   key: password
             - name: POSTGRES_DB
-              value: {{ .Values.postgresql.auth.database | quote }}
+              value: {{ .Values.dashboard.postgresql.auth.database | quote }}
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           livenessProbe:
@@ -63,7 +63,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - pg_isready -U {{ .Values.postgresql.auth.username }}
+                - pg_isready -U {{ .Values.dashboard.postgresql.auth.username }}
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -74,18 +74,18 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - pg_isready -U {{ .Values.postgresql.auth.username }}
+                - pg_isready -U {{ .Values.dashboard.postgresql.auth.username }}
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
             successThreshold: 1
             failureThreshold: 6
           resources:
-            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+            {{- toYaml .Values.dashboard.postgresql.resources | nindent 12 }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-  {{- if .Values.postgresql.persistence.enabled }}
+  {{- if .Values.dashboard.postgresql.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -94,9 +94,9 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: {{ .Values.postgresql.persistence.size }}
-        {{- if .Values.postgresql.persistence.storageClass }}
-        storageClassName: {{ .Values.postgresql.persistence.storageClass }}
+            storage: {{ .Values.dashboard.postgresql.persistence.size }}
+        {{- if .Values.dashboard.postgresql.persistence.storageClass }}
+        storageClassName: {{ .Values.dashboard.postgresql.persistence.storageClass }}
         {{- end }}
   {{- else }}
       volumes:
