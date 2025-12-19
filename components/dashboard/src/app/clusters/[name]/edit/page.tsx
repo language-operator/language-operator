@@ -17,13 +17,41 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { fetchWithOrganization } from '@/lib/api-client'
 import Link from 'next/link'
 
-interface EgressRule {
+interface NetworkRule {
   description?: string
-  dns?: string[]
-  cidr?: string
+  to?: {
+    dns?: string[]
+    cidr?: string
+    group?: string
+    service?: {
+      name: string
+      namespace?: string
+    }
+    namespaceSelector?: {
+      matchLabels: Record<string, string>
+    }
+    podSelector?: {
+      matchLabels: Record<string, string>
+    }
+  }
+  from?: {
+    dns?: string[]
+    cidr?: string
+    group?: string
+    service?: {
+      name: string
+      namespace?: string
+    }
+    namespaceSelector?: {
+      matchLabels: Record<string, string>
+    }
+    podSelector?: {
+      matchLabels: Record<string, string>
+    }
+  }
   ports?: Array<{
     port: number
-    protocol: 'TCP' | 'UDP'
+    protocol: 'TCP' | 'UDP' | 'SCTP'
   }>
 }
 
@@ -39,17 +67,14 @@ interface Cluster {
     ingress?: {
       enabled: boolean
     }
-    networkPolicies?: {
-      enabled: boolean
-      egressRules?: EgressRule[]
-    }
+    networkPolicies?: NetworkRule[]
   }
   status: {
     phase: string
   }
 }
 
-// Form validation schema for network tab
+// Form validation schema for network tab (uses legacy structure for compatibility with ResourceNetworkPolicyForm)
 const networkFormSchema = z.object({
   egressRules: z.array(z.object({
     description: z.string().optional(),
@@ -106,8 +131,14 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
         const data = await response.json()
         setCluster(data.cluster)
         
-        // Initialize network form with existing egress rules
-        const egressRules = data.cluster?.spec?.networkPolicies?.egressRules || []
+        // Initialize network form with existing network policies converted to legacy format
+        const networkPolicies = data.cluster?.spec?.networkPolicies || []
+        const egressRules = networkPolicies.map((rule: NetworkRule) => ({
+          description: rule.description,
+          dns: rule.to?.dns || [],
+          cidr: rule.to?.cidr || '',
+          ports: rule.ports || []
+        }))
         networkForm.reset({ egressRules })
       } catch (err: any) {
         console.error('Error fetching cluster:', err)
@@ -126,8 +157,22 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
     setError('')
 
     try {
-      // Get current network form values
+      // Get current network form values and transform to CRD format
       const networkValues = networkForm.getValues()
+      const networkPolicies = (networkValues.egressRules || []).map(rule => ({
+        description: rule.description,
+        to: {
+          dns: rule.dns && rule.dns.length > 0 ? rule.dns : undefined,
+          cidr: rule.cidr || undefined
+        },
+        ports: rule.ports && rule.ports.length > 0 ? rule.ports.map(port => ({
+          port: port.port,
+          protocol: port.protocol || 'TCP'
+        })) : undefined
+      })).filter(rule => 
+        // Only include rules that have at least one target defined
+        (rule.to?.dns && rule.to.dns.length > 0) || rule.to?.cidr
+      )
       
       const response = await fetchWithOrganization(`/api/clusters/${clusterName}`, {
         method: 'PATCH',
@@ -141,10 +186,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
             ingress: {
               enabled: formData.enableTLS, // Use enableTLS as a proxy for ingress
             },
-            networkPolicies: {
-              enabled: true, // Default to enabled
-              egressRules: networkValues.egressRules || [],
-            },
+            networkPolicies: networkPolicies,
           },
         }),
       })

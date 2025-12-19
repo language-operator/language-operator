@@ -13,18 +13,43 @@ const updateClusterSchema = z.object({
     ingress: z.object({
       enabled: z.boolean()
     }).optional(),
-    networkPolicies: z.object({
-      enabled: z.boolean(),
-      egressRules: z.array(z.object({
-        description: z.string().optional(),
+    networkPolicies: z.array(z.object({
+      description: z.string().optional(),
+      to: z.object({
         dns: z.array(z.string()).optional(),
         cidr: z.string().optional(),
-        ports: z.array(z.object({
-          port: z.number().min(1).max(65535),
-          protocol: z.enum(['TCP', 'UDP'])
-        })).optional()
+        group: z.string().optional(),
+        service: z.object({
+          name: z.string(),
+          namespace: z.string().optional()
+        }).optional(),
+        namespaceSelector: z.object({
+          matchLabels: z.record(z.string())
+        }).optional(),
+        podSelector: z.object({
+          matchLabels: z.record(z.string())
+        }).optional()
+      }).optional(),
+      from: z.object({
+        dns: z.array(z.string()).optional(),
+        cidr: z.string().optional(),
+        group: z.string().optional(),
+        service: z.object({
+          name: z.string(),
+          namespace: z.string().optional()
+        }).optional(),
+        namespaceSelector: z.object({
+          matchLabels: z.record(z.string())
+        }).optional(),
+        podSelector: z.object({
+          matchLabels: z.record(z.string())
+        }).optional()
+      }).optional(),
+      ports: z.array(z.object({
+        port: z.number().min(1).max(65535),
+        protocol: z.enum(['TCP', 'UDP', 'SCTP']).default('TCP')
       })).optional()
-    }).optional()
+    })).optional()
   }).optional()
 })
 

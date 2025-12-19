@@ -821,9 +821,16 @@ class KubernetesClient {
     })
   }
 
-  async updateLanguageCluster(namespace: string, name: string, spec: any) {
+  async updateLanguageCluster(namespace: string, name: string, updatedResource: any) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')
+    }
+    
+    // Ensure the resource has required Kubernetes fields
+    const body = {
+      apiVersion: 'langop.io/v1alpha1',
+      kind: 'LanguageCluster',
+      ...updatedResource
     }
     
     // Use replaceNamespacedCustomObject instead of patch to avoid patch format issues
@@ -833,7 +840,7 @@ class KubernetesClient {
       namespace,
       plural: 'languageclusters',
       name,
-      body: spec,
+      body,
     })
   }
 
