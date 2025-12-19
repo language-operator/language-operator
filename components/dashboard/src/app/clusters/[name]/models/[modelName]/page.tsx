@@ -240,10 +240,10 @@ function ModelDetails({ model }: ModelDetailsProps) {
                 <p className="text-sm">{model.spec.configuration.presencePenalty}</p>
               </div>
             )}
-            {model.spec.timeout && (
+            {(model.spec as any).timeout && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Request Timeout</p>
-                <p className="text-sm">{model.spec.timeout}</p>
+                <p className="text-sm">{(model.spec as any).timeout}</p>
               </div>
             )}
           </div>
@@ -344,28 +344,28 @@ function ModelDetails({ model }: ModelDetailsProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {model.spec.retryPolicy.maxAttempts && (
+              {(model.spec.retryPolicy as any).maxAttempts && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Max Attempts</p>
-                  <p className="text-sm">{model.spec.retryPolicy.maxAttempts}</p>
+                  <p className="text-sm">{(model.spec.retryPolicy as any).maxAttempts}</p>
                 </div>
               )}
-              {model.spec.retryPolicy.initialBackoff && (
+              {(model.spec.retryPolicy as any).initialBackoff && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Initial Backoff</p>
-                  <p className="text-sm">{model.spec.retryPolicy.initialBackoff}</p>
+                  <p className="text-sm">{(model.spec.retryPolicy as any).initialBackoff}</p>
                 </div>
               )}
-              {model.spec.retryPolicy.maxBackoff && (
+              {(model.spec.retryPolicy as any).maxBackoff && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Max Backoff</p>
-                  <p className="text-sm">{model.spec.retryPolicy.maxBackoff}</p>
+                  <p className="text-sm">{(model.spec.retryPolicy as any).maxBackoff}</p>
                 </div>
               )}
-              {model.spec.retryPolicy.backoffMultiplier && (
+              {(model.spec.retryPolicy as any).backoffMultiplier && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Backoff Multiplier</p>
-                  <p className="text-sm">{model.spec.retryPolicy.backoffMultiplier}</p>
+                  <p className="text-sm">{(model.spec.retryPolicy as any).backoffMultiplier}</p>
                 </div>
               )}
             </div>

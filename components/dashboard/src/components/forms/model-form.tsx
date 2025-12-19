@@ -696,11 +696,12 @@ export function ModelForm({
   // Tab rendering functions for edit mode
   function renderBasicTab() {
     return (
-      <TabsContent value="basic" className="space-y-6">
+      <TabsContent value="basic" className="space-y-6 mt-3">
+        {/* Basic Information Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
+              <Settings className="h-5 w-5" />
               Basic Information
             </CardTitle>
             <CardDescription>
@@ -758,16 +759,20 @@ export function ModelForm({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">API Key</Label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData(prev => ({ ...prev, apiKey: e.target.value }))}
+                  placeholder="Enter API key (optional)"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Required for external providers
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="timeout">Request Timeout</Label>
                 <Input
@@ -780,24 +785,11 @@ export function ModelForm({
                   Duration format: 30s, 5m, 1h
                 </p>
               </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <Switch
-                  id="enabled"
-                  checked={formData.enabled}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enabled: checked }))}
-                />
-                <Label htmlFor="enabled">Model Enabled</Label>
-              </div>
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
-    )
-  }
 
-  function renderConfigTab() {
-    return (
-      <TabsContent value="config" className="space-y-6">
+        {/* Model Configuration Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -906,9 +898,10 @@ export function ModelForm({
     )
   }
 
+
   function renderCachingTab() {
     return (
-      <TabsContent value="caching" className="space-y-6">
+      <TabsContent value="caching" className="space-y-6 mt-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -916,7 +909,7 @@ export function ModelForm({
               Response Caching
             </CardTitle>
             <CardDescription>
-              Configure response caching to improve performance and reduce costs
+              Enable in-memory caching to improve performance and reduce costs
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -930,49 +923,18 @@ export function ModelForm({
             </div>
 
             {formData.cachingEnabled && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="caching-backend">Backend</Label>
-                  <Select 
-                    value={formData.cachingBackend || 'memory'} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, cachingBackend: value as CachingBackend }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="memory">Memory</SelectItem>
-                      <SelectItem value="redis">Redis</SelectItem>
-                      <SelectItem value="memcached">Memcached</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="caching-ttl">TTL (Time to Live)</Label>
-                    <Input
-                      id="caching-ttl"
-                      value={formData.cachingTtl || '5m'}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cachingTtl: e.target.value }))}
-                      placeholder="5m"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Duration format: 30s, 5m, 1h
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="caching-maxSize">Max Size (MB)</Label>
-                    <Input
-                      id="caching-maxSize"
-                      type="number"
-                      value={formData.cachingMaxSize || 100}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cachingMaxSize: parseInt(e.target.value) || 0 }))}
-                      min="1"
-                    />
-                  </div>
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="caching-ttl">TTL (Time to Live)</Label>
+                <Input
+                  id="caching-ttl"
+                  value={formData.cachingTtl || '5m'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cachingTtl: e.target.value }))}
+                  placeholder="5m"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Duration to keep responses cached (e.g., 30s, 5m, 1h)
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -980,32 +942,10 @@ export function ModelForm({
     )
   }
 
-  function renderLoadBalancingTab() {
-    return (
-      <TabsContent value="loadbalancing" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5" />
-              Load Balancing
-            </CardTitle>
-            <CardDescription>
-              Configure multiple endpoints and load balancing strategies
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center py-8 text-muted-foreground">
-              Load balancing configuration will be implemented in the next iteration.
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    )
-  }
 
   function renderSecurityTab() {
     return (
-      <TabsContent value="security" className="space-y-6">
+      <TabsContent value="security" className="space-y-6 mt-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1240,93 +1180,10 @@ export function ModelForm({
     )
   }
 
-  function renderObservabilityTab() {
-    return (
-      <TabsContent value="observability" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Observability
-            </CardTitle>
-            <CardDescription>
-              Configure logging, metrics, and tracing for monitoring
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium">Logging</h4>
-              <div className="space-y-2">
-                <Label htmlFor="log-level">Log Level</Label>
-                <Select 
-                  value={formData.logLevel || 'info'} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, logLevel: value as LogLevel }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="debug">Debug</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warn">Warn</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="log-requests"
-                    checked={formData.logRequests !== false}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, logRequests: checked }))}
-                  />
-                  <Label htmlFor="log-requests">Log Requests</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="log-responses"
-                    checked={formData.logResponses || false}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, logResponses: checked }))}
-                  />
-                  <Label htmlFor="log-responses">Log Responses</Label>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="metrics-enabled"
-                  checked={formData.metricsEnabled !== false}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, metricsEnabled: checked }))}
-                />
-                <Label htmlFor="metrics-enabled">Enable Metrics Collection</Label>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="tracing-enabled"
-                  checked={formData.tracingEnabled || false}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, tracingEnabled: checked }))}
-                />
-                <Label htmlFor="tracing-enabled">Enable Distributed Tracing</Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    )
-  }
 
   function renderAdvancedTab() {
     return (
-      <TabsContent value="advanced" className="space-y-6">
+      <TabsContent value="advanced" className="space-y-6 mt-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1338,7 +1195,7 @@ export function ModelForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="requestsPerMinute">Requests per Minute</Label>
                 <Input
@@ -1359,16 +1216,6 @@ export function ModelForm({
                   placeholder="10000"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="concurrentRequests">Concurrent Requests</Label>
-                <Input
-                  id="concurrentRequests"
-                  type="number"
-                  value={formData.concurrentRequests || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, concurrentRequests: e.target.value ? parseInt(e.target.value) : undefined }))}
-                  placeholder="10"
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -1380,53 +1227,23 @@ export function ModelForm({
               Retry Policy
             </CardTitle>
             <CardDescription>
-              Configure retry behavior for failed requests
+              Configure maximum retry attempts for failed requests
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxAttempts">Max Attempts</Label>
-                <Input
-                  id="maxAttempts"
-                  type="number"
-                  value={formData.retryMaxAttempts || 3}
-                  onChange={(e) => setFormData(prev => ({ ...prev, retryMaxAttempts: parseInt(e.target.value) || 0 }))}
-                  min="0"
-                  max="10"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="backoffMultiplier">Backoff Multiplier</Label>
-                <Input
-                  id="backoffMultiplier"
-                  type="number"
-                  step="0.1"
-                  value={formData.retryBackoffMultiplier || 2}
-                  onChange={(e) => setFormData(prev => ({ ...prev, retryBackoffMultiplier: parseFloat(e.target.value) || 0 }))}
-                  min="1"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="initialBackoff">Initial Backoff</Label>
-                <Input
-                  id="initialBackoff"
-                  value={formData.retryInitialBackoff || '1s'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, retryInitialBackoff: e.target.value }))}
-                  placeholder="1s"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxBackoff">Max Backoff</Label>
-                <Input
-                  id="maxBackoff"
-                  value={formData.retryMaxBackoff || '30s'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, retryMaxBackoff: e.target.value }))}
-                  placeholder="30s"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="maxAttempts">Max Attempts</Label>
+              <Input
+                id="maxAttempts"
+                type="number"
+                value={formData.retryMaxAttempts || 3}
+                onChange={(e) => setFormData(prev => ({ ...prev, retryMaxAttempts: parseInt(e.target.value) || 0 }))}
+                min="0"
+                max="10"
+              />
+              <p className="text-sm text-muted-foreground">
+                Maximum number of retry attempts (0-10)
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1438,13 +1255,6 @@ export function ModelForm({
   function renderEditForm() {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header */}
-        <div>
-          <h3 className="text-lg font-medium">Edit Model</h3>
-          <p className="text-sm text-muted-foreground">
-            Update model configuration and enterprise features
-          </p>
-        </div>
 
         {/* Error Display */}
         {displayError && (
@@ -1456,30 +1266,18 @@ export function ModelForm({
 
         {/* Tab-based Form */}
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              Basic
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Config
+              Basic
             </TabsTrigger>
             <TabsTrigger value="caching" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Cache
             </TabsTrigger>
-            <TabsTrigger value="loadbalancing" className="flex items-center gap-2">
-              <Server className="h-4 w-4" />
-              Balance
-            </TabsTrigger>
             <TabsTrigger value="security" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Security
-            </TabsTrigger>
-            <TabsTrigger value="observability" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Observe
+              <Network className="h-4 w-4" />
+              Network
             </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -1488,11 +1286,8 @@ export function ModelForm({
           </TabsList>
 
           {renderBasicTab()}
-          {renderConfigTab()}
           {renderCachingTab()}
-          {renderLoadBalancingTab()}
           {renderSecurityTab()}
-          {renderObservabilityTab()}
           {renderAdvancedTab()}
         </Tabs>
 

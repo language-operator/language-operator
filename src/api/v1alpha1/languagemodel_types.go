@@ -70,8 +70,46 @@ type LanguageModelSpec struct {
 	// +optional
 	Regions []RegionSpec `json:"regions,omitempty"`
 
-	// Egress defines external network access rules for this model proxy
-	// By default, model proxies can access all resources within the cluster but no external endpoints
+	// Egress defines external network access rules for this model proxy.
+	// By default, model proxies can access all resources within the cluster but no external endpoints.
+	//
+	// Common patterns:
+	//
+	// # Azure OpenAI Service
+	// egress:
+	// - description: "Allow Azure OpenAI API"
+	//   to:
+	//     dns: ["*.openai.azure.com"]
+	//   ports:
+	//   - port: 443
+	//     protocol: TCP
+	//
+	// # AWS Bedrock
+	// egress:
+	// - description: "Allow AWS Bedrock API"
+	//   to:
+	//     dns: ["bedrock-runtime.*.amazonaws.com"]
+	//   ports:
+	//   - port: 443
+	//     protocol: TCP
+	//
+	// # Corporate proxy
+	// egress:
+	// - description: "Allow corporate proxy"
+	//   to:
+	//     cidr: "10.0.0.0/8"
+	//   ports:
+	//   - port: 8080
+	//     protocol: TCP
+	//
+	// # Local LM Studio
+	// egress:
+	// - description: "Allow LM Studio API"
+	//   to:
+	//     cidr: "192.168.1.0/24"
+	//   ports:
+	//   - port: 1234
+	//     protocol: TCP
 	// +optional
 	Egress []NetworkRule `json:"egress,omitempty"`
 }

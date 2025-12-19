@@ -1,0 +1,72 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: vertex-gemini
+  namespace: langop-system
+spec:
+  # Provider type
+  provider: vertex
+
+  # Model identifier
+  modelName: gemini-1.5-pro
+
+  # Google Cloud endpoint
+  endpoint: https://generativelanguage.googleapis.com
+
+  # Service account key from Kubernetes secret
+  apiKeySecretRef:
+    name: vertex-ai-credentials
+    key: service-account-key
+
+  # Request timeout
+  timeout: "8m"
+
+  # Rate limiting
+  rateLimits:
+    requestsPerMinute: 80
+    tokensPerMinute: 120000
+    concurrentRequests: 10
+
+  # Retry policy
+  retryPolicy:
+    maxAttempts: 3
+    initialBackoff: "1s"
+    maxBackoff: "45s"
+
+  # Model configuration
+  configuration:
+    temperature: 0.9
+    maxTokens: 8192
+    additionalParameters:
+      project_id: "your-gcp-project-id"
+      location: "us-central1"
+
+  # Observability
+  observability:
+    metrics: true
+    tracing: true
+    logging:
+      level: info
+      logRequests: true
+
+  # Cost tracking
+  costTracking:
+    enabled: true
+    currency: "USD"
+    inputTokenCost: 0.00125   # Vertex AI Gemini pricing
+    outputTokenCost: 0.00375
+
+  # Network egress rules for Google Vertex AI
+  egress:
+  - description: "Allow Google Vertex AI API access"
+    to:
+      dns: ["generativelanguage.googleapis.com", "aiplatform.googleapis.com"]
+    ports:
+    - port: 443
+      protocol: TCP
+  - description: "Allow Google OAuth for authentication"
+    to:
+      dns: ["oauth2.googleapis.com", "accounts.google.com"]
+    ports:
+    - port: 443
+      protocol: TCP

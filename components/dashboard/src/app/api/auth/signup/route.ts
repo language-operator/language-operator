@@ -94,10 +94,27 @@ export async function POST(req: NextRequest) {
     // Create Kubernetes namespace with ResourceQuota for the organization
     try {
       await k8sClient.createOrganizationNamespace(namespace, organization.id, 'free')
+      console.log(`Successfully created Kubernetes namespace: ${namespace}`)
     } catch (err: any) {
-      // If namespace creation fails, log but don't fail signup
-      // (namespace might already exist)
+      // If namespace creation fails, we need to clean up the user and organization and fail signup
       console.error('Failed to create organization namespace:', err.message)
+      
+      // Clean up the created organization and user from database
+      try {
+        await db.organization.delete({
+          where: { id: organization.id }
+        })
+        await db.user.delete({
+          where: { id: user.id }
+        })
+      } catch (cleanupErr: any) {
+        console.error('Failed to cleanup after namespace creation failure:', cleanupErr.message)
+      }
+      
+      return NextResponse.json(
+        { error: `Failed to create account infrastructure: ${err.message}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json(

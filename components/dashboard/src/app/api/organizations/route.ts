@@ -174,9 +174,24 @@ export async function POST(request: NextRequest) {
     // Create Kubernetes namespace with ResourceQuota for the organization
     try {
       await k8sClient.createOrganizationNamespace(namespace, organization.id, organization.plan)
+      console.log(`Successfully created Kubernetes namespace: ${namespace}`)
     } catch (err: any) {
-      // If namespace creation fails, log but don't fail organization creation
+      // If namespace creation fails, we need to clean up the organization and fail
       console.error('Failed to create organization namespace:', err.message)
+      
+      // Clean up the created organization from database
+      try {
+        await prisma.organization.delete({
+          where: { id: organization.id }
+        })
+      } catch (cleanupErr: any) {
+        console.error('Failed to cleanup organization after namespace creation failure:', cleanupErr.message)
+      }
+      
+      return NextResponse.json(
+        { error: `Failed to create organization infrastructure: ${err.message}` },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ organization }, { status: 201 })

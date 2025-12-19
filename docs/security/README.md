@@ -57,6 +57,8 @@ See [CVE Mitigations](cve-mitigations.md) for detailed attack scenarios, impacts
 - ❌ Pods CANNOT reach other namespaces
 
 **Egress allowlists:**
+
+For LanguageTool resources:
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageTool
@@ -69,6 +71,25 @@ spec:
     to:
       dns:
       - "*.duckduckgo.com"
+    ports:
+    - port: 443
+      protocol: TCP
+```
+
+For LanguageModel resources:
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: azure-gpt4
+spec:
+  provider: azure
+  modelName: gpt-4
+  endpoint: https://my-openai.openai.azure.com/
+  egress:
+  - description: "Allow Azure OpenAI API"
+    to:
+      dns: ["*.openai.azure.com"]
     ports:
     - port: 443
       protocol: TCP
@@ -209,6 +230,14 @@ resources:
    - Only allow necessary domains
    - Use specific ports (443, 80) not wildcards
    - Document why each egress rule is needed
+
+### For Model Operators
+
+1. **Configure model egress carefully**
+   - Use provider-specific DNS patterns (e.g., `*.openai.azure.com` for Azure OpenAI)
+   - Allow only HTTPS (port 443) for external model APIs
+   - For local/corporate models, use CIDR ranges not wildcards
+   - Test egress rules with `kubectl logs` to verify connectivity
 
 2. **Avoid sensitive data in instructions**
    - Don't hardcode API keys or credentials

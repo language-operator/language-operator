@@ -53,3 +53,12 @@ spec:
     currency: "USD"
     inputTokenCost: 0.01
     outputTokenCost: 0.03
+
+  # Network egress rules (required for Cilium/NetworkPolicy enforcement)
+  egress:
+  - description: "Allow Azure OpenAI API access"
+    to:
+      dns: ["*.openai.azure.com"]
+    ports:
+    - port: 443
+      protocol: TCP

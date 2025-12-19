@@ -63,3 +63,12 @@ spec:
     currency: "USD"
     inputTokenCost: 0.01  # per 1000 tokens
     outputTokenCost: 0.03  # per 1000 tokens
+
+  # Network egress rules (required for Cilium/NetworkPolicy enforcement)
+  egress:
+  - description: "Allow OpenAI API access"
+    to:
+      dns: ["api.openai.com"]
+    ports:
+    - port: 443
+      protocol: TCP

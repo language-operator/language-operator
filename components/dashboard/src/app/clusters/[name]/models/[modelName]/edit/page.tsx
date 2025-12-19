@@ -235,8 +235,8 @@ export default function ClusterEditModelPage() {
           backLabel="Back to Model"
           icon={Cpu}
           iconColor="text-blue-500"
-          title={`Edit Model: ${model.metadata.name}`}
-          subtitle={`Update the configuration for this model in the ${clusterName} cluster`}
+          title={model.metadata.name}
+          subtitle="LanguageModel"
         />
 
         {/* Form */}

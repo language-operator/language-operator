@@ -70,11 +70,11 @@ export async function GET(request: NextRequest) {
                 console.log(`📡 Agent watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
                 sendEvent(clientEvent, 'resource-update')
               },
-              (error: Error) => {
+              (error: Error | null) => {
                 console.error('Agent watch error:', error)
                 sendEvent({
                   type: 'error',
-                  message: error.message,
+                  message: error?.message || 'Watch stream ended unexpectedly',
                   timestamp: new Date().toISOString()
                 }, 'error')
                 

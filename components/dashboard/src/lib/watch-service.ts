@@ -133,7 +133,7 @@ export class KubernetesWatchService {
           this.activeStreams.delete(watchKey)
           
           if (onError) {
-            onError(error)
+            onError(error || new Error('Watch stream ended'))
           }
           
           // Auto-reconnect after a delay (exponential backoff could be added here)
@@ -316,7 +316,7 @@ export class KubernetesWatchService {
           this.activeStreams.delete(watchKey)
           
           if (onError) {
-            onError(error)
+            onError(error || new Error('Watch stream ended'))
           }
           
           // Auto-reconnect

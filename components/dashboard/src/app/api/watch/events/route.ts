@@ -97,11 +97,11 @@ export async function GET(request: NextRequest) {
                 console.log(`📡 Event watch: ${event.type} - ${k8sEvent?.involvedObject?.name || 'unknown'} (${k8sEvent?.reason})`)
                 sendEvent(clientEvent, 'resource-update')
               },
-              (error: Error) => {
+              (error: Error | null) => {
                 console.error('Events watch error:', error)
                 sendEvent({
                   type: 'error',
-                  message: error.message,
+                  message: error?.message || 'Watch stream ended unexpectedly',
                   timestamp: new Date().toISOString()
                 }, 'error')
                 

@@ -58,3 +58,12 @@ spec:
     currency: "USD"
     inputTokenCost: 0.003   # per 1000 tokens
     outputTokenCost: 0.015  # per 1000 tokens
+
+  # Network egress rules (required for Cilium/NetworkPolicy enforcement)
+  egress:
+  - description: "Allow Anthropic API access"
+    to:
+      dns: ["api.anthropic.com"]
+    ports:
+    - port: 443
+      protocol: TCP

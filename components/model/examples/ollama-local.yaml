@@ -53,3 +53,13 @@ spec:
   # Cost tracking (free for local!)
   costTracking:
     enabled: false
+
+  # Network egress rules (for local Ollama outside cluster)
+  # Remove this section if Ollama is running in the same cluster
+  egress:
+  - description: "Allow local Ollama server"
+    to:
+      cidr: "192.168.1.0/24"  # Adjust to your local network
+    ports:
+    - port: 11434
+      protocol: TCP

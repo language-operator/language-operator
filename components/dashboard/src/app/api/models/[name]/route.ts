@@ -33,6 +33,14 @@ const updateModelSchema = z.object({
     }).optional(),
     enabled: z.boolean().optional(),
     requireApproval: z.boolean().optional(),
+    egress: z.array(z.object({
+      description: z.string(),
+      to: z.object({
+        dns: z.array(z.string()).optional(),
+        cidr: z.string().optional(),
+      }),
+      ports: z.array(z.number().int().min(1).max(65535)).optional(),
+    })).optional(),
   }).optional()
 })
 
@@ -101,6 +109,7 @@ export async function PATCH(
         endpoint: validatedData.endpoint || validatedData.spec?.endpoint || existingModel.spec.endpoint,
         ...(validatedData.apiKey !== undefined && { apiKey: validatedData.apiKey }),
         ...(validatedData.spec?.apiKey !== undefined && { apiKey: validatedData.spec.apiKey }),
+        ...(validatedData.spec?.egress !== undefined && { egress: validatedData.spec.egress }),
       }
     })
 
@@ -167,6 +176,7 @@ export async function PUT(
         endpoint: validatedData.endpoint || validatedData.spec?.endpoint || existingModel.spec.endpoint,
         ...(validatedData.apiKey !== undefined && { apiKey: validatedData.apiKey }),
         ...(validatedData.spec?.apiKey !== undefined && { apiKey: validatedData.spec.apiKey }),
+        ...(validatedData.spec?.egress !== undefined && { egress: validatedData.spec.egress }),
       }
     })
 

@@ -54,11 +54,11 @@ export async function GET(request: NextRequest) {
                 console.log(`📡 Persona watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
                 sendEvent(clientEvent, 'resource-update')
               },
-              (error: Error) => {
+              (error: Error | null) => {
                 console.error('Persona watch error:', error)
                 sendEvent({
                   type: 'error',
-                  message: error.message,
+                  message: error?.message || 'Watch stream ended unexpectedly',
                   timestamp: new Date().toISOString()
                 }, 'error')
                 setTimeout(startWatch, 15000)

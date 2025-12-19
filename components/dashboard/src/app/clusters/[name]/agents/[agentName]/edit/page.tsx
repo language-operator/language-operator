@@ -18,6 +18,8 @@ import {
   ArrowLeft, Bot, Save, Plus, X, Trash2,
   Settings, Zap, Network
 } from 'lucide-react'
+import { ResourceHeader } from '@/components/ui/resource-header'
+import { ResourceNetworkPolicyForm } from '@/components/forms/resource-network-policy-form'
 import {
   Form,
   FormControl,
@@ -177,15 +179,14 @@ export default function EditClusterAgentPage() {
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleCancel}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="space-y-2">
-              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          </div>
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/agents`}
+            backLabel="Back to Agents"
+            icon={Bot}
+            iconColor="text-blue-500"
+            title="Loading..."
+            subtitle="LanguageAgent"
+          />
           <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
         </div>
       </AuthenticatedLayout>
@@ -196,17 +197,14 @@ export default function EditClusterAgentPage() {
     return (
       <AuthenticatedLayout>
         <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleCancel}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Agent Not Found</h1>
-              <p className="text-muted-foreground mt-1">
-                The agent "{agentName}" was not found in cluster "{clusterName}"
-              </p>
-            </div>
-          </div>
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/agents`}
+            backLabel="Back to Agents"
+            icon={Bot}
+            iconColor="text-blue-500"
+            title="Agent Not Found"
+            subtitle={`The agent "${agentName}" was not found in cluster "${clusterName}"`}
+          />
         </div>
       </AuthenticatedLayout>
     )
@@ -216,20 +214,14 @@ export default function EditClusterAgentPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleCancel}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Bot className="h-8 w-8 text-blue-500" />
-            <div>
-              <h1 className="text-3xl font-bold">Edit Language Agent</h1>
-              <p className="text-muted-foreground">
-                Edit "{agentName}" in the {clusterName} cluster
-              </p>
-            </div>
-          </div>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/agents/${agentName}`}
+          backLabel="Back to Agent"
+          icon={Bot}
+          iconColor="text-blue-500"
+          title={agentName}
+          subtitle="LanguageAgent"
+        />
 
         <div className="grid gap-6">
           {/* Main Form */}
@@ -253,7 +245,7 @@ export default function EditClusterAgentPage() {
                   </TabsList>
 
                   {/* Basic Configuration */}
-                  <TabsContent value="basic" className="space-y-6">
+                  <TabsContent value="basic" className="space-y-6 mt-3">
                     <Card>
                       <CardHeader>
                         <CardTitle>Agent Configuration</CardTitle>
@@ -421,7 +413,7 @@ export default function EditClusterAgentPage() {
 
 
                   {/* Resources Configuration */}
-                  <TabsContent value="resources" className="space-y-6">
+                  <TabsContent value="resources" className="space-y-6 mt-3">
                     <Card>
                       <CardHeader>
                         <CardTitle>Resource Limits</CardTitle>
@@ -497,154 +489,17 @@ export default function EditClusterAgentPage() {
                   </TabsContent>
 
                   {/* Network Policy Configuration */}
-                  <TabsContent value="networking" className="space-y-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Egress Network Policy</CardTitle>
-                        <CardDescription>
-                          Control external network access for security. By default, agents can access cluster resources but no external endpoints.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <FormLabel>Egress Rules</FormLabel>
-                            <FormDescription>
-                              Define which external endpoints this agent can access
-                            </FormDescription>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const currentRules = form.getValues('egressRules') || []
-                              form.setValue('egressRules', [...currentRules, {
-                                description: '',
-                                dns: [],
-                                cidr: '',
-                                ports: []
-                              }])
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Rule
-                          </Button>
-                        </div>
-
-                        {watchedValues.egressRules && watchedValues.egressRules.length > 0 ? (
-                          <div className="space-y-4">
-                            {watchedValues.egressRules.map((rule, index) => (
-                              <Card key={index} className="p-4">
-                                <div className="flex items-start justify-between mb-4">
-                                  <div className="flex-1">
-                                    <FormField
-                                      control={form.control}
-                                      name={`egressRules.${index}.description`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Rule Description</FormLabel>
-                                          <FormControl>
-                                            <Input 
-                                              placeholder="e.g., Allow access to OpenAI API" 
-                                              {...field} 
-                                            />
-                                          </FormControl>
-                                          <FormMessage />
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="ml-2"
-                                    onClick={() => {
-                                      const currentRules = form.getValues('egressRules') || []
-                                      const newRules = currentRules.filter((_, i) => i !== index)
-                                      form.setValue('egressRules', newRules)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <FormField
-                                    control={form.control}
-                                    name={`egressRules.${index}.dns`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>DNS Names</FormLabel>
-                                        <FormControl>
-                                          <Textarea
-                                            placeholder="api.openai.com&#10;*.googleapis.com&#10;api.anthropic.com"
-                                            className="min-h-[80px]"
-                                            value={Array.isArray(field.value) ? field.value.join('\n') : ''}
-                                            onChange={(e) => {
-                                              const lines = e.target.value.split('\n').filter(line => line.trim())
-                                              field.onChange(lines)
-                                            }}
-                                          />
-                                        </FormControl>
-                                        <FormDescription>
-                                          One domain per line. Supports wildcards with *
-                                        </FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-
-                                  <FormField
-                                    control={form.control}
-                                    name={`egressRules.${index}.cidr`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>CIDR Block</FormLabel>
-                                        <FormControl>
-                                          <Input 
-                                            placeholder="e.g., 10.0.0.0/8 or 192.168.1.0/24" 
-                                            {...field} 
-                                          />
-                                        </FormControl>
-                                        <FormDescription>
-                                          IP address range in CIDR notation
-                                        </FormDescription>
-                                        <FormMessage />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Network className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>No egress rules configured</p>
-                            <p className="text-sm">Agent will only be able to access cluster resources</p>
-                          </div>
-                        )}
-
-                        {watchedValues.egressRules && watchedValues.egressRules.length > 0 && (
-                          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                            <h4 className="text-sm font-medium mb-2">Common Egress Rules</h4>
-                            <div className="grid grid-cols-1 gap-2 text-sm">
-                              <div>
-                                <strong>AI APIs:</strong> api.openai.com, api.anthropic.com, *.googleapis.com
-                              </div>
-                              <div>
-                                <strong>Private Networks:</strong> 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12
-                              </div>
-                              <div>
-                                <strong>Internet Access:</strong> 0.0.0.0/0 (use with caution)
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                  <TabsContent value="networking" className="space-y-6 mt-3">
+                    <ResourceNetworkPolicyForm
+                      control={form.control}
+                      egressRulesFieldName="egressRules"
+                      watchedEgressRules={watchedValues.egressRules}
+                      setValue={form.setValue}
+                      getValues={form.getValues}
+                      title="Egress Network Policy"
+                      description="Control external network access for security. By default, agents can access cluster resources but no external endpoints."
+                      resourceType="agent"
+                    />
                   </TabsContent>
                 </Tabs>
 
