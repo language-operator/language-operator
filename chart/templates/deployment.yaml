@@ -1,0 +1,229 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "language-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "language-operator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "language-operator.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "language-operator.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      containers:
+      - name: manager
+        image: {{ include "language-operator.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /app/manager
+        args:
+        {{- if .Values.config.leaderElection.enabled }}
+        - --leader-elect
+        - --leader-elect-lease-duration={{ .Values.config.leaderElection.leaseDuration }}
+        - --leader-elect-renew-deadline={{ .Values.config.leaderElection.renewDeadline }}
+        - --leader-elect-retry-period={{ .Values.config.leaderElection.retryPeriod }}
+        {{- end }}
+        - --metrics-bind-address={{ include "language-operator.metricsBindAddress" . }}
+        - --health-probe-bind-address={{ .Values.config.health.bindAddress }}
+        - --zap-log-level={{ .Values.config.logging.level }}
+        - --zap-encoder={{ .Values.config.logging.format }}
+        {{- if .Values.config.logging.development }}
+        - --zap-devel
+        {{- end }}
+        {{- if .Values.config.controller.concurrency }}
+        - --concurrency={{ .Values.config.controller.concurrency }}
+        {{- end }}
+        {{- if .Values.config.controller.syncPeriod }}
+        - --sync-period={{ .Values.config.controller.syncPeriod }}
+        {{- end }}
+        {{- if .Values.config.watch.namespaces }}
+        - --watch-namespaces={{ join "," .Values.config.watch.namespaces }}
+        {{- end }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.service.metricsPort }}
+          protocol: TCP
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+        {{- if .Values.config.webhook.enabled }}
+        - name: webhook
+          containerPort: {{ .Values.config.webhook.port }}
+          protocol: TCP
+        {{- end }}
+        {{- with .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        env:
+        # Learning system task schema extraction - allow gem to load files from dedicated directory
+        - name: LANGOP_ALLOWED_PATHS
+          value: "/tmp/task-schemas"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        {{- if .Values.config.synthesis.rateLimits }}
+        # Synthesis rate limiting configuration
+        {{- if .Values.config.synthesis.rateLimits.perHour }}
+        - name: SYNTHESIS_MAX_PER_HOUR
+          value: {{ .Values.config.synthesis.rateLimits.perHour | quote }}
+        {{- end }}
+        {{- if .Values.config.synthesis.rateLimits.perDay }}
+        - name: SYNTHESIS_MAX_ATTEMPTS_PER_DAY
+          value: {{ .Values.config.synthesis.rateLimits.perDay | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.opentelemetry.collector.enabled }}
+        # OpenTelemetry data collection configuration
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ .Values.opentelemetry.collector.endpoint | quote }}
+        - name: OTEL_SERVICE_NAME
+          value: "language-operator"
+        - name: OTEL_TRACES_SAMPLER
+          value: "traceidratio"
+        - name: OTEL_TRACES_SAMPLER_ARG
+          value: {{ .Values.opentelemetry.collector.sampling.rate | quote }}
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value: {{ include "language-operator.otelResourceAttributes" . | quote }}
+        {{- end }}
+        {{- if include "language-operator.telemetryAdapter.enabled" . }}
+        # Telemetry query backend configuration for learning system
+        - name: TELEMETRY_ADAPTER_TYPE
+          value: {{ include "language-operator.telemetryAdapter.type" . | quote }}
+        - name: TELEMETRY_ADAPTER_ENDPOINT
+          value: {{ .Values.telemetry.queryBackend.endpoint | quote }}
+        {{- if or .Values.telemetry.queryBackend.auth.apiKey .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
+        - name: TELEMETRY_ADAPTER_API_KEY
+          {{- if .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
+              key: {{ .Values.telemetry.queryBackend.auth.apiKeySecret.key }}
+          {{- else }}
+          value: {{ .Values.telemetry.queryBackend.auth.apiKey | quote }}
+          {{- end }}
+        {{- end }}
+        - name: TELEMETRY_ADAPTER_TIMEOUT
+          value: {{ .Values.telemetry.queryBackend.timeout | quote }}
+        - name: TELEMETRY_ADAPTER_RETRY_ATTEMPTS
+          value: {{ .Values.telemetry.queryBackend.retryAttempts | quote }}
+        - name: TELEMETRY_ADAPTER_RETRY_BACKOFF
+          value: {{ .Values.telemetry.queryBackend.retryBackoff | quote }}
+        - name: TELEMETRY_ADAPTER_MAX_TRACES
+          value: {{ .Values.telemetry.queryBackend.query.maxTraces | quote }}
+        - name: TELEMETRY_ADAPTER_LOOKBACK_PERIOD
+          value: {{ .Values.telemetry.queryBackend.query.lookbackPeriod | quote }}
+        - name: TELEMETRY_ADAPTER_QUERY_TIMEOUT
+          value: {{ .Values.telemetry.queryBackend.query.timeout | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED
+          value: {{ .Values.telemetry.queryBackend.healthCheck.enabled | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL
+          value: {{ .Values.telemetry.queryBackend.healthCheck.interval | quote }}
+        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_TIMEOUT
+          value: {{ .Values.telemetry.queryBackend.healthCheck.timeout | quote }}
+        {{- range $header, $value := .Values.telemetry.queryBackend.auth.headers }}
+        - name: TELEMETRY_ADAPTER_HEADER_{{ upper $header | replace "-" "_" }}
+          value: {{ $value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.config.networkPolicy }}
+        # NetworkPolicy configuration for agent pods
+        {{- if .Values.config.networkPolicy.apiServerCIDRs }}
+        - name: NETWORKPOLICY_API_SERVER_CIDRS
+          value: {{ join "," .Values.config.networkPolicy.apiServerCIDRs | quote }}
+        {{- end }}
+        {{- if .Values.config.networkPolicy.customCIDRs }}
+        - name: NETWORKPOLICY_CUSTOM_CIDRS
+          value: {{ join "," .Values.config.networkPolicy.customCIDRs | quote }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.env }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.envFrom }}
+        envFrom:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        {{- if .Values.config.webhook.enabled }}
+        - name: cert
+          mountPath: {{ .Values.config.webhook.certDir }}
+          readOnly: true
+        {{- end }}
+        {{- with .Values.volumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      {{- if .Values.config.webhook.enabled }}
+      - name: cert
+        secret:
+          secretName: {{ include "language-operator.fullname" . }}-webhook-cert
+          defaultMode: 420
+      {{- end }}
+      {{- with .Values.volumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
