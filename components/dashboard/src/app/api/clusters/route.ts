@@ -81,46 +81,45 @@ export async function GET(request: NextRequest) {
       return true
     })
 
-    // Calculate agent counts for each cluster
-    const clustersWithAgentCounts = await Promise.all(
-      filteredClusters.map(async (cluster: LanguageCluster) => {
-        try {
-          // Query agents for this cluster using organization filtering with backwards compatibility
-          const agentsResponse = await k8sClient.listByOrganization('agents', organization.namespace, organization.id)
-
-          // Handle different response structures from k8s client
-          const allAgents = (agentsResponse as any)?.body?.items || 
-                           (agentsResponse as any)?.data?.items || 
-                           (agentsResponse as any)?.items || 
-                           []
-
-          // Calculate agent count for this cluster - filter by clusterRef
-          const clusterAgents = allAgents.filter((agent: any) => 
-            agent.spec?.clusterRef === cluster.metadata.name
-          )
-          const agentCount = clusterAgents.length
-
-          // Return cluster with computed agentCount
-          return {
-            ...cluster,
-            status: {
-              ...cluster.status,
-              agentCount
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching agent count for cluster ${cluster.metadata.name}:`, error)
-          // Return cluster with 0 agents on error
-          return {
-            ...cluster,
-            status: {
-              ...cluster.status,
-              agentCount: 0
-            }
-          }
+    // Fetch all agents once to avoid N+1 query problem
+    let agentCountsByCluster: Record<string, number> = {}
+    
+    try {
+      const agentsResponse = await k8sClient.listByOrganization('agents', organization.namespace, organization.id)
+      
+      // Handle different response structures from k8s client
+      const allAgents = (agentsResponse as any)?.body?.items || 
+                       (agentsResponse as any)?.data?.items || 
+                       (agentsResponse as any)?.items || 
+                       []
+      
+      // Group agents by cluster
+      agentCountsByCluster = allAgents.reduce((acc: Record<string, number>, agent: any) => {
+        const clusterRef = agent.spec?.clusterRef
+        if (clusterRef) {
+          acc[clusterRef] = (acc[clusterRef] || 0) + 1
         }
-      })
-    )
+        return acc
+      }, {})
+      
+      console.log(`Agent counts by cluster:`, agentCountsByCluster)
+    } catch (error) {
+      console.error('Error fetching agents for cluster counts:', error)
+      // agentCountsByCluster remains empty object, all clusters get 0 count
+    }
+
+    // Add agent counts to clusters
+    const clustersWithAgentCounts = filteredClusters.map((cluster: LanguageCluster) => {
+      const agentCount = agentCountsByCluster[cluster.metadata.name] || 0
+      
+      return {
+        ...cluster,
+        status: {
+          ...cluster.status,
+          agentCount
+        }
+      }
+    })
 
     // Sort and paginate
     const startIndex = ((params.page || 1) - 1) * (params.limit || 50)
