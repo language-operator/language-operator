@@ -11,10 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResourceHeader } from '@/components/ui/resource-header'
+import { ResourceEventsActivity } from '@/components/ui/events-activity'
 import { 
   Cpu, AlertCircle, CheckCircle, Clock, ArrowLeft, 
   Edit, FileText, Trash2, Activity, Zap, DollarSign, 
-  TrendingUp, Globe, Shield, Key, Settings, MoreVertical, FileCode, Copy, Check
+  TrendingUp, Globe, Shield, Key, Settings, MoreVertical, FileCode, Copy, Check,
+  Home, BarChart3, Info, RefreshCw, Database
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -53,26 +56,19 @@ function formatTimeAgo(timestamp?: string | Date) {
 
 interface ModelOverviewProps {
   model: LanguageModel
+  clusterName: string
 }
 
-function ModelOverview({ model }: ModelOverviewProps) {
+function ModelOverview({ model, clusterName }: ModelOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Basic Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Name</p>
-              <p className="text-sm">{model.metadata.name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Namespace</p>
-              <p className="text-sm">{model.metadata.namespace}</p>
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Provider</p>
               <Badge variant="outline">{model.spec.provider}</Badge>
@@ -81,95 +77,57 @@ function ModelOverview({ model }: ModelOverviewProps) {
               <p className="text-sm font-medium text-muted-foreground">Model Name</p>
               <p className="text-sm font-mono">{model.spec.modelName}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Created</p>
-              <p className="text-sm">{formatTimeAgo(model.metadata.creationTimestamp)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Health Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Phase</p>
-              <p className="text-sm">{model.status?.phase || 'Unknown'}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Configuration */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Model Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
             {model.spec.endpoint && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
                 <p className="text-sm font-mono text-xs break-all">{model.spec.endpoint}</p>
               </div>
             )}
-            {model.spec.configuration && (
-              <>
-                {model.spec.configuration.temperature && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Temperature</p>
-                    <p className="text-sm">{model.spec.configuration.temperature}</p>
-                  </div>
-                )}
-                {model.spec.configuration.maxTokens && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Max Tokens</p>
-                    <p className="text-sm">{model.spec.configuration.maxTokens.toLocaleString()}</p>
-                  </div>
-                )}
-                {model.spec.configuration.topP && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Top P</p>
-                    <p className="text-sm">{model.spec.configuration.topP}</p>
-                  </div>
-                )}
-                {model.spec.configuration.timeoutMs && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Timeout</p>
-                    <p className="text-sm">{model.spec.configuration.timeoutMs}ms</p>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Security & Authentication</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {model.spec.apiKeySecretRef ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">API Key Secret</p>
-                <div className="flex items-center space-x-2">
-                  <Key className="h-4 w-4 text-blue-500" />
-                  <p className="text-sm font-mono">{model.spec.apiKeySecretRef.name}</p>
-                  <Badge variant="outline" className="text-xs">
-                    {model.spec.apiKeySecretRef.key || 'api-key'}
-                  </Badge>
+      {/* Status & Conditions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Status & Conditions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {model.status?.conditions && model.status.conditions.length > 0 ? (
+            <div className="space-y-3">
+              {model.status.conditions.map((condition, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">{condition.type}</p>
+                    {condition.message && (
+                      <p className="text-xs text-muted-foreground">{condition.message}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {condition.status === 'True' ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : condition.status === 'False' ? (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">API Key Secret</p>
-                <p className="text-sm text-muted-foreground">Not configured</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No status conditions available</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Events */}
+      <ResourceEventsActivity
+        resourceType="model"
+        resourceName={model.metadata.name}
+        namespace={model.metadata.namespace}
+        clusterName={clusterName}
+      />
 
       {/* Cost Tracking */}
       {model.spec.costTracking?.enabled && (
@@ -234,179 +192,254 @@ function ModelOverview({ model }: ModelOverviewProps) {
   )
 }
 
+interface ModelDetailsProps {
+  model: LanguageModel
+}
+
+function ModelDetails({ model }: ModelDetailsProps) {
+  return (
+    <div className="space-y-6">
+      {/* Model Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Model Configuration
+          </CardTitle>
+          <CardDescription>
+            LLM parameters and behavior settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Temperature</p>
+              <p className="text-sm">{model.spec.configuration?.temperature ?? 0.7}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Max Tokens</p>
+              <p className="text-sm">{(model.spec.configuration?.maxTokens ?? 4096).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Top P</p>
+              <p className="text-sm">{model.spec.configuration?.topP ?? 1.0}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Context Window</p>
+              <p className="text-sm">{((model.spec.configuration as any)?.contextWindow ?? 8192).toLocaleString()} tokens</p>
+            </div>
+            {model.spec.configuration?.frequencyPenalty !== undefined && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Frequency Penalty</p>
+                <p className="text-sm">{model.spec.configuration.frequencyPenalty}</p>
+              </div>
+            )}
+            {model.spec.configuration?.presencePenalty !== undefined && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Presence Penalty</p>
+                <p className="text-sm">{model.spec.configuration.presencePenalty}</p>
+              </div>
+            )}
+            {model.spec.timeout && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Request Timeout</p>
+                <p className="text-sm">{model.spec.timeout}</p>
+              </div>
+            )}
+          </div>
+          {model.spec.configuration?.stopSequences && model.spec.configuration.stopSequences.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Stop Sequences</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {model.spec.configuration.stopSequences.map((seq, index) => (
+                  <Badge key={index} variant="outline" className="text-xs font-mono">
+                    {seq}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Caching */}
+      {model.spec.caching && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Response Caching
+            </CardTitle>
+            <CardDescription>
+              Caching configuration for improved performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <Badge variant={model.spec.caching.enabled ? "default" : "secondary"}>
+                  {model.spec.caching.enabled ? "Enabled" : "Disabled"}
+                </Badge>
+              </div>
+              {model.spec.caching.ttl && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">TTL (Time to Live)</p>
+                  <p className="text-sm">{model.spec.caching.ttl}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rate Limits */}
+      {model.spec.rateLimits && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Rate Limiting
+            </CardTitle>
+            <CardDescription>
+              Request rate limits and throttling
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {model.spec.rateLimits.requestsPerMinute && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Requests per Minute</p>
+                  <p className="text-sm">{model.spec.rateLimits.requestsPerMinute.toLocaleString()}</p>
+                </div>
+              )}
+              {model.spec.rateLimits.tokensPerMinute && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Tokens per Minute</p>
+                  <p className="text-sm">{model.spec.rateLimits.tokensPerMinute.toLocaleString()}</p>
+                </div>
+              )}
+              {model.spec.rateLimits.concurrentRequests && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Concurrent Requests</p>
+                  <p className="text-sm">{model.spec.rateLimits.concurrentRequests}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Retry Policy */}
+      {model.spec.retryPolicy && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Retry Policy
+            </CardTitle>
+            <CardDescription>
+              Automatic retry configuration for failed requests
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {model.spec.retryPolicy.maxAttempts && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Max Attempts</p>
+                  <p className="text-sm">{model.spec.retryPolicy.maxAttempts}</p>
+                </div>
+              )}
+              {model.spec.retryPolicy.initialBackoff && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Initial Backoff</p>
+                  <p className="text-sm">{model.spec.retryPolicy.initialBackoff}</p>
+                </div>
+              )}
+              {model.spec.retryPolicy.maxBackoff && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Max Backoff</p>
+                  <p className="text-sm">{model.spec.retryPolicy.maxBackoff}</p>
+                </div>
+              )}
+              {model.spec.retryPolicy.backoffMultiplier && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Backoff Multiplier</p>
+                  <p className="text-sm">{model.spec.retryPolicy.backoffMultiplier}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Network Policy */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Network Policy
+          </CardTitle>
+          <CardDescription>
+            External network access rules
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {model.spec.egress && model.spec.egress.length > 0 ? (
+            <div className="space-y-3">
+              {model.spec.egress.map((rule, index) => (
+                <div key={index} className="border rounded-lg p-3">
+                  <div className="space-y-2">
+                    {rule.description && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Description</p>
+                        <p className="text-sm">{rule.description}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      {rule.to?.dns && rule.to.dns.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">DNS Names</p>
+                          <p className="text-sm font-mono">{rule.to.dns.join(', ')}</p>
+                        </div>
+                      )}
+                      {rule.ports && rule.ports.length > 0 && (
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Ports</p>
+                          <p className="text-sm font-mono">{rule.ports.map(p => p.port).join(', ')}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Globe className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No network egress rules configured</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Network policies control external access from the model
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 interface ModelMetricsProps {
   model: LanguageModel
 }
 
 function ModelMetrics({ model }: ModelMetricsProps) {
-  const metrics = model.status?.metrics
-
   return (
-    <div className="space-y-6">
-      {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {metrics?.totalRequests?.toLocaleString() ?? 'N/A'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              All time requests
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {metrics?.successRate ?? 'N/A'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Success percentage
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatLatency(metrics?.averageLatency)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Response time
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(typeof metrics?.costMetrics?.totalCost === 'string' ? parseFloat(metrics.costMetrics.totalCost) : metrics?.costMetrics?.totalCost, model.spec.costTracking?.currency)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {model.spec.costTracking?.currency || 'USD'} total
-            </p>
-          </CardContent>
-        </Card>
+    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+      <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+        <BarChart3 className="h-12 w-12 text-gray-400" />
       </div>
-
-      {/* Detailed Metrics */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Performance Metrics</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Error Rate</p>
-              <p className="text-sm">{metrics?.errorRate ?? 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">P95 Latency</p>
-              <p className="text-sm">{formatLatency(metrics?.p95Latency)}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">P99 Latency</p>
-              <p className="text-sm">{formatLatency(metrics?.p99Latency)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cost Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {metrics ? (
-              <>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Cost</p>
-                  <p className="text-sm">{formatCurrency(typeof metrics?.costMetrics?.totalCost === 'string' ? parseFloat(metrics.costMetrics.totalCost) : metrics?.costMetrics?.totalCost, model.spec.costTracking?.currency)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Input Tokens</p>
-                  <p className="text-sm">{metrics.costMetrics?.totalInputTokens?.toLocaleString() ?? 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Output Tokens</p>
-                  <p className="text-sm">{metrics.costMetrics?.totalOutputTokens?.toLocaleString() ?? 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Cost per Request</p>
-                  <p className="text-sm">
-                    {metrics.totalRequests && metrics.costMetrics?.totalCost 
-                      ? formatCurrency(
-                          (typeof metrics.costMetrics.totalCost === 'string' 
-                            ? parseFloat(metrics.costMetrics.totalCost) 
-                            : metrics.costMetrics.totalCost) / metrics.totalRequests, 
-                          model.spec.costTracking?.currency
-                        )
-                      : 'N/A'
-                    }
-                  </p>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">No cost metrics available</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Regional Health (if available) */}
-      {metrics?.regionHealth && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Regional Endpoint Health</CardTitle>
-            <CardDescription>Health status across different regions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(metrics.regionHealth).map(([region, health]) => (
-                <div key={region} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-medium">{region}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {health ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
-                          Healthy
-                        </Badge>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-4 w-4 text-red-500" />
-                        <Badge variant="destructive" className="text-xs">
-                          Unhealthy
-                        </Badge>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <h3 className="text-xl font-semibold text-gray-500">Coming Soon</h3>
     </div>
   )
 }
@@ -532,67 +565,72 @@ export default function ClusterModelDetailPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href={`/clusters/${clusterName}/models`}>
-              <Button variant="outline" size="icon">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Cpu className="h-8 w-8 text-blue-500" />
-            <div>
-              <div>
-                <h1 className="text-3xl font-bold">{model.metadata.name}</h1>
-              </div>
-              <p className="text-muted-foreground">
-                LanguageModel
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Link href={`/clusters/${clusterName}/models/${model.metadata.name}/edit`}>
-              <Button variant="outline">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-4 w-4" />
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/models`}
+          backLabel="Back to Models"
+          icon={Cpu}
+          iconColor="text-blue-500"
+          title={model.metadata.name}
+          subtitle="LanguageModel"
+          actions={
+            <>
+              <Link href={`/clusters/${clusterName}/models/${model.metadata.name}/edit`}>
+                <Button variant="outline">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleViewYaml}>
-                  <FileCode className="h-4 w-4 mr-2" />
-                  View YAML
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleDeleteModel}
-                  disabled={deleteModel.isPending}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {deleteModel.isPending ? 'Deleting...' : 'Delete Model'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleViewYaml}>
+                    <FileCode className="h-4 w-4 mr-2" />
+                    View YAML
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={handleDeleteModel}
+                    disabled={deleteModel.isPending}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteModel.isPending ? 'Deleting...' : 'Delete Model'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+            <TabsTrigger value="overview">
+              <Home className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="details">
+              <Info className="w-4 h-4 mr-2" />
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="metrics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Metrics
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <ModelOverview model={model} />
+          <TabsContent value="overview" className="space-y-6 mt-3">
+            <ModelOverview model={model} clusterName={clusterName} />
           </TabsContent>
 
-          <TabsContent value="metrics" className="space-y-6">
+          <TabsContent value="details" className="space-y-6 mt-3">
+            <ModelDetails model={model} />
+          </TabsContent>
+
+          <TabsContent value="metrics" className="space-y-6 mt-3">
             <ModelMetrics model={model} />
           </TabsContent>
         </Tabs>
