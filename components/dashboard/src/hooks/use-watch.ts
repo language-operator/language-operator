@@ -84,7 +84,9 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
     console.log(`🔗 [${instanceId}] Connecting to watch stream: ${url}`)
 
     try {
-      const eventSource = new EventSource(url)
+      const eventSource = new EventSource(url, {
+        withCredentials: true
+      })
       eventSourceRef.current = eventSource
 
       eventSource.addEventListener('connection', (event) => {
