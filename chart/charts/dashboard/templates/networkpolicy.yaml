@@ -31,8 +31,13 @@ spec:
     - protocol: TCP
       port: 53
   
-  # Allow external HTTPS access for model provider APIs
-  # This is required for dashboard to fetch available models from providers
+  # Allow full egress for model discovery (local models, custom endpoints)
+  # This enables the dashboard to discover models from any endpoint without NetworkPolicy expertise
+  {{- if .Values.networkPolicy.allowModelDiscovery }}
+  - to: []
+    # Allow all protocols and ports for model discovery
+  {{- else }}
+  # Restrictive mode: only allow specific external access
   {{- if .Values.networkPolicy.allowExternalHTTPS }}
   - to: []
     ports:
@@ -46,6 +51,7 @@ spec:
     ports:
     - protocol: TCP
       port: 80
+  {{- end }}
   {{- end }}
   
   # Allow specific CIDR blocks if configured
