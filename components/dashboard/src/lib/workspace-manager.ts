@@ -62,6 +62,36 @@ class WorkspaceManager {
   }
 
   /**
+   * Delete a workspace pod
+   */
+  private async deleteWorkspacePod(namespace: string, podName: string): Promise<void> {
+    try {
+      await this.coreV1Api.deleteNamespacedPod({
+        name: podName,
+        namespace,
+      })
+      console.log(`Workspace Manager - Deleted expired pod: ${podName}`)
+    } catch (error: any) {
+      // Check for 404 - pod already deleted
+      const is404 = error.response?.statusCode === 404 || 
+                   error.statusCode === 404 ||
+                   error.response?.status === 404 ||
+                   error.status === 404 ||
+                   error.code === 404 ||
+                   (error.response?.body && error.response.body.code === 404) ||
+                   (error.body && error.body.code === 404)
+      
+      if (is404) {
+        console.log(`Workspace Manager - Pod ${podName} already deleted`)
+        return
+      }
+      
+      console.error(`Workspace Manager - Failed to delete pod ${podName}:`, error.message)
+      throw new WorkspaceError('POD_ERROR', `Failed to delete expired pod: ${error.message}`)
+    }
+  }
+
+  /**
    * Ensure a file manager pod exists for the given agent
    */
   async ensureFileManagerPod(namespace: string, agentName: string): Promise<WorkspacePodInfo> {
@@ -75,13 +105,26 @@ class WorkspaceManager {
       })
 
       const pod = (existingPod as any).body || existingPod
+      const phase = pod.status?.phase
       const createdAt = pod.metadata?.creationTimestamp || new Date().toISOString()
-      const expiresAt = new Date(Date.parse(createdAt) + WORKSPACE_LIMITS.POD_TIMEOUT_MINUTES * 60 * 1000).toISOString()
+      const age = Date.now() - Date.parse(createdAt)
+      const maxAge = WORKSPACE_LIMITS.POD_TIMEOUT_MINUTES * 60 * 1000
 
+      // Delete pod if it's expired, failed, or succeeded
+      if (phase === 'Succeeded' || phase === 'Failed' || age > maxAge) {
+        console.log(`Workspace Manager - Pod ${podName} is expired/failed (phase: ${phase}, age: ${Math.round(age / 60000)}min), deleting...`)
+        await this.deleteWorkspacePod(namespace, podName)
+        return await this.createFileManagerPod(namespace, agentName)
+      }
+
+      // Pod exists and is still valid
+      const expiresAt = new Date(Date.parse(createdAt) + WORKSPACE_LIMITS.POD_TIMEOUT_MINUTES * 60 * 1000).toISOString()
+      console.log(`Workspace Manager - Using existing pod ${podName} (phase: ${phase})`)
+      
       return {
         name: podName,
         namespace,
-        status: this.mapPodPhase(pod.status?.phase),
+        status: this.mapPodPhase(phase),
         createdAt,
         expiresAt,
       }

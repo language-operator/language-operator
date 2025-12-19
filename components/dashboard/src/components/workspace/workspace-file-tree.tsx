@@ -260,13 +260,22 @@ export function WorkspaceFileTree({
   }
 
   if (error) {
+    const isPodError = error.includes('Pod failed to start') || error.includes('Pod status check failed')
+    
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <AlertCircle className="w-8 h-8 text-destructive mb-2" />
-        <p className="text-sm font-medium">Error loading workspace</p>
-        <p className="text-xs text-muted-foreground mb-4">{error}</p>
+        <p className="text-sm font-medium">
+          {isPodError ? 'Workspace pod needs restart' : 'Error loading workspace'}
+        </p>
+        <p className="text-xs text-muted-foreground mb-4">
+          {isPodError ? 
+            'The workspace container has expired and needs to be restarted. Click "Restart Workspace" to create a new container.' :
+            error
+          }
+        </p>
         <Button variant="outline" size="sm" onClick={loadRootDirectory}>
-          Try Again
+          {isPodError ? 'Restart Workspace' : 'Try Again'}
         </Button>
       </div>
     )
