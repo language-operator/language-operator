@@ -15,7 +15,15 @@ const updateClusterSchema = z.object({
     }).optional(),
     networkPolicies: z.object({
       enabled: z.boolean(),
-      allowedDomains: z.array(z.string()).optional()
+      egressRules: z.array(z.object({
+        description: z.string().optional(),
+        dns: z.array(z.string()).optional(),
+        cidr: z.string().optional(),
+        ports: z.array(z.object({
+          port: z.number().min(1).max(65535),
+          protocol: z.enum(['TCP', 'UDP'])
+        })).optional()
+      })).optional()
     }).optional()
   }).optional()
 })
