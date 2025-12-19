@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
+import { NavigationLoadingProvider } from '@/contexts/navigation-loading-context'
+import { NavigationProgress } from '@/components/ui/navigation-progress'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -29,8 +31,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <SessionProvider>
         <QueryClientProvider client={queryClient}>
-          {children}
-          <Toaster richColors position="top-right" />
+          <NavigationLoadingProvider>
+            <NavigationProgress />
+            {children}
+            <Toaster richColors position="top-right" />
+          </NavigationLoadingProvider>
         </QueryClientProvider>
       </SessionProvider>
     </ThemeProvider>

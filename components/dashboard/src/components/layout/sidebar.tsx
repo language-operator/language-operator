@@ -39,7 +39,7 @@ export function Sidebar() {
         <div className="px-3 py-2 font-mono text-sm w-full">
           <span className="text-black dark:text-white font-bold tracking-wide">
             LANGUAGE OPERATOR{' '}
-            <span className="text-green-500">█</span>
+            <span className="text-black dark:text-black">█</span>
           </span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
+import { useEffect } from 'react'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { ClusterStatusBadge } from '@/components/ui/resource-status-badge'
 import { ClusterEventsActivity } from '@/components/ui/events-activity'
-import { LoadingBoundary, ClusterDashboardSkeleton } from '@/components/ui/loading-boundary'
 import { 
   Bot, 
   Cpu, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useCluster } from '@/hooks/use-clusters'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
+import { usePageReady } from '@/components/ui/navigation-progress'
 import Link from 'next/link'
 
 function formatTimeAgo(timestamp?: string) {
@@ -45,6 +46,14 @@ export default function ClusterDashboard() {
   
   const { data: cluster, isLoading, error } = useCluster(clusterName)
   const { counts, loading: countsLoading, isStale } = useResourceCounts(clusterName)
+  const setPageReady = usePageReady()
+
+  // Signal when page is ready (data loaded and no errors)
+  useEffect(() => {
+    if (!isLoading && !countsLoading && (cluster || error)) {
+      setPageReady()
+    }
+  }, [isLoading, countsLoading, cluster, error, setPageReady])
 
   if (isLoading) {
     return (
@@ -74,12 +83,7 @@ export default function ClusterDashboard() {
 
   return (
     <AuthenticatedLayout>
-      <LoadingBoundary 
-        fallback={<ClusterDashboardSkeleton />}
-        timeout={15000}
-        onTimeout={() => console.warn('Cluster dashboard taking longer than expected to load')}
-      >
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Cluster Header */}
           <ResourceHeader
             icon={BarChart3}
@@ -290,8 +294,7 @@ export default function ClusterDashboard() {
             clusterName={clusterName}
             limit={10}
           />
-        </div>
-      </LoadingBoundary>
+      </div>
     </AuthenticatedLayout>
   )
 }
