@@ -255,6 +255,7 @@ export async function POST(
     }
 
     console.log(`Creating model ${body.name} for cluster ${clusterName} in namespace:`, organization.namespace)
+    console.log('Model spec being sent to Kubernetes:', JSON.stringify(modelSpec, null, 2))
     
     // Create the model in Kubernetes
     const response = await handleKubernetesOperation(
