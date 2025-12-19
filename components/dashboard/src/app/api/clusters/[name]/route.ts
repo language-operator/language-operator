@@ -14,7 +14,8 @@ const updateClusterSchema = z.object({
       enabled: z.boolean()
     }).optional(),
     networkPolicies: z.object({
-      enabled: z.boolean()
+      enabled: z.boolean(),
+      allowedDomains: z.array(z.string()).optional()
     }).optional()
   }).optional()
 })

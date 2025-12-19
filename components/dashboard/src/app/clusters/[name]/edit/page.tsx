@@ -4,8 +4,14 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { X, Plus, Globe, Cloud, Zap } from 'lucide-react'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
-import { ArrowLeft, Server } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ArrowLeft, Server, Settings, Network } from 'lucide-react'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { fetchWithOrganization } from '@/lib/api-client'
@@ -25,6 +31,7 @@ interface Cluster {
     }
     networkPolicies?: {
       enabled: boolean
+      allowedDomains?: string[]
     }
   }
   status: {
@@ -39,6 +46,9 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
   const [isLoadingCluster, setIsLoadingCluster] = useState(true)
   const [error, setError] = useState('')
   const [clusterName, setClusterName] = useState<string>('')
+  const [activeTab, setActiveTab] = useState('general')
+  const [allowedDomains, setAllowedDomains] = useState<string[]>([])
+  const [newDomain, setNewDomain] = useState('')
 
   // Get the cluster name from params
   useEffect(() => {
@@ -62,6 +72,10 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
         }
         const data = await response.json()
         setCluster(data.cluster)
+        
+        // Initialize allowed domains from cluster data
+        const domains = data.cluster?.spec?.networkPolicies?.allowedDomains || []
+        setAllowedDomains(domains)
       } catch (err: any) {
         console.error('Error fetching cluster:', err)
         setError(err.message || 'Failed to load cluster')
@@ -72,6 +86,37 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
 
     fetchCluster()
   }, [clusterName])
+
+  const handleAddDomain = () => {
+    if (!newDomain.trim()) return
+    
+    // Validate domain format
+    const domainRegex = /^[a-zA-Z0-9*]([a-zA-Z0-9\-.*]{0,61}[a-zA-Z0-9*])?(\.[a-zA-Z0-9*]([a-zA-Z0-9\-.*]{0,61}[a-zA-Z0-9*])?)*$/
+    if (!domainRegex.test(newDomain.trim())) {
+      setError('Invalid domain format')
+      return
+    }
+    
+    // Check for duplicates
+    if (allowedDomains.includes(newDomain.trim())) {
+      setError('Domain already exists')
+      return
+    }
+    
+    setAllowedDomains(prev => [...prev, newDomain.trim()])
+    setNewDomain('')
+    setError('')
+  }
+
+  const handleRemoveDomain = (domain: string) => {
+    setAllowedDomains(prev => prev.filter(d => d !== domain))
+  }
+
+  const handleAddQuickDomain = (domain: string) => {
+    if (!allowedDomains.includes(domain)) {
+      setAllowedDomains(prev => [...prev, domain])
+    }
+  }
 
   const handleSubmit = async (formData: ClusterFormData) => {
     setIsLoading(true)
@@ -92,6 +137,7 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
             },
             networkPolicies: {
               enabled: true, // Default to enabled
+              allowedDomains: allowedDomains,
             },
           },
         }),
@@ -189,16 +235,169 @@ export default function EditClusterPage({ params }: { params: Promise<{ name: st
           subtitle={`Update settings for cluster "${clusterName}"`}
         />
 
-        {/* Form */}
-        <div className="max-w-2xl">
-          <ClusterForm
-            initialData={getInitialFormData()}
-            isLoading={isLoading}
-            error={error}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isEdit={true}
-          />
+        {/* Tabbed Form */}
+        <div className="max-w-4xl">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="general">
+                <Settings className="h-4 w-4 mr-2" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="network">
+                <Network className="h-4 w-4 mr-2" />
+                Network
+              </TabsTrigger>
+            </TabsList>
+
+            {/* General Configuration */}
+            <TabsContent value="general" className="space-y-6 mt-6">
+              <ClusterForm
+                initialData={getInitialFormData()}
+                isLoading={isLoading}
+                error={activeTab === 'general' ? error : ''}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+                isEdit={true}
+              />
+            </TabsContent>
+
+            {/* Network Configuration */}
+            <TabsContent value="network" className="space-y-6 mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Globe className="h-5 w-5" />
+                    <span>Allowed Domains</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Configure domains that agents in this cluster can access. This creates a NetworkPolicy to allow egress traffic to these domains.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Current Domains */}
+                  {allowedDomains.length > 0 && (
+                    <div className="space-y-3">
+                      <Label>Current Domains</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {allowedDomains.map((domain) => (
+                          <Badge key={domain} variant="outline" className="flex items-center gap-2">
+                            {domain}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => handleRemoveDomain(domain)}
+                              disabled={isLoading}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Domain */}
+                  <div className="space-y-3">
+                    <Label htmlFor="newDomain">Add Domain</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="newDomain"
+                        value={newDomain}
+                        onChange={(e) => setNewDomain(e.target.value)}
+                        placeholder="*.company.com or api.openai.com"
+                        className="flex-1"
+                        disabled={isLoading}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddDomain()
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddDomain}
+                        disabled={isLoading || !newDomain.trim()}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Use wildcards like *.company.com for subdomains. IPv4 CIDR blocks are also supported.
+                    </p>
+                  </div>
+
+                  {/* Quick Add Buttons */}
+                  <div className="space-y-3">
+                    <Label>Quick Add Common Providers</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { name: 'OpenAI', domain: 'api.openai.com' },
+                        { name: 'Anthropic', domain: 'api.anthropic.com' },
+                        { name: 'Google AI', domain: '*.googleapis.com' },
+                        { name: 'Azure OpenAI', domain: '*.openai.azure.com' },
+                        { name: 'AWS Bedrock', domain: '*.amazonaws.com' },
+                      ].map((provider) => (
+                        <Button
+                          key={provider.domain}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAddQuickDomain(provider.domain)}
+                          disabled={isLoading || allowedDomains.includes(provider.domain)}
+                        >
+                          {provider.name}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* System Access Info */}
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <div className="flex items-start space-x-3">
+                      <Zap className="h-5 w-5 text-green-600 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-green-800">
+                          System Access (Auto-managed)
+                        </p>
+                        <p className="text-sm text-green-700">
+                          Agents automatically have access to the Kubernetes API server for event emission and system operations.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Error Display */}
+                  {activeTab === 'network' && error && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  )}
+
+                  {/* Network Tab Actions */}
+                  <div className="flex justify-end space-x-4 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleSubmit(getInitialFormData() as ClusterFormData)}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Updating...' : 'Update Cluster'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </AuthenticatedLayout>
