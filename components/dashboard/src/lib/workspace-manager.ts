@@ -207,12 +207,12 @@ class WorkspaceManager {
             ],
             resources: {
               limits: {
-                cpu: '100m',
-                memory: '128Mi',
-              },
-              requests: {
                 cpu: '50m',
                 memory: '64Mi',
+              },
+              requests: {
+                cpu: '10m',
+                memory: '32Mi',
               },
             },
             securityContext: {
