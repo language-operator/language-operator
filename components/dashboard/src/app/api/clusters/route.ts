@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     // Add agent counts to clusters
     const clustersWithAgentCounts = filteredClusters.map((cluster: LanguageCluster) => {
-      const agentCount = agentCountsByCluster[cluster.metadata.name] || 0
+      const agentCount = agentCountsByCluster[cluster.metadata.name || ''] || 0
       
       return {
         ...cluster,
