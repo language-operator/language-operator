@@ -124,8 +124,8 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
       {/* Events */}
       <ResourceEventsActivity
         resourceType="model"
-        resourceName={model.metadata.name}
-        namespace={model.metadata.namespace}
+        resourceName={model.metadata.name!}
+        namespace={model.metadata.namespace!}
         clusterName={clusterName}
       />
 
