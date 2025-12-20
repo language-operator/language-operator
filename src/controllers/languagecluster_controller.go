@@ -293,6 +293,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 
 	// Build egress rules starting with K8s API server access
 	tcpProtocol := corev1.ProtocolTCP
+	udpProtocol := corev1.ProtocolUDP
 	egressRules := []networkingv1.NetworkPolicyEgressRule{
 		{
 			// Allow access to Kubernetes API server via service discovery (kubernetes.default.svc)
@@ -310,6 +311,28 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				{
 					Protocol: &tcpProtocol,
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
+				},
+			},
+		},
+		{
+			// Allow DNS access for name resolution (kube-dns in kube-system namespace)
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": "kube-system",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: &udpProtocol,
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+				},
+				{
+					Protocol: &tcpProtocol,
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
 				},
 			},
 		},
