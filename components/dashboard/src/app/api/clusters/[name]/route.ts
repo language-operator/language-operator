@@ -24,10 +24,10 @@ const updateClusterSchema = z.object({
           namespace: z.string().optional()
         }).optional(),
         namespaceSelector: z.object({
-          matchLabels: z.record(z.string())
+          matchLabels: z.record(z.string(), z.string())
         }).optional(),
         podSelector: z.object({
-          matchLabels: z.record(z.string())
+          matchLabels: z.record(z.string(), z.string())
         }).optional()
       }).optional(),
       from: z.object({
@@ -39,10 +39,10 @@ const updateClusterSchema = z.object({
           namespace: z.string().optional()
         }).optional(),
         namespaceSelector: z.object({
-          matchLabels: z.record(z.string())
+          matchLabels: z.record(z.string(), z.string())
         }).optional(),
         podSelector: z.object({
-          matchLabels: z.record(z.string())
+          matchLabels: z.record(z.string(), z.string())
         }).optional()
       }).optional(),
       ports: z.array(z.object({
