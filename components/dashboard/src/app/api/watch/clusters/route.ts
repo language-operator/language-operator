@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
               {
                 namespace: organization.namespace,
                 labelSelector: `langop.io/organization-id=${organization.id}`,
-                timeoutSeconds: 300, // 5 minute timeout
+                timeoutSeconds: 90, // 90 second timeout (reduced from 5 minutes)
               },
               (event: WatchEvent) => {
                 // Transform the event for the frontend
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
               watchCleanup()
             }
           }
-        }, 30000) // Every 30 seconds
+        }, 15000) // Every 15 seconds (reduced from 30)
 
         // Cleanup on stream close
         const cleanup = () => {

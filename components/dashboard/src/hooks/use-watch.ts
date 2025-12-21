@@ -150,7 +150,14 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
       })
 
       eventSource.onerror = (error) => {
-        console.error('EventSource error:', error)
+        const readyState = eventSource.readyState;
+        const readyStateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
+        console.error(`EventSource error (readyState: ${readyStateNames[readyState] || readyState}):`, {
+          error,
+          url: eventSource.url,
+          timestamp: new Date().toISOString(),
+          instanceId
+        })
         setIsConnected(false)
         
         const errorMessage = 'Connection lost. Attempting to reconnect...'
