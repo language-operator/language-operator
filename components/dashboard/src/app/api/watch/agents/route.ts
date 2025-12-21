@@ -5,12 +5,13 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { watchService, WatchEvent } from '@/lib/watch-service'
+import { createSSEWatchStream } from '@/lib/sse-watch-helper'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user's selected organization (replaces broken memberships[0] pattern)
+    // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
-    
+
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
       return new Response('Insufficient permissions', { status: 403 })
@@ -22,116 +23,100 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔍 Starting agent watch for organization ${organization.name}${clusterName ? ` (cluster: ${clusterName})` : ''}`)
 
-    // Create a readable stream for Server-Sent Events
-    const stream = new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        let watchCleanup: (() => void) | null = null
-        
-        const sendEvent = (data: any, event?: string) => {
-          const eventData = `${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`
-          controller.enqueue(encoder.encode(eventData))
+    // Track watch state
+    let watchCleanup: (() => void) | null = null
+    let retryTimeout: NodeJS.Timeout | null = null
+
+    // Create safe SSE stream with automatic lifecycle management
+    const { stream, sendEvent, isActive } = createSSEWatchStream(request, {
+      heartbeatInterval: 30000,
+      onCleanup: () => {
+        if (watchCleanup) {
+          watchCleanup()
+          watchCleanup = null
         }
-
-        sendEvent({ 
-          type: 'connected', 
-          cluster: clusterName,
-          timestamp: new Date().toISOString() 
-        }, 'connection')
-
-        const startWatch = async () => {
-          try {
-            // Build label selector
-            let labelSelector = `langop.io/organization-id=${organization.id}`
-            if (clusterName) {
-              labelSelector += `,langop.io/cluster=${clusterName}`
-            }
-
-            watchCleanup = await watchService.watchLanguageAgents(
-              {
-                namespace: organization.namespace,
-                labelSelector,
-                timeoutSeconds: 300,
-              },
-              (event: WatchEvent) => {
-                const clientEvent = {
-                  type: event.type,
-                  resource: 'agent',
-                  data: event.object,
-                  timestamp: new Date().toISOString(),
-                  resourceVersion: event.resourceVersion,
-                  cluster: event.object?.metadata?.labels?.['langop.io/cluster'],
-                }
-
-                if (event.error) {
-                  clientEvent.data = { error: event.error }
-                }
-
-                console.log(`📡 Agent watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
-                sendEvent(clientEvent, 'resource-update')
-              },
-              (error: Error | null) => {
-                console.error('Agent watch error:', error)
-                sendEvent({
-                  type: 'error',
-                  message: error?.message || 'Watch stream ended unexpectedly',
-                  timestamp: new Date().toISOString()
-                }, 'error')
-                
-                setTimeout(startWatch, 15000)
-              }
-            )
-          } catch (error) {
-            console.error('Failed to start agent watch:', error)
-            sendEvent({
-              type: 'error',
-              message: error instanceof Error ? error.message : 'Failed to start watch',
-              timestamp: new Date().toISOString()
-            }, 'error')
-          }
-        }
-
-        startWatch()
-
-        request.signal.addEventListener('abort', () => {
-          console.log('🛑 Agent watch client disconnected')
-          if (watchCleanup) {
-            watchCleanup()
-          }
-          controller.close()
-        })
-
-        const heartbeatInterval = setInterval(() => {
-          try {
-            sendEvent({
-              type: 'heartbeat',
-              timestamp: new Date().toISOString(),
-              activeWatches: watchService.getActiveWatchCount()
-            }, 'heartbeat')
-          } catch (error) {
-            clearInterval(heartbeatInterval)
-            if (watchCleanup) {
-              watchCleanup()
-            }
-          }
-        }, 30000)
-
-        const cleanup = () => {
-          clearInterval(heartbeatInterval)
-          if (watchCleanup) {
-            watchCleanup()
-          }
-        }
-
-        ;(controller as any).cleanup = cleanup
-      },
-      cancel() {
-        console.log('🛑 Agent watch stream cancelled')
-        if ((this as any).cleanup) {
-          (this as any).cleanup()
+        if (retryTimeout) {
+          clearTimeout(retryTimeout)
+          retryTimeout = null
         }
       }
     })
+
+    // Send initial connection data
+    sendEvent({
+      cluster: clusterName,
+    }, 'connection')
+
+    const startWatch = async () => {
+      // Don't retry if client has disconnected
+      if (request.signal.aborted || !isActive()) {
+        console.log('🛑 Client disconnected, not starting agent watch')
+        return
+      }
+
+      try {
+        // Build label selector
+        let labelSelector = `langop.io/organization-id=${organization.id}`
+        if (clusterName) {
+          labelSelector += `,langop.io/cluster=${clusterName}`
+        }
+
+        watchCleanup = await watchService.watchLanguageAgents(
+          {
+            namespace: organization.namespace,
+            labelSelector,
+            timeoutSeconds: 300,
+          },
+          (event: WatchEvent) => {
+            const clientEvent = {
+              type: event.type,
+              resource: 'agent',
+              data: event.object,
+              timestamp: new Date().toISOString(),
+              resourceVersion: event.resourceVersion,
+              cluster: event.object?.metadata?.labels?.['langop.io/cluster'],
+            }
+
+            if (event.error) {
+              clientEvent.data = { error: event.error }
+            }
+
+            console.log(`📡 Agent watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
+            sendEvent(clientEvent, 'resource-update')
+          },
+          (error: Error | null) => {
+            console.error('Agent watch error:', error)
+
+            // Send error to client if stream is still active
+            if (isActive()) {
+              sendEvent({
+                type: 'error',
+                message: error?.message || 'Watch stream ended unexpectedly',
+                timestamp: new Date().toISOString()
+              }, 'error')
+            }
+
+            // Retry only if client is still connected
+            if (!request.signal.aborted && isActive()) {
+              retryTimeout = setTimeout(startWatch, 15000)
+            }
+          }
+        )
+      } catch (error) {
+        console.error('Failed to start agent watch:', error)
+
+        // Send error to client if stream is still active
+        if (isActive()) {
+          sendEvent({
+            type: 'error',
+            message: error instanceof Error ? error.message : 'Failed to start watch',
+            timestamp: new Date().toISOString()
+          }, 'error')
+        }
+      }
+    }
+
+    startWatch()
 
     return new Response(stream, {
       headers: {
@@ -146,10 +131,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error setting up agent watch:', error)
+    console.error('Unhandled error in agent watch route:', error)
     return new Response(
-      `Error setting up agent watch: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      { status: 500 }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
