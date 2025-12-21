@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
           {
             namespace: organization.namespace,
             labelSelector: `langop.io/organization-id=${organization.id}`,
-            timeoutSeconds: 90,
+            // No timeout - let the watch run indefinitely
+            // K8s will close it eventually, but we'll reconnect immediately
           },
           (event: WatchEvent) => {
             const clientEvent = {
@@ -80,9 +81,11 @@ export async function GET(request: NextRequest) {
               }, 'error')
             }
 
-            // Retry only if client is still connected
+            // Retry immediately if client is still connected
+            // This prevents missing events during reconnection
             if (!request.signal.aborted && isActive()) {
-              retryTimeout = setTimeout(startWatch, 15000)
+              console.log('🔄 Reconnecting cluster watch immediately...')
+              retryTimeout = setTimeout(startWatch, 100) // 100ms delay to prevent tight loop
             }
           }
         )

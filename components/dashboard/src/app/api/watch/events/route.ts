@@ -87,7 +87,8 @@ export async function GET(request: NextRequest) {
             namespace: organization.namespace,
             labelSelector,
             fieldSelector,
-            timeoutSeconds: 300,
+            // No timeout - let the watch run indefinitely
+            // K8s will close it eventually, but we will reconnect immediately
           },
           (event: WatchEvent) => {
             // Filter and transform the event
@@ -126,7 +127,8 @@ export async function GET(request: NextRequest) {
 
             // Retry only if client is still connected
             if (!request.signal.aborted && isActive()) {
-              retryTimeout = setTimeout(startWatch, 15000)
+              console.log('🔄 Reconnecting events watch immediately...')
+              retryTimeout = setTimeout(startWatch, 100) // 100ms delay to prevent tight loop
             }
           }
         )
