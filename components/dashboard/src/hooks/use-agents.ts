@@ -220,3 +220,106 @@ export function useDeleteAgent(clusterName: string) {
     },
   })
 }
+
+export function useAgentVersions(agentName: string, clusterName: string) {
+  const { activeOrganizationId } = useOrganizationStore()
+  
+  return useQuery({
+    queryKey: ['agent-versions', activeOrganizationId, clusterName, agentName],
+    queryFn: async () => {
+      if (!clusterName || !agentName) {
+        throw new Error('Cluster name and agent name are required to fetch agent versions')
+      }
+      
+      const endpoint = `/api/clusters/${clusterName}/agents/${agentName}/versions`
+      
+      const response = await fetchWithOrganization(endpoint)
+      if (!response.ok) {
+        let errorMessage = 'Failed to fetch agent versions'
+        let errorData: any = null
+        
+        try {
+          errorData = await response.json()
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          if (response.status === 404) {
+            errorMessage = `Agent "${agentName}" not found in cluster "${clusterName}"`
+          }
+        }
+        
+        const error = new Error(errorMessage) as any
+        error.status = response.status
+        error.data = errorData
+        throw error
+      }
+      return response.json()
+    },
+    enabled: !!agentName && !!clusterName,
+  })
+}
+
+export function useRollbackAgent(clusterName: string) {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ agentName, versionName, lock = false }: { agentName: string; versionName: string; lock?: boolean }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for agent rollback')
+      }
+      
+      const endpoint = `/api/clusters/${clusterName}/agents/${agentName}/rollback`
+      
+      const response = await fetchWithOrganization(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ versionName, lock }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || errorData.message || 'Failed to rollback agent')
+      }
+      
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate agent and version queries
+      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+    },
+  })
+}
+
+export function useToggleAgentLock(clusterName: string) {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ agentName, lock }: { agentName: string; lock: boolean }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for agent lock operation')
+      }
+      
+      const endpoint = `/api/clusters/${clusterName}/agents/${agentName}/lock`
+      
+      const response = await fetchWithOrganization(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lock }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || errorData.message || 'Failed to update agent lock status')
+      }
+      
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate agent and version queries
+      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+    },
+  })
+}

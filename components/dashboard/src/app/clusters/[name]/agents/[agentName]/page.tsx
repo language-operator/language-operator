@@ -15,11 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Bot, AlertCircle, CheckCircle, Clock, ArrowLeft, 
   Edit, FileText, Trash2, Activity, Zap, DollarSign, TrendingUp, Code, MoreVertical, FileCode, Copy, Check, FolderOpen,
-  Home, ScrollText, BarChart3, Play, ArrowDown, ChevronDown
+  Home, ScrollText, BarChart3, Play, ArrowDown, ChevronDown, RotateCcw, Lock, Unlock, History
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
+import { useAgent, useDeleteAgent, useAgentVersions, useRollbackAgent, useToggleAgentLock } from '@/hooks/use-agents'
 import { useModels } from '@/hooks/use-models'
 import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
@@ -357,61 +357,81 @@ interface AgentCodeProps {
 }
 
 function AgentCode({ agent, clusterName }: AgentCodeProps) {
-  const [agentVersion, setAgentVersion] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedVersionName, setSelectedVersionName] = useState<string>('')
+  const [showRollbackDialog, setShowRollbackDialog] = useState(false)
+  const [lockOnRollback, setLockOnRollback] = useState(false)
+  
+  // Hooks for version management
+  const { data: versionsResponse, isLoading: versionsLoading, error: versionsError } = useAgentVersions(agent.metadata.name || '', clusterName || '')
+  const rollbackMutation = useRollbackAgent(clusterName || '')
+  const lockMutation = useToggleAgentLock(clusterName || '')
 
-  // Fetch the LanguageAgentVersion referenced by the agent
+  const versions = versionsResponse?.data || []
+  const currentVersionName = versionsResponse?.currentVersion
+  const isLocked = versionsResponse?.isLocked || false
+  
+  // Set initial selected version to current version
   useEffect(() => {
-    const fetchAgentVersion = async () => {
-      if (!agent.spec.agentVersionRef) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const url = `/api/clusters/${clusterName}/agent-versions/${agent.spec.agentVersionRef.name}`
-        console.log('Fetching agent version from:', url)
-        
-        const response = await fetch(url)
-        console.log('Response status:', response.status, response.statusText)
-        
-        if (!response.ok) {
-          const errorData = await response.text()
-          console.error('Error response:', errorData)
-          throw new Error(`Failed to fetch agent version: ${response.status} ${response.statusText}`)
-        }
-        
-        const data = await response.json()
-        console.log('Agent version data:', data)
-        setAgentVersion(data.data)
-      } catch (err) {
-        console.error('Error fetching agent version:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load agent version')
-      } finally {
-        setLoading(false)
-      }
+    if (currentVersionName && !selectedVersionName) {
+      setSelectedVersionName(currentVersionName)
     }
+  }, [currentVersionName, selectedVersionName])
 
-    fetchAgentVersion()
-  }, [agent.spec.agentVersionRef, clusterName])
-
+  const selectedVersion = versions.find((v: any) => v.metadata.name === selectedVersionName)
   const synthesisInfo = agent.status?.synthesisInfo
   const isSynthesized = agent.status?.conditions?.some(
     (condition: any) => condition.type === 'Synthesized' && condition.status === 'True'
   )
 
-  if (loading) {
+  const handleRollback = async () => {
+    if (!selectedVersionName || selectedVersionName === currentVersionName) return
+    
+    try {
+      await rollbackMutation.mutateAsync({
+        agentName: agent.metadata.name || '',
+        versionName: selectedVersionName,
+        lock: lockOnRollback
+      })
+      setShowRollbackDialog(false)
+      setLockOnRollback(false)
+    } catch (error) {
+      console.error('Rollback failed:', error)
+    }
+  }
+
+  const handleToggleLock = async () => {
+    try {
+      await lockMutation.mutateAsync({
+        agentName: agent.metadata.name || '',
+        lock: !isLocked
+      })
+    } catch (error) {
+      console.error('Lock toggle failed:', error)
+    }
+  }
+
+  const formatTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return 'Just now'
+  }
+
+  if (versionsLoading) {
     return (
       <div className="space-y-6">
         <Card>
           <CardContent className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading synthesized code...</p>
+              <p className="text-gray-600">Loading agent versions...</p>
             </div>
           </CardContent>
         </Card>
@@ -421,6 +441,109 @@ function AgentCode({ agent, clusterName }: AgentCodeProps) {
 
   return (
     <div className="space-y-6">
+      {/* Version Selector and Controls */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Agent Version Management
+          </CardTitle>
+          <CardDescription>
+            View and manage different versions of this agent's synthesized code
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 mb-4">
+            {/* Version Selector */}
+            <div className="flex-1">
+              <Select 
+                value={selectedVersionName} 
+                onValueChange={setSelectedVersionName}
+                disabled={versions.length === 0}
+              >
+                <SelectTrigger className="min-w-80">
+                  <SelectValue placeholder="Select a version" />
+                </SelectTrigger>
+                <SelectContent>
+                  {versions.map((version: any) => (
+                    <SelectItem key={version.metadata.name} value={version.metadata.name}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm">v{version.spec.version}</span>
+                        {version.isCurrent && (
+                          <Badge variant="default" className="text-xs">CURRENT</Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {version.spec.sourceType || 'manual'}
+                        </Badge>
+                        <span className="text-muted-foreground text-xs">
+                          {formatTimeAgo(version.metadata.creationTimestamp)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Version Controls */}
+            <div className="flex items-center gap-2">
+              {/* Lock Toggle */}
+              {currentVersionName && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleLock}
+                  disabled={lockMutation.isPending}
+                  className={isLocked ? 'text-orange-600' : ''}
+                >
+                  {isLocked ? (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Unlock
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="h-4 w-4 mr-2" />
+                      Lock
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Rollback Button */}
+              {selectedVersionName && selectedVersionName !== currentVersionName && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowRollbackDialog(true)}
+                  disabled={rollbackMutation.isPending}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Roll Back to This Version
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Status Indicators */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            {currentVersionName && (
+              <div className="flex items-center gap-2">
+                <span>Current:</span>
+                <code className="text-xs bg-muted px-2 py-1 rounded">{currentVersionName}</code>
+              </div>
+            )}
+            {isLocked && (
+              <div className="flex items-center gap-1 text-orange-600">
+                <Lock className="h-3 w-3" />
+                <span>Version Locked</span>
+              </div>
+            )}
+            <div>Total Versions: {versions.length}</div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Code Synthesis Status */}
       <Card>
         <CardHeader>
@@ -484,27 +607,30 @@ function AgentCode({ agent, clusterName }: AgentCodeProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Code className="h-5 w-5" />
-            Synthesized Agent Code
+            Agent Code {selectedVersion?.isCurrent ? '(Current)' : '(Version ' + selectedVersion?.spec?.version + ')'}
           </CardTitle>
           <CardDescription>
-            Ruby DSL code synthesized for this agent's execution logic
+            Ruby DSL code for this agent's execution logic
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error ? (
+          {versionsError ? (
             <div className="text-center py-16">
               <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Code</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">{error}</p>
+              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Versions</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">{versionsError.message}</p>
             </div>
-          ) : agentVersion?.spec?.code ? (
+          ) : selectedVersion?.spec?.code ? (
             <div className="border rounded-lg">
               <div className="bg-muted p-3 border-b">
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-sm">Agent Definition (Ruby DSL)</p>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">Ruby</Badge>
-                    <Badge variant="outline">v{agentVersion.spec.version || 1}</Badge>
+                    <Badge variant="outline">v{selectedVersion.spec.version}</Badge>
+                    {selectedVersion.isCurrent && (
+                      <Badge variant="default">Current</Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -526,68 +652,126 @@ function AgentCode({ agent, clusterName }: AgentCodeProps) {
                     }
                   }}
                 >
-                  {agentVersion.spec.code}
+                  {selectedVersion.spec.code}
                 </SyntaxHighlighter>
               </div>
             </div>
           ) : (
             <div className="text-center py-16">
               <Code className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Code Synthesized</h3>
+              <h3 className="text-lg font-semibold mb-2">No Code Available</h3>
               <p className="text-muted-foreground max-w-md mx-auto">
-                This agent hasn't been synthesized yet. Code will appear here
-                after the synthesis process completes successfully.
+                {versions.length === 0 
+                  ? 'This agent has no synthesized versions yet. Code will appear here after the synthesis process completes successfully.'
+                  : 'Select a version to view its code.'
+                }
               </p>
-              {agent.spec.agentVersionRef && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Agent Version Reference: {agent.spec.agentVersionRef.name}
-                </p>
-              )}
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* Agent Version Details */}
-      {agentVersion && (
+      {selectedVersion && (
         <Card>
           <CardHeader>
-            <CardTitle>Agent Version Details</CardTitle>
+            <CardTitle>Version Details</CardTitle>
             <CardDescription>
-              Metadata and information about the synthesized agent version
+              Metadata and information about the selected agent version
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Version Name</p>
-                <p className="text-sm font-mono">{agentVersion.metadata.name}</p>
+                <p className="text-sm font-mono">{selectedVersion.metadata.name}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Created</p>
-                <p className="text-sm">{formatTimeAgo(agentVersion.metadata.creationTimestamp)}</p>
+                <p className="text-sm">{formatTimeAgo(selectedVersion.metadata.creationTimestamp)}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Source Type</p>
-                <Badge variant="outline">{agentVersion.spec.sourceType || 'manual'}</Badge>
+                <Badge variant="outline">{selectedVersion.spec.sourceType || 'manual'}</Badge>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Status</p>
-                <Badge variant={agentVersion.status?.phase === 'Ready' ? 'default' : 'secondary'}>
-                  {agentVersion.status?.phase || 'Unknown'}
+                <Badge variant={selectedVersion.status?.phase === 'Ready' ? 'default' : 'secondary'}>
+                  {selectedVersion.status?.phase || 'Unknown'}
                 </Badge>
               </div>
             </div>
             
-            {agentVersion.spec.description && (
+            {selectedVersion.spec.description && (
               <div className="mt-4">
                 <p className="text-sm font-medium text-muted-foreground">Description</p>
-                <p className="text-sm">{agentVersion.spec.description}</p>
+                <p className="text-sm">{selectedVersion.spec.description}</p>
+              </div>
+            )}
+
+            {selectedVersion.spec.optimizedTasks && Object.keys(selectedVersion.spec.optimizedTasks).length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-muted-foreground mb-2">Optimized Tasks</p>
+                <div className="space-y-2">
+                  {Object.entries(selectedVersion.spec.optimizedTasks).map(([taskName, task]: [string, any]) => (
+                    <div key={taskName} className="flex items-center justify-between p-2 bg-muted rounded">
+                      <span className="text-sm font-medium">{task.name}</span>
+                      <div className="flex items-center gap-2">
+                        {task.confidenceScore !== undefined && (
+                          <Badge variant="outline" className="text-xs">
+                            {task.confidenceScore}% confidence
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
       )}
+
+      {/* Rollback Confirmation Dialog */}
+      <Dialog open={showRollbackDialog} onOpenChange={setShowRollbackDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Roll Back Agent Version</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will change the agent "{agent.metadata.name || 'unknown'}" to use version {selectedVersion?.spec?.version} 
+              instead of the current version. This action cannot be undone automatically.
+            </p>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="lockOnRollback"
+                checked={lockOnRollback}
+                onChange={(e) => setLockOnRollback(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="lockOnRollback" className="text-sm">
+                Lock version after rollback (prevents automatic optimization)
+              </label>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowRollbackDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRollback}
+              disabled={rollbackMutation.isPending}
+            >
+              {rollbackMutation.isPending ? 'Rolling Back...' : 'Roll Back'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
