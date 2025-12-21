@@ -27,6 +27,7 @@ import {
 import { Users, Plus, MessageCircle, Palette, Clock, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { usePersonas } from '@/hooks/use-personas'
+import { useWatchPersonas } from '@/hooks/use-watch'
 import { EventsActivity } from '@/components/ui/events-activity'
 
 function formatTimeAgo(timestamp?: string | Date) {
@@ -49,9 +50,13 @@ export default function ClusterPersonas() {
   const clusterName = params?.name as string
   const [search, setSearch] = React.useState('')
   const [toneFilter, setToneFilter] = React.useState<string>('all')
-  
-  // Fetch all personas and filter client-side (TODO: implement server-side filtering by namespace)
+
+  // Fetch all personas with real-time updates
   const { data: personasResponse, isLoading, error } = usePersonas({ clusterName, limit: 100 })
+
+  // Enable real-time updates via SSE watch
+  useWatchPersonas()
+
   const allPersonas = personasResponse?.data || []
   
   // Filter personas based on search and tone

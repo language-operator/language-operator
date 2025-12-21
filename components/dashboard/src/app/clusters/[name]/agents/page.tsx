@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { fetchWithOrganization } from '@/lib/api-client'
+import React, { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +28,8 @@ import {
 import { Bot, Plus, Activity, Clock, Zap, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { LanguageAgent } from '@/types/agent'
+import { useAgents } from '@/hooks/use-agents'
+import { useWatchAgents } from '@/hooks/use-watch'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -49,51 +50,39 @@ export default function ClusterAgents() {
   const params = useParams()
   const router = useRouter()
   const clusterName = params?.name as string
-  
-  const [agents, setAgents] = useState<LanguageAgent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+
   const [search, setSearch] = useState('')
   const [executionModeFilter, setExecutionModeFilter] = useState<string>('all')
 
-  useEffect(() => {
-    fetchAgents()
-  }, [clusterName])
+  // Use the agents hook for real-time updates
+  const { data: agentsData, isLoading: loading, error: agentsError } = useAgents({
+    clusterName,
+    page: 1,
+    limit: 1000, // Get all agents for list view
+  })
 
-  const fetchAgents = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  // Enable real-time updates via SSE watch
+  useWatchAgents({ clusterName })
 
-      // Fetch agents for this cluster using cluster-scoped API
-      const agentsResponse = await fetchWithOrganization(`/api/clusters/${clusterName}/agents`)
-      if (!agentsResponse.ok) {
-        throw new Error('Failed to fetch agents')
-      }
-      const agentsData = await agentsResponse.json()
-      setAgents(agentsData.data || [])
-    } catch (err) {
-      console.error('Error fetching agents:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load agents')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const agents = agentsData?.data || []
+  const error = agentsError ? (agentsError as Error).message : null
 
   // Filter agents based on search and execution mode
-  const filteredAgents = agents.filter((agent: any) => {
-    const searchQuery = search.toLowerCase()
-    const matchesSearch = !search || 
-      agent.metadata.name.toLowerCase().includes(searchQuery) ||
-      (agent.spec.displayName || '').toLowerCase().includes(searchQuery) ||
-      (agent.spec.description || '').toLowerCase().includes(searchQuery)
-    
-    const matchesExecutionMode = executionModeFilter === 'all' || 
-      (agent.spec.executionMode || 'autonomous').toLowerCase() === executionModeFilter.toLowerCase()
-    
-    return matchesSearch && matchesExecutionMode
-  })
-  
+  const filteredAgents = useMemo(() => {
+    return agents.filter((agent: any) => {
+      const searchQuery = search.toLowerCase()
+      const matchesSearch = !search ||
+        agent.metadata.name.toLowerCase().includes(searchQuery) ||
+        (agent.spec.displayName || '').toLowerCase().includes(searchQuery) ||
+        (agent.spec.description || '').toLowerCase().includes(searchQuery)
+
+      const matchesExecutionMode = executionModeFilter === 'all' ||
+        (agent.spec.executionMode || 'autonomous').toLowerCase() === executionModeFilter.toLowerCase()
+
+      return matchesSearch && matchesExecutionMode
+    })
+  }, [agents, search, executionModeFilter])
+
   const clusterAgents = filteredAgents
   
   // Get unique execution modes for filter dropdown

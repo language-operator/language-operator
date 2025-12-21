@@ -27,6 +27,7 @@ import {
 import { Cpu, Plus, ExternalLink, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useModels } from '@/hooks/use-models'
+import { useWatchModels } from '@/hooks/use-watch'
 import { EventsActivity } from '@/components/ui/events-activity'
 
 function formatTimeAgo(timestamp?: string | Date) {
@@ -49,12 +50,16 @@ export default function ClusterModels() {
   const clusterName = params?.name as string
   const [search, setSearch] = React.useState('')
   const [providerFilter, setProviderFilter] = React.useState<string>('all')
-  
-  // Use cluster-specific API endpoint
-  const { data: modelsResponse, isLoading, error } = useModels({ 
-    clusterName, 
-    limit: 100 
+
+  // Use cluster-specific API endpoint with real-time updates
+  const { data: modelsResponse, isLoading, error } = useModels({
+    clusterName,
+    limit: 100
   })
+
+  // Enable real-time updates via SSE watch
+  useWatchModels()
+
   const allModels = modelsResponse?.data || []
   
   
