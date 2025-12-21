@@ -58,13 +58,14 @@ export function useModel(name: string, clusterName: string) {
 
 export function useDeleteModel(clusterName: string) {
   const queryClient = useQueryClient()
-  
+  const { activeOrganizationId } = useOrganizationStore()
+
   return useMutation({
     mutationFn: async (name: string) => {
       if (!clusterName) {
         throw new Error('Cluster name is required for model deletion')
       }
-      
+
       const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${name}`, {
         method: 'DELETE',
       })
@@ -73,9 +74,44 @@ export function useDeleteModel(clusterName: string) {
       }
       return response.json()
     },
-    onSuccess: () => {
+    onMutate: async (modelName: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['models'] })
+
+      // Snapshot the previous value
+      const previousModels = queryClient.getQueryData(['models'])
+      const previousClusterModels = queryClient.getQueryData(['models', activeOrganizationId, clusterName])
+
+      // Optimistically remove from cache
+      queryClient.setQueryData(['models', activeOrganizationId, clusterName], (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: old.data.filter((model: any) => model.metadata.name !== modelName),
+          total: Math.max(0, old.total - 1)
+        }
+      })
+
+      return { previousModels, previousClusterModels }
+    },
+    onError: (err, modelName, context) => {
+      // Rollback on error
+      if (context?.previousModels) {
+        queryClient.setQueryData(['models'], context.previousModels)
+      }
+      if (context?.previousClusterModels) {
+        queryClient.setQueryData(['models', activeOrganizationId, clusterName], context.previousClusterModels)
+      }
+      console.error('Failed to delete model:', err)
+    },
+    onSettled: (data, error, modelName) => {
+      // Always refetch after mutation
       queryClient.invalidateQueries({ queryKey: ['models'] })
       queryClient.invalidateQueries({ queryKey: ['models', clusterName] })
+      if (modelName) {
+        queryClient.removeQueries({ queryKey: ['models', clusterName, modelName] })
+      }
     },
   })
 }

@@ -54,13 +54,14 @@ export function usePersona(name: string, clusterName: string) {
 
 export function useDeletePersona(clusterName: string) {
   const queryClient = useQueryClient()
-  
+  const { activeOrganizationId } = useOrganizationStore()
+
   return useMutation({
     mutationFn: async (name: string) => {
       if (!clusterName) {
         throw new Error('Cluster name is required for persona deletion')
       }
-      
+
       const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas/${name}`, {
         method: 'DELETE',
       })
@@ -69,9 +70,44 @@ export function useDeletePersona(clusterName: string) {
       }
       return response.json()
     },
-    onSuccess: () => {
+    onMutate: async (personaName: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['personas'] })
+
+      // Snapshot the previous value
+      const previousPersonas = queryClient.getQueryData(['personas'])
+      const previousClusterPersonas = queryClient.getQueryData(['personas', activeOrganizationId, clusterName])
+
+      // Optimistically remove from cache
+      queryClient.setQueryData(['personas', activeOrganizationId, clusterName], (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: old.data.filter((persona: any) => persona.metadata.name !== personaName),
+          total: Math.max(0, old.total - 1)
+        }
+      })
+
+      return { previousPersonas, previousClusterPersonas }
+    },
+    onError: (err, personaName, context) => {
+      // Rollback on error
+      if (context?.previousPersonas) {
+        queryClient.setQueryData(['personas'], context.previousPersonas)
+      }
+      if (context?.previousClusterPersonas) {
+        queryClient.setQueryData(['personas', activeOrganizationId, clusterName], context.previousClusterPersonas)
+      }
+      console.error('Failed to delete persona:', err)
+    },
+    onSettled: (data, error, personaName) => {
+      // Always refetch after mutation
       queryClient.invalidateQueries({ queryKey: ['personas'] })
       queryClient.invalidateQueries({ queryKey: ['personas', clusterName] })
+      if (personaName) {
+        queryClient.removeQueries({ queryKey: ['personas', clusterName, personaName] })
+      }
     },
   })
 }

@@ -85,7 +85,8 @@ export function useAgent(name: string, clusterName: string) {
 
 export function useCreateAgent(clusterName: string) {
   const queryClient = useQueryClient()
-  
+  const { activeOrganizationId } = useOrganizationStore()
+
   return useMutation({
     mutationFn: async (agent: LanguageAgentFormData) => {
       if (!clusterName) {
@@ -97,16 +98,63 @@ export function useCreateAgent(clusterName: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
         throw new Error(errorData.error || 'Failed to create agent')
       }
-      
+
       return response.json()
     },
-    onSuccess: () => {
-      // Invalidate cluster-specific queries
+    onMutate: async (newAgent: LanguageAgentFormData) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['agents'] })
+      await queryClient.cancelQueries({ queryKey: ['agents', activeOrganizationId, clusterName] })
+
+      // Snapshot the previous value
+      const previousAgents = queryClient.getQueryData(['agents'])
+      const previousClusterAgents = queryClient.getQueryData(['agents', activeOrganizationId, clusterName])
+
+      // Create optimistic agent object
+      const optimisticAgent: any = {
+        metadata: {
+          name: newAgent.name,
+          namespace: activeOrganizationId,
+          labels: {
+            'langop.io/cluster': clusterName,
+          },
+        },
+        spec: newAgent,
+        status: {
+          phase: 'Pending',
+        },
+      }
+
+      // Optimistically update the agents cache
+      queryClient.setQueryData(['agents', activeOrganizationId, clusterName], (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: [optimisticAgent, ...old.data],
+          total: old.total + 1
+        }
+      })
+
+      return { previousAgents, previousClusterAgents }
+    },
+    onError: (err, newAgent, context) => {
+      // Rollback on error
+      if (context?.previousAgents) {
+        queryClient.setQueryData(['agents'], context.previousAgents)
+      }
+      if (context?.previousClusterAgents) {
+        queryClient.setQueryData(['agents', activeOrganizationId, clusterName], context.previousClusterAgents)
+      }
+      console.error('Failed to create agent:', err)
+    },
+    onSettled: () => {
+      // Always refetch after mutation to get server state
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       queryClient.invalidateQueries({ queryKey: ['agents', clusterName] })
     },
@@ -115,29 +163,87 @@ export function useCreateAgent(clusterName: string) {
 
 export function useUpdateAgent(clusterName: string) {
   const queryClient = useQueryClient()
-  
+  const { activeOrganizationId } = useOrganizationStore()
+
   return useMutation({
     mutationFn: async ({ name, agent }: { name: string; agent: Partial<LanguageAgent> }) => {
       if (!clusterName) {
         throw new Error('Cluster name is required for agent update')
       }
-      
+
       const endpoint = `/api/clusters/${clusterName}/agents/${name}`
-      
+
       const response = await fetchWithOrganization(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent),
       })
-      
+
       if (!response.ok) {
-        throw new Error('Failed to update agent')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        // Check for conflict (409)
+        if (response.status === 409) {
+          const error = new Error('This agent was modified by another user. Please refresh and try again.') as any
+          error.status = 409
+          error.data = errorData
+          throw error
+        }
+        throw new Error(errorData.error || 'Failed to update agent')
       }
-      
+
       return response.json()
     },
-    onSuccess: () => {
-      // Invalidate cluster-specific queries
+    onMutate: async ({ name, agent }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['agents', clusterName, name] })
+      await queryClient.cancelQueries({ queryKey: ['agents', activeOrganizationId, clusterName] })
+
+      // Snapshot the previous values
+      const previousAgent = queryClient.getQueryData(['agents', clusterName, name])
+      const previousClusterAgents = queryClient.getQueryData(['agents', activeOrganizationId, clusterName])
+
+      // Optimistically update individual agent query
+      queryClient.setQueryData(['agents', clusterName, name], (old: any) => {
+        if (!old) return old
+        return {
+          ...old,
+          ...agent,
+        }
+      })
+
+      // Optimistically update agents list
+      queryClient.setQueryData(['agents', activeOrganizationId, clusterName], (old: any) => {
+        if (!old?.data) return old
+
+        return {
+          ...old,
+          data: old.data.map((a: any) =>
+            a.metadata.name === name ? { ...a, ...agent } : a
+          ),
+        }
+      })
+
+      return { previousAgent, previousClusterAgents }
+    },
+    onError: (err: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousAgent) {
+        queryClient.setQueryData(['agents', clusterName, variables.name], context.previousAgent)
+      }
+      if (context?.previousClusterAgents) {
+        queryClient.setQueryData(['agents', activeOrganizationId, clusterName], context.previousClusterAgents)
+      }
+
+      // Log conflict errors specially
+      if (err.status === 409) {
+        console.error('Conflict detected:', err.message)
+      } else {
+        console.error('Failed to update agent:', err)
+      }
+    },
+    onSettled: (data, error, variables) => {
+      // Always refetch to ensure server state is correct
+      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.name] })
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       queryClient.invalidateQueries({ queryKey: ['agents', clusterName] })
     },
