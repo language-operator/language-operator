@@ -9,63 +9,69 @@ import { Input } from '@/components/ui/input'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Wrench, Download, CheckCircle, Search, ExternalLink, Shield, Network } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { ToolCatalog, ToolCatalogEntry, InstalledTool } from '@/types/tool-catalog'
-import { fetchWithOrganization } from '@/lib/api-client'
 import { EventsActivity } from '@/components/ui/events-activity'
+import { useTools } from '@/hooks/use-tools'
+import { useWatchTools } from '@/hooks/use-watch'
 
 export default function ClusterTools() {
   const params = useParams()
   const clusterName = params?.name as string
   const [catalog, setCatalog] = useState<ToolCatalog | null>(null)
-  const [installedTools, setInstalledTools] = useState<InstalledTool[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Use the tools hook for installed tools (with real-time updates)
+  const { data: toolsData, isLoading: toolsLoading, error: toolsError } = useTools({
+    clusterName,
+    page: 1,
+    limit: 1000, // Get all tools for catalog view
+  })
+
+  // Enable real-time updates via SSE watch
+  useWatchTools()
+
+  // Convert LanguageTool objects to InstalledTool format
+  const installedTools = useMemo(() => {
+    return (toolsData?.data || []).map((tool: any) => ({
+      name: tool.metadata.name,
+      catalogName: tool.metadata.labels?.['langop.io/catalog-name'] || tool.metadata.name,
+      status: {
+        phase: tool.status?.phase || 'Unknown',
+        message: tool.status?.conditions?.[0]?.message || ''
+      }
+    }))
+  }, [toolsData])
+
+  // Fetch catalog separately (static data, doesn't need watch)
   useEffect(() => {
-    fetchData()
-  }, [clusterName])
+    const fetchCatalog = async () => {
+      try {
+        setCatalogLoading(true)
+        setCatalogError(null)
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Fetch catalog
-      const catalogResponse = await fetch('/api/tools/catalog')
-      if (!catalogResponse.ok) {
-        throw new Error('Failed to fetch tool catalog')
+        const catalogResponse = await fetch('/api/tools/catalog')
+        if (!catalogResponse.ok) {
+          throw new Error('Failed to fetch tool catalog')
+        }
+        const catalogData = await catalogResponse.json()
+        setCatalog(catalogData)
+      } catch (err) {
+        console.error('Error fetching catalog:', err)
+        setCatalogError(err instanceof Error ? err.message : 'Failed to load tool catalog')
+      } finally {
+        setCatalogLoading(false)
       }
-      const catalogData = await catalogResponse.json()
-      setCatalog(catalogData)
-
-      // Fetch installed tools for this cluster
-      const toolsResponse = await fetchWithOrganization(`/api/clusters/${clusterName}/tools`)
-      if (toolsResponse.ok) {
-        const toolsData = await toolsResponse.json()
-        // Convert LanguageTool objects to InstalledTool format
-        const adaptedTools = (toolsData.data || []).map((tool: any) => ({
-          name: tool.metadata.name,
-          catalogName: tool.metadata.labels?.['langop.io/catalog-name'] || tool.metadata.name,
-          status: {
-            phase: tool.status?.phase || 'Unknown',
-            message: tool.status?.conditions?.[0]?.message || ''
-          }
-        }))
-        setInstalledTools(adaptedTools)
-      }
-    } catch (err) {
-      console.error('Error fetching data:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load tools')
-    } finally {
-      setLoading(false)
     }
-  }
+
+    fetchCatalog()
+  }, [])
 
   const isToolInstalled = (toolName: string) => {
-    return installedTools.some(tool => 
-      tool.catalogName === toolName || 
+    return installedTools.some((tool: InstalledTool) =>
+      tool.catalogName === toolName ||
       tool.name === toolName
     )
   }
@@ -236,7 +242,7 @@ export default function ClusterTools() {
     : []
 
   // Filter installed tools by search query as well
-  const filteredInstalledTools = installedTools.filter(installedTool => {
+  const filteredInstalledTools = installedTools.filter((installedTool: InstalledTool) => {
     const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
     if (!catalogEntry) return false
     const query = searchQuery.toLowerCase()
@@ -248,13 +254,16 @@ export default function ClusterTools() {
     )
   })
 
-  if (loading) {
+  const isLoading = catalogLoading || toolsLoading
+  const error = catalogError || (toolsError ? (toolsError as Error).message : null)
+
+  if (isLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading tool catalog...</p>
+            <p className="mt-4 text-gray-600">Loading tools...</p>
           </div>
         </div>
       </AuthenticatedLayout>
@@ -278,9 +287,6 @@ export default function ClusterTools() {
               <CardDescription className="text-center max-w-md">
                 {error}
               </CardDescription>
-              <Button onClick={fetchData} className="mt-4">
-                Try Again
-              </Button>
             </CardContent>
           </Card>
         </div>
@@ -316,7 +322,7 @@ export default function ClusterTools() {
           <div>
             <h2 className="text-xl font-semibold mb-4">Installed Tools</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredInstalledTools.map((installedTool) => {
+              {filteredInstalledTools.map((installedTool: InstalledTool) => {
                 const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
                 if (!catalogEntry) return null
                 const toolId = installedTool.catalogName || installedTool.name
