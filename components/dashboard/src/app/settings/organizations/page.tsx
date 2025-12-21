@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, Settings, Users, MoreHorizontal, Trash2, Edit } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -29,11 +30,11 @@ import { EditOrganizationDialog } from '@/components/organization/edit-organizat
 import type { Organization } from '@/store/organization-store'
 
 export default function OrganizationsPage() {
+  const router = useRouter()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null)
   const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  
+
   const { data: organizations = [], isLoading } = useOrganizations()
   const { organization: activeOrganization } = useActiveOrganization()
   const { setActiveOrganization } = useOrganizationStore()
@@ -216,7 +217,7 @@ export default function OrganizationsPage() {
                               <Users className="mr-2 h-4 w-4" />
                               Switch to Organization
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setEditingOrganization(org)}>
+                            <DropdownMenuItem onClick={() => router.push(`/settings/organizations/${org.id}/edit`)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Organization
                             </DropdownMenuItem>
@@ -247,13 +248,6 @@ export default function OrganizationsPage() {
       <CreateOrganizationDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-      />
-
-      {/* Edit Organization Dialog */}
-      <EditOrganizationDialog
-        open={!!editingOrganization}
-        onOpenChange={(open) => !open && setEditingOrganization(null)}
-        organization={editingOrganization}
       />
 
       {/* Delete Organization Dialog */}

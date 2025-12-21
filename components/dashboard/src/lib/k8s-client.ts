@@ -350,6 +350,88 @@ class KubernetesClient {
     })
   }
 
+  async updateResourceQuotaWithCustomSpec(
+    namespace: string,
+    quotaSpec: Record<string, string>,
+    organizationId: string,
+    name?: string
+  ) {
+    const quotaName = name || `${namespace}-quota`
+
+    const resourceQuota: k8s.V1ResourceQuota = {
+      metadata: {
+        name: quotaName,
+        namespace,
+        labels: {
+          'langop.io/organization-id': organizationId,
+          'langop.io/plan': 'custom',
+          'langop.io/resource': 'quota'
+        }
+      },
+      spec: {
+        hard: quotaSpec
+      }
+    }
+
+    if (!this.coreV1Api) {
+      throw new Error('Kubernetes API not available')
+    }
+
+    return await this.coreV1Api.replaceNamespacedResourceQuota({
+      name: quotaName,
+      namespace,
+      body: resourceQuota
+    })
+  }
+
+  validateQuotaSpec(quotaSpec: Record<string, string>): { valid: boolean; errors: string[] } {
+    const errors: string[] = []
+
+    // Validate count fields (must be positive integers)
+    const countFields = [
+      'count/languageagents',
+      'count/languagemodels',
+      'count/languagetools',
+      'count/languagepersonas',
+      'count/languageclusters'
+    ]
+
+    countFields.forEach(field => {
+      const value = quotaSpec[field]
+      if (value) {
+        const num = parseInt(value)
+        if (isNaN(num) || num < 0) {
+          errors.push(`${field} must be a positive integer`)
+        }
+      }
+    })
+
+    // Validate resource fields (CPU: m/cores, Memory: Ki/Mi/Gi)
+    const resourceFields = ['requests.cpu', 'limits.cpu', 'requests.memory', 'limits.memory']
+
+    resourceFields.forEach(field => {
+      const value = quotaSpec[field]
+      if (value) {
+        if (field.includes('cpu')) {
+          // Validate CPU format (e.g., 100m, 1, 2000m)
+          if (!/^\d+(m)?$/.test(value)) {
+            errors.push(`${field} must be in format: 100m or 1 (cores)`)
+          }
+        } else {
+          // Validate memory format (e.g., 128Mi, 2Gi, 1024Ki)
+          if (!/^\d+(Ki|Mi|Gi)$/.test(value)) {
+            errors.push(`${field} must be in format: 128Mi, 2Gi, or 1024Ki`)
+          }
+        }
+      }
+    })
+
+    return {
+      valid: errors.length === 0,
+      errors
+    }
+  }
+
   async deleteResourceQuota(namespace: string, name?: string) {
     if (!this.coreV1Api) {
       throw new Error('Kubernetes API not available')

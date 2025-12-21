@@ -2,7 +2,7 @@
 
 import { useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Settings, Users } from 'lucide-react'
+import { ArrowLeft, Settings, Users, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useOrganization } from '@/hooks/use-organizations'
@@ -25,6 +25,12 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
       href: `/settings/organizations/${organizationId}`,
       icon: Settings,
       current: pathname === `/settings/organizations/${organizationId}`
+    },
+    {
+      name: 'Quotas',
+      href: `/settings/organizations/${organizationId}/edit`,
+      icon: BarChart3,
+      current: pathname === `/settings/organizations/${organizationId}/edit`
     },
     {
       name: 'Members',

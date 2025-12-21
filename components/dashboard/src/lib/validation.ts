@@ -659,3 +659,37 @@ export type ClusterResourceCreateParams = z.infer<typeof ClusterResourceCreatePa
 export type ResourceFilterParams = z.infer<typeof ResourceFilterParamsSchema>
 export type ClusterValidation = z.infer<typeof ClusterValidationSchema>
 export type ApiErrorContext = z.infer<typeof ApiErrorContextSchema>
+
+// Resource quota validation schemas
+export const QuotaSchema = z.object({
+  'count/languageagents': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'count/languagemodels': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'count/languagetools': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'count/languagepersonas': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'count/languageclusters': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'requests.cpu': z.string().regex(/^\d+(m)?$/, 'Must be in format: 100m or 1 (cores)'),
+  'requests.memory': z.string().regex(/^\d+(Ki|Mi|Gi)$/, 'Must be in format: 128Mi, 2Gi, or 1024Ki'),
+  'limits.cpu': z.string().regex(/^\d+(m)?$/, 'Must be in format: 100m or 1 (cores)'),
+  'limits.memory': z.string().regex(/^\d+(Ki|Mi|Gi)$/, 'Must be in format: 128Mi, 2Gi, or 1024Ki'),
+})
+
+export const QuotaUpdateSchema = z.object({
+  plan: z.enum(['free', 'pro', 'enterprise']).optional(),
+  quotas: QuotaSchema.optional()
+}).refine(data => data.plan || data.quotas, {
+  message: 'Either plan or quotas must be provided'
+})
+
+export type Quota = z.infer<typeof QuotaSchema>
+export type QuotaUpdate = z.infer<typeof QuotaUpdateSchema>
+
+// Quota validation helper functions
+export function safeValidateQuota(data: unknown) {
+  const result = QuotaSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
+
+export function safeValidateQuotaUpdate(data: unknown) {
+  const result = QuotaUpdateSchema.safeParse(data)
+  return result.success ? { success: true, data: result.data } : { success: false, error: result.error }
+}
