@@ -131,18 +131,13 @@ export class KubernetesWatchService {
         (error: any) => {
           console.error(`Watch stream ended for ${plural}:`, error)
           this.activeStreams.delete(watchKey)
-          
+
           if (onError) {
             onError(error || new Error('Watch stream ended'))
           }
-          
-          // Auto-reconnect after a delay (exponential backoff could be added here)
-          setTimeout(() => {
-            if (this.watchers.has(watchKey)) {
-              console.log(`🔄 Reconnecting watch for ${plural}...`)
-              this.watchCustomResource(group, version, plural, options, onEvent, onError)
-            }
-          }, 5000)
+
+          // Note: Reconnection is now handled by the route layer
+          // This prevents double reconnection logic and reconnection storms
         }
       )
 
@@ -314,18 +309,13 @@ export class KubernetesWatchService {
         (error: any) => {
           console.error(`Watch stream ended for ${resource}:`, error)
           this.activeStreams.delete(watchKey)
-          
+
           if (onError) {
             onError(error || new Error('Watch stream ended'))
           }
-          
-          // Auto-reconnect
-          setTimeout(() => {
-            if (this.watchers.has(watchKey)) {
-              console.log(`🔄 Reconnecting watch for ${resource}...`)
-              this.watchCoreResource(apiVersion, resource, options, onEvent, onError)
-            }
-          }, 5000)
+
+          // Note: Reconnection is now handled by the route layer
+          // This prevents double reconnection logic and reconnection storms
         }
       )
 

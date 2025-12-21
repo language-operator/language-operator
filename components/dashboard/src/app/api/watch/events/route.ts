@@ -5,12 +5,13 @@ import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { watchService, WatchEvent } from '@/lib/watch-service'
+import { createSSEWatchStream } from '@/lib/sse-watch-helper'
 
 export async function GET(request: NextRequest) {
   try {
     // Get user's selected organization
     const { user, organization, userRole } = await getUserOrganization(request)
-    
+
     const hasPermission = await requirePermission(user.id, organization.id, 'view')
     if (!hasPermission) {
       return new Response('Insufficient permissions', { status: 403 })
@@ -28,140 +29,122 @@ export async function GET(request: NextRequest) {
       resourceName
     })
 
-    // Create a readable stream for Server-Sent Events
-    const stream = new ReadableStream({
-      start(controller) {
-        const encoder = new TextEncoder()
-        let watchCleanup: (() => void) | null = null
-        
-        const sendEvent = (data: any, event?: string) => {
-          const eventData = `${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`
-          controller.enqueue(encoder.encode(eventData))
+    // Track watch state
+    let watchCleanup: (() => void) | null = null
+    let retryTimeout: NodeJS.Timeout | null = null
+
+    // Create safe SSE stream with automatic lifecycle management
+    const { stream, sendEvent, isActive } = createSSEWatchStream(request, {
+      heartbeatInterval: 30000,
+      onCleanup: () => {
+        // Cleanup watch and timers when client disconnects
+        if (watchCleanup) {
+          watchCleanup()
+          watchCleanup = null
         }
-
-        sendEvent({ 
-          type: 'connected', 
-          cluster: clusterName,
-          resourceType,
-          resourceName,
-          timestamp: new Date().toISOString() 
-        }, 'connection')
-
-        const startWatch = async () => {
-          try {
-            // Build field selector for filtering events
-            const fieldSelectors: string[] = []
-
-            // Filter by involved object if resource specified
-            if (resourceName && resourceType) {
-              const k8sKind = mapResourceTypeToK8sKind(resourceType)
-              fieldSelectors.push(`involvedObject.kind=${k8sKind}`)
-              fieldSelectors.push(`involvedObject.name=${resourceName}`)
-            } else if (resourceType) {
-              const k8sKind = mapResourceTypeToK8sKind(resourceType)
-              fieldSelectors.push(`involvedObject.kind=${k8sKind}`)
-            }
-
-            const fieldSelector = fieldSelectors.length > 0 ? fieldSelectors.join(',') : undefined
-
-            // Build label selector for organization filtering
-            const labelSelector = `langop.io/organization-id=${organization.id}`
-
-            watchCleanup = await watchService.watchEvents(
-              {
-                namespace: organization.namespace,
-                labelSelector,
-                fieldSelector,
-                timeoutSeconds: 300,
-              },
-              (event: WatchEvent) => {
-                // Filter and transform the event
-                const k8sEvent = event.object
-                if (!k8sEvent || !shouldIncludeEvent(k8sEvent, clusterName ?? undefined, resourceType ?? undefined, resourceName ?? undefined)) {
-                  return
-                }
-
-                const clientEvent: any = {
-                  type: mapK8sEventToClientEventType(k8sEvent),
-                  resource: 'event',
-                  data: transformEventData(k8sEvent, organization.namespace),
-                  timestamp: new Date().toISOString(),
-                  resourceVersion: event.resourceVersion,
-                  eventType: event.type, // ADDED, MODIFIED, DELETED
-                }
-
-                if (event.error) {
-                  clientEvent.data = { error: event.error }
-                }
-
-                console.log(`📡 Event watch: ${event.type} - ${k8sEvent?.involvedObject?.name || 'unknown'} (${k8sEvent?.reason})`)
-                sendEvent(clientEvent, 'resource-update')
-              },
-              (error: Error | null) => {
-                console.error('Events watch error:', error)
-                sendEvent({
-                  type: 'error',
-                  message: error?.message || 'Watch stream ended unexpectedly',
-                  timestamp: new Date().toISOString()
-                }, 'error')
-                
-                // Retry after delay
-                setTimeout(startWatch, 15000)
-              }
-            )
-          } catch (error) {
-            console.error('Failed to start events watch:', error)
-            sendEvent({
-              type: 'error',
-              message: error instanceof Error ? error.message : 'Failed to start events watch',
-              timestamp: new Date().toISOString()
-            }, 'error')
-          }
-        }
-
-        startWatch()
-
-        // Handle client disconnect
-        request.signal.addEventListener('abort', () => {
-          console.log('🛑 Events watch client disconnected')
-          if (watchCleanup) {
-            watchCleanup()
-          }
-          controller.close()
-        })
-
-        // Send periodic heartbeats
-        const heartbeatInterval = setInterval(() => {
-          try {
-            sendEvent({
-              type: 'heartbeat',
-              timestamp: new Date().toISOString(),
-              activeWatches: watchService.getActiveWatchCount()
-            }, 'heartbeat')
-          } catch (error) {
-            clearInterval(heartbeatInterval)
-            if (watchCleanup) {
-              watchCleanup()
-            }
-          }
-        }, 30000)
-
-        const cleanup = () => {
-          clearInterval(heartbeatInterval)
-          if (watchCleanup) {
-            watchCleanup()
-          }
-        }
-
-        ;(controller as any).cleanup = cleanup
-      },
-      cancel() {
-        console.log('🛑 Events watch stream cancelled')
-        if ((this as any).cleanup) {
-          (this as any).cleanup()
+        if (retryTimeout) {
+          clearTimeout(retryTimeout)
+          retryTimeout = null
         }
       }
     })
+
+    // Send initial connection data
+    sendEvent({
+      cluster: clusterName,
+      resourceType,
+      resourceName,
+    }, 'connection')
+
+    const startWatch = async () => {
+      // Don't retry if client has disconnected
+      if (request.signal.aborted || !isActive()) {
+        console.log('🛑 Client disconnected, not starting events watch')
+        return
+      }
+
+      try {
+        // Build field selector for filtering events
+        const fieldSelectors: string[] = []
+
+        // Filter by involved object if resource specified
+        if (resourceName && resourceType) {
+          const k8sKind = mapResourceTypeToK8sKind(resourceType)
+          fieldSelectors.push(`involvedObject.kind=${k8sKind}`)
+          fieldSelectors.push(`involvedObject.name=${resourceName}`)
+        } else if (resourceType) {
+          const k8sKind = mapResourceTypeToK8sKind(resourceType)
+          fieldSelectors.push(`involvedObject.kind=${k8sKind}`)
+        }
+
+        const fieldSelector = fieldSelectors.length > 0 ? fieldSelectors.join(',') : undefined
+
+        // Build label selector for organization filtering
+        const labelSelector = `langop.io/organization-id=${organization.id}`
+
+        watchCleanup = await watchService.watchEvents(
+          {
+            namespace: organization.namespace,
+            labelSelector,
+            fieldSelector,
+            timeoutSeconds: 300,
+          },
+          (event: WatchEvent) => {
+            // Filter and transform the event
+            const k8sEvent = event.object
+            if (!k8sEvent || !shouldIncludeEvent(k8sEvent, clusterName ?? undefined, resourceType ?? undefined, resourceName ?? undefined)) {
+              return
+            }
+
+            const clientEvent: any = {
+              type: mapK8sEventToClientEventType(k8sEvent),
+              resource: 'event',
+              data: transformEventData(k8sEvent, organization.namespace),
+              timestamp: new Date().toISOString(),
+              resourceVersion: event.resourceVersion,
+              eventType: event.type, // ADDED, MODIFIED, DELETED
+            }
+
+            if (event.error) {
+              clientEvent.data = { error: event.error }
+            }
+
+            console.log(`📡 Event watch: ${event.type} - ${k8sEvent?.involvedObject?.name || 'unknown'} (${k8sEvent?.reason})`)
+            sendEvent(clientEvent, 'resource-update')
+          },
+          (error: Error | null) => {
+            console.error('Events watch error:', error)
+
+            // Send error to client if stream is still active
+            if (isActive()) {
+              sendEvent({
+                type: 'error',
+                message: error?.message || 'Watch stream ended unexpectedly',
+                timestamp: new Date().toISOString()
+              }, 'error')
+            }
+
+            // Retry only if client is still connected
+            if (!request.signal.aborted && isActive()) {
+              retryTimeout = setTimeout(startWatch, 15000)
+            }
+          }
+        )
+      } catch (error) {
+        console.error('Failed to start events watch:', error)
+
+        // Send error to client if stream is still active
+        if (isActive()) {
+          sendEvent({
+            type: 'error',
+            message: error instanceof Error ? error.message : 'Failed to start events watch',
+            timestamp: new Date().toISOString()
+          }, 'error')
+        }
+      }
+    }
+
+    startWatch()
 
     return new Response(stream, {
       headers: {
@@ -176,10 +159,10 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error setting up events watch:', error)
+    console.error('Unhandled error in events watch route:', error)
     return new Response(
-      `Error setting up events watch: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      { status: 500 }
+      JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
