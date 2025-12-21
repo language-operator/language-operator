@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResourceEventsActivity } from '@/components/ui/events-activity'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -438,6 +439,14 @@ export default function ClusterPersonaDetailPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Persona Events */}
+        <ResourceEventsActivity
+          resourceType="persona"
+          resourceName={personaName}
+          namespace={persona.metadata.namespace}
+          limit={15}
+        />
       </div>
 
       {/* YAML Modal */}

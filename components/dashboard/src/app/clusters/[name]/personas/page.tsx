@@ -27,6 +27,7 @@ import {
 import { Users, Plus, MessageCircle, Palette, Clock, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { usePersonas } from '@/hooks/use-personas'
+import { EventsActivity } from '@/components/ui/events-activity'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -313,6 +314,16 @@ export default function ClusterPersonas() {
             )}
           </>
         )}
+
+        {/* Persona Events */}
+        <EventsActivity
+          title="Persona Events"
+          description="Recent events for personas in this cluster"
+          clusterName={clusterName}
+          resourceType="persona"
+          limit={10}
+          showNamespace={false}
+        />
       </div>
     </AuthenticatedLayout>
   )

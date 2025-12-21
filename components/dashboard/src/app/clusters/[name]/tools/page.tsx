@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { ToolCatalog, ToolCatalogEntry, InstalledTool } from '@/types/tool-catalog'
 import { fetchWithOrganization } from '@/lib/api-client'
+import { EventsActivity } from '@/components/ui/events-activity'
 
 export default function ClusterTools() {
   const params = useParams()
@@ -366,6 +367,16 @@ export default function ClusterTools() {
             </div>
           )}
         </div>
+
+        {/* Tool Events */}
+        <EventsActivity
+          title="Tool Events"
+          description="Recent events for tools in this cluster"
+          clusterName={clusterName}
+          resourceType="tool"
+          limit={10}
+          showNamespace={false}
+        />
       </div>
     </AuthenticatedLayout>
   )

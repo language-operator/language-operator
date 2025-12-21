@@ -27,6 +27,7 @@ import {
 import { Cpu, Plus, ExternalLink, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useModels } from '@/hooks/use-models'
+import { EventsActivity } from '@/components/ui/events-activity'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -271,6 +272,16 @@ export default function ClusterModels() {
             </CardContent>
           </Card>
         )}
+
+        {/* Model Events */}
+        <EventsActivity
+          title="Model Events"
+          description="Recent events for models in this cluster"
+          clusterName={clusterName}
+          resourceType="model"
+          limit={10}
+          showNamespace={false}
+        />
       </div>
     </AuthenticatedLayout>
   )

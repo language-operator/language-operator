@@ -27,6 +27,7 @@ import { LanguageAgent } from '@/types/agent'
 import { Skeleton } from '@/components/ui/skeleton'
 import { NotFound } from '@/components/ui/not-found'
 import { AgentWorkspace } from '@/components/workspace/agent-workspace'
+import { ResourceEventsActivity } from '@/components/ui/events-activity'
 // Simple ANSI code converter
 function convertAnsiToHtml(text: string): string {
   if (!text) return text;
@@ -1530,6 +1531,10 @@ export default function ClusterAgentDetailPage() {
               <ScrollText className="w-4 h-4 mr-2" />
               Logs
             </TabsTrigger>
+            <TabsTrigger value="events">
+              <Clock className="w-4 h-4 mr-2" />
+              Events
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -1559,6 +1564,15 @@ export default function ClusterAgentDetailPage() {
 
           <TabsContent value="logs" className="space-y-6">
             <AgentLogs agent={agent} clusterName={clusterName} />
+          </TabsContent>
+
+          <TabsContent value="events" className="space-y-4">
+            <ResourceEventsActivity
+              resourceType="agent"
+              resourceName={agentName}
+              namespace={agent.metadata.namespace}
+              limit={20}
+            />
           </TabsContent>
         </Tabs>
       </div>

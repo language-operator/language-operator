@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ResourceEventsActivity } from '@/components/ui/events-activity'
 
 export default function ClusterToolDetailPage() {
   const router = useRouter()
@@ -268,6 +269,14 @@ export default function ClusterToolDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Tool Events */}
+        <ResourceEventsActivity
+          resourceType="tool"
+          resourceName={toolName}
+          namespace={tool.metadata.namespace}
+          limit={15}
+        />
       </div>
 
       {/* YAML Modal */}

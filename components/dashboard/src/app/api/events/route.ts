@@ -44,9 +44,6 @@ export async function GET(request: NextRequest) {
       fieldSelector = fieldSelectors.join(',')
     }
 
-    // Build label selector for organization filtering
-    const labelSelector = `langop.io/organization-id=${organization.id}`
-
     // Determine target namespace for event fetching
     let targetNamespace = namespace
 
@@ -63,9 +60,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch events from Kubernetes
+    // Note: We don't use labelSelector because Events don't inherit labels from involved resources
     const eventsResponse = await k8sClient.listEvents(targetNamespace, {
       limit: Math.min(limit * 2, 100), // Fetch more than requested to account for filtering
-      labelSelector,
       fieldSelector: fieldSelector || undefined,
     })
 
@@ -107,20 +104,52 @@ export async function GET(request: NextRequest) {
 
     // Apply cluster filtering if specified
     if (clusterName) {
+      // For cluster filtering, we need to fetch resources and check their spec.clusterRef
+      // Build a set of resource names that belong to this cluster
+      const clusterResourceNames = new Set<string>()
+
+      try {
+        // Fetch all Language Operator resources in the namespace
+        const [agentsResp, modelsResp, toolsResp, personasResp] = await Promise.all([
+          k8sClient.listLanguageAgents(targetNamespace).catch(() => ({ items: [] })),
+          k8sClient.listLanguageModels(targetNamespace).catch(() => ({ items: [] })),
+          k8sClient.listLanguageTools(targetNamespace).catch(() => ({ items: [] })),
+          k8sClient.listLanguagePersonas(targetNamespace).catch(() => ({ items: [] })),
+        ])
+
+        // Extract items from responses (handle different response structures)
+        const agents = (agentsResp as any)?.body?.items || (agentsResp as any)?.data?.items || (agentsResp as any)?.items || []
+        const models = (modelsResp as any)?.body?.items || (modelsResp as any)?.data?.items || (modelsResp as any)?.items || []
+        const tools = (toolsResp as any)?.body?.items || (toolsResp as any)?.data?.items || (toolsResp as any)?.items || []
+        const personas = (personasResp as any)?.body?.items || (personasResp as any)?.data?.items || (personasResp as any)?.items || []
+
+        // Add resource names that belong to the cluster
+        const allResources = [...agents, ...models, ...tools, ...personas]
+        allResources.forEach((resource: any) => {
+          if (resource.spec?.clusterRef === clusterName) {
+            clusterResourceNames.add(resource.metadata?.name)
+          }
+        })
+
+        // Also add the cluster itself
+        clusterResourceNames.add(clusterName)
+      } catch (error) {
+        console.error('Error fetching resources for cluster filtering:', error)
+      }
+
+      // Filter events to only include resources in this cluster
       filteredEvents = filteredEvents.filter((event: any) => {
         const involvedObject = event.involvedObject
-        
-        // Check if the resource belongs to the specified cluster
+
+        // Check if the involved object is in our cluster resources set
         if (involvedObject.apiVersion === 'langop.io/v1alpha1') {
-          // For Language Operator resources, check cluster reference
-          return involvedObject.name === clusterName || 
-                 event.involvedObject?.labels?.['langop.io/cluster'] === clusterName
+          return clusterResourceNames.has(involvedObject.name)
         }
-        
-        // For core K8s resources, check labels
-        const labels = event.involvedObject?.labels || {}
-        return labels['langop.io/cluster'] === clusterName ||
-               labels['langop.io/managed-by'] === clusterName
+
+        // For core K8s resources (Pods, Services), we can't easily determine cluster membership
+        // without fetching each resource and checking labels, so include all for now
+        // This is acceptable since we're already filtering by namespace
+        return true
       })
     }
 
