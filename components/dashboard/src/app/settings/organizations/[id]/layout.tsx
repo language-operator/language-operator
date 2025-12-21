@@ -2,10 +2,12 @@
 
 import { useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Settings, Users, BarChart3, Building2 } from 'lucide-react'
+import { Settings, Users, BarChart3, Building2, Copy } from 'lucide-react'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { cn } from '@/lib/utils'
 import { useOrganization } from '@/hooks/use-organizations'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 interface OrganizationLayoutProps {
   children: React.ReactNode
@@ -40,6 +42,13 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
     }
   ]
 
+  const handleCopyNamespace = () => {
+    if (organization?.namespace) {
+      navigator.clipboard.writeText(organization.namespace)
+      toast.success('Namespace copied to clipboard')
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Resource Header */}
@@ -50,7 +59,21 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
           icon={Building2}
           iconColor="text-blue-600"
           title={organization.name}
-          subtitle={`Namespace: ${organization.namespace}`}
+          subtitle={
+            <div className="flex items-center gap-2">
+              <span>Organization</span>
+              <span className="text-gray-400">|</span>
+              <span className="font-mono">{organization.namespace}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={handleCopyNamespace}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          }
         />
       )}
 

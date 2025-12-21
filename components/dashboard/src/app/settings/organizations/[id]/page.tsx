@@ -83,18 +83,16 @@ export default function OrganizationSettingsPage() {
               Basic information about your organization
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Name</label>
-              <p className="text-sm text-gray-900">{organization.name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Namespace</label>
-              <p className="text-sm text-gray-900 font-mono">{organization.namespace}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Plan</label>
-              <p className="text-sm text-gray-900 capitalize">{organization.plan}</p>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Name</label>
+                <p className="text-sm text-gray-900">{organization.name}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Plan</label>
+                <p className="text-sm text-gray-900 capitalize">{organization.plan}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
