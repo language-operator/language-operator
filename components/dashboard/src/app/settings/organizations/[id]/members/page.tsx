@@ -148,12 +148,6 @@ export default function OrganizationMembersPage() {
   if (membersLoading || invitesLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Members</h1>
-            <p className="text-gray-600">Loading organization members...</p>
-          </div>
-        </div>
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -176,29 +170,23 @@ export default function OrganizationMembersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Members</h1>
-          <p className="text-gray-600">
-            Manage who has access to <strong>{organization?.name || 'this organization'}</strong>
-          </p>
-        </div>
-        {canManageMembers && (
-          <Button onClick={() => setShowInviteDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Invite Member
-          </Button>
-        )}
-      </div>
-
       {/* Members List */}
       <Card>
         <CardHeader>
-          <CardTitle>Team Members ({members.length})</CardTitle>
-          <CardDescription>
-            People who are currently part of this organization
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Team Members ({members.length})</CardTitle>
+              <CardDescription>
+                People who are currently part of this organization
+              </CardDescription>
+            </div>
+            {canManageMembers && (
+              <Button onClick={() => setShowInviteDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Invite Member
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
