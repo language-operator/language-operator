@@ -1594,7 +1594,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		"", // endpoint - not applicable for agents
 		otelEndpoint,
 		agent.Spec.Egress,
-		nil, // clusterEgressRules - no cluster policies for now
 	)
 
 	// Create or update the NetworkPolicy with owner reference and configured timeout/retries
