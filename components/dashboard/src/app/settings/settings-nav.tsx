@@ -26,7 +26,7 @@ export function SettingsNav() {
     <nav className="flex flex-col w-64 gap-1">
       <h2 className="text-lg font-semibold mb-4">Settings</h2>
       {settingsNavigation.map((item) => {
-        const isActive = pathname === item.href
+        const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
         return (
           <Link
             key={item.name}

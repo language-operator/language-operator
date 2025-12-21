@@ -5,10 +5,11 @@ import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { useOrganization, useActiveOrganization } from '@/hooks/use-organizations'
 import { useOrganizationStore } from '@/store/organization-store'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { Building2, Trash2 } from 'lucide-react'
 
 export default function OrganizationSettingsPage() {
   const params = useParams()
@@ -73,11 +74,6 @@ export default function OrganizationSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">General Settings</h2>
-        <p className="text-gray-600">Manage your organization settings</p>
-      </div>
-
       <div className="grid gap-6">
         {/* Organization Info */}
         <Card>
@@ -93,20 +89,12 @@ export default function OrganizationSettingsPage() {
               <p className="text-sm text-gray-900">{organization.name}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Slug</label>
-              <p className="text-sm text-gray-900">{organization.slug}</p>
-            </div>
-            <div>
               <label className="text-sm font-medium text-gray-700">Namespace</label>
               <p className="text-sm text-gray-900 font-mono">{organization.namespace}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Plan</label>
               <p className="text-sm text-gray-900 capitalize">{organization.plan}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Members</label>
-              <p className="text-sm text-gray-900">{organization._count?.members || 0} members</p>
             </div>
           </CardContent>
         </Card>
