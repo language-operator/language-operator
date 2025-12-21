@@ -27,7 +27,7 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
       current: pathname === `/settings/organizations/${organizationId}`
     },
     {
-      name: 'Quotas',
+      name: 'Resource Limits',
       href: `/settings/organizations/${organizationId}/edit`,
       icon: BarChart3,
       current: pathname === `/settings/organizations/${organizationId}/edit`
