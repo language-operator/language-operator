@@ -91,27 +91,32 @@ export async function GET(request: NextRequest) {
             // K8s will close it eventually, but we will reconnect immediately
           },
           (event: WatchEvent) => {
-            // Filter and transform the event
-            const k8sEvent = event.object
-            if (!k8sEvent || !shouldIncludeEvent(k8sEvent, clusterName ?? undefined, resourceType ?? undefined, resourceName ?? undefined)) {
-              return
-            }
+            try {
+              // Filter and transform the event
+              const k8sEvent = event.object
+              if (!k8sEvent || !shouldIncludeEvent(k8sEvent, clusterName ?? undefined, resourceType ?? undefined, resourceName ?? undefined)) {
+                return
+              }
 
-            const clientEvent: any = {
-              type: mapK8sEventToClientEventType(k8sEvent),
-              resource: 'event',
-              data: transformEventData(k8sEvent, organization.namespace),
-              timestamp: new Date().toISOString(),
-              resourceVersion: event.resourceVersion,
-              eventType: event.type, // ADDED, MODIFIED, DELETED
-            }
+              const clientEvent: any = {
+                type: mapK8sEventToClientEventType(k8sEvent),
+                resource: 'event',
+                data: transformEventData(k8sEvent, organization.namespace),
+                timestamp: new Date().toISOString(),
+                resourceVersion: event.resourceVersion,
+                eventType: event.type, // ADDED, MODIFIED, DELETED
+              }
 
-            if (event.error) {
-              clientEvent.data = { error: event.error }
-            }
+              if (event.error) {
+                clientEvent.data = { error: event.error }
+              }
 
-            console.log(`📡 Event watch: ${event.type} - ${k8sEvent?.involvedObject?.name || 'unknown'} (${k8sEvent?.reason})`)
-            sendEvent(clientEvent, 'resource-update')
+              console.log(`📡 Event watch: ${event.type} - ${k8sEvent?.involvedObject?.name || 'unknown'} (${k8sEvent?.reason})`)
+              sendEvent(clientEvent, 'resource-update')
+            } catch (error) {
+              console.error('⚠️  Error processing event watch event:', error)
+              // Don't let event processing errors kill the watch stream
+            }
           },
           (error: Error | null) => {
             console.error('Events watch error:', error)

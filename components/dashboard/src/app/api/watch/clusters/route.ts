@@ -54,20 +54,25 @@ export async function GET(request: NextRequest) {
             // K8s will close it eventually, but we'll reconnect immediately
           },
           (event: WatchEvent) => {
-            const clientEvent = {
-              type: event.type,
-              resource: 'cluster',
-              data: event.object,
-              timestamp: new Date().toISOString(),
-              resourceVersion: event.resourceVersion,
-            }
+            try {
+              const clientEvent = {
+                type: event.type,
+                resource: 'cluster',
+                data: event.object,
+                timestamp: new Date().toISOString(),
+                resourceVersion: event.resourceVersion,
+              }
 
-            if (event.error) {
-              clientEvent.data = { error: event.error }
-            }
+              if (event.error) {
+                clientEvent.data = { error: event.error }
+              }
 
-            console.log(`📡 Cluster watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
-            sendEvent(clientEvent, 'resource-update')
+              console.log(`📡 Cluster watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
+              sendEvent(clientEvent, 'resource-update')
+            } catch (error) {
+              console.error('⚠️  Error processing cluster watch event:', error)
+              // Don't let event processing errors kill the watch stream
+            }
           },
           (error: Error | null) => {
             console.error('Cluster watch error:', error)

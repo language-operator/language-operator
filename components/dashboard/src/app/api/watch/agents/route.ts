@@ -69,21 +69,26 @@ export async function GET(request: NextRequest) {
             // K8s will close it eventually, but we will reconnect immediately
           },
           (event: WatchEvent) => {
-            const clientEvent = {
-              type: event.type,
-              resource: 'agent',
-              data: event.object,
-              timestamp: new Date().toISOString(),
-              resourceVersion: event.resourceVersion,
-              cluster: event.object?.metadata?.labels?.['langop.io/cluster'],
-            }
+            try {
+              const clientEvent = {
+                type: event.type,
+                resource: 'agent',
+                data: event.object,
+                timestamp: new Date().toISOString(),
+                resourceVersion: event.resourceVersion,
+                cluster: event.object?.metadata?.labels?.['langop.io/cluster'],
+              }
 
-            if (event.error) {
-              clientEvent.data = { error: event.error }
-            }
+              if (event.error) {
+                clientEvent.data = { error: event.error }
+              }
 
-            console.log(`📡 Agent watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
-            sendEvent(clientEvent, 'resource-update')
+              console.log(`📡 Agent watch event: ${event.type} - ${event.object?.metadata?.name || 'unknown'}`)
+              sendEvent(clientEvent, 'resource-update')
+            } catch (error) {
+              console.error('⚠️  Error processing agent watch event:', error)
+              // Don't let event processing errors kill the watch stream
+            }
           },
           (error: Error | null) => {
             console.error('Agent watch error:', error)
