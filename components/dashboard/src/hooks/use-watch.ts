@@ -115,7 +115,12 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           
           // Invalidate relevant React Query cache
           if (queryKey) {
-            queryClient.invalidateQueries({ queryKey })
+            console.log(`🔄 Invalidating queries with key:`, queryKey)
+            queryClient.invalidateQueries({
+              queryKey,
+              exact: false, // Match all queries starting with this prefix
+              refetchType: 'active' // Refetch active queries immediately
+            })
           }
           
           // Call custom event handler
