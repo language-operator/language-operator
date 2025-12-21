@@ -4,6 +4,7 @@ export interface OrganizationQuota {
   'count/languagetools': string
   'count/languagepersonas': string
   'count/languageclusters': string
+  'count/members': string
   'requests.cpu': string
   'requests.memory': string
   'limits.cpu': string
@@ -28,6 +29,7 @@ export const QUOTA_FIELDS = [
   'count/languagetools',
   'count/languagepersonas',
   'count/languageclusters',
+  'count/members',
   'requests.cpu',
   'requests.memory',
   'limits.cpu',
@@ -40,6 +42,7 @@ export const QUOTA_LABELS: Record<string, string> = {
   'count/languagetools': 'Language Tools',
   'count/languagepersonas': 'Language Personas',
   'count/languageclusters': 'Language Clusters',
+  'count/members': 'Members',
   'requests.cpu': 'CPU Requests',
   'requests.memory': 'Memory Requests',
   'limits.cpu': 'CPU Limits',
@@ -52,6 +55,7 @@ export const QUOTA_DESCRIPTIONS: Record<string, string> = {
   'count/languagetools': 'Maximum number of tools',
   'count/languagepersonas': 'Maximum number of personas',
   'count/languageclusters': 'Maximum number of clusters',
+  'count/members': 'Maximum number of organization members',
   'requests.cpu': 'CPU requests (e.g., 1000m or 1)',
   'requests.memory': 'Memory requests (e.g., 2Gi or 1024Mi)',
   'limits.cpu': 'CPU limits (e.g., 2000m or 2)',

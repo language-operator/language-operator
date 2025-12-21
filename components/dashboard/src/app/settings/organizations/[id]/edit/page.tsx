@@ -16,6 +16,7 @@ import { fetchWithOrganization } from '@/lib/api-client'
 import type { Organization } from '@/store/organization-store'
 import type { OrganizationQuota, QUOTA_DESCRIPTIONS } from '@/types/quota'
 import { QUOTA_LABELS } from '@/types/quota'
+import { Cloud, Bot, Wrench, Users, Cpu, UserPlus, Plus, Minus } from 'lucide-react'
 
 // Form schema
 const quotaFormSchema = z.object({
@@ -24,6 +25,7 @@ const quotaFormSchema = z.object({
   'count/languagetools': z.string().regex(/^\d+$/, 'Must be a positive integer'),
   'count/languagepersonas': z.string().regex(/^\d+$/, 'Must be a positive integer'),
   'count/languageclusters': z.string().regex(/^\d+$/, 'Must be a positive integer'),
+  'count/members': z.string().regex(/^\d+$/, 'Must be a positive integer'),
   'requests.cpu': z.string().regex(/^\d+(m)?$/, 'Must be in format: 100m or 1'),
   'requests.memory': z.string().regex(/^\d+(Ki|Mi|Gi)$/, 'Must be in format: 128Mi or 2Gi'),
   'limits.cpu': z.string().regex(/^\d+(m)?$/, 'Must be in format: 100m or 1'),
@@ -60,6 +62,7 @@ export default function EditOrganizationPage() {
       'count/languagetools': '5',
       'count/languagepersonas': '3',
       'count/languageclusters': '1',
+      'count/members': '5',
       'requests.cpu': '1000m',
       'requests.memory': '2Gi',
       'limits.cpu': '2000m',
@@ -187,47 +190,57 @@ export default function EditOrganizationPage() {
                         Maximum number of resources this organization can create
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <QuotaField
-                        form={quotaForm}
-                        name="count/languageagents"
-                        label={QUOTA_LABELS['count/languageagents']}
-                        description="Maximum number of agents"
-                        currentUsed={quotaData?.used?.['count/languageagents'] || '0'}
-                        disabled={!canEditQuotas || isLoadingQuota}
-                      />
-                      <QuotaField
-                        form={quotaForm}
-                        name="count/languagemodels"
-                        label={QUOTA_LABELS['count/languagemodels']}
-                        description="Maximum number of model configurations"
-                        currentUsed={quotaData?.used?.['count/languagemodels'] || '0'}
-                        disabled={!canEditQuotas || isLoadingQuota}
-                      />
-                      <QuotaField
-                        form={quotaForm}
-                        name="count/languagetools"
-                        label={QUOTA_LABELS['count/languagetools']}
-                        description="Maximum number of tools"
-                        currentUsed={quotaData?.used?.['count/languagetools'] || '0'}
-                        disabled={!canEditQuotas || isLoadingQuota}
-                      />
-                      <QuotaField
-                        form={quotaForm}
-                        name="count/languagepersonas"
-                        label={QUOTA_LABELS['count/languagepersonas']}
-                        description="Maximum number of personas"
-                        currentUsed={quotaData?.used?.['count/languagepersonas'] || '0'}
-                        disabled={!canEditQuotas || isLoadingQuota}
-                      />
-                      <QuotaField
-                        form={quotaForm}
-                        name="count/languageclusters"
-                        label={QUOTA_LABELS['count/languageclusters']}
-                        description="Maximum number of clusters"
-                        currentUsed={quotaData?.used?.['count/languageclusters'] || '0'}
-                        disabled={!canEditQuotas || isLoadingQuota}
-                      />
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/languageclusters"
+                          label="Clusters"
+                          icon={Cloud}
+                          currentUsed={quotaData?.used?.['count/languageclusters']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/languageagents"
+                          label="Agents"
+                          icon={Bot}
+                          currentUsed={quotaData?.used?.['count/languageagents']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/languagetools"
+                          label="Tools"
+                          icon={Wrench}
+                          currentUsed={quotaData?.used?.['count/languagetools']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/languagepersonas"
+                          label="Personas"
+                          icon={Users}
+                          currentUsed={quotaData?.used?.['count/languagepersonas']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/languagemodels"
+                          label="Models"
+                          icon={Cpu}
+                          currentUsed={quotaData?.used?.['count/languagemodels']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                        <ResourceCountField
+                          form={quotaForm}
+                          name="count/members"
+                          label="Members"
+                          icon={UserPlus}
+                          currentUsed={quotaData?.used?.['count/members']}
+                          disabled={!canEditQuotas || isLoadingQuota}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -245,16 +258,14 @@ export default function EditOrganizationPage() {
                           form={quotaForm}
                           name="requests.cpu"
                           label={QUOTA_LABELS['requests.cpu']}
-                          description="e.g., 1000m or 1"
-                          currentUsed={quotaData?.used?.['requests.cpu'] || '0'}
+                          currentUsed={quotaData?.used?.['requests.cpu']}
                           disabled={!canEditQuotas || isLoadingQuota}
                         />
                         <QuotaField
                           form={quotaForm}
                           name="limits.cpu"
                           label={QUOTA_LABELS['limits.cpu']}
-                          description="e.g., 2000m or 2"
-                          currentUsed={quotaData?.used?.['limits.cpu'] || '0'}
+                          currentUsed={quotaData?.used?.['limits.cpu']}
                           disabled={!canEditQuotas || isLoadingQuota}
                         />
                       </div>
@@ -264,16 +275,14 @@ export default function EditOrganizationPage() {
                           form={quotaForm}
                           name="requests.memory"
                           label={QUOTA_LABELS['requests.memory']}
-                          description="e.g., 2Gi or 1024Mi"
-                          currentUsed={quotaData?.used?.['requests.memory'] || '0'}
+                          currentUsed={quotaData?.used?.['requests.memory']}
                           disabled={!canEditQuotas || isLoadingQuota}
                         />
                         <QuotaField
                           form={quotaForm}
                           name="limits.memory"
                           label={QUOTA_LABELS['limits.memory']}
-                          description="e.g., 4Gi or 2048Mi"
-                          currentUsed={quotaData?.used?.['limits.memory'] || '0'}
+                          currentUsed={quotaData?.used?.['limits.memory']}
                           disabled={!canEditQuotas || isLoadingQuota}
                         />
                       </div>
@@ -297,20 +306,107 @@ export default function EditOrganizationPage() {
   )
 }
 
-// Helper component for quota fields
-function QuotaField({
+// Helper component for resource count fields with icons and +/- buttons
+function ResourceCountField({
   form,
   name,
   label,
-  description,
+  icon: Icon,
   currentUsed,
   disabled
 }: {
   form: any
   name: string
   label: string
-  description: string
-  currentUsed: string
+  icon: any
+  currentUsed?: string
+  disabled: boolean
+}) {
+  return (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }) => {
+        const currentValue = parseInt(field.value) || 0
+
+        const increment = () => {
+          field.onChange(String(currentValue + 1))
+        }
+
+        const decrement = () => {
+          if (currentValue > 0) {
+            field.onChange(String(currentValue - 1))
+          }
+        }
+
+        return (
+          <FormItem>
+            <div className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-base font-medium">{label}</FormLabel>
+                <Icon className="w-5 h-5 text-muted-foreground" />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={decrement}
+                  disabled={disabled || currentValue <= 0}
+                  className="h-10 w-10"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+
+                <FormControl>
+                  <Input
+                    {...field}
+                    disabled={disabled}
+                    className="text-center font-bold h-16 max-w-[120px]"
+                    style={{ fontSize: '1.75rem' }}
+                  />
+                </FormControl>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={increment}
+                  disabled={disabled}
+                  className="h-10 w-10"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {currentUsed && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Currently used: {currentUsed}
+                </p>
+              )}
+
+              <FormMessage />
+            </div>
+          </FormItem>
+        )
+      }}
+    />
+  )
+}
+
+// Helper component for quota fields
+function QuotaField({
+  form,
+  name,
+  label,
+  currentUsed,
+  disabled
+}: {
+  form: any
+  name: string
+  label: string
+  currentUsed?: string
   disabled: boolean
 }) {
   return (
@@ -320,15 +416,14 @@ function QuotaField({
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
-          <div className="flex items-center gap-2">
-            <FormControl>
-              <Input {...field} disabled={disabled} className="max-w-xs" />
-            </FormControl>
-            <span className="text-sm text-muted-foreground">
-              (used: {currentUsed})
-            </span>
-          </div>
-          <FormDescription>{description}</FormDescription>
+          <FormControl>
+            <Input {...field} disabled={disabled} className="max-w-xs" />
+          </FormControl>
+          {currentUsed && (
+            <p className="text-sm text-muted-foreground">
+              Currently used: {currentUsed}
+            </p>
+          )}
           <FormMessage />
         </FormItem>
       )}
