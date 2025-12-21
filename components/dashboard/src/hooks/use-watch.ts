@@ -108,8 +108,10 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           
           setLastEvent(watchEvent)
           
-          // Clear connection error since we're receiving data successfully
+          // Clear connection error only if we're connected (not during reconnection attempts)
+          setIsConnected(true)
           setConnectionError(null)
+          setReconnectCount(0)
           
           // Invalidate relevant React Query cache
           if (queryKey) {
@@ -128,8 +130,10 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
       eventSource.addEventListener('heartbeat', (event) => {
         const heartbeatData = JSON.parse(event.data)
         
-        // Clear connection error since heartbeat indicates healthy connection
+        // Clear connection error and confirm connected state since heartbeat indicates healthy connection
+        setIsConnected(true)
         setConnectionError(null)
+        setReconnectCount(0)
         
         if (onConnection) {
           onConnection(heartbeatData)
