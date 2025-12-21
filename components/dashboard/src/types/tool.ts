@@ -325,6 +325,27 @@ export interface LanguageToolFormData {
   parameters?: ToolParameterFormData[]
   returnType?: string
   examples?: ToolExampleFormData[]
+  
+  // Network policy fields
+  egressRules?: Array<{
+    description?: string
+    dns?: string[]
+    cidr?: string
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
+  
+  // Ingress policy fields - tools accept connections from agents
+  ingressRules?: Array<{
+    description?: string
+    from: 'agents' | 'tools' | 'models' | 'cluster' | 'external' | 'gateway'
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
 }
 
 export interface ToolParameterFormData {

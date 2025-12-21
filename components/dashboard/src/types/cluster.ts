@@ -24,6 +24,35 @@ export interface LanguageClusterSpec {
   
   // Ingress/Gateway configuration
   ingressConfig?: IngressConfig
+  
+  // Network policy configuration
+  networkPolicies?: NetworkRule[]
+}
+
+// Network rule types for cluster-level policies
+export interface NetworkRule {
+  description?: string
+  to?: NetworkPeer
+  ports?: NetworkPort[]
+}
+
+export interface NetworkPeer {
+  group?: string
+  cidr?: string
+  dns?: string[]
+  service?: ServiceReference
+  namespaceSelector?: any
+  podSelector?: any
+}
+
+export interface NetworkPort {
+  protocol?: 'TCP' | 'UDP' | 'SCTP'
+  port: number
+}
+
+export interface ServiceReference {
+  name: string
+  namespace?: string
 }
 
 export interface IngressConfig {
@@ -87,6 +116,17 @@ export interface LanguageClusterFormData {
   issuerName?: string
   issuerKind?: 'Issuer' | 'ClusterIssuer'
   issuerGroup?: string
+  
+  // Network policy fields (egress only for clusters)
+  egressRules?: Array<{
+    description?: string
+    dns?: string[]
+    cidr?: string
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
 }
 
 export interface LanguageClusterListItem {

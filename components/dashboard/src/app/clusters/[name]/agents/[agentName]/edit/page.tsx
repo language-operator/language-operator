@@ -66,6 +66,16 @@ const agentFormSchema = z.object({
       protocol: z.enum(['TCP', 'UDP'])
     })).optional()
   })).optional(),
+  
+  // Ingress rules - agents accept connections from external/gateway
+  ingressRules: z.array(z.object({
+    description: z.string().optional(),
+    from: z.enum(['agents', 'tools', 'models', 'cluster', 'external', 'gateway']),
+    ports: z.array(z.object({
+      port: z.number().min(1).max(65535),
+      protocol: z.enum(['TCP', 'UDP'])
+    })).optional()
+  })).optional(),
 })
 
 type AgentFormValues = z.infer<typeof agentFormSchema>
@@ -107,6 +117,7 @@ export default function EditClusterAgentPage() {
       cpuLimit: '500m',
       memoryLimit: '512Mi',
       egressRules: [],
+      ingressRules: [],
     },
   })
 
@@ -129,6 +140,11 @@ export default function EditClusterAgentPage() {
           cidr: rule.to?.cidr || '',
           ports: rule.ports || []
         })) || [],
+        ingressRules: agent.spec.ingress?.map((rule: any) => ({
+          description: rule.description || '',
+          from: rule.from?.type || 'external',
+          ports: rule.ports || []
+        })) || [],
       })
     }
   }, [agent, form])
@@ -149,6 +165,7 @@ export default function EditClusterAgentPage() {
         cpuLimit: values.cpuLimit,
         memoryLimit: values.memoryLimit,
         egressRules: values.egressRules,
+        ingressRules: values.ingressRules,
       }
 
       await updateAgent.mutateAsync({ name: agentName, agent: formData as any })
@@ -493,12 +510,15 @@ export default function EditClusterAgentPage() {
                     <ResourceNetworkPolicyForm
                       control={form.control}
                       egressRulesFieldName="egressRules"
+                      ingressRulesFieldName="ingressRules"
                       watchedEgressRules={watchedValues.egressRules}
+                      watchedIngressRules={watchedValues.ingressRules}
                       setValue={form.setValue}
                       getValues={form.getValues}
-                      title="Egress Network Policy"
-                      description="Control external network access for security. By default, agents can access cluster resources but no external endpoints."
+                      title="Network Policy"
+                      description="Control network access for security. By default, agents can access cluster resources but no external endpoints."
                       resourceType="agent"
+                      showIngressRules={true}
                     />
                   </TabsContent>
                 </Tabs>

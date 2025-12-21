@@ -270,6 +270,27 @@ export interface LanguageAgentFormData {
       protocol: 'TCP' | 'UDP'
     }>
   }>
+  
+  // Ingress policy fields
+  ingressRules?: Array<{
+    description?: string
+    from: 'agents' | 'tools' | 'models' | 'cluster' | 'external' | 'gateway'
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
+  
+  // Cluster-specific ingress rules for advanced use cases
+  clusterIngressRules?: Array<{
+    description?: string
+    from: 'agents' | 'tools' | 'models' | 'cluster'
+    clusterName?: string
+    ports?: Array<{
+      port: number
+      protocol: 'TCP' | 'UDP'
+    }>
+  }>
 }
 
 export interface LanguageAgentListItem {
