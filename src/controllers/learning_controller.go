@@ -185,6 +185,20 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	defer span.End()
 
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
+
+	// Check if agent version is locked before running expensive optimization
+	if agent.Spec.AgentVersionRef != nil && agent.Spec.AgentVersionRef.Lock {
+		log.Info("Agent version is locked, skipping optimization entirely",
+			"lockedVersion", agent.Spec.AgentVersionRef.Name)
+		// Reset pending learning counter since we're not optimizing
+		agent.Status.RunsPendingLearning = 0
+		if err := r.Status().Update(ctx, agent); err != nil {
+			log.Error(err, "Failed to reset learning counter for locked agent")
+			return err
+		}
+		return nil
+	}
+
 	log.Info("Triggering agent optimization based on accumulated runs")
 
 	// Create synthesizer from agent's model for optimization
@@ -2079,7 +2093,42 @@ func (r *LearningReconciler) setAgentVersionReferenceWithRetry(ctx context.Conte
 			return nil
 		}
 
-		// Update the agent's AgentVersionRef on the fresh object
+		// Verify the new version and its ConfigMap are fully ready before switching
+		newVersion := &langopv1alpha1.LanguageAgentVersion{}
+		if err := r.Get(ctx, types.NamespacedName{Name: versionName, Namespace: agent.Namespace}, newVersion); err != nil {
+			if apierrors.IsNotFound(err) && attempt < maxRetries-1 {
+				log.V(1).Info("New version not found yet, retrying", "attempt", attempt+1)
+				time.Sleep(time.Millisecond * time.Duration(100*(attempt+1)))
+				continue
+			}
+			return fmt.Errorf("new version not found: %w", err)
+		}
+
+		if newVersion.Status.Phase != "Ready" {
+			if attempt < maxRetries-1 {
+				log.V(1).Info("New version not ready yet, retrying", "attempt", attempt+1, "phase", newVersion.Status.Phase)
+				time.Sleep(time.Millisecond * time.Duration(100*(attempt+1)))
+				continue
+			}
+			return fmt.Errorf("new version not ready after %d attempts: phase=%s", maxRetries, newVersion.Status.Phase)
+		}
+
+		if newVersion.Status.ConfigMapName == "" {
+			return fmt.Errorf("new version has no ConfigMap")
+		}
+
+		// Verify ConfigMap exists
+		configMap := &corev1.ConfigMap{}
+		if err := r.Get(ctx, types.NamespacedName{Name: newVersion.Status.ConfigMapName, Namespace: agent.Namespace}, configMap); err != nil {
+			if apierrors.IsNotFound(err) && attempt < maxRetries-1 {
+				log.V(1).Info("Version ConfigMap not found yet, retrying", "attempt", attempt+1)
+				time.Sleep(time.Millisecond * time.Duration(100*(attempt+1)))
+				continue
+			}
+			return fmt.Errorf("version ConfigMap not found: %w", err)
+		}
+
+		// All resources ready - now safe to switch
 		freshAgent.Spec.AgentVersionRef = &langopv1alpha1.AgentVersionReference{
 			Name:      versionName,
 			Namespace: agent.Namespace,

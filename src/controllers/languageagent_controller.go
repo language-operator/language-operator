@@ -853,9 +853,16 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name)
 			}
 		} else if currentVersion.Status.Phase != "Ready" {
-			log.Info("Current AgentVersionRef points to unready version, updating to v1",
-				"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "phase", currentVersion.Status.Phase, "newRef", agentVersion.Name)
-			shouldUpdateVersionRef = true
+			// Check if version is locked before auto-updating
+			if agent.Spec.AgentVersionRef.Lock {
+				log.Info("Current AgentVersionRef is locked and unready, keeping locked reference",
+					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "phase", currentVersion.Status.Phase)
+				// Don't update - operator must manually intervene
+			} else {
+				log.Info("Current AgentVersionRef points to unready version, updating to v1",
+					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "phase", currentVersion.Status.Phase, "newRef", agentVersion.Name)
+				shouldUpdateVersionRef = true
+			}
 		} else {
 			log.Info("AgentVersionRef already points to valid version, keeping current reference",
 				"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name, "version", currentVersion.Spec.Version)
@@ -1239,27 +1246,30 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 
 	// Add code ConfigMap volume if agent has modelRefs and instructions (synthesis enabled)
 	if len(agent.Spec.ModelRefs) > 0 && agent.Spec.Instructions != "" {
-		// Resolve ConfigMap name from AgentVersionRef or use base code ConfigMap
+		// Resolve ConfigMap name from AgentVersionRef
+		// No fallback - if we can't resolve the ConfigMap, the pod shouldn't start
 		codeConfigMapName, err := r.resolveCodeConfigMapName(ctx, agent)
 		if err != nil {
-			log.FromContext(ctx).Error(err, "Failed to resolve code ConfigMap name, using base ConfigMap")
-			codeConfigMapName = GenerateConfigMapName(agent.Name, "code")
-		}
-		volumes = append(volumes, corev1.Volume{
-			Name: "agent-code",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: codeConfigMapName,
+			log.FromContext(ctx).Error(err, "Cannot resolve code ConfigMap name - agent code not ready")
+			// Don't add the volume - this will cause the deployment/cronjob reconciliation to fail
+			// and retry, which is correct behavior when the code isn't ready yet
+		} else {
+			volumes = append(volumes, corev1.Volume{
+				Name: "agent-code",
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: codeConfigMapName,
+						},
 					},
 				},
-			},
-		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "agent-code",
-			MountPath: "/etc/agent/code",
-			ReadOnly:  true,
-		})
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      "agent-code",
+				MountPath: "/etc/agent/code",
+				ReadOnly:  true,
+			})
+		}
 	}
 
 	// Add workspace volume if enabled
@@ -3560,22 +3570,15 @@ func (r *LanguageAgentReconciler) createInitialAgentVersion(ctx context.Context,
 	// Create the LanguageAgentVersion
 	if err := r.Create(ctx, agentVersion); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			// If it already exists, get it and update it
+			// Version v1 already exists - this is expected and correct
+			// LanguageAgentVersions are immutable once created
+			// Return the existing version without modification
 			existingVersion := &langopv1alpha1.LanguageAgentVersion{}
 			if err := r.Get(ctx, types.NamespacedName{Name: agentVersion.Name, Namespace: agentVersion.Namespace}, existingVersion); err != nil {
 				return nil, fmt.Errorf("failed to get existing LanguageAgentVersion: %w", err)
 			}
 
-			// Update the code and annotations
-			existingVersion.Spec.Code = dslCode
-			existingVersion.Annotations = agentVersion.Annotations
-			existingVersion.Spec.Description = "Updated synthesized version"
-
-			if err := r.Update(ctx, existingVersion); err != nil {
-				return nil, fmt.Errorf("failed to update existing LanguageAgentVersion: %w", err)
-			}
-
-			log.Info("Updated existing LanguageAgentVersion v1", "agent", agent.Name)
+			log.Info("Using existing immutable LanguageAgentVersion v1", "agent", agent.Name)
 			return existingVersion, nil
 		} else {
 			return nil, fmt.Errorf("failed to create LanguageAgentVersion: %w", err)
