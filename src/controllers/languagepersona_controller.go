@@ -22,8 +22,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -36,8 +38,9 @@ import (
 // LanguagePersonaReconciler reconciles a LanguagePersona object
 type LanguagePersonaReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme   *runtime.Scheme
+	Log      logr.Logger
+	Recorder record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
@@ -87,6 +90,10 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
+		if r.Recorder != nil {
+			r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaCreated",
+				"LanguagePersona created: %s", persona.Spec.DisplayName)
+		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -95,6 +102,10 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(persona, corev1.EventTypeWarning, "ConfigurationFailed",
+				"Failed to store persona configuration: %v", err)
+		}
 		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
 		persona.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, persona); statusErr != nil {
@@ -109,6 +120,11 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	persona.Status.Phase = "Ready"
 	// Status fields updated
 	SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Persona configuration is ready", persona.Generation)
+
+	if r.Recorder != nil {
+		r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaReady",
+			"Persona '%s' is ready for agent assignment", persona.Spec.DisplayName)
+	}
 
 	if err := r.Status().Update(ctx, persona); err != nil {
 		log.Error(err, "Failed to update status")

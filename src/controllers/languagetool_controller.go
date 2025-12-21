@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,6 +39,7 @@ type LanguageToolReconciler struct {
 	Scheme          *runtime.Scheme
 	Log             logr.Logger
 	RegistryManager RegistryManager
+	Recorder        record.EventRecorder
 }
 
 // MCPRequest represents an MCP JSON-RPC request
@@ -163,6 +165,10 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
+		if r.Recorder != nil {
+			r.Recorder.Eventf(tool, corev1.EventTypeNormal, "ToolCreated",
+				"LanguageTool created with type %s", tool.Spec.Type)
+		}
 	}
 
 	// Validate image registry against whitelist
@@ -170,6 +176,10 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "RegistryValidationFailed",
+				"Image registry not in whitelist: %s", tool.Spec.Image)
+		}
 		SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), tool.Generation)
 		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after registry validation failure")
@@ -178,12 +188,20 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionTrue, "Validated", "Image registry is in whitelist", tool.Generation)
+	if r.Recorder != nil {
+		r.Recorder.Event(tool, corev1.EventTypeNormal, "RegistryValidated",
+			"Container image registry validated successfully")
+	}
 
 	// Reconcile ConfigMap
 	if err := r.reconcileConfigMap(ctx, tool); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "ConfigMapFailed",
+				"Failed to reconcile configuration: %v", err)
+		}
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
 		reconcileErr = err
@@ -198,6 +216,10 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			log.Error(err, "Failed to reconcile Deployment")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile Deployment")
+			if r.Recorder != nil {
+				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "DeploymentFailed",
+					"Failed to create or update deployment: %v", err)
+			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
 			reconcileErr = err
@@ -209,6 +231,10 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			log.Error(err, "Failed to reconcile Service")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile Service")
+			if r.Recorder != nil {
+				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "ServiceFailed",
+					"Failed to create or update service: %v", err)
+			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
 			reconcileErr = err
@@ -221,6 +247,10 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.Error(err, "Failed to reconcile NetworkPolicy")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "NetworkPolicyFailed",
+				"Failed to configure network isolation: %v", err)
+		}
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
 		reconcileErr = err

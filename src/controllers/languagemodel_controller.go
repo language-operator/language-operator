@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -44,8 +45,9 @@ import (
 // LanguageModelReconciler reconciles a LanguageModel object
 type LanguageModelReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	Scheme   *runtime.Scheme
+	Log      logr.Logger
+	Recorder record.EventRecorder
 }
 
 // modelTracer is used by methods that haven't been refactored yet
@@ -107,6 +109,10 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
+		if r.Recorder != nil {
+			r.Recorder.Event(model, corev1.EventTypeNormal, "ModelCreated",
+				"LanguageModel resource created")
+		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -115,6 +121,10 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ConfigMapFailed",
+				"Failed to reconcile configuration: %v", err)
+		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -129,6 +139,10 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile Deployment")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ProxyDeploymentFailed",
+				"Failed to create or update proxy deployment: %v", err)
+		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -143,6 +157,10 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Service")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile Service")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ServiceFailed",
+				"Failed to create or update service: %v", err)
+		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -157,6 +175,10 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile NetworkPolicy")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+		if r.Recorder != nil {
+			r.Recorder.Eventf(model, corev1.EventTypeWarning, "NetworkPolicyFailed",
+				"Failed to configure network isolation: %v", err)
+		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
@@ -171,6 +193,11 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	model.Status.Phase = "Ready"
 	// Status fields updated
 	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model proxy is ready", model.Generation)
+
+	if r.Recorder != nil {
+		r.Recorder.Eventf(model, corev1.EventTypeNormal, "ModelReady",
+			"Model proxy is ready for provider %s", model.Spec.Provider)
+	}
 
 	if err := r.Status().Update(ctx, model); err != nil {
 		log.Error(err, "Failed to update status")

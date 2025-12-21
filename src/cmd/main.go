@@ -332,6 +332,7 @@ func main() {
 		Scheme:          mgr.GetScheme(),
 		Log:             ctrl.Log.WithName("controllers").WithName("LanguageTool"),
 		RegistryManager: registryManager,
+		Recorder:        mgr.GetEventRecorderFor("languagetool-controller"),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
 		os.Exit(1)
@@ -339,9 +340,10 @@ func main() {
 
 	// Setup LanguageModel controller
 	if err = (&controllers.LanguageModelReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguageModel"),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("LanguageModel"),
+		Recorder: mgr.GetEventRecorderFor("languagemodel-controller"),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageModel")
 		os.Exit(1)
@@ -383,9 +385,10 @@ func main() {
 
 	// Setup LanguagePersona controller
 	if err = (&controllers.LanguagePersonaReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguagePersona"),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("LanguagePersona"),
+		Recorder: mgr.GetEventRecorderFor("languagepersona-controller"),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguagePersona")
 		os.Exit(1)
@@ -393,9 +396,10 @@ func main() {
 
 	// Setup LanguageCluster controller
 	if err = (&controllers.LanguageClusterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
+		Recorder: mgr.GetEventRecorderFor("languagecluster-controller"),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)
