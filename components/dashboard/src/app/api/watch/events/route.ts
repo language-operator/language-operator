@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     // Track watch state
     let watchCleanup: (() => void) | null = null
     let retryTimeout: NodeJS.Timeout | null = null
+    let lastResourceVersion: string | undefined = undefined
 
     // Create safe SSE stream with automatic lifecycle management
     const { stream, sendEvent, isActive } = createSSEWatchStream(request, {
@@ -87,11 +88,17 @@ export async function GET(request: NextRequest) {
             namespace: organization.namespace,
             labelSelector,
             fieldSelector,
+            resourceVersion: lastResourceVersion,
             // No timeout - let the watch run indefinitely
             // K8s will close it eventually, but we will reconnect immediately
           },
           (event: WatchEvent) => {
             try {
+              // Update last known resourceVersion for bookmarking
+              if (event.resourceVersion) {
+                lastResourceVersion = event.resourceVersion
+              }
+
               // Filter and transform the event
               const k8sEvent = event.object
               if (!k8sEvent || !shouldIncludeEvent(k8sEvent, clusterName ?? undefined, resourceType ?? undefined, resourceName ?? undefined)) {
