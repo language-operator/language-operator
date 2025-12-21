@@ -1535,7 +1535,8 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 		}
 
 		cronJob.Spec = batchv1.CronJobSpec{
-			Schedule: schedule,
+			Schedule:          schedule,
+			ConcurrencyPolicy: batchv1.ForbidConcurrent,
 			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: batchv1.JobSpec{
 					Template: corev1.PodTemplateSpec{
@@ -1582,7 +1583,17 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 	// This ensures agents can send traces to the collector
 	otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 
-	// Build NetworkPolicy using helper from utils.go
+	// Fetch cluster network policies for inheritance
+	var clusterPolicies []langopv1alpha1.NetworkRule
+	if agent.Spec.ClusterRef != "" {
+		var err error
+		clusterPolicies, err = GetClusterNetworkPolicies(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace)
+		if err != nil {
+			return fmt.Errorf("failed to fetch cluster network policies: %w", err)
+		}
+	}
+
+	// Build NetworkPolicy using helper from utils.go with cluster policy inheritance
 	networkPolicy := BuildEgressNetworkPolicy(
 		ctx,
 		r.Client,
@@ -1593,7 +1604,12 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		"", // endpoint - not applicable for agents
 		otelEndpoint,
 		agent.Spec.Egress,
+		clusterPolicies,
 	)
+
+	// Add standardized ingress rules for agent webhook access
+	// Agents need to be accessible from external webhook sources and gateway ingress controllers
+	AddIngressRulesToNetworkPolicy(networkPolicy, IngressFromExternal, IngressFromGateway)
 
 	// Create or update the NetworkPolicy with owner reference and configured timeout/retries
 	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, r.Client, r.Scheme, agent, networkPolicy, r.NetworkPolicyTimeout, r.NetworkPolicyRetries)
