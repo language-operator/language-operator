@@ -18,7 +18,7 @@ interface ResourceHeaderProps {
   
   /** Title and subtitle */
   title: string | React.ReactNode
-  subtitle?: string
+  subtitle?: string | React.ReactNode
   
   /** Right-side actions */
   actions?: React.ReactNode
