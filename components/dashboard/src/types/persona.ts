@@ -20,9 +20,9 @@ export interface LanguagePersonaList {
 
 export interface LanguagePersonaSpec {
   // Core persona definition
-  displayName: string
-  description: string
-  systemPrompt: string
+  displayName?: string
+  description?: string
+  systemPrompt?: string
   personality?: string
   
   // Cluster reference for scoping
