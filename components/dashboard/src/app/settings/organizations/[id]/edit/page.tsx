@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -52,7 +52,7 @@ export default function EditOrganizationPage() {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [isLoadingOrg, setIsLoadingOrg] = useState(true)
   const [userRole, setUserRole] = useState<string | null>(null)
-  const [hasLoadedInitialQuota, setHasLoadedInitialQuota] = useState(false)
+  const hasLoadedInitialQuota = useRef(false)
 
   // Quota form
   const quotaForm = useForm<QuotaFormValues>({
@@ -107,9 +107,9 @@ export default function EditOrganizationPage() {
         setQuotaData(data.data)
 
         // Only populate quota form on initial load, not after updates
-        if (data.data.quota && !hasLoadedInitialQuota) {
+        if (data.data.quota && !hasLoadedInitialQuota.current) {
           quotaForm.reset(data.data.quota)
-          setHasLoadedInitialQuota(true)
+          hasLoadedInitialQuota.current = true
         }
       } catch (error) {
         console.error('Error fetching quota data:', error)
