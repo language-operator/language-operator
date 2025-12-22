@@ -65,8 +65,8 @@ Guidelines:
     console.log(`Generating persona with model ${modelName} for idea: "${idea}"`)
 
     // Call the model via LiteLLM proxy (OpenAI-compatible API)
-    // The service is at: http://{modelName}.{namespace}.svc.cluster.local/v1/chat/completions
-    const modelEndpoint = `http://${modelName}.${organization.namespace}.svc.cluster.local/v1/chat/completions`
+    // The service is at: http://{modelName}.{namespace}.svc.cluster.local:8000/v1/chat/completions
+    const modelEndpoint = `http://${modelName}.${organization.namespace}.svc.cluster.local:8000/v1/chat/completions`
 
     console.log(`Calling model endpoint: ${modelEndpoint}`)
 
