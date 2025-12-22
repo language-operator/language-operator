@@ -46,7 +46,7 @@ export default function EditOrganizationPage() {
   const params = useParams()
   const organizationId = params.id as string
 
-  const [isLoadingQuota, setIsLoadingQuota] = useState(false)
+  const [isLoadingQuota, setIsLoadingQuota] = useState(true)
   const [quotaData, setQuotaData] = useState<QuotaData | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [organization, setOrganization] = useState<Organization | null>(null)
@@ -124,6 +124,8 @@ export default function EditOrganizationPage() {
 
   // Handle quota form submission
   const onQuotaSubmit = async (values: QuotaFormValues) => {
+    console.log('[SUBMIT] Received values:', values)
+    console.log('[SUBMIT] CPU Limits:', values['limits.cpu'])
     setIsUpdating(true)
     try {
       const response = await fetch(`/api/organizations/${organizationId}/quota`, {
@@ -140,10 +142,8 @@ export default function EditOrganizationPage() {
       const data = await response.json()
       setQuotaData(data.data)
 
-      // Reset form with the updated quota values from the server
-      if (data.data.quota) {
-        quotaForm.reset(data.data.quota)
-      }
+      // Don't reset the form - it already has the correct values the user just submitted
+      // The API returns current k8s state which might not reflect the update yet
 
       toast.success('Quotas updated successfully')
     } catch (error) {
@@ -420,20 +420,31 @@ function QuotaField({
     <FormField
       control={form.control}
       name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <FormControl>
-            <Input {...field} disabled={disabled} className="max-w-xs" />
-          </FormControl>
-          {currentUsed && (
-            <p className="text-sm text-muted-foreground">
-              Currently used: {currentUsed}
-            </p>
-          )}
-          <FormMessage />
-        </FormItem>
-      )}
+      render={({ field }) => {
+        console.log(`[FIELD ${name}] Current value:`, field.value)
+        return (
+          <FormItem>
+            <FormLabel>{label}</FormLabel>
+            <FormControl>
+              <Input
+                {...field}
+                disabled={disabled}
+                className="max-w-xs"
+                onChange={(e) => {
+                  console.log(`[FIELD ${name}] onChange called with:`, e.target.value)
+                  field.onChange(e)
+                }}
+              />
+            </FormControl>
+            {currentUsed && (
+              <p className="text-sm text-muted-foreground">
+                Currently used: {currentUsed}
+              </p>
+            )}
+            <FormMessage />
+          </FormItem>
+        )
+      }}
     />
   )
 }

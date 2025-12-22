@@ -460,8 +460,8 @@ class KubernetesClient {
         namespace
       })
 
-      const quota = (response as any).body.spec?.hard || {}
-      const used = (response as any).body.status?.used || {}
+      const quota = (response as any).spec?.hard || {}
+      const used = (response as any).status?.used || {}
       const available: Record<string, string> = {}
       const percentUsed: Record<string, number> = {}
 
@@ -482,6 +482,7 @@ class KubernetesClient {
       }
     } catch (error) {
       // Return empty usage if quota doesn't exist
+      console.error(`[K8S] Failed to read ResourceQuota ${quotaName} in namespace ${namespace}:`, error)
       return {
         quota: {},
         used: {},
