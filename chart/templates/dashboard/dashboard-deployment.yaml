@@ -21,6 +21,7 @@ spec:
         {{- end }}
       labels:
         {{- include "dashboard.selectorLabels" . | nindent 8 }}
+        langop.io/kind: Dashboard
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -36,11 +37,17 @@ spec:
         command: ['sh', '-c']
         args:
         - |
+          set -e
           echo "Running database migrations..."
+
+          # Generate Prisma client with proper environment
           echo "Generating Prisma client..."
-          npx prisma generate
+          PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate
+
+          # Deploy migrations (Prisma will wait for DB)
           echo "Deploying migrations..."
           npx prisma migrate deploy
+
           echo "Database migrations completed successfully"
         env:
         - name: DATABASE_URL
