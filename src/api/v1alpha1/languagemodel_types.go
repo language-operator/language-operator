@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -112,6 +113,13 @@ type LanguageModelSpec struct {
 	//     protocol: TCP
 	// +optional
 	Egress []NetworkRule `json:"egress,omitempty"`
+
+	// Resources defines CPU and memory resource requirements for the model proxy.
+	// If not specified, defaults to:
+	//   requests: cpu=100m, memory=128Mi
+	//   limits: cpu=1000m, memory=512Mi
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // SecretReference references a Kubernetes Secret
