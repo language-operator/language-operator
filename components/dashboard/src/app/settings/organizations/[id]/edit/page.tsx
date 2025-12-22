@@ -108,7 +108,7 @@ export default function EditOrganizationPage() {
 
         // Only populate quota form on initial load, not after updates
         if (data.data.quota && !hasLoadedInitialQuota.current) {
-          quotaForm.reset(data.data.quota)
+          quotaForm.reset(data.data.quota, { keepDefaultValues: false })
           hasLoadedInitialQuota.current = true
         }
       } catch (error) {
@@ -123,8 +123,10 @@ export default function EditOrganizationPage() {
   }, [organizationId])
 
   // Handle quota form submission
-  const onQuotaSubmit = async (values: QuotaFormValues) => {
-    console.log('[SUBMIT] Received values:', values)
+  const onQuotaSubmit = async () => {
+    // Use getValues() instead of the values parameter to avoid stale closure issues
+    const values = quotaForm.getValues()
+    console.log('[SUBMIT] getValues():', values)
     console.log('[SUBMIT] CPU Limits:', values['limits.cpu'])
     setIsUpdating(true)
     try {
@@ -430,10 +432,6 @@ function QuotaField({
                 {...field}
                 disabled={disabled}
                 className="max-w-xs"
-                onChange={(e) => {
-                  console.log(`[FIELD ${name}] onChange called with:`, e.target.value)
-                  field.onChange(e)
-                }}
               />
             </FormControl>
             {currentUsed && (
