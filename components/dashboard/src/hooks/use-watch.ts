@@ -48,6 +48,20 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
   const queryClient = useQueryClient()
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Use refs for callbacks to avoid recreating connect() function
+  const onEventRef = useRef(onEvent)
+  const onConnectionRef = useRef(onConnection)
+  const onErrorRef = useRef(onError)
+  const queryKeyRef = useRef(queryKey)
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onEventRef.current = onEvent
+    onConnectionRef.current = onConnection
+    onErrorRef.current = onError
+    queryKeyRef.current = queryKey
+  })
+
   // Build URL with query parameters
   const buildUrl = useCallback(() => {
     const url = new URL(endpoint, window.location.origin)
@@ -95,9 +109,9 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
         setIsConnected(true)
         setConnectionError(null)
         setReconnectCount(0)
-        
-        if (onConnection) {
-          onConnection(connectionData)
+
+        if (onConnectionRef.current) {
+          onConnectionRef.current(connectionData)
         }
       })
 
@@ -114,18 +128,18 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           setReconnectCount(0)
           
           // Invalidate relevant React Query cache
-          if (queryKey) {
-            console.log(`🔄 Invalidating queries with key:`, queryKey)
+          if (queryKeyRef.current) {
+            console.log(`🔄 Invalidating queries with key:`, queryKeyRef.current)
             queryClient.invalidateQueries({
-              queryKey,
+              queryKey: queryKeyRef.current,
               exact: false, // Match all queries starting with this prefix
               refetchType: 'active' // Refetch active queries immediately
             })
           }
-          
+
           // Call custom event handler
-          if (onEvent) {
-            onEvent(watchEvent)
+          if (onEventRef.current) {
+            onEventRef.current(watchEvent)
           }
         } catch (error) {
           console.error('Failed to parse watch event:', error)
@@ -139,9 +153,9 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
         setIsConnected(true)
         setConnectionError(null)
         setReconnectCount(0)
-        
-        if (onConnection) {
-          onConnection(heartbeatData)
+
+        if (onConnectionRef.current) {
+          onConnectionRef.current(heartbeatData)
         }
       })
 
@@ -150,17 +164,17 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           const errorData = JSON.parse((event as any).data || '{}')
           console.error('Watch error event:', errorData)
           setConnectionError(errorData.message || 'Watch error')
-          
-          if (onError) {
-            onError(new Error(errorData.message || 'Watch error'))
+
+          if (onErrorRef.current) {
+            onErrorRef.current(new Error(errorData.message || 'Watch error'))
           }
         } catch (err) {
           // Error events may not have parseable data
           console.error('Watch error event (no data):', event)
           setConnectionError('Watch connection error')
-          
-          if (onError) {
-            onError(new Error('Watch connection error'))
+
+          if (onErrorRef.current) {
+            onErrorRef.current(new Error('Watch connection error'))
           }
         }
       })
@@ -175,19 +189,19 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
           instanceId
         })
         setIsConnected(false)
-        
+
         const errorMessage = 'Connection lost. Attempting to reconnect...'
         setConnectionError(errorMessage)
-        
-        if (onError) {
-          onError(new Error(errorMessage))
+
+        if (onErrorRef.current) {
+          onErrorRef.current(new Error(errorMessage))
         }
-        
+
         // Attempt reconnect with exponential backoff, max 5 attempts
         if (reconnectCount < 5) {
           const delay = Math.min(5000 * Math.pow(1.5, reconnectCount), 60000) // Start at 5s, max 60 seconds
           console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectCount + 1})`)
-          
+
           setReconnectCount(prev => prev + 1)
           reconnectTimeoutRef.current = setTimeout(() => {
             if (enabled) {
@@ -207,12 +221,12 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
     } catch (error) {
       console.error('Failed to create EventSource:', error)
       setConnectionError('Failed to establish connection')
-      
-      if (onError) {
-        onError(error instanceof Error ? error : new Error('Connection failed'))
+
+      if (onErrorRef.current) {
+        onErrorRef.current(error instanceof Error ? error : new Error('Connection failed'))
       }
     }
-  }, [enabled, buildUrl, queryKey, cleanup]) // Remove callback dependencies to prevent re-connections
+  }, [enabled, buildUrl, instanceId, cleanup]) // Stable dependencies only
 
   // Start/stop watching based on enabled flag
   useEffect(() => {
@@ -224,7 +238,7 @@ export function useWatch(endpoint: string, options: UseWatchOptions = {}) {
 
     // Cleanup on unmount
     return cleanup
-  }, [enabled]) // Simplified dependencies
+  }, [enabled, connect, cleanup]) // Added connect and cleanup back to match their definitions
 
   // Handle page visibility changes to reconnect when page becomes visible
   useEffect(() => {
