@@ -480,17 +480,24 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 		model.Spec.Egress,
 	)
 
-	// Add Ingress rules to allow agents to connect to the model service
-	// Only allow pods labeled as LanguageAgents to connect
+	// Add Ingress rules to allow agents and dashboard to connect to the model service
+	// Allow pods labeled as LanguageAgent or Dashboard
 	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 		{
-			// Allow from LanguageAgent pods only
+			// Allow from LanguageAgent pods
 			From: []networkingv1.NetworkPolicyPeer{
 				{
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"langop.io/kind": "LanguageAgent",
+						},
+					},
+				},
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"langop.io/kind": "Dashboard",
 						},
 					},
 				},
