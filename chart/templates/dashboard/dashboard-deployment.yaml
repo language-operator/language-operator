@@ -37,7 +37,6 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          set -e
           echo "Running database migrations..."
 
           # Note: Prisma client is already generated at build time
@@ -47,18 +46,20 @@ spec:
 
           # Handle the case where the database schema exists but migrations weren't tracked
           # This can happen if the database was initialized with 'db push' instead of 'migrate deploy'
-          if ! npx prisma migrate deploy 2>&1 | tee /tmp/migrate.log; then
-            if grep -q "P3005" /tmp/migrate.log; then
-              echo "Database schema exists but migrations not tracked. Resolving..."
-              # Mark all pending migrations as applied
-              npx prisma migrate resolve --applied 20241210_000000_init || true
-              # Try deploy again
-              npx prisma migrate deploy
-            else
-              echo "Migration failed with unexpected error"
-              cat /tmp/migrate.log
-              exit 1
-            fi
+          npx prisma migrate deploy 2>&1 | tee /tmp/migrate.log
+          EXIT_CODE=$?
+
+          # Check for P3005 error (database not empty)
+          if grep -q "P3005" /tmp/migrate.log; then
+            echo "Database schema exists but migrations not tracked. Resolving..."
+            # Mark all pending migrations as applied
+            npx prisma migrate resolve --applied 20241210_000000_init
+            # Try deploy again
+            npx prisma migrate deploy
+          elif [ $EXIT_CODE -ne 0 ]; then
+            echo "Migration failed with unexpected error (exit code: $EXIT_CODE)"
+            cat /tmp/migrate.log
+            exit $EXIT_CODE
           fi
 
           echo "Database migrations completed successfully"
