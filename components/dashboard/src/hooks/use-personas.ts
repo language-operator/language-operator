@@ -52,6 +52,40 @@ export function usePersona(name: string, clusterName: string) {
   })
 }
 
+export function useUpdatePersona(clusterName: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ name, data }: { name: string; data: any }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for persona update')
+      }
+
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/personas/${name}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update persona')
+      }
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch persona queries
+      queryClient.invalidateQueries({ queryKey: ['personas'] })
+      queryClient.invalidateQueries({ queryKey: ['personas', clusterName] })
+      queryClient.invalidateQueries({ queryKey: ['personas', clusterName, variables.name] })
+    },
+    onError: (err) => {
+      console.error('Failed to update persona:', err)
+    },
+  })
+}
+
 export function useDeletePersona(clusterName: string) {
   const queryClient = useQueryClient()
   const { activeOrganizationId } = useOrganizationStore()
@@ -108,6 +142,33 @@ export function useDeletePersona(clusterName: string) {
       if (personaName) {
         queryClient.removeQueries({ queryKey: ['personas', clusterName, personaName] })
       }
+    },
+  })
+}
+
+export interface GeneratePersonaParams {
+  idea: string
+  modelName: string
+}
+
+export function useGeneratePersona() {
+  return useMutation({
+    mutationFn: async (params: GeneratePersonaParams) => {
+      const response = await fetchWithOrganization('/api/personas/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate persona')
+      }
+      return response.json()
+    },
+    onError: (err) => {
+      console.error('Failed to generate persona:', err)
     },
   })
 }

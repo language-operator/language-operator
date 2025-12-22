@@ -62,14 +62,13 @@ export default function ClusterPersonas() {
   // Filter personas based on search and tone
   const filteredPersonas = allPersonas.filter((persona: any) => {
     const searchQuery = search.toLowerCase()
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       persona.metadata.name.toLowerCase().includes(searchQuery) ||
-      (persona.spec.displayName || '').toLowerCase().includes(searchQuery) ||
-      (persona.spec.description || '').toLowerCase().includes(searchQuery)
-    
-    const matchesTone = toneFilter === 'all' || 
+      (persona.spec.displayName || '').toLowerCase().includes(searchQuery)
+
+    const matchesTone = toneFilter === 'all' ||
       (persona.spec.tone || '').toLowerCase() === toneFilter.toLowerCase()
-    
+
     return matchesSearch && matchesTone
   })
   
@@ -229,7 +228,6 @@ export default function ClusterPersonas() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Description</TableHead>
                         <TableHead>Tone</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Age</TableHead>
@@ -242,18 +240,13 @@ export default function ClusterPersonas() {
                           <TableCell className="font-medium">
                             <div className="flex items-center space-x-2">
                               <Users className="h-4 w-4 text-blue-500" />
-                              <Link 
+                              <Link
                                 href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
                                 className="hover:underline"
                               >
                                 {persona.spec.displayName || persona.metadata.name}
                               </Link>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {persona.spec.description || 'No description provided'}
-                            </span>
                           </TableCell>
                           <TableCell>
                             {persona.spec.tone ? (

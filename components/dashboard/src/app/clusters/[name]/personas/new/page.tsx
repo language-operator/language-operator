@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
-import { PersonaForm, PersonaFormData } from '@/components/forms/persona-form'
+import { PersonaFormSimple, PersonaFormData } from '@/components/forms/persona-form-simple'
 import { fetchWithOrganization } from '@/lib/api-client'
+import { ResourceHeader } from '@/components/ui/resource-header'
+import { Users } from 'lucide-react'
 
 export default function CreateClusterPersonaPage() {
   const router = useRouter()
@@ -22,55 +24,10 @@ export default function CreateClusterPersonaPage() {
         name: formData.name,
         displayName: formData.displayName,
         description: formData.description,
-        systemPrompt: formData.systemPrompt,
+        ...(formData.systemPrompt && { systemPrompt: formData.systemPrompt }),
         ...(formData.tone && { tone: formData.tone }),
         ...(formData.language && { language: formData.language }),
-        ...(formData.version && { version: formData.version }),
-        ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
-        ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
         ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
-        ...(formData.examples && formData.examples.length > 0 && (() => {
-          const validExamples = formData.examples.filter(ex => ex.input && ex.output)
-          return validExamples.length > 0 ? {
-            examples: validExamples.map(ex => ({
-              input: ex.input,
-              output: ex.output,
-              ...(ex.context && { context: ex.context }),
-              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
-            }))
-          } : {}
-        })()),
-        // New CRD features
-        ...(formData.knowledgeSources && formData.knowledgeSources.length > 0 && { 
-          knowledgeSources: formData.knowledgeSources.filter(ks => ks.name && ks.type)
-        }),
-        ...(formData.constraints && (
-          formData.constraints.maxResponseTokens ||
-          formData.constraints.maxToolCalls ||
-          formData.constraints.responseTimeout ||
-          formData.constraints.requireDocumentation ||
-          formData.constraints.blockedTopics.length > 0 ||
-          formData.constraints.allowedDomains.length > 0
-        ) && { constraints: formData.constraints }),
-        ...(formData.rules && formData.rules.length > 0 && { 
-          rules: formData.rules.filter(rule => rule.name && rule.condition && rule.action)
-        }),
-        ...(formData.responseFormat && (
-          formData.responseFormat.type !== 'text' ||
-          formData.responseFormat.includeConfidence ||
-          formData.responseFormat.includeSources ||
-          formData.responseFormat.maxLength ||
-          formData.responseFormat.template ||
-          formData.responseFormat.schema
-        ) && { responseFormat: formData.responseFormat }),
-        ...(formData.toolPreferences && (
-          formData.toolPreferences.strategy !== 'balanced' ||
-          formData.toolPreferences.alwaysConfirm ||
-          !formData.toolPreferences.explainToolUse ||
-          formData.toolPreferences.preferredTools.length > 0 ||
-          formData.toolPreferences.avoidTools.length > 0
-        ) && { toolPreferences: formData.toolPreferences }),
-        ...(formData.parentPersona && formData.parentPersona.name && { parentPersona: formData.parentPersona }),
       }
       
       console.log('Sending payload:', payload)
@@ -116,20 +73,27 @@ export default function CreateClusterPersonaPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Create Language Persona</h1>
-          <p className="text-muted-foreground mt-1">
-            Add a new language persona to the {clusterName} cluster
-          </p>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/personas`}
+          backLabel="Back to Personas"
+          icon={Users}
+          iconColor="text-blue-500"
+          title="Create Persona"
+          subtitle="Define specific personality traits and custom instructions"
+        />
 
         {/* Form */}
         <div className="max-w-4xl">
-          <PersonaForm
-            isLoading={isLoading}
-            error={error}
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+          <PersonaFormSimple
             onSubmit={handleSubmit}
             onCancel={handleCancel}
+            submitLabel="Create Persona"
+            clusterName={clusterName}
           />
         </div>
       </div>
