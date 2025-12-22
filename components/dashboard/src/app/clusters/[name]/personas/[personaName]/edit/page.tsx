@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
-import { PersonaForm, PersonaFormData } from '@/components/forms/persona-form'
-import { usePersona } from '@/hooks/use-personas'
+import { PersonaFormSimple, PersonaFormData } from '@/components/forms/persona-form-simple'
+import { usePersona, useUpdatePersona } from '@/hooks/use-personas'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -15,11 +15,11 @@ export default function EditClusterPersonaPage() {
   const params = useParams()
   const clusterName = params?.name as string
   const personaName = params?.personaName as string
-  
+
   const { data: personaResponse, isLoading: isLoadingPersona, error } = usePersona(personaName, clusterName)
   const persona = personaResponse?.persona
-  
-  const [isLoading, setIsLoading] = useState(false)
+  const updatePersona = useUpdatePersona(clusterName)
+
   const [submitError, setSubmitError] = useState('')
   const [initialData, setInitialData] = useState<Partial<PersonaFormData>>()
 
@@ -32,74 +32,34 @@ export default function EditClusterPersonaPage() {
         systemPrompt: persona.spec.systemPrompt || '',
         tone: persona.spec.tone || '',
         language: persona.spec.language || '',
-        version: persona.spec.version || '',
-        capabilities: persona.spec.capabilities || [],
-        limitations: persona.spec.limitations || [],
         instructions: persona.spec.instructions || [],
-        examples: persona.spec.examples || [],
       })
     }
   }, [persona])
 
   const handleSubmit = async (formData: PersonaFormData) => {
-    setIsLoading(true)
     setSubmitError('')
 
     try {
       const payload = {
-        spec: {
-          displayName: formData.displayName,
-          description: formData.description,
-          systemPrompt: formData.systemPrompt,
-          ...(formData.tone && { tone: formData.tone }),
-          ...(formData.language && { language: formData.language }),
-          ...(formData.version && { version: formData.version }),
-          ...(formData.capabilities && formData.capabilities.length > 0 && { capabilities: formData.capabilities }),
-          ...(formData.limitations && formData.limitations.length > 0 && { limitations: formData.limitations }),
-          ...(formData.instructions && formData.instructions.length > 0 && { instructions: formData.instructions }),
-          ...(formData.examples && formData.examples.length > 0 && { 
-            examples: formData.examples.map(ex => ({
-              input: ex.input,
-              output: ex.output,
-              ...(ex.context && { context: ex.context }),
-              ...(ex.tags && ex.tags.length > 0 && { tags: ex.tags })
-            }))
-          }),
-        }
+        displayName: formData.displayName,
+        description: formData.description,
+        systemPrompt: formData.systemPrompt,
+        tone: formData.tone,
+        language: formData.language,
+        instructions: formData.instructions,
       }
-      
-      console.log('Updating persona with payload:', payload)
-      
-      const response = await fetch(`/api/personas/${personaName}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+
+      await updatePersona.mutateAsync({
+        name: personaName,
+        data: payload,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('API Error Response:', errorData)
-        
-        if (errorData.details && Array.isArray(errorData.details)) {
-          const detailMessages = errorData.details.map((d: any) => `${d.path}: ${d.message}`).join(', ')
-          throw new Error(`${errorData.error || 'Validation failed'}: ${detailMessages}`)
-        }
-        
-        throw new Error(errorData.error || 'Failed to update persona')
-      }
-
-      const result = await response.json()
-      console.log('Update persona result:', result)
-      
       // Redirect to persona detail page
       router.push(`/clusters/${clusterName}/personas/${personaName}`)
     } catch (err: any) {
       console.error('Error updating persona:', err)
       setSubmitError(err.message || 'Failed to update persona')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -159,14 +119,20 @@ export default function EditClusterPersonaPage() {
         {/* Form */}
         <div className="max-w-4xl">
           {initialData ? (
-            <PersonaForm
-              initialData={initialData}
-              isLoading={isLoading}
-              error={submitError}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isEdit={true}
-            />
+            <>
+              {submitError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-800">{submitError}</p>
+                </div>
+              )}
+              <PersonaFormSimple
+                initialData={initialData}
+                onSubmit={handleSubmit}
+                onCancel={handleCancel}
+                submitLabel={updatePersona.isPending ? 'Updating...' : 'Update Persona'}
+                isEdit={true}
+              />
+            </>
           ) : (
             <Skeleton className="h-96 w-full" />
           )}

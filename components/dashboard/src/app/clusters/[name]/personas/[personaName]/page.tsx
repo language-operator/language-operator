@@ -5,12 +5,11 @@ import { useRouter, useParams } from 'next/navigation'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Users, AlertCircle, CheckCircle, Clock, ArrowLeft, 
-  Edit, Trash2, MessageCircle, Palette, BookOpen, Target, MoreVertical, FileCode, Copy, Check
+import {
+  Users, AlertCircle, CheckCircle, Clock, ArrowLeft,
+  Edit, Trash2, MessageCircle, BookOpen, MoreVertical, FileCode, Copy, Check
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -41,7 +40,6 @@ export default function ClusterPersonaDetailPage() {
   const params = useParams()
   const clusterName = params?.name as string
   const personaName = params?.personaName as string
-  const [activeTab, setActiveTab] = useState('overview')
   const [yamlModalOpen, setYamlModalOpen] = useState(false)
   const [yamlContent, setYamlContent] = useState('')
   const [yamlLoading, setYamlLoading] = useState(false)
@@ -220,89 +218,65 @@ export default function ClusterPersonaDetailPage() {
           }
         />
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="examples">Examples</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Basic Info */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Name</p>
-                    <p className="text-sm">{persona.metadata.name}</p>
-                  </div>
+        {/* Overview */}
+        <div className="space-y-6">
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Name</p>
+                  <p className="text-sm">{persona.metadata.name}</p>
+                </div>
+                {persona.spec.displayName && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Display Name</p>
                     <p className="text-sm">{persona.spec.displayName}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Cluster</p>
-                    <p className="text-sm">{clusterName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Namespace</p>
-                    <p className="text-sm">{persona.metadata.namespace}</p>
-                  </div>
-                  {persona.spec.tone && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Tone</p>
-                      <Badge variant="secondary">{persona.spec.tone}</Badge>
-                    </div>
-                  )}
-                  {persona.spec.language && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Language</p>
-                      <Badge variant="outline">{persona.spec.language}</Badge>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Created</p>
-                    <p className="text-sm">{formatTimeAgo(persona.metadata.creationTimestamp)}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <Badge variant={persona.status?.phase === 'Ready' ? 'default' : 'secondary'}>
+                    {persona.status?.phase || 'Unknown'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Created</p>
+                  <p className="text-sm">{formatTimeAgo(persona.metadata.creationTimestamp)}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Configuration */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configuration</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            {/* Communication */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Communication</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                {persona.spec.tone && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Description</p>
-                    <p className="text-sm">{persona.spec.description}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Tone</p>
+                    <Badge variant="secondary">{persona.spec.tone}</Badge>
                   </div>
-                  {persona.spec.version && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Version</p>
-                      <p className="text-sm">{persona.spec.version}</p>
-                    </div>
-                  )}
+                )}
+                {persona.spec.language && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Status</p>
-                    <Badge variant={persona.status?.phase === 'Ready' ? 'default' : 'secondary'}>
-                      {persona.status?.phase || 'Unknown'}
-                    </Badge>
+                    <p className="text-sm font-medium text-muted-foreground">Language</p>
+                    <Badge variant="outline">{persona.spec.language}</Badge>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
 
-            {/* System Prompt */}
+            {/* Core Capabilities */}
             {persona.spec.systemPrompt && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <MessageCircle className="h-5 w-5" />
-                    <span>System Prompt</span>
+                    <span>Core Capabilities</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -315,130 +289,44 @@ export default function ClusterPersonaDetailPage() {
               </Card>
             )}
 
-            {/* Capabilities and Limitations */}
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Target className="h-5 w-5" />
-                    <span>Capabilities ({persona.spec.capabilities?.length || 0})</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {persona.spec.capabilities && persona.spec.capabilities.length > 0 ? (
-                    <div className="space-y-2">
-                      {persona.spec.capabilities.map((capability: any, index: number) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
-                          <p className="text-sm">{capability}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No capabilities specified</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <AlertCircle className="h-5 w-5" />
-                    <span>Limitations ({persona.spec.limitations?.length || 0})</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {persona.spec.limitations && persona.spec.limitations.length > 0 ? (
-                    <div className="space-y-2">
-                      {persona.spec.limitations.map((limitation: any, index: number) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
-                          <p className="text-sm">{limitation}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No limitations specified</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Instructions */}
+            {/* Additional Instructions */}
             {persona.spec.instructions && persona.spec.instructions.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <BookOpen className="h-5 w-5" />
-                    <span>Instructions ({persona.spec.instructions.length})</span>
+                    <span>Additional Instructions ({persona.spec.instructions.length})</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {persona.spec.instructions.map((instruction: any, index: number) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <p className="text-sm">{instruction}</p>
+                      <div key={index} className="border rounded-lg overflow-hidden">
+                        <SyntaxHighlighter
+                          language="markdown"
+                          style={oneLight}
+                          customStyle={{
+                            margin: 0,
+                            padding: '1rem',
+                            background: 'rgb(249 250 251)',
+                            fontSize: '0.875rem',
+                            lineHeight: '1.5',
+                          }}
+                          codeTagProps={{
+                            style: {
+                              fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                            }
+                          }}
+                        >
+                          {instruction}
+                        </SyntaxHighlighter>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="examples" className="space-y-6">
-            {persona.spec.examples && persona.spec.examples.length > 0 ? (
-              <div className="space-y-4">
-                {persona.spec.examples.map((example: any, index: number) => (
-                  <Card key={index}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Example {index + 1}</CardTitle>
-                      {example.tags && example.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {example.tags.map((tag: any, tagIndex: number) => (
-                            <Badge key={tagIndex} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {example.context && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-2">Context</p>
-                          <p className="text-sm bg-blue-50 p-3 rounded-lg">{example.context}</p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Input</p>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <pre className="whitespace-pre-wrap text-sm font-mono">{example.input}</pre>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-2">Expected Output</p>
-                        <div className="bg-green-50 rounded-lg p-3">
-                          <pre className="whitespace-pre-wrap text-sm font-mono">{example.output}</pre>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <BookOpen className="h-16 w-16 text-gray-400 mb-4" />
-                  <CardTitle className="text-xl mb-2">No examples</CardTitle>
-                  <CardDescription className="text-center max-w-md">
-                    No conversation examples have been configured for this persona.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
 
         {/* Persona Events */}
         <ResourceEventsActivity
