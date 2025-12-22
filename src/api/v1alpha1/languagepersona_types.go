@@ -7,19 +7,16 @@ import (
 // LanguagePersonaSpec defines the desired state of LanguagePersona
 type LanguagePersonaSpec struct {
 	// DisplayName is the human-readable name for this persona
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	DisplayName string `json:"displayName"`
+	// +optional
+	DisplayName string `json:"displayName,omitempty"`
 
 	// Description describes the persona's role and behavior
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	Description string `json:"description"`
+	// +optional
+	Description string `json:"description,omitempty"`
 
 	// SystemPrompt is the base system instruction for this persona
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	SystemPrompt string `json:"systemPrompt"`
+	// +optional
+	SystemPrompt string `json:"systemPrompt,omitempty"`
 
 	// ClusterRef references a LanguageCluster to deploy this persona into
 	// +optional

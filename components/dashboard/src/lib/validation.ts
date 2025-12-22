@@ -224,11 +224,11 @@ export const LanguageToolSchema = z.object({
 
 // LanguagePersona validation matching CRD spec
 export const LanguagePersonaSpecSchema = z.object({
-  // Required fields per CRD spec
-  description: z.string().min(1, "Description is required"),
-  displayName: z.string().min(1, "Display name is required"),
-  systemPrompt: z.string().min(1, "System prompt is required"),
-  
+  // All fields are optional except those enforced by the CRD
+  description: z.string().optional(),
+  displayName: z.string().optional(),
+  systemPrompt: z.string().optional(),
+
   // Optional fields
   tone: z.string().optional(),
   language: z.string().optional(),

@@ -160,19 +160,24 @@ export async function PUT(
 
     // Update Kubernetes ResourceQuota
     try {
+      console.log('[QUOTA UPDATE] Starting update for org:', organizationId, 'namespace:', organization.namespace)
       if (quotas) {
         // Custom quota specification
+        console.log('[QUOTA UPDATE] Using custom quotas:', JSON.stringify(quotas))
         await k8sClient.updateResourceQuotaWithCustomSpec(
           organization.namespace,
           quotas,
           organizationId
         )
+        console.log('[QUOTA UPDATE] Custom quota update succeeded')
       } else {
         // Plan-based quota
+        console.log('[QUOTA UPDATE] Using plan-based quotas, plan:', plan)
         await k8sClient.updateResourceQuota(organization.namespace, plan, organizationId)
+        console.log('[QUOTA UPDATE] Plan-based quota update succeeded')
       }
     } catch (k8sError: any) {
-      console.error('Failed to update Kubernetes ResourceQuota:', k8sError.message)
+      console.error('[QUOTA UPDATE] Failed to update Kubernetes ResourceQuota:', k8sError.message, k8sError.stack)
       // Rollback database change
       await db.organization.update({
         where: { id: organizationId },

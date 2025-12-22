@@ -33,8 +33,7 @@ export async function GET(
     }
 
     return NextResponse.json({
-      success: true,
-      data: persona,
+      persona,
       cluster: clusterName
     })
 
@@ -43,6 +42,72 @@ export async function GET(
     return NextResponse.json(
       {
         error: 'Failed to fetch persona',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH /api/clusters/[name]/personas/[personaName] - Update a specific persona in a cluster
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ name: string; personaName: string }> }
+) {
+  try {
+    const { name: clusterName, personaName } = await params
+    // Get user's selected organization
+    const { user, organization, userRole } = await getUserOrganization(request)
+
+    const hasPermission = await requirePermission(user.id, organization.id, 'edit')
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
+    }
+
+    if (!clusterName || !personaName) {
+      return NextResponse.json({ error: 'Cluster name and persona name are required' }, { status: 400 })
+    }
+
+    // Check if persona exists
+    const existingPersona = await k8sClient.getLanguagePersona(organization.namespace, personaName)
+    if (!existingPersona) {
+      return NextResponse.json({ error: 'Persona not found' }, { status: 404 })
+    }
+
+    const body = await request.json()
+
+    // Update the persona spec
+    const updatedSpec = {
+      ...existingPersona.spec,
+      ...(body.displayName !== undefined && { displayName: body.displayName }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.systemPrompt !== undefined && { systemPrompt: body.systemPrompt }),
+      ...(body.tone !== undefined && { tone: body.tone }),
+      ...(body.language !== undefined && { language: body.language }),
+      ...(body.instructions !== undefined && { instructions: body.instructions }),
+    }
+
+    const updatedPersona = {
+      ...existingPersona,
+      spec: updatedSpec
+    }
+
+    // Update the persona
+    const result = await k8sClient.updateLanguagePersona(organization.namespace, personaName, updatedPersona)
+
+    // Log the update for audit trail
+    console.log(`Persona updated: ${personaName} in cluster ${clusterName} by ${user.email} in namespace ${organization.namespace}`)
+
+    return NextResponse.json({
+      persona: result,
+      cluster: clusterName
+    })
+
+  } catch (error) {
+    console.error('Error updating cluster persona:', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to update persona',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

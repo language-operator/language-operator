@@ -52,6 +52,7 @@ export default function EditOrganizationPage() {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [isLoadingOrg, setIsLoadingOrg] = useState(true)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [hasLoadedInitialQuota, setHasLoadedInitialQuota] = useState(false)
 
   // Quota form
   const quotaForm = useForm<QuotaFormValues>({
@@ -105,9 +106,10 @@ export default function EditOrganizationPage() {
         const data = await response.json()
         setQuotaData(data.data)
 
-        // Populate quota form with current values
-        if (data.data.quota) {
+        // Only populate quota form on initial load, not after updates
+        if (data.data.quota && !hasLoadedInitialQuota) {
           quotaForm.reset(data.data.quota)
+          setHasLoadedInitialQuota(true)
         }
       } catch (error) {
         console.error('Error fetching quota data:', error)
@@ -137,6 +139,11 @@ export default function EditOrganizationPage() {
 
       const data = await response.json()
       setQuotaData(data.data)
+
+      // Reset form with the updated quota values from the server
+      if (data.data.quota) {
+        quotaForm.reset(data.data.quota)
+      }
 
       toast.success('Quotas updated successfully')
     } catch (error) {

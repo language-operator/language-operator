@@ -109,11 +109,9 @@ spec:
                 type: object
               description:
                 description: Description describes the persona's role and behavior
-                minLength: 1
                 type: string
               displayName:
                 description: DisplayName is the human-readable name for this persona
-                minLength: 1
                 type: string
               examples:
                 description: Examples provide few-shot learning examples
@@ -303,7 +301,6 @@ spec:
               systemPrompt:
                 description: SystemPrompt is the base system instruction for this
                   persona
-                minLength: 1
                 type: string
               tone:
                 default: professional
@@ -353,10 +350,6 @@ spec:
               version:
                 description: Version tracks the persona version
                 type: string
-            required:
-            - description
-            - displayName
-            - systemPrompt
             type: object
           status:
             description: LanguagePersonaStatus defines the observed state of LanguagePersona

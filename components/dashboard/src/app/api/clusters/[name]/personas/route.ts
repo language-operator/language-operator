@@ -169,9 +169,9 @@ export async function POST(
         },
       },
       spec: {
-        displayName: formData.displayName,
-        description: formData.description,
-        systemPrompt: formData.systemPrompt,
+        ...(formData.displayName && { displayName: formData.displayName }),
+        ...(formData.description && { description: formData.description }),
+        ...(formData.systemPrompt && { systemPrompt: formData.systemPrompt }),
         clusterRef: clusterName,  // This makes it cluster-scoped
         ...(formData.tone && { tone: formData.tone }),
         ...(formData.language && { language: formData.language }),
