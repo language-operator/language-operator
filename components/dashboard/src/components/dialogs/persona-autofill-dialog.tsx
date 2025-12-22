@@ -32,9 +32,9 @@ export function PersonaAutofillDialog({
 
   const models = modelsResponse?.data || []
 
-  // Filter for healthy, ready models
+  // Filter for ready models
   const availableModels = models.filter((model: any) =>
-    model.status?.phase === 'Ready' && model.status?.healthy
+    model.status?.phase === 'Ready'
   )
 
   const handleGenerate = async () => {
@@ -63,7 +63,7 @@ export function PersonaAutofillDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
-            Auto-fill with AI
+            Auto Create with AI
           </DialogTitle>
           <DialogDescription>
             Describe your persona idea and select a model to generate a complete persona automatically.
@@ -94,7 +94,7 @@ export function PersonaAutofillDialog({
               </div>
             ) : availableModels.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
-                No healthy models available in this cluster. Please add a model first.
+                No ready models available in this cluster. Please add a model first.
               </p>
             ) : (
               <Select value={selectedModel} onValueChange={setSelectedModel} disabled={generatePersona.isPending}>

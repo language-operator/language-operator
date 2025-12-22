@@ -9,9 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trash2, Plus, Sparkles } from 'lucide-react'
+import { Trash2, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { PersonaAutofillDialog } from '@/components/dialogs/persona-autofill-dialog'
 
 // Form data type matching implemented fields
 export type PersonaFormData = {
@@ -53,7 +52,6 @@ export function PersonaFormSimple({
   clusterName
 }: PersonaFormProps) {
   const [instructions, setInstructions] = useState<string[]>(initialData?.instructions || [])
-  const [autofillOpen, setAutofillOpen] = useState(false)
 
   const {
     register,
@@ -99,42 +97,14 @@ export function PersonaFormSimple({
     setValue('instructions', updated)
   }
 
-  const handleAutofillGenerated = (data: Partial<PersonaFormData>) => {
-    // Populate form fields with generated data
-    if (data.displayName) setValue('displayName', data.displayName)
-    if (data.systemPrompt) setValue('systemPrompt', data.systemPrompt)
-    if (data.tone) setValue('tone', data.tone)
-    if (data.language) setValue('language', data.language)
-    if (data.instructions) {
-      setInstructions(data.instructions)
-      setValue('instructions', data.instructions)
-    }
-  }
-
   return (
-    <>
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* Auto-fill button - only show on create */}
-        {!isEdit && clusterName && (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAutofillOpen(true)}
-              className="gap-2"
-            >
-              <Sparkles className="h-4 w-4" />
-              Auto-fill with AI
-            </Button>
-          </div>
-        )}
-
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Configure the basic settings for your persona</CardDescription>
-          </CardHeader>
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Basic Information</CardTitle>
+          <CardDescription>Configure the basic settings for your persona</CardDescription>
+        </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Persona Name *</Label>
@@ -248,16 +218,5 @@ export function PersonaFormSimple({
         </Button>
       </div>
     </form>
-
-      {/* Auto-fill Dialog */}
-      {clusterName && (
-        <PersonaAutofillDialog
-          open={autofillOpen}
-          onOpenChange={setAutofillOpen}
-          onGenerated={handleAutofillGenerated}
-          clusterName={clusterName}
-        />
-      )}
-    </>
   )
 }
