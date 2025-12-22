@@ -40,11 +40,9 @@ spec:
           set -e
           echo "Running database migrations..."
 
-          # Generate Prisma client with proper environment
-          echo "Generating Prisma client..."
-          PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate
+          # Note: Prisma client is already generated at build time
+          # We only need to run migrations
 
-          # Deploy migrations (Prisma will wait for DB)
           echo "Deploying migrations..."
           npx prisma migrate deploy
 
