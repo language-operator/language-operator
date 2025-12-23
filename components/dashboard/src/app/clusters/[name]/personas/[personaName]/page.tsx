@@ -48,7 +48,7 @@ export default function ClusterPersonaDetailPage() {
   const { data: personaResponse, isLoading, error } = usePersona(personaName, clusterName)
   const deletePersona = useDeletePersona(clusterName)
 
-  const persona = personaResponse?.persona
+  const persona = personaResponse?.data
 
   const getStatusIcon = (persona: any) => {
     const phase = persona?.status?.phase || 'Unknown'
