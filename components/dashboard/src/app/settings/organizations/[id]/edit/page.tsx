@@ -112,16 +112,17 @@ export default function EditOrganizationPage() {
           // Use setValue for each field instead of reset() due to react-hook-form
           // limitations with dot-notation field names
           const quota = data.data.quota
-          if (quota['count/languageagents']) quotaForm.setValue('count/languageagents', quota['count/languageagents'])
-          if (quota['count/languagemodels']) quotaForm.setValue('count/languagemodels', quota['count/languagemodels'])
-          if (quota['count/languagetools']) quotaForm.setValue('count/languagetools', quota['count/languagetools'])
-          if (quota['count/languagepersonas']) quotaForm.setValue('count/languagepersonas', quota['count/languagepersonas'])
-          if (quota['count/languageclusters']) quotaForm.setValue('count/languageclusters', quota['count/languageclusters'])
-          if (quota['count/members']) quotaForm.setValue('count/members', quota['count/members'])
-          if (quota['requests.cpu']) quotaForm.setValue('requests.cpu', quota['requests.cpu'])
-          if (quota['requests.memory']) quotaForm.setValue('requests.memory', quota['requests.memory'])
-          if (quota['limits.cpu']) quotaForm.setValue('limits.cpu', quota['limits.cpu'])
-          if (quota['limits.memory']) quotaForm.setValue('limits.memory', quota['limits.memory'])
+          const setFormValue = quotaForm.setValue as any
+          if (quota['count/languageagents']) setFormValue('count/languageagents', String(quota['count/languageagents']))
+          if (quota['count/languagemodels']) setFormValue('count/languagemodels', String(quota['count/languagemodels']))
+          if (quota['count/languagetools']) setFormValue('count/languagetools', String(quota['count/languagetools']))
+          if (quota['count/languagepersonas']) setFormValue('count/languagepersonas', String(quota['count/languagepersonas']))
+          if (quota['count/languageclusters']) setFormValue('count/languageclusters', String(quota['count/languageclusters']))
+          if (quota['count/members']) setFormValue('count/members', String(quota['count/members']))
+          if (quota['requests.cpu']) setFormValue('requests.cpu', String(quota['requests.cpu']))
+          if (quota['requests.memory']) setFormValue('requests.memory', String(quota['requests.memory']))
+          if (quota['limits.cpu']) setFormValue('limits.cpu', String(quota['limits.cpu']))
+          if (quota['limits.memory']) setFormValue('limits.memory', String(quota['limits.memory']))
           hasLoadedInitialQuota.current = true
         }
       } catch (error) {
