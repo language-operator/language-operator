@@ -109,13 +109,19 @@ export default function EditOrganizationPage() {
         // Only populate quota form on initial load, not after updates
         if (data.data.quota && !hasLoadedInitialQuota.current) {
           console.log('[QUOTA LOAD] API quota data:', JSON.stringify(data.data.quota))
-          // Merge API data with defaults to ensure all fields are present
-          const quotaValues = {
-            ...quotaForm.getValues(), // Start with current defaults
-            ...data.data.quota         // Override with API values
-          }
-          console.log('[QUOTA LOAD] Merged quotaValues:', JSON.stringify(quotaValues))
-          quotaForm.reset(quotaValues, { keepDefaultValues: false })
+          // Use setValue for each field instead of reset() due to react-hook-form
+          // limitations with dot-notation field names
+          const quota = data.data.quota
+          if (quota['count/languageagents']) quotaForm.setValue('count/languageagents', quota['count/languageagents'])
+          if (quota['count/languagemodels']) quotaForm.setValue('count/languagemodels', quota['count/languagemodels'])
+          if (quota['count/languagetools']) quotaForm.setValue('count/languagetools', quota['count/languagetools'])
+          if (quota['count/languagepersonas']) quotaForm.setValue('count/languagepersonas', quota['count/languagepersonas'])
+          if (quota['count/languageclusters']) quotaForm.setValue('count/languageclusters', quota['count/languageclusters'])
+          if (quota['count/members']) quotaForm.setValue('count/members', quota['count/members'])
+          if (quota['requests.cpu']) quotaForm.setValue('requests.cpu', quota['requests.cpu'])
+          if (quota['requests.memory']) quotaForm.setValue('requests.memory', quota['requests.memory'])
+          if (quota['limits.cpu']) quotaForm.setValue('limits.cpu', quota['limits.cpu'])
+          if (quota['limits.memory']) quotaForm.setValue('limits.memory', quota['limits.memory'])
           hasLoadedInitialQuota.current = true
         }
       } catch (error) {
