@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Trash2, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Form data type matching implemented fields
 export type PersonaFormData = {
@@ -59,6 +59,7 @@ export function PersonaFormSimple({
     formState: { errors, isSubmitting },
     setValue,
     watch,
+    reset,
   } = useForm<PersonaFormData>({
     resolver: zodResolver(personaSchema),
     defaultValues: {
@@ -73,6 +74,22 @@ export function PersonaFormSimple({
   })
 
   const tone = watch('tone')
+
+  // Update form when initialData changes (e.g., from AI generation)
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        name: initialData.name || '',
+        displayName: initialData.displayName || '',
+        description: initialData.description || '',
+        systemPrompt: initialData.systemPrompt || '',
+        tone: initialData.tone || 'professional',
+        language: initialData.language || 'en',
+        instructions: initialData.instructions || [],
+      })
+      setInstructions(initialData.instructions || [])
+    }
+  }, [initialData, reset])
 
   const handleFormSubmit = async (data: PersonaFormData) => {
     const formData = {
