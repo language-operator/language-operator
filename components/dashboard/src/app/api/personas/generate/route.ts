@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUserOrganization } from '@/lib/organization-context'
 import { requirePermission } from '@/lib/permissions'
 import { createErrorResponse, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
+import { k8sClient } from '@/lib/k8s-client'
 
 // POST /api/personas/generate - Generate a persona using a cluster model
 export async function POST(request: NextRequest) {
@@ -64,6 +65,23 @@ Guidelines:
 
     console.log(`Generating persona with model ${modelName} for idea: "${idea}"`)
 
+    // Fetch the LanguageModel resource to get the actual model name
+    let actualModelName: string
+    try {
+      const modelResource = await k8sClient.getLanguageModel(organization.namespace, modelName)
+      const modelBody = (modelResource as any)?.body || modelResource
+      actualModelName = modelBody.spec?.modelName
+
+      if (!actualModelName) {
+        throw new Error(`LanguageModel ${modelName} does not have spec.modelName`)
+      }
+
+      console.log(`Resolved model name: ${modelName} -> ${actualModelName}`)
+    } catch (error: any) {
+      console.error('Failed to fetch LanguageModel:', error)
+      throw new Error(`Failed to fetch model information: ${error.message}`)
+    }
+
     // Call the model via LiteLLM proxy (OpenAI-compatible API)
     // The service is at: http://{modelName}.{namespace}.svc.cluster.local:8000/v1/chat/completions
     const modelEndpoint = `http://${modelName}.${organization.namespace}.svc.cluster.local:8000/v1/chat/completions`
@@ -76,7 +94,7 @@ Guidelines:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: modelName, // LiteLLM expects the model name
+        model: actualModelName, // LiteLLM expects the actual model name from spec.modelName
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
