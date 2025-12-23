@@ -108,11 +108,13 @@ export default function EditOrganizationPage() {
 
         // Only populate quota form on initial load, not after updates
         if (data.data.quota && !hasLoadedInitialQuota.current) {
+          console.log('[QUOTA LOAD] API quota data:', JSON.stringify(data.data.quota))
           // Merge API data with defaults to ensure all fields are present
           const quotaValues = {
             ...quotaForm.getValues(), // Start with current defaults
             ...data.data.quota         // Override with API values
           }
+          console.log('[QUOTA LOAD] Merged quotaValues:', JSON.stringify(quotaValues))
           quotaForm.reset(quotaValues, { keepDefaultValues: false })
           hasLoadedInitialQuota.current = true
         }
@@ -406,9 +408,9 @@ function ResourceCountField({
               </div>
 
               {currentUsed && (
-                <p className="text-xs text-muted-foreground text-center">
+                <FormDescription className="text-xs text-center">
                   Currently used: {currentUsed}
-                </p>
+                </FormDescription>
               )}
 
               <FormMessage />
@@ -451,9 +453,9 @@ function QuotaField({
               />
             </FormControl>
             {currentUsed && (
-              <p className="text-sm text-muted-foreground">
+              <FormDescription>
                 Currently used: {currentUsed}
-              </p>
+              </FormDescription>
             )}
             <FormMessage />
           </FormItem>

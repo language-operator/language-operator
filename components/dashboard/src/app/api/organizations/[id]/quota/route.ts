@@ -46,6 +46,7 @@ export async function GET(
 
     // Get ResourceQuota usage from Kubernetes
     const quotaUsage = await k8sClient.getResourceQuotaUsage(organization.namespace)
+    console.log('[QUOTA API GET] Returning quota:', JSON.stringify(quotaUsage.quota))
 
     // Calculate warnings (80% threshold)
     const warnings: string[] = []

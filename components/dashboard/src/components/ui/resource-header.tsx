@@ -66,7 +66,7 @@ export function ResourceHeader({
         <div>
           <h1 className="text-3xl font-bold font-mono">{title}</h1>
           {subtitle && (
-            <p className="text-gray-600">{subtitle}</p>
+            <div className="text-gray-600">{subtitle}</div>
           )}
         </div>
       </div>
