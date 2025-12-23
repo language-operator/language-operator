@@ -26,9 +26,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Users, Plus, MessageCircle, Palette, Clock, MoreHorizontal, Eye, Edit, Trash2, Search } from 'lucide-react'
 import Link from 'next/link'
-import { usePersonas } from '@/hooks/use-personas'
+import { usePersonas, useDeletePersona } from '@/hooks/use-personas'
 import { useWatchPersonas } from '@/hooks/use-watch'
 import { EventsActivity } from '@/components/ui/events-activity'
+import { useRouter } from 'next/navigation'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -46,6 +47,7 @@ function formatTimeAgo(timestamp?: string | Date) {
 }
 
 export default function ClusterPersonas() {
+  const router = useRouter()
   const params = useParams()
   const clusterName = params?.name as string
   const [search, setSearch] = React.useState('')
@@ -53,6 +55,7 @@ export default function ClusterPersonas() {
 
   // Fetch all personas with real-time updates
   const { data: personasResponse, isLoading, error } = usePersonas({ clusterName, limit: 100 })
+  const deletePersona = useDeletePersona(clusterName)
 
   // Enable real-time updates via SSE watch
   useWatchPersonas()
@@ -113,6 +116,19 @@ export default function ClusterPersonas() {
         return 'bg-pink-100 text-pink-800'
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const handleDeletePersona = async (persona: any) => {
+    if (!persona || !persona.metadata.name) return
+
+    if (confirm(`Are you sure you want to delete persona "${persona.spec.displayName || persona.metadata.name}"?`)) {
+      try {
+        await deletePersona.mutateAsync(persona.metadata.name)
+      } catch (error) {
+        console.error('Failed to delete persona:', error)
+        alert('Failed to delete persona. Please try again.')
+      }
     }
   }
 
@@ -290,12 +306,7 @@ export default function ClusterPersonas() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive"
-                                  onClick={() => {
-                                    if (confirm(`Are you sure you want to delete persona "${persona.spec.displayName || persona.metadata.name}"?`)) {
-                                      // TODO: Add delete functionality
-                                      console.log('Delete persona:', persona.metadata.name)
-                                    }
-                                  }}
+                                  onClick={() => handleDeletePersona(persona)}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete
