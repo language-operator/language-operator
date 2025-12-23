@@ -5,6 +5,12 @@ import { k8sClient } from '@/lib/k8s-client'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { validateClusterExists } from '@/lib/cluster-validation'
+import {
+  createErrorResponse,
+  handleKubernetesOperation,
+  validateClusterNameFormat,
+} from '@/lib/api-error-handler'
 import yaml from 'js-yaml'
 
 // GET /api/clusters/[name]/personas/[personaName]/yaml - Get persona YAML
@@ -22,51 +28,51 @@ export async function GET(
     }
 
     const { name: clusterName, personaName } = await params
-    if (!clusterName || !personaName) {
-      return NextResponse.json({ error: 'Cluster name and persona name are required' }, { status: 400 })
-    }
+
+    // Validate cluster name format
+    validateClusterNameFormat(clusterName)
+
+    // Validate cluster exists and user has access
+    await validateClusterExists(organization.namespace, clusterName, { validateAccess: true })
 
     // Fetch specific persona from organization namespace
+    const response = await handleKubernetesOperation(
+      'get persona for YAML',
+      k8sClient.getLanguagePersona(organization.namespace, personaName)
+    )
+
+    // Handle different response structures from k8s client
     let persona: any = null
-    
-    try {
-      const response = await k8sClient.getLanguagePersona(organization.namespace, personaName)
-      
-      // Handle different response structures from k8s client
-      if ((response as any)?.body) {
-        persona = (response as any).body
-      } else if ((response as any)?.data) {
-        persona = (response as any).data
-      } else if (response) {
-        persona = response as any
-      }
-    } catch (k8sError) {
-      // If persona not found, return 404
-      if (k8sError instanceof Error && k8sError.message.includes('404')) {
-        return NextResponse.json({ 
-          error: 'Persona not found',
-          details: `Persona "${personaName}" not found in cluster "${clusterName}"` 
-        }, { status: 404 })
-      }
-      
-      console.error('Error fetching persona from Kubernetes:', k8sError)
-      throw k8sError
+    if ((response as any)?.body) {
+      persona = (response as any).body
+    } else if ((response as any)?.data) {
+      persona = (response as any).data
+    } else if (response) {
+      persona = response as any
     }
 
     if (!persona) {
-      return NextResponse.json({ 
-        error: 'Persona not found',
-        details: `Persona "${personaName}" not found in cluster "${clusterName}"` 
-      }, { status: 404 })
+      return createErrorResponse(
+        new Error(`Persona '${personaName}' not found`),
+        'Persona not found'
+      )
+    }
+
+    // Verify the persona belongs to this cluster (check clusterRef)
+    if (persona.spec?.clusterRef !== clusterName) {
+      return createErrorResponse(
+        new Error(`Persona '${personaName}' does not belong to cluster '${clusterName}'`),
+        'Persona not found in cluster'
+      )
     }
 
     // Verify persona belongs to user's organization
     const personaOrgLabel = persona.metadata?.labels?.['langop.io/organization-id']
     if (personaOrgLabel && personaOrgLabel !== organization.id) {
-      return NextResponse.json({ 
-        error: 'Persona not found',
-        details: `Persona "${personaName}" not found in cluster "${clusterName}"` 
-      }, { status: 404 })
+      return createErrorResponse(
+        new Error(`Persona '${personaName}' not found`),
+        'Persona not found'
+      )
     }
 
     // Convert persona object to YAML
@@ -87,9 +93,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Error fetching persona YAML:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch persona YAML',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return createErrorResponse(error, 'Failed to fetch persona YAML')
   }
 }
