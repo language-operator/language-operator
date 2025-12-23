@@ -496,11 +496,10 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 	)
 
 	// Add Ingress rules to allow agents and dashboard to connect to the model service
-	// Allow pods labeled as LanguageAgent or Dashboard
 	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 		{
-			// Allow from LanguageAgent pods
+			// Allow from LanguageAgent pods in the same namespace
 			From: []networkingv1.NetworkPolicyPeer{
 				{
 					PodSelector: &metav1.LabelSelector{
@@ -509,7 +508,17 @@ func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, mo
 						},
 					},
 				},
+			},
+		},
+		{
+			// Allow from Dashboard pods in the language-operator namespace
+			From: []networkingv1.NetworkPolicyPeer{
 				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": "language-operator",
+						},
+					},
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"langop.io/kind": "Dashboard",
