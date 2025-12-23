@@ -108,7 +108,12 @@ export default function EditOrganizationPage() {
 
         // Only populate quota form on initial load, not after updates
         if (data.data.quota && !hasLoadedInitialQuota.current) {
-          quotaForm.reset(data.data.quota, { keepDefaultValues: false })
+          // Merge API data with defaults to ensure all fields are present
+          const quotaValues = {
+            ...quotaForm.getValues(), // Start with current defaults
+            ...data.data.quota         // Override with API values
+          }
+          quotaForm.reset(quotaValues, { keepDefaultValues: false })
           hasLoadedInitialQuota.current = true
         }
       } catch (error) {
@@ -124,10 +129,21 @@ export default function EditOrganizationPage() {
 
   // Handle quota form submission
   const onQuotaSubmit = async () => {
-    // Use getValues() instead of the values parameter to avoid stale closure issues
-    const values = quotaForm.getValues()
-    console.log('[SUBMIT] getValues():', values)
-    console.log('[SUBMIT] CPU Limits:', values['limits.cpu'])
+    // Build values object by manually reading each field using watch()
+    // This works around a react-hook-form limitation with dot-notation field names
+    // where getValues() doesn't properly track changes to fields with dots in their names
+    const values = {
+      'count/languageagents': quotaForm.watch('count/languageagents'),
+      'count/languagemodels': quotaForm.watch('count/languagemodels'),
+      'count/languagetools': quotaForm.watch('count/languagetools'),
+      'count/languagepersonas': quotaForm.watch('count/languagepersonas'),
+      'count/languageclusters': quotaForm.watch('count/languageclusters'),
+      'count/members': quotaForm.watch('count/members'),
+      'requests.cpu': quotaForm.watch('requests.cpu'),
+      'requests.memory': quotaForm.watch('requests.memory'),
+      'limits.cpu': quotaForm.watch('limits.cpu'),
+      'limits.memory': quotaForm.watch('limits.memory'),
+    }
     setIsUpdating(true)
     try {
       const response = await fetch(`/api/organizations/${organizationId}/quota`, {
