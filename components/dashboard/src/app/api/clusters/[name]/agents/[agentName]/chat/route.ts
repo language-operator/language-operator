@@ -74,12 +74,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Get agent's networking configuration to find chat endpoint
     const networking = agentData.spec?.networking
-    const port = networking?.port || 8080 // Default agent port
-    const serviceName = `${agentName}-service`
+    const port = networking?.port || 80 // Service port (80 -> 8080 on pod)
+    const serviceName = `${agentName}` // Service name matches agent name
     
     // Construct internal cluster URL for the agent's chat completion endpoint
-    // Format: http://<service-name>.<namespace>.svc.cluster.local:<port>/chat/completions
-    const agentEndpoint = `http://${serviceName}.${organization.namespace}.svc.cluster.local:${port}/chat/completions`
+    // Format: http://<service-name>.<namespace>.svc.cluster.local:<port>/v1/chat/completions
+    const agentEndpoint = `http://${serviceName}.${organization.namespace}.svc.cluster.local:${port}/v1/chat/completions`
 
     // Prepare the chat completion request
     const systemMessage = agentData.spec?.instructions 
