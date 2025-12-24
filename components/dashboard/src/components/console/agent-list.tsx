@@ -10,7 +10,7 @@ interface Conversation {
   id: string
   agentName: string
   clusterName: string
-  title: string | null
+  title?: string
   createdAt: string
   updatedAt: string
   messageCount?: number
