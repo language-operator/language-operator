@@ -30,7 +30,6 @@ import Link from 'next/link'
 import { LanguageAgent } from '@/types/agent'
 import { useAgents } from '@/hooks/use-agents'
 import { useWatchAgents } from '@/hooks/use-watch'
-import { AgentChatDialog } from '@/components/agents/agent-chat-dialog'
 
 function formatTimeAgo(timestamp?: string | Date) {
   if (!timestamp) return 'Unknown'
@@ -54,8 +53,6 @@ export default function ClusterAgents() {
 
   const [search, setSearch] = useState('')
   const [executionModeFilter, setExecutionModeFilter] = useState<string>('all')
-  const [selectedChatAgent, setSelectedChatAgent] = useState<string | null>(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
 
   // Use the agents hook for real-time updates
   const { data: agentsData, isLoading: loading, error: agentsError } = useAgents({
@@ -121,16 +118,6 @@ export default function ClusterAgents() {
       default:
         return <Bot className="h-4 w-4" />
     }
-  }
-
-  const handleOpenChat = (agentName: string) => {
-    setSelectedChatAgent(agentName)
-    setIsChatOpen(true)
-  }
-
-  const handleCloseChat = () => {
-    setIsChatOpen(false)
-    setSelectedChatAgent(null)
   }
 
 
@@ -310,11 +297,11 @@ export default function ClusterAgents() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  onClick={() => handleOpenChat(agent.metadata.name)}
-                                >
-                                  <MessageCircle className="h-4 w-4 mr-2" />
-                                  Connect to Chat
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/clusters/${clusterName}/console?agent=${agent.metadata.name}`}>
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    Open in Console
+                                  </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
@@ -365,16 +352,6 @@ export default function ClusterAgents() {
               />
             )}
           </>
-        )}
-        
-        {/* Agent Chat Dialog */}
-        {selectedChatAgent && (
-          <AgentChatDialog
-            isOpen={isChatOpen}
-            onClose={handleCloseChat}
-            agentName={selectedChatAgent}
-            clusterName={clusterName}
-          />
         )}
       </div>
     </AuthenticatedLayout>
