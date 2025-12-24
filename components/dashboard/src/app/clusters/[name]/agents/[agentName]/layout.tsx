@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Bot, ArrowLeft, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check } from 'lucide-react'
+import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -14,6 +14,7 @@ import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { NotFound } from '@/components/ui/not-found'
 import { cn } from '@/lib/utils'
 import { getStatusIcon, getStatusColor } from '@/components/agents/utils'
@@ -40,6 +41,9 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
   const deleteAgent = useDeleteAgent(clusterName)
 
   const agent = agentResponse?.data
+  
+  // Check if we're on the edit page
+  const isEditPage = pathname.endsWith('/edit')
 
   const tabs = [
     {
@@ -88,9 +92,6 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
     }
   }
 
-  const handleBack = () => {
-    router.push(`/clusters/${clusterName}/agents`)
-  }
 
   const handleViewYaml = async () => {
     setYamlModalOpen(true)
@@ -162,9 +163,8 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
       <AuthenticatedLayout>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
+            <Skeleton className="h-10 w-16" />
+            <Skeleton className="h-8 w-8" />
             <div className="space-y-2">
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-4 w-32" />
@@ -186,82 +186,100 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
         <NotFound
           title={is404Error ? 'Agent Not Found' : 'Error Loading Agent'}
           message={errorMessage}
-          onBack={handleBack}
+          onBack={() => router.push(`/clusters/${clusterName}/agents`)}
           backLabel="Back to Agents"
         />
       </AuthenticatedLayout>
     )
   }
 
+  // Render edit page layout differently
+  if (isEditPage) {
+    return (
+      <AuthenticatedLayout>
+        <div className="space-y-6">
+          {/* Edit Page Header */}
+          <ResourceHeader
+            backHref={`/clusters/${clusterName}/agents/${agentName}`}
+            backLabel="Back to Agent"
+            icon={Bot}
+            title={`Edit ${agent.metadata.name}`}
+            subtitle="LanguageAgent"
+          />
+          
+          {/* Page Content */}
+          {children}
+        </div>
+      </AuthenticatedLayout>
+    )
+  }
+
+  // Regular agent detail layout
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="icon" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Bot className="h-8 w-8 text-blue-500" />
-            <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-3xl font-bold">{agent.metadata.name}</h1>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(agent)}
-                  <Badge className={getStatusColor(agent)}>
-                    {agent.status?.phase || 'Unknown'}
-                  </Badge>
-                </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/agents`}
+          backLabel="Back to Agents"
+          icon={Bot}
+          title={
+            <div className="flex items-center space-x-3">
+              <span>{agent.metadata.name}</span>
+              <div className="flex items-center space-x-2">
+                {getStatusIcon(agent)}
+                <Badge className={getStatusColor(agent)}>
+                  {agent.status?.phase || 'Unknown'}
+                </Badge>
               </div>
-              <p className="text-muted-foreground">
-                LanguageAgent
-              </p>
             </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/clusters/${clusterName}/agents/${agentName}/edit`)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {agent?.spec?.executionMode === 'scheduled' && (
-                  <DropdownMenuItem
-                    onClick={handleRunManually}
-                    disabled={isExecuting}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    {isExecuting ? 'Executing...' : 'Run Manually'}
+          }
+          subtitle="LanguageAgent"
+          actions={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/clusters/${clusterName}/agents/${agentName}/edit`)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {agent?.spec?.executionMode === 'scheduled' && (
+                    <DropdownMenuItem
+                      onClick={handleRunManually}
+                      disabled={isExecuting}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      {isExecuting ? 'Executing...' : 'Run Manually'}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={handleViewYaml}>
+                    <FileCode className="h-4 w-4 mr-2" />
+                    View YAML
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={handleViewYaml}>
-                  <FileCode className="h-4 w-4 mr-2" />
-                  View YAML
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleDeleteAgent}
-                  disabled={deleteAgent.isPending}
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {deleteAgent.isPending ? 'Deleting...' : 'Delete Agent'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+                  <DropdownMenuItem
+                    onClick={handleDeleteAgent}
+                    disabled={deleteAgent.isPending}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {deleteAgent.isPending ? 'Deleting...' : 'Delete Agent'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
 
         {/* Tabs Navigation */}
-        <div className="bg-muted text-muted-foreground inline-flex h-12 w-fit items-center justify-center rounded-lg p-1">
+        <div className="bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400 inline-flex h-12 w-fit items-center justify-center p-1">
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
@@ -269,10 +287,10 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
                 key={tab.name}
                 href={tab.href}
                 className={cn(
-                  'inline-flex h-[calc(100%-8px)] items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap transition-[color,box-shadow]',
+                  'inline-flex h-[calc(100%-8px)] items-center justify-center gap-2 border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap transition-all',
                   tab.current
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-foreground hover:bg-background/50'
+                    ? 'bg-white text-stone-900 shadow-warm-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-night-sm'
+                    : 'text-stone-700 hover:bg-white/50 dark:text-stone-300 dark:hover:bg-stone-900/50'
                 )}
               >
                 <Icon className="w-4 h-4" />
@@ -364,7 +382,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
             <DialogTitle>Run Agent Manually</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-stone-600 dark:text-stone-400">
               This will create a one-time job to execute the agent "{agentName}" immediately.
               The execution will be independent of the scheduled runs.
             </p>

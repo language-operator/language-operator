@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ChevronsUpDown, Plus, Building2 } from 'lucide-react'
+import { Check, ChevronDown, Plus, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -46,9 +46,9 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
       case 'editor':
         return 'bg-green-100 text-green-800 hover:bg-green-100'
       case 'viewer':
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300'
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100 dark:bg-stone-800 dark:text-stone-300'
     }
   }
 
@@ -56,22 +56,22 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-64 justify-between", className)}
+          className={cn("w-64 justify-between hover:bg-transparent dark:hover:bg-transparent", className)}
         >
           <div className="flex items-center gap-2 overflow-hidden">
             <Building2 className="h-4 w-4 flex-shrink-0" />
             {activeOrganization ? (
-              <span className="font-medium truncate">
+              <span className="font-medium truncate text-sm">
                 {activeOrganization.name}
               </span>
             ) : (
-              <span className="text-muted-foreground">Select organization...</span>
+              <span className="text-stone-600 dark:text-stone-400 text-sm">Select organization...</span>
             )}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64" align="start">

@@ -59,15 +59,15 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Name</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Name</p>
               <p className="text-sm">{agent.metadata.name}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Execution Mode</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Execution Mode</p>
               <Badge variant="secondary">{agent.spec.executionMode}</Badge>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Created</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Created</p>
               <p className="text-sm">{formatTimeAgo(agent.metadata.creationTimestamp)}</p>
             </div>
           </div>
@@ -80,7 +80,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
           <CardTitle>Goal</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/50 rounded-lg p-4">
+          <div className="bg-stone-50 border border-stone-200 p-4 dark:bg-stone-800/50 dark:border-stone-700">
             <p className="text-base leading-relaxed">
               {agent.spec.instructions || 'No goal specified'}
             </p>
@@ -134,7 +134,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">None</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400">None</p>
             )}
           </CardContent>
         </Card>
@@ -186,7 +186,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">None</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400">None</p>
             )}
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">None</p>
+              <p className="text-sm text-stone-600 dark:text-stone-400">None</p>
             )}
           </CardContent>
         </Card>
@@ -250,11 +250,11 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
           {agent.status?.conditions && agent.status.conditions.length > 0 ? (
             <div className="space-y-3">
               {agent.status.conditions.map((condition, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border border-stone-200 dark:border-stone-700">
                   <div>
                     <p className="text-sm font-medium">{condition.type}</p>
                     {condition.message && (
-                      <p className="text-xs text-muted-foreground">{condition.message}</p>
+                      <p className="text-xs text-stone-600 dark:text-stone-400">{condition.message}</p>
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
@@ -270,7 +270,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No status conditions available</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">No status conditions available</p>
           )}
         </CardContent>
       </Card>

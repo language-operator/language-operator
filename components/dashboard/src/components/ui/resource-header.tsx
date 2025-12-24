@@ -13,7 +13,6 @@ interface ResourceHeaderProps {
   
   /** Icon configuration */
   icon: LucideIcon
-  iconColor?: string
   iconBgColor?: string
   
   /** Title and subtitle */
@@ -31,7 +30,6 @@ export function ResourceHeader({
   backHref,
   backLabel = 'Back',
   icon: Icon,
-  iconColor = 'text-blue-600',
   iconBgColor,
   title,
   subtitle,
@@ -43,7 +41,7 @@ export function ResourceHeader({
       <div className="flex items-center gap-3">
         {/* Optional Back Button */}
         {backHref && (
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild>
             <Link href={backHref}>
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">{backLabel}</span>
@@ -53,12 +51,12 @@ export function ResourceHeader({
         
         {/* Resource Icon */}
         {iconBgColor ? (
-          <div className={cn('flex items-center justify-center w-12 h-12 rounded-lg pl-4 pr-2', iconBgColor)}>
-            <Icon className={cn('h-6 w-6', iconColor)} />
+          <div className={cn('flex items-center justify-center w-12 h-12 pl-4 pr-2', iconBgColor)}>
+            <Icon className="h-6 w-6 text-amber-700 dark:text-amber-400" />
           </div>
         ) : (
           <div className="pl-4 pr-2">
-            <Icon className={cn('h-8 w-8', iconColor)} />
+            <Icon className="h-8 w-8 text-amber-700 dark:text-amber-400" />
           </div>
         )}
         
@@ -66,7 +64,7 @@ export function ResourceHeader({
         <div>
           <h1 className="text-3xl font-bold font-mono">{title}</h1>
           {subtitle && (
-            <div className="text-gray-600">{subtitle}</div>
+            <div className="text-stone-600 dark:text-stone-400">{subtitle}</div>
           )}
         </div>
       </div>

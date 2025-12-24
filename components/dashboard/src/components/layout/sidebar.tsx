@@ -34,7 +34,7 @@ export function Sidebar() {
   const { selectedCluster, isClusterSelected } = useClusterContext()
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-white border-r border-stone-800/80 dark:bg-stone-900 dark:border-stone-600/80">
+    <div className="flex h-screen w-64 flex-col bg-stone-100 border-r border-stone-800/80 dark:bg-stone-950 dark:border-stone-600/80">
       <div className="flex h-16 items-center border-b border-stone-800/80 px-4 dark:border-stone-600/80">
         <div className="w-full">
           <h1 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
