@@ -19,12 +19,12 @@ import {
 
 const globalNavigation = [
   { name: 'Overview', href: '/', icon: Home },
-  { name: 'Console', href: '/console', icon: MessageSquare },
   { name: 'Clusters', href: '/clusters', icon: Boxes },
 ]
 
 const clusterNavigation = [
   { name: 'Dashboard', href: '', icon: BarChart3 }, // Will be prefixed with /clusters/[name]
+  { name: 'Console', href: '/console', icon: MessageSquare },
   { name: 'Agents', href: '/agents', icon: Bot },
   { name: 'Tools', href: '/tools', icon: Wrench },
   { name: 'Personas', href: '/personas', icon: Users },

@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, useParams } from 'next/navigation'
 import { useEffect, Suspense } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
@@ -10,15 +10,14 @@ import { ConsoleLayout } from '@/components/console/console-layout'
 import { ConsoleProvider } from '@/contexts/console-context'
 import { useOrganizations } from '@/hooks/use-organizations'
 
-function ConsoleContent() {
+function ConsoleContent({ clusterName }: { clusterName: string }) {
   const searchParams = useSearchParams()
 
-  // Extract URL parameters for initial agent/cluster selection
+  // Extract URL parameters for initial agent selection
   const agentParam = searchParams.get('agent')
-  const clusterParam = searchParams.get('cluster')
 
   return (
-    <ConsoleProvider initialAgent={agentParam} initialCluster={clusterParam}>
+    <ConsoleProvider initialAgent={agentParam} initialCluster={clusterName}>
       <ConsoleLayout />
     </ConsoleProvider>
   )
@@ -27,6 +26,8 @@ function ConsoleContent() {
 export default function ConsolePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const params = useParams()
+  const clusterName = params.name as string
 
   // Load organizations on app startup to initialize active organization
   useOrganizations()
@@ -56,7 +57,7 @@ export default function ConsolePage() {
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
           <Suspense fallback={<div className="flex h-full items-center justify-center"><div className="text-sm">Loading console...</div></div>}>
-            <ConsoleContent />
+            <ConsoleContent clusterName={clusterName} />
           </Suspense>
         </div>
       </div>
