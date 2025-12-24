@@ -5,7 +5,6 @@ import { MessageHeader } from './message-header'
 import { MessageStream } from './message-stream'
 import { WelcomeMessage } from './welcome-message'
 import { ChatMessageInput } from '@/components/agents/chat-message-input'
-import { useAgentChat } from '@/hooks/use-agent-chat'
 import { useCallback } from 'react'
 import { fetchWithOrganization } from '@/lib/api-client'
 
@@ -23,11 +22,6 @@ export function MessagePanel() {
   } = useConsole()
 
   const conversation = getActiveConversation()
-
-  const { sendMessage: sendChatMessage } = useAgentChat(
-    selectedAgent || '',
-    selectedCluster || ''
-  )
 
   const handleSendMessage = useCallback(
     async (content: string) => {
@@ -90,7 +84,23 @@ export function MessagePanel() {
         }
 
         // Send message to agent
-        const response = await sendChatMessage(content, conversation.messages)
+        const chatResponse = await fetchWithOrganization(
+          `/api/clusters/${selectedCluster}/agents/${selectedAgent}/chat`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: content,
+              conversation: conversation.messages.filter(msg => msg.role !== 'system')
+            }),
+          }
+        )
+
+        if (!chatResponse.ok) {
+          throw new Error('Failed to send message to agent')
+        }
+
+        const response = await chatResponse.json()
 
         // Update user message to delivered
         addMessage(selectedAgent, {
@@ -144,7 +154,6 @@ export function MessagePanel() {
       addMessage,
       setLoading,
       setError,
-      sendChatMessage,
       conversationDbId,
       setConversationDbId,
       refreshConversationList,
