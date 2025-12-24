@@ -57,7 +57,6 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
           backHref="/settings/organizations"
           backLabel="Back to Organizations"
           icon={Building2}
-          iconColor="text-blue-600"
           title={organization.name}
           subtitle={
             <div className="flex items-center gap-2">

@@ -60,7 +60,6 @@ export default function CreateClusterPage() {
           backHref="/clusters"
           backLabel="Back to Clusters"
           icon={Cloud}
-          iconColor="text-blue-500"
           title="Create Language Cluster"
           subtitle="Set up a new cluster for deploying language agents"
         />

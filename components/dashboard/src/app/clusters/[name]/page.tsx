@@ -87,7 +87,6 @@ export default function ClusterDashboard() {
           {/* Cluster Header */}
           <ResourceHeader
             icon={BarChart3}
-            iconColor="text-blue-500"
             title={cluster.metadata?.name || ''}
             subtitle="LanguageCluster"
             actions={

@@ -138,7 +138,6 @@ export default function ClusterPersonas() {
         {/* Header */}
         <ResourceHeader
           icon={Users}
-          iconColor="text-blue-500"
           title="Personas"
           subtitle="Personalities and preferences agents can use to influence their behavior"
           actions={

@@ -280,7 +280,6 @@ export default function ClustersPage() {
         {/* Header */}
         <ResourceHeader
           icon={Cloud}
-          iconColor="text-blue-500"
           title="Clusters"
           subtitle="Logical groups of agents, tools, and models"
           actions={

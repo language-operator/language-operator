@@ -199,7 +199,6 @@ export default function ClusterEditModelPage() {
             backHref={`/clusters/${clusterName}/models`}
             backLabel="Back to Models"
             icon={Cpu}
-            iconColor="text-blue-500"
             title="Loading..."
             subtitle="Loading model details..."
           />
@@ -217,7 +216,6 @@ export default function ClusterEditModelPage() {
             backHref={`/clusters/${clusterName}/models`}
             backLabel="Back to Models"
             icon={Cpu}
-            iconColor="text-blue-500"
             title="Model Not Found"
             subtitle={`The model "${modelName}" could not be found in cluster "${clusterName}"`}
           />
@@ -234,7 +232,6 @@ export default function ClusterEditModelPage() {
           backHref={`/clusters/${clusterName}/models/${modelName}`}
           backLabel="Back to Model"
           icon={Cpu}
-          iconColor="text-blue-500"
           title={model.metadata.name}
           subtitle="LanguageModel"
         />

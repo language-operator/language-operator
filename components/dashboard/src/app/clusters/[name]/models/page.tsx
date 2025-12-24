@@ -119,7 +119,6 @@ export default function ClusterModels() {
         {/* Header */}
         <ResourceHeader
           icon={Cpu}
-          iconColor="text-blue-500"
           title="Models"
           subtitle="Large language models used for reasoning"
           actions={

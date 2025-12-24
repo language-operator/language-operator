@@ -85,7 +85,6 @@ export default function CreateClusterPersonaPage() {
           backHref={`/clusters/${clusterName}/personas`}
           backLabel="Back to Personas"
           icon={Users}
-          iconColor="text-blue-500"
           title="Create Persona"
           subtitle="Define specific personality traits and custom instructions"
           actions={

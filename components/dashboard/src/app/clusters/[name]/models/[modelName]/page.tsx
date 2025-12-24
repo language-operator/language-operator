@@ -569,7 +569,6 @@ export default function ClusterModelDetailPage() {
           backHref={`/clusters/${clusterName}/models`}
           backLabel="Back to Models"
           icon={Cpu}
-          iconColor="text-blue-500"
           title={model.metadata.name}
           subtitle="LanguageModel"
           actions={

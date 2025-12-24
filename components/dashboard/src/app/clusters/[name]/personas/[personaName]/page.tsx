@@ -171,7 +171,6 @@ export default function ClusterPersonaDetailPage() {
           backHref={`/clusters/${clusterName}/personas`}
           backLabel="Back to Personas"
           icon={Users}
-          iconColor="text-blue-500"
           title={
             <div className="flex items-center space-x-3">
               <span>{persona.spec.displayName || persona.metadata.name}</span>

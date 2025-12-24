@@ -300,7 +300,6 @@ export default function ClusterTools() {
         {/* Header */}
         <ResourceHeader
           icon={Wrench}
-          iconColor="text-blue-500"
           title="Tools"
           subtitle="Agents use MCP-compatible tools to perform work"
         />

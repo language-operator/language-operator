@@ -76,7 +76,6 @@ export default function EditClusterPersonaPage() {
             backHref={`/clusters/${clusterName}/personas`}
             backLabel="Back to Personas"
             icon={Users}
-            iconColor="text-blue-500"
             title="Loading..."
             subtitle="Loading persona details..."
           />
@@ -94,7 +93,6 @@ export default function EditClusterPersonaPage() {
             backHref={`/clusters/${clusterName}/personas`}
             backLabel="Back to Personas"
             icon={Users}
-            iconColor="text-blue-500"
             title="Persona Not Found"
             subtitle={`The persona "${personaName}" was not found in cluster "${clusterName}"`}
           />
@@ -111,7 +109,6 @@ export default function EditClusterPersonaPage() {
           backHref={`/clusters/${clusterName}/personas`}
           backLabel="Back to Personas"
           icon={Users}
-          iconColor="text-blue-500"
           title="Edit Language Persona"
           subtitle={`Edit "${persona.spec.displayName || persona.metadata.name}" in the ${clusterName} cluster`}
         />
