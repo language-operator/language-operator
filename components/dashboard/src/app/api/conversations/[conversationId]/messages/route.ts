@@ -6,7 +6,7 @@ import { getUserOrganization } from '@/lib/organization-context'
 // GET /api/conversations/[conversationId]/messages - Get all messages for a conversation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
     const { user, organization } = await getUserOrganization(request)
@@ -23,7 +23,7 @@ export async function GET(
       )
     }
 
-    const { conversationId } = params
+    const { conversationId } = await params
 
     // Verify conversation belongs to user's organization
     const conversation = await db.conversation.findFirst({
@@ -73,7 +73,7 @@ export async function GET(
 // POST /api/conversations/[conversationId]/messages - Add a message to a conversation
 export async function POST(
   request: NextRequest,
-  { params }: { params: { conversationId: string } }
+  { params }: { params: Promise<{ conversationId: string }> }
 ) {
   try {
     const { user, organization } = await getUserOrganization(request)
@@ -90,7 +90,7 @@ export async function POST(
       )
     }
 
-    const { conversationId } = params
+    const { conversationId } = await params
     const { role, content, toolCalls, metadata } = await request.json()
 
     if (!role || !content) {
