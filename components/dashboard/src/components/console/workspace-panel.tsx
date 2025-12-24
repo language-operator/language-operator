@@ -6,12 +6,13 @@ import { WorkspaceFileTree } from '@/components/workspace/workspace-file-tree'
 import { WorkspaceFileViewer } from '@/components/workspace/workspace-file-viewer'
 import { WorkspaceToolbar } from '@/components/workspace/workspace-toolbar'
 import { useAgent } from '@/hooks/use-agents'
+import { FileEntry } from '@/types/workspace'
 import { FolderOpen } from 'lucide-react'
 
 export function WorkspacePanel() {
   const { selectedAgent, selectedCluster } = useConsole()
   const [currentPath, setCurrentPath] = useState('/')
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<FileEntry | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const { data: agentResponse, isLoading: agentLoading } = useAgent(
@@ -70,16 +71,18 @@ export function WorkspacePanel() {
             clusterName={selectedCluster}
             currentPath={currentPath}
             onPathChange={setCurrentPath}
-            onFileSelect={(file) => setSelectedFile(file.path)}
+            onFileSelect={setSelectedFile}
             refreshTrigger={refreshTrigger}
           />
         ) : (
           <WorkspaceFileViewer
-            agentName={selectedAgent}
+            agent={agentResponse.data}
             clusterName={selectedCluster}
-            filePath={selectedFile}
-            onClose={() => setSelectedFile(null)}
-            onRefresh={handleRefresh}
+            selectedFile={selectedFile}
+            onFileDelete={() => {
+              setSelectedFile(null)
+              handleRefresh()
+            }}
           />
         )}
       </div>
