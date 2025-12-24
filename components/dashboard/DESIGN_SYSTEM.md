@@ -15,7 +15,9 @@ This design system is inspired by **Donald Judd's minimalism** and the **West Te
 
 ## Color Palette
 
-### Neutrals (Stone)
+### Light Mode (West Texas Day)
+
+#### Neutrals (Stone)
 ```css
 stone-50:  #fafaf9   /* Subtle warm off-white */
 stone-100: #f5f5f4   /* Background base */
@@ -26,14 +28,14 @@ stone-900: #1c1917   /* Deep charcoal */
 stone-950: #0c0a09   /* Nearly black */
 ```
 
-### Warm Accents (Amber/Desert)
+#### Warm Accents (Amber/Desert)
 ```css
 amber-50:   #fffbeb   /* Atmospheric mist */
 amber-900:  #78350f   /* Deep rust */
 amber-950:  #451a03   /* Weathered bronze */
 ```
 
-### Gradients
+#### Light Mode Gradients
 
 **Background (Atmospheric)**
 ```css
@@ -56,6 +58,52 @@ hover:from-amber-900 hover:to-amber-950
 ```
 - Reveals desert warmth on interaction
 - Rust to deep bronze
+
+### Dark Mode (West Texas Night)
+
+Inspired by the vast starlit nights of the Chihuahuan Desert — deep sky darkness, sage moonlight, and firelight warmth.
+
+#### Night Neutrals
+```css
+neutral-950:  #0a0a0a   /* Deep desert black */
+stone-900:    #1c1917   /* Warm darkness */
+stone-800:    #292524   /* Darker surface */
+stone-700:    #44403c   /* Medium surface */
+stone-600:    #57534e   /* Divider lines */
+stone-400:    #a8a29e   /* Sage moonlight (labels) */
+stone-300:    #d6d3d1   /* Bright moonlight (text) */
+```
+
+#### Night Fire (Warm Interactions)
+```css
+amber-600:    #d97706   /* Firelight glow */
+amber-400:    #fbbf24   /* Starlight (cursor) */
+orange-600:   #ea580c   /* Fire embers */
+```
+
+#### Dark Mode Gradients
+
+**Background (Night Sky)**
+```css
+dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950
+```
+- Deep desert night with warm stone undertones
+- Vast darkness with subtle horizon warmth
+- Atmospheric depth without harshness
+
+**Button (Default State)**
+```css
+dark:from-stone-700 dark:to-stone-800
+```
+- Muted stone in darkness
+- Visible but restrained
+
+**Button (Hover - Firelight)**
+```css
+dark:hover:from-amber-600 dark:hover:to-orange-600
+```
+- Reveals fire warmth on interaction
+- Like lighting a match in the desert night
 
 ---
 
@@ -240,7 +288,7 @@ stone-200     /* Input borders - soft */
 
 ## Shadows
 
-### Elevation
+### Light Mode (Desert Sun)
 ```css
 /* Card Shadow - Warm, atmospheric */
 box-shadow: 0 8px 32px rgba(120,53,15,0.08)
@@ -249,11 +297,21 @@ box-shadow: 0 8px 32px rgba(120,53,15,0.08)
 box-shadow: 0 2px 8px rgba(120,53,15,0.12)
 ```
 
+### Dark Mode (Night Depth)
+```css
+/* Card Shadow - Deep night */
+dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+
+/* Button Shadow - Black void */
+dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]
+```
+
 **Principles**
-- Shadows are warm-tinted (brown, not black)
-- Very subtle (8-12% opacity max)
+- **Light**: Shadows are warm-tinted (brown, not black)
+- **Dark**: Shadows are deep black (void of night sky)  
+- Very subtle (8-12% opacity in light, 30-40% in dark)
 - Atmospheric quality over sharp depth
-- Suggests desert light, not harsh overhead
+- Light suggests desert sun, dark suggests starlit void
 
 ---
 
@@ -392,7 +450,8 @@ module.exports = {
 ✗ Introduce new colors outside the palette
 ✗ Round corners or soften edges
 ✗ Reduce padding to "fit more in"
-✗ Use pure black (#000) - always use stone-950
+✗ Use pure black (#000) in light mode - use stone-950
+✗ Use pure white (#fff) in dark mode - use stone-300
 ✗ Add icons unless absolutely necessary
 
 ---
@@ -406,7 +465,8 @@ When adding new components:
 3. **Apply restraint**: Minimal color in default state
 4. **Design interaction**: Reveal warmth on hover/focus
 5. **Consider spacing**: Generous padding is intentional
-6. **Test in context**: Does it feel like West Texas minimalism?
+6. **Support both modes**: Light (day) and dark (night) aesthetics
+7. **Test in context**: Does it feel like West Texas minimalism?
 
 ---
 
