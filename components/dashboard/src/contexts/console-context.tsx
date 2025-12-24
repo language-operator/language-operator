@@ -1,0 +1,268 @@
+'use client'
+
+import React, { createContext, useContext, useState, useCallback } from 'react'
+import { ChatMessage } from '@/types/chat'
+
+interface ConversationState {
+  agentName: string
+  clusterName: string
+  messages: ChatMessage[]
+  isLoading: boolean
+  error: string | null
+  lastActivity: Date
+}
+
+interface ConsoleContextType {
+  // Selected agent
+  selectedAgent: string | null
+  selectedCluster: string | null
+  setSelectedAgent: (agentName: string | null, clusterName: string | null) => void
+
+  // Conversation state
+  activeConversationId: string | null
+  conversations: Map<string, ConversationState>
+  getActiveConversation: () => ConversationState | null
+  addMessage: (agentName: string, message: ChatMessage) => void
+  setLoading: (agentName: string, isLoading: boolean) => void
+  setError: (agentName: string, error: string | null) => void
+
+  // Database conversation ID tracking
+  conversationDbId: string | null
+  setConversationDbId: (id: string | null) => void
+  loadConversation: (conversationId: string, agentName: string, clusterName: string) => Promise<void>
+  refreshConversationList: () => void
+  conversationListRefreshTrigger: number
+
+  // Workspace visibility
+  isWorkspaceVisible: boolean
+  toggleWorkspace: () => void
+  setWorkspaceVisible: (visible: boolean) => void
+}
+
+const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined)
+
+interface ConsoleProviderProps {
+  children: React.ReactNode
+  initialAgent?: string | null
+  initialCluster?: string | null
+}
+
+export function ConsoleProvider({
+  children,
+  initialAgent = null,
+  initialCluster = null
+}: ConsoleProviderProps) {
+  const [selectedAgent, setSelectedAgentState] = useState<string | null>(initialAgent)
+  const [selectedCluster, setSelectedClusterState] = useState<string | null>(initialCluster)
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    initialAgent && initialCluster ? `${initialCluster}/${initialAgent}` : null
+  )
+  const [conversations, setConversations] = useState<Map<string, ConversationState>>(() => {
+    const map = new Map()
+    if (initialAgent && initialCluster) {
+      const key = `${initialCluster}/${initialAgent}`
+      map.set(key, {
+        agentName: initialAgent,
+        clusterName: initialCluster,
+        messages: [],
+        isLoading: false,
+        error: null,
+        lastActivity: new Date(),
+      })
+    }
+    return map
+  })
+  const [conversationDbId, setConversationDbId] = useState<string | null>(null)
+  const [conversationListRefreshTrigger, setConversationListRefreshTrigger] = useState(0)
+  const [isWorkspaceVisible, setWorkspaceVisible] = useState(true)
+
+  const setSelectedAgent = useCallback(
+    (agentName: string | null, clusterName: string | null) => {
+      setSelectedAgentState(agentName)
+      setSelectedClusterState(clusterName)
+
+      if (agentName && clusterName) {
+        // Initialize conversation state if it doesn't exist
+        const key = `${clusterName}/${agentName}`
+        setConversations((prev) => {
+          const newMap = new Map(prev)
+          if (!newMap.has(key)) {
+            newMap.set(key, {
+              agentName,
+              clusterName,
+              messages: [],
+              isLoading: false,
+              error: null,
+              lastActivity: new Date(),
+            })
+          }
+          return newMap
+        })
+        setActiveConversationId(key)
+      } else {
+        setActiveConversationId(null)
+      }
+    },
+    []
+  )
+
+  const getActiveConversation = useCallback((): ConversationState | null => {
+    if (!activeConversationId) return null
+    return conversations.get(activeConversationId) || null
+  }, [activeConversationId, conversations])
+
+  const addMessage = useCallback((agentName: string, message: ChatMessage) => {
+    setConversations((prev) => {
+      const newMap = new Map(prev)
+      const key = Array.from(newMap.keys()).find((k) => k.endsWith(`/${agentName}`))
+      if (key) {
+        const conv = newMap.get(key)
+        if (conv) {
+          newMap.set(key, {
+            ...conv,
+            messages: [...conv.messages, message],
+            lastActivity: new Date(),
+          })
+        }
+      }
+      return newMap
+    })
+  }, [])
+
+  const setLoading = useCallback((agentName: string, isLoading: boolean) => {
+    setConversations((prev) => {
+      const newMap = new Map(prev)
+      const key = Array.from(newMap.keys()).find((k) => k.endsWith(`/${agentName}`))
+      if (key) {
+        const conv = newMap.get(key)
+        if (conv) {
+          newMap.set(key, {
+            ...conv,
+            isLoading,
+          })
+        }
+      }
+      return newMap
+    })
+  }, [])
+
+  const setError = useCallback((agentName: string, error: string | null) => {
+    setConversations((prev) => {
+      const newMap = new Map(prev)
+      const key = Array.from(newMap.keys()).find((k) => k.endsWith(`/${agentName}`))
+      if (key) {
+        const conv = newMap.get(key)
+        if (conv) {
+          newMap.set(key, {
+            ...conv,
+            error,
+          })
+        }
+      }
+      return newMap
+    })
+  }, [])
+
+  const toggleWorkspace = useCallback(() => {
+    setWorkspaceVisible((prev) => !prev)
+  }, [])
+
+  const refreshConversationList = useCallback(() => {
+    setConversationListRefreshTrigger((prev) => prev + 1)
+  }, [])
+
+  const loadConversation = useCallback(
+    async (conversationId: string, agentName: string, clusterName: string) => {
+      // Set the selected agent and cluster
+      setSelectedAgentState(agentName)
+      setSelectedClusterState(clusterName)
+      setConversationDbId(conversationId)
+
+      const key = `${clusterName}/${agentName}`
+      setActiveConversationId(key)
+
+      // Fetch messages from database
+      try {
+        const response = await fetch(`/api/conversations/${conversationId}/messages`)
+
+        if (!response.ok) {
+          throw new Error('Failed to load conversation messages')
+        }
+
+        const data = await response.json()
+
+        // Convert database messages to ChatMessage format
+        const messages = data.messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.timestamp),
+          ...(msg.toolCalls && { toolCalls: msg.toolCalls }),
+          ...(msg.metadata && { metadata: msg.metadata }),
+        }))
+
+        // Update conversation state with loaded messages
+        setConversations((prev) => {
+          const newMap = new Map(prev)
+          newMap.set(key, {
+            agentName,
+            clusterName,
+            messages,
+            isLoading: false,
+            error: null,
+            lastActivity: new Date(),
+          })
+          return newMap
+        })
+      } catch (error) {
+        console.error('Error loading conversation:', error)
+        // Initialize with empty messages on error
+        setConversations((prev) => {
+          const newMap = new Map(prev)
+          newMap.set(key, {
+            agentName,
+            clusterName,
+            messages: [],
+            isLoading: false,
+            error: 'Failed to load conversation',
+            lastActivity: new Date(),
+          })
+          return newMap
+        })
+      }
+    },
+    []
+  )
+
+  const value: ConsoleContextType = {
+    selectedAgent,
+    selectedCluster,
+    setSelectedAgent,
+    activeConversationId,
+    conversations,
+    getActiveConversation,
+    addMessage,
+    setLoading,
+    setError,
+    conversationDbId,
+    setConversationDbId,
+    loadConversation,
+    refreshConversationList,
+    conversationListRefreshTrigger,
+    isWorkspaceVisible,
+    toggleWorkspace,
+    setWorkspaceVisible,
+  }
+
+  return (
+    <ConsoleContext.Provider value={value}>{children}</ConsoleContext.Provider>
+  )
+}
+
+export function useConsole() {
+  const context = useContext(ConsoleContext)
+  if (context === undefined) {
+    throw new Error('useConsole must be used within a ConsoleProvider')
+  }
+  return context
+}

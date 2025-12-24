@@ -14,10 +14,12 @@ import {
   Boxes,
   Settings,
   BarChart3,
+  MessageSquare,
 } from 'lucide-react'
 
 const globalNavigation = [
   { name: 'Overview', href: '/', icon: Home },
+  { name: 'Console', href: '/console', icon: MessageSquare },
   { name: 'Clusters', href: '/clusters', icon: Boxes },
 ]
 

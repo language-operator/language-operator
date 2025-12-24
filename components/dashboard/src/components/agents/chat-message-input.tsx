@@ -53,7 +53,7 @@ export function ChatMessageInput({
   }
 
   return (
-    <div className={cn("flex items-end gap-3 p-4 border-t border-stone-200 bg-white/50 backdrop-blur-sm dark:border-stone-700 dark:bg-stone-900/50", className)}>
+    <div className={cn("flex items-center gap-3 px-6 py-4", className)}>
       <div className="flex-1 relative">
         <Textarea
           ref={textareaRef}
@@ -62,7 +62,7 @@ export function ChatMessageInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || isLoading}
-          className="min-h-[44px] max-h-[120px] resize-none pr-4 py-3 text-sm leading-relaxed"
+          className="min-h-[44px] max-h-[120px] resize-none text-sm leading-relaxed !bg-transparent !border-none focus:!ring-0 focus:!outline-none !p-0 !shadow-none"
           style={{ height: 'auto' }}
         />
       </div>
@@ -70,14 +70,13 @@ export function ChatMessageInput({
         onClick={handleSend}
         disabled={!message.trim() || isLoading || disabled}
         size="sm"
-        className="h-11 px-4 flex items-center gap-2 shrink-0"
+        className="h-9 w-9 p-0 flex items-center justify-center shrink-0 bg-amber-500 hover:bg-amber-600 dark:bg-amber-500 dark:hover:bg-amber-600 text-white"
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <Send className="h-4 w-4" />
         )}
-        <span className="hidden sm:inline">Send</span>
       </Button>
     </div>
   )

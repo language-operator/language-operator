@@ -314,9 +314,9 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Link href={`/clusters/${agent.spec?.clusterRef || agent.metadata.namespace}/agents/${agent.metadata.name}`}>
-                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="View Agent">
-                            <ExternalLink className="h-4 w-4 text-stone-600 dark:text-stone-400" />
+                        <Link href={`/console?agent=${agent.metadata.name}&cluster=${agent.spec?.clusterRef || agent.metadata.namespace}`}>
+                          <button className="px-3 py-1 text-[10px] tracking-wider uppercase font-light bg-stone-900 text-amber-400 hover:bg-stone-800 dark:bg-amber-400 dark:text-stone-900 dark:hover:bg-amber-500 transition-colors">
+                            Connect
                           </button>
                         </Link>
                       </div>

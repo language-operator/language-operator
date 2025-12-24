@@ -29,7 +29,7 @@ export function ClusterSelector() {
   const selectedClusterData = clusters.find((c: any) => c.metadata?.name === selectedCluster)
 
   return (
-    <div className="border-b p-3">
+    <div className="border-b py-3 px-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

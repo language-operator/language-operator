@@ -282,7 +282,7 @@ export function WorkspaceFileTree({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 p-4">
       <div className="text-sm font-medium mb-4 flex items-center">
         <FolderOpen className="w-4 h-4 mr-2" />
         Files
