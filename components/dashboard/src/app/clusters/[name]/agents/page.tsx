@@ -127,7 +127,6 @@ export default function ClusterAgents() {
         {/* Header */}
         <ResourceHeader
           icon={Bot}
-          iconColor="text-blue-500"
           title="Agents"
           subtitle="Natural language-based goals and automations"
           actions={
