@@ -16,7 +16,7 @@ import { fetchWithOrganization } from '@/lib/api-client'
 import type { Organization } from '@/store/organization-store'
 import type { OrganizationQuota, QUOTA_DESCRIPTIONS } from '@/types/quota'
 import { QUOTA_LABELS } from '@/types/quota'
-import { Cloud, Bot, Wrench, Users, Cpu, UserPlus, Plus, Minus } from 'lucide-react'
+import { Boxes, Bot, Wrench, Users, Cpu, UserPlus, Plus, Minus } from 'lucide-react'
 
 // Form schema
 const quotaFormSchema = z.object({
@@ -230,7 +230,7 @@ export default function EditOrganizationPage() {
                           form={quotaForm}
                           name="count/languageclusters"
                           label="Clusters"
-                          icon={Cloud}
+                          icon={Boxes}
                           currentUsed={quotaData?.used?.['count/languageclusters']}
                           disabled={!canEditQuotas || isLoadingQuota}
                         />

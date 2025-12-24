@@ -8,7 +8,7 @@ import {
   Cpu, 
   Wrench, 
   Users, 
-  Cloud,
+  Boxes,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -80,7 +80,7 @@ export function EventsActivity({
       case 'persona':
         return <Users className={`${iconClass} text-indigo-500`} />
       case 'cluster':
-        return <Cloud className={`${iconClass} text-orange-500`} />
+        return <Boxes className={`${iconClass} text-orange-500`} />
       case 'pod':
         return <Server className={`${iconClass} text-cyan-500`} />
       case 'service':
@@ -171,7 +171,7 @@ export function EventsActivity({
           <div className="text-xs text-stone-600 dark:text-stone-400 flex flex-col items-end gap-1">
             {clusterName && (
               <div className="flex items-center gap-1">
-                <Cloud className="h-3 w-3" />
+                <Boxes className="h-3 w-3" />
                 {clusterName}
               </div>
             )}

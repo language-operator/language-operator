@@ -6,7 +6,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClusterSelectionModal } from '@/components/cluster-selection-modal'
 import { EventsActivity } from '@/components/ui/events-activity'
-import { Bot, Cpu, Wrench, Users, Cloud, Activity, TrendingUp, Clock, ExternalLink, Settings } from 'lucide-react'
+import { Bot, Cpu, Wrench, Users, Boxes, Activity, TrendingUp, Clock, ExternalLink, Settings } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useClusters } from '@/hooks/use-clusters'
 import { useAggregatedAgents } from '@/hooks/use-aggregated-agents'
@@ -106,7 +106,7 @@ export default function Home() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Clusters</CardTitle>
-              <Cloud className="h-4 w-4 text-muted-foreground" />
+              <Boxes className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -184,7 +184,7 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Cloud className="h-5 w-5" />
+                <Boxes className="h-5 w-5" />
                 Clusters
               </CardTitle>
               <CardDescription>
@@ -206,12 +206,12 @@ export default function Home() {
                 </div>
               ) : clustersError ? (
                 <div className="text-center py-4">
-                  <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <Boxes className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-stone-600 dark:text-stone-400">Failed to load clusters</p>
                 </div>
               ) : !clustersData?.data || clustersData.data.length === 0 ? (
                 <div className="text-center py-4">
-                  <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <Boxes className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-stone-600 dark:text-stone-400">No clusters deployed</p>
                   <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">Deploy your first cluster to get started</p>
                 </div>
@@ -350,7 +350,7 @@ export default function Home() {
                 className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60"
                 onClick={() => handleQuickAction('cluster')}
               >
-                <Cloud className="h-8 w-8 text-orange-500 mb-3" />
+                <Boxes className="h-8 w-8 text-orange-500 mb-3" />
                 <span className="text-sm font-light text-stone-900 dark:text-stone-300">Deploy Cluster</span>
                 <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                   Create cluster for agents

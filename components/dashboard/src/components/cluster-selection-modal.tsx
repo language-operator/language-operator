@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Cloud, ExternalLink, Users } from 'lucide-react'
+import { Boxes, ExternalLink, Users } from 'lucide-react'
 import { LanguageCluster } from '@/types/cluster'
 
 interface ClusterSelectionModalProps {
@@ -53,7 +53,7 @@ export function ClusterSelectionModal({
       case 'agent':
         return <Users className="h-5 w-5 text-blue-500" />
       case 'model':
-        return <Cloud className="h-5 w-5 text-green-500" />
+        return <Boxes className="h-5 w-5 text-green-500" />
       case 'tool':
         return <ExternalLink className="h-5 w-5 text-purple-500" />
     }
@@ -83,7 +83,7 @@ export function ClusterSelectionModal({
             </div>
           ) : clusters.length === 0 ? (
             <div className="text-center py-8">
-              <Cloud className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <Boxes className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No clusters available</h3>
               <p className="text-sm text-gray-500 mb-4">
                 You need to create a cluster before you can {actionType === 'agent' ? 'deploy agents' : actionType === 'model' ? 'add models' : 'configure tools'}.
@@ -93,7 +93,7 @@ export function ClusterSelectionModal({
                 variant="outline"
                 className="gap-2"
               >
-                <Cloud className="h-4 w-4" />
+                <Boxes className="h-4 w-4" />
                 Create First Cluster
               </Button>
             </div>
@@ -115,7 +115,7 @@ export function ClusterSelectionModal({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Cloud className="h-5 w-5 text-blue-500" />
+                        <Boxes className="h-5 w-5 text-blue-500" />
                         <div>
                           <div className="font-medium text-sm">
                             {cluster.metadata?.name}

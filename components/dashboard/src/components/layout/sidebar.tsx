@@ -11,14 +11,14 @@ import {
   Cpu,
   Wrench,
   Users,
-  Cloud,
+  Boxes,
   Settings,
   BarChart3,
 } from 'lucide-react'
 
 const globalNavigation = [
   { name: 'Overview', href: '/', icon: Home },
-  { name: 'Clusters', href: '/clusters', icon: Cloud },
+  { name: 'Clusters', href: '/clusters', icon: Boxes },
 ]
 
 const clusterNavigation = [
@@ -109,7 +109,7 @@ export function Sidebar() {
         {!isClusterSelected && (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
-              <Cloud className="h-12 w-12 mx-auto text-stone-400 dark:text-stone-500 mb-2" />
+              <Boxes className="h-12 w-12 mx-auto text-stone-400 dark:text-stone-500 mb-2" />
               <p className="text-[11px] font-light text-stone-600 dark:text-stone-400">Select a cluster to access</p>
               <p className="text-[11px] font-light text-stone-600 dark:text-stone-400">models, tools, and agents</p>
             </div>

@@ -6,7 +6,7 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
-import { Cloud } from 'lucide-react'
+import { Boxes } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client'
 
 export default function CreateClusterPage() {
@@ -59,7 +59,7 @@ export default function CreateClusterPage() {
         <ResourceHeader
           backHref="/clusters"
           backLabel="Back to Clusters"
-          icon={Cloud}
+          icon={Boxes}
           title="Create Language Cluster"
           subtitle="Set up a new cluster for deploying language agents"
         />

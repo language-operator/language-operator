@@ -22,7 +22,7 @@ import {
   Plus, Search, Server, CheckCircle, AlertCircle, 
   Clock, Globe, Shield, Users, MoreHorizontal, 
   Edit, Trash2, Eye, Activity, Bot, 
-  Link as LinkIcon, Cloud
+  Link as LinkIcon, Boxes
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -162,7 +162,7 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
         </Table>
         {clusters.length === 0 && (
           <div className="text-center py-8">
-            <Cloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <Boxes className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No clusters found</h3>
             <p className="text-muted-foreground mb-4">
               Create your first language cluster to get started.
@@ -276,7 +276,7 @@ export default function ClustersPage() {
       <div className="space-y-6">
         {/* Header */}
         <ResourceHeader
-          icon={Cloud}
+          icon={Boxes}
           title="Clusters"
           subtitle="Logical groups of agents, tools, and models"
           actions={
