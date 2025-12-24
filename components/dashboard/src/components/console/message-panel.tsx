@@ -38,7 +38,7 @@ export function MessagePanel() {
         id: Date.now().toString(),
         role: 'user' as const,
         content,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
         status: 'sending' as const,
       }
 
@@ -104,7 +104,7 @@ export function MessagePanel() {
             id: (Date.now() + 1).toString(),
             role: 'assistant' as const,
             content: response.message.content,
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
             agentName: response.agentName,
           }
 
