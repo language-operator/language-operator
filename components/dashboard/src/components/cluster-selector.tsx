@@ -33,8 +33,8 @@ export function ClusterSelector() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
-            className="w-full justify-between"
+            variant="ghost"
+            className="w-full justify-between text-yellow-600 hover:text-white dark:text-yellow-400 dark:hover:text-white"
             disabled={isLoading}
           >
             <div className="flex items-center gap-2">
