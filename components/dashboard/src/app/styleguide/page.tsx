@@ -286,53 +286,180 @@ export default function StyleGuidePage() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
+      {/* Tabs Navigation */}
       <Card>
         <CardHeader>
-          <CardTitle>Tabs Component</CardTitle>
-          <CardDescription>Navigation tabs with border-based active states</CardDescription>
+          <CardTitle>Tab Navigation</CardTitle>
+          <CardDescription>Subnav pattern with amber underlines and icon support - the standard for resource detail pages</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="metrics">Metrics</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
-              <TabsTrigger value="yaml">YAML</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview">
-              <div className="space-y-4">
-                <h3 className="text-[11px] tracking-wider uppercase font-light">Overview Content</h3>
-                <p className="text-sm font-light">
-                  This is the overview tab content with Marfa design system styling.
-                </p>
+        <CardContent className="space-y-8">
+          
+          {/* Basic Tabs */}
+          <div className="space-y-4">
+            <h3 className="text-[11px] tracking-wider uppercase font-light text-stone-600 dark:text-stone-400">Basic Text Tabs</h3>
+            <Tabs defaultValue="overview" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="metrics">Metrics</TabsTrigger>
+                <TabsTrigger value="logs">Logs</TabsTrigger>
+                <TabsTrigger value="yaml">YAML</TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview">
+                <div className="space-y-4">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light">Overview Content</h4>
+                  <p className="text-sm font-light">
+                    This is the overview tab content with Marfa design system styling.
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="metrics">
+                <div className="space-y-4">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light">Metrics Content</h4>
+                  <p className="text-sm font-light">
+                    Metrics and analytics content would be displayed here.
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="logs">
+                <div className="space-y-4">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light">Logs Content</h4>
+                  <p className="text-sm font-light">
+                    Log output with terminal-style formatting.
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="yaml">
+                <div className="space-y-4">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light">YAML Content</h4>
+                  <p className="text-sm font-light">
+                    Raw YAML configuration display.
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Subnav with Icons */}
+          <div className="space-y-4">
+            <h3 className="text-[11px] tracking-wider uppercase font-light text-stone-600 dark:text-stone-400">Resource Detail Subnav (Recommended)</h3>
+            <p className="text-xs font-light text-stone-600 dark:text-stone-400">
+              Standard pattern for agent, model, tool, and persona detail pages. Features icons, clean typography, and amber active states.
+            </p>
+            <Tabs defaultValue="overview" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="overview">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v14l-5-3-5 3V5z" />
+                  </svg>
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="details">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Details
+                </TabsTrigger>
+                <TabsTrigger value="metrics">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Metrics
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="overview">
+                <Card className="p-6">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light mb-4">Resource Overview</h4>
+                  <p className="text-sm font-light">
+                    Primary resource information including status, configuration, and key metrics. 
+                    This is the default view for most resource detail pages.
+                  </p>
+                </Card>
+              </TabsContent>
+              <TabsContent value="details">
+                <Card className="p-6">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light mb-4">Detailed Configuration</h4>
+                  <p className="text-sm font-light">
+                    Complete configuration details, advanced settings, and technical specifications.
+                    Used for deep inspection of resource properties.
+                  </p>
+                </Card>
+              </TabsContent>
+              <TabsContent value="metrics">
+                <Card className="p-6">
+                  <h4 className="text-[11px] tracking-wider uppercase font-light mb-4">Performance Metrics</h4>
+                  <p className="text-sm font-light">
+                    Real-time and historical performance data, charts, and monitoring information.
+                    Essential for operational insights and debugging.
+                  </p>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Implementation Code Example */}
+          <div className="space-y-4">
+            <h3 className="text-[11px] tracking-wider uppercase font-light text-stone-600 dark:text-stone-400">Implementation</h3>
+            <div className="bg-stone-50 border border-stone-200 p-4 dark:bg-stone-800/50 dark:border-stone-700">
+              <pre className="text-xs font-mono text-stone-900 dark:text-stone-300 overflow-x-auto">
+{`<Tabs value={activeTab} onValueChange={setActiveTab}>
+  <TabsList>
+    <TabsTrigger value="overview">
+      <Home className="w-4 h-4 mr-2" />
+      Overview
+    </TabsTrigger>
+    <TabsTrigger value="details">
+      <Info className="w-4 h-4 mr-2" />
+      Details
+    </TabsTrigger>
+    <TabsTrigger value="metrics">
+      <BarChart3 className="w-4 h-4 mr-2" />
+      Metrics
+    </TabsTrigger>
+  </TabsList>
+
+  <TabsContent value="overview">
+    <ResourceOverview />
+  </TabsContent>
+  
+  <TabsContent value="details">
+    <ResourceDetails />
+  </TabsContent>
+  
+  <TabsContent value="metrics">
+    <ResourceMetrics />
+  </TabsContent>
+</Tabs>`}
+              </pre>
+            </div>
+          </div>
+
+          {/* Usage Guidelines */}
+          <div className="space-y-4">
+            <h3 className="text-[11px] tracking-wider uppercase font-light text-stone-600 dark:text-stone-400">Usage Guidelines</h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <h4 className="text-xs font-light text-green-700 dark:text-green-400">✓ Do</h4>
+                <ul className="text-xs font-light text-stone-600 dark:text-stone-400 space-y-1">
+                  <li>• Use icons for resource detail pages</li>
+                  <li>• Keep tab labels concise and clear</li>
+                  <li>• Follow Overview → Details → Metrics pattern</li>
+                  <li>• Use consistent icons across similar resources</li>
+                  <li>• Maintain logical information hierarchy</li>
+                </ul>
               </div>
-            </TabsContent>
-            <TabsContent value="metrics">
-              <div className="space-y-4">
-                <h3 className="text-[11px] tracking-wider uppercase font-light">Metrics Content</h3>
-                <p className="text-sm font-light">
-                  Metrics and analytics content would be displayed here.
-                </p>
+              <div className="space-y-2">
+                <h4 className="text-xs font-light text-red-700 dark:text-red-400">✗ Don't</h4>
+                <ul className="text-xs font-light text-stone-600 dark:text-stone-400 space-y-1">
+                  <li>• Use more than 5 tabs in a single nav</li>
+                  <li>• Mix icons and non-icon tabs in same set</li>
+                  <li>• Create deeply nested tab structures</li>
+                  <li>• Use tabs for primary navigation</li>
+                  <li>• Override the Marfa tab styling</li>
+                </ul>
               </div>
-            </TabsContent>
-            <TabsContent value="logs">
-              <div className="space-y-4">
-                <h3 className="text-[11px] tracking-wider uppercase font-light">Logs Content</h3>
-                <p className="text-sm font-light">
-                  Log output with terminal-style formatting.
-                </p>
-              </div>
-            </TabsContent>
-            <TabsContent value="yaml">
-              <div className="space-y-4">
-                <h3 className="text-[11px] tracking-wider uppercase font-light">YAML Content</h3>
-                <p className="text-sm font-light">
-                  Raw YAML configuration display.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

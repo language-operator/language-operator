@@ -107,8 +107,8 @@ export default function InstallToolPage() {
       <AuthenticatedLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading tool details...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-stone-900 dark:border-stone-100 mx-auto"></div>
+            <p className="mt-4 text-stone-600 dark:text-stone-400">Loading tool details...</p>
           </div>
         </div>
       </AuthenticatedLayout>
@@ -157,9 +157,9 @@ export default function InstallToolPage() {
 
         {/* Success Message */}
         {success && (
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-800">
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="text-green-800 dark:text-green-200">
               Tool installed successfully! Redirecting to tools list...
             </AlertDescription>
           </Alert>
@@ -185,24 +185,24 @@ export default function InstallToolPage() {
               <h3 className="font-semibold mb-3">Basic Information</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Tool ID:</span>
+                  <span className="text-stone-600 dark:text-stone-400">Tool ID:</span>
                   <span className="ml-2 font-mono">{toolName}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Type:</span>
+                  <span className="text-stone-600 dark:text-stone-400">Type:</span>
                   <Badge variant="secondary" className="ml-2">
                     {tool.type.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <span className="text-gray-600">Deployment Mode:</span>
+                  <span className="text-stone-600 dark:text-stone-400">Deployment Mode:</span>
                   <Badge variant="outline" className="ml-2">
                     {tool.deploymentMode}
                   </Badge>
                 </div>
                 {tool.port && (
                   <div>
-                    <span className="text-gray-600">Port:</span>
+                    <span className="text-stone-600 dark:text-stone-400">Port:</span>
                     <span className="ml-2">{tool.port}</span>
                   </div>
                 )}
@@ -212,9 +212,9 @@ export default function InstallToolPage() {
             {/* Container */}
             <div>
               <h3 className="font-semibold mb-3">Container</h3>
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-md">
-                <Server className="h-4 w-4 text-gray-600" />
-                <code className="text-sm flex-1">{tool.image}</code>
+              <div className="flex items-center gap-2 p-3 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-md">
+                <Server className="h-4 w-4 text-stone-600 dark:text-stone-400" />
+                <code className="text-sm flex-1 font-mono">{tool.image}</code>
               </div>
             </div>
 
@@ -236,7 +236,7 @@ export default function InstallToolPage() {
                       <span>RBAC permissions will be configured</span>
                     </div>
                     {tool.rbac.clusterRole?.rules.map((rule, idx) => (
-                      <div key={idx} className="ml-6 p-2 bg-gray-50 rounded text-xs font-mono">
+                      <div key={idx} className="ml-6 p-2 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded text-xs font-mono">
                         <div>API Groups: {rule.apiGroups.join(', ')}</div>
                         <div>Resources: {rule.resources.join(', ')}</div>
                         <div>Verbs: {rule.verbs.join(', ')}</div>
@@ -252,7 +252,7 @@ export default function InstallToolPage() {
                       <span>Network policies will be applied</span>
                     </div>
                     {tool.egress.map((rule, idx) => (
-                      <div key={idx} className="ml-6 p-2 bg-gray-50 rounded text-xs">
+                      <div key={idx} className="ml-6 p-2 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded text-xs">
                         <div className="font-medium">{rule.description}</div>
                         {rule.dns && (
                           <div>DNS: {rule.dns.join(', ')}</div>

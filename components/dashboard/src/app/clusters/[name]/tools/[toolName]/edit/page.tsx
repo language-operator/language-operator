@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { ToolForm, ToolFormData } from '@/components/forms/tool-form'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { useTools } from '@/hooks/use-tools'
+import { Wrench } from 'lucide-react'
 
 export default function EditClusterToolPage() {
   const router = useRouter()
@@ -13,7 +15,7 @@ export default function EditClusterToolPage() {
   const toolName = params?.toolName as string
   
   const { data: tools, isLoading: isLoadingTools } = useTools({ clusterName })
-  const tool = tools?.find((t: any) => t.metadata.name === toolName)
+  const tool = tools?.data?.find((t: any) => t.metadata.name === toolName)
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -109,10 +111,10 @@ export default function EditClusterToolPage() {
       <AuthenticatedLayout>
         <div className="space-y-6">
           <div>
-            <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-            <div className="h-4 w-64 bg-gray-200 rounded mt-2 animate-pulse"></div>
+            <div className="h-8 w-48 bg-stone-200 dark:bg-stone-800 rounded animate-pulse"></div>
+            <div className="h-4 w-64 bg-stone-200 dark:bg-stone-800 rounded mt-2 animate-pulse"></div>
           </div>
-          <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-96 bg-stone-200 dark:bg-stone-800 rounded animate-pulse"></div>
         </div>
       </AuthenticatedLayout>
     )
@@ -137,12 +139,13 @@ export default function EditClusterToolPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Edit Language Tool</h1>
-          <p className="text-muted-foreground mt-1">
-            Edit "{toolName}" in the {clusterName} cluster
-          </p>
-        </div>
+        <ResourceHeader
+          backHref={`/clusters/${clusterName}/tools/${toolName}`}
+          backLabel="Back to Tool"
+          icon={Wrench}
+          title={`Edit ${toolName}`}
+          subtitle="Language Tool"
+        />
 
         {/* Form */}
         <div className="max-w-4xl">
@@ -156,7 +159,7 @@ export default function EditClusterToolPage() {
               isEdit={true}
             />
           ) : (
-            <div className="h-96 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-96 bg-stone-200 dark:bg-stone-800 rounded animate-pulse"></div>
           )}
         </div>
       </div>

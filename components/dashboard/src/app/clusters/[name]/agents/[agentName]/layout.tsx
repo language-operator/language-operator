@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +19,18 @@ import { ResourceHeader } from '@/components/ui/resource-header'
 import { NotFound } from '@/components/ui/not-found'
 import { cn } from '@/lib/utils'
 import { getStatusIcon, getStatusColor } from '@/components/agents/utils'
+
+function getCurrentTabValue(pathname: string, clusterName: string, agentName: string): string {
+  const basePath = `/clusters/${clusterName}/agents/${agentName}`
+  
+  if (pathname === basePath) return 'overview'
+  if (pathname.endsWith('/code')) return 'code'
+  if (pathname.endsWith('/workspace')) return 'workspace'
+  if (pathname.endsWith('/logs')) return 'logs'
+  if (pathname.endsWith('/events')) return 'events'
+  
+  return 'overview'
+}
 
 interface AgentDetailLayoutProps {
   children: React.ReactNode
@@ -45,38 +58,6 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
   // Check if we're on the edit page
   const isEditPage = pathname.endsWith('/edit')
 
-  const tabs = [
-    {
-      name: 'Overview',
-      href: `/clusters/${clusterName}/agents/${agentName}`,
-      icon: Home,
-      current: pathname === `/clusters/${clusterName}/agents/${agentName}`
-    },
-    {
-      name: 'Code',
-      href: `/clusters/${clusterName}/agents/${agentName}/code`,
-      icon: Code,
-      current: pathname === `/clusters/${clusterName}/agents/${agentName}/code`
-    },
-    {
-      name: 'Workspace',
-      href: `/clusters/${clusterName}/agents/${agentName}/workspace`,
-      icon: FolderOpen,
-      current: pathname === `/clusters/${clusterName}/agents/${agentName}/workspace`
-    },
-    {
-      name: 'Logs',
-      href: `/clusters/${clusterName}/agents/${agentName}/logs`,
-      icon: ScrollText,
-      current: pathname === `/clusters/${clusterName}/agents/${agentName}/logs`
-    },
-    {
-      name: 'Events',
-      href: `/clusters/${clusterName}/agents/${agentName}/events`,
-      icon: Clock,
-      current: pathname === `/clusters/${clusterName}/agents/${agentName}/events`
-    }
-  ]
 
   const handleDeleteAgent = async () => {
     if (!agent || !agent.metadata.name) return
@@ -279,26 +260,40 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
         />
 
         {/* Tabs Navigation */}
-        <div className="bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400 inline-flex h-12 w-fit items-center justify-center p-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <Link
-                key={tab.name}
-                href={tab.href}
-                className={cn(
-                  'inline-flex h-[calc(100%-8px)] items-center justify-center gap-2 border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap transition-all',
-                  tab.current
-                    ? 'bg-white text-stone-900 shadow-warm-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-night-sm'
-                    : 'text-stone-700 hover:bg-white/50 dark:text-stone-300 dark:hover:bg-stone-900/50'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.name}
+        <Tabs value={getCurrentTabValue(pathname, clusterName, agentName)}>
+          <TabsList>
+            <TabsTrigger value="overview" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}`}>
+                <Home className="w-4 h-4 mr-2" />
+                Overview
               </Link>
-            )
-          })}
-        </div>
+            </TabsTrigger>
+            <TabsTrigger value="code" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/code`}>
+                <Code className="w-4 h-4 mr-2" />
+                Code
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="workspace" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/workspace`}>
+                <FolderOpen className="w-4 h-4 mr-2" />
+                Workspace
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="logs" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/logs`}>
+                <ScrollText className="w-4 h-4 mr-2" />
+                Logs
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="events" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/events`}>
+                <Clock className="w-4 h-4 mr-2" />
+                Events
+              </Link>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Page Content */}
         {children}
