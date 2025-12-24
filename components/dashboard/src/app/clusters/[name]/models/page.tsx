@@ -207,15 +207,12 @@ export default function ClusterModels() {
                   {clusterModels.map((model: any) => (
                     <TableRow key={model.metadata.name}>
                       <TableCell className="font-medium">
-                        <div className="flex items-center space-x-2">
-                          <Cpu className="h-4 w-4 text-blue-500" />
-                          <Link 
-                            href={`/clusters/${clusterName}/models/${model.metadata.name}`}
-                            className="hover:underline"
-                          >
-                            {model.metadata.name}
-                          </Link>
-                        </div>
+                        <Link 
+                          href={`/clusters/${clusterName}/models/${model.metadata.name}`}
+                          className="hover:underline"
+                        >
+                          {model.metadata.name}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">{model.spec.provider}</span>

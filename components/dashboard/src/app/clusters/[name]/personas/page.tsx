@@ -253,15 +253,12 @@ export default function ClusterPersonas() {
                       {clusterPersonas.map((persona: any) => (
                         <TableRow key={persona.metadata.name}>
                           <TableCell className="font-medium">
-                            <div className="flex items-center space-x-2">
-                              <Users className="h-4 w-4 text-blue-500" />
-                              <Link
-                                href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
-                                className="hover:underline"
-                              >
-                                {persona.spec.displayName || persona.metadata.name}
-                              </Link>
-                            </div>
+                            <Link
+                              href={`/clusters/${clusterName}/personas/${persona.metadata.name}`}
+                              className="hover:underline"
+                            >
+                              {persona.spec.displayName || persona.metadata.name}
+                            </Link>
                           </TableCell>
                           <TableCell>
                             {persona.spec.tone ? (

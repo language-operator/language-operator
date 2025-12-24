@@ -244,15 +244,12 @@ export default function ClusterAgents() {
                       {clusterAgents.map((agent: any) => (
                         <TableRow key={agent.metadata.name}>
                           <TableCell className="font-medium">
-                            <div className="flex items-center space-x-2">
-                              <Bot className="h-4 w-4 text-blue-500" />
-                              <Link 
-                                href={`/clusters/${clusterName}/agents/${agent.metadata.name}`}
-                                className="hover:underline"
-                              >
-                                {agent.metadata.name}
-                              </Link>
-                            </div>
+                            <Link 
+                              href={`/clusters/${clusterName}/agents/${agent.metadata.name}`}
+                              className="hover:underline"
+                            >
+                              {agent.metadata.name}
+                            </Link>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-1">

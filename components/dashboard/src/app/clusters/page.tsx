@@ -87,15 +87,12 @@ function ClusterTable({ clusters, onDelete, isDeleting }: ClusterTableProps) {
             {clusters.map((cluster) => (
               <TableRow key={cluster.metadata.name}>
                 <TableCell className="font-medium">
-                  <div className="flex items-center space-x-2">
-                    <Cloud className="h-4 w-4 text-blue-500" />
-                    <Link 
-                      href={`/clusters/${cluster.metadata.name}`}
-                      className="hover:underline"
-                    >
-                      {cluster.metadata.name}
-                    </Link>
-                  </div>
+                  <Link 
+                    href={`/clusters/${cluster.metadata.name}`}
+                    className="hover:underline"
+                  >
+                    {cluster.metadata.name}
+                  </Link>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
