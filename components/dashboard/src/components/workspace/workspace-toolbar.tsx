@@ -87,51 +87,12 @@ export function WorkspaceToolbar({
       </div>
 
       <div className="flex items-center space-x-2">
-        {/* Workspace Info */}
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Info className="w-4 h-4 mr-2" />
-              Info
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Workspace Information</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Mount Path</label>
-                <p className="text-sm text-muted-foreground">{mountPath}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Storage Size</label>
-                <p className="text-sm text-muted-foreground">{size}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Access Mode</label>
-                <p className="text-sm text-muted-foreground">{accessMode}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">PVC Name</label>
-                <p className="text-sm text-muted-foreground">{agent.metadata?.name}-workspace</p>
-              </div>
-              {workspaceInfo?.storageClassName && (
-                <div>
-                  <label className="text-sm font-medium">Storage Class</label>
-                  <p className="text-sm text-muted-foreground">{workspaceInfo.storageClassName}</p>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Upload Button */}
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4 mr-2" />
-              Upload
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Upload className="w-4 h-4" />
+              <span className="sr-only">Upload files</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -166,9 +127,9 @@ export function WorkspaceToolbar({
         </Dialog>
 
         {/* Refresh Button */}
-        <Button variant="outline" size="sm" onClick={onRefresh}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefresh}>
+          <RefreshCw className="w-4 h-4" />
+          <span className="sr-only">Refresh workspace</span>
         </Button>
       </div>
     </div>
