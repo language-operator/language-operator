@@ -92,7 +92,6 @@ export function AgentList({ searchQuery, refreshTrigger = 0 }: AgentListProps) {
         <AgentListItem
           key={conversation.id}
           conversation={conversation}
-          isActive={selectedAgent === conversation.agentName && selectedCluster === conversation.clusterName}
         />
       ))}
     </div>
