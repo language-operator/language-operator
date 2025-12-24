@@ -11,6 +11,7 @@ interface Conversation {
   agentName: string
   clusterName: string
   title: string | null
+  createdAt: string
   updatedAt: string
   messageCount?: number
 }
