@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, Cloud, Plus } from 'lucide-react'
+import { Boxes, ChevronDown, Plus } from 'lucide-react'
 
 export function ClusterSelector() {
   const router = useRouter()
@@ -38,7 +38,7 @@ export function ClusterSelector() {
             disabled={isLoading}
           >
             <div className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
+              <Boxes className="h-4 w-4" />
               {selectedCluster ? (
                 <span className="truncate">{selectedCluster}</span>
               ) : (
@@ -58,7 +58,7 @@ export function ClusterSelector() {
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <Cloud className="h-4 w-4" />
+                    <Boxes className="h-4 w-4" />
                     <span>{cluster.metadata?.name}</span>
                   </div>
                   {cluster.status?.phase && (
@@ -87,7 +87,7 @@ export function ClusterSelector() {
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/clusters" className="flex items-center gap-2">
-              <Cloud className="h-4 w-4" />
+              <Boxes className="h-4 w-4" />
               Manage All Clusters
             </Link>
           </DropdownMenuItem>
