@@ -70,7 +70,7 @@ export function WorkspacePanel() {
             clusterName={selectedCluster}
             currentPath={currentPath}
             onPathChange={setCurrentPath}
-            onFileSelect={setSelectedFile}
+            onFileSelect={(file) => setSelectedFile(file.path)}
             refreshTrigger={refreshTrigger}
           />
         ) : (
