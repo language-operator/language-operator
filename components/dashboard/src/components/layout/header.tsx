@@ -39,7 +39,7 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between bg-stone-50 border-b border-stone-800/80 px-6 dark:bg-stone-950 dark:border-stone-600/80">
+    <header className="flex h-16 items-center justify-between bg-gradient-to-b from-stone-100 to-stone-200 border-b border-stone-800/80 px-6 dark:from-stone-900 dark:to-stone-950 dark:border-stone-600/80">
       <div className="flex items-center gap-4">
         <OrganizationSwitcher />
       </div>
