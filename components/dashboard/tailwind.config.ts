@@ -11,7 +11,26 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
+        sans: ['system-ui', '-apple-system', 'sans-serif'],
+      },
+      fontWeight: {
+        light: '300', // Only light weight for Marfa aesthetic
+      },
+      letterSpacing: {
+        widest: '0.2em',   // Headers and labels
+        wider: '0.15em',   // Buttons
+      },
+      spacing: {
+        generous: '3rem',     // 48px - Primary container padding
+        comfortable: '1.5rem', // 24px - Form field spacing
+      },
+      boxShadow: {
+        // Light mode warm shadows
+        'warm': '0 8px 32px rgba(120,53,15,0.08)',
+        'warm-sm': '0 2px 8px rgba(120,53,15,0.12)',
+        // Dark mode night shadows
+        'night': '0 8px 32px rgba(0,0,0,0.4)',
+        'night-sm': '0 2px 8px rgba(0,0,0,0.3)',
       },
       colors: {
         background: "hsl(var(--background))",

@@ -99,11 +99,11 @@ export default function OrganizationsPage() {
           {[...Array(3)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div className="h-4 bg-stone-200 w-1/4 mb-2 dark:bg-stone-700"></div>
+                <div className="h-3 bg-stone-200 w-1/2 mb-4 dark:bg-stone-700"></div>
                 <div className="flex gap-2">
-                  <div className="h-6 bg-gray-200 rounded w-16"></div>
-                  <div className="h-6 bg-gray-200 rounded w-20"></div>
+                  <div className="h-6 bg-stone-200 w-16 dark:bg-stone-700"></div>
+                  <div className="h-6 bg-stone-200 w-20 dark:bg-stone-700"></div>
                 </div>
               </CardContent>
             </Card>
@@ -154,7 +154,7 @@ export default function OrganizationsPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12">
                     <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <div className="w-12 h-12 bg-stone-100 border border-stone-200 flex items-center justify-center mb-4 dark:bg-stone-800 dark:border-stone-700">
                         <Settings className="w-6 h-6 text-gray-400" />
                       </div>
                       <h3 className="text-lg font-semibold mb-2">No organizations</h3>
@@ -178,7 +178,7 @@ export default function OrganizationsPage() {
                   const isActive = activeOrganization?.id === org.id
                   
                   return (
-                    <TableRow key={org.id} className={isActive ? 'bg-blue-50' : ''}>
+                    <TableRow key={org.id} className={isActive ? 'bg-stone-50 dark:bg-stone-800/50' : ''}>
                       <TableCell>
                         <div className="font-medium flex items-center gap-2">
                           {org.name}

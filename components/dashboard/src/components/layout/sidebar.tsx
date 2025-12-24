@@ -34,23 +34,23 @@ export function Sidebar() {
   const { selectedCluster, isClusterSelected } = useClusterContext()
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-gray-50 dark:bg-gray-900">
-      <div className="flex h-16 items-center border-b px-3">
-        <div className="px-3 py-2 font-mono text-sm w-full">
-          <span className="text-black dark:text-white font-bold tracking-wide">
-            LANGUAGE OPERATOR{' '}
-            <span className="text-black dark:text-black">█</span>
-          </span>
+    <div className="flex h-screen w-64 flex-col bg-white border-r border-stone-800/80 dark:bg-stone-900 dark:border-stone-600/80">
+      <div className="flex h-16 items-center border-b border-stone-800/80 px-4 dark:border-stone-600/80">
+        <div className="w-full">
+          <h1 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
+            Language Operator
+            <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
+          </h1>
         </div>
       </div>
       
       {/* Cluster Selector */}
       <ClusterSelector />
       
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 px-4 py-6">
         {/* Global Navigation */}
-        <div className="mb-4">
-          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 pb-2">
+        <div className="mb-6">
+          <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
             Global
           </div>
           {globalNavigation.map((item) => {
@@ -60,10 +60,10 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
                   isActive
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+                    : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -76,7 +76,7 @@ export function Sidebar() {
         {/* Cluster-Specific Navigation */}
         {isClusterSelected && (
           <div>
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 pb-2">
+            <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
               {selectedCluster}
             </div>
             {clusterNavigation.map((item) => {
@@ -92,10 +92,10 @@ export function Sidebar() {
                   key={item.name}
                   href={href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
                     isActive
-                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+                      : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -109,26 +109,39 @@ export function Sidebar() {
         {!isClusterSelected && (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
-              <Cloud className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">Select a cluster to access</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">models, tools, and agents</p>
+              <Cloud className="h-12 w-12 mx-auto text-stone-400 dark:text-stone-500 mb-2" />
+              <p className="text-[11px] font-light text-stone-600 dark:text-stone-400">Select a cluster to access</p>
+              <p className="text-[11px] font-light text-stone-600 dark:text-stone-400">models, tools, and agents</p>
             </div>
           </div>
         )}
       </nav>
       
-      <div className="border-t p-3">
+      <div className="border-t border-stone-800/80 dark:border-stone-600/80 p-4 space-y-1">
         <Link
           href="/settings/users"
           className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
             pathname.startsWith('/settings')
-              ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+              ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+              : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
           )}
         >
           <Settings className="h-5 w-5" />
           Settings
+        </Link>
+        
+        <Link
+          href="/styleguide"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
+            pathname === '/styleguide'
+              ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+              : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+          )}
+        >
+          <div className="h-5 w-5 bg-stone-600 dark:bg-stone-400" />
+          Style Guide
         </Link>
       </div>
     </div>

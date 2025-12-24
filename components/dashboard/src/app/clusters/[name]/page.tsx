@@ -111,18 +111,18 @@ export default function ClusterDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Name</dt>
-                <dd className="mt-1 text-sm text-gray-900">{cluster.metadata?.name}</dd>
+                <dt className="text-sm font-medium text-stone-600 dark:text-stone-400">Name</dt>
+                <dd className="mt-1 text-sm text-stone-900 dark:text-stone-300">{cluster.metadata?.name}</dd>
               </div>
               {cluster.spec?.domain && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Domain</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+                  <dt className="text-sm font-medium text-stone-600 dark:text-stone-400">Domain</dt>
+                  <dd className="mt-1 text-sm text-stone-900 dark:text-stone-300">
                     <a 
                       href={`https://${cluster.spec.domain}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      className="flex items-center gap-1 text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300"
                     >
                       {cluster.spec.domain}
                       <ExternalLink className="h-3 w-3" />
@@ -131,11 +131,11 @@ export default function ClusterDashboard() {
                 </div>
               )}
               <div>
-                <dt className="text-sm font-medium text-gray-500">Namespace</dt>
-                <dd className="mt-1 text-sm text-gray-900">{cluster.metadata?.namespace}</dd>
+                <dt className="text-sm font-medium text-stone-600 dark:text-stone-400">Namespace</dt>
+                <dd className="mt-1 text-sm text-stone-900 dark:text-stone-300">{cluster.metadata?.namespace}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
+                <dt className="text-sm font-medium text-stone-600 dark:text-stone-400">Status</dt>
                 <dd className="mt-1">
                   <ClusterStatusBadge cluster={cluster} />
                 </dd>
@@ -153,37 +153,37 @@ export default function ClusterDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <Link href={`/clusters/${clusterName}/models/new`}>
-                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <Cpu className="h-8 w-8 text-green-500 mb-2" />
-                    <span className="text-sm font-medium">Create Model</span>
-                    <span className="text-xs text-gray-500 text-center mt-1">
+                  <div className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60">
+                    <Cpu className="h-8 w-8 text-green-500 mb-3" />
+                    <span className="text-sm font-light text-stone-900 dark:text-stone-300">Create Model</span>
+                    <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                       Connect to LLM provider
                     </span>
                   </div>
                 </Link>
                 <Link href={`/clusters/${clusterName}/tools`}>
-                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <Wrench className="h-8 w-8 text-purple-500 mb-2" />
-                    <span className="text-sm font-medium">Install Tool</span>
-                    <span className="text-xs text-gray-500 text-center mt-1">
+                  <div className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60">
+                    <Wrench className="h-8 w-8 text-purple-500 mb-3" />
+                    <span className="text-sm font-light text-stone-900 dark:text-stone-300">Install Tool</span>
+                    <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                       Add capabilities to agents
                     </span>
                   </div>
                 </Link>
                 <Link href={`/clusters/${clusterName}/personas/new`}>
-                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <Users className="h-8 w-8 text-rose-500 mb-2" />
-                    <span className="text-sm font-medium">Create Persona</span>
-                    <span className="text-xs text-gray-500 text-center mt-1">
+                  <div className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60">
+                    <Users className="h-8 w-8 text-rose-500 mb-3" />
+                    <span className="text-sm font-light text-stone-900 dark:text-stone-300">Create Persona</span>
+                    <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                       Define agent behavior
                     </span>
                   </div>
                 </Link>
                 <Link href={`/clusters/${clusterName}/agents/new`}>
-                  <div className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                    <Bot className="h-8 w-8 text-blue-500 mb-2" />
-                    <span className="text-sm font-medium">Create Agent</span>
-                    <span className="text-xs text-gray-500 text-center mt-1">
+                  <div className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60">
+                    <Bot className="h-8 w-8 text-blue-500 mb-3" />
+                    <span className="text-sm font-light text-stone-900 dark:text-stone-300">Create Agent</span>
+                    <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                       Build a new AI agent
                     </span>
                   </div>

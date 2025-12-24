@@ -70,16 +70,16 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Provider</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Provider</p>
               <Badge variant="outline">{model.spec.provider}</Badge>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Model Name</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Model Name</p>
               <p className="text-sm font-mono">{model.spec.modelName}</p>
             </div>
             {model.spec.endpoint && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Endpoint</p>
                 <p className="text-sm font-mono text-xs break-all">{model.spec.endpoint}</p>
               </div>
             )}
@@ -96,11 +96,11 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
           {model.status?.conditions && model.status.conditions.length > 0 ? (
             <div className="space-y-3">
               {model.status.conditions.map((condition, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 border border-stone-200 dark:border-stone-700">
                   <div>
                     <p className="text-sm font-medium">{condition.type}</p>
                     {condition.message && (
-                      <p className="text-xs text-muted-foreground">{condition.message}</p>
+                      <p className="text-xs text-stone-600 dark:text-stone-400">{condition.message}</p>
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
@@ -116,7 +116,7 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No status conditions available</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400">No status conditions available</p>
           )}
         </CardContent>
       </Card>
@@ -138,18 +138,18 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Currency</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Currency</p>
                 <p className="text-sm">{model.spec.costTracking.currency || 'USD'}</p>
               </div>
               {model.spec.costTracking.inputTokenCost && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Input Token Cost</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Input Token Cost</p>
                   <p className="text-sm">{formatCurrency(model.spec.costTracking.inputTokenCost, model.spec.costTracking.currency)}</p>
                 </div>
               )}
               {model.spec.costTracking.outputTokenCost && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Output Token Cost</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Output Token Cost</p>
                   <p className="text-sm">{formatCurrency(model.spec.costTracking.outputTokenCost, model.spec.costTracking.currency)}</p>
                 </div>
               )}
@@ -168,19 +168,19 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
             <div className="grid gap-4 md:grid-cols-3">
               {model.spec.rateLimits.requestsPerMinute && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Requests per Minute</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Requests per Minute</p>
                   <p className="text-sm">{model.spec.rateLimits.requestsPerMinute.toLocaleString()}</p>
                 </div>
               )}
               {model.spec.rateLimits.tokensPerMinute && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tokens per Minute</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Tokens per Minute</p>
                   <p className="text-sm">{model.spec.rateLimits.tokensPerMinute.toLocaleString()}</p>
                 </div>
               )}
               {model.spec.rateLimits.concurrentRequests && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Concurrent Requests</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Concurrent Requests</p>
                   <p className="text-sm">{model.spec.rateLimits.concurrentRequests}</p>
                 </div>
               )}
@@ -213,43 +213,43 @@ function ModelDetails({ model }: ModelDetailsProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Temperature</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Temperature</p>
               <p className="text-sm">{model.spec.configuration?.temperature ?? 0.7}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Max Tokens</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Max Tokens</p>
               <p className="text-sm">{(model.spec.configuration?.maxTokens ?? 4096).toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Top P</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Top P</p>
               <p className="text-sm">{model.spec.configuration?.topP ?? 1.0}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Context Window</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Context Window</p>
               <p className="text-sm">{((model.spec.configuration as any)?.contextWindow ?? 8192).toLocaleString()} tokens</p>
             </div>
             {model.spec.configuration?.frequencyPenalty !== undefined && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Frequency Penalty</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Frequency Penalty</p>
                 <p className="text-sm">{model.spec.configuration.frequencyPenalty}</p>
               </div>
             )}
             {model.spec.configuration?.presencePenalty !== undefined && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Presence Penalty</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Presence Penalty</p>
                 <p className="text-sm">{model.spec.configuration.presencePenalty}</p>
               </div>
             )}
             {(model.spec as any).timeout && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Request Timeout</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Request Timeout</p>
                 <p className="text-sm">{(model.spec as any).timeout}</p>
               </div>
             )}
           </div>
           {model.spec.configuration?.stopSequences && model.spec.configuration.stopSequences.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Stop Sequences</p>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Stop Sequences</p>
               <div className="flex flex-wrap gap-1 mt-1">
                 {model.spec.configuration.stopSequences.map((seq, index) => (
                   <Badge key={index} variant="outline" className="text-xs font-mono">
@@ -277,14 +277,14 @@ function ModelDetails({ model }: ModelDetailsProps) {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Status</p>
                 <Badge variant={model.spec.caching.enabled ? "default" : "secondary"}>
                   {model.spec.caching.enabled ? "Enabled" : "Disabled"}
                 </Badge>
               </div>
               {model.spec.caching.ttl && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">TTL (Time to Live)</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">TTL (Time to Live)</p>
                   <p className="text-sm">{model.spec.caching.ttl}</p>
                 </div>
               )}
@@ -309,19 +309,19 @@ function ModelDetails({ model }: ModelDetailsProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {model.spec.rateLimits.requestsPerMinute && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Requests per Minute</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Requests per Minute</p>
                   <p className="text-sm">{model.spec.rateLimits.requestsPerMinute.toLocaleString()}</p>
                 </div>
               )}
               {model.spec.rateLimits.tokensPerMinute && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Tokens per Minute</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Tokens per Minute</p>
                   <p className="text-sm">{model.spec.rateLimits.tokensPerMinute.toLocaleString()}</p>
                 </div>
               )}
               {model.spec.rateLimits.concurrentRequests && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Concurrent Requests</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Concurrent Requests</p>
                   <p className="text-sm">{model.spec.rateLimits.concurrentRequests}</p>
                 </div>
               )}
@@ -346,25 +346,25 @@ function ModelDetails({ model }: ModelDetailsProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {(model.spec.retryPolicy as any).maxAttempts && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Max Attempts</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Max Attempts</p>
                   <p className="text-sm">{(model.spec.retryPolicy as any).maxAttempts}</p>
                 </div>
               )}
               {(model.spec.retryPolicy as any).initialBackoff && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Initial Backoff</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Initial Backoff</p>
                   <p className="text-sm">{(model.spec.retryPolicy as any).initialBackoff}</p>
                 </div>
               )}
               {(model.spec.retryPolicy as any).maxBackoff && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Max Backoff</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Max Backoff</p>
                   <p className="text-sm">{(model.spec.retryPolicy as any).maxBackoff}</p>
                 </div>
               )}
               {(model.spec.retryPolicy as any).backoffMultiplier && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Backoff Multiplier</p>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Backoff Multiplier</p>
                   <p className="text-sm">{(model.spec.retryPolicy as any).backoffMultiplier}</p>
                 </div>
               )}
@@ -388,24 +388,24 @@ function ModelDetails({ model }: ModelDetailsProps) {
           {model.spec.egress && model.spec.egress.length > 0 ? (
             <div className="space-y-3">
               {model.spec.egress.map((rule, index) => (
-                <div key={index} className="border rounded-lg p-3">
+                <div key={index} className="border border-stone-200 p-3 dark:border-stone-700">
                   <div className="space-y-2">
                     {rule.description && (
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Description</p>
+                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Description</p>
                         <p className="text-sm">{rule.description}</p>
                       </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       {rule.to?.dns && rule.to.dns.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">DNS Names</p>
+                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">DNS Names</p>
                           <p className="text-sm font-mono">{rule.to.dns.join(', ')}</p>
                         </div>
                       )}
                       {rule.ports && rule.ports.length > 0 && (
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Ports</p>
+                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Ports</p>
                           <p className="text-sm font-mono">{rule.ports.map(p => p.port).join(', ')}</p>
                         </div>
                       )}
@@ -416,9 +416,9 @@ function ModelDetails({ model }: ModelDetailsProps) {
             </div>
           ) : (
             <div className="text-center py-6">
-              <Globe className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No network egress rules configured</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <Globe className="h-8 w-8 text-stone-500 dark:text-stone-400 mx-auto mb-2" />
+              <p className="text-sm text-stone-600 dark:text-stone-400">No network egress rules configured</p>
+              <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">
                 Network policies control external access from the model
               </p>
             </div>
@@ -436,10 +436,10 @@ interface ModelMetricsProps {
 function ModelMetrics({ model }: ModelMetricsProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-      <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
-        <BarChart3 className="h-12 w-12 text-gray-400" />
+      <div className="mx-auto w-24 h-24 bg-stone-100 border border-stone-200 flex items-center justify-center dark:bg-stone-800 dark:border-stone-700">
+        <BarChart3 className="h-12 w-12 text-stone-500 dark:text-stone-400" />
       </div>
-      <h3 className="text-xl font-semibold text-gray-500">Coming Soon</h3>
+      <h3 className="text-xl font-semibold text-stone-600 dark:text-stone-400">Coming Soon</h3>
     </div>
   )
 }
@@ -475,7 +475,7 @@ export default function ClusterModelDetailPage() {
     } else if (model.status?.healthy === false) {
       return 'bg-red-100 text-red-800'
     } else {
-      return 'bg-gray-100 text-gray-800'
+      return 'bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-300'
     }
   }
 
@@ -546,7 +546,7 @@ export default function ClusterModelDetailPage() {
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Model not found</h3>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-stone-600 dark:text-stone-400 mb-4">
               The model "{modelName}" could not be found in cluster "{clusterName}".
             </p>
             <Link href={`/clusters/${clusterName}/models`}>

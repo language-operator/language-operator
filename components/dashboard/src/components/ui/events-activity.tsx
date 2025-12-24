@@ -90,9 +90,9 @@ export function EventsActivity({
       default:
         // Default based on event type
         if (event.eventType === 'Normal') {
-          return <CheckCircle className={`${iconClass} text-gray-500`} />
+          return <CheckCircle className={`${iconClass} text-stone-600 dark:text-stone-400`} />
         }
-        return <Activity className={`${iconClass} text-gray-500`} />
+        return <Activity className={`${iconClass} text-stone-600 dark:text-stone-400`} />
     }
   }
 
@@ -156,7 +156,7 @@ export function EventsActivity({
                       {isRealtime && <span className="text-xs text-green-600 font-medium">Live</span>}
                     </div>
                   ) : (
-                    <div className="h-2 w-2 bg-gray-400 rounded-full" />
+                    <div className="h-2 w-2 bg-stone-400 dark:bg-stone-600 rounded-full" />
                   )}
                 </div>
               )}
@@ -169,7 +169,7 @@ export function EventsActivity({
             </CardDescription>
           </div>
           {/* Show scope information if filtered */}
-          <div className="text-xs text-gray-500 flex flex-col items-end gap-1">
+          <div className="text-xs text-stone-600 dark:text-stone-400 flex flex-col items-end gap-1">
             {clusterName && (
               <div className="flex items-center gap-1">
                 <Cloud className="h-3 w-3" />
@@ -190,18 +190,18 @@ export function EventsActivity({
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-start space-x-3">
-                <div className="h-4 w-4 bg-gray-200 rounded mt-0.5 animate-pulse flex-shrink-0" />
+                <div className="h-4 w-4 bg-stone-200 dark:bg-stone-700 mt-0.5 animate-pulse flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-stone-200 dark:bg-stone-700 animate-pulse mb-1" />
+                  <div className="h-3 bg-stone-100 dark:bg-stone-800 animate-pulse w-3/4" />
                 </div>
               </div>
             ))}
           </div>
         ) : error ? (
           <div className="text-center py-6">
-            <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Failed to load events</p>
+            <AlertCircle className="h-8 w-8 text-stone-500 dark:text-stone-400 mx-auto mb-2" />
+            <p className="text-sm text-stone-600 dark:text-stone-400">Failed to load events</p>
             <button 
               onClick={() => refetch()}
               className="text-xs text-blue-600 hover:text-blue-800 mt-1"
@@ -211,9 +211,9 @@ export function EventsActivity({
           </div>
         ) : !eventsData?.data || eventsData.data.length === 0 ? (
           <div className="text-center py-6">
-            <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">No recent events</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <Clock className="h-8 w-8 text-stone-500 dark:text-stone-400 mx-auto mb-2" />
+            <p className="text-sm text-stone-600 dark:text-stone-400">No recent events</p>
+            <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">
               Events will appear here when resources are created or updated
             </p>
           </div>
@@ -225,10 +225,10 @@ export function EventsActivity({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 leading-tight">
+                      <p className="text-sm font-medium text-stone-900 dark:text-stone-300 leading-tight">
                         {formatEventMessage(event)}
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-stone-600 dark:text-stone-400">
                         <span>{formatTimestamp(event.timestamp)}</span>
                         {showNamespace && event.namespace && event.namespace !== 'default' && (
                           <>
@@ -254,8 +254,8 @@ export function EventsActivity({
             
             {/* Show total count if there are more events */}
             {eventsData.total > eventsData.data.length && (
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500 text-center">
+              <div className="pt-2 border-t border-stone-200 dark:border-stone-700">
+                <p className="text-xs text-stone-600 dark:text-stone-400 text-center">
                   Showing {eventsData.data.length} of {eventsData.total} events
                 </p>
               </div>

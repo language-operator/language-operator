@@ -35,11 +35,11 @@ export function AuthenticatedLayout({ children }: { children: React.ReactNode })
 
   return (
     <ClusterProvider>
-      <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
+      <div className="flex h-screen overflow-hidden bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+          <main className="flex-1 overflow-y-auto p-generous">
             {children}
           </main>
         </div>

@@ -96,7 +96,7 @@ export default function Home() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold font-mono">System Overview</h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-stone-600 dark:text-stone-400 mt-2">
             Monitor and manage your Language Operator resources
           </p>
         </div>
@@ -207,13 +207,13 @@ export default function Home() {
               ) : clustersError ? (
                 <div className="text-center py-4">
                   <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Failed to load clusters</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Failed to load clusters</p>
                 </div>
               ) : !clustersData?.data || clustersData.data.length === 0 ? (
                 <div className="text-center py-4">
                   <Cloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No clusters deployed</p>
-                  <p className="text-xs text-gray-400 mt-1">Deploy your first cluster to get started</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">No clusters deployed</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">Deploy your first cluster to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -231,23 +231,23 @@ export default function Home() {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link href={`/clusters/${cluster.metadata.name}/agents`}>
-                          <button className="p-1 hover:bg-gray-100 rounded" title="Agents">
-                            <Bot className="h-4 w-4 text-gray-500" />
+                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="Agents">
+                            <Bot className="h-4 w-4 text-stone-600 dark:text-stone-400" />
                           </button>
                         </Link>
                         <Link href={`/clusters/${cluster.metadata.name}/tools`}>
-                          <button className="p-1 hover:bg-gray-100 rounded" title="Tools">
-                            <Wrench className="h-4 w-4 text-gray-500" />
+                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="Tools">
+                            <Wrench className="h-4 w-4 text-stone-600 dark:text-stone-400" />
                           </button>
                         </Link>
                         <Link href={`/clusters/${cluster.metadata.name}/models`}>
-                          <button className="p-1 hover:bg-gray-100 rounded" title="Models">
-                            <Cpu className="h-4 w-4 text-gray-500" />
+                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="Models">
+                            <Cpu className="h-4 w-4 text-stone-600 dark:text-stone-400" />
                           </button>
                         </Link>
                         <Link href={`/clusters/${cluster.metadata.name}/personas`}>
-                          <button className="p-1 hover:bg-gray-100 rounded" title="Personas">
-                            <Users className="h-4 w-4 text-gray-500" />
+                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="Personas">
+                            <Users className="h-4 w-4 text-stone-600 dark:text-stone-400" />
                           </button>
                         </Link>
                       </div>
@@ -291,13 +291,13 @@ export default function Home() {
               ) : agentsError ? (
                 <div className="text-center py-4">
                   <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Failed to load agents</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">Failed to load agents</p>
                 </div>
               ) : !agentsData?.data || agentsData.data.length === 0 ? (
                 <div className="text-center py-4">
                   <Bot className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No agents deployed</p>
-                  <p className="text-xs text-gray-400 mt-1">Create your first agent to get started</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400">No agents deployed</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">Create your first agent to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -315,8 +315,8 @@ export default function Home() {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Link href={`/clusters/${agent.spec?.clusterRef || agent.metadata.namespace}/agents/${agent.metadata.name}`}>
-                          <button className="p-1 hover:bg-gray-100 rounded" title="View Agent">
-                            <ExternalLink className="h-4 w-4 text-gray-500" />
+                          <button className="p-1 hover:bg-stone-100 dark:hover:bg-stone-800" title="View Agent">
+                            <ExternalLink className="h-4 w-4 text-stone-600 dark:text-stone-400" />
                           </button>
                         </Link>
                       </div>
@@ -347,66 +347,66 @@ export default function Home() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {/* Deploy Cluster - Always enabled, shown first */}
               <div 
-                className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                className="flex flex-col items-center p-6 border border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer transition-all dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60"
                 onClick={() => handleQuickAction('cluster')}
               >
-                <Cloud className="h-8 w-8 text-orange-500 mb-2" />
-                <span className="text-sm font-medium">Deploy Cluster</span>
-                <span className="text-xs text-gray-500 text-center mt-1">
+                <Cloud className="h-8 w-8 text-orange-500 mb-3" />
+                <span className="text-sm font-light text-stone-900 dark:text-stone-300">Deploy Cluster</span>
+                <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                   Create cluster for agents
                 </span>
               </div>
               
               {/* Create Agent - Disabled without clusters */}
               <div 
-                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                className={`flex flex-col items-center p-6 border transition-all ${
                   hasClusters 
-                    ? 'hover:bg-gray-50 cursor-pointer' 
-                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                    ? 'border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60' 
+                    : 'opacity-50 cursor-not-allowed bg-stone-50 border-stone-200 dark:bg-stone-800/50 dark:border-stone-600'
                 }`}
                 onClick={() => handleQuickAction('agent')}
               >
-                <Bot className={`h-8 w-8 mb-2 ${hasClusters ? 'text-blue-500' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                <Bot className={`h-8 w-8 mb-3 ${hasClusters ? 'text-blue-500' : 'text-stone-400'}`} />
+                <span className={`text-sm font-light ${hasClusters ? 'text-stone-900 dark:text-stone-300' : 'text-stone-400'}`}>
                   Create Agent
                 </span>
-                <span className="text-xs text-gray-500 text-center mt-1">
+                <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                   {hasClusters ? 'Build a new AI agent' : 'Deploy a cluster first'}
                 </span>
               </div>
               
               {/* Add Model - Disabled without clusters */}
               <div 
-                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                className={`flex flex-col items-center p-6 border transition-all ${
                   hasClusters 
-                    ? 'hover:bg-gray-50 cursor-pointer' 
-                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                    ? 'border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60' 
+                    : 'opacity-50 cursor-not-allowed bg-stone-50 border-stone-200 dark:bg-stone-800/50 dark:border-stone-600'
                 }`}
                 onClick={() => handleQuickAction('model')}
               >
-                <Cpu className={`h-8 w-8 mb-2 ${hasClusters ? 'text-green-500' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                <Cpu className={`h-8 w-8 mb-3 ${hasClusters ? 'text-green-500' : 'text-stone-400'}`} />
+                <span className={`text-sm font-light ${hasClusters ? 'text-stone-900 dark:text-stone-300' : 'text-stone-400'}`}>
                   Add Model
                 </span>
-                <span className="text-xs text-gray-500 text-center mt-1">
+                <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                   {hasClusters ? 'Connect to LLM provider' : 'Deploy a cluster first'}
                 </span>
               </div>
               
               {/* Configure Tool - Disabled without clusters */}
               <div 
-                className={`flex flex-col items-center p-4 border rounded-lg transition-colors ${
+                className={`flex flex-col items-center p-6 border transition-all ${
                   hasClusters 
-                    ? 'hover:bg-gray-50 cursor-pointer' 
-                    : 'opacity-50 cursor-not-allowed bg-gray-50'
+                    ? 'border-stone-200 hover:bg-stone-50 hover:border-amber-900/40 cursor-pointer dark:border-stone-600 dark:hover:bg-stone-800 dark:hover:border-amber-600/60' 
+                    : 'opacity-50 cursor-not-allowed bg-stone-50 border-stone-200 dark:bg-stone-800/50 dark:border-stone-600'
                 }`}
                 onClick={() => handleQuickAction('tool')}
               >
-                <Wrench className={`h-8 w-8 mb-2 ${hasClusters ? 'text-purple-500' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium ${hasClusters ? '' : 'text-gray-400'}`}>
+                <Wrench className={`h-8 w-8 mb-3 ${hasClusters ? 'text-purple-500' : 'text-stone-400'}`} />
+                <span className={`text-sm font-light ${hasClusters ? 'text-stone-900 dark:text-stone-300' : 'text-stone-400'}`}>
                   Configure Tool
                 </span>
-                <span className="text-xs text-gray-500 text-center mt-1">
+                <span className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center mt-1">
                   {hasClusters ? 'Add capabilities to agents' : 'Deploy a cluster first'}
                 </span>
               </div>

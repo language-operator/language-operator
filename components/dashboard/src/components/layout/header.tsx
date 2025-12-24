@@ -39,7 +39,7 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+    <header className="flex h-16 items-center justify-between bg-white border-b border-stone-800/80 px-generous dark:bg-stone-900 dark:border-stone-600/80">
       <div className="flex items-center gap-4">
         <OrganizationSwitcher />
       </div>
@@ -65,8 +65,8 @@ export function Header() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{session?.user?.name}</p>
-                <p className="text-xs text-gray-500">{session?.user?.email}</p>
+                <p className="text-sm font-light text-stone-900 dark:text-stone-300">{session?.user?.name}</p>
+                <p className="text-[11px] font-light text-stone-600 dark:text-stone-400">{session?.user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
