@@ -13,10 +13,10 @@ export function ConsoleLayout() {
   const hasActiveConversation = selectedAgent !== null
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-stone-50 dark:bg-stone-950">
+    <div className="flex h-[calc(100vh-4rem)] bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950">
       {/* Left Column: Agents & Conversations - shown when conversation is active */}
       {hasActiveConversation && (
-        <div className="flex-shrink-0 w-80 border-r border-stone-800/80 dark:border-stone-600/80 bg-stone-200 dark:bg-stone-950">
+        <div className="flex-shrink-0 w-80 border-r border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm">
           <ConversationSidebar />
         </div>
       )}
@@ -30,7 +30,7 @@ export function ConsoleLayout() {
       {hasActiveConversation && (
         <div
           className={cn(
-            'flex-shrink-0 border-l border-stone-800/80 dark:border-stone-600/80 bg-stone-200 dark:bg-stone-950 transition-all duration-300',
+            'flex-shrink-0 border-l border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm transition-all duration-300',
             isWorkspaceVisible ? 'w-[420px]' : 'w-0 overflow-hidden'
           )}
         >
