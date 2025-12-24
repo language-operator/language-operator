@@ -29,7 +29,7 @@ export function ClusterSelector() {
   const selectedClusterData = clusters.find((c: any) => c.metadata?.name === selectedCluster)
 
   return (
-    <div className="border-b py-3 px-4">
+    <div className="border-b h-[52px]">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -38,11 +38,11 @@ export function ClusterSelector() {
             disabled={isLoading}
           >
             <div className="flex items-center gap-2">
-              <Boxes className="h-4 w-4" />
+              <Boxes className="h-4 w-4 mr-1" />
               {selectedCluster ? (
                 <span className="truncate">{selectedCluster}</span>
               ) : (
-                <span className="text-gray-500">Select Cluster</span>
+                <span className="">Select Cluster</span>
               )}
             </div>
             <ChevronDown className="h-4 w-4" />

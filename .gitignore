@@ -1,6 +1,7 @@
 .env
 language-operator-*.gem
 components/base/gem-credentials
+.playwright-mcp
 
 # Go test coverage
 *.out
