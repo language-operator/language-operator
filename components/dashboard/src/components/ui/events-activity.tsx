@@ -144,8 +144,7 @@ export function EventsActivity({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2">
               {title}
               {/* Real-time connection indicator */}
               {showConnectionStatus && (
