@@ -355,16 +355,37 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 	case "scheduled":
-		if err := r.reconcileCronJob(ctx, agent); err != nil {
-			log.Error(err, "Failed to reconcile CronJob")
+		// Scheduled agents now run as Deployments in standby mode
+		// The Deployment runs the agent web server waiting for HTTP triggers
+		if err := r.reconcileDeployment(ctx, agent); err != nil {
+			log.Error(err, "Failed to reconcile Deployment for scheduled agent")
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "CronJob reconciliation failed")
-			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "CronJobError", err.Error(), agent.Generation)
+			span.SetStatus(codes.Error, "Deployment reconciliation failed")
+			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
 			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after CronJob error")
+				log.Error(updateErr, "Failed to update status after Deployment error")
 			}
 			reconcileErr = err
 			return ctrl.Result{}, err
+		}
+
+		// Create CronJob trigger to invoke the agent via HTTP POST
+		if err := r.reconcileCronJobTrigger(ctx, agent); err != nil {
+			log.Error(err, "Failed to reconcile CronJob trigger")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "CronJob trigger reconciliation failed")
+			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "CronJobTriggerError", err.Error(), agent.Generation)
+			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after CronJob trigger error")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+
+		// Clean up legacy CronJob if it exists (non-fatal)
+		if err := r.cleanupLegacyCronJob(ctx, agent); err != nil {
+			log.Error(err, "Failed to clean up legacy CronJob (non-fatal)")
+			// Don't fail reconciliation for cleanup errors
 		}
 	case "":
 		// ExecutionMode not yet set - wait for synthesis to complete and detect the mode
@@ -1390,6 +1411,30 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Add resource requirements if specified
 		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
+		// Add health and readiness probes
+		// All agents now run web servers in standby mode (v0.1.73+)
+		deployment.Spec.Template.Spec.Containers[0].LivenessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/api/v1/health",
+					Port: intstr.FromInt(8080),
+				},
+			},
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       30,
+		}
+
+		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/api/v1/ready",
+					Port: intstr.FromInt(8080),
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+		}
+
 		// Build and apply volumes and volume mounts
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
 		if len(volumes) > 0 {
@@ -1414,11 +1459,13 @@ func (r *LanguageAgentReconciler) checkAndIncrementRunsCounter(ctx context.Conte
 
 	log := log.FromContext(ctx)
 
-	// List Jobs owned by this agent's CronJob
+	// List Jobs owned by this agent's CronJob trigger
+	// Only count trigger Jobs (component=trigger) to track scheduled executions
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, client.InNamespace(agent.Namespace), client.MatchingLabels{
 		"app.kubernetes.io/name": agent.Name,
 		"langop.io/kind":         "LanguageAgent",
+		"langop.io/component":    "trigger", // Only count trigger Jobs
 	}); err != nil {
 		return false, fmt.Errorf("failed to list Jobs: %w", err)
 	}
@@ -1584,6 +1631,148 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 	})
 
 	return err
+}
+
+// reconcileCronJobTrigger creates a CronJob that triggers the agent via HTTP
+// This is used for scheduled agents running in standby mode (Deployment)
+// The trigger CronJob creates pods that POST to the agent's /api/v1/execute endpoint
+func (r *LanguageAgentReconciler) reconcileCronJobTrigger(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Determine target namespace and labels
+	targetNamespace := agent.Namespace
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labels["langop.io/component"] = "trigger" // Distinguish from agent pods
+
+	// If cluster ref is set, verify cluster exists and is ready
+	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+		return err
+	}
+
+	// Add cluster label if cluster ref is set
+	if agent.Spec.ClusterRef != "" {
+		labels["langop.io/cluster"] = agent.Spec.ClusterRef
+	}
+
+	cronJob := &batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name + "-trigger",
+			Namespace: targetNamespace,
+			Labels:    labels,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, cronJob, func() error {
+		if err := controllerutil.SetControllerReference(agent, cronJob, r.Scheme); err != nil {
+			return err
+		}
+
+		schedule := "0 * * * *" // Default: hourly
+		if agent.Spec.Schedule != "" {
+			schedule = agent.Spec.Schedule
+		}
+
+		// Build service URL for HTTP trigger
+		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:8080/api/v1/execute",
+			agent.Name, agent.Namespace)
+
+		cronJob.Spec = batchv1.CronJobSpec{
+			Schedule:          schedule,
+			ConcurrencyPolicy: batchv1.ForbidConcurrent, // Prevent concurrent executions
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: labels,
+						},
+						Spec: corev1.PodSpec{
+							RestartPolicy: corev1.RestartPolicyOnFailure,
+							Containers: []corev1.Container{
+								{
+									Name:  "trigger",
+									Image: "curlimages/curl:latest",
+									Command: []string{
+										"/bin/sh",
+										"-c",
+										fmt.Sprintf(`curl -X POST %s \
+  -H "Content-Type: application/json" \
+  -d '{"wait": true}' \
+  --max-time 600 \
+  --fail-with-body`, serviceURL),
+									},
+								},
+							},
+							SecurityContext: r.buildPodSecurityContext(),
+						},
+					},
+				},
+			},
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to reconcile CronJob trigger: %w", err)
+	}
+
+	schedule := "0 * * * *"
+	if agent.Spec.Schedule != "" {
+		schedule = agent.Spec.Schedule
+	}
+
+	log.Info("Reconciled CronJob trigger for scheduled agent",
+		"agent", agent.Name,
+		"schedule", schedule)
+
+	return nil
+}
+
+// cleanupLegacyCronJob removes old-style CronJobs (pre-standby mode)
+// that directly executed the agent instead of triggering via HTTP
+func (r *LanguageAgentReconciler) cleanupLegacyCronJob(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Look for CronJob with the agent's name (old naming scheme)
+	// New triggers are named "<agent-name>-trigger"
+	cronJob := &batchv1.CronJob{}
+	err := r.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, cronJob)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// No legacy CronJob to clean up
+			return nil
+		}
+		return err
+	}
+
+	// Check if this is a legacy CronJob (no "-trigger" suffix)
+	// and it's owned by this agent
+	if !strings.HasSuffix(cronJob.Name, "-trigger") && isOwnedByAgent(cronJob, agent) {
+		log.Info("Cleaning up legacy CronJob", "cronJob", cronJob.Name)
+
+		// Delete the legacy CronJob
+		if err := r.Delete(ctx, cronJob); err != nil {
+			return fmt.Errorf("failed to delete legacy CronJob: %w", err)
+		}
+
+		log.Info("Successfully deleted legacy CronJob", "cronJob", cronJob.Name)
+	}
+
+	return nil
+}
+
+// isOwnedByAgent checks if a resource is owned by the given agent
+func isOwnedByAgent(obj metav1.Object, agent *langopv1alpha1.LanguageAgent) bool {
+	for _, owner := range obj.GetOwnerReferences() {
+		if owner.UID == agent.UID {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {

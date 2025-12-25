@@ -190,27 +190,53 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify CronJob was created
-	cronJob := &batchv1.CronJob{}
+	// Verify Deployment was created (standby mode)
+	deployment := &appsv1.Deployment{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
 		Name:      agent.Name,
 		Namespace: agent.Namespace,
-	}, cronJob)
+	}, deployment)
 	if err != nil {
-		t.Fatalf("Expected CronJob to exist for scheduled agent, but got error: %v", err)
+		t.Fatalf("Expected Deployment to exist for scheduled agent, but got error: %v", err)
 	}
 
-	// Verify CronJob schedule
+	// Verify Deployment has correct image
+	if len(deployment.Spec.Template.Spec.Containers) != 1 {
+		t.Errorf("Expected 1 container in Deployment, got %d", len(deployment.Spec.Template.Spec.Containers))
+	}
+	if deployment.Spec.Template.Spec.Containers[0].Image != agent.Spec.Image {
+		t.Errorf("Expected Deployment image '%s', got '%s'", agent.Spec.Image, deployment.Spec.Template.Spec.Containers[0].Image)
+	}
+
+	// Verify Deployment has health probes
+	if deployment.Spec.Template.Spec.Containers[0].LivenessProbe == nil {
+		t.Error("Expected liveness probe on Deployment")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].ReadinessProbe == nil {
+		t.Error("Expected readiness probe on Deployment")
+	}
+
+	// Verify CronJob trigger was created
+	cronJob := &batchv1.CronJob{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name + "-trigger",
+		Namespace: agent.Namespace,
+	}, cronJob)
+	if err != nil {
+		t.Fatalf("Expected CronJob trigger to exist for scheduled agent, but got error: %v", err)
+	}
+
+	// Verify CronJob trigger schedule
 	if cronJob.Spec.Schedule != agent.Spec.Schedule {
 		t.Errorf("Expected schedule '%s', got '%s'", agent.Spec.Schedule, cronJob.Spec.Schedule)
 	}
 
-	// Verify CronJob has correct image
+	// Verify CronJob trigger uses curl image
 	if len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("Expected 1 container, got %d", len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers))
+		t.Errorf("Expected 1 container in trigger, got %d", len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers))
 	}
-	if cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image != agent.Spec.Image {
-		t.Errorf("Expected image '%s', got '%s'", agent.Spec.Image, cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image)
+	if cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image != "curlimages/curl:latest" {
+		t.Errorf("Expected trigger image 'curlimages/curl:latest', got '%s'", cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image)
 	}
 }
 
@@ -752,44 +778,65 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify CronJob was created
-	cronJob := &batchv1.CronJob{}
+	// Verify Deployment was created (standby mode)
+	deployment := &appsv1.Deployment{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
 		Name:      agent.Name,
 		Namespace: agent.Namespace,
-	}, cronJob)
+	}, deployment)
 	if err != nil {
-		t.Fatalf("Expected CronJob to exist, but got error: %v", err)
+		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
 	}
 
-	// Verify Pod security context
-	podSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.SecurityContext
+	// Verify Deployment Pod security context
+	podSec := deployment.Spec.Template.Spec.SecurityContext
 	if podSec == nil {
-		t.Fatal("Pod SecurityContext is nil")
+		t.Fatal("Deployment Pod SecurityContext is nil")
 	}
 
 	if podSec.RunAsNonRoot == nil || !*podSec.RunAsNonRoot {
-		t.Error("Expected RunAsNonRoot to be true")
+		t.Error("Expected Deployment RunAsNonRoot to be true")
 	}
 
 	if podSec.RunAsUser == nil || *podSec.RunAsUser != 1000 {
-		t.Errorf("Expected RunAsUser to be 1000, got %v", podSec.RunAsUser)
+		t.Errorf("Expected Deployment RunAsUser to be 1000, got %v", podSec.RunAsUser)
 	}
 
-	// Verify container security context
-	if len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers found in cronjob")
+	// Verify Deployment container security context
+	if len(deployment.Spec.Template.Spec.Containers) == 0 {
+		t.Fatal("No containers found in Deployment")
 	}
 
-	containerSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext
+	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
 	if containerSec == nil {
-		t.Fatal("Container SecurityContext is nil")
+		t.Fatal("Deployment Container SecurityContext is nil")
 	}
 
 	if containerSec.ReadOnlyRootFilesystem == nil || !*containerSec.ReadOnlyRootFilesystem {
-		t.Error("Expected ReadOnlyRootFilesystem to be true")
+		t.Error("Expected Deployment ReadOnlyRootFilesystem to be true")
 	}
 
+	// Verify CronJob trigger was created
+	cronJob := &batchv1.CronJob{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name + "-trigger",
+		Namespace: agent.Namespace,
+	}, cronJob)
+	if err != nil {
+		t.Fatalf("Expected CronJob trigger to exist, but got error: %v", err)
+	}
+
+	// Verify CronJob trigger has security context
+	triggerPodSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.SecurityContext
+	if triggerPodSec == nil {
+		t.Fatal("CronJob trigger Pod SecurityContext is nil")
+	}
+
+	if triggerPodSec.RunAsNonRoot == nil || !*triggerPodSec.RunAsNonRoot {
+		t.Error("Expected trigger RunAsNonRoot to be true")
+	}
+
+	// Continue with Deployment container security validation
 	if containerSec.Capabilities == nil || len(containerSec.Capabilities.Drop) != 1 || containerSec.Capabilities.Drop[0] != "ALL" {
 		t.Error("Expected capabilities to drop ALL")
 	}
