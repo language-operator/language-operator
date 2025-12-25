@@ -116,6 +116,10 @@ export function MessagePanel() {
             content: response.message.content,
             timestamp: new Date().toISOString(),
             agentName: response.agentName,
+            // Include parsed thinking content fields
+            thinkingContent: response.message.thinkingContent,
+            responseContent: response.message.responseContent,
+            hasThinking: response.message.hasThinking,
           }
 
           addMessage(selectedAgent, assistantMessage)

@@ -240,6 +240,10 @@ export function ConsoleProvider({
           timestamp: new Date(msg.timestamp),
           ...(msg.toolCalls && { toolCalls: msg.toolCalls }),
           ...(msg.metadata && { metadata: msg.metadata }),
+          // Include parsed thinking content fields if they exist
+          ...(msg.thinkingContent && { thinkingContent: msg.thinkingContent }),
+          ...(msg.responseContent && { responseContent: msg.responseContent }),
+          ...(msg.hasThinking !== undefined && { hasThinking: msg.hasThinking }),
         }))
 
         // Update conversation state with loaded messages
