@@ -267,7 +267,7 @@ agent "{{.AgentName}}" do
   main do |inputs|
     # ACTUAL execution flow implementing the user's request
     result = execute_task(:<ACTUAL_task_name>, inputs: { <actual_param>: <actual_value> })
-    result
+    result # always return a hash
   end
 
 {{.ConstraintsSection}}
