@@ -20,9 +20,9 @@ export function parseAgentMessage(content: string): ParsedMessage {
     }
   }
 
-  // Extract all [THINK]...[/THINK] sections using regex
+  // Extract all [THINK]...[/THINK] sections using regex with dotall flag
   const thinkingContent: string[] = []
-  const thinkRegex = /\[THINK\](.*?)\[\/THINK\]/g
+  const thinkRegex = /\[THINK\]([\s\S]*?)\[\/THINK\]/g
   let remainingContent = content
   
   // Extract thinking content and remove from remaining content
@@ -41,19 +41,24 @@ export function parseAgentMessage(content: string): ParsedMessage {
 
   // Check if remaining content contains JSON with a message field
   try {
-    const jsonMatch = remainingContent.match(/\{.*"message"\s*:\s*"([^"]*)".*\}/)
-    if (jsonMatch) {
-      // Try to parse the full JSON
-      const jsonStr = remainingContent.match(/\{.*\}/)?.[0]
-      if (jsonStr) {
-        const parsed = JSON.parse(jsonStr)
-        if (parsed.message) {
-          responseContent = parsed.message
-        }
+    // Try to parse the entire remaining content as JSON first
+    const jsonStr = remainingContent.match(/\{[\s\S]*\}/)?.[0]
+    if (jsonStr) {
+      const parsed = JSON.parse(jsonStr)
+      if (parsed.message) {
+        responseContent = parsed.message
       }
     }
   } catch (error) {
-    // If JSON parsing fails, keep the remaining content as-is
+    // If full JSON parsing fails, try to extract message field with regex
+    try {
+      const jsonMatch = remainingContent.match(/"message"\s*:\s*"([^"]*)"/)
+      if (jsonMatch) {
+        responseContent = jsonMatch[1]
+      }
+    } catch (e) {
+      // If all parsing fails, keep the remaining content as-is
+    }
   }
 
   // If no clean response found, try to extract any non-[THINK] text
@@ -85,5 +90,5 @@ export function formatThinkingContent(thinkingContent: string[]): string {
  * @returns True if the content contains [THINK]...[/THINK] tags
  */
 export function hasThinkingContent(content: string): boolean {
-  return /\[THINK\].*?\[\/THINK\]/.test(content)
+  return /\[THINK\][\s\S]*?\[\/THINK\]/.test(content)
 }
