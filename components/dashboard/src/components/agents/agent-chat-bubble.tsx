@@ -4,6 +4,7 @@ import { forwardRef } from 'react'
 import { ChatMessage } from '@/types/chat'
 import { Bot, User, AlertCircle, Clock, Check, CheckCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ThinkingSection } from './thinking-section'
 
 interface ChatBubbleProps {
   message: ChatMessage
@@ -83,6 +84,11 @@ export const ChatBubble = forwardRef<HTMLDivElement, ChatBubbleProps>(
             </div>
           )}
 
+          {/* Thinking Section (for assistant messages with thinking content) */}
+          {isAssistant && message.hasThinking && message.thinkingContent && (
+            <ThinkingSection thinkingContent={message.thinkingContent} />
+          )}
+
           {/* Message Bubble */}
           <div
             className={cn(
@@ -93,7 +99,8 @@ export const ChatBubble = forwardRef<HTMLDivElement, ChatBubbleProps>(
               message.status === 'error' && isUser && "bg-red-500"
             )}
           >
-            {message.content}
+            {/* Use parsed response content if available, fallback to original content */}
+            {isAssistant && message.responseContent ? message.responseContent : message.content}
           </div>
 
           {/* Status and Timestamp */}

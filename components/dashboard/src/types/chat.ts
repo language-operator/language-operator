@@ -7,6 +7,10 @@ export interface ChatMessage {
   timestamp: string
   agentName?: string
   status?: 'sending' | 'sent' | 'delivered' | 'error'
+  // Optional fields for separating thinking content from response
+  thinkingContent?: string[]
+  responseContent?: string
+  hasThinking?: boolean
 }
 
 export interface ChatConversation {

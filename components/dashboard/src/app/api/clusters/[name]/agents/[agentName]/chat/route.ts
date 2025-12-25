@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { k8sClient } from '@/lib/k8s-client'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
+import { parseAgentMessage } from '@/lib/message-parser'
+import { ChatMessage } from '@/types/chat'
 
 interface RouteParams {
   params: Promise<{
@@ -12,11 +14,12 @@ interface RouteParams {
   }>
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: string
-}
+// Remove local interface - we'll import from types
+// interface ChatMessage {
+//   role: 'user' | 'assistant' | 'system'
+//   content: string
+//   timestamp: string
+// }
 
 interface ChatRequest {
   message: string
@@ -124,11 +127,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                              agentData_response.message || 
                              'I apologize, but I was unable to generate a response.'
 
+    // Parse the response to separate thinking content from actual response
+    const parsed = parseAgentMessage(assistantMessage)
+
     // Create the response message
     const responseMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(), // Generate unique ID
       role: 'assistant',
-      content: assistantMessage,
-      timestamp: new Date().toISOString()
+      content: assistantMessage, // Keep original content for backward compatibility
+      timestamp: new Date().toISOString(),
+      // Add parsed content for UI separation
+      thinkingContent: parsed.thinkingContent,
+      responseContent: parsed.responseContent,
+      hasThinking: parsed.hasThinking
     }
 
     // Return the chat response
