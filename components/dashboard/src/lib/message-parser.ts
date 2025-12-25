@@ -7,7 +7,7 @@ export interface ParsedMessage {
 }
 
 /**
- * Parses agent response content to separate [THINK] sections from actual response
+ * Parses agent response content to separate [THINK]...[/THINK] sections from actual response
  * @param content - Raw agent response content
  * @returns Parsed message with thinking and response content separated
  */
@@ -20,26 +20,20 @@ export function parseAgentMessage(content: string): ParsedMessage {
     }
   }
 
-  // Extract all [THINK] sections using a more compatible approach
+  // Extract all [THINK]...[/THINK] sections using regex
   const thinkingContent: string[] = []
-  const sections = content.split('[THINK]')
+  const thinkRegex = /\[THINK\](.*?)\[\/THINK\]/g
+  let remainingContent = content
   
-  // Skip first section if it's before any [THINK] tag, collect the rest
-  let remainingContent = sections[0] // Content before first [THINK]
-  
-  for (let i = 1; i < sections.length; i++) {
-    const section = sections[i].trim()
-    if (section) {
-      thinkingContent.push(section)
+  // Extract thinking content and remove from remaining content
+  let match
+  while ((match = thinkRegex.exec(content)) !== null) {
+    const thinkContent = match[1].trim()
+    if (thinkContent) {
+      thinkingContent.push(thinkContent)
     }
-  }
-  
-  // If there were [THINK] sections, try to find remaining content after them
-  if (thinkingContent.length > 0) {
-    // Look for content that comes after all thinking sections
-    const lastSection = sections[sections.length - 1]
-    // Try to extract JSON or clean text from the last section
-    remainingContent = lastSection || remainingContent
+    // Remove this [THINK]...[/THINK] section from remaining content
+    remainingContent = remainingContent.replace(match[0], '').trim()
   }
 
   // Try to parse any remaining content as JSON to extract the actual message
@@ -88,8 +82,8 @@ export function formatThinkingContent(thinkingContent: string[]): string {
 /**
  * Checks if a message contains thinking content
  * @param content - Message content to check
- * @returns True if the content contains [THINK] tags
+ * @returns True if the content contains [THINK]...[/THINK] tags
  */
 export function hasThinkingContent(content: string): boolean {
-  return /\[THINK\]/.test(content)
+  return /\[THINK\].*?\[\/THINK\]/.test(content)
 }
