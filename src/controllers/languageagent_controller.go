@@ -1700,6 +1700,16 @@ func (r *LanguageAgentReconciler) reconcileCronJobTrigger(ctx context.Context, a
   --max-time 600 \
   --fail-with-body`, serviceURL),
 									},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("10m"),
+											corev1.ResourceMemory: resource.MustParse("16Mi"),
+										},
+										Limits: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("50m"),
+											corev1.ResourceMemory: resource.MustParse("32Mi"),
+										},
+									},
 								},
 							},
 							SecurityContext: r.buildPodSecurityContext(),
