@@ -1412,11 +1412,11 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
 
 		// Add health and readiness probes
-		// All agents now run web servers in standby mode (v0.1.73+)
+		// All agents now run web servers with operational endpoints
 		deployment.Spec.Template.Spec.Containers[0].LivenessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/api/v1/health",
+					Path: "/health",
 					Port: intstr.FromInt(8080),
 				},
 			},
@@ -1427,7 +1427,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/api/v1/ready",
+					Path: "/ready",
 					Port: intstr.FromInt(8080),
 				},
 			},
