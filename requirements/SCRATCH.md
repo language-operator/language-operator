@@ -1,6 +1,6 @@
 # Agent Memory Bank
 
-## Current Focus Areas (Dec 23, 2025)
+## Current Focus Areas (Dec 25, 2025)
 
 ### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
@@ -8,6 +8,7 @@
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
 ### Recently Completed
+- ✅ **Issue #198**: Support standby mode runtime for scheduled/reactive agents - **RESOLVED** (Dec 25) - Implemented standby mode runtime for scheduled agents, migrating from CronJob-based execution (pods that execute and exit) to Deployment-based standby mode (persistent pods with HTTP-triggered execution). All agent modes now run as persistent Deployments with web servers. Changes: (1) Added health (/api/v1/health) and readiness (/api/v1/ready) probes to all Deployments for proper K8s lifecycle management; (2) Created reconcileCronJobTrigger() function that generates CronJob using curlimages/curl:latest to POST to /api/v1/execute with {"wait": true} for synchronous execution; (3) Scheduled agents now create both Deployment (standby) + CronJob trigger (HTTP caller) instead of direct CronJob; (4) Updated Job completion tracking to filter by langop.io/component=trigger label; (5) Added cleanupLegacyCronJob() for automatic migration from legacy CronJobs to new architecture. All 78 controller tests pass, including updated TestLanguageAgentController_CronJobCreation and TestLanguageAgentController_CronJobSecurityContext. Requires language-operator-gem v0.1.73+ for agent runtime standby mode support (commit e71d72d).
 - ✅ **Issue #192**: Persona deletion from UI not functional - **RESOLVED** (Dec 23) - Implemented complete delete functionality on personas list page. Users can now delete personas directly from the personas list using the dropdown menu (•••) on each row. Added useDeletePersona hook, handleDeletePersona function with confirmation dialog, and wired up delete menu item. Delete flow: click ••• → select Delete → confirm → API deletion → real-time UI update via optimistic updates + SSE watch stream. Also standardized error handling across persona API endpoints with proper validation utilities (createErrorResponse, createSuccessResponse, handleKubernetesOperation), cluster validation (validateClusterNameFormat, validateClusterExists), and clusterRef verification. DELETE API now returns HTTP 200 with clear messages instead of 500 errors. Tested with Playwright MCP - verified deletion works end-to-end with proper confirmation, API calls, and live table updates (commits 2fb801f, b5ad83b).
 
 ### Dashboard Development (Recent)

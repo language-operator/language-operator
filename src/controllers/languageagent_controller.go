@@ -1805,6 +1805,55 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.Egress,
 	)
 
+	// Add ingress rules to allow trigger pods and dashboard to connect to agent
+	// This is required for:
+	// 1. Scheduled agents: CronJob trigger pods POST to /api/v1/execute
+	// 2. Dashboard: UI connects to agent endpoints for status and control
+	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
+		{
+			// Allow trigger pods in same namespace to connect to agent on port 8080
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"langop.io/component": "trigger",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				},
+			},
+		},
+		{
+			// Allow dashboard pods from language-operator namespace to connect on port 8080
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"kubernetes.io/metadata.name": "language-operator",
+						},
+					},
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app.kubernetes.io/name": "language-operator-dashboard",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+				},
+			},
+		},
+	}
+
 	// Create or update the NetworkPolicy with owner reference and configured timeout/retries
 	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, r.Client, r.Scheme, agent, networkPolicy, r.NetworkPolicyTimeout, r.NetworkPolicyRetries)
 }
