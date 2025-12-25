@@ -1673,7 +1673,8 @@ func (r *LanguageAgentReconciler) reconcileCronJobTrigger(ctx context.Context, a
 		}
 
 		// Build service URL for HTTP trigger
-		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:8080/api/v1/execute",
+		// Use port 80 (Service port), not 8080 (targetPort)
+		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local/api/v1/execute",
 			agent.Name, agent.Namespace)
 
 		cronJob.Spec = batchv1.CronJobSpec{
