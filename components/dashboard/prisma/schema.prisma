@@ -24,6 +24,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   memberships   OrganizationMember[]
+
+  @@index([createdAt])
 }
 
 // OAuth accounts for third-party auth (Google, GitHub)
@@ -76,7 +78,6 @@ model Organization {
 
   members       OrganizationMember[]
   invites       OrganizationInvite[]
-  conversations Conversation[]
 
   @@index([namespace])
 }
@@ -108,37 +109,4 @@ model OrganizationInvite {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, email])
-}
-
-// Console conversations for agent interactions
-model Conversation {
-  id             String   @id @default(cuid())
-  organizationId String
-  agentName      String
-  clusterName    String
-  title          String?  // Auto-generated from first message or user-defined
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  messages       ConversationMessage[]
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, agentName])
-  @@index([organizationId, createdAt])
-  @@index([agentName, clusterName])
-}
-
-// Messages within conversations
-model ConversationMessage {
-  id             String   @id @default(cuid())
-  conversationId String
-  role           String   // user, assistant, system, tool
-  content        String   @db.Text
-  toolCalls      Json?    // Structured tool use data
-  metadata       Json?    // Token usage, model info, timing
-  timestamp      DateTime @default(now())
-
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, timestamp])
 }
