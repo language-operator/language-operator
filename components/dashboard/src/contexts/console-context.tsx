@@ -23,6 +23,7 @@ interface ConsoleContextType {
   conversations: Map<string, ConversationState>
   getActiveConversation: () => ConversationState | null
   addMessage: (agentName: string, message: ChatMessage) => void
+  updateMessage: (agentName: string, messageId: string, updates: Partial<ChatMessage>) => void
   setLoading: (agentName: string, isLoading: boolean) => void
   setError: (agentName: string, error: string | null) => void
 
@@ -118,11 +119,51 @@ export function ConsoleProvider({
       if (key) {
         const conv = newMap.get(key)
         if (conv) {
+          // Check if message with same ID already exists
+          const existingIndex = conv.messages.findIndex(m => m.id === message.id)
+          let updatedMessages
+          
+          if (existingIndex >= 0) {
+            // Replace existing message
+            updatedMessages = [...conv.messages]
+            updatedMessages[existingIndex] = message
+          } else {
+            // Add new message
+            updatedMessages = [...conv.messages, message]
+          }
+          
           newMap.set(key, {
             ...conv,
-            messages: [...conv.messages, message],
+            messages: updatedMessages,
             lastActivity: new Date(),
           })
+        }
+      }
+      return newMap
+    })
+  }, [])
+
+  const updateMessage = useCallback((agentName: string, messageId: string, updates: Partial<ChatMessage>) => {
+    setConversations((prev) => {
+      const newMap = new Map(prev)
+      const key = Array.from(newMap.keys()).find((k) => k.endsWith(`/${agentName}`))
+      if (key) {
+        const conv = newMap.get(key)
+        if (conv) {
+          const existingIndex = conv.messages.findIndex(m => m.id === messageId)
+          if (existingIndex >= 0) {
+            const updatedMessages = [...conv.messages]
+            updatedMessages[existingIndex] = {
+              ...updatedMessages[existingIndex],
+              ...updates
+            }
+            
+            newMap.set(key, {
+              ...conv,
+              messages: updatedMessages,
+              lastActivity: new Date(),
+            })
+          }
         }
       }
       return newMap
@@ -242,6 +283,7 @@ export function ConsoleProvider({
     conversations,
     getActiveConversation,
     addMessage,
+    updateMessage,
     setLoading,
     setError,
     conversationDbId,

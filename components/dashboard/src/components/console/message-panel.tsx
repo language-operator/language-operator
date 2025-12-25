@@ -14,6 +14,7 @@ export function MessagePanel() {
     selectedCluster,
     getActiveConversation,
     addMessage,
+    updateMessage,
     setLoading,
     setError,
     conversationDbId,
@@ -103,8 +104,7 @@ export function MessagePanel() {
         const response = await chatResponse.json()
 
         // Update user message to delivered
-        addMessage(selectedAgent, {
-          ...userMessage,
+        updateMessage(selectedAgent, userMessage.id, {
           status: 'delivered',
         })
 
@@ -139,8 +139,7 @@ export function MessagePanel() {
         setError(selectedAgent, errorMessage)
 
         // Mark user message as error
-        addMessage(selectedAgent, {
-          ...userMessage,
+        updateMessage(selectedAgent, userMessage.id, {
           status: 'error',
         })
       } finally {
@@ -152,6 +151,7 @@ export function MessagePanel() {
       selectedCluster,
       conversation,
       addMessage,
+      updateMessage,
       setLoading,
       setError,
       conversationDbId,
