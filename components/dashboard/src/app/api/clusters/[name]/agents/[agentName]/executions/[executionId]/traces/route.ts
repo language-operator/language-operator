@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@clickhouse/client'
 
 // Types for trace data
 interface TraceSpan {
@@ -25,51 +26,99 @@ interface TraceData {
   spans: TraceSpan[]
 }
 
+// ClickHouse client
+const clickhouse = createClient({
+  host: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
+  database: 'langop',
+})
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ name: string; agentName: string; executionId: string }> }
 ) {
   try {
     const { name: clusterName, agentName, executionId } = await params
-
-    // Proxy request to Go telemetry service
-    const telemetryServiceUrl = process.env.TELEMETRY_SERVICE_URL || 'http://localhost:8080'
-    const proxyUrl = `${telemetryServiceUrl}/api/clusters/${encodeURIComponent(clusterName)}/agents/${encodeURIComponent(agentName)}/executions/${encodeURIComponent(executionId)}/traces`
     
-    const response = await fetch(proxyUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    // Extract trace ID from execution ID (reverse of exec_{traceId.substring(0,8)})
+    const traceIdPrefix = executionId.startsWith('exec_') ? executionId.substring(5) : executionId
+
+    // Query ClickHouse for all spans in this trace
+    const sql = `
+      SELECT 
+        TraceId as traceId,
+        SpanId as spanId,
+        ParentSpanId as parentSpanId,
+        SpanName as spanName,
+        Timestamp as startTime,
+        addNanoseconds(Timestamp, Duration) as endTime,
+        Duration / 1000000 as duration,
+        StatusCode as statusCode,
+        SpanAttributes as attributes,
+        Events.Timestamp as eventTimestamps,
+        Events.Name as eventNames,
+        Events.Attributes as eventAttributes
+      FROM langop.otel_traces
+      WHERE TraceId LIKE {traceIdPattern:String}
+      ORDER BY Timestamp ASC
+    `
+
+    const resultSet = await clickhouse.query({
+      query: sql,
+      query_params: {
+        traceIdPattern: `${traceIdPrefix}%` // Match trace IDs that start with our pattern
       },
     })
 
-    if (!response.ok) {
-      console.error(`Telemetry service error: ${response.status} ${response.statusText}`)
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch traces from telemetry service' },
-        { status: response.status }
-      )
-    }
-
-    const data = await response.json()
+    const rows = await resultSet.json()
     
-    // Transform dates from string to Date objects for frontend compatibility
-    if (data.success && data.data && Array.isArray(data.data.spans)) {
-      data.data.spans = data.data.spans.map((span: any) => ({
-        ...span,
-        startTime: new Date(span.startTime),
-        endTime: new Date(span.endTime),
-        events: span.events?.map((event: any) => ({
-          ...event,
-          time: new Date(event.time),
-        })) || [],
-      }))
+    if (rows.data.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          traceId: traceIdPrefix,
+          executionId,
+          spans: []
+        }
+      })
     }
 
-    return NextResponse.json(data)
+    const spans: TraceSpan[] = rows.data.map((row: any) => {
+      // Parse events arrays
+      const events: SpanEvent[] = []
+      if (row.eventTimestamps && row.eventNames) {
+        for (let i = 0; i < row.eventTimestamps.length; i++) {
+          events.push({
+            time: new Date(row.eventTimestamps[i]),
+            name: row.eventNames[i] || '',
+            attributes: row.eventAttributes?.[i] || {}
+          })
+        }
+      }
+
+      return {
+        spanId: row.spanId,
+        parentSpanId: row.parentSpanId || undefined,
+        spanName: row.spanName,
+        startTime: new Date(row.startTime),
+        endTime: new Date(row.endTime),
+        duration: Math.round(row.duration),
+        status: row.statusCode === 'STATUS_CODE_OK' ? 'success' : 'error',
+        attributes: row.attributes || {},
+        events
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        traceId: rows.data.length > 0 ? rows.data[0].traceId : traceIdPrefix,
+        executionId,
+        spans
+      }
+    })
 
   } catch (error) {
-    console.error('Error fetching trace data:', error)
+    console.error('Error querying ClickHouse for trace data:', error)
     
     return NextResponse.json(
       { success: false, error: 'Failed to fetch trace data' },

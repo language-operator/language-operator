@@ -19,6 +19,7 @@
     "migrate:namespaces": "npx tsx src/scripts/migrate-organization-namespaces.ts"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.15.0",
     "@hookform/resolvers": "^5.2.2",
     "@kubernetes/client-node": "^1.4.0",
     "@next-auth/prisma-adapter": "^1.0.7",
