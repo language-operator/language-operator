@@ -21,17 +21,14 @@ interface Conversation {
 
 interface AgentListItemProps {
   conversation: Conversation
-  isLast?: boolean
 }
 
-export function AgentListItem({ conversation, isLast = false }: AgentListItemProps) {
-  const { selectedAgent, selectedCluster, loadConversation, deleteConversation } = useConsole()
+export function AgentListItem({ conversation }: AgentListItemProps) {
+  const { selectedAgent, selectedCluster, conversationDbId, loadConversation, deleteConversation } = useConsole()
   const [isHovered, setIsHovered] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
-  const isActive =
-    selectedAgent === conversation.agentName &&
-    selectedCluster === conversation.clusterName
+  const isActive = conversationDbId === conversation.id
 
   const handleClick = () => {
     loadConversation(conversation.id, conversation.agentName, conversation.clusterName)
@@ -58,8 +55,6 @@ export function AgentListItem({ conversation, isLast = false }: AgentListItemPro
       <div
         className={cn(
           'w-full px-4 py-3 text-left transition-colors border-l-2 relative group cursor-pointer',
-          // Bottom border - all items except last
-          !isLast && 'border-b border-b-stone-200 dark:border-b-stone-700',
           // Active state styling - enhanced background and left border
           isActive
             ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-amber-400'
