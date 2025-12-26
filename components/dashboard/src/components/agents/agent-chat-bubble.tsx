@@ -5,6 +5,7 @@ import { ChatMessage } from '@/types/chat'
 import { Bot, User, AlertCircle, Clock, Check, CheckCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThinkingSection } from './thinking-section'
+import { MarkdownContent } from '@/components/ui/markdown-content'
 
 interface ChatBubbleProps {
   message: ChatMessage
@@ -99,8 +100,15 @@ export const ChatBubble = forwardRef<HTMLDivElement, ChatBubbleProps>(
               message.status === 'error' && isUser && "bg-red-500"
             )}
           >
-            {/* Use parsed response content if available, fallback to original content */}
-            {isAssistant && message.responseContent ? message.responseContent : message.content}
+            {/* Render markdown for assistant messages, plain text for user messages */}
+            {isAssistant ? (
+              <MarkdownContent 
+                content={message.responseContent || message.content} 
+                className="prose-sm [&>*]:text-stone-900 dark:[&>*]:text-stone-100"
+              />
+            ) : (
+              message.content
+            )}
           </div>
 
           {/* Status and Timestamp */}
