@@ -120,7 +120,7 @@ spec:
         {{- if .Values.opentelemetry.collector.enabled }}
         # OpenTelemetry data collection configuration
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: {{ .Values.opentelemetry.collector.endpoint | quote }}
+          value: {{ include "language-operator.otelCollector.endpoint" . | quote }}
         - name: OTEL_SERVICE_NAME
           value: "language-operator"
         - name: OTEL_TRACES_SAMPLER
@@ -135,7 +135,7 @@ spec:
         - name: TELEMETRY_ADAPTER_TYPE
           value: {{ include "language-operator.telemetryAdapter.type" . | quote }}
         - name: TELEMETRY_ADAPTER_ENDPOINT
-          value: {{ .Values.telemetry.queryBackend.endpoint | quote }}
+          value: {{ include "language-operator.telemetryAdapter.endpoint" . | quote }}
         {{- if or .Values.telemetry.queryBackend.auth.apiKey .Values.telemetry.queryBackend.auth.apiKeySecret.name }}
         - name: TELEMETRY_ADAPTER_API_KEY
           {{- if .Values.telemetry.queryBackend.auth.apiKeySecret.name }}

@@ -1,0 +1,145 @@
+{{- if .Values.telemetry.clickhouse.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "language-operator.fullname" . }}-clickhouse
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8123
+      targetPort: http
+      protocol: TCP
+    - name: native
+      port: 9000
+      targetPort: native
+      protocol: TCP
+    - name: interserver
+      port: 9009
+      targetPort: interserver
+      protocol: TCP
+  selector:
+    {{- include "language-operator.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "language-operator.fullname" . }}-clickhouse
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+spec:
+  serviceName: {{ include "language-operator.fullname" . }}-clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "language-operator.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: clickhouse
+  template:
+    metadata:
+      labels:
+        {{- include "language-operator.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: clickhouse
+    spec:
+      securityContext:
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      containers:
+        - name: clickhouse
+          image: "clickhouse/clickhouse-server:{{ .Values.telemetry.clickhouse.image.tag | default "24.1-alpine" }}"
+          imagePullPolicy: {{ .Values.telemetry.clickhouse.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+            - name: native
+              containerPort: 9000
+              protocol: TCP
+            - name: interserver
+              containerPort: 9009
+              protocol: TCP
+          env:
+            - name: CLICKHOUSE_DB
+              value: {{ .Values.telemetry.clickhouse.database | default "otel" | quote }}
+            - name: CLICKHOUSE_USER
+              value: {{ .Values.telemetry.clickhouse.auth.username | default "default" | quote }}
+            {{- if .Values.telemetry.clickhouse.auth.password }}
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "language-operator.fullname" . }}-clickhouse
+                  key: password
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.telemetry.clickhouse.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+            {{- if .Values.telemetry.clickhouse.auth.password }}
+            - name: users-config
+              mountPath: /etc/clickhouse-server/users.d
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "language-operator.fullname" . }}-clickhouse-config
+        {{- if .Values.telemetry.clickhouse.auth.password }}
+        - name: users-config
+          configMap:
+            name: {{ include "language-operator.fullname" . }}-clickhouse-users
+        {{- end }}
+  {{- if .Values.telemetry.clickhouse.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        {{- if .Values.telemetry.clickhouse.persistence.annotations }}
+        annotations:
+          {{- toYaml .Values.telemetry.clickhouse.persistence.annotations | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- range .Values.telemetry.clickhouse.persistence.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.telemetry.clickhouse.persistence.size }}
+        {{- if .Values.telemetry.clickhouse.persistence.storageClass }}
+        {{- if (eq "-" .Values.telemetry.clickhouse.persistence.storageClass) }}
+        storageClassName: ""
+        {{- else }}
+        storageClassName: {{ .Values.telemetry.clickhouse.persistence.storageClass }}
+        {{- end }}
+        {{- end }}
+  {{- else }}
+      volumes:
+        - name: data
+          emptyDir: {}
+  {{- end }}
+{{- end }}

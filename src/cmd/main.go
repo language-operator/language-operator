@@ -85,6 +85,8 @@ func initializeTelemetryAdapter() telemetry.TelemetryAdapter {
 	switch strings.ToLower(adapterType) {
 	case "signoz":
 		return initializeSigNozAdapter()
+	case "clickhouse":
+		return initializeClickhouseAdapter()
 	case "noop", "disabled":
 		setupLog.Info("Telemetry adapter explicitly disabled")
 		return telemetry.NewNoOpAdapter()
@@ -139,6 +141,27 @@ func initializeSigNozAdapter() telemetry.TelemetryAdapter {
 		"queryTimeout", getEnvOrDefault("TELEMETRY_ADAPTER_QUERY_TIMEOUT", "10s"),
 		"healthCheckEnabled", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED", "true"),
 		"healthCheckInterval", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL", "5m"))
+
+	return adapter
+}
+
+// initializeClickhouseAdapter creates a ClickHouse telemetry adapter from environment variables
+func initializeClickhouseAdapter() telemetry.TelemetryAdapter {
+	// Create ClickHouse adapter - it reads configuration from environment variables
+	adapter, err := adapters.NewClickhouseAdapter()
+	if err != nil {
+		setupLog.Error(err, "Failed to create ClickHouse telemetry adapter, falling back to NoOpAdapter")
+		return telemetry.NewNoOpAdapter()
+	}
+
+	// Log configuration details (excluding sensitive information)
+	setupLog.Info("ClickHouse telemetry adapter initialized successfully",
+		"endpoint", getEnvOrDefault("TELEMETRY_ADAPTER_ENDPOINT", ""),
+		"database", getEnvOrDefault("TELEMETRY_ADAPTER_DATABASE", "otel"),
+		"username", getEnvOrDefault("TELEMETRY_ADAPTER_USERNAME", "default"),
+		"timeout", getEnvOrDefault("TELEMETRY_ADAPTER_TIMEOUT", "30s"),
+		"retryAttempts", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_ATTEMPTS", "3"),
+		"retryBackoff", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_BACKOFF", "1s"))
 
 	return adapter
 }

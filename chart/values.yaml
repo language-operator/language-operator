@@ -507,22 +507,30 @@ monitoring:
     scrapeTimeout: 10s
 
 # OpenTelemetry configuration
-# Enables distributed tracing for operator and agents
-# OpenTelemetry Configuration
-# Split into two distinct purposes for clarity:
+# Internal Telemetry Stack (enabled by default)
+# 
+# The Language Operator now includes a complete internal telemetry stack:
+# - ClickHouse for data storage (persistent traces/metrics/logs)
+# - OpenTelemetry Collector for data ingestion  
+# - Direct ClickHouse adapter for learning system queries
+#
+# This eliminates dependencies on external services like SigNoz.
+#
+# To disable the telemetry stack entirely:
+#   opentelemetry.collector.enabled: false
+#   telemetry.clickhouse.enabled: false  
+#   telemetry.otelCollector.enabled: false
+#   telemetry.queryBackend.enabled: false
 
 # 1. DATA COLLECTION - Where agents/tools/operator send telemetry data
 opentelemetry:
   collector:
-    # Enable OpenTelemetry data collection (default: false for opt-in behavior)
-    enabled: false
+    # Enable OpenTelemetry data collection (enabled by default with internal stack)
+    enabled: true
 
     # OTLP gRPC endpoint for exporting traces/metrics/logs
-    # This is where all operator components send their telemetry data
-    # Examples:
-    #   - "otel-collector.observability.svc.cluster.local:4317" (in-cluster collector)
-    #   - "otel-collector:4317" (same namespace)
-    #   - "jaeger-collector.observability.svc.cluster.local:4317" (Jaeger with OTLP)
+    # When telemetry.otelCollector.enabled=true, this automatically points to internal collector
+    # Manual override: set to external endpoint if needed
     endpoint: ""
 
     # Sampling configuration for data collection
@@ -551,45 +559,143 @@ opentelemetry:
 
 # 2. DATA QUERYING - Where the learning system queries historical telemetry data
 telemetry:
-  queryBackend:
-    # Enable telemetry query backend for learning system (default: false for opt-in behavior)
-    enabled: false
-
-    # Backend type: "signoz", "jaeger", "tempo", or "noop"
-    type: "signoz"
-
-    # Query endpoint for historical data retrieval
-    # This is where the learning system queries traces for pattern analysis
-    endpoint: ""
-    # Example endpoints:
-    #   SigNoz: "https://signoz.example.com" 
-    #   Jaeger: "https://jaeger.example.com"
-    #   Tempo: "https://tempo.example.com"
-
-    # Authentication for query backend
+  # Internal ClickHouse deployment for telemetry storage
+  clickhouse:
+    # Enable internal ClickHouse deployment (enabled by default)
+    enabled: true
+    
+    # ClickHouse image configuration
+    image:
+      tag: "24.1-alpine"
+      pullPolicy: IfNotPresent
+    
+    # Database configuration
+    database: "otel"
+    
+    # Authentication settings
     auth:
-      # API key for authentication (for SigNoz, Grafana Cloud, etc.)
-      # Can be provided directly or via secret reference
-      apiKey: ""
+      username: "default"
+      # Set password for authentication (optional, uses no auth if empty)
+      password: ""
+    
+    # ClickHouse configuration
+    config:
+      # Log level: trace, debug, information, warning, error
+      logLevel: "information"
+      # Log all queries for debugging (can be verbose)
+      logQueries: false
+      # Maximum memory usage in bytes (10GB default)
+      maxMemoryUsage: "10000000000"
+      # Maximum concurrent queries
+      maxConcurrentQueries: 100
+    
+    # Resource configuration
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    # Persistence configuration
+    persistence:
+      enabled: true
+      size: 100Gi
+      # Storage class (leave empty for default)
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      # Annotations for PVC
+      annotations: {}
+    
+    # Data retention configuration
+    retention:
+      # Retention period for traces
+      traces: "7d"
+      # Retention period for metrics  
+      metrics: "30d"
+      # Retention period for logs
+      logs: "3d"
+
+  # OpenTelemetry Collector for data collection
+  otelCollector:
+    # Enable OTel Collector deployment (enabled by default)
+    enabled: true
+    
+    # Number of collector replicas for HA
+    replicas: 2
+    
+    # OTel Collector image configuration
+    image:
+      tag: "0.91.0"
+      pullPolicy: IfNotPresent
+    
+    # Resource configuration
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+    
+    # Collector configuration
+    config:
+      # Environment identifier
+      environment: "production"
       
-      # Secret reference for API key (recommended for production)
-      # Example:
-      #   secretName: "signoz-credentials"
-      #   secretKey: "api-key"
-      apiKeySecret:
-        name: ""
-        key: ""
+      # Batch processing settings
+      batchSize: 1024
+      batchTimeout: "1s"
+      batchMaxSize: 2048
+      
+      # Memory limits
+      memoryLimitMiB: 512
+      memorySpikeLimit: 128
+      
+      # Export timeout
+      exportTimeout: "30s"
+      
+      # Logging configuration
+      logLevel: "info"
+      metricsLevel: "normal"
+      
+      # Sampling configuration (optional)
+      sampling:
+        enabled: false
+        rate: 10.0  # 10% sampling rate
+      
+      # Debug configuration
+      debug:
+        enabled: false
+        verbosity: "normal"
+    
+    # Node selector
+    nodeSelector: {}
+    
+    # Tolerations
+    tolerations: []
+    
+    # Affinity rules
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                - otel-collector
+            topologyKey: kubernetes.io/hostname
 
-      # Additional auth headers (optional)
-      # Example for custom auth schemes:
-      #   Authorization: "Bearer token"
-      #   X-Custom-Auth: "value"
-      headers: {}
-
-    # Connection settings
-    timeout: "30s"
-    retryAttempts: 3
-    retryBackoff: "1s"
+  # Internal query backend configuration
+  # Uses the internal ClickHouse deployment for learning system queries
+  queryBackend:
+    # Enable telemetry querying for learning system (enabled by default)
+    enabled: true
 
     # Query configuration
     query:
@@ -601,6 +707,12 @@ telemetry:
       
       # Query timeout for individual requests  
       timeout: "10s"
+    
+    # Connection settings to internal ClickHouse
+    connection:
+      timeout: "30s"
+      retryAttempts: 3
+      retryBackoff: "1s"
 
     # Health check configuration
     healthCheck:
@@ -617,9 +729,8 @@ telemetry:
 # Allows agents and tools to use different collection settings than the operator
 agentTelemetry:
   # OTLP endpoint override for agents and tools
-  # If empty, agents inherit the operator's opentelemetry.collector.endpoint
-  # Useful for routing agent traces to a different collector
-  # Example: "otel-collector-agents.observability.svc.cluster.local:4317"
+  # If empty, agents inherit the operator's opentelemetry configuration
+  # When telemetry.otelCollector.enabled=true, automatically uses internal collector
   endpoint: ""
 
   # Sampling rate override for agents and tools

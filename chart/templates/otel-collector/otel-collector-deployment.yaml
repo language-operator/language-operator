@@ -1,0 +1,138 @@
+{{- if .Values.telemetry.otelCollector.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "language-operator.fullname" . }}-otel-collector
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+spec:
+  type: ClusterIP
+  ports:
+    # OTLP gRPC receiver
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+    # OTLP HTTP receiver
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP
+    # Health check endpoint
+    - name: health-check
+      port: 13133
+      targetPort: health-check
+      protocol: TCP
+    # Metrics endpoint
+    - name: metrics
+      port: 8888
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    {{- include "language-operator.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "language-operator.fullname" . }}-otel-collector
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+spec:
+  replicas: {{ .Values.telemetry.otelCollector.replicas | default 2 }}
+  selector:
+    matchLabels:
+      {{- include "language-operator.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: otel-collector
+  template:
+    metadata:
+      labels:
+        {{- include "language-operator.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: otel-collector
+      annotations:
+        # Force restart when config changes
+        checksum/config: {{ include (print $.Template.BasePath "/otel-collector/otel-collector-configmap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        runAsNonRoot: true
+      containers:
+        - name: otel-collector
+          image: "otel/opentelemetry-collector-contrib:{{ .Values.telemetry.otelCollector.image.tag | default "0.91.0" }}"
+          imagePullPolicy: {{ .Values.telemetry.otelCollector.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - "--config=/etc/otelcol-contrib/config.yaml"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: health-check
+              containerPort: 13133
+              protocol: TCP
+            - name: metrics
+              containerPort: 8888
+              protocol: TCP
+          env:
+            # ClickHouse connection details
+            - name: CLICKHOUSE_ENDPOINT
+              value: "tcp://{{ include "language-operator.fullname" . }}-clickhouse:9000"
+            - name: CLICKHOUSE_DATABASE
+              value: {{ .Values.telemetry.clickhouse.database | default "otel" | quote }}
+            - name: CLICKHOUSE_USERNAME
+              value: {{ .Values.telemetry.clickhouse.auth.username | default "default" | quote }}
+            {{- if .Values.telemetry.clickhouse.auth.password }}
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "language-operator.fullname" . }}-clickhouse
+                  key: password
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health-check
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health-check
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.telemetry.otelCollector.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "language-operator.fullname" . }}-otel-collector-config
+            items:
+              - key: config.yaml
+                path: config.yaml
+      {{- with .Values.telemetry.otelCollector.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.telemetry.otelCollector.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.telemetry.otelCollector.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

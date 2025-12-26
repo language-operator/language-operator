@@ -108,13 +108,53 @@ Builds a comma-separated list of key=value pairs for OTEL_RESOURCE_ATTRIBUTES
 
 {{/*
 Telemetry adapter enabled check
-Returns true if telemetry adapter is enabled and properly configured
+Returns true if telemetry adapter is enabled (either internal ClickHouse or external)
 */}}
 {{- define "language-operator.telemetryAdapter.enabled" -}}
-{{- if and .Values.telemetry.queryBackend.enabled .Values.telemetry.queryBackend.endpoint -}}
+{{- if .Values.telemetry.queryBackend.enabled -}}
+{{- if or .Values.telemetry.clickhouse.enabled .Values.telemetry.queryBackend.endpoint -}}
 {{- true -}}
 {{- else -}}
 {{- false -}}
+{{- end -}}
+{{- else -}}
+{{- false -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Telemetry adapter endpoint
+Returns the internal ClickHouse endpoint if enabled, otherwise the configured endpoint
+*/}}
+{{- define "language-operator.telemetryAdapter.endpoint" -}}
+{{- if .Values.telemetry.clickhouse.enabled -}}
+{{- printf "http://%s-clickhouse:8123" (include "language-operator.fullname" .) -}}
+{{- else -}}
+{{- .Values.telemetry.queryBackend.endpoint -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+OpenTelemetry collector endpoint  
+Returns the internal collector endpoint if enabled, otherwise the configured endpoint
+*/}}
+{{- define "language-operator.otelCollector.endpoint" -}}
+{{- if .Values.telemetry.otelCollector.enabled -}}
+{{- printf "%s-otel-collector:4317" (include "language-operator.fullname" .) -}}
+{{- else -}}
+{{- .Values.opentelemetry.collector.endpoint -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Agent telemetry endpoint
+Returns the agent-specific telemetry endpoint if configured, otherwise inherits from main config
+*/}}
+{{- define "language-operator.agentTelemetry.endpoint" -}}
+{{- if .Values.agentTelemetry.endpoint -}}
+{{- .Values.agentTelemetry.endpoint -}}
+{{- else -}}
+{{- include "language-operator.otelCollector.endpoint" . -}}
 {{- end -}}
 {{- end }}
 
@@ -133,15 +173,19 @@ Returns the API key value, either direct or from secret reference
 {{- end }}
 
 {{/*
-Telemetry adapter type validation
-Returns the adapter type if valid, otherwise "noop"
+Telemetry adapter type
+Returns "clickhouse" for internal deployment, otherwise the configured type
 */}}
 {{- define "language-operator.telemetryAdapter.type" -}}
+{{- if .Values.telemetry.clickhouse.enabled -}}
+{{- "clickhouse" -}}
+{{- else -}}
 {{- $validTypes := list "signoz" "jaeger" "tempo" "noop" -}}
 {{- if has .Values.telemetry.queryBackend.type $validTypes -}}
 {{- .Values.telemetry.queryBackend.type -}}
 {{- else -}}
 {{- "noop" -}}
+{{- end -}}
 {{- end -}}
 {{- end }}
 
