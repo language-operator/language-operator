@@ -71,6 +71,7 @@ export function AgentWorkspace({ agent, clusterName }: AgentWorkspaceProps) {
               clusterName={clusterName}
               selectedFile={selectedFile}
               onFileDelete={handleRefresh}
+              onBack={() => setSelectedFile(null)}
             />
           </CardContent>
         </Card>

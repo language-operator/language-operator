@@ -15,7 +15,8 @@ import {
   File, 
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronLeft
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -38,6 +39,7 @@ interface WorkspaceFileViewerProps {
   clusterName: string
   selectedFile: FileEntry | null
   onFileDelete: () => void
+  onBack: () => void
 }
 
 interface FileContent {
@@ -56,6 +58,7 @@ export function WorkspaceFileViewer({
   clusterName,
   selectedFile,
   onFileDelete,
+  onBack,
 }: WorkspaceFileViewerProps) {
   const [fileContent, setFileContent] = useState<FileContent | null>(null)
   const [loading, setLoading] = useState(false)
@@ -207,6 +210,18 @@ export function WorkspaceFileViewer({
     }
   }, [selectedFile])
 
+  // Handle keyboard navigation - Escape key to go back
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onBack()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onBack])
+
   if (!selectedFile) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -236,8 +251,21 @@ export function WorkspaceFileViewer({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-4 min-w-0 flex-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground shrink-0"
+            title="Back to Files (Press Escape)"
+            aria-label="Back to file list"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium truncate">{selectedFile.name}</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-muted-foreground text-sm">›</span>
+              <h3 className="font-medium truncate">{selectedFile.name}</h3>
+            </div>
             <div className="flex items-center space-x-4 mt-1">
               <Badge variant="secondary" className="text-xs">
                 {formatFileSize(selectedFile.size || 0)}
