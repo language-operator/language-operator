@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useConsole } from '@/contexts/console-context'
 import { AgentListItem } from './agent-list-item'
 import { Loader2, MessageSquare } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { fetchWithOrganization } from '@/lib/api-client'
+import { useAgentFilter } from '@/hooks/use-agent-filter'
 
 interface Conversation {
   id: string
@@ -17,15 +19,19 @@ interface Conversation {
 }
 
 interface AgentListProps {
-  searchQuery: string
+  selectedAgentFilter: string
+  onAgentFilterChange: (value: string) => void
   refreshTrigger?: number
 }
 
-export function AgentList({ searchQuery, refreshTrigger = 0 }: AgentListProps) {
+export function AgentList({ selectedAgentFilter, onAgentFilterChange, refreshTrigger = 0 }: AgentListProps) {
   const { selectedAgent, selectedCluster } = useConsole()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Get agent filter options
+  const { agentOptions, isLoading: isLoadingAgents } = useAgentFilter(selectedCluster, conversations)
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -52,8 +58,7 @@ export function AgentList({ searchQuery, refreshTrigger = 0 }: AgentListProps) {
   }, [refreshTrigger])
 
   const filteredConversations = conversations.filter((conversation) =>
-    conversation.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conversation.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    selectedAgentFilter === 'all' || conversation.agentName === selectedAgentFilter
   )
 
   if (isLoading) {
@@ -72,28 +77,47 @@ export function AgentList({ searchQuery, refreshTrigger = 0 }: AgentListProps) {
     )
   }
 
-  if (filteredConversations.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
-        <MessageSquare className="h-12 w-12 text-stone-400 dark:text-stone-500 mb-3" />
-        <p className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center">
-          {searchQuery ? 'No conversations match your search' : 'No conversations yet'}
-        </p>
-        <p className="text-[10px] font-light text-stone-500 dark:text-stone-500 text-center mt-2">
-          Connect to an agent to start
-        </p>
-      </div>
-    )
-  }
-
   return (
-    <div className="py-2">
-      {filteredConversations.map((conversation) => (
-        <AgentListItem
-          key={conversation.id}
-          conversation={conversation}
-        />
-      ))}
+    <div className="flex flex-col h-full">
+      {/* Agent Filter Dropdown */}
+      <div className="p-4 border-b border-stone-800/80 dark:border-stone-600/80">
+        <Select value={selectedAgentFilter} onValueChange={onAgentFilterChange}>
+          <SelectTrigger className="w-full text-sm">
+            <SelectValue placeholder="Filter by agent..." />
+          </SelectTrigger>
+          <SelectContent>
+            {agentOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Conversation List */}
+      <div className="flex-1 overflow-y-auto">
+        {filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <MessageSquare className="h-12 w-12 text-stone-400 dark:text-stone-500 mb-3" />
+            <p className="text-[11px] font-light text-stone-600 dark:text-stone-400 text-center">
+              {selectedAgentFilter === 'all' ? 'No conversations yet' : `No conversations for ${selectedAgentFilter}`}
+            </p>
+            <p className="text-[10px] font-light text-stone-500 dark:text-stone-500 text-center mt-2">
+              Connect to an agent to start
+            </p>
+          </div>
+        ) : (
+          <div className="py-2">
+            {filteredConversations.map((conversation) => (
+              <AgentListItem
+                key={conversation.id}
+                conversation={conversation}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

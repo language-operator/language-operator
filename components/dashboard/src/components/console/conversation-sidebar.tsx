@@ -2,14 +2,15 @@
 
 import { useState } from 'react'
 import { AgentList } from './agent-list'
-import { Search, ChevronLeft, MessageSquare } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useConsole } from '@/contexts/console-context'
+import { useAgentFilter } from '@/hooks/use-agent-filter'
 
 export function ConversationSidebar() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const { conversationListRefreshTrigger, toggleConversationSidebar } = useConsole()
+  const [selectedAgentFilter, setSelectedAgentFilter] = useState('all')
+  const { conversationListRefreshTrigger, toggleConversationSidebar, selectedCluster } = useConsole()
 
   return (
     <div className="flex flex-col h-full">
@@ -29,23 +30,13 @@ export function ConversationSidebar() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="p-4 border-b border-stone-800/80 dark:border-stone-600/80">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-stone-400" />
-          <Input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-sm"
-          />
-        </div>
-      </div>
-
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto">
-        <AgentList searchQuery={searchQuery} refreshTrigger={conversationListRefreshTrigger} />
+        <AgentList 
+          selectedAgentFilter={selectedAgentFilter} 
+          onAgentFilterChange={setSelectedAgentFilter}
+          refreshTrigger={conversationListRefreshTrigger} 
+        />
       </div>
     </div>
   )

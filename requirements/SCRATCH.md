@@ -80,12 +80,14 @@
 
 ### Development Standards
 - ❌ **NEVER** implement stub/fake algorithms
+- ❌ **NEVER** run `npm run build` directly - kills computer, use Docker only
 - ✅ **ALWAYS** test implementations manually before committing  
 - ✅ **FIX** TypeScript errors before pushing
 - ✅ **VERIFY** CI builds pass before considering issues resolved
 - ✅ **CRUD COMPLETENESS** - Use 8-point routing checklist (see requirements/development-standards.md)
 - ✅ **CLUSTER-SCOPED TESTING** - Manually verify `/clusters/[name]/{resource}/new` workflows
 - ✅ **NO FALSE COMPLETION** - 80% backend work ≠ 100% complete (missing cluster routes cause 404s)
+- ✅ **BUILD TESTING** - Only use `docker compose up` for testing builds and TypeScript compilation
 
 ## Recently Resolved (Context for future issues)
 - **Dashboard TypeScript compilation**: Multiple fixes for null safety, error handling
