@@ -120,6 +120,10 @@ spec:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: NEXTAUTH_SECRET
+        {{- if .Values.clickhouse.enabled }}
+        - name: CLICKHOUSE_URL
+          value: "http://{{ include "language-operator.fullname" . }}-clickhouse:8123"
+        {{- end }}
         {{- if .Values.dashboard.oauth.google.clientId }}
         - name: GOOGLE_CLIENT_ID
           valueFrom:

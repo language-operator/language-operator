@@ -64,6 +64,16 @@ data:
                 </grants>
             </{{ .Values.telemetry.clickhouse.auth.username | default "langop" }}>
         </users>
+        {{- else }}
+        <users>
+            <default>
+                <profile>default</profile>
+                <quota>default</quota>
+                <networks>
+                    <ip>::/0</ip>
+                </networks>
+            </default>
+        </users>
         {{- end }}
     </clickhouse>
 {{- end }}
