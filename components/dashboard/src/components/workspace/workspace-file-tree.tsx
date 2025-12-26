@@ -217,7 +217,7 @@ export function WorkspaceFileTree({
               )
             )}
             {getFileIcon(node)}
-            <span className="truncate text-sm">{node.name}</span>
+            <span className="truncate text-sm" style={{ textTransform: 'none' }}>{node.name}</span>
             {node.type === 'file' && node.size !== undefined && (
               <span className="text-xs text-muted-foreground ml-auto">
                 {formatFileSize(node.size)}
