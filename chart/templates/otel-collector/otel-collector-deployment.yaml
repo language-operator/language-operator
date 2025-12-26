@@ -82,7 +82,7 @@ spec:
           env:
             # ClickHouse connection details
             - name: CLICKHOUSE_ENDPOINT
-              value: "tcp://{{ include "language-operator.fullname" . }}-clickhouse-web:9000"
+              value: "tcp://{{ include "language-operator.fullname" . }}-clickhouse:9000"
             - name: CLICKHOUSE_DATABASE
               value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
             - name: CLICKHOUSE_USERNAME
