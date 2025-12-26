@@ -120,7 +120,7 @@ spec:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: NEXTAUTH_SECRET
-        {{- if .Values.clickhouse.enabled }}
+        {{- if .Values.telemetry.clickhouse.enabled }}
         - name: CLICKHOUSE_URL
           value: "http://{{ include "language-operator.fullname" . }}-clickhouse:8123"
         {{- end }}
