@@ -140,7 +140,7 @@ Returns the internal collector endpoint if enabled, otherwise the configured end
 */}}
 {{- define "language-operator.otelCollector.endpoint" -}}
 {{- if .Values.telemetry.otelCollector.enabled -}}
-{{- printf "%s-otel-collector:4317" (include "language-operator.fullname" .) -}}
+{{- printf "http://%s-otel-collector.%s.svc.cluster.local:4318" (include "language-operator.fullname" .) .Release.Namespace -}}
 {{- else -}}
 {{- .Values.opentelemetry.collector.endpoint -}}
 {{- end -}}
