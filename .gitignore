@@ -20,3 +20,7 @@ test/instructions/**/*.rb
 test/synthesis_results.json
 
 values.local.yaml
+
+# Development Environment
+components/dashboard/docker-compose*.yml
+components/dashboard/.kube/

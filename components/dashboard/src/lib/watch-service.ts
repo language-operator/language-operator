@@ -28,6 +28,7 @@ export class KubernetesWatchService {
     try {
       // Use same config logic as k8sClient
       if (process.env.KUBERNETES_SERVER_URL && process.env.KUBERNETES_TOKEN) {
+        // Environment variable configuration with token
         const cluster = {
           name: 'env-cluster',
           server: process.env.KUBERNETES_SERVER_URL,
@@ -39,6 +40,28 @@ export class KubernetesWatchService {
         }
         const context = {
           name: 'env-context',
+          user: user.name,
+          cluster: cluster.name,
+        }
+        this.kc.loadFromOptions({
+          clusters: [cluster],
+          users: [user],
+          contexts: [context],
+          currentContext: context.name,
+        })
+      } else if (process.env.KUBERNETES_SERVER_URL && process.env.KUBERNETES_SERVER_URL.includes('kubectl-proxy')) {
+        // Docker Compose mode: use kubectl proxy (no token needed)
+        const cluster = {
+          name: 'kubectl-proxy-cluster',
+          server: process.env.KUBERNETES_SERVER_URL,
+          skipTLSVerify: true, // kubectl proxy doesn't use TLS
+        }
+        const user = {
+          name: 'kubectl-proxy-user',
+          // No token needed for kubectl proxy
+        }
+        const context = {
+          name: 'kubectl-proxy-context',
           user: user.name,
           cluster: cluster.name,
         }

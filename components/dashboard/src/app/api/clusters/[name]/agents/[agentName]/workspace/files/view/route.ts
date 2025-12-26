@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
-import { workspaceManager } from '@/lib/workspace-manager'
+import { workspaceClient } from '@/lib/workspace-client'
 import { WorkspaceError, VIEWABLE_FILE_EXTENSIONS } from '@/types/workspace'
 
 // GET /api/clusters/[name]/agents/[agentName]/workspace/files/view?path=/file.txt - Get file content for viewing
@@ -45,7 +45,7 @@ export async function GET(
     }
 
     try {
-      const content = await workspaceManager.viewFile(
+      const content = await workspaceClient.viewFile(
         organization.namespace,
         agentName,
         path

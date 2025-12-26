@@ -1,101 +1,64 @@
 # Agent Memory Bank
 
-## Current Focus Areas (Dec 25, 2025)
+## Current Focus Areas (Dec 26, 2025)
 
 ### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
-- 🎯 **Issue #61**: Registry whitelist configuration drift - **READY**
+- 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Recently Completed
-- ✅ **Issue #198**: Support standby mode runtime for scheduled/reactive agents - **RESOLVED** (Dec 25) - Implemented standby mode runtime for scheduled agents, migrating from CronJob-based execution (pods that execute and exit) to Deployment-based standby mode (persistent pods with HTTP-triggered execution). All agent modes now run as persistent Deployments with web servers. Changes: (1) Added health (/api/v1/health) and readiness (/api/v1/ready) probes to all Deployments for proper K8s lifecycle management; (2) Created reconcileCronJobTrigger() function that generates CronJob using curlimages/curl:latest to POST to /api/v1/execute with {"wait": true} for synchronous execution; (3) Scheduled agents now create both Deployment (standby) + CronJob trigger (HTTP caller) instead of direct CronJob; (4) Updated Job completion tracking to filter by langop.io/component=trigger label; (5) Added cleanupLegacyCronJob() for automatic migration from legacy CronJobs to new architecture. All 78 controller tests pass, including updated TestLanguageAgentController_CronJobCreation and TestLanguageAgentController_CronJobSecurityContext. Requires language-operator-gem v0.1.73+ for agent runtime standby mode support (commit e71d72d).
-- ✅ **Issue #192**: Persona deletion from UI not functional - **RESOLVED** (Dec 23) - Implemented complete delete functionality on personas list page. Users can now delete personas directly from the personas list using the dropdown menu (•••) on each row. Added useDeletePersona hook, handleDeletePersona function with confirmation dialog, and wired up delete menu item. Delete flow: click ••• → select Delete → confirm → API deletion → real-time UI update via optimistic updates + SSE watch stream. Also standardized error handling across persona API endpoints with proper validation utilities (createErrorResponse, createSuccessResponse, handleKubernetesOperation), cluster validation (validateClusterNameFormat, validateClusterExists), and clusterRef verification. DELETE API now returns HTTP 200 with clear messages instead of 500 errors. Tested with Playwright MCP - verified deletion works end-to-end with proper confirmation, API calls, and live table updates (commits 2fb801f, b5ad83b).
+### Recently Completed (Dec 25-26)
+- ✅ **Issue #208**: Console auto-load last conversation - Implemented localStorage persistence to auto-restore last active conversation on Console page navigation (commit 08bdc16)
+- ✅ **Issue #201**: Console workspace back button - Added ChevronLeft navigation from file viewer to file list with Escape key support (commit 36f6926)
+- ✅ **Issue #202**: Console workspace file name casing - Added `style={{ textTransform: 'none' }}` to workspace-file-tree.tsx:220 (commit 8d0026d)
+- ✅ **Issue #203**: Console conversation highlighting - Fixed conversationDbId matching, added dropdown menus, border styling (commits f303727, 636b7cf, 33a17fd, 951de3c)
+- ✅ **Issue #207**: Markdown rendering in chat - Added react-markdown with role-based rendering (commit 28cfdae)
+- ✅ **Issue #198**: Agent standby mode - Migrated scheduled agents from CronJob to Deployment+CronJobTrigger (commit e71d72d)
+- ✅ **Issue #192**: Persona deletion UI - Complete delete workflow with confirmation dialogs (commits 2fb801f, b5ad83b)
+- ✅ **Issue #191**: AI persona CRD validation - Fixed stale CRD deployment (commit 3efbc7f)
+- ✅ **Issue #190**: AI persona generation - Fixed NetworkPolicy, model name resolution, form population (commits 31839b1, 184226c, d08425f)
 
-### Dashboard Development (Recent)
-- ✅ **Issue #191**: AI-generated personas fail CRD validation - **RESOLVED** (Dec 23) - Fixed stale LanguagePersona CRD deployment that had incorrect `required: ["description", "displayName", "systemPrompt"]` constraint not present in source code. Root cause: deployed CRD had `minLength: 1` validations and required field list, while source CRD correctly marks all fields as optional per Go type definition (`+optional` marker, `omitempty` JSON tag). Applied correct CRD to cluster via `kubectl apply`, bumped Helm chart version 0.1.62 → 0.1.63 to ensure permanent deployment. Verified fix by creating test persona without description field - succeeded. All CI tests passed. AI-generated personas now work correctly even when description field is omitted (commit 3efbc7f).
-- ✅ **Issue #190**: Persona auto-creation fails with "Failed to generate persona" - **RESOLVED** (Dec 22) - Fixed three critical bugs blocking AI persona generation: (1) NetworkPolicy cross-namespace access - dashboard in `language-operator` namespace couldn't reach models in org namespaces, fixed by adding `namespaceSelector` to ingress rules for Dashboard pods; (2) Model name resolution - API was passing Kubernetes resource name (e.g., `qwen3-coder-30b`) to LiteLLM instead of actual model name from `spec.modelName` (e.g., `qwen3-coder:30b`), fixed by fetching LanguageModel resource in API route; (3) Form population - react-hook-form's `defaultValues` are static and don't react to prop changes, fixed by adding `useEffect` + `reset()` pattern to update form when AI-generated data arrives. Feature now fully functional: users can click Auto Create, enter idea, select model, generate persona, and form populates with AI-generated values. Follow-up Issue #191 filed for missing `description` field validation. All CI tests passed (commits 31839b1, 184226c, d08425f).
-- ✅ **Issue #187**: Agent detail page timeout causes server hang - **RESOLVED** (Dec 21) - Fixed critical production server crashes from SSE watch streams writing to closed ReadableStream controllers. Created reusable sse-watch-helper.ts with safe stream pattern including controller state tracking, try-catch wrapped operations, automatic cleanup on client disconnect, and optional heartbeat with auto-cleanup. Updated all 6 watch routes (events, clusters, agents, models, tools, personas) to use defensive guards checking isActive() before sendEvent() calls and request.signal.aborted before retry attempts. Removed double reconnection logic from watch-service.ts (route layer now has single responsibility). Eliminated ERR_INVALID_STATE uncaught exceptions, reconnection storms, and resource exhaustion. Server now stable with no crashes. All CI pipelines passed, verified in production (commits 5dd14fd, cc5ac35).
-- ✅ **Issue #181**: Real-time connection fails after browser navigation - **RESOLVED** (Dec 21) - Fixed as side effect of #187. Browser back/forward navigation now properly maintains watch stream connections. Server-side abort signal detection (request.signal.addEventListener) allows clean stream closure when client disconnects, enabling client-side EventSource reconnection logic to succeed. Exponential backoff and visibility change handlers in use-watch.ts now function correctly without server-side errors interfering. Verified working in production.
-- ✅ **Issue #186**: Controller not emitting Kubernetes Events - **RESOLVED** (Dec 21) - Implemented event recording across all controllers. Added EventRecorder fields to 4 controllers (LanguageModel, LanguageTool, LanguagePersona, LanguageCluster) and initialized them in main.go. Created 21 events total: 6 for LanguageModel (ModelCreated, ConfigMapFailed, ProxyDeploymentFailed, ServiceFailed, NetworkPolicyFailed, ModelReady), 8 for LanguageTool (ToolCreated, RegistryValidationFailed, RegistryValidated, ConfigMapFailed, DeploymentFailed, ServiceFailed, NetworkPolicyFailed), 3 for LanguagePersona (PersonaCreated, ConfigurationFailed, PersonaReady), 4 for LanguageCluster (ClusterCreated, RBACFailed, NetworkPolicyFailed, ClusterReady). Root cause analysis revealed existing event code only executed on error paths and events had 1-hour TTL. Manual testing via Playwright confirmed events display correctly in dashboard UI. All CI tests passed (commit d195c2c).
-- ✅ **Issue #178**: Log window auto-scrolling and full-height behavior causes jarring UX - **RESOLVED** (Dec 19) - Fixed disruptive log viewer UX with smart scroll controls and fixed-height container. Replaced full-viewport layout with max-h-[60vh], added "Scroll to Bottom" button that appears when user scrolls up, eliminated auto-scroll interruptions by tracking user preferences. Implemented scroll position detection (isAtBottom, userScrolledUp) and smooth tab transitions. Manual testing confirmed stable layout, user control preservation, and elimination of jarring height changes. Resolves workflow disruption issues (commit 7d3c5da).
-- ✅ **Issue #177**: Workspace tab fails to load with pod startup error - **RESOLVED** (Dec 19) - Fixed critical workspace pod lifecycle issue causing HTTP 500 errors. Root cause was expired workspace manager pods (30min timeout) not being replaced. Implemented deleteWorkspacePod() method for proper cleanup, enhanced ensureFileManagerPod() to check pod status before reuse, added pod age validation, and improved error messages with "Restart Workspace" button. Now automatically deletes expired/failed pods and creates new ones, resolving "Pod failed to start: Succeeded" errors. Verified fix on production site, deployed to main branch (commit 2fb8112).
-- ✅ **Issue #174**: Implement NetworkPolicy egress UI for LanguageModel editing - **RESOLVED** (Dec 18) - Created comprehensive Security tab in model editing interface with visual egress rule editor supporting DNS names, CIDR blocks, port configuration, and quick-add buttons for common providers (OpenAI, Anthropic, Azure OpenAI, AWS Bedrock). Added individual model API endpoint (/api/clusters/[name]/models/[modelName]), implemented proper data format transformation between UI (integers) and CRD (port objects), and ensured full data persistence with loading. Fixed TypeScript compilation errors and verified CI/CD pipeline success. Enables network security configuration for models in Cilium NetworkPolicy-enforced clusters.
-- ✅ **Issue #173**: Deprecate legacy organization-scoped APIs in favor of cluster-scoped APIs - **RESOLVED** (Dec 18) - Removed legacy API routes (/api/agents, /api/models, /api/personas) and updated all frontend hooks to require clusterName parameter. Fixed 8 component files to pass cluster context. Achieved single API pattern, reduced 590 lines of duplicate code, eliminated developer confusion about which APIs to use. Manual testing verified cluster-scoped routes (/clusters/ba/agents, /clusters/ba/models) working correctly with CRUD operations functional.
-- ✅ **Issue #171**: Add comprehensive error handling to cluster-scoped APIs - **RESOLVED** (Dec 18) - Created centralized error handling utilities (api-error-handler.ts) and cluster validation helpers (cluster-validation.ts). Updated all 5 cluster-scoped APIs with standardized error responses, proper HTTP status codes, input validation, and graceful Kubernetes API failure handling. Implemented consistent error format with debug context, cluster existence validation, and orphaned resource detection. TypeScript compilation successful, all acceptance criteria met.
-- ✅ **Issue #170**: Standardize cluster filtering logic across all APIs - **RESOLVED** (Dec 18) - Created reusable filterByClusterRef utility function and standardized all cluster-scoped APIs to use only spec.clusterRef for filtering, eliminating inconsistent fallback logic. Updated 5 API routes (models, agents, tools, personas, counts) to use unified filtering mechanism. Manually tested filtering behavior, all CI tests passing. Eliminates maintenance burden of supporting multiple filtering approaches.
-- ✅ **Issue #166**: Cluster Settings page returns 404 - **RESOLVED** (Dec 16) - Fixed Settings button on cluster detail pages to correctly link to existing edit page (/clusters/[name]/edit) instead of non-existent /settings route. Simple one-line change resolved user navigation issue, manually tested with Playwright, all CI tests passing.  
-- ✅ **Issue #155**: Agent creation API fails with multiple 404 errors - **RESOLVED** (Dec 15) - Eliminated all 404 errors in agent creation workflow by implementing proper cluster-scoped API endpoints. Added POST handler to /api/clusters/[name]/agents/, updated React hooks (useCreateAgent, useTools) to use cluster-scoped URLs, and fixed agent creation form to pass cluster context. Tools now load correctly (5 tools vs "No tools available"), form validation works properly, and agent creation reaches server without 404 errors.
-- ✅ **Issue #157**: YAML preview displays invalid resource configuration - **RESOLVED** (Dec 15) - Enhanced YAML preview validation UX with visual feedback: red styling for "YAML Preview" header when validation fails, disabled Create Agent button when errors present, and real-time onChange validation. Manually tested with both valid and invalid configurations
-- ✅ **Issue #153**: Agent creation page causes application-wide build failure - **RESOLVED** (Dec 15) - Fixed Next.js 16/Turbopack module resolution for react-syntax-highlighter by adding transpilePackages configuration. Agent creation page now loads properly with full YAML syntax highlighting functionality instead of critical Module not found errors
-- ✅ **Issue #148**: Organization selection state not persisting across page navigation - **RESOLVED** (Dec 15) - Enhanced organization store with initializeActiveOrganization method, updated useOrganizations hook to initialize after loading, and added organization loading in AuthenticatedLayout on app startup. Organization selection now properly persists across page refreshes and navigation
-- ✅ **Issue #149**: Agent details page displays empty content with 404 errors - **RESOLVED** (Dec 14) - Created cluster-scoped agent details API endpoint and updated React hooks, agent details pages now display full content with working Edit/Delete functionality and eliminated console 404 errors
-- ✅ **Issue #150**: Agent count inconsistencies across cluster dashboard and agents page - **RESOLVED** (Dec 14) - Automatically fixed by Issue #151 agent count improvements, cluster dashboard now correctly shows "2" agents matching the agents page display
-- ✅ **Issue #151**: Clusters overview displays incorrect agent counts systemically - **RESOLVED** (Dec 14) - Enhanced clusters API to dynamically calculate agent counts by querying LanguageAgent resources instead of relying on unpopulated cluster.status.agentCount field, now shows accurate "Total Agents: 2" and "synth - 2 agents"  
-- ✅ **Issue #152**: Recent Activity displays data from inaccessible clusters and namespaces - **RESOLVED** (Dec 14) - Created Kubernetes events-based Recent Activity API to replace hardcoded "production" references, added proper permission filtering by organization membership, implemented real-time activity data with loading/error states
-- ✅ **Issue #145**: Tools page generates 404 errors and shows inconsistent data - **NOT REPRODUCIBLE** (Dec 14) - Investigated thoroughly but could not reproduce reported 404 errors or data inconsistencies. Tools page working correctly with proper API responses and consistent data display between dashboard and tools catalog
-- ✅ **Issue #143**: Dashboard displays incorrect resource counts for cluster components - **RESOLVED** (Dec 14) - Created missing agents API endpoint, fixed agents page to use cluster-scoped API, updated organization labels for stale resources, and corrected docker-compose NEXTAUTH_URL port configuration
-- ✅ **Issue #146**: Tool installation fails with 500 Internal Server Error - **RESOLVED** (Dec 14) - Fixed authentication pattern in tool installation API to use proper database lookup instead of non-existent session.activeOrganization.namespace, added proper permission checks and organization labeling, improved 409 error handling
-- ✅ **Issue #147**: Personas count inconsistency between dashboard and personas page - **RESOLVED** (Dec 14) - Fixed dashboard counts API to filter by organization ID and updated cluster dashboard page to use useResourceCounts hook instead of hardcoded zeros, now shows accurate resource counts
-- ✅ **Issue #133**: Agent tiles not clickable - cannot access detail pages with edit/delete options - **RESOLVED** (Dec 14) - Made agent tiles clickable with navigation to detail pages, added hover effects, keyboard accessibility, and proper ARIA labels for screen readers
-- ✅ **Issue #135**: React warning: Tools list items missing unique 'key' props - **RESOLVED** (Dec 14) - Removed incorrect key prop from ToolCard component, React keys should only be set by parent components
-- ✅ **Issue #136**: Tool detail pages crash with 'tools?.find is not a function' error - **RESOLVED** (Dec 14) - Fixed JavaScript crash AND implemented complete tool detail functionality with cluster-scoped API endpoint, proper data display, and working Edit/Delete buttons
-- ✅ **Issue #137**: Tool tiles not clickable - cannot access detail pages for configuration/removal - **RESOLVED** (Dec 14) - Made tool tiles clickable with navigation to detail pages, added accessibility features and hover effects
-- ✅ **Issue #140**: Persona creation fails with 500 Internal Server Error - **RESOLVED** (Dec 14) - Fixed cluster-scoped persona creation payload structure, removed nested 'spec' wrapper to match flat LanguagePersonaFormData interface
-- ✅ **Issue #138**: Tools search only filters Available Tools, not Installed Tools - **RESOLVED** (Dec 14) - Fixed LanguageTool data structure mapping and added consistent search filtering for both sections
-- ✅ **Issue #141**: Complete CRUD functionality for personas - **RESOLVED** (Dec 14) - Fixed API routes, form validation, error handling, and cluster-scoped operations
-- ✅ **Issue #126**: Dashboard counts API returns incorrect cluster count (0 vs 1) - **RESOLVED** (Dec 14) - Fixed k8s client response parsing to handle both live and demo modes correctly
-- ✅ **Issue #120**: Dashboard Quick Actions are non-functional - **RESOLVED** (Dec 14) - Implemented cluster-aware Quick Actions with modal selection, now routes to cluster-scoped creation pages
-- ✅ **Issue #119**: Model edit form shows 'Create Model' instead of 'Update Model' button - **RESOLVED** (Dec 14) - Fixed button text conditional logic in ModelForm component
-- ✅ **Issue #118**: Agents creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly
-- ✅ **Issue #117**: Personas creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly  
-- ✅ **Issue #116**: Tools creation page returns 404 error - **RESOLVED** (Dec 14) - Already resolved by prior cluster-scoped routing work, verified working correctly
-- ✅ **Issue #121**: Complete cluster-scoped CRUD routing for Tools, Personas, and Agents - **RESOLVED** (Dec 13) - Implemented 9 missing routing files for cluster-scoped resource creation/editing, fixed TypeScript compilation errors, manually tested with Playwright
-- ✅ **Issue #115**: Settings page returns 404 error - **RESOLVED** (Dec 13) - Added missing page.tsx with redirect, fixed AuthenticatedLayout wrapper, updated Docker volume mounts
-- ✅ **Issue #114**: Cluster listing page shows incorrect data and missing clusters - **RESOLVED** (Dec 13) - Fixed API response parsing for different k8s client structures (live vs demo mode)
-
-### Recent Issue Patterns (Nov-Dec 2025)
-- **TypeScript Compilation**: Multiple fixes for strict mode compliance, null safety, error type handling
-- **Dashboard API Integration**: Response parsing inconsistencies between demo/live Kubernetes modes
-- **PostCSS/Tailwind**: Version compatibility issues (v4 syntax on v3 tooling)
-- **Docker Development**: Volume mount configuration for live file updates
+### Critical Infrastructure Fixed (Dec 18-23)
+- ✅ **Issue #187**: SSE watch stream crashes - Fixed ReadableStream controller safety with sse-watch-helper.ts (commits 5dd14fd, cc5ac35)
+- ✅ **Issue #186**: Missing Kubernetes Events - Added EventRecorder to 4 controllers, 21 event types (commit d195c2c)  
+- ✅ **Issue #178**: Log viewer UX issues - Fixed auto-scroll, added max-h-[60vh] container (commit 7d3c5da)
+- ✅ **Issue #177**: Workspace pod lifecycle - Fixed 30min timeout handling, auto-cleanup (commit 2fb8112)
+- ✅ **Issue #174**: NetworkPolicy UI - Added Security tab with egress rule editor (commit varies)
+- ✅ **Issue #173**: API consolidation - Removed legacy organization-scoped APIs, standardized cluster-scoped (commit varies)
+- ✅ **Issue #171**: Error handling - Created api-error-handler.ts, cluster-validation.ts utilities (commit varies)
+- ✅ **Issue #170**: Cluster filtering - Unified filterByClusterRef across 5 API routes (commit varies)
+### Dashboard Foundation Completed (Dec 13-16)
+- ✅ **Major milestone**: Cluster-scoped CRUD routing - 25+ issues resolved
+  - Fixed 404 errors across creation pages (#155, #118, #117, #116)
+  - Implemented complete API endpoints for agents, tools, personas
+  - Enhanced dashboard counts and resource management
+  - Added proper authentication patterns and error handling
+  - Resolved TypeScript compilation and build issues
+  - Implemented clickable tiles, navigation, and accessibility features
 
 ## Critical Development Context
 
-### Deployment Constraints
-- ⚠️ **Operator deployment**: CI pipeline only, no local Docker builds
-- **Workflow**: Push to origin → CI builds image → manual install via ~/workspace/system/manifests/language-operator
-- **Dashboard**: Use docker compose in components/dashboard.  It runs Postgres and exposes the app at port 3000, which has hot-reloading capabilities.  It is the preferred development server, and you can log in with "james@theryans.io" and "password123"
+### Deployment Rules
+- ⚠️ **Operator**: CI pipeline only, no local Docker builds
+- **Dashboard**: ROOT directory `docker compose up` only → http://localhost:3000
+- **Login**: "james@theryans.io" / "password123"  
+- ❌ **NEVER**: components/dashboard/docker-compose.yml (deprecated)
+- ❌ **NEVER**: `npm run build` directly (crashes system)
 
-### Next.js Dashboard Architecture
-- **API Routes**: `/api/clusters`, `/api/models`, etc. proxy to Kubernetes client
-- **Response Handling**: Support both `{ body: { items: [...] } }` (live K8s) and `{ data: { items: [] } }` (demo mode)
-- **Error Patterns**: Use `error instanceof Error` checks, avoid implicit any types
-- **Testing**: Manual testing required, playwright available for UI testing
+### Key Patterns
+- **k8s-client.ts**: Handles demo/live mode differences: `{ body: { items: [...] } }` vs `{ data: { items: [] } }`
+- **Error handling**: Use `error instanceof Error`, avoid implicit any
+- **TypeScript**: Strict mode compliance required
+- **API structure**: All routes cluster-scoped `/api/clusters/[name]/...`
 
-### Key Technical Patterns
-- **k8s-client.ts**: Handles fallbacks, null safety for API objects
-- **ReconcileHelper[T]**: Standard pattern for new controllers (Go backend)
-- **TypeScript**: Strict mode compliance, explicit error handling
-- **CSS**: Use Tailwind v3 syntax, proper PostCSS configuration
+### Testing Requirements
+- ✅ Manual testing before commit
+- ✅ Verify CI builds pass
+- ✅ Cluster-scoped CRUD workflows: `/clusters/[name]/{resource}/new`
+- ✅ Playwright available for UI automation
 
-### Development Standards
-- ❌ **NEVER** implement stub/fake algorithms
-- ❌ **NEVER** run `npm run build` directly - kills computer, use Docker only
-- ✅ **ALWAYS** test implementations manually before committing  
-- ✅ **FIX** TypeScript errors before pushing
-- ✅ **VERIFY** CI builds pass before considering issues resolved
-- ✅ **CRUD COMPLETENESS** - Use 8-point routing checklist (see requirements/development-standards.md)
-- ✅ **CLUSTER-SCOPED TESTING** - Manually verify `/clusters/[name]/{resource}/new` workflows
-- ✅ **NO FALSE COMPLETION** - 80% backend work ≠ 100% complete (missing cluster routes cause 404s)
-- ✅ **BUILD TESTING** - Only use `docker compose up` for testing builds and TypeScript compilation
-
-## Recently Resolved (Context for future issues)
-- **Dashboard TypeScript compilation**: Multiple fixes for null safety, error handling
-- **CSS build issues**: PostCSS plugin updates, Tailwind v3/v4 compatibility
-- **API response parsing**: Consistent handling across demo/live K8s environments
-- **Docker volume configuration**: Live reload in development environment
-
-## Completed Phases
-- **Phase 1**: Core platform infrastructure (Go backend, CRDs, controllers)
-- **Phase 2**: 20+ critical issues resolved (security, lifecycle, validation)
-- **Phase 3**: Dashboard development and TypeScript modernization (ongoing)
+### Common Issue Patterns
+- **TypeScript**: Null safety, error type handling
+- **API parsing**: Demo vs live Kubernetes response structures  
+- **CSS**: Tailwind v3 syntax, PostCSS configuration
+- **Routing**: Missing cluster-scoped endpoints → 404s

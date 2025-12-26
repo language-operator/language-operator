@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
-import { workspaceManager } from '@/lib/workspace-manager'
+import { workspaceClient } from '@/lib/workspace-client'
 import { WorkspaceError } from '@/types/workspace'
 
 // GET /api/clusters/[name]/agents/[agentName]/workspace/files/download?path=/file.txt - Download file
@@ -30,11 +30,13 @@ export async function GET(
     }
 
     try {
-      const fileBuffer = await workspaceManager.downloadFile(
+      const fileBlob = await workspaceClient.downloadFile(
         organization.namespace,
         agentName,
         path
       )
+      
+      const fileBuffer = Buffer.from(await fileBlob.arrayBuffer())
       
       // Extract filename from path
       const filename = path.split('/').pop() || 'download'
@@ -42,7 +44,7 @@ export async function GET(
       // Determine content type based on file extension
       const contentType = getContentType(filename)
       
-      return new NextResponse(new Uint8Array(fileBuffer), {
+      return new NextResponse(fileBuffer, {
         status: 200,
         headers: {
           'Content-Type': contentType,

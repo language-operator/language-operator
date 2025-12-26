@@ -6,6 +6,7 @@ import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
 import { parseAgentMessage } from '@/lib/message-parser'
 import { ChatMessage } from '@/types/chat'
+import { serviceResolver } from '@/lib/service-resolver'
 
 interface RouteParams {
   params: Promise<{
@@ -80,9 +81,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const port = networking?.port || 80 // Service port (80 -> 8080 on pod)
     const serviceName = `${agentName}` // Service name matches agent name
     
-    // Construct internal cluster URL for the agent's chat completion endpoint
-    // Format: http://<service-name>.<namespace>.svc.cluster.local:<port>/v1/chat/completions
-    const agentEndpoint = `http://${serviceName}.${organization.namespace}.svc.cluster.local:${port}/v1/chat/completions`
+    // Resolve agent endpoint based on environment (K8s vs Docker Compose)
+    const agentEndpoint = serviceResolver.resolveAgentChatUrl(serviceName, organization.namespace, port)
+    
+    console.log(`Environment: ${JSON.stringify(serviceResolver.getEnvironmentInfo())}`)
+    console.log(`Resolved agent endpoint: ${agentEndpoint}`)
 
     // Prepare the chat completion request
     const systemMessage = agentData.spec?.instructions 

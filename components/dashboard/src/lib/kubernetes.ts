@@ -162,7 +162,34 @@ class KubernetesClient {
     if (process.env.NODE_ENV === 'production') {
       this.kc.loadFromCluster()
     } else {
-      this.kc.loadFromDefault()
+      // Check if we're running in Docker Compose with kubectl proxy
+      if (process.env.KUBERNETES_SERVER_URL?.includes('kubectl-proxy')) {
+        // Configure for kubectl proxy access
+        this.kc.loadFromString(JSON.stringify({
+          apiVersion: 'v1',
+          kind: 'Config',
+          clusters: [{
+            cluster: {
+              server: process.env.KUBERNETES_SERVER_URL
+            },
+            name: 'docker-compose-cluster'
+          }],
+          contexts: [{
+            context: {
+              cluster: 'docker-compose-cluster',
+              user: 'docker-compose-user'
+            },
+            name: 'docker-compose'
+          }],
+          users: [{
+            name: 'docker-compose-user',
+            user: {} // kubectl proxy handles auth
+          }],
+          'current-context': 'docker-compose'
+        }))
+      } else {
+        this.kc.loadFromDefault()
+      }
     }
 
     this.customApi = this.kc.makeApiClient(CustomObjectsApi)

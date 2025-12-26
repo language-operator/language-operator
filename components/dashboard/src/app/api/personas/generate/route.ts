@@ -3,6 +3,7 @@ import { getUserOrganization } from '@/lib/organization-context'
 import { requirePermission } from '@/lib/permissions'
 import { createErrorResponse, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
 import { k8sClient } from '@/lib/k8s-client'
+import { serviceResolver } from '@/lib/service-resolver'
 
 // POST /api/personas/generate - Generate a persona using a cluster model
 export async function POST(request: NextRequest) {
@@ -82,11 +83,11 @@ Guidelines:
       throw new Error(`Failed to fetch model information: ${error.message}`)
     }
 
-    // Call the model via LiteLLM proxy (OpenAI-compatible API)
-    // The service is at: http://{modelName}.{namespace}.svc.cluster.local:8000/v1/chat/completions
-    const modelEndpoint = `http://${modelName}.${organization.namespace}.svc.cluster.local:8000/v1/chat/completions`
-
-    console.log(`Calling model endpoint: ${modelEndpoint}`)
+    // Resolve model endpoint based on environment (K8s vs Docker Compose)  
+    const modelEndpoint = serviceResolver.resolveModelUrl(modelName, organization.namespace, 8000)
+    
+    console.log(`Environment: ${JSON.stringify(serviceResolver.getEnvironmentInfo())}`)
+    console.log(`Resolved model endpoint: ${modelEndpoint}`)
 
     const response = await fetch(modelEndpoint, {
       method: 'POST',

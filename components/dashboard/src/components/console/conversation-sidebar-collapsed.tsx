@@ -22,6 +22,7 @@ export function ConversationSidebarCollapsed() {
     toggleConversationSidebar, 
     selectedAgent,
     selectedCluster,
+    conversationDbId,
     loadConversation,
     conversationListRefreshTrigger
   } = useConsole()
@@ -83,7 +84,7 @@ export function ConversationSidebarCollapsed() {
           </div>
         ) : conversations.length > 0 ? (
           conversations.map((conversation) => {
-            const isActive = selectedAgent === conversation.agentName && selectedCluster === conversation.clusterName
+            const isActive = conversationDbId === conversation.id
             
             return (
               <div key={conversation.id} className="flex justify-center mb-2">
@@ -92,10 +93,10 @@ export function ConversationSidebarCollapsed() {
                   size="sm"
                   onClick={() => handleConversationClick(conversation)}
                   className={cn(
-                    "h-10 w-10 p-0 rounded-lg relative flex items-center justify-center",
+                    "h-10 w-10 p-0 rounded-lg relative flex items-center justify-center border-l-2",
                     isActive
-                      ? "bg-stone-300/60 dark:bg-stone-700/60 ring-1 ring-stone-400/50 dark:ring-stone-600/50"
-                      : "hover:bg-stone-300/30 dark:hover:bg-stone-700/30"
+                      ? "bg-stone-100 dark:bg-stone-800/70 border-l-amber-400"
+                      : "border-l-transparent hover:bg-stone-300/30 dark:hover:bg-stone-700/30"
                   )}
                   title={`${conversation.agentName} conversation (${conversation.clusterName})`}
                 >

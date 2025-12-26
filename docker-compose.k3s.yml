@@ -1,0 +1,103 @@
+services:
+  # Database for development
+  postgres-dev:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: language_operator_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d language_operator_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - langop-dev
+
+  # DNS proxy for K3s service discovery
+  k3s-dns-proxy:
+    image: alpine/socat:latest
+    restart: always
+    command: >
+      sh -c "
+        apk add --no-cache dnsmasq &&
+        echo 'server=/cluster.local/10.43.0.10' > /etc/dnsmasq.conf &&
+        echo 'server=8.8.8.8' >> /etc/dnsmasq.conf &&
+        dnsmasq --no-daemon --log-queries
+      "
+    networks:
+      - langop-dev
+
+  # Development dashboard (with hot reload)
+  dashboard-dev:
+    build:
+      context: ./components/dashboard
+      target: build-deps
+    restart: always
+    dns:
+      - k3s-dns-proxy
+      - 8.8.8.8
+    environment:
+      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+      NEXTAUTH_SECRET: "dev-secret-not-for-production"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NODE_ENV: "development"
+      # Kubernetes configuration (uses K3s cluster with service discovery)
+      KUBERNETES_SERVER_URL: "${KUBERNETES_SERVER_URL:-https://dl4:6443}"
+      KUBERNETES_SKIP_TLS_VERIFY: "${KUBERNETES_SKIP_TLS_VERIFY:-true}"
+      KUBECONFIG: "/app/.kube/config"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      k3s-dns-proxy:
+        condition: service_started
+    volumes:
+      - type: bind
+        source: ./components/dashboard
+        target: /app
+      - /app/node_modules
+      - /app/.next
+      # Mount host kubeconfig if available
+      - type: bind
+        source: ${HOME}/.kube/config
+        target: /app/.kube/config
+        read_only: true
+    networks:
+      - langop-dev
+    command: sh -c "npx prisma generate && npm run dev"
+
+  # Prisma Studio for database management
+  prisma-studio:
+    build:
+      context: ./components/dashboard
+      target: build-deps
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+    ports:
+      - "5555:5555"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./components/dashboard
+        target: /app
+      - /app/node_modules
+    networks:
+      - langop-dev
+    command: sh -c "npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0"
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  langop-dev:
+    driver: bridge

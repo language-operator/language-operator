@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { requirePermission } from '@/lib/permissions'
 import { getUserOrganization } from '@/lib/organization-context'
-import { workspaceManager } from '@/lib/workspace-manager'
+import { workspaceClient } from '@/lib/workspace-client'
 import { WorkspaceError } from '@/types/workspace'
 
 // GET /api/clusters/[name]/agents/[agentName]/workspace/files?path=/ - List directory contents
@@ -26,13 +26,13 @@ export async function GET(
     const path = searchParams.get('path') || '/'
 
     try {
-      const files = await workspaceManager.listDirectory(
+      const result = await workspaceClient.listFiles(
         organization.namespace, 
         agentName, 
         path
       )
       
-      return NextResponse.json({ files, path })
+      return NextResponse.json(result)
     } catch (error: any) {
       if (error instanceof WorkspaceError) {
         const statusCode = getStatusCodeForWorkspaceError(error.code)
@@ -80,11 +80,12 @@ export async function POST(
       const fileBuffer = Buffer.from(await file.arrayBuffer())
       const filePath = path.endsWith('/') ? `${path}${file.name}` : `${path}/${file.name}`
 
-      await workspaceManager.uploadFile(
+      await workspaceClient.uploadFile(
         organization.namespace,
         agentName,
-        filePath,
-        fileBuffer
+        path,
+        fileBuffer,
+        file.name
       )
       
       return NextResponse.json({ 
@@ -135,12 +136,10 @@ export async function DELETE(
     }
 
     try {
-      // Use rm command via workspace manager
-      const podInfo = await workspaceManager.ensureFileManagerPod(organization.namespace, agentName)
-      await workspaceManager.executeCommand(
+      await workspaceClient.deleteFile(
         organization.namespace,
-        podInfo.name,
-        ['rm', '-f', `/workspace${path}`]
+        agentName,
+        path
       )
       
       return NextResponse.json({ 

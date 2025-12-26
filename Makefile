@@ -1,4 +1,4 @@
-.PHONY: help k8s-status test test-unit test-integration setup-hooks
+.PHONY: help k8s-status test test-unit test-integration setup-hooks dev-up dev-down dev-logs dev-status dev-clean dev-k3s-bridge dev-k3s-bridge-clean
 
 QA_PROMPT := "/task test"
 ITERATE_PROMPT := "/task iterate"
@@ -65,11 +65,72 @@ test-integration:
 	@echo ""
 	@echo "✓ Integration tests passed!"
 
+# Development Environment Commands
+
+dev-up:
+	@echo "Starting development dashboard and database..."
+	@docker compose up -d
+	@echo ""
+	@echo "⏳ Waiting for services to start..."
+	@sleep 5
+	@echo ""
+	@echo "✅ Services running:"
+	@echo "   📊 Dashboard:      http://localhost:3000"
+	@echo "   🗄️  Database:       postgresql://dev:dev@localhost:5433/language_operator_dev"
+	@echo "   🎛️  Prisma Studio:  http://localhost:5555"
+	@echo ""
+	@echo "📝 Database migrations are automatically applied during startup"
+	@echo ""
+	@echo "📝 Next steps:"
+	@echo "   • View logs: make dev-logs"
+	@echo "   • Check status: make dev-status"
+	@echo "   • Access via kubectl proxy for K8s service discovery"
+
+dev-down:
+	@echo "Stopping development environment..."
+	@docker compose down
+
+dev-logs:
+	@docker compose logs -f
+
+dev-status:
+	@echo "📊 Development Environment Status:"
+	@echo ""
+	@echo "🐳 Docker Services:"
+	@docker compose ps
+	@echo ""
+	@echo "☸️ Kubernetes Cluster:"
+	@if kubectl get nodes 2>/dev/null | grep -q "Ready"; then \
+		echo "   ✅ K3s cluster accessible"; \
+		echo "   Nodes: $$(kubectl get nodes --no-headers | wc -l)"; \
+	else \
+		echo "   ❌ K3s cluster not accessible"; \
+	fi
+	@echo ""
+	@echo "🌐 Kubectl Proxy:"
+	@if docker compose ps kubectl-proxy | grep -q "Up"; then \
+		echo "   ✅ kubectl proxy running"; \
+	else \
+		echo "   ❌ kubectl proxy not running"; \
+	fi
+
+dev-clean:
+	@echo "🧹 Cleaning up development environment..."
+	@docker compose down -v
+	@echo "✓ Docker services stopped and volumes cleaned"
+
 # Show help
 help:
 	@echo "Hi :-)"
 	@echo ""
-	@echo "Development:"
+	@echo "Development Environment:"
+	@echo "  dev-up            - Start dashboard and database"
+	@echo "  dev-down          - Stop development environment"
+	@echo "  dev-logs          - Show logs from all services"
+	@echo "  dev-status        - Show status of development services"
+	@echo "  dev-clean         - Clean up volumes and containers"
+	@echo ""
+	@echo "Development Tools:"
 	@echo "  docs              - Generate CRD API reference documentation"
 	@echo "  setup-hooks       - Install git pre-commit hooks for code quality"
 	@echo ""
@@ -81,7 +142,7 @@ help:
 	@echo "Kubernetes Operations:"
 	@echo "  k8s-status        - Check status of all language resources"
 	@echo ""
-	@echo "Note: Docker builds and deployment happen via CI/CD pipeline"
+	@echo "Quick Start: run 'make dev-up' to start everything!"
 
 fetch-synthesis-templates:
 	@echo "Fetching synthesis templates from language-operator-gem..."

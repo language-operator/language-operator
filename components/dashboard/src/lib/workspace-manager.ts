@@ -12,7 +12,7 @@ class WorkspaceManager {
   private static instance: WorkspaceManager
   private kc: k8s.KubeConfig
   private coreV1Api: k8s.CoreV1Api
-  private exec: k8s.Exec
+  private exec!: k8s.Exec
 
   private constructor() {
     this.kc = new k8s.KubeConfig()
@@ -40,6 +40,34 @@ class WorkspaceManager {
           contexts: [context],
           currentContext: context.name,
         })
+      } else if (process.env.KUBERNETES_SERVER_URL && process.env.KUBERNETES_SERVER_URL.includes('kubectl-proxy')) {
+        // Docker Compose mode: use kubectl proxy for API calls but direct connection for exec
+        const cluster = {
+          name: 'kubectl-proxy-cluster',
+          server: process.env.KUBERNETES_SERVER_URL,
+          skipTLSVerify: true, // kubectl proxy doesn't use TLS
+        }
+        const user = {
+          name: 'kubectl-proxy-user',
+          // No token needed for kubectl proxy
+        }
+        const context = {
+          name: 'kubectl-proxy-context',
+          user: user.name,
+          cluster: cluster.name,
+        }
+        this.kc.loadFromOptions({
+          clusters: [cluster],
+          users: [user],
+          contexts: [context],
+          currentContext: context.name,
+        })
+
+        // For exec operations, we need direct access since kubectl proxy doesn't support exec properly
+        // Create a separate kubeconfig for exec operations
+        const execKc = new k8s.KubeConfig()
+        execKc.loadFromDefault() // Use direct connection for exec
+        this.exec = new k8s.Exec(execKc)
       } else if (process.env.NODE_ENV === 'development') {
         this.kc.loadFromDefault()
       } else {
@@ -47,7 +75,11 @@ class WorkspaceManager {
       }
 
       this.coreV1Api = this.kc.makeApiClient(k8s.CoreV1Api)
-      this.exec = new k8s.Exec(this.kc)
+      
+      // Only create exec if it wasn't created above in kubectl-proxy mode
+      if (!this.exec) {
+        this.exec = new k8s.Exec(this.kc)
+      }
     } catch (error) {
       console.error('❌ Failed to configure WorkspaceManager:', error instanceof Error ? error.message : String(error))
       throw new Error('Kubernetes configuration is required for workspace operations')
