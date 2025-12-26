@@ -611,12 +611,12 @@ telemetry:
     
     # Data retention configuration
     retention:
-      # Retention period for traces
-      traces: "7d"
-      # Retention period for metrics  
-      metrics: "30d"
-      # Retention period for logs
-      logs: "3d"
+      # Retention period for traces (7 days = 168 hours)
+      traces: "168h"
+      # Retention period for metrics (30 days = 720 hours)
+      metrics: "720h"
+      # Retention period for logs (3 days = 72 hours)
+      logs: "72h"
 
   # OpenTelemetry Collector for data collection
   otelCollector:

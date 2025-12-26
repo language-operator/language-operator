@@ -73,9 +73,8 @@ data:
         {{- if .Values.telemetry.clickhouse.auth.password }}
         password: ${CLICKHOUSE_PASSWORD}
         {{- end }}
-        ttl: {{ .Values.telemetry.clickhouse.retention.traces | default "7d" }}
+        ttl: {{ .Values.telemetry.clickhouse.retention.traces | default "168h" }}
         traces_table_name: otel_traces
-        create_schema: true
         timeout: {{ .Values.telemetry.otelCollector.config.exportTimeout | default "30s" }}
         retry_on_failure:
           enabled: true
@@ -91,9 +90,8 @@ data:
         {{- if .Values.telemetry.clickhouse.auth.password }}
         password: ${CLICKHOUSE_PASSWORD}
         {{- end }}
-        ttl: {{ .Values.telemetry.clickhouse.retention.logs | default "3d" }}
+        ttl: {{ .Values.telemetry.clickhouse.retention.logs | default "72h" }}
         logs_table_name: otel_logs
-        create_schema: true
         timeout: {{ .Values.telemetry.otelCollector.config.exportTimeout | default "30s" }}
       
       # ClickHouse exporter for metrics
@@ -104,9 +102,8 @@ data:
         {{- if .Values.telemetry.clickhouse.auth.password }}
         password: ${CLICKHOUSE_PASSWORD}
         {{- end }}
-        ttl: {{ .Values.telemetry.clickhouse.retention.metrics | default "30d" }}
+        ttl: {{ .Values.telemetry.clickhouse.retention.metrics | default "720h" }}
         metrics_table_name: otel_metrics
-        create_schema: true
         timeout: {{ .Values.telemetry.otelCollector.config.exportTimeout | default "30s" }}
       
       {{- if .Values.telemetry.otelCollector.config.debug.enabled }}
