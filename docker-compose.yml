@@ -1,0 +1,160 @@
+services:
+  # ClickHouse for telemetry data storage
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    restart: always
+    environment:
+      CLICKHOUSE_DB: otel
+      CLICKHOUSE_USER: default
+    ports:
+      - "8123:8123"  # HTTP interface
+      - "9000:9000"  # Native interface
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./config/clickhouse:/etc/clickhouse-server/config.d
+    networks:
+      - langop-k3s
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    restart: always
+    command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
+    environment:
+      CLICKHOUSE_ENDPOINT: tcp://clickhouse:9000
+      CLICKHOUSE_DATABASE: otel
+      CLICKHOUSE_USERNAME: default
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "13133:13133" # Health check endpoint
+    volumes:
+      - ./config/otel-collector:/etc/otelcol-contrib
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - langop-k3s
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Database for development
+  postgres-dev:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: language_operator_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d language_operator_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - langop-k3s
+
+  # Kubectl proxy for K8s API and service access
+  kubectl-proxy:
+    image: bitnami/kubectl:latest
+    restart: always
+    network_mode: host
+    environment:
+      KUBECONFIG: /root/.kube/dev-config
+    command: ["proxy", "--address=0.0.0.0", "--accept-hosts=^.*$", "--port=8001"]
+    volumes:
+      - type: bind
+        source: /tmp/dev-kubeconfig-final.yaml
+        target: /root/.kube/dev-config
+        read_only: true
+
+  # Development dashboard (with hot reload)
+  dashboard-dev:
+    build:
+      context: ./components/dashboard
+      target: build-deps
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+      NEXTAUTH_SECRET: "dev-secret-not-for-production"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NODE_ENV: "development"
+      # Kubernetes configuration (via kubectl proxy)
+      KUBERNETES_SERVER_URL: "http://kubectl-proxy:8001"
+      KUBERNETES_SKIP_TLS_VERIFY: "true"
+      KUBECONFIG: "/app/.kube/config"
+      # OpenTelemetry configuration
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "dashboard-dev"
+      # Telemetry adapter configuration
+      TELEMETRY_ADAPTER_TYPE: "clickhouse"
+      TELEMETRY_ADAPTER_ENDPOINT: "http://clickhouse:8123"
+      TELEMETRY_ADAPTER_DATABASE: "otel"
+      TELEMETRY_ADAPTER_USERNAME: "default"
+    extra_hosts:
+      - "kubectl-proxy:host-gateway"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      kubectl-proxy:
+        condition: service_started
+      otel-collector:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./components/dashboard
+        target: /app
+      - /app/node_modules
+      - /app/.next
+      # Mount host kubeconfig if available
+      - type: bind
+        source: ${HOME}/.kube/config
+        target: /app/.kube/config
+        read_only: true
+    networks:
+      - langop-k3s
+    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+
+  # Prisma Studio for database management
+  prisma-studio:
+    build:
+      context: ./components/dashboard
+      target: build-deps
+    restart: always
+    environment:
+      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+    ports:
+      - "5555:5555"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ./components/dashboard
+        target: /app
+      - /app/node_modules
+    networks:
+      - langop-k3s
+    command: sh -c "npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0"
+
+volumes:
+  postgres_dev_data:
+  clickhouse_data:
+
+networks:
+  langop-k3s:
+    driver: bridge
