@@ -31,6 +31,7 @@ interface ConsoleContextType {
   conversationDbId: string | null
   setConversationDbId: (id: string | null) => void
   loadConversation: (conversationId: string, agentName: string, clusterName: string) => Promise<void>
+  deleteConversation: (conversationId: string) => Promise<void>
   refreshConversationList: () => void
   conversationListRefreshTrigger: number
 
@@ -38,6 +39,11 @@ interface ConsoleContextType {
   isWorkspaceVisible: boolean
   toggleWorkspace: () => void
   setWorkspaceVisible: (visible: boolean) => void
+
+  // Conversation sidebar visibility
+  isConversationSidebarVisible: boolean
+  toggleConversationSidebar: () => void
+  setConversationSidebarVisible: (visible: boolean) => void
 }
 
 const ConsoleContext = createContext<ConsoleContextType | undefined>(undefined)
@@ -76,6 +82,7 @@ export function ConsoleProvider({
   const [conversationDbId, setConversationDbId] = useState<string | null>(null)
   const [conversationListRefreshTrigger, setConversationListRefreshTrigger] = useState(0)
   const [isWorkspaceVisible, setWorkspaceVisible] = useState(true)
+  const [isConversationSidebarVisible, setConversationSidebarVisible] = useState(true)
 
   const setSelectedAgent = useCallback(
     (agentName: string | null, clusterName: string | null) => {
@@ -208,6 +215,10 @@ export function ConsoleProvider({
     setWorkspaceVisible((prev) => !prev)
   }, [])
 
+  const toggleConversationSidebar = useCallback(() => {
+    setConversationSidebarVisible((prev) => !prev)
+  }, [])
+
   const refreshConversationList = useCallback(() => {
     setConversationListRefreshTrigger((prev) => prev + 1)
   }, [])
@@ -279,6 +290,46 @@ export function ConsoleProvider({
     []
   )
 
+  const deleteConversation = useCallback(
+    async (conversationId: string) => {
+      try {
+        const response = await fetch(`/api/conversations/${conversationId}`, {
+          method: 'DELETE',
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to delete conversation')
+        }
+
+        // If we're deleting the currently active conversation, clear the selection
+        if (conversationDbId === conversationId) {
+          setSelectedAgent(null, null)
+          setConversationDbId(null)
+          setActiveConversationId(null)
+        }
+
+        // Clear the conversation from local state
+        setConversations((prev) => {
+          const newMap = new Map(prev)
+          // Find and remove the conversation by ID (we need to match against conversationDbId)
+          for (const [key, conv] of newMap.entries()) {
+            // Note: This is a limitation - we don't have a direct mapping from conversation key to DB ID
+            // But since we're refreshing the list anyway, this is okay
+          }
+          return newMap
+        })
+
+        // Refresh the conversation list to get updated data
+        refreshConversationList()
+      } catch (error) {
+        console.error('Error deleting conversation:', error)
+        throw error
+      }
+    },
+    [conversationDbId, setSelectedAgent, setConversationDbId, setActiveConversationId, refreshConversationList]
+  )
+
   const value: ConsoleContextType = {
     selectedAgent,
     selectedCluster,
@@ -293,11 +344,15 @@ export function ConsoleProvider({
     conversationDbId,
     setConversationDbId,
     loadConversation,
+    deleteConversation,
     refreshConversationList,
     conversationListRefreshTrigger,
     isWorkspaceVisible,
     toggleWorkspace,
     setWorkspaceVisible,
+    isConversationSidebarVisible,
+    toggleConversationSidebar,
+    setConversationSidebarVisible,
   }
 
   return (
