@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "language-operator.fullname" . }}-clickhouse
+  name: {{ include "language-operator.fullname" . }}-clickhouse-headless
   labels:
     {{- include "language-operator.labels" . | nindent 4 }}
     app.kubernetes.io/component: clickhouse
@@ -34,7 +34,7 @@ metadata:
     {{- include "language-operator.labels" . | nindent 4 }}
     app.kubernetes.io/component: clickhouse
 spec:
-  serviceName: {{ include "language-operator.fullname" . }}-clickhouse
+  serviceName: {{ include "language-operator.fullname" . }}-clickhouse-headless
   replicas: 1
   selector:
     matchLabels:
