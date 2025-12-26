@@ -3,10 +3,17 @@
 import { useState } from 'react'
 import { useConsole } from '@/contexts/console-context'
 import { cn } from '@/lib/utils'
-import { MessageSquare, Trash2 } from 'lucide-react'
+import { MessageSquare, MoreVertical, ExternalLink, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DeleteConversationDialog } from './delete-conversation-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
 
 interface Conversation {
@@ -25,17 +32,21 @@ interface AgentListItemProps {
 
 export function AgentListItem({ conversation }: AgentListItemProps) {
   const { selectedAgent, selectedCluster, conversationDbId, loadConversation, deleteConversation } = useConsole()
-  const [isHovered, setIsHovered] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
   const isActive = conversationDbId === conversation.id
 
-  const handleClick = () => {
+  const handleConversationClick = () => {
     loadConversation(conversation.id, conversation.agentName, conversation.clusterName)
   }
 
+  const handleOpenClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    handleConversationClick()
+  }
+
   const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent triggering conversation selection
+    e.stopPropagation()
     setShowDeleteDialog(true)
   }
 
@@ -54,15 +65,13 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
     <>
       <div
         className={cn(
-          'w-full px-4 py-3 text-left transition-colors border-l-2 relative group cursor-pointer',
+          'w-full px-4 py-3 text-left transition-colors border-l-2 border-b border-b-stone-200 dark:border-b-stone-700 relative group cursor-pointer',
           // Active state styling - enhanced background and left border
           isActive
             ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-amber-400'
             : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30'
         )}
-        onClick={handleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleConversationClick}
       >
         <div className="flex items-start gap-3">
           <div className="mt-1">
@@ -74,17 +83,30 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
               <h3 className="text-sm font-light text-stone-900 dark:text-stone-300 truncate">
                 {displayTitle}
               </h3>
-              {/* Delete button - shown on hover */}
-              {isHovered && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDeleteClick}
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              )}
+              {/* Dropdown menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700/50"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleOpenClick}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open Conversation
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDeleteClick} variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Conversation
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="flex items-center gap-2 text-[10px] text-stone-500 dark:text-stone-400">
