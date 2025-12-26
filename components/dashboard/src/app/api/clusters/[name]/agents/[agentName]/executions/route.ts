@@ -65,8 +65,8 @@ export async function GET(
     const resultSet = await clickhouse.query({
       query: sql,
       query_params: {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: startTime.getTime() * 1000000, // Convert to nanoseconds
+        endTime: endTime.getTime() * 1000000, // Convert to nanoseconds
         agentName,
         limit: query.limit,
       },
