@@ -46,13 +46,10 @@ spec:
         {{- include "language-operator.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: clickhouse
     spec:
-      securityContext:
-        runAsUser: 101
-        runAsGroup: 101
-        fsGroup: 101
+      # Removed restrictive security context to avoid executable corruption issues
       containers:
         - name: clickhouse
-          image: "clickhouse/clickhouse-server:{{ .Values.telemetry.clickhouse.image.tag | default "24.1-alpine" }}"
+          image: "clickhouse/clickhouse-server:{{ .Values.telemetry.clickhouse.image.tag | default "24.11-alpine" }}"
           imagePullPolicy: {{ .Values.telemetry.clickhouse.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: http
