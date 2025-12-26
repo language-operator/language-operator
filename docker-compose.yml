@@ -1,51 +1,4 @@
 services:
-  # ClickHouse for telemetry data storage
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.1-alpine
-    restart: always
-    environment:
-      CLICKHOUSE_DB: otel
-      CLICKHOUSE_USER: default
-    ports:
-      - "8123:8123"  # HTTP interface
-      - "9000:9000"  # Native interface
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-      - ./config/clickhouse:/etc/clickhouse-server/config.d
-    networks:
-      - langop-k3s
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # OpenTelemetry Collector
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.91.0
-    restart: always
-    command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
-    environment:
-      CLICKHOUSE_ENDPOINT: tcp://clickhouse:9000
-      CLICKHOUSE_DATABASE: otel
-      CLICKHOUSE_USERNAME: default
-    ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "13133:13133" # Health check endpoint
-    volumes:
-      - ./config/otel-collector:/etc/otelcol-contrib
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    networks:
-      - langop-k3s
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:13133/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Database for development
   postgres-dev:
     image: postgres:15-alpine
@@ -95,14 +48,14 @@ services:
       KUBERNETES_SERVER_URL: "http://kubectl-proxy:8001"
       KUBERNETES_SKIP_TLS_VERIFY: "true"
       KUBECONFIG: "/app/.kube/config"
-      # OpenTelemetry configuration
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      # OpenTelemetry configuration (connects to K3s cluster services)
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4317"
       OTEL_SERVICE_NAME: "dashboard-dev"
-      # Telemetry adapter configuration
+      # Telemetry adapter configuration (connects to K3s cluster services)
       TELEMETRY_ADAPTER_TYPE: "clickhouse"
-      TELEMETRY_ADAPTER_ENDPOINT: "http://clickhouse:8123"
-      TELEMETRY_ADAPTER_DATABASE: "otel"
-      TELEMETRY_ADAPTER_USERNAME: "default"
+      TELEMETRY_ADAPTER_ENDPOINT: "http://localhost:8123"
+      TELEMETRY_ADAPTER_DATABASE: "langop"
+      TELEMETRY_ADAPTER_USERNAME: "langop"
     extra_hosts:
       - "kubectl-proxy:host-gateway"
     ports:
@@ -112,8 +65,6 @@ services:
         condition: service_healthy
       kubectl-proxy:
         condition: service_started
-      otel-collector:
-        condition: service_healthy
     volumes:
       - type: bind
         source: ./components/dashboard
@@ -153,7 +104,6 @@ services:
 
 volumes:
   postgres_dev_data:
-  clickhouse_data:
 
 networks:
   langop-k3s:
