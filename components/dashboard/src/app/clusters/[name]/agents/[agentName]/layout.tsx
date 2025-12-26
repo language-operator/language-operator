@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check } from 'lucide-react'
+import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -232,6 +232,12 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/clusters/${clusterName}/console?agent=${agentName}`}>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Open in Console
+                    </Link>
+                  </DropdownMenuItem>
                   {agent?.spec?.executionMode === 'scheduled' && (
                     <DropdownMenuItem
                       onClick={handleRunManually}

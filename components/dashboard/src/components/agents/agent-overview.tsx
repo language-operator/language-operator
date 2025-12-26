@@ -1,17 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { AlertCircle, CheckCircle, Clock, MessageCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { useModels } from '@/hooks/use-models'
 import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
-import { AgentChatDialog } from './agent-chat-dialog'
 
 interface AgentOverviewProps {
   agent: LanguageAgent
@@ -19,7 +16,6 @@ interface AgentOverviewProps {
 }
 
 export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
-  const [isChatOpen, setIsChatOpen] = useState(false)
   
   const { data: modelsResponse } = useModels({ clusterName })
   const { data: toolsResponse } = useTools({ clusterName })
@@ -82,16 +78,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
       {/* Goal - Prominent Full Width Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Goal</CardTitle>
-            <Button 
-              onClick={() => setIsChatOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Start Conversation
-            </Button>
-          </div>
+          <CardTitle>Goal</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-stone-50 border border-stone-200 p-4 dark:bg-stone-800/50 dark:border-stone-700">
@@ -289,13 +276,6 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
         </CardContent>
       </Card>
 
-      {/* Agent Chat Dialog */}
-      <AgentChatDialog
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        agentName={agent.metadata.name!}
-        clusterName={clusterName}
-      />
     </div>
   )
 }
