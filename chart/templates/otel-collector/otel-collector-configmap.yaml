@@ -44,6 +44,7 @@ data:
       memory_limiter:
         limit_mib: {{ .Values.telemetry.otelCollector.config.memoryLimitMiB | default 512 }}
         spike_limit_mib: {{ .Values.telemetry.otelCollector.config.memorySpikeLimit | default 128 }}
+        check_interval: {{ .Values.telemetry.otelCollector.config.memoryCheckInterval | default "1s" }}
       
       # Resource processor to add standard attributes
       resource:
