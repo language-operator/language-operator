@@ -158,7 +158,7 @@ func TestClickhouseAdapter_buildSpanQuery(t *testing.T) {
 			StatusCode,
 			StatusMessage,
 			SpanAttributes
-		FROM otel_traces
+		FROM langop.otel_traces
 		WHERE 1=1 ORDER BY Timestamp DESC`,
 		},
 		{
@@ -178,7 +178,7 @@ func TestClickhouseAdapter_buildSpanQuery(t *testing.T) {
 			StatusCode,
 			StatusMessage,
 			SpanAttributes
-		FROM otel_traces
+		FROM langop.otel_traces
 		WHERE 1=1 AND (SpanAttributes['task.name'] = ? OR SpanName LIKE ?) ORDER BY Timestamp DESC`,
 		},
 		{
@@ -198,7 +198,7 @@ func TestClickhouseAdapter_buildSpanQuery(t *testing.T) {
 			StatusCode,
 			StatusMessage,
 			SpanAttributes
-		FROM otel_traces
+		FROM langop.otel_traces
 		WHERE 1=1 ORDER BY Timestamp DESC LIMIT ?`,
 		},
 	}

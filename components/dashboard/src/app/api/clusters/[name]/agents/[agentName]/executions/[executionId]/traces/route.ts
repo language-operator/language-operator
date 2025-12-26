@@ -111,7 +111,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        traceId: rows.data.length > 0 ? rows.data[0].traceId : traceIdPrefix,
+        traceId: rows.data.length > 0 ? (rows.data[0] as any).traceId : traceIdPrefix,
         executionId,
         spans
       }

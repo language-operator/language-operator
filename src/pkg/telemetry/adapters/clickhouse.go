@@ -82,7 +82,7 @@ func NewClickhouseAdapter() (*ClickhouseAdapter, error) {
 
 	database := os.Getenv("TELEMETRY_ADAPTER_DATABASE")
 	if database == "" {
-		database = "otel"
+		database = "langop"
 	}
 
 	username := os.Getenv("TELEMETRY_ADAPTER_USERNAME")
@@ -236,7 +236,7 @@ func (c *ClickhouseAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 			StatusCode,
 			StatusMessage,
 			SpanAttributes
-		FROM otel_traces
+		FROM langop.otel_traces
 		WHERE 1=1`
 
 	// Add time range filter
@@ -372,7 +372,7 @@ func (c *ClickhouseAdapter) QueryMetrics(ctx context.Context, filter telemetry.M
 			MetricName,
 			Value,
 			Attributes
-		FROM otel_metrics
+		FROM langop.otel_metrics_gauge
 		WHERE MetricName = ?
 		AND TimeUnix >= ? AND TimeUnix <= ?
 		ORDER BY TimeUnix DESC
