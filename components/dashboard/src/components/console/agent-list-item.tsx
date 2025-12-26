@@ -68,8 +68,8 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
           'w-full px-4 py-3 text-left transition-colors border-l-2 border-b border-b-stone-200 dark:border-b-stone-700 relative group cursor-pointer',
           // Active state styling - enhanced background and left border
           isActive
-            ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-amber-400'
-            : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30'
+            ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-l-amber-400'
+            : 'border-l-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30'
         )}
         onClick={handleConversationClick}
       >
