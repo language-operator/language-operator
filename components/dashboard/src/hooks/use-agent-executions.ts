@@ -9,7 +9,7 @@ interface AgentExecution {
   duration: number
   status: 'success' | 'error' | 'running'
   rootSpanName: string
-  spans: any[]
+  spanCount: number
 }
 
 interface AgentExecutionsResponse {

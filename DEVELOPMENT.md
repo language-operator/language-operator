@@ -42,16 +42,11 @@ This approach provides:
 
 ## Service Details
 
-### Kind Cluster
-- **URL**: `https://kind-cluster:6443` (internal) or `https://localhost:6443` (external)
-- **Config**: Automatically sets up CRDs and RBAC
-- **Ports**: 6443 (API), 30080 (HTTP ingress), 30443 (HTTPS ingress)
-
 ### Dashboard
 - **URL**: `http://localhost:3000`
 - **Hot Reload**: Changes to `components/dashboard/` are automatically reflected
 - **Database**: Connects to `postgres-dev:5432`
-- **Kubernetes**: Connects to `kind-cluster:6443`
+- **Kubernetes**: Connects to your K3s cluster via the network bridge
 
 ### Database
 - **URL**: `postgresql://dev:dev@localhost:5433/language_operator_dev`
@@ -66,33 +61,31 @@ make dev-up
 
 This will:
 - Start PostgreSQL database
-- Start Kind Kubernetes cluster
-- Install Language Operator CRDs and RBAC
-- Start the Language Operator controller
+- Set up Docker network bridge to your K3s cluster
 - Start the dashboard with hot reload
 - Start Prisma Studio
 
 ### 2. Develop
 - **Dashboard changes**: Edit files in `components/dashboard/` - changes are hot-reloaded
-- **Operator changes**: Edit files in `src/` - rebuild with `docker compose build language-operator && docker compose up -d language-operator`
+- **Operator changes**: Deploy to your K3s cluster using Helm
 - **Database changes**: Use Prisma Studio at `http://localhost:5555`
 
 ### 3. Test Kubernetes Resources
 ```bash
-# Check if Kind cluster is ready
+# Check dashboard status
 make dev-status
 
-# Apply test resources (from another terminal)
-kubectl apply -f examples/ --kubeconfig components/dashboard/.kube/config
+# Apply test resources to your K3s cluster
+kubectl apply -f examples/
 
-# Watch operator logs
-docker compose logs -f language-operator
+# Watch operator logs (in K3s cluster)
+kubectl logs -f -n language-operator deployment/language-operator
 ```
 
 ### 4. Access Services
 - **Dashboard**: `http://localhost:3000`
 - **Prisma Studio**: `http://localhost:5555`
-- **Kubernetes API**: `https://localhost:6443` (insecure-skip-tls-verify)
+- **Kubernetes API**: Your K3s cluster endpoint
 
 ## Troubleshooting
 
@@ -102,18 +95,17 @@ docker compose logs -f language-operator
 make dev-status
 
 # View logs for specific service
-docker compose logs kind-cluster
-docker compose logs language-operator
 docker compose logs dashboard-dev
+docker compose logs postgres-dev
 ```
 
-### Kind Cluster Issues
+### K3s Network Bridge Issues
 ```bash
-# Restart just the cluster
-docker compose restart kind-cluster
+# Recreate the bridge
+make dev-k3s-bridge
 
-# Check cluster status
-docker compose exec kind-cluster kubectl get nodes
+# Test DNS resolution
+docker run --rm --network=langop-k3s alpine nslookup kubernetes.default.svc.cluster.local
 ```
 
 ### Dashboard Issues
@@ -136,32 +128,33 @@ make dev-clean
 
 ### Environment Variables
 - `DATABASE_URL`: PostgreSQL connection string  
-- `KUBERNETES_SERVER_URL`: Kind cluster API endpoint
 - `NEXTAUTH_SECRET`: Dashboard authentication secret
+- `KUBECONFIG`: Path to your K3s cluster configuration
 
 ### Volumes
 - `postgres_dev_data`: Database storage
-- `kind_data`: Kind cluster storage
-- `dashboard_kube`: Dashboard kubeconfig
-- `operator_kube`: Operator kubeconfig
 
 ## Advanced Usage
 
-### Using External Cluster
-To use a different Kubernetes cluster instead of Kind:
+### Using Different K3s Cluster
+To use a different K3s cluster:
 
-1. Set environment variables before starting:
+1. Update the K3s host in the bridge setup script:
 ```bash
-export KUBERNETES_SERVER_URL=https://your-cluster.example.com
+# Edit scripts/setup-k3s-bridge.sh
+K3S_HOST="your-k3s-host"
+```
+
+2. Set your kubeconfig to point to the cluster:
+```bash
 export KUBECONFIG=/path/to/your/kubeconfig
 ```
 
-2. Start the development environment:
+3. Set up the bridge and start development:
 ```bash
+make dev-k3s-bridge
 make dev-up
 ```
-
-The dashboard will automatically connect to your specified cluster.
 
 ### Custom Configuration
 Create a `docker-compose.override.yml` file to customize the setup without modifying the main configuration.

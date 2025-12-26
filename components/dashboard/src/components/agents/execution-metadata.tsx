@@ -10,7 +10,7 @@ interface AgentExecution {
   duration: number
   status: 'success' | 'error' | 'running'
   rootSpanName: string
-  spans: any[]
+  spanCount: number
 }
 
 interface ExecutionMetadataProps {
@@ -88,7 +88,7 @@ export function ExecutionMetadata({ execution }: ExecutionMetadataProps) {
         <div>
           <p className="text-sm font-medium text-muted-foreground">Number of Spans</p>
           <p className="text-lg font-semibold text-foreground">
-            {execution.spans.length}
+            {execution.spanCount}
           </p>
         </div>
       </div>

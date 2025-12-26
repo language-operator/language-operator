@@ -477,12 +477,13 @@ rbac:
       - update
       - patch
       - delete
-    # RBAC resources for LanguageCluster
+    # RBAC resources for LanguageCluster and agent ServiceAccounts
     - apiGroups:
       - rbac.authorization.k8s.io
       resources:
       - roles
       - rolebindings
+      - clusterrolebindings
       verbs:
       - get
       - list

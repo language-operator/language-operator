@@ -9,7 +9,7 @@ Kubernetes operator for managing language agents, models, tools, and personas.
 ### Prerequisites
 
 - Go 1.22+
-- Kubernetes cluster (kind, minikube, etc.)
+- Kubernetes cluster (K3s recommended)
 - kubectl configured
 
 ### Quick Start

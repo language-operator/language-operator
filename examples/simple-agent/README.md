@@ -10,7 +10,7 @@ This example demonstrates a complete working deployment of the language-operator
 
 ## Prerequisites
 
-1. Kubernetes cluster (kind, k3s, or any cluster)
+1. Kubernetes cluster (K3s recommended)
 2. language-operator installed
 3. Local LLM running (e.g., LM Studio) or OpenAI API key
 
