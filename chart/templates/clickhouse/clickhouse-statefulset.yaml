@@ -67,9 +67,9 @@ spec:
           env:
             - name: CLICKHOUSE_DB
               value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
+            {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_USER
               value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
-            {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_PASSWORD
               valueFrom:
                 secretKeyRef:
