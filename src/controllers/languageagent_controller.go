@@ -20,6 +20,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -337,6 +338,18 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionFalse, "Pending", err.Error(), agent.Generation)
 	} else {
 		SetCondition(&agent.Status.Conditions, "WebhooksReady", metav1.ConditionTrue, "Configured", "Webhook routing configured", agent.Generation)
+	}
+
+	// Reconcile ServiceAccount for agent pods
+	if err := r.reconcileAgentServiceAccount(ctx, agent); err != nil {
+		log.Error(err, "Failed to reconcile agent ServiceAccount")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "ServiceAccount reconciliation failed")
+		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceAccountError", err.Error(), agent.Generation)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after ServiceAccount error")
+		}
+		return ctrl.Result{}, err
 	}
 
 	// Reconcile workload based on execution mode
@@ -1397,6 +1410,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName:    r.getServiceAccountName(agent),
 					ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
 					InitContainers:        sidecarContainers, // Sidecars as init containers with restartPolicy: Always
 					Containers:            containers,
@@ -1601,6 +1615,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 							Labels: labels,
 						},
 						Spec: corev1.PodSpec{
+							ServiceAccountName:    r.getServiceAccountName(agent),
 							RestartPolicy:         corev1.RestartPolicyOnFailure,
 							ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
 							InitContainers:        sidecarContainers, // Sidecars as init containers with restartPolicy: Always
@@ -1687,7 +1702,8 @@ func (r *LanguageAgentReconciler) reconcileCronJobTrigger(ctx context.Context, a
 							Labels: labels,
 						},
 						Spec: corev1.PodSpec{
-							RestartPolicy: corev1.RestartPolicyOnFailure,
+							ServiceAccountName: r.getServiceAccountName(agent),
+							RestartPolicy:      corev1.RestartPolicyOnFailure,
 							Containers: []corev1.Container{
 								{
 									Name:  "trigger",
@@ -3713,9 +3729,116 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&batchv1.Job{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Complete(r)
+}
+
+// reconcileAgentServiceAccount ensures the ServiceAccount for agent pods exists with proper permissions
+func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+
+	// Skip if custom ServiceAccount is specified - assume it exists and has proper permissions
+	if agent.Spec.ServiceAccountName != "" {
+		return nil
+	}
+
+	// Determine target namespace
+	targetNamespace := agent.Namespace
+	if agent.Spec.ClusterRef != "" {
+		// Validate cluster ref and get namespace
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
+			if apierrors.IsNotFound(err) {
+				return fmt.Errorf("cluster %s not found in namespace %s", agent.Spec.ClusterRef, agent.Namespace)
+			}
+			return fmt.Errorf("failed to get cluster %s: %w", agent.Spec.ClusterRef, err)
+		}
+		targetNamespace = cluster.Namespace
+	}
+
+	// Create ServiceAccount
+	serviceAccount := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "language-agent",
+			Namespace: targetNamespace,
+		},
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, serviceAccount, func() error {
+		// Set labels
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = make(map[string]string)
+		}
+		serviceAccount.Labels["app.kubernetes.io/name"] = "language-agent"
+		serviceAccount.Labels["app.kubernetes.io/component"] = "serviceaccount"
+		serviceAccount.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create/update ServiceAccount: %w", err)
+	}
+
+	// Create ClusterRoleBinding to give the ServiceAccount permissions
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("language-agent-%s-%s", targetNamespace, "language-agent"),
+		},
+	}
+
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, clusterRoleBinding, func() error {
+		// Set labels
+		if clusterRoleBinding.Labels == nil {
+			clusterRoleBinding.Labels = make(map[string]string)
+		}
+		clusterRoleBinding.Labels["app.kubernetes.io/name"] = "language-agent"
+		clusterRoleBinding.Labels["app.kubernetes.io/component"] = "clusterrolebinding"
+		clusterRoleBinding.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+
+		// Bind to the language-operator ClusterRole which has the necessary permissions
+		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "language-operator",
+		}
+
+		// Subject is the ServiceAccount in the target namespace
+		clusterRoleBinding.Subjects = []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "language-agent",
+				Namespace: targetNamespace,
+			},
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to create/update ClusterRoleBinding: %w", err)
+	}
+
+	log.Info("Reconciled agent ServiceAccount and permissions",
+		"serviceAccount", "language-agent",
+		"namespace", targetNamespace,
+		"clusterRoleBinding", clusterRoleBinding.Name)
+
+	return nil
+}
+
+// getServiceAccountName returns the ServiceAccount name to use for agent pods
+func (r *LanguageAgentReconciler) getServiceAccountName(agent *langopv1alpha1.LanguageAgent) string {
+	// If explicitly specified in the agent spec, use that
+	if agent.Spec.ServiceAccountName != "" {
+		return agent.Spec.ServiceAccountName
+	}
+
+	// Default to a language-agent ServiceAccount that will be created in the agent's namespace
+	return "language-agent"
 }
 
 // resolveCodeConfigMapName resolves the ConfigMap name for agent code based on AgentVersionRef
