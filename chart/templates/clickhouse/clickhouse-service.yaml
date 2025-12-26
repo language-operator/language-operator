@@ -16,6 +16,10 @@ spec:
       {{- if and (eq (.Values.telemetry.clickhouse.service.type | default "ClusterIP") "NodePort") .Values.telemetry.clickhouse.service.nodePort }}
       nodePort: {{ .Values.telemetry.clickhouse.service.nodePort }}
       {{- end }}
+    - name: native
+      port: 9000
+      targetPort: native
+      protocol: TCP
   selector:
     {{- include "language-operator.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: clickhouse
