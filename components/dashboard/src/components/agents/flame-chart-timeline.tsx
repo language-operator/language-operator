@@ -13,7 +13,7 @@ interface AgentExecution {
   duration: number
   status: 'success' | 'error' | 'running'
   rootSpanName: string
-  spans: TraceSpan[]
+  spanCount: number
 }
 
 interface TraceSpan {
