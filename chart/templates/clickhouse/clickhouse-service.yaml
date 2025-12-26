@@ -1,0 +1,22 @@
+{{- if .Values.telemetry.clickhouse.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "language-operator.fullname" . }}-clickhouse-web
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-web
+spec:
+  type: {{ .Values.telemetry.clickhouse.service.type | default "ClusterIP" }}
+  ports:
+    - name: http
+      port: {{ .Values.telemetry.clickhouse.service.port | default 8123 }}
+      targetPort: http
+      protocol: TCP
+      {{- if and (eq (.Values.telemetry.clickhouse.service.type | default "ClusterIP") "NodePort") .Values.telemetry.clickhouse.service.nodePort }}
+      nodePort: {{ .Values.telemetry.clickhouse.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "language-operator.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+{{- end }}

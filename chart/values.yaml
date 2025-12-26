@@ -617,6 +617,29 @@ telemetry:
       metrics: "720h"
       # Retention period for logs (3 days = 72 hours)
       logs: "72h"
+    
+    # Service configuration for ClickHouse web UI
+    service:
+      type: ClusterIP
+      port: 8123
+      # nodePort: 30123  # Only used if type is NodePort
+    
+    # Ingress configuration for ClickHouse web UI
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+        # kubernetes.io/ingress.class: nginx
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: clickhouse.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+      #  - secretName: clickhouse-tls
+      #    hosts:
+      #      - clickhouse.local
 
   # OpenTelemetry Collector for data collection
   otelCollector:

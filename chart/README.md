@@ -134,6 +134,48 @@ helm install language-operator ./chart \
 | `opentelemetry.resourceAttributes.environment` | Environment name | `production` |
 | `opentelemetry.resourceAttributes.cluster` | Cluster name | `main` |
 
+### ClickHouse Web UI
+
+The operator includes an internal ClickHouse deployment for telemetry storage. You can access the web interface for querying and analysis:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `telemetry.clickhouse.enabled` | Enable ClickHouse deployment | `true` |
+| `telemetry.clickhouse.service.type` | Service type for web UI | `ClusterIP` |
+| `telemetry.clickhouse.service.port` | Web UI service port | `8123` |
+| `telemetry.clickhouse.ingress.enabled` | Enable ingress for web UI | `false` |
+| `telemetry.clickhouse.ingress.hosts[0].host` | Web UI hostname | `clickhouse.local` |
+
+**Accessing ClickHouse Web UI:**
+
+```bash
+# Via kubectl port-forward (recommended for development)
+kubectl port-forward -n language-operator svc/language-operator-clickhouse-web 8123:8123
+# Then open: http://localhost:8123/play
+
+# Via NodePort (for testing)
+helm upgrade language-operator ./chart \
+  --set telemetry.clickhouse.service.type=NodePort \
+  --set telemetry.clickhouse.service.nodePort=30123
+
+# Via Ingress (for production)
+helm upgrade language-operator ./chart \
+  --set telemetry.clickhouse.ingress.enabled=true \
+  --set telemetry.clickhouse.ingress.hosts[0].host=clickhouse.yourdomain.com
+```
+
+**Example queries:**
+```sql
+-- View all telemetry databases
+SHOW DATABASES;
+
+-- Query trace data
+SELECT * FROM langop.otel_traces LIMIT 10;
+
+-- Query metrics data  
+SELECT * FROM langop.otel_metrics LIMIT 10;
+```
+
 ### Agent Telemetry
 
 | Parameter | Description | Default |

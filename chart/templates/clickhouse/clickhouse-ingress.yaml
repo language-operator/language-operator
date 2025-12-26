@@ -1,0 +1,46 @@
+{{- if and .Values.telemetry.clickhouse.enabled .Values.telemetry.clickhouse.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "language-operator.fullname" . }}-clickhouse
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse-web
+  {{- with .Values.telemetry.clickhouse.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.telemetry.clickhouse.ingress.className }}
+  ingressClassName: {{ .Values.telemetry.clickhouse.ingress.className }}
+  {{- end }}
+  {{- if .Values.telemetry.clickhouse.ingress.tls }}
+  tls:
+    {{- range .Values.telemetry.clickhouse.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.telemetry.clickhouse.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if .pathType }}
+            pathType: {{ .pathType }}
+            {{- else }}
+            pathType: Prefix
+            {{- end }}
+            backend:
+              service:
+                name: {{ include "language-operator.fullname" $ }}-clickhouse-web
+                port:
+                  number: {{ $.Values.telemetry.clickhouse.service.port | default 8123 }}
+          {{- end }}
+    {{- end }}
+{{- end }}
