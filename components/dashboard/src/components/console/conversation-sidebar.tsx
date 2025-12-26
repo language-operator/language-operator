@@ -2,21 +2,31 @@
 
 import { useState } from 'react'
 import { AgentList } from './agent-list'
-import { Search } from 'lucide-react'
+import { Search, ChevronLeft, MessageSquare } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { useConsole } from '@/contexts/console-context'
 
 export function ConversationSidebar() {
   const [searchQuery, setSearchQuery] = useState('')
-  const { conversationListRefreshTrigger } = useConsole()
+  const { conversationListRefreshTrigger, toggleConversationSidebar } = useConsole()
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-stone-800/80 dark:border-stone-600/80 py-4 px-4 h-[52px]">
+      <div className="border-b border-stone-800/80 dark:border-stone-600/80 py-3 px-4 h-[52px] flex items-center justify-between">
         <h2 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300">
           Conversations
         </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleConversationSidebar}
+          className="h-6 w-6 p-0 hover:bg-stone-300/50 dark:hover:bg-stone-700/50 text-stone-600 dark:text-stone-400"
+          title="Collapse sidebar"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Search */}
