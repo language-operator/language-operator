@@ -621,34 +621,8 @@ func BuildEgressNetworkPolicy(
 		}
 	}
 
-	// Allow egress to Kubernetes API server for event emission
-	// This enables agents to create Kubernetes events for learning system integration
-	egress = append(egress, networkingv1.NetworkPolicyEgressRule{
-		To: []networkingv1.NetworkPolicyPeer{
-			{
-				// Target the kubernetes service in default namespace
-				// Works for both k3s and managed clusters where API server
-				// doesn't run as pods with specific component labels
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": "default",
-					},
-				},
-				// No podSelector - allow access to any pod/service in default namespace
-				// This will include the kubernetes service endpoints
-			},
-		},
-		Ports: []networkingv1.NetworkPolicyPort{
-			{
-				Protocol: protocolPtr(corev1.ProtocolTCP),
-				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
-			},
-			{
-				Protocol: protocolPtr(corev1.ProtocolTCP),
-				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
-			},
-		},
-	})
+	// Kubernetes API server access rules are handled by CNI-aware function below
+	// This was causing duplicate rules that interfered with proper network policy enforcement
 
 	// Add CNI-aware rules for Kubernetes API server access
 	// Use CNI detection to generate appropriate egress rules for different CNI implementations
