@@ -66,9 +66,9 @@ spec:
               protocol: TCP
           env:
             - name: CLICKHOUSE_DB
-              value: {{ .Values.telemetry.clickhouse.database | default "otel" | quote }}
+              value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
             - name: CLICKHOUSE_USER
-              value: {{ .Values.telemetry.clickhouse.auth.username | default "default" | quote }}
+              value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
             {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_PASSWORD
               valueFrom:

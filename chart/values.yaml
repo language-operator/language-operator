@@ -570,11 +570,11 @@ telemetry:
       pullPolicy: IfNotPresent
     
     # Database configuration
-    database: "otel"
+    database: "langop"
     
     # Authentication settings
     auth:
-      username: "default"
+      username: "langop"
       # Set password for authentication (optional, uses no auth if empty)
       password: ""
     

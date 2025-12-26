@@ -84,9 +84,9 @@ spec:
             - name: CLICKHOUSE_ENDPOINT
               value: "tcp://{{ include "language-operator.fullname" . }}-clickhouse:9000"
             - name: CLICKHOUSE_DATABASE
-              value: {{ .Values.telemetry.clickhouse.database | default "otel" | quote }}
+              value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
             - name: CLICKHOUSE_USERNAME
-              value: {{ .Values.telemetry.clickhouse.auth.username | default "default" | quote }}
+              value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
             {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_PASSWORD
               valueFrom:
