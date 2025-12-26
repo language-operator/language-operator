@@ -101,19 +101,15 @@ spec:
               mountPath: /var/lib/clickhouse
             - name: config
               mountPath: /etc/clickhouse-server/config.d
-            {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: users-config
               mountPath: /etc/clickhouse-server/users.d
-            {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ include "language-operator.fullname" . }}-clickhouse-config
-        {{- if .Values.telemetry.clickhouse.auth.password }}
         - name: users-config
           configMap:
             name: {{ include "language-operator.fullname" . }}-clickhouse-users
-        {{- end }}
   {{- if .Values.telemetry.clickhouse.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
