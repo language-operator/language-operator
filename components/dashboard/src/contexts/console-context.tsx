@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
 import { ChatMessage } from '@/types/chat'
+import { saveLastConversation, clearLastConversation } from '@/lib/conversation-storage'
 
 interface ConversationState {
   agentName: string
@@ -229,6 +230,9 @@ export function ConsoleProvider({
       setSelectedAgentState(agentName)
       setSelectedClusterState(clusterName)
       setConversationDbId(conversationId)
+      
+      // Save to localStorage for auto-restore
+      saveLastConversation(conversationId, agentName, clusterName)
 
       const key = `${clusterName}/${agentName}`
       setActiveConversationId(key)
@@ -307,6 +311,9 @@ export function ConsoleProvider({
           setSelectedAgent(null, null)
           setConversationDbId(null)
           setActiveConversationId(null)
+          
+          // Clear from localStorage since this conversation no longer exists
+          clearLastConversation()
         }
 
         // Clear the conversation from local state
@@ -327,7 +334,7 @@ export function ConsoleProvider({
         throw error
       }
     },
-    [conversationDbId, setSelectedAgent, setConversationDbId, setActiveConversationId, refreshConversationList]
+    [conversationDbId, refreshConversationList]
   )
 
   const value: ConsoleContextType = {

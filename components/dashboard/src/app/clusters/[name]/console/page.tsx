@@ -2,13 +2,47 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams, useParams } from 'next/navigation'
-import { useEffect, Suspense } from 'react'
+import { useEffect, Suspense, useRef } from 'react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { ClusterProvider } from '@/contexts/cluster-context'
 import { ConsoleLayout } from '@/components/console/console-layout'
 import { ConsoleProvider } from '@/contexts/console-context'
+import { useConsole } from '@/contexts/console-context'
 import { useOrganizations } from '@/hooks/use-organizations'
+import { getLastConversation } from '@/lib/conversation-storage'
+
+function ConsoleContentWithAutoLoad({ clusterName }: { clusterName: string }) {
+  const { loadConversation, selectedAgent } = useConsole()
+  const hasAutoLoaded = useRef(false)
+  const searchParams = useSearchParams()
+
+  // Extract URL parameters for initial agent selection
+  const agentParam = searchParams.get('agent')
+
+  useEffect(() => {
+    // Only auto-load if we haven't already and there's no agent selected
+    if (!hasAutoLoaded.current && !selectedAgent && !agentParam) {
+      hasAutoLoaded.current = true
+      
+      // Try to load last conversation from localStorage
+      const lastConv = getLastConversation()
+      if (lastConv && lastConv.clusterName === clusterName) {
+        // Verify conversation still exists and load it
+        loadConversation(
+          lastConv.conversationId,
+          lastConv.agentName,
+          lastConv.clusterName
+        ).catch(error => {
+          // If conversation doesn't exist anymore, fail silently
+          console.log('Could not restore last conversation:', error)
+        })
+      }
+    }
+  }, [clusterName, loadConversation, selectedAgent, agentParam])
+
+  return <ConsoleLayout />
+}
 
 function ConsoleContent({ clusterName }: { clusterName: string }) {
   const searchParams = useSearchParams()
@@ -18,7 +52,7 @@ function ConsoleContent({ clusterName }: { clusterName: string }) {
 
   return (
     <ConsoleProvider initialAgent={agentParam} initialCluster={clusterName}>
-      <ConsoleLayout />
+      <ConsoleContentWithAutoLoad clusterName={clusterName} />
     </ConsoleProvider>
   )
 }
