@@ -85,14 +85,17 @@ spec:
               value: "tcp://{{ include "language-operator.fullname" . }}-clickhouse:9000"
             - name: CLICKHOUSE_DATABASE
               value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
+            {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_USERNAME
               value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
-            {{- if .Values.telemetry.clickhouse.auth.password }}
             - name: CLICKHOUSE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "language-operator.fullname" . }}-clickhouse
                   key: password
+            {{- else }}
+            - name: CLICKHOUSE_USERNAME
+              value: "default"
             {{- end }}
           livenessProbe:
             httpGet:
