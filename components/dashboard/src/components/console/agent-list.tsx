@@ -109,10 +109,11 @@ export function AgentList({ selectedAgentFilter, onAgentFilterChange, refreshTri
           </div>
         ) : (
           <div className="py-2">
-            {filteredConversations.map((conversation) => (
+            {filteredConversations.map((conversation, index) => (
               <AgentListItem
                 key={conversation.id}
                 conversation={conversation}
+                isLast={index === filteredConversations.length - 1}
               />
             ))}
           </div>

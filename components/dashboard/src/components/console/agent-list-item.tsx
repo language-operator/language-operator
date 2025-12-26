@@ -21,9 +21,10 @@ interface Conversation {
 
 interface AgentListItemProps {
   conversation: Conversation
+  isLast?: boolean
 }
 
-export function AgentListItem({ conversation }: AgentListItemProps) {
+export function AgentListItem({ conversation, isLast = false }: AgentListItemProps) {
   const { selectedAgent, selectedCluster, loadConversation, deleteConversation } = useConsole()
   const [isHovered, setIsHovered] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -57,9 +58,12 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
       <div
         className={cn(
           'w-full px-4 py-3 text-left transition-colors border-l-2 relative group cursor-pointer',
+          // Bottom border - all items except last
+          !isLast && 'border-b border-b-stone-200 dark:border-b-stone-700',
+          // Active state styling - enhanced background and left border
           isActive
-            ? 'bg-stone-200 border-stone-900 dark:bg-stone-800 dark:border-amber-400'
-            : 'border-transparent hover:bg-stone-100/50 dark:hover:bg-stone-800/50'
+            ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-amber-400'
+            : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30'
         )}
         onClick={handleClick}
         onMouseEnter={() => setIsHovered(true)}
