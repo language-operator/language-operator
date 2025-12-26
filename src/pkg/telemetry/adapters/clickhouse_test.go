@@ -17,7 +17,6 @@ limitations under the License.
 package adapters
 
 import (
-	"context"
 	"os"
 	"strings"
 	"testing"
@@ -239,13 +238,13 @@ func TestClickhouseAdapter_buildSpanArgs(t *testing.T) {
 	args := adapter.buildSpanArgs(filter)
 
 	expectedArgs := []interface{}{
-		start,                    // TimeRange.Start
-		end,                      // TimeRange.End
-		"test_task",              // TaskName
-		"%test_task%",            // TaskName (LIKE pattern)
-		"trace123",               // TraceID
-		"test-service",           // Attributes["service.name"]
-		50,                       // Limit
+		start,          // TimeRange.Start
+		end,            // TimeRange.End
+		"test_task",    // TaskName
+		"%test_task%",  // TaskName (LIKE pattern)
+		"trace123",     // TraceID
+		"test-service", // Attributes["service.name"]
+		50,             // Limit
 	}
 
 	if len(args) != len(expectedArgs) {
@@ -321,4 +320,3 @@ func normalizeWhitespace(s string) string {
 	}
 	return strings.Join(normalized, " ")
 }
-
