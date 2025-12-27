@@ -52,11 +52,12 @@ export async function GET(
         max(Duration) / 1000000 as duration,
         count() as spanCount,
         any(SpanName) as rootSpanName,
-        countIf(StatusCode != 'STATUS_CODE_OK') > 0 ? 'error' : 'success' as status
+        countIf(StatusCode = 'STATUS_CODE_ERROR') > 0 ? 'error' : 'success' as status
       FROM langop.otel_traces
       WHERE Timestamp >= {startTime:DateTime64(9)}
         AND Timestamp <= {endTime:DateTime64(9)}
         AND SpanAttributes['agent.name'] = {agentName:String}
+        AND SpanName != 'agent.reconcile'
       GROUP BY TraceId
       ORDER BY startTime DESC
       LIMIT {limit:UInt32}
