@@ -292,7 +292,7 @@ export function AgentPrismTraceViewer({
             </div>
             <div>
               <p className="text-muted-foreground">Start Time</p>
-              <p className="font-medium">{execution.startTime.toLocaleTimeString()}</p>
+              <p className="font-medium">{new Date(execution.startTime).toLocaleTimeString()}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Status</p>
