@@ -1325,3 +1325,130 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		}
 	})
 }
+
+func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Create a scheduled agent (will create both deployment and trigger pods)
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-scheduled-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			ExecutionMode: "scheduled",
+			Schedule:      "0 * * * *",
+			Image:         "test-image",
+			Goal:          "Test scheduled agent",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	}
+
+	// Reconcile to create service and deployment
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Verify service was created
+	service := &corev1.Service{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, service)
+	if err != nil {
+		t.Fatalf("Expected service to be created, got error: %v", err)
+	}
+
+	// Verify service selector includes component=agent
+	selector := service.Spec.Selector
+	if selector == nil {
+		t.Fatal("Service selector is nil")
+	}
+
+	expectedLabels := map[string]string{
+		"app.kubernetes.io/name":       agent.Name,
+		"app.kubernetes.io/managed-by": "language-operator",
+		"app.kubernetes.io/part-of":    "langop",
+		"langop.io/kind":               "LanguageAgent",
+		"langop.io/component":          "agent",
+	}
+
+	for key, expectedValue := range expectedLabels {
+		if actualValue, exists := selector[key]; !exists {
+			t.Errorf("Service selector missing expected label %s", key)
+		} else if actualValue != expectedValue {
+			t.Errorf("Service selector label %s: expected %s, got %s", key, expectedValue, actualValue)
+		}
+	}
+
+	// Verify deployment was created with component=agent label
+	deployment := &appsv1.Deployment{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name,
+		Namespace: agent.Namespace,
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Expected deployment to be created, got error: %v", err)
+	}
+
+	// Check deployment pod template labels include component=agent
+	podLabels := deployment.Spec.Template.Labels
+	if component, exists := podLabels["langop.io/component"]; !exists {
+		t.Error("Deployment pod template missing langop.io/component label")
+	} else if component != "agent" {
+		t.Errorf("Deployment pod template component label: expected 'agent', got '%s'", component)
+	}
+
+	// Verify trigger CronJob was created with component=trigger label
+	cronJob := &batchv1.CronJob{}
+	err = fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name + "-trigger",
+		Namespace: agent.Namespace,
+	}, cronJob)
+	if err != nil {
+		t.Fatalf("Expected trigger CronJob to be created, got error: %v", err)
+	}
+
+	// Check trigger pod template labels include component=trigger
+	triggerPodLabels := cronJob.Spec.JobTemplate.Spec.Template.Labels
+	if component, exists := triggerPodLabels["langop.io/component"]; !exists {
+		t.Error("Trigger CronJob pod template missing langop.io/component label")
+	} else if component != "trigger" {
+		t.Errorf("Trigger CronJob pod template component label: expected 'trigger', got '%s'", component)
+	}
+
+	// Ensure service selector would NOT match trigger pods (service has component=agent, trigger has component=trigger)
+	triggerWouldMatch := true
+	for key, value := range selector {
+		if triggerValue, exists := triggerPodLabels[key]; !exists || triggerValue != value {
+			triggerWouldMatch = false
+			break
+		}
+	}
+	
+	if triggerWouldMatch {
+		t.Error("Service selector would incorrectly match trigger pods - this defeats the purpose of the fix")
+	}
+}

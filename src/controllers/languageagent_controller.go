@@ -1362,6 +1362,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labels["langop.io/component"] = "agent" // Distinguish from trigger pods
 
 	// If cluster ref is set, verify cluster exists and is ready
 	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
@@ -2565,6 +2566,7 @@ func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, o
 // reconcileService creates a Service for the agent's webhook server
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+	labels["langop.io/component"] = "agent" // Only route to agent pods, not trigger pods
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
