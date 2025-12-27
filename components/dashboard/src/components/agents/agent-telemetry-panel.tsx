@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ExecutionDropdown } from './execution-dropdown'
-import { FlameChartTimeline } from './flame-chart-timeline' 
+import { AgentPrismTraceViewer } from './agent-prism-trace-viewer' 
 import { ExecutionMetadata } from './execution-metadata'
 import { useAgentExecutions } from '@/hooks/use-agent-executions'
 import { Activity, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
@@ -159,22 +159,12 @@ export function AgentTelemetryPanel({ agent, clusterName }: AgentTelemetryPanelP
             </CardContent>
           </Card>
 
-          {/* Flame Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Execution Timeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FlameChartTimeline
-                execution={selectedExecution}
-                clusterName={clusterName}
-                agentName={agent.metadata.name}
-              />
-            </CardContent>
-          </Card>
+          {/* AgentPrism Trace Viewer */}
+          <AgentPrismTraceViewer
+            execution={selectedExecution}
+            clusterName={clusterName}
+            agentName={agent.metadata.name}
+          />
         </>
       )}
 

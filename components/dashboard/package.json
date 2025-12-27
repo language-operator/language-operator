@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@clickhouse/client": "^1.15.0",
+    "@evilmartians/agent-prism-data": "^0.0.9",
+    "@evilmartians/agent-prism-types": "^0.0.9",
     "@hookform/resolvers": "^5.2.2",
     "@kubernetes/client-node": "^1.4.0",
     "@next-auth/prisma-adapter": "^1.0.7",
