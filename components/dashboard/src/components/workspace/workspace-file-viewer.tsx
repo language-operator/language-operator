@@ -263,7 +263,6 @@ export function WorkspaceFileViewer({
           </Button>
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
-              <span className="text-muted-foreground text-sm">›</span>
               <h3 className="font-medium truncate">{selectedFile.name}</h3>
             </div>
             <div className="flex items-center space-x-4 mt-1">

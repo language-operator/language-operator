@@ -59,12 +59,12 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
           variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-64 justify-between hover:bg-transparent dark:hover:bg-transparent", className)}
+          className={cn("min-w-[32rem] max-w-none justify-between hover:bg-transparent dark:hover:bg-transparent", className)}
         >
-          <div className="flex items-center gap-2 overflow-hidden">
+          <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 flex-shrink-0" />
             {activeOrganization ? (
-              <span className="font-medium truncate text-sm">
+              <span className="font-medium text-sm whitespace-nowrap">
                 {activeOrganization.name}
               </span>
             ) : (
@@ -74,7 +74,7 @@ export function OrganizationSwitcher({ className, onCreateNew }: OrganizationSwi
           </div>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="start">
+      <DropdownMenuContent className="min-w-[32rem]" align="start">
         <DropdownMenuLabel>Organizations</DropdownMenuLabel>
         <DropdownMenuSeparator />
         

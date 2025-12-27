@@ -268,7 +268,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
 
         {/* Tabs Navigation */}
         <Tabs value={getCurrentTabValue(pathname, clusterName, agentName)}>
-          <TabsList>
+          <TabsList className="w-full">
             <TabsTrigger value="overview" asChild>
               <Link href={`/clusters/${clusterName}/agents/${agentName}`}>
                 <Home className="w-4 h-4 mr-2" />

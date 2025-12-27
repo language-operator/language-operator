@@ -10,14 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LogOut, Settings, Building2 } from 'lucide-react'
+import { LogOut, Settings, Building2, Copy } from 'lucide-react'
 import { OrganizationSwitcher } from '@/components/organization/organization-switcher'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { ConnectionStatus } from '@/components/ui/connection-status'
 import { useWatchClusters } from '@/hooks/use-watch'
+import { useActiveOrganization } from '@/hooks/use-organizations'
+import { toast } from 'sonner'
 
 export function Header() {
   const { data: session } = useSession()
+  const { organization: activeOrganization } = useActiveOrganization()
 
   // Connect to cluster watch for connection status (disabled in dev if no K8s)
   const isDev = process.env.NODE_ENV === 'development'
@@ -38,6 +41,17 @@ export function Header() {
       .slice(0, 2)
   }
 
+  const copyNamespace = async () => {
+    if (activeOrganization?.namespace) {
+      try {
+        await navigator.clipboard.writeText(activeOrganization.namespace)
+        toast.success('Namespace copied to clipboard')
+      } catch (err) {
+        toast.error('Failed to copy namespace')
+      }
+    }
+  }
+
   return (
     <header className="flex h-16 items-center justify-between bg-gradient-to-b from-stone-100 to-stone-200 border-b border-stone-800/80 px-6 dark:from-stone-900 dark:to-stone-950 dark:border-stone-600/80">
       <div className="flex items-center gap-4">
@@ -52,6 +66,20 @@ export function Header() {
           reconnectCount={watchStatus.reconnectCount}
           onReconnect={watchStatus.reconnect}
         />
+        {activeOrganization?.namespace && (
+          <div className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-400">
+            <span className="font-mono bg-stone-100 dark:bg-stone-800 px-2 py-1 rounded">
+              {activeOrganization.namespace}
+            </span>
+            <button
+              onClick={copyNamespace}
+              className="p-1 hover:bg-stone-200 dark:hover:bg-stone-700 rounded transition-colors"
+              title="Copy namespace to clipboard"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">

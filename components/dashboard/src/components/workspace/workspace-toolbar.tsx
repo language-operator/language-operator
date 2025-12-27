@@ -78,7 +78,7 @@ export function WorkspaceToolbar({
   const accessMode = workspaceInfo?.accessMode || 'ReadWriteOnce'
 
   return (
-    <div className="flex items-center justify-between p-4 border-b border-stone-800/80 dark:border-stone-600/80">
+    <div className="flex items-center justify-between p-4 border border-stone-800/80 dark:border-stone-600/80 rounded-lg">
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
           <FolderOpen className="w-5 h-5 text-muted-foreground" />
