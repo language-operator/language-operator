@@ -5,8 +5,37 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Activity, AlertCircle, ChevronDown, ChevronRight, Clock, Database } from 'lucide-react'
-import { openTelemetrySpanAdapter } from '@evilmartians/agent-prism-data'
-import type { TraceRecord, TraceSpan } from '@evilmartians/agent-prism-types'
+// TODO: Fix AgentPrism package imports
+// import { openTelemetrySpanAdapter } from '@evilmartians/agent-prism-data'
+// import type { TraceRecord, TraceSpan } from '@evilmartians/agent-prism-types'
+
+// Temporary local types until AgentPrism is working
+interface TraceRecord {
+  id: string
+  name: string
+  spansCount: number
+  durationMs: number
+  agentDescription: string
+}
+
+interface TraceSpan {
+  id: string
+  title: string
+  type?: string
+  duration: number
+  status?: string
+  children?: TraceSpan[]
+  attributes?: Array<{
+    key: string
+    value: {
+      stringValue?: string
+      intValue?: number
+      boolValue?: boolean
+    }
+  }>
+  input?: string
+  output?: string
+}
 
 interface AgentExecution {
   traceId: string
@@ -17,6 +46,39 @@ interface AgentExecution {
   status: 'success' | 'error' | 'running'
   rootSpanName: string
   spanCount: number
+}
+
+// Temporary OTLP to TraceSpan conversion until AgentPrism is working
+function convertOtlpToSpans(otlpData: any): TraceSpan[] {
+  if (!otlpData || !otlpData.resourceSpans) {
+    return []
+  }
+
+  const spans: TraceSpan[] = []
+  
+  for (const resourceSpan of otlpData.resourceSpans) {
+    for (const scopeSpan of resourceSpan.scopeSpans || []) {
+      for (const span of scopeSpan.spans || []) {
+        const convertedSpan: TraceSpan = {
+          id: span.spanId || Math.random().toString(36),
+          title: span.name || 'Unknown Span',
+          type: span.kind ? `Kind ${span.kind}` : undefined,
+          duration: span.endTimeUnixNano && span.startTimeUnixNano 
+            ? Math.round((parseInt(span.endTimeUnixNano) - parseInt(span.startTimeUnixNano)) / 1000000)
+            : 0,
+          status: span.status?.code === 2 ? 'error' : 'success',
+          attributes: (span.attributes || []).map((attr: any) => ({
+            key: attr.key,
+            value: attr.value
+          })),
+          children: [] // TODO: Build span hierarchy
+        }
+        spans.push(convertedSpan)
+      }
+    }
+  }
+  
+  return spans
 }
 
 interface AgentPrismTraceViewerProps {
@@ -213,8 +275,11 @@ export function AgentPrismTraceViewer({
         const otlpDocument = result.data
         setTraceData(otlpDocument)
 
-        // Convert to AgentPrism spans
-        const convertedSpans = openTelemetrySpanAdapter.convertRawDocumentsToSpans(otlpDocument)
+        // TODO: Replace with proper AgentPrism conversion
+        // const convertedSpans = openTelemetrySpanAdapter.convertRawDocumentsToSpans(otlpDocument)
+        
+        // Temporary simple conversion for OTLP data
+        const convertedSpans = convertOtlpToSpans(otlpDocument)
         setSpans(convertedSpans)
         
         setError(null)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@clickhouse/client'
+import { createClickHouseClient } from '@/lib/clickhouse-config'
 
 // OpenTelemetry OTLP format interfaces
 interface OtlpAttribute {
@@ -59,10 +59,7 @@ interface OtlpDocument {
 }
 
 // ClickHouse client
-const clickhouse = createClient({
-  host: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
-  database: 'langop',
-})
+const clickhouse = createClickHouseClient()
 
 function convertAttributesToOtlp(attributes: Record<string, any>): OtlpAttribute[] {
   return Object.entries(attributes).map(([key, value]) => ({

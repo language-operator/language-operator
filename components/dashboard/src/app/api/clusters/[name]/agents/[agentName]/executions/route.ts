@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@clickhouse/client'
+import { createClickHouseClient } from '@/lib/clickhouse-config'
 
 // Types for API responses
 export interface AgentExecution {
@@ -21,10 +21,7 @@ const QuerySchema = z.object({
 })
 
 // ClickHouse client
-const clickhouse = createClient({
-  host: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
-  database: 'langop',
-})
+const clickhouse = createClickHouseClient()
 
 export async function GET(
   request: NextRequest,
@@ -75,7 +72,13 @@ export async function GET(
 
     const rows = await resultSet.json()
     
-    const executions: AgentExecution[] = rows.data.map((row: any) => ({
+    // Handle different response formats from ClickHouse
+    const data = rows.data || rows
+    if (!Array.isArray(data)) {
+      return NextResponse.json({ data: [] })
+    }
+    
+    const executions: AgentExecution[] = data.map((row: any) => ({
       traceId: row.traceId,
       executionId: `exec_${row.traceId.substring(0, 8)}`,
       startTime: new Date(row.startTime),

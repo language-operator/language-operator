@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@clickhouse/client'
+import { createClickHouseClient } from '@/lib/clickhouse-config'
 
 // Types for trace data
 interface TraceSpan {
@@ -27,10 +27,7 @@ interface TraceData {
 }
 
 // ClickHouse client
-const clickhouse = createClient({
-  host: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
-  database: 'langop',
-})
+const clickhouse = createClickHouseClient()
 
 export async function GET(
   request: NextRequest,
