@@ -27,9 +27,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     console.log(`Fetching pods for agent ${agentName} in cluster ${clusterName}, namespace ${organization.namespace}`)
 
-    // Find all pods for this agent
+    // Find all pods for this agent (only agent pods, not trigger pods)
     const pods = await k8sClient.listPods(organization.namespace, {
-      labelSelector: `app.kubernetes.io/name=${agentName}`
+      labelSelector: `app.kubernetes.io/name=${agentName},langop.io/component=agent`
     })
 
     // Handle different response structures from k8s client
