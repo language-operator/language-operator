@@ -1447,7 +1447,7 @@ func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if triggerWouldMatch {
 		t.Error("Service selector would incorrectly match trigger pods - this defeats the purpose of the fix")
 	}
