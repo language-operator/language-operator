@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { useModels } from '@/hooks/use-models'
 import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
+import { ResourceEventsActivity } from '@/components/ui/events-activity'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
 
@@ -275,6 +276,14 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Recent Events */}
+      <ResourceEventsActivity
+        resourceType="agent"
+        resourceName={agent.metadata.name}
+        namespace={agent.metadata.namespace}
+        limit={10}
+      />
 
     </div>
   )

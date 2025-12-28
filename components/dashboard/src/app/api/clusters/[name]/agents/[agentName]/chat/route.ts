@@ -78,7 +78,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Get agent's networking configuration to find chat endpoint
     const networking = agentData.spec?.networking
-    const port = networking?.port || 80 // Service port (80 -> 8080 on pod)
+    const port = networking?.port || 8080 // Service port for agent communication
     const serviceName = `${agentName}` // Service name matches agent name
     
     // Resolve agent endpoint based on environment (K8s vs Docker Compose)
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         stream: false
       }),
       // Add timeout for agent responses
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      signal: AbortSignal.timeout(60000) // 60 second timeout
     })
 
     if (!agentResponse.ok) {

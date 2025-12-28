@@ -49,7 +49,7 @@ export class ServiceResolver {
   /**
    * Helper method specifically for chat completion endpoints
    */
-  public resolveAgentChatUrl(agentName: string, namespace: string, port: number = 80): string {
+  public resolveAgentChatUrl(agentName: string, namespace: string, port: number = 8080): string {
     return this.resolveServiceUrl({
       serviceName: agentName,
       namespace,

@@ -27,7 +27,6 @@ function getCurrentTabValue(pathname: string, clusterName: string, agentName: st
   if (pathname.endsWith('/code')) return 'code'
   if (pathname.endsWith('/workspace')) return 'workspace'
   if (pathname.endsWith('/logs')) return 'logs'
-  if (pathname.endsWith('/events')) return 'events'
   if (pathname.endsWith('/traces')) return 'traces'
   
   return 'overview'
@@ -210,9 +209,9 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
               <span>{agent.metadata.name}</span>
               <div className="flex items-center space-x-2">
                 {getStatusIcon(agent)}
-                <Badge className={`${getStatusColor(agent)} border-none bg-transparent`}>
+                <span className={`text-[10px] tracking-wider uppercase font-light ${getStatusColor(agent)}`}>
                   {agent.status?.phase || 'Unknown'}
-                </Badge>
+                </span>
               </div>
             </div>
           }
@@ -297,12 +296,6 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
               <Link href={`/clusters/${clusterName}/agents/${agentName}/traces`}>
                 <Activity className="w-4 h-4 mr-2" />
                 Traces
-              </Link>
-            </TabsTrigger>
-            <TabsTrigger value="events" asChild>
-              <Link href={`/clusters/${clusterName}/agents/${agentName}/events`}>
-                <Clock className="w-4 h-4 mr-2" />
-                Events
               </Link>
             </TabsTrigger>
           </TabsList>

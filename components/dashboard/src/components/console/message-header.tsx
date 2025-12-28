@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useConsole } from '@/contexts/console-context'
@@ -80,9 +81,12 @@ export function MessageHeader() {
           <Plus className="h-4 w-4" />
         </Button>
 
-        <h2 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300">
+        <Link 
+          href={`/clusters/${selectedCluster}/agents/${selectedAgent}`}
+          className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 hover:text-stone-600 dark:hover:text-stone-400 transition-colors cursor-pointer"
+        >
           {selectedAgent}
-        </h2>
+        </Link>
 
         <Button
           variant="ghost"
