@@ -78,49 +78,50 @@ function ModelDetails({ model }: ModelDetailsProps) {
       </Card>
 
       {/* Caching */}
-      {model.spec.caching && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Response Caching
-            </CardTitle>
-            <CardDescription>
-              Caching configuration for improved performance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Status</p>
-                <Badge variant={model.spec.caching.enabled ? "default" : "secondary"}>
-                  {model.spec.caching.enabled ? "Enabled" : "Disabled"}
-                </Badge>
-              </div>
-              {model.spec.caching.ttl && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">TTL (Time to Live)</p>
-                  <p className="text-sm">{model.spec.caching.ttl}</p>
-                </div>
-              )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Response Caching
+          </CardTitle>
+          <CardDescription>
+            Caching configuration for improved performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Status</p>
+              <Badge variant={model.spec.caching?.enabled ? "default" : "secondary"}>
+                {model.spec.caching?.enabled ? "Enabled" : "Disabled"}
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            {model.spec.caching?.ttl && (
+              <div>
+                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">TTL (Time to Live)</p>
+                <p className="text-sm">{model.spec.caching.ttl}</p>
+              </div>
+            )}
+          </div>
+          {!model.spec.caching && (
+            <p className="text-sm text-muted-foreground italic">Off</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Rate Limits */}
-      {model.spec.rateLimits && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Rate Limiting
-            </CardTitle>
-            <CardDescription>
-              Request rate limits and throttling
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Rate Limiting
+          </CardTitle>
+          <CardDescription>
+            Request rate limits and throttling
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {model.spec.rateLimits ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {model.spec.rateLimits.requestsPerMinute && (
                 <div>
@@ -140,53 +141,44 @@ function ModelDetails({ model }: ModelDetailsProps) {
                   <p className="text-sm">{model.spec.rateLimits.concurrentRequests}</p>
                 </div>
               )}
+              {!model.spec.rateLimits.requestsPerMinute && !model.spec.rateLimits.tokensPerMinute && !model.spec.rateLimits.concurrentRequests && (
+                <p className="text-sm text-muted-foreground italic">Off</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Off</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Retry Policy */}
-      {model.spec.retryPolicy && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Retry Policy
-            </CardTitle>
-            <CardDescription>
-              Automatic retry configuration for failed requests
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Retry Policy
+          </CardTitle>
+          <CardDescription>
+            Automatic retry configuration for failed requests
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {model.spec.retryPolicy ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(model.spec.retryPolicy as any).maxAttempts && (
+              {(model.spec.retryPolicy as any).maxAttempts ? (
                 <div>
                   <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Max Attempts</p>
                   <p className="text-sm">{(model.spec.retryPolicy as any).maxAttempts}</p>
                 </div>
-              )}
-              {(model.spec.retryPolicy as any).initialBackoff && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Initial Backoff</p>
-                  <p className="text-sm">{(model.spec.retryPolicy as any).initialBackoff}</p>
-                </div>
-              )}
-              {(model.spec.retryPolicy as any).maxBackoff && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Max Backoff</p>
-                  <p className="text-sm">{(model.spec.retryPolicy as any).maxBackoff}</p>
-                </div>
-              )}
-              {(model.spec.retryPolicy as any).backoffMultiplier && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Backoff Multiplier</p>
-                  <p className="text-sm">{(model.spec.retryPolicy as any).backoffMultiplier}</p>
-                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Off</p>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Off</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Cost Tracking */}
       {model.spec.costTracking && (
@@ -225,34 +217,6 @@ function ModelDetails({ model }: ModelDetailsProps) {
         </Card>
       )}
 
-      {/* Model State */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Model State
-          </CardTitle>
-          <CardDescription>
-            Model availability and approval settings
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Enabled</p>
-              <Badge variant={model.spec.enabled !== false ? "default" : "secondary"}>
-                {model.spec.enabled !== false ? "Enabled" : "Disabled"}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Requires Approval</p>
-              <Badge variant={model.spec.requireApproval ? "default" : "secondary"}>
-                {model.spec.requireApproval ? "Yes" : "No"}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

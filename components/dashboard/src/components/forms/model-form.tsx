@@ -849,49 +849,6 @@ export function ModelForm({
                 />
               </div>
             </div>
-            <Separator />
-            <div className="space-y-2">
-              <Label>Stop Sequences</Label>
-              <div className="space-y-2">
-                {(formData.stopSequences || []).map((sequence, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      value={sequence}
-                      onChange={(e) => {
-                        const newSequences = [...(formData.stopSequences || [])]
-                        newSequences[index] = e.target.value
-                        setFormData(prev => ({ ...prev, stopSequences: newSequences }))
-                      }}
-                      placeholder="Stop sequence"
-                      className="font-mono"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newSequences = removeStopSequence(formData.stopSequences || [], index)
-                        setFormData(prev => ({ ...prev, stopSequences: newSequences }))
-                      }}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newSequences = addStopSequence(formData.stopSequences || [], "")
-                    setFormData(prev => ({ ...prev, stopSequences: newSequences }))
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Stop Sequence
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </TabsContent>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Database, Edit, MoreVertical, FileCode, Trash2, Home, Info, Globe, ScrollText, Copy, Check } from 'lucide-react'
+import { Cpu, Edit, MoreVertical, FileCode, Trash2, Home, Info, Globe, ScrollText, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -141,7 +141,7 @@ export default function ModelDetailLayout({ children }: ModelDetailLayoutProps) 
           <ResourceHeader
             backHref={`/clusters/${clusterName}/models/${modelName}`}
             backLabel="Back to Model"
-            icon={Database}
+            icon={Cpu}
             title={`Edit ${model.metadata.name}`}
             subtitle="LanguageModel"
           />
@@ -161,7 +161,7 @@ export default function ModelDetailLayout({ children }: ModelDetailLayoutProps) 
         <ResourceHeader
           backHref={`/clusters/${clusterName}/models`}
           backLabel="Back to Models"
-          icon={Database}
+          icon={Cpu}
           title={
             <div className="flex items-center space-x-3">
               <span>{model.metadata.name}</span>

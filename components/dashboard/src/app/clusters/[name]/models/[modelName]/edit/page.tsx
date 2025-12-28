@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
-import { useModel } from '@/hooks/use-models'
-import { fetchWithOrganization } from '@/lib/api-client'
+import { useModel, useUpdateModel } from '@/hooks/use-models'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ClusterEditModelPage() {
@@ -13,23 +10,16 @@ export default function ClusterEditModelPage() {
   const router = useRouter()
   const clusterName = params.name as string
   const modelName = params.modelName as string
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-
   const { data: modelResponse, isLoading: isLoadingModel } = useModel(modelName, clusterName)
   const model = modelResponse?.data
+  
+  const updateModel = useUpdateModel(clusterName)
 
   const handleSubmit = async (formData: ModelFormData) => {
-    setIsLoading(true)
-    setError('')
-
     try {
-      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${modelName}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await updateModel.mutateAsync({
+        modelName,
+        updateData: {
           name: formData.name,
           provider: formData.provider,
           model: formData.model,
@@ -48,7 +38,6 @@ export default function ClusterEditModelPage() {
               topP: formData.topP,
               frequencyPenalty: formData.frequencyPenalty,
               presencePenalty: formData.presencePenalty,
-              stopSequences: formData.stopSequences,
               additionalParameters: formData.additionalParameters,
             },
             contextWindow: formData.contextWindow,
@@ -60,11 +49,12 @@ export default function ClusterEditModelPage() {
             enabled: formData.enabled,
             requireApproval: formData.requireApproval,
             // Enterprise features
-            caching: formData.cachingEnabled ? {
+            caching: {
+              enabled: formData.cachingEnabled || false,
               backend: formData.cachingBackend,
               ttl: formData.cachingTtl,
               maxSize: formData.cachingMaxSize
-            } : undefined,
+            },
             loadBalancing: formData.loadBalancingEnabled ? {
               strategy: formData.loadBalancingStrategy,
               endpoints: formData.loadBalancingEndpoints,
@@ -105,21 +95,14 @@ export default function ClusterEditModelPage() {
             regions: formData.regions,
             fallbacks: formData.fallbacks
           },
-        }),
+        }
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update model')
-      }
 
       // Redirect to model detail page
       router.push(`/clusters/${clusterName}/models/${modelName}`)
     } catch (err: any) {
       console.error('Error updating model:', err)
-      setError(err.message || 'Failed to update model')
-    } finally {
-      setIsLoading(false)
+      // Error is handled by the mutation hook
     }
   }
 
@@ -147,9 +130,8 @@ export default function ClusterEditModelPage() {
     
     // Enterprise features from existing model
     timeout: model.spec.timeout || '5m',
-    stopSequences: model.spec.configuration?.stopSequences || [],
     additionalParameters: model.spec.configuration?.additionalParameters || {},
-    cachingEnabled: !!model.spec.caching,
+    cachingEnabled: model.spec.caching?.enabled || false,
     cachingBackend: model.spec.caching?.backend || 'memory',
     cachingTtl: model.spec.caching?.ttl || '5m',
     cachingMaxSize: model.spec.caching?.maxSize || 100,
@@ -209,8 +191,8 @@ export default function ClusterEditModelPage() {
     <div>
       <ModelForm
         initialData={initialData}
-        isLoading={isLoading}
-        error={error}
+        isLoading={updateModel.isPending}
+        error={updateModel.error?.message}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         isEdit={true}

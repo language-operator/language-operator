@@ -40,6 +40,7 @@ const updateModelSchema = z.object({
     enabled: z.boolean().optional(),
     requireApproval: z.boolean().optional(),
     caching: z.object({
+      enabled: z.boolean().optional(),
       backend: z.string().optional(),
       ttl: z.string().optional(),
       maxSize: z.number().optional()

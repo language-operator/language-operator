@@ -56,6 +56,50 @@ export function useModel(name: string, clusterName: string) {
   })
 }
 
+export function useUpdateModel(clusterName: string) {
+  const queryClient = useQueryClient()
+  const { activeOrganizationId } = useOrganizationStore()
+
+  return useMutation({
+    mutationFn: async ({ modelName, updateData }: { modelName: string; updateData: any }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for model update')
+      }
+
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${modelName}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update model')
+      }
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch the individual model query
+      queryClient.invalidateQueries({ 
+        queryKey: ['models', clusterName, variables.modelName] 
+      })
+      
+      // Also invalidate the models list to update any summary data
+      queryClient.invalidateQueries({ 
+        queryKey: ['models', activeOrganizationId, clusterName] 
+      })
+      queryClient.invalidateQueries({ 
+        queryKey: ['models'] 
+      })
+    },
+    onError: (error) => {
+      console.error('Failed to update model:', error)
+    }
+  })
+}
+
 export function useDeleteModel(clusterName: string) {
   const queryClient = useQueryClient()
   const { activeOrganizationId } = useOrganizationStore()
