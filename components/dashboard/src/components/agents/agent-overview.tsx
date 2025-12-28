@@ -280,8 +280,8 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
       {/* Recent Events */}
       <ResourceEventsActivity
         resourceType="agent"
-        resourceName={agent.metadata.name}
-        namespace={agent.metadata.namespace}
+        resourceName={agent.metadata.name || ''}
+        namespace={agent.metadata.namespace || ''}
         limit={10}
       />
 
