@@ -425,9 +425,9 @@ func (r *LearningReconciler) getExecutionTraces(ctx context.Context, agent *lang
 
 	filter := telemetry.SpanFilter{
 		TimeRange: timeRange,
-		// Use semantic attributes like the original gem implementation
+		// Use the same attribute pattern as the dashboard
 		Attributes: map[string]string{
-			"service.name": fmt.Sprintf("language-operator-agent-%s", agent.Name),
+			"agent.name": agent.Name,
 		},
 		Limit: 1000, // Reasonable limit for pattern analysis
 	}
@@ -1097,17 +1097,17 @@ func (r *LearningReconciler) calculatePatternConfidenceFromTraces(traces []TaskT
 // identifyTasksForOptimization analyzes agent telemetry to identify tasks that could benefit from optimization
 func (r *LearningReconciler) identifyTasksForOptimization(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]synthesis.TaskSynthesisRequest, error) {
 	log := r.Log.WithValues("agent", agent.Name, "namespace", agent.Namespace)
-	log.Info("Identifying tasks for optimization (direct SigNoz query approach)")
+	log.Info("Identifying tasks for optimization using telemetry data")
 
-	// Query SigNoz directly for all traces (Ruby gem approach)
+	// Query telemetry backend for all traces
 	allTraces, err := r.getExecutionTraces(ctx, agent)
 	if err != nil {
-		log.Error(err, "Failed to get execution traces from SigNoz")
+		log.Error(err, "Failed to get execution traces from telemetry backend")
 		return nil, fmt.Errorf("failed to get execution traces: %w", err)
 	}
 
 	if len(allTraces) == 0 {
-		log.Info("No execution traces found in SigNoz, no tasks to optimize")
+		log.Info("No execution traces found in telemetry backend, no tasks to optimize")
 		return []synthesis.TaskSynthesisRequest{}, nil
 	}
 
