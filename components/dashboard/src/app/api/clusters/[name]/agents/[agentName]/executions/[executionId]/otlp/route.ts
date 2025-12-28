@@ -139,14 +139,37 @@ export async function GET(
           
           // Helper function to safely parse JSON
           const safeJsonParse = (str: string, defaultValue: any = null) => {
-            if (!str || str === 'null' || str === '') return defaultValue
+            if (!str || str === 'null' || str === '' || str === '\\N') return defaultValue
             try {
-              return JSON.parse(str)
+              // Clean up common JSON formatting issues
+              let cleanStr = str.trim()
+              
+              // Handle ClickHouse NULL values
+              if (cleanStr === '\\N' || cleanStr === 'NULL') return defaultValue
+              
+              // Try to parse as-is first
+              try {
+                return JSON.parse(cleanStr)
+              } catch (firstError) {
+                // If that fails, try to fix common issues
+                // Remove trailing commas, fix single quotes, etc.
+                cleanStr = cleanStr
+                  .replace(/,(\s*[}\]])/g, '$1')  // Remove trailing commas
+                  .replace(/'/g, '"')             // Replace single quotes with double quotes
+                  .replace(/([{,]\s*)(\w+):/g, '$1"$2":')  // Quote unquoted keys
+                
+                return JSON.parse(cleanStr)
+              }
             } catch (e) {
-              console.warn('Failed to parse JSON field:', str, e)
+              // Only log warnings in development
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Failed to parse JSON field after cleanup:', str.substring(0, 200), e)
+              }
               return defaultValue
             }
           }
+          
+          const attributes = safeJsonParse(fields[10], {})
           
           return {
             traceId: fields[0] || '',
@@ -159,7 +182,7 @@ export async function GET(
             statusCode: fields[7] || 'STATUS_CODE_UNSET',
             statusMessage: fields[8] || '',
             spanKind: fields[9] ? parseInt(fields[9]) : 1,
-            attributes: safeJsonParse(fields[10], {}),
+            attributes: attributes,
             eventTimestamps: safeJsonParse(fields[11], []),
             eventNames: safeJsonParse(fields[12], []),
             eventAttributes: safeJsonParse(fields[13], [])

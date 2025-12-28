@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ExecutionDropdown } from './execution-dropdown'
-import { AgentPrismTraceViewer } from './agent-prism-trace-viewer' 
+import { AgentTraceViewer } from './agent-trace-viewer' 
 import { ExecutionMetadata } from './execution-metadata'
 import { useAgentExecutions } from '@/hooks/use-agent-executions'
 import { Activity, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
@@ -27,12 +28,45 @@ interface AgentTelemetryPanelProps {
 
 export function AgentTelemetryPanel({ agent, clusterName }: AgentTelemetryPanelProps) {
   const [selectedExecution, setSelectedExecution] = useState<AgentExecution | null>(null)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   
   const { 
     data: executions, 
     isLoading, 
     error 
   } = useAgentExecutions(agent.metadata.name, clusterName)
+
+  // Handle URL-based trace selection and auto-select most recent execution
+  useEffect(() => {
+    if (!executions?.data || executions.data.length === 0) return
+
+    const urlTraceId = searchParams.get('traceId')
+    
+    if (urlTraceId) {
+      // If there's a trace ID in the URL, try to find and select that execution
+      const foundExecution = executions.data.find(exec => exec.traceId === urlTraceId)
+      if (foundExecution && foundExecution !== selectedExecution) {
+        setSelectedExecution(foundExecution)
+      }
+    } else if (!selectedExecution) {
+      // No trace ID in URL and no execution selected, auto-select most recent
+      const mostRecent = executions.data[0]
+      setSelectedExecution(mostRecent)
+      // Update URL to reflect the selected trace
+      const newUrl = `${window.location.pathname}?traceId=${mostRecent.traceId}`
+      window.history.pushState(null, '', newUrl)
+    }
+  }, [executions?.data, selectedExecution, searchParams])
+
+  // Handle execution selection with URL update (but stay on same page)
+  const handleExecutionSelect = (execution: AgentExecution) => {
+    setSelectedExecution(execution)
+    // Use shallow routing to update the URL without navigating to a new page
+    const newUrl = `${window.location.pathname}?traceId=${execution.traceId}`
+    window.history.pushState(null, '', newUrl)
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -124,43 +158,24 @@ export function AgentTelemetryPanel({ agent, clusterName }: AgentTelemetryPanelP
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Recent Executions
+            Executions
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ExecutionDropdown
             executions={executionList}
             selectedExecution={selectedExecution}
-            onExecutionSelect={setSelectedExecution}
+            onExecutionSelect={handleExecutionSelect}
+            clusterName={clusterName}
+            agentName={agent.metadata.name}
           />
         </CardContent>
       </Card>
 
       {selectedExecution && (
         <>
-          {/* Execution Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Execution Summary
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(selectedExecution.status)}
-                  <Badge className={getStatusColor(selectedExecution.status)}>
-                    {selectedExecution.status}
-                  </Badge>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ExecutionMetadata execution={selectedExecution} />
-            </CardContent>
-          </Card>
-
-          {/* AgentPrism Trace Viewer */}
-          <AgentPrismTraceViewer
+          {/* Agent Trace Viewer */}
+          <AgentTraceViewer
             execution={selectedExecution}
             clusterName={clusterName}
             agentName={agent.metadata.name}

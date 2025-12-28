@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronDown, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, Clock, CheckCircle, XCircle, AlertCircle, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -26,13 +27,30 @@ interface ExecutionDropdownProps {
   executions: AgentExecution[]
   selectedExecution: AgentExecution | null
   onExecutionSelect: (execution: AgentExecution) => void
+  clusterName: string
+  agentName: string
 }
 
 export function ExecutionDropdown({
   executions,
   selectedExecution,
-  onExecutionSelect
+  onExecutionSelect,
+  clusterName,
+  agentName
 }: ExecutionDropdownProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [triggerWidth, setTriggerWidth] = useState<number>(0)
+
+  useEffect(() => {
+    if (triggerRef.current) {
+      const updateWidth = () => {
+        setTriggerWidth(triggerRef.current?.offsetWidth || 0)
+      }
+      updateWidth()
+      window.addEventListener('resize', updateWidth)
+      return () => window.removeEventListener('resize', updateWidth)
+    }
+  }, [])
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
@@ -98,6 +116,7 @@ export function ExecutionDropdown({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             className="w-full justify-between h-auto p-4"
           >
@@ -106,8 +125,8 @@ export function ExecutionDropdown({
                 <div className="flex items-center gap-3">
                   {getStatusIcon(selectedExecution.status)}
                   <div className="text-left">
-                    <div className="font-medium">
-                      Execution {formatExecutionId(selectedExecution.executionId)}
+                    <div className="font-mono text-sm">
+                      {selectedExecution.traceId}
                     </div>
                     <div className="text-sm text-muted-foreground" style={{ textTransform: 'none' }}>
                       {formatTimestamp(selectedExecution.startTime)} • {formatDuration(selectedExecution.duration)}
@@ -129,7 +148,14 @@ export function ExecutionDropdown({
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[400px] max-h-[300px] overflow-y-auto">
+        <DropdownMenuContent 
+          className="max-h-[300px] overflow-y-auto"
+          align="start"
+          sideOffset={4}
+          style={{ 
+            width: triggerWidth > 0 ? `${triggerWidth}px` : 'auto'
+          }}
+        >
           {executions.map((execution) => (
             <DropdownMenuItem
               key={execution.executionId}
@@ -140,17 +166,26 @@ export function ExecutionDropdown({
                 <div className="flex items-center gap-3">
                   {getStatusIcon(execution.status)}
                   <div>
-                    <div className="font-medium">
-                      Execution {formatExecutionId(execution.executionId)}
+                    <div className="font-mono text-sm">
+                      {execution.traceId}
                     </div>
                     <div className="text-sm text-muted-foreground" style={{ textTransform: 'none' }}>
                       {formatTimestamp(execution.startTime)} • {formatDuration(execution.duration)}
                     </div>
                   </div>
                 </div>
-                <Badge className={getStatusColor(execution.status)}>
-                  {execution.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/clusters/${clusterName}/agents/${agentName}/traces/trace/${execution.traceId}`}
+                    className="p-1 hover:bg-accent rounded"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <Badge className={getStatusColor(execution.status)}>
+                    {execution.status}
+                  </Badge>
+                </div>
               </div>
             </DropdownMenuItem>
           ))}

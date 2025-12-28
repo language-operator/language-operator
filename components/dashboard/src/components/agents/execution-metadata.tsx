@@ -48,47 +48,20 @@ export function ExecutionMetadata({ execution }: ExecutionMetadataProps) {
   }
 
   const formatExecutionId = (executionId: string) => {
-    const match = executionId.match(/\d+/)
-    return match ? `#${match[0]}` : executionId
+    return executionId
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Execution ID */}
-      <div className="flex items-center gap-3">
+      {/* Trace ID */}
+      <div className="md:col-span-2 flex items-center gap-3">
         <div className="flex-shrink-0">
           <Hash className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Execution ID</p>
-          <p className="text-lg font-semibold text-foreground">
-            {formatExecutionId(execution.executionId)}
-          </p>
-        </div>
-      </div>
-
-      {/* Duration */}
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">Total Duration</p>
-          <p className="text-lg font-semibold text-foreground">
-            {formatDuration(execution.duration)}
-          </p>
-        </div>
-      </div>
-
-      {/* Span Count */}
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          <Activity className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">Number of Spans</p>
-          <p className="text-lg font-semibold text-foreground">
-            {execution.spanCount}
+          <p className="text-sm font-medium text-muted-foreground">Trace ID</p>
+          <p className="text-lg font-semibold font-mono text-foreground">
+            {execution.traceId}
           </p>
         </div>
       </div>
@@ -106,29 +79,7 @@ export function ExecutionMetadata({ execution }: ExecutionMetadataProps) {
         </div>
       </div>
 
-      {/* Start Time */}
-      <div className="md:col-span-2">
-        <p className="text-sm font-medium text-muted-foreground mb-1">Start Time</p>
-        <p className="text-base text-foreground">
-          {formatDateTime(execution.startTime)}
-        </p>
-      </div>
 
-      {/* End Time */}
-      <div className="md:col-span-2">
-        <p className="text-sm font-medium text-muted-foreground mb-1">End Time</p>
-        <p className="text-base text-foreground">
-          {formatDateTime(execution.endTime)}
-        </p>
-      </div>
-
-      {/* Trace ID */}
-      <div className="md:col-span-2 lg:col-span-4">
-        <p className="text-sm font-medium text-muted-foreground mb-1">Trace ID</p>
-        <p className="text-base font-mono text-foreground bg-muted px-3 py-2 rounded border">
-          {execution.traceId}
-        </p>
-      </div>
     </div>
   )
 }
