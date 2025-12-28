@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Database, Edit, MoreVertical, FileCode, Trash2, Home, Info, BarChart3, ScrollText, Copy, Check } from 'lucide-react'
+import { Database, Edit, MoreVertical, FileCode, Trash2, Home, Info, Globe, ScrollText, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -24,7 +24,7 @@ function getCurrentTabValue(pathname: string, clusterName: string, modelName: st
   
   if (pathname === basePath) return 'overview'
   if (pathname.endsWith('/details')) return 'details'
-  if (pathname.endsWith('/metrics')) return 'metrics'
+  if (pathname.endsWith('/network')) return 'network'
   if (pathname.endsWith('/logs')) return 'logs'
   
   return 'overview'
@@ -222,10 +222,10 @@ export default function ModelDetailLayout({ children }: ModelDetailLayoutProps) 
                 Details
               </Link>
             </TabsTrigger>
-            <TabsTrigger value="metrics" asChild>
-              <Link href={`/clusters/${clusterName}/models/${modelName}/metrics`}>
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Metrics
+            <TabsTrigger value="network" asChild>
+              <Link href={`/clusters/${clusterName}/models/${modelName}/network`}>
+                <Globe className="w-4 h-4 mr-2" />
+                Network
               </Link>
             </TabsTrigger>
             <TabsTrigger value="logs" asChild>

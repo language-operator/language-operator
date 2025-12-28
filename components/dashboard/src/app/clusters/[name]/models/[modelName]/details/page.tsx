@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import { useModel } from '@/hooks/use-models'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Settings, Database, Shield, RefreshCw, Globe } from 'lucide-react'
+import { Settings, Database, Shield, RefreshCw } from 'lucide-react'
 import { LanguageModel } from '@/types/model'
 
 interface ModelDetailsProps {
@@ -188,56 +188,69 @@ function ModelDetails({ model }: ModelDetailsProps) {
         </Card>
       )}
 
-      {/* Network Policy */}
+      {/* Cost Tracking */}
+      {model.spec.costTracking && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Cost Tracking
+            </CardTitle>
+            <CardDescription>
+              Token cost configuration and tracking
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {model.spec.costTracking.inputTokenCost && (
+                <div>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Input Token Cost</p>
+                  <p className="text-sm">${model.spec.costTracking.inputTokenCost.toFixed(6)} per token</p>
+                </div>
+              )}
+              {model.spec.costTracking.outputTokenCost && (
+                <div>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Output Token Cost</p>
+                  <p className="text-sm">${model.spec.costTracking.outputTokenCost.toFixed(6)} per token</p>
+                </div>
+              )}
+              {model.spec.costTracking.currency && (
+                <div>
+                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Currency</p>
+                  <p className="text-sm">{model.spec.costTracking.currency}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Model State */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Network Policy
+            <Settings className="h-5 w-5" />
+            Model State
           </CardTitle>
           <CardDescription>
-            External network access rules
+            Model availability and approval settings
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {model.spec.egress && model.spec.egress.length > 0 ? (
-            <div className="space-y-3">
-              {model.spec.egress.map((rule, index) => (
-                <div key={index} className="border border-stone-200 p-3 dark:border-stone-700">
-                  <div className="space-y-2">
-                    {rule.description && (
-                      <div>
-                        <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Description</p>
-                        <p className="text-sm">{rule.description}</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                      {rule.to?.dns && rule.to.dns.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">DNS Names</p>
-                          <p className="text-sm font-mono">{rule.to.dns.join(', ')}</p>
-                        </div>
-                      )}
-                      {rule.ports && rule.ports.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Ports</p>
-                          <p className="text-sm font-mono">{rule.ports.map(p => p.port).join(', ')}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Enabled</p>
+              <Badge variant={model.spec.enabled !== false ? "default" : "secondary"}>
+                {model.spec.enabled !== false ? "Enabled" : "Disabled"}
+              </Badge>
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <Globe className="h-8 w-8 text-stone-500 dark:text-stone-400 mx-auto mb-2" />
-              <p className="text-sm text-stone-600 dark:text-stone-400">No network egress rules configured</p>
-              <p className="text-xs text-stone-500 dark:text-stone-500 mt-1">
-                Network policies control external access from the model
-              </p>
+            <div>
+              <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Requires Approval</p>
+              <Badge variant={model.spec.requireApproval ? "default" : "secondary"}>
+                {model.spec.requireApproval ? "Yes" : "No"}
+              </Badge>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>
