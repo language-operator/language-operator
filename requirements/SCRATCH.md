@@ -1,13 +1,16 @@
 # Agent Memory Bank
 
-## Current Focus Areas (Dec 26, 2025)
+## Current Focus Areas (Dec 27, 2025)
 
 ### Active Issues
 - 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Recently Completed (Dec 25-26)
+### Recently Completed (Dec 27)
+- ✅ **Issue #218**: Service selector routing to trigger pods - Fixed service selector to only route workspace API calls to agent pods, not trigger pods. Added `langop.io/component=agent` label to deployment pods and updated service selector accordingly (commits 3fa451f, 743447e)
+
+### Previously Completed (Dec 25-26)
 - ✅ **Issue #208**: Console auto-load last conversation - Implemented localStorage persistence to auto-restore last active conversation on Console page navigation (commit 08bdc16)
 - ✅ **Issue #201**: Console workspace back button - Added ChevronLeft navigation from file viewer to file list with Escape key support (commit 36f6926)
 - ✅ **Issue #202**: Console workspace file name casing - Added `style={{ textTransform: 'none' }}` to workspace-file-tree.tsx:220 (commit 8d0026d)
