@@ -7,7 +7,10 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Recently Completed (Dec 27)
+### Recently Completed (Dec 28, 2025)
+- ✅ **Issue #219**: Synthesis hash management bug causing infinite loops - Fixed root cause in `createInitialAgentVersion()` where LanguageAgentVersion v1 was returned with stale hash annotations when instructions changed. Implemented atomic hash + code updates to prevent both infinite synthesis loops and stale code usage. Added comprehensive unit tests covering infinite loop scenarios (commit 268f8ca)
+
+### Previously Completed (Dec 27)
 - ✅ **Issue #218**: Service selector routing to trigger pods - Fixed service selector to only route workspace API calls to agent pods, not trigger pods. Added `langop.io/component=agent` label to deployment pods and updated service selector accordingly (commits 3fa451f, 743447e)
 
 ### Previously Completed (Dec 25-26)

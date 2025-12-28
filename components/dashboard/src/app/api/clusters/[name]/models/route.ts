@@ -238,6 +238,11 @@ export async function POST(
       metadata: {
         name: body.name,
         namespace: organization.namespace,
+        labels: {
+          'langop.io/organization-id': organization.id,
+          'langop.io/cluster': clusterName,
+          'langop.io/managed-by': 'language-operator-dashboard'
+        }
       },
       spec: {
         clusterRef: clusterName, // Automatically set clusterRef to the cluster name
