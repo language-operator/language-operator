@@ -94,6 +94,9 @@ type PatternAnalysis struct {
 var learningTracer = otel.Tracer("language-operator/learning")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=langop.io,resources=languageagentversions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=langop.io,resources=languageagentversions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=langop.io,resources=languageagentversions/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;get;list;patch;watch;update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
@@ -285,8 +288,15 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	} else {
 		// Create LanguageAgentVersion resource with optimized code
 		if err := r.createAgentVersion(ctx, agent, optimizedTasks, synthesizer); err != nil {
-			log.Error(err, "Failed to create LanguageAgentVersion")
-			// Don't return error - learning was successful, version creation failed
+			log.Error(err, "Failed to create LanguageAgentVersion",
+				"optimizedTaskCount", len(optimizedTasks),
+				"agentName", agent.Name,
+				"namespace", agent.Namespace)
+			// Check for permission errors specifically
+			if strings.Contains(err.Error(), "forbidden") || strings.Contains(err.Error(), "unauthorized") {
+				log.Error(err, "RBAC permission error: learning controller may be missing LanguageAgentVersion permissions")
+			}
+			return fmt.Errorf("failed to create LanguageAgentVersion: %w", err)
 		} else {
 			log.Info("Successfully created LanguageAgentVersion with optimized tasks",
 				"agent", agent.Name,

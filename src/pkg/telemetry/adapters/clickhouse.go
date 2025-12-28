@@ -259,7 +259,12 @@ func (c *ClickhouseAdapter) buildSpanQuery(filter telemetry.SpanFilter) string {
 
 	// Add attribute filters
 	for key := range filter.Attributes {
-		query += fmt.Sprintf(" AND SpanAttributes['%s'] = ?", key)
+		// Special case: service.name should filter on ServiceName column, not SpanAttributes
+		if key == "service.name" {
+			query += " AND ServiceName = ?"
+		} else {
+			query += fmt.Sprintf(" AND SpanAttributes['%s'] = ?", key)
+		}
 	}
 
 	// Order by timestamp (newest first)
