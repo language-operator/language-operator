@@ -127,7 +127,7 @@ func TestClickhouseAdapter_buildDSN(t *testing.T) {
 		timeout:  30 * time.Second,
 	}
 
-	expected := "tcp://clickhouse:9000?database=otel&username=default&password=secret&read_timeout=30&write_timeout=30"
+	expected := "tcp://clickhouse:9000?database=otel&username=default&password=secret&read_timeout=30s&write_timeout=30s"
 	actual := adapter.buildDSN()
 
 	if actual != expected {

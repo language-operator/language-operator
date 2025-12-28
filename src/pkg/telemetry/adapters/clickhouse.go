@@ -185,8 +185,8 @@ func (c *ClickhouseAdapter) buildDSN() string {
 	}
 
 	// Add connection settings
-	dsn += fmt.Sprintf("&read_timeout=%d&write_timeout=%d",
-		int(c.timeout.Seconds()), int(c.timeout.Seconds()))
+	dsn += fmt.Sprintf("&read_timeout=%s&write_timeout=%s",
+		c.timeout.String(), c.timeout.String())
 
 	return dsn
 }
