@@ -73,14 +73,14 @@ export function getStatusColor(agent: LanguageAgent) {
   const phase = agent.status?.phase || 'Unknown'
 
   if (phase === 'Running') {
-    return 'bg-green-100 text-green-800'
+    return 'text-green-600'
   } else if (phase === 'Pending') {
-    return 'bg-yellow-100 text-yellow-800'
+    return 'text-yellow-600'
   } else if (phase === 'Failed') {
-    return 'bg-red-100 text-red-800'
+    return 'text-red-600'
   } else if (phase === 'Succeeded') {
-    return 'bg-blue-100 text-blue-800'
+    return 'text-blue-600'
   } else {
-    return 'bg-gray-100 text-gray-800'
+    return 'text-gray-600'
   }
 }

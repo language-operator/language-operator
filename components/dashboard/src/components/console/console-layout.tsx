@@ -24,22 +24,19 @@ export function ConsoleLayout() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950 relative">
-      {/* Left Column: Agents & Conversations - shown when conversation is active */}
-      {hasActiveConversation && (
-        <div
-          className={cn(
-            'flex-shrink-0 border-r border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm transition-all duration-300',
-            isConversationSidebarVisible ? 'w-80' : 'w-16 overflow-hidden'
-          )}
-        >
-          {isConversationSidebarVisible ? (
-            <ConversationSidebar />
-          ) : (
-            <ConversationSidebarCollapsed />
-          )}
-        </div>
-      )}
-
+      {/* Left Column: Agents & Conversations - always shown for browsing */}
+      <div
+        className={cn(
+          'flex-shrink-0 border-r border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm transition-all duration-300',
+          isConversationSidebarVisible ? 'w-80' : 'w-16 overflow-hidden'
+        )}
+      >
+        {isConversationSidebarVisible ? (
+          <ConversationSidebar />
+        ) : (
+          <ConversationSidebarCollapsed />
+        )}
+      </div>
 
       {/* Middle Column: Chat Messages */}
       <div className="flex-1 min-w-[500px] flex flex-col">

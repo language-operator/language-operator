@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useApiClient } from '@/lib/api-client'
 
 interface WorkspaceFileTreeProps {
   agent: LanguageAgent
@@ -45,12 +46,13 @@ export function WorkspaceFileTree({
   const [tree, setTree] = useState<DirectoryNode[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const apiClient = useApiClient()
 
   const agentName = agent.metadata?.name
 
   const fetchDirectory = async (path: string): Promise<FileEntry[]> => {
-    const response = await fetch(
-      `/api/clusters/${clusterName}/agents/${agentName}/workspace/files?path=${encodeURIComponent(path)}`
+    const response = await apiClient.get(
+      `/clusters/${clusterName}/agents/${agentName}/workspace/files?path=${encodeURIComponent(path)}`
     )
     
     if (!response.ok) {

@@ -213,7 +213,7 @@ export class WorkspaceClient {
     const baseUrl = this.serviceResolver.resolveServiceUrl({
       serviceName: agentName,
       namespace,
-      port: 80,
+      port: 8080,
       path: `/api/v1/workspace${endpoint}`
     })
 

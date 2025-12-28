@@ -210,7 +210,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
               <span>{agent.metadata.name}</span>
               <div className="flex items-center space-x-2">
                 {getStatusIcon(agent)}
-                <Badge className={getStatusColor(agent)}>
+                <Badge variant="ghost" className={`${getStatusColor(agent)} border-none`}>
                   {agent.status?.phase || 'Unknown'}
                 </Badge>
               </div>
@@ -293,16 +293,16 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
                 Logs
               </Link>
             </TabsTrigger>
-            <TabsTrigger value="events" asChild>
-              <Link href={`/clusters/${clusterName}/agents/${agentName}/events`}>
-                <Clock className="w-4 h-4 mr-2" />
-                Events
-              </Link>
-            </TabsTrigger>
             <TabsTrigger value="traces" asChild>
               <Link href={`/clusters/${clusterName}/agents/${agentName}/traces`}>
                 <Activity className="w-4 h-4 mr-2" />
                 Traces
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="events" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/events`}>
+                <Clock className="w-4 h-4 mr-2" />
+                Events
               </Link>
             </TabsTrigger>
           </TabsList>
