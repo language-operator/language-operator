@@ -210,7 +210,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
               <span>{agent.metadata.name}</span>
               <div className="flex items-center space-x-2">
                 {getStatusIcon(agent)}
-                <Badge variant="ghost" className={`${getStatusColor(agent)} border-none`}>
+                <Badge className={`${getStatusColor(agent)} border-none bg-transparent`}>
                   {agent.status?.phase || 'Unknown'}
                 </Badge>
               </div>
