@@ -114,14 +114,68 @@ export async function GET(
       ORDER BY Timestamp ASC
     `
 
-    const resultSet = await clickhouse.query({
-      query: sql,
-      query_params: {
-        traceIdPattern: `${traceIdPrefix}%`
-      },
-    })
-
-    const rows = await resultSet.json()
+    // For kubectl-proxy, use direct HTTP request instead of the ClickHouse client
+    let rows: any
+    if (process.env.KUBERNETES_SERVER_URL?.includes('kubectl-proxy')) {
+      const baseUrl = `${process.env.KUBERNETES_SERVER_URL}/api/v1/namespaces/language-operator/services/language-operator-clickhouse:8123/proxy`
+      
+      // Build the SQL query with parameters substituted directly
+      const sqlWithParams = sql.replace('{traceIdPattern:String}', `'${traceIdPrefix}%'`)
+      
+      const response = await fetch(`${baseUrl}?database=langop&query=${encodeURIComponent(sqlWithParams)}`)
+      if (!response.ok) {
+        throw new Error(`ClickHouse query failed: ${response.status} ${response.statusText}`)
+      }
+      
+      const text = await response.text()
+      
+      // Parse tab-separated values response
+      const lines = text.trim().split('\n')
+      if (lines.length === 0 || lines[0] === '') {
+        rows = { data: [] }
+      } else {
+        const data = lines.map(line => {
+          const fields = line.split('\t')
+          
+          // Helper function to safely parse JSON
+          const safeJsonParse = (str: string, defaultValue: any = null) => {
+            if (!str || str === 'null' || str === '') return defaultValue
+            try {
+              return JSON.parse(str)
+            } catch (e) {
+              console.warn('Failed to parse JSON field:', str, e)
+              return defaultValue
+            }
+          }
+          
+          return {
+            traceId: fields[0] || '',
+            spanId: fields[1] || '',
+            parentSpanId: fields[2] || null,
+            spanName: fields[3] || '',
+            startTime: fields[4] || '',
+            endTime: fields[5] || '',
+            duration: fields[6] ? parseInt(fields[6]) : 0,
+            statusCode: fields[7] || 'STATUS_CODE_UNSET',
+            statusMessage: fields[8] || '',
+            spanKind: fields[9] ? parseInt(fields[9]) : 1,
+            attributes: safeJsonParse(fields[10], {}),
+            eventTimestamps: safeJsonParse(fields[11], []),
+            eventNames: safeJsonParse(fields[12], []),
+            eventAttributes: safeJsonParse(fields[13], [])
+          }
+        })
+        rows = { data }
+      }
+    } else {
+      const resultSet = await clickhouse.query({
+        query: sql,
+        query_params: {
+          traceIdPattern: `${traceIdPrefix}%`
+        },
+      })
+      rows = await resultSet.json()
+    }
     
     if (rows.data.length === 0) {
       return NextResponse.json({

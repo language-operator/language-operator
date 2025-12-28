@@ -60,17 +60,56 @@ export async function GET(
       LIMIT {limit:UInt32}
     `
 
-    const resultSet = await clickhouse.query({
-      query: sql,
-      query_params: {
-        startTime: startTime.getTime() * 1000000, // Convert to nanoseconds
-        endTime: endTime.getTime() * 1000000, // Convert to nanoseconds
-        agentName,
-        limit: query.limit,
-      },
-    })
 
-    const rows = await resultSet.json()
+    // For kubectl-proxy, use direct HTTP request instead of the ClickHouse client
+    // because the client library doesn't work well with the proxy format
+    let rows: any
+    if (process.env.KUBERNETES_SERVER_URL?.includes('kubectl-proxy')) {
+      const baseUrl = `${process.env.KUBERNETES_SERVER_URL}/api/v1/namespaces/language-operator/services/language-operator-clickhouse:8123/proxy`
+      
+      // Build the SQL query with parameters substituted directly
+      const sqlWithParams = sql
+        .replace('{startTime:DateTime64(9)}', `fromUnixTimestamp64Nano(${startTime.getTime() * 1000000})`)
+        .replace('{endTime:DateTime64(9)}', `fromUnixTimestamp64Nano(${endTime.getTime() * 1000000})`)
+        .replace('{agentName:String}', `'${agentName}'`)
+        .replace('{limit:UInt32}', query.limit.toString())
+
+      const response = await fetch(`${baseUrl}?database=langop&query=${encodeURIComponent(sqlWithParams)}`)
+      if (!response.ok) {
+        throw new Error(`ClickHouse query failed: ${response.status} ${response.statusText}`)
+      }
+      
+      const text = await response.text()
+      
+      // Parse tab-separated values response
+      const lines = text.trim().split('\n')
+      const data = lines.map(line => {
+        const fields = line.split('\t')
+        return {
+          traceId: fields[0],
+          startTime: new Date(fields[1]),
+          endTime: new Date(fields[2]),
+          duration: parseFloat(fields[3]),
+          spanCount: parseInt(fields[4]),
+          rootSpanName: fields[5],
+          status: fields[6]
+        }
+      })
+      
+      rows = { data }
+    } else {
+      const resultSet = await clickhouse.query({
+        query: sql,
+        query_params: {
+          startTime: startTime.getTime() * 1000000, // Convert to nanoseconds
+          endTime: endTime.getTime() * 1000000, // Convert to nanoseconds
+          agentName,
+          limit: query.limit,
+        },
+      })
+      rows = await resultSet.json()
+    }
+
     
     // Handle different response formats from ClickHouse
     const data = rows.data || rows
@@ -107,9 +146,14 @@ export async function GET(
     }
 
     console.error('Error querying ClickHouse:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
     
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch agent executions' },
+      { 
+        success: false, 
+        error: 'Failed to fetch agent executions',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
