@@ -13,6 +13,7 @@ import { useTheme } from 'next-themes'
 import { useAgentVersions, useRollbackAgent, useToggleAgentLock, useTriggerOptimization } from '@/hooks/use-agents'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
+import { toast } from 'sonner'
 
 interface AgentCodeProps {
   agent: LanguageAgent
@@ -80,7 +81,29 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
       await optimizeMutation.mutateAsync({
         agentName: agent.metadata.name || '',
       })
+      // Success case
+      toast.success("Optimization Started", {
+        description: "Agent optimization has been triggered successfully."
+      })
     } catch (error) {
+      // Error cases with user-friendly messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      if (errorMessage.includes('Agent locked')) {
+        toast.error("Agent Locked", {
+          description: "Unlock the agent version before trying to optimize."
+        })
+      } else if (errorMessage.includes('Agent not found')) {
+        toast.error("Agent Not Found", {
+          description: "The specified agent could not be found."
+        })
+      } else {
+        toast.error("Optimization Failed", {
+          description: errorMessage
+        })
+      }
+      
+      // Still log to console for debugging
       console.error('Optimization failed:', error)
     }
   }
@@ -148,9 +171,6 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                         {version.isCurrent && (
                           <Badge variant="secondary" className="text-xs">CURRENT</Badge>
                         )}
-                        <Badge variant="secondary" className="text-xs">
-                          {version.spec.sourceType || 'manual'}
-                        </Badge>
                         <span className="text-muted-foreground text-xs">
                           {formatTimeAgoCondensed(version.metadata.creationTimestamp)}
                         </span>
@@ -191,12 +211,17 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                 variant="default"
                 size="sm"
                 onClick={handleOptimize}
-                disabled={optimizeMutation.isPending}
+                disabled={optimizeMutation.isPending || agent.status?.learningRequestPending}
               >
                 {optimizeMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Optimizing...
+                  </>
+                ) : agent.status?.learningRequestPending ? (
+                  <>
+                    <Brain className="h-4 w-4 mr-2" />
+                    Optimization Pending...
                   </>
                 ) : (
                   <>

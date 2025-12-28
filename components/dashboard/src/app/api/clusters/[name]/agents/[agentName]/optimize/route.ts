@@ -65,16 +65,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
-    // Check if agent has enough runs for optimization
-    const runsPending = agent.status?.runsPendingLearning || 0
-    const learningThreshold = 10 // Default threshold from learning controller
-    
-    if (runsPending < learningThreshold) {
-      return NextResponse.json({ 
-        error: 'Insufficient data',
-        message: `Agent "${agentName}" has only ${runsPending} runs. Need at least ${learningThreshold} runs for optimization.`
-      }, { status: 400 })
-    }
+    // Manual optimization bypasses the automatic learning threshold
+    // Users can trigger optimization on demand regardless of execution count
 
     // Set learningRequestPending=true to trigger optimization
     // The learning controller will see this flag and trigger optimization
@@ -110,11 +102,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       return NextResponse.json({
         data: updatedAgentResult,
-        message: `Successfully triggered optimization for agent "${agentName}". The learning controller will process this request.`,
+        message: `Successfully triggered manual optimization for agent "${agentName}". The learning controller will process this request.`,
         optimizationStatus: {
           triggered: true,
-          runsPending: runsPending,
-          threshold: learningThreshold,
+          triggerType: 'manual',
           timestamp: new Date().toISOString()
         }
       })
