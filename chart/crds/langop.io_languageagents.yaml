@@ -2550,23 +2550,6 @@ spec:
                                 May contain labels and annotations that will be copied into the PVC
                                 when creating it. No other fields are allowed and will be rejected during
                                 validation.
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                finalizers:
-                                  items:
-                                    type: string
-                                  type: array
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
                               type: object
                             spec:
                               description: |-
@@ -3978,6 +3961,11 @@ spec:
                 description: LastUpdateTime is the last time the status was updated
                 format: date-time
                 type: string
+              learningRequestPending:
+                description: |-
+                  LearningRequestPending indicates a manual optimization request is pending
+                  Set to true to trigger manual learning, automatically reset to false after processing
+                type: boolean
               message:
                 description: Message provides human-readable details about the current
                   state

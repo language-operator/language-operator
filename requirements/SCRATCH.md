@@ -8,6 +8,7 @@
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
 ### Recently Completed (Dec 28, 2025)
+- ✅ **Issue #223**: Learning controller not creating new LanguageAgentVersions after manual optimization - Fixed ClickHouse query logic where `service.name` attribute was incorrectly filtering on `SpanAttributes['service.name']` instead of the dedicated `ServiceName` column. Added RBAC annotations, enhanced error logging, and comprehensive unit tests. Verified with real telemetry data showing 1,982 traces now properly found for optimization (commit c34679c)
 - ✅ **Issue #219**: Synthesis hash management bug causing infinite loops - Fixed root cause in `createInitialAgentVersion()` where LanguageAgentVersion v1 was returned with stale hash annotations when instructions changed. Implemented atomic hash + code updates to prevent both infinite synthesis loops and stale code usage. Added comprehensive unit tests covering infinite loop scenarios (commit 268f8ca)
 
 ### Previously Completed (Dec 27)

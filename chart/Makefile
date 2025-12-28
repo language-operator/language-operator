@@ -3,7 +3,7 @@
 # Chart configuration
 CHART_NAME := language-operator
 RELEASE_NAME := language-operator
-NAMESPACE := kube-system
+NAMESPACE := language-operator
 CHART_DIR := .
 VALUES_FILE := values.local.yaml
 
