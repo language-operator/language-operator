@@ -1452,3 +1452,175 @@ func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
 		t.Error("Service selector would incorrectly match trigger pods - this defeats the purpose of the fix")
 	}
 }
+
+// TestCreateInitialAgentVersion_HashManagement tests the fix for issue #219
+func TestCreateInitialAgentVersion_HashManagement(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        record.NewFakeRecorder(100),
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "Initial instructions",
+		},
+	}
+
+	t.Run("First creation with no existing version", func(t *testing.T) {
+		version, err := reconciler.createInitialAgentVersion(ctx, agent, "initial code", "manual")
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		if version.Spec.Code != "initial code" {
+			t.Errorf("Expected code 'initial code', got: %s", version.Spec.Code)
+		}
+
+		expectedHash := hashString("Initial instructions")
+		actualHash := version.Annotations["langop.io/instructions-hash"]
+		if actualHash != expectedHash {
+			t.Errorf("Expected instructions hash %s, got %s", expectedHash, actualHash)
+		}
+	})
+
+	t.Run("Instructions change triggers hash and code update", func(t *testing.T) {
+		// Update agent instructions
+		agent.Spec.Instructions = "Updated instructions"
+
+		// Call createInitialAgentVersion again (this simulates the synthesis flow)
+		version, err := reconciler.createInitialAgentVersion(ctx, agent, "updated code", "manual")
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		// Verify code was updated
+		if version.Spec.Code != "updated code" {
+			t.Errorf("Expected updated code 'updated code', got: %s", version.Spec.Code)
+		}
+
+		// Verify hash was updated
+		expectedHash := hashString("Updated instructions")
+		actualHash := version.Annotations["langop.io/instructions-hash"]
+		if actualHash != expectedHash {
+			t.Errorf("Expected updated instructions hash %s, got %s", expectedHash, actualHash)
+		}
+	})
+
+	t.Run("No update when hashes match", func(t *testing.T) {
+		// Get current version before the call
+		existingVersion := &langopv1alpha1.LanguageAgentVersion{}
+		err := fakeClient.Get(ctx, types.NamespacedName{
+			Name:      "test-agent-v1",
+			Namespace: "default",
+		}, existingVersion)
+		if err != nil {
+			t.Fatalf("Failed to get existing version: %v", err)
+		}
+
+		originalResourceVersion := existingVersion.ResourceVersion
+
+		// Call with same instructions (no changes)
+		version, err := reconciler.createInitialAgentVersion(ctx, agent, "updated code", "manual")
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		// ResourceVersion should be the same (no update occurred)
+		if version.ResourceVersion != originalResourceVersion {
+			t.Error("Expected no update when hashes match, but ResourceVersion changed")
+		}
+	})
+
+	t.Run("Code mismatch forces update even with matching hash", func(t *testing.T) {
+		// This tests the "belt and suspenders" approach
+		version, err := reconciler.createInitialAgentVersion(ctx, agent, "different code content", "manual")
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+
+		if version.Spec.Code != "different code content" {
+			t.Errorf("Expected code to be updated to 'different code content', got: %s", version.Spec.Code)
+		}
+	})
+}
+
+// TestCreateInitialAgentVersion_PreventInfiniteLoop tests that the fix prevents synthesis loops
+func TestCreateInitialAgentVersion_PreventInfiniteLoop(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        record.NewFakeRecorder(100),
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "every 10 minutes, make a small modification",
+		},
+	}
+
+	// Create initial version
+	version1, err := reconciler.createInitialAgentVersion(ctx, agent, "initial synthesized code", "manual")
+	if err != nil {
+		t.Fatalf("Failed to create initial version: %v", err)
+	}
+
+	// Simulate minor instructions change (like adding a period)
+	agent.Spec.Instructions = "every 10 minutes, make a small modification."
+
+	// Call synthesis again with new code
+	version2, err := reconciler.createInitialAgentVersion(ctx, agent, "updated synthesized code", "manual")
+	if err != nil {
+		t.Fatalf("Failed to update version: %v", err)
+	}
+
+	// Verify it's the same version object but updated
+	if version1.Name != version2.Name {
+		t.Error("Expected same version name")
+	}
+
+	// Verify code was updated
+	if version2.Spec.Code != "updated synthesized code" {
+		t.Errorf("Code was not updated, got: %s", version2.Spec.Code)
+	}
+
+	// Verify hash was updated
+	expectedHash := hashString("every 10 minutes, make a small modification.")
+	actualHash := version2.Annotations["langop.io/instructions-hash"]
+	if actualHash != expectedHash {
+		t.Errorf("Hash was not updated. Expected: %s, Got: %s", expectedHash, actualHash)
+	}
+
+	// Call again with same instructions - should NOT update
+	originalResourceVersion := version2.ResourceVersion
+	version3, err := reconciler.createInitialAgentVersion(ctx, agent, "updated synthesized code", "manual")
+	if err != nil {
+		t.Fatalf("Failed on third call: %v", err)
+	}
+
+	if version3.ResourceVersion != originalResourceVersion {
+		t.Error("Expected no update on third call, but ResourceVersion changed")
+	}
+}

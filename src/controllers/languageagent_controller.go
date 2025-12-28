@@ -3944,15 +3944,63 @@ func (r *LanguageAgentReconciler) createInitialAgentVersion(ctx context.Context,
 	// Create the LanguageAgentVersion
 	if err := r.Create(ctx, agentVersion); err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			// Version v1 already exists - this is expected and correct
-			// LanguageAgentVersions are immutable once created
-			// Return the existing version without modification
+			// Version v1 already exists - update it with new code and hash annotations
+			// This fixes the synthesis hash management bug that caused infinite loops
 			existingVersion := &langopv1alpha1.LanguageAgentVersion{}
 			if err := r.Get(ctx, types.NamespacedName{Name: agentVersion.Name, Namespace: agentVersion.Namespace}, existingVersion); err != nil {
 				return nil, fmt.Errorf("failed to get existing LanguageAgentVersion: %w", err)
 			}
 
-			log.Info("Using existing immutable LanguageAgentVersion v1", "agent", agent.Name)
+			// Calculate current hashes to compare with existing version
+			currentInstructionsHash := hashString(agent.Spec.Instructions)
+			currentToolsHash := hashString(strings.Join(r.getToolNames(agent), ","))
+			currentModelsHash := hashString(strings.Join(r.getModelNames(agent), ","))
+			currentPersonaHash := hashString(strings.Join(r.getPersonaNames(agent), ","))
+
+			// Check if existing version has stale hashes or code
+			existingInstructionsHash := existingVersion.Annotations["langop.io/instructions-hash"]
+			needsUpdate := false
+
+			// Validate hash consistency and update if necessary
+			if existingInstructionsHash != currentInstructionsHash {
+				needsUpdate = true
+				log.Info("Detected stale instructions hash, updating LanguageAgentVersion",
+					"agent", agent.Name,
+					"oldHash", existingInstructionsHash,
+					"newHash", currentInstructionsHash)
+			}
+
+			// Also check if code needs updating (belt and suspenders approach)
+			if existingVersion.Spec.Code != dslCode {
+				needsUpdate = true
+				log.Info("Detected stale synthesized code, updating LanguageAgentVersion",
+					"agent", agent.Name,
+					"oldCodeLength", len(existingVersion.Spec.Code),
+					"newCodeLength", len(dslCode))
+			}
+
+			if needsUpdate {
+				// Atomically update both code and all hash annotations
+				existingVersion.Spec.Code = dslCode
+				if existingVersion.Annotations == nil {
+					existingVersion.Annotations = make(map[string]string)
+				}
+				existingVersion.Annotations["langop.io/instructions-hash"] = currentInstructionsHash
+				existingVersion.Annotations["langop.io/tools-hash"] = currentToolsHash
+				existingVersion.Annotations["langop.io/models-hash"] = currentModelsHash
+				existingVersion.Annotations["langop.io/persona-hash"] = currentPersonaHash
+
+				if err := r.Update(ctx, existingVersion); err != nil {
+					return nil, fmt.Errorf("failed to update LanguageAgentVersion with new code and hashes: %w", err)
+				}
+
+				log.Info("Successfully updated LanguageAgentVersion v1 with new code and hashes",
+					"agent", agent.Name,
+					"codeLength", len(dslCode))
+			} else {
+				log.Info("Using existing LanguageAgentVersion v1 with current hashes", "agent", agent.Name)
+			}
+
 			return existingVersion, nil
 		} else {
 			return nil, fmt.Errorf("failed to create LanguageAgentVersion: %w", err)
