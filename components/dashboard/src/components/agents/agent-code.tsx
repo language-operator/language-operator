@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AlertCircle, Code, History, Lock, Unlock, RotateCcw } from 'lucide-react'
+import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from 'next-themes'
-import { useAgentVersions, useRollbackAgent, useToggleAgentLock } from '@/hooks/use-agents'
+import { useAgentVersions, useRollbackAgent, useToggleAgentLock, useTriggerOptimization } from '@/hooks/use-agents'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
 
@@ -29,6 +29,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
   const { data: versionsResponse, isLoading: versionsLoading, error: versionsError } = useAgentVersions(agent.metadata.name || '', clusterName || '')
   const rollbackMutation = useRollbackAgent(clusterName || '')
   const lockMutation = useToggleAgentLock(clusterName || '')
+  const optimizeMutation = useTriggerOptimization(clusterName || '')
 
   const versions = versionsResponse?.data || []
   const currentVersionName = versionsResponse?.currentVersion
@@ -74,6 +75,16 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
     }
   }
 
+  const handleOptimize = async () => {
+    try {
+      await optimizeMutation.mutateAsync({
+        agentName: agent.metadata.name || '',
+      })
+    } catch (error) {
+      console.error('Optimization failed:', error)
+    }
+  }
+
   // Local formatTimeAgo for condensed version display
   const formatTimeAgoCondensed = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -111,7 +122,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            Agent Version Management
+            Versions
           </CardTitle>
           <CardDescription>
             View and manage different versions of this agent's synthesized code
@@ -135,9 +146,9 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm">v{version.spec.version}</span>
                         {version.isCurrent && (
-                          <Badge variant="default" className="text-xs">CURRENT</Badge>
+                          <Badge variant="secondary" className="text-xs">CURRENT</Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {version.spec.sourceType || 'manual'}
                         </Badge>
                         <span className="text-muted-foreground text-xs">
@@ -175,6 +186,26 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                 </Button>
               )}
 
+              {/* Optimize Button */}
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleOptimize}
+                disabled={optimizeMutation.isPending}
+              >
+                {optimizeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Optimizing...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="h-4 w-4 mr-2" />
+                    Optimize
+                  </>
+                )}
+              </Button>
+
               {/* Rollback Button */}
               {selectedVersionName && selectedVersionName !== currentVersionName && (
                 <Button
@@ -191,77 +222,10 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
           </div>
 
           {/* Status Indicators */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {currentVersionName && (
-              <div className="flex items-center gap-2">
-                <span>Current:</span>
-                <code className="text-xs bg-muted px-2 py-1 rounded">{currentVersionName}</code>
-              </div>
-            )}
-            {isLocked && (
-              <div className="flex items-center gap-1 text-orange-600">
-                <Lock className="h-3 w-3" />
-                <span>Version Locked</span>
-              </div>
-            )}
-            <div>Total Versions: {versions.length}</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Code Synthesis Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Code Synthesis Status</CardTitle>
-          <CardDescription>
-            Status and metadata of code synthesis for this agent
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Synthesis Status</p>
-              <Badge variant={isSynthesized ? 'default' : 'secondary'}>
-                {isSynthesized ? 'Code Synthesized' : 'Not Synthesized'}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Last Synthesis</p>
-              <p className="text-sm">
-                {synthesisInfo?.lastSynthesisTime
-                  ? formatTimeAgo(synthesisInfo.lastSynthesisTime)
-                  : 'Never'
-                }
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Synthesis Model</p>
-              <p className="text-sm">
-                {synthesisInfo?.synthesisModel || 'N/A'}
-              </p>
-            </div>
-          </div>
-
-          {synthesisInfo && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="grid gap-4 md:grid-cols-4 text-sm">
-                <div>
-                  <p className="font-medium text-muted-foreground">Duration</p>
-                  <p>{synthesisInfo.synthesisDuration ? `${synthesisInfo.synthesisDuration.toFixed(2)}s` : 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-muted-foreground">Attempts</p>
-                  <p>{synthesisInfo.synthesisAttempts || 0}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-muted-foreground">Code Hash</p>
-                  <p className="font-mono text-xs">{synthesisInfo.codeHash?.substring(0, 12) || 'N/A'}...</p>
-                </div>
-                <div>
-                  <p className="font-medium text-muted-foreground">Instructions Hash</p>
-                  <p className="font-mono text-xs">{synthesisInfo.instructionsHash?.substring(0, 12) || 'N/A'}...</p>
-                </div>
-              </div>
+          {isLocked && (
+            <div className="flex items-center gap-1 text-orange-600 text-sm">
+              <Lock className="h-3 w-3" />
+              <span>Version Locked</span>
             </div>
           )}
         </CardContent>
@@ -275,7 +239,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
             Agent Code {selectedVersion?.isCurrent ? '(Current)' : '(Version ' + selectedVersion?.spec?.version + ')'}
           </CardTitle>
           <CardDescription>
-            Ruby DSL code for this agent's execution logic
+            Tasks and execution logic synthesized from agent instructions
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -289,9 +253,8 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
             <div className="border rounded-lg">
               <div className="bg-muted p-3 border-b">
                 <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm">Agent Definition (Ruby DSL)</p>
+                  <p className="font-medium text-sm">Ruby</p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">Ruby</Badge>
                     <Badge variant="outline">v{selectedVersion.spec.version}</Badge>
                     {selectedVersion.isCurrent && (
                       <Badge variant="default">Current</Badge>
@@ -341,9 +304,6 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
         <Card>
           <CardHeader>
             <CardTitle>Version Details</CardTitle>
-            <CardDescription>
-              Metadata and information about the selected agent version
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -396,6 +356,61 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Synthesis Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Synthesis Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Synthesis Status</p>
+              <Badge variant={isSynthesized ? 'default' : 'secondary'}>
+                {isSynthesized ? 'Code Synthesized' : 'Not Synthesized'}
+              </Badge>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Last Synthesis</p>
+              <p className="text-sm">
+                {synthesisInfo?.lastSynthesisTime
+                  ? formatTimeAgo(synthesisInfo.lastSynthesisTime)
+                  : 'Never'
+                }
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Synthesis Model</p>
+              <p className="text-sm">
+                {synthesisInfo?.synthesisModel || 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          {synthesisInfo && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid gap-4 md:grid-cols-4 text-sm">
+                <div>
+                  <p className="font-medium text-muted-foreground">Duration</p>
+                  <p>{synthesisInfo.synthesisDuration ? `${synthesisInfo.synthesisDuration.toFixed(2)}s` : 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Attempts</p>
+                  <p>{synthesisInfo.synthesisAttempts || 0}</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Code Hash</p>
+                  <p className="font-mono text-xs">{synthesisInfo.codeHash?.substring(0, 12) || 'N/A'}...</p>
+                </div>
+                <div>
+                  <p className="font-medium text-muted-foreground">Instructions Hash</p>
+                  <p className="font-mono text-xs">{synthesisInfo.instructionsHash?.substring(0, 12) || 'N/A'}...</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Rollback Confirmation Dialog */}
       <Dialog open={showRollbackDialog} onOpenChange={setShowRollbackDialog}>

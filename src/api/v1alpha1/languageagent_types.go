@@ -526,6 +526,11 @@ type LanguageAgentStatus struct {
 	// Resets to 0 when learning optimization is triggered
 	// +optional
 	RunsPendingLearning int32 `json:"runsPendingLearning,omitempty"`
+
+	// LearningRequestPending indicates a manual optimization request is pending
+	// Set to true to trigger manual learning, automatically reset to false after processing
+	// +optional
+	LearningRequestPending bool `json:"learningRequestPending,omitempty"`
 }
 
 // SynthesisInfo contains metadata about agent code synthesis

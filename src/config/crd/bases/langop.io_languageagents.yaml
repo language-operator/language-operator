@@ -3961,6 +3961,11 @@ spec:
                 description: LastUpdateTime is the last time the status was updated
                 format: date-time
                 type: string
+              learningRequestPending:
+                description: |-
+                  LearningRequestPending indicates a manual optimization request is pending
+                  Set to true to trigger manual learning, automatically reset to false after processing
+                type: boolean
               message:
                 description: Message provides human-readable details about the current
                   state

@@ -188,6 +188,8 @@ export interface LanguageAgentStatus {
   metrics?: LanguageAgentMetrics
   observedGeneration?: number
   synthesisInfo?: SynthesisInfo
+  runsPendingLearning?: number
+  learningRequestPending?: boolean
 }
 
 export interface SynthesisInfo {

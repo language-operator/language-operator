@@ -429,3 +429,35 @@ export function useToggleAgentLock(clusterName: string) {
     },
   })
 }
+
+export function useTriggerOptimization(clusterName: string) {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ agentName }: { agentName: string }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for optimization trigger')
+      }
+      
+      const endpoint = `/api/clusters/${clusterName}/agents/${agentName}/optimize`
+      
+      const response = await fetchWithOrganization(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || errorData.message || 'Failed to trigger agent optimization')
+      }
+      
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate agent and version queries to pick up the optimization results
+      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+    },
+  })
+}

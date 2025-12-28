@@ -144,11 +144,19 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		"runsPendingLearning", agent.Status.RunsPendingLearning,
 		"threshold", r.LearningThreshold)
 
-	// Simplified learning logic: check if runsPendingLearning reaches threshold
-	if agent.Status.RunsPendingLearning >= r.LearningThreshold {
-		log.Info("Learning threshold reached, triggering optimization",
-			"runs", agent.Status.RunsPendingLearning,
-			"threshold", r.LearningThreshold)
+	// Check for manual optimization request or automatic threshold
+	shouldOptimize := agent.Status.LearningRequestPending || agent.Status.RunsPendingLearning >= r.LearningThreshold
+
+	if shouldOptimize {
+		if agent.Status.LearningRequestPending {
+			log.Info("Manual optimization requested, triggering optimization",
+				"runs", agent.Status.RunsPendingLearning,
+				"manualRequest", true)
+		} else {
+			log.Info("Learning threshold reached, triggering optimization",
+				"runs", agent.Status.RunsPendingLearning,
+				"threshold", r.LearningThreshold)
+		}
 
 		// Trigger optimization
 		if err := r.triggerOptimization(ctx, agent); err != nil {
@@ -157,13 +165,14 @@ func (r *LearningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, reconcileErr
 		}
 
-		// Reset counter after successful optimization with retry on conflict
+		// Reset counters after successful optimization with retry on conflict
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			// Re-fetch the agent to get the latest version
 			if err := r.Get(ctx, req.NamespacedName, agent); err != nil {
 				return err
 			}
 			agent.Status.RunsPendingLearning = 0
+			agent.Status.LearningRequestPending = false
 			return r.Status().Update(ctx, agent)
 		})
 		if err != nil {
@@ -190,8 +199,9 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 	if agent.Spec.AgentVersionRef != nil && agent.Spec.AgentVersionRef.Lock {
 		log.Info("Agent version is locked, skipping optimization entirely",
 			"lockedVersion", agent.Spec.AgentVersionRef.Name)
-		// Reset pending learning counter since we're not optimizing
+		// Reset pending learning fields since we're not optimizing
 		agent.Status.RunsPendingLearning = 0
+		agent.Status.LearningRequestPending = false
 		if err := r.Status().Update(ctx, agent); err != nil {
 			log.Error(err, "Failed to reset learning counter for locked agent")
 			return err
@@ -219,8 +229,9 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 
 	if len(tasksToOptimize) == 0 {
 		log.Info("No tasks identified for optimization", "agent", agent.Name)
-		// Reset the counter since we processed the optimization request
+		// Reset the fields since we processed the optimization request
 		agent.Status.RunsPendingLearning = 0
+		agent.Status.LearningRequestPending = false
 		if err := r.Status().Update(ctx, agent); err != nil {
 			log.Error(err, "Failed to reset learning counter")
 		}
@@ -291,6 +302,7 @@ func (r *LearningReconciler) triggerOptimization(ctx context.Context, agent *lan
 			return err
 		}
 		freshAgent.Status.RunsPendingLearning = 0
+		freshAgent.Status.LearningRequestPending = false
 		return r.Status().Update(ctx, freshAgent)
 	})
 	if retryErr != nil {
