@@ -2,15 +2,11 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
-import { ArrowLeft, Cpu } from 'lucide-react'
 import { useModel } from '@/hooks/use-models'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ResourceHeader } from '@/components/ui/resource-header'
-import Link from 'next/link'
 
 export default function ClusterEditModelPage() {
   const params = useParams()
@@ -193,62 +189,33 @@ export default function ClusterEditModelPage() {
 
   if (isLoadingModel) {
     return (
-      <AuthenticatedLayout>
-        <div className="space-y-6">
-          <ResourceHeader
-            backHref={`/clusters/${clusterName}/models`}
-            backLabel="Back to Models"
-            icon={Cpu}
-            title="Loading..."
-            subtitle="Loading model details..."
-          />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      </AuthenticatedLayout>
+      <div className="space-y-6">
+        <Skeleton className="h-64 w-full" />
+      </div>
     )
   }
 
   if (!model) {
     return (
-      <AuthenticatedLayout>
-        <div className="space-y-6">
-          <ResourceHeader
-            backHref={`/clusters/${clusterName}/models`}
-            backLabel="Back to Models"
-            icon={Cpu}
-            title="Model Not Found"
-            subtitle={`The model "${modelName}" could not be found in cluster "${clusterName}"`}
-          />
+      <div className="space-y-6">
+        <div className="text-center py-6">
+          <p className="text-gray-600">Model not found</p>
         </div>
-      </AuthenticatedLayout>
+      </div>
     )
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <ResourceHeader
-          backHref={`/clusters/${clusterName}/models/${modelName}`}
-          backLabel="Back to Model"
-          icon={Cpu}
-          title={model.metadata.name}
-          subtitle="LanguageModel"
-        />
-
-        {/* Form */}
-        <div>
-          <ModelForm
-            initialData={initialData}
-            isLoading={isLoading}
-            error={error}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isEdit={true}
-            clusterName={clusterName}
-          />
-        </div>
-      </div>
-    </AuthenticatedLayout>
+    <div>
+      <ModelForm
+        initialData={initialData}
+        isLoading={isLoading}
+        error={error}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        isEdit={true}
+        clusterName={clusterName}
+      />
+    </div>
   )
 }
