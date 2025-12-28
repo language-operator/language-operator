@@ -434,11 +434,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconciliation successful
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 
-	// For scheduled agents, requeue periodically to check for completed jobs
-	if agent.Spec.ExecutionMode == "scheduled" {
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
-	}
-
+	// No need for periodic requeues - Job events will trigger reconciliation automatically
+	// via the Owns(&batchv1.Job{}) watch relationship in SetupWithManager
 	return ctrl.Result{}, nil
 }
 
