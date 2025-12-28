@@ -513,8 +513,10 @@ func (s *Synthesizer) SynthesizeTask(ctx context.Context, req TaskSynthesisReque
 	// Log the complete rendered template for debugging
 	s.log.Info("Task synthesis template rendered",
 		"task", req.TaskName,
-		"promptLength", len(prompt))
-	s.log.V(1).Info("Full task synthesis prompt", "prompt", prompt)
+		"promptLength", len(prompt),
+		"traceCount", req.TraceCount,
+		"consistencyScore", req.ConsistencyScore)
+	s.log.Info("Full task synthesis prompt", "prompt", prompt)
 
 	// Call LLM using eino ChatModel
 	messages := []*schema.Message{
@@ -837,6 +839,20 @@ func (s *Synthesizer) buildTaskSynthesisPrompt(req TaskSynthesisRequest) string 
 		"UniquePatternCount": req.UniquePatternCount,
 		"ToolsList":          req.ToolsList,
 	}
+
+	// Log template data for debugging
+	s.log.Info("Task synthesis template data",
+		"taskName", req.TaskName,
+		"instructions", req.Instructions,
+		"inputs", req.Inputs,
+		"outputs", req.Outputs,
+		"taskCode", req.TaskCode,
+		"traces", req.Traces,
+		"traceCount", req.TraceCount,
+		"commonPattern", req.CommonPattern,
+		"consistencyScore", req.ConsistencyScore,
+		"uniquePatternCount", req.UniquePatternCount,
+		"toolsList", req.ToolsList)
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
