@@ -778,6 +778,20 @@ class KubernetesClient {
     })
   }
 
+  async replaceLanguageTool(namespace: string, name: string, tool: any) {
+    if (!this.customObjectsApi) {
+      throw new Error('Kubernetes API not available')
+    }
+    return await this.customObjectsApi.replaceNamespacedCustomObject({
+      group: 'langop.io',
+      version: 'v1alpha1',
+      namespace,
+      plural: 'languagetools',
+      name,
+      body: tool,
+    })
+  }
+
   async deleteLanguageTool(namespace: string, name: string) {
     if (!this.customObjectsApi) {
       throw new Error('Kubernetes API not available')

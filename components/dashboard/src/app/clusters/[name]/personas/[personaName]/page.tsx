@@ -12,7 +12,8 @@ import {
   Edit, Trash2, MessageCircle, BookOpen, MoreVertical, FileCode, Copy, Check
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { usePersona, useDeletePersona } from '@/hooks/use-personas'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ResourceHeader } from '@/components/ui/resource-header'
@@ -44,6 +45,7 @@ export default function ClusterPersonaDetailPage() {
   const [yamlContent, setYamlContent] = useState('')
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const { theme } = useTheme()
   
   const { data: personaResponse, isLoading, error } = usePersona(personaName, clusterName)
   const deletePersona = useDeletePersona(clusterName)
@@ -303,7 +305,7 @@ export default function ClusterPersonaDetailPage() {
                       <div key={index} className="border border-stone-200 overflow-hidden dark:border-stone-700">
                         <SyntaxHighlighter
                           language="markdown"
-                          style={oneLight}
+                          style={theme === 'dark' ? oneDark : oneLight}
                           customStyle={{
                             margin: 0,
                             padding: '1rem',
@@ -381,7 +383,7 @@ export default function ClusterPersonaDetailPage() {
                   ) : (
                     <SyntaxHighlighter
                       language="yaml"
-                      style={oneLight}
+                      style={theme === 'dark' ? oneDark : oneLight}
                       customStyle={{
                         margin: 0,
                         padding: '1rem',

@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Trash2, Play, Pause, Wrench, MoreVertical, FileCode, Copy, Check } from 'lucide-react'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { useQuery } from '@tanstack/react-query'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -25,6 +26,7 @@ export default function ClusterToolDetailPage() {
   const [yamlContent, setYamlContent] = useState('')
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const { theme } = useTheme()
 
   // Use cluster-scoped API endpoint for tool details
   const { data: toolResponse, isLoading } = useQuery({
@@ -206,6 +208,18 @@ export default function ClusterToolDetailPage() {
                     {tool.metadata.creationTimestamp ? new Date(tool.metadata.creationTimestamp).toLocaleDateString() : 'Unknown'}
                   </p>
                 </div>
+                {tool.spec.image && (
+                  <div>
+                    <p className="text-sm font-medium">Image</p>
+                    <p className="text-sm text-muted-foreground font-mono">{tool.spec.image}</p>
+                  </div>
+                )}
+                {tool.spec.port && (
+                  <div>
+                    <p className="text-sm font-medium">Port</p>
+                    <p className="text-sm text-muted-foreground">{tool.spec.port}</p>
+                  </div>
+                )}
               </div>
 
               {tool.spec.description && (
@@ -217,57 +231,49 @@ export default function ClusterToolDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuration</CardTitle>
-              <CardDescription>Tool configuration settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {tool.spec.image && (
-                  <div>
-                    <p className="text-sm font-medium">Image</p>
-                    <p className="text-sm text-muted-foreground font-mono">{tool.spec.image}</p>
-                  </div>
-                )}
-
+          {/* Resources */}
+          {tool.spec.resources && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Resources</CardTitle>
+                <CardDescription>Resource requests and limits</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  {tool.spec.resources.requests?.cpu && (
+                    <div>
+                      <p className="text-sm font-medium">CPU Request</p>
+                      <p className="text-sm text-muted-foreground font-mono">{tool.spec.resources.requests.cpu}</p>
+                    </div>
+                  )}
+                  {tool.spec.resources.limits?.cpu && (
+                    <div>
+                      <p className="text-sm font-medium">CPU Limit</p>
+                      <p className="text-sm text-muted-foreground font-mono">{tool.spec.resources.limits.cpu}</p>
+                    </div>
+                  )}
+                  {tool.spec.resources.requests?.memory && (
+                    <div>
+                      <p className="text-sm font-medium">Memory Request</p>
+                      <p className="text-sm text-muted-foreground font-mono">{tool.spec.resources.requests.memory}</p>
+                    </div>
+                  )}
+                  {tool.spec.resources.limits?.memory && (
+                    <div>
+                      <p className="text-sm font-medium">Memory Limit</p>
+                      <p className="text-sm text-muted-foreground font-mono">{tool.spec.resources.limits.memory}</p>
+                    </div>
+                  )}
+                </div>
                 {tool.spec.endpoint && (
-                  <div>
+                  <div className="mt-4">
                     <p className="text-sm font-medium">Endpoint</p>
                     <p className="text-sm text-muted-foreground font-mono">{tool.spec.endpoint}</p>
                   </div>
                 )}
-
-                {tool.spec.port && (
-                  <div>
-                    <p className="text-sm font-medium">Port</p>
-                    <p className="text-sm text-muted-foreground">{tool.spec.port}</p>
-                  </div>
-                )}
-
-                {tool.spec.resources && (
-                  <div>
-                    <p className="text-sm font-medium">Resource Limits</p>
-                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                      {tool.spec.resources.requests && (
-                        <div>
-                          <span className="font-mono">CPU Request: {tool.spec.resources.requests.cpu}</span><br />
-                          <span className="font-mono">Memory Request: {tool.spec.resources.requests.memory}</span>
-                        </div>
-                      )}
-                      {tool.spec.resources.limits && (
-                        <div>
-                          <span className="font-mono">CPU Limit: {tool.spec.resources.limits.cpu}</span><br />
-                          <span className="font-mono">Memory Limit: {tool.spec.resources.limits.memory}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Tool Events */}
@@ -324,7 +330,7 @@ export default function ClusterToolDetailPage() {
                   ) : (
                     <SyntaxHighlighter
                       language="yaml"
-                      style={oneLight}
+                      style={theme === 'dark' ? oneDark : oneLight}
                       customStyle={{
                         margin: 0,
                         padding: '1rem',

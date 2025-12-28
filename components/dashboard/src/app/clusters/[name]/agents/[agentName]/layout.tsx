@@ -11,7 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { useAgent, useDeleteAgent } from '@/hooks/use-agents'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
@@ -49,6 +50,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
   const [copied, setCopied] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [showExecuteDialog, setShowExecuteDialog] = useState(false)
+  const { theme } = useTheme()
 
   const { data: agentResponse, isLoading, error } = useAgent(agentName, clusterName)
   const deleteAgent = useDeleteAgent(clusterName)
@@ -350,7 +352,7 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
                   ) : (
                     <SyntaxHighlighter
                       language="yaml"
-                      style={oneLight}
+                      style={theme === 'dark' ? oneDark : oneLight}
                       customStyle={{
                         margin: 0,
                         padding: '1rem',

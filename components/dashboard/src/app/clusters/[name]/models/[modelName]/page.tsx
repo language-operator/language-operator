@@ -20,7 +20,8 @@ import {
   Home, BarChart3, Info, RefreshCw, Database
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { useModel, useDeleteModel } from '@/hooks/use-models'
 import { LanguageModel } from '@/types/model'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -453,6 +454,7 @@ export default function ClusterModelDetailPage() {
   const [yamlContent, setYamlContent] = useState('')
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const { theme } = useTheme()
   
   const { data: modelResponse, isLoading, error } = useModel(modelName, clusterName)
   const deleteModel = useDeleteModel(clusterName)
@@ -680,7 +682,7 @@ export default function ClusterModelDetailPage() {
                   ) : (
                     <SyntaxHighlighter
                       language="yaml"
-                      style={oneLight}
+                      style={theme === 'dark' ? oneDark : oneLight}
                       customStyle={{
                         margin: 0,
                         padding: '1rem',

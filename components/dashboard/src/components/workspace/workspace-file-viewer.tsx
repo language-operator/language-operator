@@ -19,7 +19,8 @@ import {
   ChevronLeft
 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { 
@@ -63,6 +64,7 @@ export function WorkspaceFileViewer({
   const [fileContent, setFileContent] = useState<FileContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { theme } = useTheme()
   const [copied, setCopied] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
@@ -388,7 +390,7 @@ export function WorkspaceFileViewer({
               ) : (
                 <SyntaxHighlighter
                   language={fileContent.language}
-                  style={oneLight}
+                  style={theme === 'dark' ? oneDark : oneLight}
                   customStyle={{
                     margin: 0,
                     padding: 0,

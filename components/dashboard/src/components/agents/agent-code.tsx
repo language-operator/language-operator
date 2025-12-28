@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AlertCircle, Code, History, Lock, Unlock, RotateCcw } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTheme } from 'next-themes'
 import { useAgentVersions, useRollbackAgent, useToggleAgentLock } from '@/hooks/use-agents'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
@@ -22,6 +23,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
   const [selectedVersionName, setSelectedVersionName] = useState<string>('')
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [lockOnRollback, setLockOnRollback] = useState(false)
+  const { theme } = useTheme()
 
   // Hooks for version management
   const { data: versionsResponse, isLoading: versionsLoading, error: versionsError } = useAgentVersions(agent.metadata.name || '', clusterName || '')
@@ -300,7 +302,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
               <div className="p-0">
                 <SyntaxHighlighter
                   language="ruby"
-                  style={oneLight}
+                  style={theme === 'dark' ? oneDark : oneLight}
                   customStyle={{
                     margin: 0,
                     padding: '1rem',

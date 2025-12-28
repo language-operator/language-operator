@@ -1,0 +1,134 @@
+{
+  "version": "1.0",
+  "description": "Skill activation triggers for Language Operator project",
+  "skills": {
+    "kubernetes-operator-patterns": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Go controller patterns, CRDs, RBAC, and Kubernetes operator development",
+      "promptTriggers": {
+        "keywords": [
+          "controller",
+          "CRD",
+          "Custom Resource Definition",
+          "RBAC",
+          "operator",
+          "reconcile",
+          "kubebuilder",
+          "controller-runtime",
+          "Kubernetes API",
+          "client-go",
+          "ginkgo",
+          "gomega",
+          "integration test",
+          "manifests",
+          "controller-gen"
+        ],
+        "intentPatterns": [
+          "(create|add|implement|build).*?(controller|CRD|operator)",
+          "(how to|best practice).*?(reconcile|controller|RBAC)",
+          "(fix|debug|handle).*?(controller|reconciliation|operator)",
+          "(generate|create|update).*?(manifests|CRD|RBAC)",
+          "(test|testing).*?(controller|operator|integration)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "src/controllers/**/*.go",
+          "src/api/**/*.go",
+          "src/config/**/*.yaml",
+          "src/config/**/*.yml",
+          "**/*_test.go",
+          "chart/**/*.yaml",
+          "chart/**/*.yml"
+        ],
+        "pathExclusions": [
+          "**/vendor/**",
+          "**/node_modules/**",
+          "**/.git/**"
+        ],
+        "contentPatterns": [
+          "import.*controller-runtime",
+          "import.*client-go",
+          "\\+kubebuilder:",
+          "func.*Reconcile",
+          "client\\.Client",
+          "ctrl\\.Request",
+          "ctrl\\.Result",
+          "ginkgo\\.",
+          "gomega\\.",
+          "Describe\\(",
+          "It\\(",
+          "Expect\\("
+        ]
+      }
+    },
+    "nextjs-dashboard-patterns": {
+      "type": "domain",
+      "enforcement": "suggest",
+      "priority": "high",
+      "description": "Next.js 15 App Router patterns, React components, API routes for dashboard",
+      "promptTriggers": {
+        "keywords": [
+          "React",
+          "Next.js",
+          "component",
+          "dashboard",
+          "API route",
+          "App Router",
+          "Server Component",
+          "shadcn",
+          "Tailwind",
+          "TypeScript",
+          "React Query",
+          "form",
+          "validation",
+          "Zod",
+          "hook",
+          "context"
+        ],
+        "intentPatterns": [
+          "(create|add|implement|build).*?(component|page|route|form)",
+          "(how to|best practice).*?(React|Next\\.js|component)",
+          "(fix|debug|style).*?(component|page|form|API)",
+          "(fetch|query|data).*?(API|data|state)",
+          "(validate|form).*?(input|schema|data)"
+        ]
+      },
+      "fileTriggers": {
+        "pathPatterns": [
+          "components/dashboard/src/**/*.{ts,tsx,js,jsx}",
+          "components/dashboard/src/app/**/*.{ts,tsx}",
+          "components/dashboard/src/components/**/*.{ts,tsx}",
+          "components/dashboard/src/hooks/**/*.{ts,tsx}",
+          "components/dashboard/src/lib/**/*.{ts,tsx}",
+          "components/dashboard/src/types/**/*.ts"
+        ],
+        "pathExclusions": [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/.next/**",
+          "**/coverage/**"
+        ],
+        "contentPatterns": [
+          "import.*react",
+          "import.*next",
+          "export.*function.*\\(",
+          "export.*const.*=.*\\(",
+          "useQuery\\(",
+          "useMutation\\(",
+          "useState\\(",
+          "useEffect\\(",
+          "className=",
+          "tailwind",
+          "shadcn",
+          "@/components/ui",
+          "z\\.",
+          "zodResolver",
+          "useForm\\("
+        ]
+      }
+    }
+  }
+}

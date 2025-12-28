@@ -136,7 +136,7 @@ export default function ClusterTools() {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg">{tool.displayName}</CardTitle>
-            <CardDescription className="text-sm text-gray-500 mt-1">{toolId}</CardDescription>
+            <CardDescription className="text-sm text-muted-foreground mt-1">{toolId}</CardDescription>
             <CardDescription className="mt-1 line-clamp-2">
               {tool.description}
             </CardDescription>
@@ -147,9 +147,6 @@ export default function ClusterTools() {
         <div className="space-y-3 flex-1">
           {/* Tool metadata */}
           <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-xs">
-              {tool.type.toUpperCase()}
-            </Badge>
             <Badge variant="outline" className="text-xs">
               {tool.deploymentMode}
             </Badge>
@@ -162,17 +159,17 @@ export default function ClusterTools() {
           </div>
 
           {/* Features */}
-          <div className="text-xs text-gray-600 space-y-1">
+          <div className="text-xs text-muted-foreground space-y-1">
             {tool.rbac && (
               <div className="flex items-center gap-1">
                 <Shield className="h-3 w-3" />
-                <span>RBAC configured</span>
+                <span>RBAC</span>
               </div>
             )}
             {tool.egress && (
               <div className="flex items-center gap-1">
                 <Network className="h-3 w-3" />
-                <span>Network policies defined</span>
+                <span>Network Restrictions</span>
               </div>
             )}
           </div>
@@ -190,7 +187,7 @@ export default function ClusterTools() {
                     {['Ready', 'Running'].includes(installedTool.status.phase) ? 'Installed' : installedTool.status.phase}
                   </Badge>
                   {installedTool.status.message && (
-                    <span className="text-xs text-gray-500 truncate">
+                    <span className="text-xs text-muted-foreground truncate">
                       {installedTool.status.message.replace('Image registry is in whitelist', 'approved registry')}
                     </span>
                   )}
@@ -319,7 +316,7 @@ export default function ClusterTools() {
         {/* Installed Tools Section */}
         {filteredInstalledTools.length > 0 && (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Installed Tools</h2>
+            <h2 className="text-xl font-semibold mb-4">Installed Tools ({filteredInstalledTools.length})</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredInstalledTools.map((installedTool: InstalledTool) => {
                 const catalogEntry = getCatalogEntryForInstalledTool(installedTool)
