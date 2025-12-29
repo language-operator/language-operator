@@ -150,8 +150,8 @@ func initializeClickhouseAdapter() telemetry.TelemetryAdapter {
 	// Create ClickHouse adapter - it reads configuration from environment variables
 	adapter, err := adapters.NewClickhouseAdapter()
 	if err != nil {
-		setupLog.Error(err, "Failed to create ClickHouse telemetry adapter, falling back to NoOpAdapter")
-		return telemetry.NewNoOpAdapter()
+		setupLog.Error(err, "Failed to create ClickHouse telemetry adapter - operator cannot start without telemetry")
+		panic(fmt.Sprintf("ClickHouse telemetry adapter initialization failed: %v", err))
 	}
 
 	// Log configuration details (excluding sensitive information)
