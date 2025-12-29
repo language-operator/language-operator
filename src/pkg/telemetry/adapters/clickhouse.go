@@ -320,11 +320,11 @@ func (c *ClickhouseAdapter) scanSpan(rows *sql.Rows) (telemetry.Span, error) {
 	var duration int64
 	var statusCode string
 	var statusMessage string
-	var attributesJson string
+	var attributesMap map[string]string
 
 	err := rows.Scan(
 		&spanId, &traceId, &parentSpanId, &spanName, &spanKind,
-		&timestamp, &duration, &statusCode, &statusMessage, &attributesJson,
+		&timestamp, &duration, &statusCode, &statusMessage, &attributesMap,
 	)
 	if err != nil {
 		return span, err
@@ -340,13 +340,12 @@ func (c *ClickhouseAdapter) scanSpan(rows *sql.Rows) (telemetry.Span, error) {
 	span.Status = statusCode == "STATUS_CODE_OK" // Convert string enum to boolean
 	span.ErrorMessage = statusMessage
 
-	// Parse attributes from JSON (simplified - could use JSON parsing)
-	span.Attributes = map[string]string{}
-	if attributesJson != "" {
-		// Basic attribute parsing - in production, use proper JSON parsing
-		if strings.Contains(attributesJson, "task.name") {
-			// Extract task name from attributes
-			span.TaskName = extractTaskName(attributesJson)
+	// Use attributes directly from the ClickHouse Map
+	span.Attributes = attributesMap
+	if attributesMap != nil {
+		// Extract task name directly from the map
+		if taskName, ok := attributesMap["task.name"]; ok {
+			span.TaskName = taskName
 		}
 	}
 
