@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2, Sparkles } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2, Sparkles, Grid3X3, FileText, ChevronDown, ChevronRight } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from 'next-themes'
@@ -24,6 +25,10 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
   const [selectedVersionName, setSelectedVersionName] = useState<string>('')
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [lockOnRollback, setLockOnRollback] = useState(false)
+  const [viewMode, setViewMode] = useState<'raw' | 'graphical'>('graphical')
+  const [showRaw, setShowRaw] = useState(false)
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
+  const [isMainExpanded, setIsMainExpanded] = useState(false)
   const { theme } = useTheme()
 
   // Hooks for version management
@@ -122,6 +127,80 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
     if (minutes > 0) return `${minutes}m ago`
     return 'Just now'
   }
+
+  // Parse Ruby DSL code using server-side AST parsing
+  const [parsedTasks, setParsedTasks] = useState<Array<{
+    id: string
+    name: string
+    type: 'symbolic' | 'neural'
+    instructions: string
+    inputs: Array<{name: string, type: string}>
+    outputs: Array<{name: string, type: string}>
+    isOptimized: boolean
+    codeBlock?: string
+  }>>([])
+  const [mainBlock, setMainBlock] = useState<string | null>(null)
+  
+  const [parsingTasks, setParsingTasks] = useState(false)
+
+  // Toggle task expansion
+  const toggleTaskExpansion = (taskId: string) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId)
+      } else {
+        newSet.add(taskId)
+      }
+      return newSet
+    })
+  }
+
+  // Parse tasks when selected version changes
+  useEffect(() => {
+    const parseCode = async () => {
+      if (!selectedVersion?.spec?.code) {
+        setParsedTasks([])
+        return
+      }
+
+      setParsingTasks(true)
+      try {
+        const response = await fetch('/api/parse-ruby', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ code: selectedVersion.spec.code })
+        })
+
+        const result = await response.json()
+        
+        if (result.success) {
+          // Add optimization info and proper IDs
+          const optimizedTasks = selectedVersion?.spec?.optimizedTasks || {}
+          const tasksWithOptimization = result.data.tasks.map((task: any, index: number) => ({
+            ...task,
+            id: `task_${index + 1}`,
+            isOptimized: task.name in optimizedTasks
+          }))
+          setParsedTasks(tasksWithOptimization)
+          setMainBlock(result.data.mainBlock)
+        } else {
+          console.error('Failed to parse Ruby code:', result.error)
+          setParsedTasks([])
+          setMainBlock(null)
+        }
+      } catch (error) {
+        console.error('Error calling Ruby parser API:', error)
+        setParsedTasks([])
+      } finally {
+        setParsingTasks(false)
+      }
+    }
+
+    parseCode()
+  }, [selectedVersion?.spec?.code, selectedVersion?.spec?.optimizedTasks])
 
   if (versionsLoading) {
     return (
@@ -264,16 +343,31 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
         </CardContent>
       </Card>
 
-      {/* Synthesized Code */}
+      {/* Agent Code with View Toggle */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Code className="h-5 w-5" />
-            Agent Code {selectedVersion?.isCurrent ? '(Current)' : '(Version ' + selectedVersion?.spec?.version + ')'}
-          </CardTitle>
-          <CardDescription>
-            Tasks and execution logic synthesized from agent instructions
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Code className="h-5 w-5" />
+                Agent Code {selectedVersion?.isCurrent ? '(Current)' : '(Version ' + selectedVersion?.spec?.version + ')'}
+              </CardTitle>
+              <CardDescription>
+                Tasks and execution logic synthesized from agent instructions
+              </CardDescription>
+            </div>
+            {/* Raw Toggle Switch */}
+            <div className="flex items-center gap-3">
+              <label htmlFor="raw-toggle" className="text-sm font-medium">
+                Raw
+              </label>
+              <Switch
+                id="raw-toggle"
+                checked={showRaw}
+                onCheckedChange={setShowRaw}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {versionsError ? (
@@ -283,39 +377,280 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
               <p className="text-muted-foreground max-w-md mx-auto">{versionsError.message}</p>
             </div>
           ) : selectedVersion?.spec?.code ? (
-            <div className="border rounded-lg">
-              <div className="bg-muted p-3 border-b">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-sm">Ruby</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">v{selectedVersion.spec.version}</Badge>
-                    {selectedVersion.isCurrent && (
-                      <Badge variant="default">Current</Badge>
-                    )}
+            <div>
+
+              {/* Raw View */}
+              {showRaw ? (
+                <div className="border rounded-lg">
+                  <div className="bg-muted p-3 border-b">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm">Ruby</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">v{selectedVersion.spec.version}</Badge>
+                        {selectedVersion.isCurrent && (
+                          <Badge variant="default">Current</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-0">
+                    <SyntaxHighlighter
+                      language="ruby"
+                      style={theme === 'dark' ? oneDark : oneLight}
+                      customStyle={{
+                        margin: 0,
+                        padding: '1rem',
+                        background: 'transparent',
+                        fontSize: '0.875rem',
+                        lineHeight: '1.5',
+                        borderRadius: '0 0 0.5rem 0.5rem',
+                      }}
+                      codeTagProps={{
+                        style: {
+                          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                        }
+                      }}
+                    >
+                      {selectedVersion.spec.code}
+                    </SyntaxHighlighter>
                   </div>
                 </div>
-              </div>
-              <div className="p-0">
-                <SyntaxHighlighter
-                  language="ruby"
-                  style={theme === 'dark' ? oneDark : oneLight}
-                  customStyle={{
-                    margin: 0,
-                    padding: '1rem',
-                    background: 'transparent',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.5',
-                    borderRadius: '0 0 0.5rem 0.5rem',
-                  }}
-                  codeTagProps={{
-                    style: {
-                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-                    }
-                  }}
-                >
-                  {selectedVersion.spec.code}
-                </SyntaxHighlighter>
-              </div>
+              ) : (
+                /* Graphical View */
+                parsingTasks ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Parsing agent tasks...</p>
+                    </div>
+                  </div>
+                ) : parsedTasks.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Agent Summary */}
+                    <div className="bg-muted p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <Badge variant="outline">
+                              {selectedVersion.spec.sourceType === 'learning' ? 'Neural Agent' : 'Symbolic Agent'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {parsedTasks.length} tasks ({parsedTasks.filter(t => t.isOptimized).length} optimized)
+                          </div>
+                        </div>
+                        <Badge variant="outline">v{selectedVersion.spec.version}</Badge>
+                      </div>
+                    </div>
+
+                    {/* Tasks Column */}
+                    <div className="space-y-4">
+                      {parsedTasks.map((task, index) => {
+                        const isExpanded = expandedTasks.has(task.id)
+                        return (
+                          <Card key={task.id} className="transition-all duration-200">
+                            <CardHeader 
+                              className="py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() => toggleTaskExpansion(task.id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="bg-muted rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
+                                    {index + 1}
+                                  </div>
+                                  <CardTitle className="text-lg">{task.name}</CardTitle>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                <Badge variant={task.type === 'neural' ? 'default' : 'secondary'}>
+                                  {task.type === 'neural' ? (
+                                    <>
+                                      <Brain className="h-3 w-3 mr-1" />
+                                      Neural
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Code className="h-3 w-3 mr-1" />
+                                      Symbolic
+                                    </>
+                                  )}
+                                </Badge>
+                                  {task.isOptimized && (
+                                    <span className="inline-flex items-center justify-center border px-3 py-1 text-[10px] tracking-wider uppercase font-light w-fit whitespace-nowrap shrink-0 gap-1 transition-colors overflow-hidden bg-amber-600 text-white border-amber-600 hover:bg-amber-700">
+                                      <Sparkles className="size-3 pointer-events-none" />
+                                      Optimized
+                                    </span>
+                                  )}
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            {isExpanded && (
+                              <CardContent className="space-y-4">
+                            {/* Instructions */}
+                            {task.instructions && (
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Instructions</p>
+                                <p className="text-sm bg-muted p-3 rounded italic">"{task.instructions}"</p>
+                              </div>
+                            )}
+                            
+                            {/* Inputs/Outputs */}
+                            {(task.inputs.length > 0 || task.outputs.length > 0) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {task.inputs.length > 0 && (
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground mb-2">Inputs</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {task.inputs.map((input, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs">
+                                          <strong>{input.name}</strong> {input.type}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {task.outputs.length > 0 && (
+                                  <div>
+                                    <p className="text-sm font-medium text-muted-foreground mb-2">Outputs</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {task.outputs.map((output, idx) => (
+                                        <Badge key={idx} variant="outline" className="text-xs">
+                                          <strong>{output.name}</strong> {output.type}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Code Block for Symbolic Tasks */}
+                            {task.type === 'symbolic' && task.codeBlock && (
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Implementation</p>
+                                <div className="border rounded-lg">
+                                  <div className="bg-muted p-2 border-b">
+                                    <p className="text-xs font-medium">Ruby</p>
+                                  </div>
+                                  <div className="p-0">
+                                    <SyntaxHighlighter
+                                      language="ruby"
+                                      style={theme === 'dark' ? oneDark : oneLight}
+                                      customStyle={{
+                                        margin: 0,
+                                        padding: '1rem',
+                                        background: 'transparent',
+                                        fontSize: '0.8rem',
+                                        lineHeight: '1.4',
+                                        borderRadius: '0 0 0.5rem 0.5rem',
+                                      }}
+                                      codeTagProps={{
+                                        style: {
+                                          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                                        }
+                                      }}
+                                    >
+                                      {task.codeBlock}
+                                    </SyntaxHighlighter>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Neural Task Placeholder */}
+                            {task.type === 'neural' && (
+                              <div>
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Neural Implementation</p>
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 p-4 rounded-lg border border-dashed">
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Brain className="h-4 w-4" />
+                                    This task uses neural processing - no code implementation shown
+                                  </div>
+                                </div>
+                              </div>
+                              )}
+                            </CardContent>
+                            )}
+                          </Card>
+                        )
+                      })}
+                    </div>
+
+                    {/* Main Block */}
+                    {mainBlock && (
+                      <Card className="transition-all duration-200">
+                        <CardHeader 
+                          className="py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => setIsMainExpanded(!isMainExpanded)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-muted rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
+                                <RotateCcw className="h-4 w-4" />
+                              </div>
+                              <CardTitle className="text-lg">MAIN</CardTitle>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Workflow
+                              </Badge>
+                              {isMainExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        {isMainExpanded && (
+                          <CardContent>
+                            <div className="border rounded-lg">
+                              <div className="bg-muted p-3 border-b">
+                                <p className="font-medium text-sm">Ruby</p>
+                              </div>
+                              <div className="p-0">
+                                <SyntaxHighlighter
+                                  language="ruby"
+                                  style={theme === 'dark' ? oneDark : oneLight}
+                                  customStyle={{
+                                    margin: 0,
+                                    padding: '1rem',
+                                    background: 'transparent',
+                                    fontSize: '0.875rem',
+                                    lineHeight: '1.5',
+                                    borderRadius: '0 0 0.5rem 0.5rem',
+                                  }}
+                                  codeTagProps={{
+                                    style: {
+                                      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                                    }
+                                  }}
+                                >
+                                  {mainBlock}
+                                </SyntaxHighlighter>
+                              </div>
+                            </div>
+                          </CardContent>
+                        )}
+                      </Card>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <Grid3X3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Tasks Found</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      No tasks could be parsed from the agent code. Tasks may not be structured in the expected Ruby DSL format.
+                    </p>
+                  </div>
+                )
+              )}
             </div>
           ) : (
             <div className="text-center py-16">
