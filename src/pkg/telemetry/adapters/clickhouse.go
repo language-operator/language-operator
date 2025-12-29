@@ -471,9 +471,10 @@ func (c *ClickhouseAdapter) queryWithRetry(ctx context.Context, query string, ar
 			}
 		}
 
-		queryCtx, cancel := context.WithTimeout(ctx, c.timeout)
-		rows, err = c.db.QueryContext(queryCtx, query, args...)
-		cancel()
+		// Use the parent context directly instead of creating a timeout context
+		// This avoids the context cancellation issue while still respecting
+		// the caller's context cancellation
+		rows, err = c.db.QueryContext(ctx, query, args...)
 
 		if err == nil {
 			c.updateHealthStatus(true)
