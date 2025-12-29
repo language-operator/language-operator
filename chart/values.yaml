@@ -730,7 +730,7 @@ telemetry:
       lookbackPeriod: "24h"
       
       # Query timeout for individual requests  
-      timeout: "10s"
+      timeout: "60s"
     
     # Connection settings to internal ClickHouse
     connection:
