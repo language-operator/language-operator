@@ -318,7 +318,7 @@ func (c *ClickhouseAdapter) scanSpan(rows *sql.Rows) (telemetry.Span, error) {
 	var spanId, traceId, parentSpanId, spanName, spanKind string
 	var timestamp time.Time
 	var duration int64
-	var statusCode int
+	var statusCode string
 	var statusMessage string
 	var attributesJson string
 
@@ -337,7 +337,7 @@ func (c *ClickhouseAdapter) scanSpan(rows *sql.Rows) (telemetry.Span, error) {
 	span.StartTime = timestamp
 	span.Duration = time.Duration(duration) * time.Nanosecond
 	span.EndTime = timestamp.Add(span.Duration)
-	span.Status = statusCode == 1 // StatusCode 1 = OK
+	span.Status = statusCode == "STATUS_CODE_OK" // Convert string enum to boolean
 	span.ErrorMessage = statusMessage
 
 	// Parse attributes from JSON (simplified - could use JSON parsing)
