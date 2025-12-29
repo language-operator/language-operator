@@ -184,10 +184,8 @@ func (c *ClickhouseAdapter) buildDSN() string {
 		dsn += "&password=" + c.password
 	}
 
-	// Add connection settings (ClickHouse expects timeouts in seconds)
-	timeoutSeconds := int(c.timeout.Seconds())
-	dsn += fmt.Sprintf("&read_timeout=%d&write_timeout=%d",
-		timeoutSeconds, timeoutSeconds)
+	// Skip timeout settings in DSN to avoid parsing issues
+	// ClickHouse driver will use default timeout values
 
 	return dsn
 }
