@@ -46,6 +46,10 @@ services:
       NODE_ENV: "development"
       # Kubernetes configuration (via kubectl proxy)
       KUBERNETES_SERVER_URL: "http://kubectl-proxy:8001"
+      # ClickHouse direct access (bypasses kubectl proxy auth issues)
+      CLICKHOUSE_DIRECT_ACCESS: "true"
+      CLICKHOUSE_HOST: "host-gateway"
+      CLICKHOUSE_PORT: "9123"
       KUBERNETES_SKIP_TLS_VERIFY: "true"
       KUBECONFIG: "/app/.kube/config"
       # OpenTelemetry configuration (connects to K3s cluster services)
@@ -56,8 +60,14 @@ services:
       TELEMETRY_ADAPTER_ENDPOINT: "http://localhost:8123"
       TELEMETRY_ADAPTER_DATABASE: "langop"
       TELEMETRY_ADAPTER_USERNAME: "langop"
+      TELEMETRY_ADAPTER_PASSWORD: "langop"
+      # ClickHouse configuration for dashboard
+      CLICKHOUSE_DATABASE: "langop"
+      CLICKHOUSE_USERNAME: "langop"
+      CLICKHOUSE_PASSWORD: "langop"
     extra_hosts:
       - "kubectl-proxy:host-gateway"
+      - "host-gateway:host-gateway"
     ports:
       - "3000:3000"
     depends_on:

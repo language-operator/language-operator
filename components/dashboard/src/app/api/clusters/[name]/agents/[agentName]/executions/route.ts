@@ -64,7 +64,7 @@ export async function GET(
     // For kubectl-proxy, use direct HTTP request instead of the ClickHouse client
     // because the client library doesn't work well with the proxy format
     let rows: any
-    if (process.env.KUBERNETES_SERVER_URL?.includes('kubectl-proxy')) {
+    if (process.env.KUBERNETES_SERVER_URL?.includes('kubectl-proxy') && process.env.CLICKHOUSE_DIRECT_ACCESS !== 'true') {
       const baseUrl = `${process.env.KUBERNETES_SERVER_URL}/api/v1/namespaces/language-operator/services/language-operator-clickhouse:8123/proxy`
       
       // Build the SQL query with parameters substituted directly
@@ -74,7 +74,11 @@ export async function GET(
         .replace('{agentName:String}', `'${agentName}'`)
         .replace('{limit:UInt32}', query.limit.toString())
 
-      const response = await fetch(`${baseUrl}?database=langop&query=${encodeURIComponent(sqlWithParams)}`)
+      const response = await fetch(`${baseUrl}?database=${process.env.CLICKHOUSE_DATABASE || 'langop'}&query=${encodeURIComponent(sqlWithParams)}`, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${process.env.CLICKHOUSE_USERNAME || 'langop'}:${process.env.CLICKHOUSE_PASSWORD || 'langop'}`).toString('base64')}`
+        }
+      })
       if (!response.ok) {
         throw new Error(`ClickHouse query failed: ${response.status} ${response.statusText}`)
       }
