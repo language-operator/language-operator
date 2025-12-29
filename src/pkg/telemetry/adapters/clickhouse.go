@@ -178,7 +178,7 @@ func (c *ClickhouseAdapter) buildDSN() string {
 	tcpEndpoint := strings.Replace(c.endpoint, "http://", "tcp://", 1)
 	tcpEndpoint = strings.Replace(tcpEndpoint, ":8123", ":9000", 1)
 
-	dsn := fmt.Sprintf("%s?database=%s&username=%s", tcpEndpoint, c.database, c.username)
+	dsn := fmt.Sprintf("%s/%s?username=%s", tcpEndpoint, c.database, c.username)
 
 	if c.password != "" {
 		dsn += "&password=" + c.password
