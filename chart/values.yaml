@@ -577,7 +577,7 @@ telemetry:
     auth:
       username: "langop"
       # Set password for authentication (optional, uses no auth if empty)
-      password: ""
+      password: "langop"
     
     # ClickHouse configuration
     config:
