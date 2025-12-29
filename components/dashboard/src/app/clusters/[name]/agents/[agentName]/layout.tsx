@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, useParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check, MessageCircle, Activity } from 'lucide-react'
+import { Bot, Edit, MoreVertical, FileCode, Trash2, Play, Home, Code, FolderOpen, ScrollText, Clock, Copy, Check, MessageCircle, Activity, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -29,6 +29,7 @@ function getCurrentTabValue(pathname: string, clusterName: string, agentName: st
   if (pathname.endsWith('/workspace')) return 'workspace'
   if (pathname.endsWith('/logs')) return 'logs'
   if (pathname.endsWith('/traces')) return 'traces'
+  if (pathname.endsWith('/usage')) return 'usage'
   
   return 'overview'
 }
@@ -298,6 +299,12 @@ export default function AgentDetailLayout({ children }: AgentDetailLayoutProps) 
               <Link href={`/clusters/${clusterName}/agents/${agentName}/traces`}>
                 <Activity className="w-4 h-4 mr-2" />
                 Traces
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="usage" asChild>
+              <Link href={`/clusters/${clusterName}/agents/${agentName}/usage`}>
+                <BarChart3 className="w-4 h-4 mr-2" />
+                Usage
               </Link>
             </TabsTrigger>
           </TabsList>

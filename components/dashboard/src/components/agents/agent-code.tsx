@@ -456,7 +456,11 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className="bg-muted rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">
-                                    {index + 1}
+                                    {task.type === 'neural' ? (
+                                      <Brain className="h-4 w-4" />
+                                    ) : (
+                                      <Code className="h-4 w-4" />
+                                    )}
                                   </div>
                                   <CardTitle className="text-lg">{task.name}</CardTitle>
                                 </div>
