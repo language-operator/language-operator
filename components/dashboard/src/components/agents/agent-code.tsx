@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2 } from 'lucide-react'
+import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2, Sparkles } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from 'next-themes'
@@ -169,8 +169,21 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm">v{version.spec.version}</span>
                         {version.isCurrent && (
-                          <Badge variant="secondary" className="text-xs">CURRENT</Badge>
+                          <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                            CURRENT
+                            {isLocked && <Lock className="h-3 w-3" />}
+                          </Badge>
                         )}
+                        <Badge variant="outline" className="text-xs">
+                          {version.spec.sourceType === 'learning' ? (
+                            <div className="flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              Optimized
+                            </div>
+                          ) : (
+                            version.spec.sourceType || 'manual'
+                          )}
+                        </Badge>
                         <span className="text-muted-foreground text-xs">
                           {formatTimeAgoCondensed(version.metadata.creationTimestamp)}
                         </span>
@@ -206,30 +219,32 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                 </Button>
               )}
 
-              {/* Optimize Button */}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleOptimize}
-                disabled={optimizeMutation.isPending || agent.status?.learningRequestPending}
-              >
-                {optimizeMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Optimizing...
-                  </>
-                ) : agent.status?.learningRequestPending ? (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    Optimization Pending...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="h-4 w-4 mr-2" />
-                    Optimize
-                  </>
-                )}
-              </Button>
+              {/* Optimize Button - Only show for current manual versions */}
+              {selectedVersion?.isCurrent && selectedVersion?.spec?.sourceType === 'manual' && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleOptimize}
+                  disabled={optimizeMutation.isPending || agent.status?.learningRequestPending}
+                >
+                  {optimizeMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Optimizing...
+                    </>
+                  ) : agent.status?.learningRequestPending ? (
+                    <>
+                      <Brain className="h-4 w-4 mr-2" />
+                      Optimization Pending...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-4 w-4 mr-2" />
+                      Optimize
+                    </>
+                  )}
+                </Button>
+              )}
 
               {/* Rollback Button */}
               {selectedVersionName && selectedVersionName !== currentVersionName && (
@@ -246,13 +261,6 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
             </div>
           </div>
 
-          {/* Status Indicators */}
-          {isLocked && (
-            <div className="flex items-center gap-1 text-orange-600 text-sm">
-              <Lock className="h-3 w-3" />
-              <span>Version Locked</span>
-            </div>
-          )}
         </CardContent>
       </Card>
 

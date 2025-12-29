@@ -366,6 +366,7 @@ export function useAgentVersions(agentName: string, clusterName: string) {
 
 export function useRollbackAgent(clusterName: string) {
   const queryClient = useQueryClient()
+  const { activeOrganizationId } = useOrganizationStore()
   
   return useMutation({
     mutationFn: async ({ agentName, versionName, lock = false }: { agentName: string; versionName: string; lock?: boolean }) => {
@@ -389,9 +390,9 @@ export function useRollbackAgent(clusterName: string) {
       return response.json()
     },
     onSuccess: (data, variables) => {
-      // Invalidate agent and version queries
-      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
-      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      // Invalidate agent and version queries with correct keys
+      queryClient.invalidateQueries({ queryKey: ['agents', activeOrganizationId, clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', activeOrganizationId, clusterName, variables.agentName] })
       queryClient.invalidateQueries({ queryKey: ['agents'] })
     },
   })
@@ -399,6 +400,7 @@ export function useRollbackAgent(clusterName: string) {
 
 export function useToggleAgentLock(clusterName: string) {
   const queryClient = useQueryClient()
+  const { activeOrganizationId } = useOrganizationStore()
   
   return useMutation({
     mutationFn: async ({ agentName, lock }: { agentName: string; lock: boolean }) => {
@@ -422,9 +424,9 @@ export function useToggleAgentLock(clusterName: string) {
       return response.json()
     },
     onSuccess: (data, variables) => {
-      // Invalidate agent and version queries
-      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
-      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      // Invalidate agent and version queries with correct keys
+      queryClient.invalidateQueries({ queryKey: ['agents', activeOrganizationId, clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', activeOrganizationId, clusterName, variables.agentName] })
       queryClient.invalidateQueries({ queryKey: ['agents'] })
     },
   })
@@ -432,6 +434,7 @@ export function useToggleAgentLock(clusterName: string) {
 
 export function useTriggerOptimization(clusterName: string) {
   const queryClient = useQueryClient()
+  const { activeOrganizationId } = useOrganizationStore()
   
   return useMutation({
     mutationFn: async ({ agentName }: { agentName: string }) => {
@@ -454,9 +457,9 @@ export function useTriggerOptimization(clusterName: string) {
       return response.json()
     },
     onSuccess: (data, variables) => {
-      // Invalidate agent and version queries to pick up the optimization results
-      queryClient.invalidateQueries({ queryKey: ['agents', clusterName, variables.agentName] })
-      queryClient.invalidateQueries({ queryKey: ['agent-versions', clusterName, variables.agentName] })
+      // Invalidate agent and version queries to pick up the optimization results with correct keys
+      queryClient.invalidateQueries({ queryKey: ['agents', activeOrganizationId, clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', activeOrganizationId, clusterName, variables.agentName] })
       queryClient.invalidateQueries({ queryKey: ['agents'] })
     },
   })
