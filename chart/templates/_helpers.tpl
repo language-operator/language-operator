@@ -128,7 +128,7 @@ Returns the internal ClickHouse endpoint if enabled, otherwise the configured en
 */}}
 {{- define "language-operator.telemetryAdapter.endpoint" -}}
 {{- if .Values.telemetry.clickhouse.enabled -}}
-{{- printf "http://%s-clickhouse:8123" (include "language-operator.fullname" .) -}}
+{{- printf "http://%s-clickhouse.%s.svc.cluster.local:8123" (include "language-operator.fullname" .) .Release.Namespace -}}
 {{- else -}}
 {{- .Values.telemetry.queryBackend.endpoint -}}
 {{- end -}}
