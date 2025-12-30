@@ -261,7 +261,7 @@ async function queryUsageTimeSeries(agentName: string, from: Date, to: Date, gra
             tokens: existing.tokens + inputTokens + outputTokens
           })
         } catch (error) {
-          console.warn(`Skipping cost calculation for model ${modelName}:`, error.message)
+          console.warn(`Skipping cost calculation for model ${modelName}:`, error instanceof Error ? error.message : String(error))
           // Still include the data but with 0 cost
           const existing = dataByInterval.get(timeInterval) || { tasks: 0, errors: 0, avgResponseTime: 0, cost: 0, tokens: 0 }
           dataByInterval.set(timeInterval, {
@@ -322,7 +322,7 @@ async function queryUsageTimeSeries(agentName: string, from: Date, to: Date, gra
             tokens: existing.tokens + inputTokens + outputTokens
           })
         } catch (error) {
-          console.warn(`Skipping cost calculation for model ${modelName}:`, error.message)
+          console.warn(`Skipping cost calculation for model ${modelName}:`, error instanceof Error ? error.message : String(error))
           // Still include the data but with 0 cost
           const existing = dataByInterval.get(timeInterval) || { tasks: 0, errors: 0, avgResponseTime: 0, cost: 0, tokens: 0 }
           dataByInterval.set(timeInterval, {
