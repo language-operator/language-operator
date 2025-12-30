@@ -892,7 +892,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete version {versions.find(v => v.metadata.name === versionToDelete)?.spec?.version}? 
+              Are you sure you want to delete version {versions.find((v: any) => v.metadata.name === versionToDelete)?.spec?.version}? 
               This action cannot be undone.
             </p>
             {versionToDelete === currentVersionName && (
