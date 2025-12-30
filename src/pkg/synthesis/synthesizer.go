@@ -387,6 +387,19 @@ func (s *Synthesizer) SynthesizeAgent(ctx context.Context, req AgentSynthesisReq
 		"codeLength", len(dslCode))
 	s.log.V(1).Info("Extracted DSL code", "code", dslCode)
 
+	// Format the Ruby code using RuboCop
+	if formattedCode, err := validation.FormatRubyCode(dslCode); err != nil {
+		s.log.Info("Ruby code formatting failed, using original code",
+			"agent", req.AgentName,
+			"error", err.Error())
+	} else if formattedCode != dslCode {
+		s.log.Info("Ruby code formatted successfully",
+			"agent", req.AgentName,
+			"originalLength", len(dslCode),
+			"formattedLength", len(formattedCode))
+		dslCode = formattedCode
+	}
+
 	// Validate against DSL schema first
 	validationErrors := []string{}
 	schemaViolations, err := ValidateGeneratedCodeAgainstSchema(ctx, dslCode)
@@ -610,6 +623,21 @@ func (s *Synthesizer) SynthesizeTask(ctx context.Context, req TaskSynthesisReque
 		"confidence", taskResponse.Confidence,
 		"hasCode", taskResponse.Code != nil,
 		"duration", duration)
+
+	// Format Ruby code if present in the task response
+	if taskResponse.Code != nil && *taskResponse.Code != "" {
+		if formattedCode, err := validation.FormatRubyCode(*taskResponse.Code); err != nil {
+			s.log.Info("Task Ruby code formatting failed, using original code",
+				"task", req.TaskName,
+				"error", err.Error())
+		} else if formattedCode != *taskResponse.Code {
+			s.log.Info("Task Ruby code formatted successfully",
+				"task", req.TaskName,
+				"originalLength", len(*taskResponse.Code),
+				"formattedLength", len(formattedCode))
+			taskResponse.Code = &formattedCode
+		}
+	}
 
 	// Set response metadata
 	taskResponse.DurationSeconds = duration

@@ -157,3 +157,129 @@ func ValidateGeneratedCodeAgainstSchema(ctx context.Context, code string) ([]Vio
 
 	return violations, nil
 }
+
+// findFormatterScript looks for the Ruby formatter script in common locations
+func findFormatterScript() string {
+	// Try locations in order of preference
+	locations := []string{
+		"/usr/local/bin/format-ruby-code.rb",                              // Docker container
+		"scripts/format-ruby-code.rb",                                     // CI from src/ directory
+		"../../../scripts/format-ruby-code.rb",                            // Test from src/pkg/validation
+		filepath.Join("..", "..", "..", "scripts", "format-ruby-code.rb"), // Alternative path
+		"../../scripts/format-ruby-code.rb",                               // From src subdirectory
+		"../scripts/format-ruby-code.rb",                                  // From pkg/validation
+	}
+
+	for _, path := range locations {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(absPath); err == nil {
+			return absPath
+		}
+	}
+
+	// Default to container location
+	return "/usr/local/bin/format-ruby-code.rb"
+}
+
+// FormatRubyCode formats Ruby code using pattern-based corrections
+// Fixes common formatting issues seen in LLM-generated code
+func FormatRubyCode(code string) (string, error) {
+	formatted := code
+
+	// Fix task definition formatting - the main issue we observed
+	formatted = fixTaskDefinitionFormatting(formatted)
+
+	// Fix empty hash spacing
+	formatted = fixEmptyHashFormatting(formatted)
+
+	// Fix excessive blank lines
+	formatted = fixExcessiveBlankLines(formatted)
+
+	return formatted, nil
+}
+
+// fixTaskDefinitionFormatting fixes the main formatting issue: task parameter alignment
+func fixTaskDefinitionFormatting(code string) string {
+	// Pattern: task(:name,\n\n       instructions: "...",\n\n       inputs: { ... },\n\n       outputs: { ... })
+	// Target: task(:name,\n     instructions: "...",\n     inputs: { ... },\n     outputs: { ... })
+
+	lines := strings.Split(code, "\n")
+	var result []string
+	inTaskDefinition := false
+	taskIndent := ""
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Detect start of task definition
+		if strings.HasPrefix(trimmed, "task(") && strings.Contains(line, ",") {
+			inTaskDefinition = true
+			// Calculate base indentation from task line
+			taskIndent = line[:len(line)-len(strings.TrimLeft(line, " \t"))]
+			result = append(result, line)
+			continue
+		}
+
+		// Handle task definition continuation
+		if inTaskDefinition {
+			// End task definition when we hit the closing parenthesis or 'do' keyword
+			if strings.Contains(trimmed, ") do |") || strings.Contains(trimmed, ")") && !strings.Contains(trimmed, ":") {
+				inTaskDefinition = false
+				result = append(result, line)
+				continue
+			}
+
+			// Format parameter lines (instructions, inputs, outputs)
+			if strings.Contains(trimmed, ":") && (strings.Contains(trimmed, "instructions:") ||
+				strings.Contains(trimmed, "inputs:") || strings.Contains(trimmed, "outputs:")) {
+
+				// Remove excessive blank lines before parameters
+				for len(result) > 0 && strings.TrimSpace(result[len(result)-1]) == "" {
+					result = result[:len(result)-1]
+				}
+
+				// Reformat with consistent indentation (5 spaces for parameter alignment)
+				formatted := taskIndent + "     " + trimmed
+				result = append(result, formatted)
+				continue
+			}
+		}
+
+		result = append(result, line)
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// fixEmptyHashFormatting fixes empty hash spacing: {  } -> {}
+func fixEmptyHashFormatting(code string) string {
+	// Fix empty hashes with spaces
+	code = strings.ReplaceAll(code, "{  }", "{}")
+	code = strings.ReplaceAll(code, "{ }", "{}")
+
+	return code
+}
+
+// fixExcessiveBlankLines removes excessive consecutive blank lines
+func fixExcessiveBlankLines(code string) string {
+	lines := strings.Split(code, "\n")
+	var result []string
+	blankLineCount := 0
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			blankLineCount++
+			if blankLineCount <= 1 { // Allow maximum 1 consecutive blank line
+				result = append(result, line)
+			}
+		} else {
+			blankLineCount = 0
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
