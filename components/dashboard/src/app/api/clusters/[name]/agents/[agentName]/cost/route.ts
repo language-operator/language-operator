@@ -298,13 +298,14 @@ async function queryUsageTimeSeries(agentName: string, from: Date, to: Date, gra
       let currency = 'USD' // Default fallback
       
       for (const row of data) {
-        const timeInterval = row.timeInterval
-        const tasks = parseInt(row.tasks) || 0
-        const errors = parseInt(row.errors) || 0
-        const avgResponseTime = parseFloat(row.avgResponseTime) || 0
-        const inputTokens = parseInt(row.inputTokens) || 0
-        const outputTokens = parseInt(row.outputTokens) || 0
-        const modelName = row.modelName
+        const rowData = row as any // Cast to any to access properties from ClickHouse result
+        const timeInterval = rowData.timeInterval
+        const tasks = parseInt(rowData.tasks) || 0
+        const errors = parseInt(rowData.errors) || 0
+        const avgResponseTime = parseFloat(rowData.avgResponseTime) || 0
+        const inputTokens = parseInt(rowData.inputTokens) || 0
+        const outputTokens = parseInt(rowData.outputTokens) || 0
+        const modelName = rowData.modelName
         
         if (!modelName) continue
         
