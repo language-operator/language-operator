@@ -68,20 +68,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Manual optimization bypasses the automatic learning threshold
     // Users can trigger optimization on demand regardless of execution count
 
-    // Set learningRequestPending=true to trigger optimization
-    // The learning controller will see this flag and trigger optimization
+    // Use annotations to trigger optimization since status is read-only
+    // The learning controller will watch for these annotations
     const updatedAgent = {
       ...agent,
-      status: {
-        ...agent.status,
-        learningRequestPending: true
-      },
       metadata: {
         ...agent.metadata,
         annotations: {
           ...agent.metadata.annotations,
           'langop.io/manual-optimization-requested': new Date().toISOString(),
-          'langop.io/optimization-trigger': 'manual'
+          'langop.io/optimization-trigger': 'manual',
+          'langop.io/learning-request-pending': 'true'
         }
       }
     }
