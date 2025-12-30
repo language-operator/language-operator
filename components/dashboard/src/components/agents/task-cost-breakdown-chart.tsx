@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { useTheme } from 'next-themes'
+import { formatCurrencyAutoPrecision } from '@/lib/currency'
 
 interface TaskCostData {
   date: string
@@ -12,21 +13,67 @@ interface TaskCostData {
 interface TaskCostBreakdownChartProps {
   data: TaskCostData[]
   taskNames: string[]
+  granularity?: string
+  currency?: string
 }
 
-export function TaskCostBreakdownChart({ data, taskNames }: TaskCostBreakdownChartProps) {
+export function TaskCostBreakdownChart({ data, taskNames, granularity = 'day', currency = 'USD' }: TaskCostBreakdownChartProps) {
   const { theme } = useTheme()
+  
+  // State to track which task series are hidden
+  const [hiddenTasks, setHiddenTasks] = useState<Set<string>>(new Set())
+  
+  // Handle legend click to toggle series visibility
+  const handleLegendClick = (data: any) => {
+    const dataKey = data.dataKey || data.value
+    if (!dataKey) return
+    
+    const newHiddenTasks = new Set(hiddenTasks)
+    if (hiddenTasks.has(dataKey)) {
+      newHiddenTasks.delete(dataKey)
+    } else {
+      newHiddenTasks.add(dataKey)
+    }
+    setHiddenTasks(newHiddenTasks)
+  }
   
   // Prepare chart data with formatted dates
   const chartData = useMemo(() => {
-    return data.map(item => ({
-      ...item,
-      displayDate: new Date(item.date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric'
-      })
-    }))
-  }, [data])
+    if (data.length === 0) return []
+    
+    return data.map((item, index) => {
+      const date = new Date(item.date)
+      let displayDate: string
+      
+      if (granularity === 'hour') {
+        // For hourly data, check if we need to show day context
+        const prevDate = index > 0 ? new Date(data[index - 1].date) : null
+        const isNewDay = !prevDate || date.getDate() !== prevDate.getDate()
+        
+        if (isNewDay) {
+          // Show day and hour for the first hour of each day
+          displayDate = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+          }) + ` ${date.getHours()}:00`
+        } else {
+          // Just show hour for subsequent hours
+          displayDate = `${date.getHours()}:00`
+        }
+      } else {
+        // For daily data, show month and day
+        displayDate = date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric'
+        })
+      }
+      
+      return {
+        ...item,
+        displayDate
+      }
+    })
+  }, [data, granularity])
 
   // Color palette for different tasks
   const taskColors = [
@@ -46,14 +93,29 @@ export function TaskCostBreakdownChart({ data, taskNames }: TaskCostBreakdownCha
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const totalCost = payload.reduce((sum: number, item: any) => sum + (item.value || 0), 0)
+      const data = payload[0].payload
+      const date = new Date(data.date)
+      
+      // Format date with hour if granularity is hourly
+      let dateString = date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+      
+      if (granularity === 'hour') {
+        const hour = date.getHours().toString().padStart(2, '0')
+        dateString += ` at ${hour}:00`
+      }
       
       return (
         <div className="bg-background border rounded-lg shadow-md p-3">
-          <p className="font-medium">{label}</p>
+          <p className="font-medium">{dateString}</p>
           <div className="space-y-1 mt-2 text-sm">
             <p className="flex justify-between gap-4 font-medium border-b pb-1">
               <span>Total:</span>
-              <span>${totalCost.toFixed(2)}</span>
+              <span>{formatCurrencyAutoPrecision(totalCost, currency)}</span>
             </p>
             {payload
               .filter((item: any) => item.value > 0)
@@ -67,7 +129,7 @@ export function TaskCostBreakdownChart({ data, taskNames }: TaskCostBreakdownCha
                     />
                     {item.dataKey}:
                   </span>
-                  <span className="font-medium">${item.value.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrencyAutoPrecision(item.value, currency)}</span>
                 </p>
               ))}
           </div>
@@ -103,14 +165,27 @@ export function TaskCostBreakdownChart({ data, taskNames }: TaskCostBreakdownCha
             stroke={theme === 'dark' ? '#9ca3af' : '#6b7280'}
             fontSize={12}
             tick={{ fill: theme === 'dark' ? '#9ca3af' : '#6b7280' }}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => formatCurrencyAutoPrecision(value, currency)}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend 
             wrapperStyle={{
               fontSize: '12px',
-              paddingTop: '10px'
+              paddingTop: '10px',
+              cursor: 'pointer'
             }}
+            onClick={handleLegendClick}
+            iconType="rect"
+            formatter={(value, entry) => (
+              <span 
+                style={{ 
+                  opacity: hiddenTasks.has(value) ? 0.4 : 1,
+                  textDecoration: hiddenTasks.has(value) ? 'line-through' : 'none'
+                }}
+              >
+                {value}
+              </span>
+            )}
           />
           {taskNames.map((taskName, index) => (
             <Area
@@ -122,6 +197,7 @@ export function TaskCostBreakdownChart({ data, taskNames }: TaskCostBreakdownCha
               fill={taskColors[index % taskColors.length]}
               fillOpacity={0.6}
               strokeWidth={1}
+              hide={hiddenTasks.has(taskName)}
             />
           ))}
         </AreaChart>

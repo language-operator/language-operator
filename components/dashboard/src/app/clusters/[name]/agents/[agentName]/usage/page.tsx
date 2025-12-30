@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { useAgent } from '@/hooks/use-agents'
 import { Card, CardContent } from '@/components/ui/card'
-import { AgentUsage } from '@/components/agents/agent-usage'
+import { AgentUsage } from '@/components/agents/agent-usage-api'
 
 export default function AgentUsagePage() {
   const params = useParams()

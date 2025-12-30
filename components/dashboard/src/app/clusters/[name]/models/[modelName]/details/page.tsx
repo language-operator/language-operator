@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Settings, Database, Shield, RefreshCw } from 'lucide-react'
 import { LanguageModel } from '@/types/model'
+import { formatCurrencyAutoPrecision } from '@/lib/currency'
 
 interface ModelDetailsProps {
   model: LanguageModel
 }
+
 
 function ModelDetails({ model }: ModelDetailsProps) {
   return (
@@ -197,13 +199,13 @@ function ModelDetails({ model }: ModelDetailsProps) {
               {model.spec.costTracking.inputTokenCost && (
                 <div>
                   <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Input Token Cost</p>
-                  <p className="text-sm">${model.spec.costTracking.inputTokenCost.toFixed(6)} per token</p>
+                  <p className="text-sm">{formatCurrencyAutoPrecision(model.spec.costTracking.inputTokenCost, model.spec.costTracking.currency)} per 1,000 tokens</p>
                 </div>
               )}
               {model.spec.costTracking.outputTokenCost && (
                 <div>
                   <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Output Token Cost</p>
-                  <p className="text-sm">${model.spec.costTracking.outputTokenCost.toFixed(6)} per token</p>
+                  <p className="text-sm">{formatCurrencyAutoPrecision(model.spec.costTracking.outputTokenCost, model.spec.costTracking.currency)} per 1,000 tokens</p>
                 </div>
               )}
               {model.spec.costTracking.currency && (
