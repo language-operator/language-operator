@@ -557,9 +557,9 @@ export async function GET(
     const queryResult = UsageQuerySchema.safeParse(rawParams)
 
     if (!queryResult.success) {
-      console.error('Query validation failed:', queryResult.error.errors)
+      console.error('Query validation failed:', queryResult.error.issues)
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: queryResult.error.errors },
+        { error: 'Invalid query parameters', details: queryResult.error.issues },
         { status: 400 }
       )
     }
