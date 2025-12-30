@@ -464,3 +464,35 @@ export function useTriggerOptimization(clusterName: string) {
     },
   })
 }
+
+export function useDeleteAgentVersion(clusterName: string) {
+  const queryClient = useQueryClient()
+  const { activeOrganizationId } = useOrganizationStore()
+  
+  return useMutation({
+    mutationFn: async ({ agentName, versionName }: { agentName: string; versionName: string }) => {
+      if (!clusterName) {
+        throw new Error('Cluster name is required for version deletion')
+      }
+      
+      const endpoint = `/api/clusters/${clusterName}/agents/${agentName}/versions/${versionName}`
+      
+      const response = await fetchWithOrganization(endpoint, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || errorData.message || 'Failed to delete agent version')
+      }
+      
+      return response.json()
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate agent and version queries to pick up changes
+      queryClient.invalidateQueries({ queryKey: ['agents', activeOrganizationId, clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agent-versions', activeOrganizationId, clusterName, variables.agentName] })
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+    },
+  })
+}

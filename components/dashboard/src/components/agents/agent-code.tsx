@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
-import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2, Sparkles, Grid3X3, FileText, ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertCircle, Code, History, Lock, Unlock, RotateCcw, Brain, Loader2, Sparkles, Grid3X3, FileText, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from 'next-themes'
-import { useAgentVersions, useRollbackAgent, useToggleAgentLock, useTriggerOptimization } from '@/hooks/use-agents'
+import { useAgentVersions, useRollbackAgent, useToggleAgentLock, useTriggerOptimization, useDeleteAgentVersion } from '@/hooks/use-agents'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
 import { toast } from 'sonner'
@@ -25,6 +25,8 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
   const [selectedVersionName, setSelectedVersionName] = useState<string>('')
   const [showRollbackDialog, setShowRollbackDialog] = useState(false)
   const [lockOnRollback, setLockOnRollback] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [versionToDelete, setVersionToDelete] = useState<string>('')
   const [viewMode, setViewMode] = useState<'raw' | 'graphical'>('graphical')
   const [showRaw, setShowRaw] = useState(false)
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
@@ -36,6 +38,7 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
   const rollbackMutation = useRollbackAgent(clusterName || '')
   const lockMutation = useToggleAgentLock(clusterName || '')
   const optimizeMutation = useTriggerOptimization(clusterName || '')
+  const deleteMutation = useDeleteAgentVersion(clusterName || '')
 
   const versions = versionsResponse?.data || []
   const currentVersionName = versionsResponse?.currentVersion
@@ -111,6 +114,36 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
       // Still log to console for debugging
       console.error('Optimization failed:', error)
     }
+  }
+
+  const handleDeleteVersion = async () => {
+    if (!versionToDelete) return
+
+    try {
+      const result = await deleteMutation.mutateAsync({
+        agentName: agent.metadata.name || '',
+        versionName: versionToDelete
+      })
+      setShowDeleteDialog(false)
+      setVersionToDelete('')
+      
+      // Show success toast
+      toast.success("Version Deleted", {
+        description: result.message || `Version deleted successfully${result.rolledBackTo ? ' and agent rolled back' : ''}`
+      })
+    } catch (error) {
+      console.error('Delete failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      toast.error("Delete Failed", {
+        description: errorMessage
+      })
+    }
+  }
+
+  const handleShowDeleteDialog = (versionName: string) => {
+    setVersionToDelete(versionName)
+    setShowDeleteDialog(true)
   }
 
   // Local formatTimeAgo for condensed version display
@@ -293,6 +326,32 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
                     <>
                       <Unlock className="h-4 w-4 mr-2" />
                       Lock
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Delete Button - Only show for versions > v1 and enabled */}
+              {selectedVersionName && selectedVersion?.spec?.version > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShowDeleteDialog(selectedVersionName)}
+                  disabled={
+                    deleteMutation.isPending || 
+                    (selectedVersion?.isCurrent && isLocked)
+                  }
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  {deleteMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </>
                   )}
                 </Button>
@@ -820,6 +879,54 @@ export function AgentCode({ agent, clusterName }: AgentCodeProps) {
               disabled={rollbackMutation.isPending}
             >
               {rollbackMutation.isPending ? 'Rolling Back...' : 'Roll Back'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Agent Version</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete version {versions.find(v => v.metadata.name === versionToDelete)?.spec?.version}? 
+              This action cannot be undone.
+            </p>
+            {versionToDelete === currentVersionName && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> You are deleting the current version. The agent will automatically 
+                  roll back to the previous version.
+                </p>
+              </div>
+            )}
+            {versionToDelete === currentVersionName && isLocked && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">
+                  <strong>Cannot delete:</strong> This version is currently locked. Unlock it first to delete.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteVersion}
+              disabled={
+                deleteMutation.isPending || 
+                (versionToDelete === currentVersionName && isLocked)
+              }
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete Version'}
             </Button>
           </DialogFooter>
         </DialogContent>
