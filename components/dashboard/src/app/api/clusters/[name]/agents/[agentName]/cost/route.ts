@@ -424,7 +424,7 @@ async function queryTaskCostBreakdown(agentName: string, from: Date, to: Date, g
             cost,
           })
         } catch (error) {
-          console.warn(`Skipping task cost calculation for model ${modelName}:`, error.message)
+          console.warn(`Skipping task cost calculation for model ${modelName}:`, error instanceof Error ? error.message : String(error))
           rawData.push({
             timeInterval,
             taskName,
@@ -467,7 +467,7 @@ async function queryTaskCostBreakdown(agentName: string, from: Date, to: Date, g
             cost,
           })
         } catch (error) {
-          console.warn(`Skipping task cost calculation for model ${modelName}:`, error.message)
+          console.warn(`Skipping task cost calculation for model ${modelName}:`, error instanceof Error ? error.message : String(error))
           rawData.push({
             timeInterval,
             taskName,
