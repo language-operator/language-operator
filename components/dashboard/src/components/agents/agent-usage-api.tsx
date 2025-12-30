@@ -368,7 +368,7 @@ export function AgentUsage({ agent, clusterName }: AgentUsageProps) {
           <div className="absolute inset-0 opacity-25">
             <Sparkline 
               data={metrics.sparklines.cost}
-              trendData={metrics.sparklines.costAverage}
+              trendData={metrics.sparklines.costAverage as number[]}
               color="#3b82f6" 
               trendColor="#fbbf24"
               className="w-full h-full"
