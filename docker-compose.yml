@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: dev
       POSTGRES_DB: language_operator_dev
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
@@ -39,17 +39,17 @@ services:
       context: ./components/dashboard
       target: build-deps
     restart: always
+    network_mode: host
     environment:
-      DATABASE_URL: "postgresql://dev:dev@postgres-dev:5432/language_operator_dev?schema=public"
+      DATABASE_URL: "postgresql://dev:dev@localhost:5434/language_operator_dev?schema=public"
       NEXTAUTH_SECRET: "dev-secret-not-for-production"
       NEXTAUTH_URL: "http://localhost:3000"
       NODE_ENV: "development"
       # Kubernetes configuration (via kubectl proxy)
-      KUBERNETES_SERVER_URL: "http://kubectl-proxy:8001"
+      KUBERNETES_SERVER_URL: "http://localhost:8001"
       # ClickHouse direct access (bypasses kubectl proxy auth issues)
       CLICKHOUSE_DIRECT_ACCESS: "true"
-      CLICKHOUSE_HOST: "host-gateway"
-      CLICKHOUSE_PORT: "9123"
+      CLICKHOUSE_HOST: "localhost:8125"
       KUBERNETES_SKIP_TLS_VERIFY: "true"
       KUBECONFIG: "/app/.kube/config"
       # OpenTelemetry configuration (connects to K3s cluster services)
@@ -65,11 +65,6 @@ services:
       CLICKHOUSE_DATABASE: "langop"
       CLICKHOUSE_USERNAME: "langop"
       CLICKHOUSE_PASSWORD: "langop"
-    extra_hosts:
-      - "kubectl-proxy:host-gateway"
-      - "host-gateway:host-gateway"
-    ports:
-      - "3000:3000"
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -86,8 +81,6 @@ services:
         source: ${HOME}/.kube/config
         target: /app/.kube/config
         read_only: true
-    networks:
-      - langop-k3s
     command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
 
   # Prisma Studio for database management

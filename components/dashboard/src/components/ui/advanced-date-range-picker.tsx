@@ -21,6 +21,11 @@ interface AdvancedDateRangePickerProps {
 }
 
 const PRESET_RANGES = [
+  { label: 'Today', getValue: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
+  { label: 'Yesterday', getValue: () => ({ from: startOfDay(addDays(new Date(), -1)), to: endOfDay(addDays(new Date(), -1)) }) },
+  { label: 'Last 24 Hours', getValue: () => ({ from: addDays(new Date(), -1), to: new Date() }) },
+  { label: 'Last 2 Days', getValue: () => ({ from: addDays(new Date(), -2), to: new Date() }) },
+  { label: 'Last 3 days', getValue: () => ({ from: addDays(new Date(), -3), to: new Date() }) },
   { label: 'Last 7 days', getValue: () => ({ from: addDays(new Date(), -7), to: new Date() }) },
   { label: 'Last 30 days', getValue: () => ({ from: addDays(new Date(), -30), to: new Date() }) },
   { label: 'Last 60 days', getValue: () => ({ from: addDays(new Date(), -60), to: new Date() }) },

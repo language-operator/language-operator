@@ -8,13 +8,6 @@ import { ResourceEventsActivity } from '@/components/ui/events-activity'
 import { AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { LanguageModel } from '@/types/model'
 
-function formatCurrency(amount?: number, currency = 'USD') {
-  if (!amount) return 'N/A'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amount)
-}
 
 interface ModelOverviewProps {
   model: LanguageModel
@@ -91,34 +84,6 @@ function ModelOverview({ model, clusterName }: ModelOverviewProps) {
         clusterName={clusterName}
       />
 
-      {/* Cost Tracking */}
-      {model.spec.costTracking?.enabled && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Cost Tracking Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Currency</p>
-                <p className="text-sm">{model.spec.costTracking.currency || 'USD'}</p>
-              </div>
-              {model.spec.costTracking.inputTokenCost && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Input Token Cost</p>
-                  <p className="text-sm">{formatCurrency(model.spec.costTracking.inputTokenCost, model.spec.costTracking.currency)}</p>
-                </div>
-              )}
-              {model.spec.costTracking.outputTokenCost && (
-                <div>
-                  <p className="text-sm font-medium text-stone-600 dark:text-stone-400">Output Token Cost</p>
-                  <p className="text-sm">{formatCurrency(model.spec.costTracking.outputTokenCost, model.spec.costTracking.currency)}</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Rate Limits */}
       {model.spec.rateLimits && (

@@ -7,7 +7,10 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Recently Completed (Dec 28, 2025)
+### Recently Completed (Dec 30, 2025)
+- ✅ **Issue #224**: Agent code synthesizer produces poorly formatted Ruby code - Implemented pattern-based Ruby code formatter to fix LLM-generated code formatting issues. Added FormatRubyCode function with task definition parameter alignment fixes, empty hash normalization ({  } → {}), and excessive blank line removal. Integrated into both agent and task synthesis pipelines with comprehensive test coverage. Addresses the main formatting problems observed in ConfigMaps where task parameters had poor indentation and spacing (commit 2311d2e)
+
+### Previously Completed (Dec 28, 2025)
 - ✅ **Issue #223**: Learning controller not creating new LanguageAgentVersions after manual optimization - Fixed ClickHouse query logic where `service.name` attribute was incorrectly filtering on `SpanAttributes['service.name']` instead of the dedicated `ServiceName` column. Added RBAC annotations, enhanced error logging, and comprehensive unit tests. Verified with real telemetry data showing 1,982 traces now properly found for optimization (commit c34679c)
 - ✅ **Issue #219**: Synthesis hash management bug causing infinite loops - Fixed root cause in `createInitialAgentVersion()` where LanguageAgentVersion v1 was returned with stale hash annotations when instructions changed. Implemented atomic hash + code updates to prevent both infinite synthesis loops and stale code usage. Added comprehensive unit tests covering infinite loop scenarios (commit 268f8ca)
 

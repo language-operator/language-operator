@@ -32,10 +32,11 @@ const updateModelSchema = z.object({
       additionalParameters: z.record(z.string(), z.any()).optional(),
     }).optional(),
     contextWindow: z.number().optional(),
-    cost: z.object({
-      inputTokens: z.number().optional(),
-      outputTokens: z.number().optional(),
-      currency: z.string().optional()
+    costTracking: z.object({
+      inputTokenCost: z.number().optional(),
+      outputTokenCost: z.number().optional(),
+      currency: z.string().optional(),
+      enabled: z.boolean().optional()
     }).optional(),
     enabled: z.boolean().optional(),
     requireApproval: z.boolean().optional(),

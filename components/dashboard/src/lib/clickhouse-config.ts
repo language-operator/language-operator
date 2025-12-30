@@ -6,10 +6,9 @@ import { createClient } from '@clickhouse/client'
 export function getClickHouseConfig() {
   // Check if we should use direct ClickHouse access (bypasses kubectl proxy auth issues)
   if (process.env.CLICKHOUSE_DIRECT_ACCESS === 'true') {
-    const host = process.env.CLICKHOUSE_HOST || 'localhost'
-    const port = process.env.CLICKHOUSE_PORT || '8123'
+    const host = process.env.CLICKHOUSE_HOST || 'localhost:8123'
     return {
-      url: `http://${host}:${port}`,
+      url: `http://${host}`,
       database: process.env.CLICKHOUSE_DATABASE,
       username: process.env.CLICKHOUSE_USERNAME,
       password: process.env.CLICKHOUSE_PASSWORD,
@@ -30,7 +29,7 @@ export function getClickHouseConfig() {
   
   // Default to environment variable or localhost
   return {
-    host: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
+    url: process.env.CLICKHOUSE_URL || 'http://localhost:8123',
     database: process.env.CLICKHOUSE_DATABASE,
     username: process.env.CLICKHOUSE_USERNAME,
     password: process.env.CLICKHOUSE_PASSWORD,

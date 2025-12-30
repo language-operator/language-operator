@@ -42,7 +42,13 @@ export interface LanguageModel {
     version: string
     endpoint?: string
     contextWindow?: number
-    costPer1kTokens?: number
+    costPer1kTokens?: number // Legacy field
+    costTracking?: {
+      enabled: boolean
+      currency: string
+      inputTokenCost: number
+      outputTokenCost: number
+    }
     secretRef?: {
       name: string
       key: string
@@ -225,7 +231,7 @@ class KubernetesClient {
   async getLanguageModels(namespace: string): Promise<LanguageModel[]> {
     try {
       const response = await this.customApi.listNamespacedCustomObject({
-        group: 'language-operator.io',
+        group: 'langop.io',
         version: 'v1alpha1',
         namespace,
         plural: 'languagemodels'
@@ -235,6 +241,23 @@ class KubernetesClient {
     } catch (error) {
       console.error('Error fetching language models:', error)
       return []
+    }
+  }
+
+  async getLanguageModel(namespace: string, name: string): Promise<LanguageModel | null> {
+    try {
+      const response = await this.customApi.getNamespacedCustomObject({
+        group: 'langop.io',
+        version: 'v1alpha1',
+        namespace,
+        plural: 'languagemodels',
+        name
+      })
+      
+      return response.body as LanguageModel
+    } catch (error) {
+      console.error(`Error fetching language model ${name}:`, error)
+      return null
     }
   }
 

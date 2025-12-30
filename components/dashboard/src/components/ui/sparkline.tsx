@@ -1,22 +1,25 @@
 'use client'
 
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, Line, ResponsiveContainer, ComposedChart } from 'recharts'
 import { useTheme } from 'next-themes'
 
 interface SparklineProps {
   data: number[]
+  trendData?: number[] // Optional moving average data
   color?: string
+  trendColor?: string
   className?: string
   showDots?: boolean
 }
 
-export function Sparkline({ data, color, className, showDots = false }: SparklineProps) {
+export function Sparkline({ data, trendData, color, trendColor = '#fbbf24', className, showDots = false }: SparklineProps) {
   const { theme } = useTheme()
   
   // Convert array to chart data format
   const chartData = data.map((value, index) => ({
     index,
-    value
+    value,
+    trend: trendData?.[index] // Include trend data if provided
   }))
 
   // Default colors based on theme
@@ -27,7 +30,7 @@ export function Sparkline({ data, color, className, showDots = false }: Sparklin
   return (
     <div className={className}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData}>
+        <ComposedChart data={chartData}>
           <defs>
             <linearGradient id={`gradient-${defaultColor.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={defaultColor} stopOpacity={fillOpacity} />
@@ -44,7 +47,18 @@ export function Sparkline({ data, color, className, showDots = false }: Sparklin
             dot={showDots ? { fill: defaultColor, r: 1.5, strokeWidth: 0 } : false}
             activeDot={false}
           />
-        </AreaChart>
+          {trendData && (
+            <Line
+              type="monotone"
+              dataKey="trend"
+              stroke={trendColor}
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+            />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )

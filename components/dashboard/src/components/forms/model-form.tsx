@@ -54,6 +54,7 @@ export interface ModelFormData {
   contextWindow: number
   costPerInputToken: number
   costPerOutputToken: number
+  costTrackingEnabled: boolean
   enabled: boolean
   requireApproval: boolean
   
@@ -155,6 +156,19 @@ interface ModelFormProps {
   clusterName?: string  // Add clusterName for cluster-scoped operations
 }
 
+// Helper function to get currency symbol
+function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'CAD': 'C$',
+    'AUD': 'A$'
+  }
+  return symbols[currency] || '$'
+}
+
 export function ModelForm({ 
   initialData, 
   isLoading = false, 
@@ -183,6 +197,7 @@ export function ModelForm({
     contextWindow: 8192,
     costPerInputToken: 0.0,
     costPerOutputToken: 0.0,
+    costTrackingEnabled: false,
     enabled: true,
     requireApproval: false,
     
@@ -1208,6 +1223,117 @@ export function ModelForm({
     )
   }
 
+  function renderCostTab() {
+    return (
+      <TabsContent value="cost" className="space-y-6 mt-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Cost Tracking
+            </CardTitle>
+            <CardDescription>
+              Configure token costs for accurate usage billing and analytics
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="cost-tracking-enabled"
+                checked={formData.costTrackingEnabled || false}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, costTrackingEnabled: checked }))}
+              />
+              <Label htmlFor="cost-tracking-enabled">Enable Cost Tracking</Label>
+            </div>
+
+            {formData.costTrackingEnabled && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="costPerInputToken">Cost per 1K Input Tokens</Label>
+                    <Input
+                      id="costPerInputToken"
+                      type="number"
+                      step="0.0001"
+                      value={formData.costPerInputToken || ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Always update the form state, let the number input handle validation
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          costPerInputToken: value === '' ? 0 : Number(value) || 0
+                        }))
+                      }}
+                      min="0"
+                      placeholder="2.50"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Cost in {formData.currency || 'USD'} per 1,000 input tokens
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="costPerOutputToken">Cost per 1K Output Tokens</Label>
+                    <Input
+                      id="costPerOutputToken"
+                      type="number"
+                      step="0.0001"
+                      value={formData.costPerOutputToken || ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Always update the form state, let the number input handle validation
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          costPerOutputToken: value === '' ? 0 : Number(value) || 0
+                        }))
+                      }}
+                      min="0"
+                      placeholder="10.00"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Cost in {formData.currency || 'USD'} per 1,000 output tokens
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Currency</Label>
+                    <Select 
+                      value={formData.currency || 'USD'} 
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">USD - US Dollar</SelectItem>
+                        <SelectItem value="EUR">EUR - Euro</SelectItem>
+                        <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                        <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                        <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                        <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estimated Cost per 1K Tokens</Label>
+                    <div className="mt-2">
+                      <div className="text-lg font-medium">
+                        {getCurrencySymbol(formData.currency || 'USD')}{((formData.costPerInputToken + formData.costPerOutputToken) / 2).toFixed(4)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Average of input and output token costs
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+    )
+  }
+
   // Enterprise edit form with tabbed interface
   function renderEditForm() {
     return (
@@ -1223,7 +1349,7 @@ export function ModelForm({
 
         {/* Tab-based Form */}
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Basic
@@ -1236,6 +1362,10 @@ export function ModelForm({
               <Network className="h-4 w-4" />
               Network
             </TabsTrigger>
+            <TabsTrigger value="cost" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Cost
+            </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Advanced
@@ -1245,6 +1375,7 @@ export function ModelForm({
           {renderBasicTab()}
           {renderCachingTab()}
           {renderSecurityTab()}
+          {renderCostTab()}
           {renderAdvancedTab()}
         </Tabs>
 

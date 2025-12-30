@@ -41,10 +41,11 @@ export default function ClusterEditModelPage() {
               additionalParameters: formData.additionalParameters,
             },
             contextWindow: formData.contextWindow,
-            cost: {
-              inputTokens: formData.costPerInputToken,
-              outputTokens: formData.costPerOutputToken,
-              currency: formData.currency || 'USD'
+            costTracking: {
+              inputTokenCost: formData.costPerInputToken,
+              outputTokenCost: formData.costPerOutputToken,
+              currency: formData.currency || 'USD',
+              enabled: formData.costTrackingEnabled || false
             },
             enabled: formData.enabled,
             requireApproval: formData.requireApproval,
@@ -125,6 +126,7 @@ export default function ClusterEditModelPage() {
     contextWindow: model.spec.configuration?.contextWindow || 8192,
     costPerInputToken: model.spec.costTracking?.inputTokenCost || 0.0,
     costPerOutputToken: model.spec.costTracking?.outputTokenCost || 0.0,
+    costTrackingEnabled: model.spec.costTracking?.enabled || false,
     enabled: model.spec.enabled !== false,
     requireApproval: model.spec.requireApproval || false,
     

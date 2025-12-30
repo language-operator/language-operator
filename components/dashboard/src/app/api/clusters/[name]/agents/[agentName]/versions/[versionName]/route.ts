@@ -206,21 +206,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete the LanguageAgentVersion CRD
+    // Note: Associated ConfigMaps are managed by the operator's garbage collection
     try {
       await k8sClient.deleteLanguageAgentVersion(organization.namespace, versionName)
       console.log(`Deleted LanguageAgentVersion ${versionName}`)
     } catch (deleteError) {
       console.error('Error deleting LanguageAgentVersion:', deleteError)
       throw deleteError
-    }
-
-    // Delete associated ConfigMap if it exists
-    try {
-      await k8sClient.deleteConfigMap(organization.namespace, versionName)
-      console.log(`Deleted ConfigMap ${versionName}`)
-    } catch (configMapError) {
-      // ConfigMap might not exist or already be deleted, log but don't fail
-      console.log(`ConfigMap ${versionName} not found or already deleted:`, configMapError)
     }
 
     const successMessage = rollbackVersionName 
