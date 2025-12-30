@@ -222,14 +222,14 @@ async function queryUsageTimeSeries(agentName: string, from: Date, to: Date, gra
       
       if (!response.ok) {
         console.error('ClickHouse query failed:', response.status, response.statusText)
-        return []
+        return { data: [], currency: 'USD' }
       }
       
       const text = await response.text()
       const lines = text.trim().split('\n')
       
       if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) {
-        return []
+        return { data: [], currency: 'USD' }
       }
       
       // Group by timeInterval and calculate costs with real pricing
