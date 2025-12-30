@@ -5,7 +5,7 @@ import { useAgent } from '@/hooks/use-agents'
 import { Card, CardContent } from '@/components/ui/card'
 import { AgentUsage } from '@/components/agents/agent-usage-api'
 
-export default function AgentUsagePage() {
+export default function AgentCostPage() {
   const params = useParams()
   const clusterName = params.name as string
   const agentName = params.agentName as string
@@ -20,7 +20,7 @@ export default function AgentUsagePage() {
           <CardContent className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading agent usage...</p>
+              <p className="text-gray-600">Loading agent cost data...</p>
             </div>
           </CardContent>
         </Card>

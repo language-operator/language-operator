@@ -127,7 +127,7 @@ export function AgentUsage({ agent, clusterName }: AgentUsageProps) {
 
   // Fetch usage data from API
   const { data: usageData, isLoading, error } = useQuery<UsageApiResponse>({
-    queryKey: ['usage', clusterName, agent.metadata.name, dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryKey: ['cost', clusterName, agent.metadata.name, dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
       const params = new URLSearchParams({
         from: dateRange.from.toISOString(),
@@ -135,10 +135,10 @@ export function AgentUsage({ agent, clusterName }: AgentUsageProps) {
         // granularity will be automatically determined by the API based on date range
       })
       
-      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/usage?${params}`)
+      const response = await fetch(`/api/clusters/${clusterName}/agents/${agent.metadata.name}/cost?${params}`)
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch usage data: ${response.statusText}`)
+        throw new Error(`Failed to fetch cost data: ${response.statusText}`)
       }
       
       return response.json()
