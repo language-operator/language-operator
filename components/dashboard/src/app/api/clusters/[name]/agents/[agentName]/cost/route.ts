@@ -447,12 +447,13 @@ async function queryTaskCostBreakdown(agentName: string, from: Date, to: Date, g
       
       rawData = []
       for (const row of data) {
-        const timeInterval = row.timeInterval
-        const taskName = row.taskName
-        const taskCount = parseInt(row.taskCount) || 0
-        const inputTokens = parseInt(row.inputTokens) || 0
-        const outputTokens = parseInt(row.outputTokens) || 0
-        const modelName = row.modelName
+        const rowData = row as any // Cast to any to access properties from ClickHouse result
+        const timeInterval = rowData.timeInterval
+        const taskName = rowData.taskName
+        const taskCount = parseInt(rowData.taskCount) || 0
+        const inputTokens = parseInt(rowData.inputTokens) || 0
+        const outputTokens = parseInt(rowData.outputTokens) || 0
+        const modelName = rowData.modelName
         
         if (!modelName || !taskName) continue
         
