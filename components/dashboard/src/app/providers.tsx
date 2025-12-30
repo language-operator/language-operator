@@ -7,6 +7,7 @@ import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { NavigationLoadingProvider } from '@/contexts/navigation-loading-context'
 import { NavigationProgress } from '@/components/ui/navigation-progress'
+import { SidebarProvider } from '@/contexts/sidebar-context'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,11 +32,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <SessionProvider>
         <QueryClientProvider client={queryClient}>
-          <NavigationLoadingProvider>
-            <NavigationProgress />
-            {children}
-            <Toaster richColors position="top-right" />
-          </NavigationLoadingProvider>
+          <SidebarProvider>
+            <NavigationLoadingProvider>
+              <NavigationProgress />
+              {children}
+              <Toaster richColors position="top-right" />
+            </NavigationLoadingProvider>
+          </SidebarProvider>
         </QueryClientProvider>
       </SessionProvider>
     </ThemeProvider>

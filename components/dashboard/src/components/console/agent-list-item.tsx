@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { useConsole } from '@/contexts/console-context'
 import { cn } from '@/lib/utils'
-import { MessageSquare, MoreVertical, ExternalLink, Trash2 } from 'lucide-react'
+import { MessageSquare, MoreVertical, ExternalLink, Trash2, Edit3 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DeleteConversationDialog } from './delete-conversation-dialog'
+import { RenameConversationDialog } from './rename-conversation-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -31,8 +32,9 @@ interface AgentListItemProps {
 }
 
 export function AgentListItem({ conversation }: AgentListItemProps) {
-  const { selectedAgent, selectedCluster, conversationDbId, loadConversation, deleteConversation } = useConsole()
+  const { selectedAgent, selectedCluster, conversationDbId, loadConversation, deleteConversation, refreshConversationList } = useConsole()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showRenameDialog, setShowRenameDialog] = useState(false)
   
   const isActive = conversationDbId === conversation.id
 
@@ -50,6 +52,11 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
     setShowDeleteDialog(true)
   }
 
+  const handleRenameClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowRenameDialog(true)
+  }
+
   const handleConfirmDelete = async (conversationId: string) => {
     try {
       await deleteConversation(conversationId)
@@ -57,6 +64,11 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete conversation')
     }
+  }
+
+  const handleConfirmRename = async (conversationId: string, newTitle: string) => {
+    // Refresh the conversation list to show the updated title
+    refreshConversationList()
   }
 
   const displayTitle = conversation.title || conversation.agentName
@@ -100,6 +112,10 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Open Conversation
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleRenameClick}>
+                    <Edit3 className="mr-2 h-4 w-4" />
+                    Rename Conversation
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDeleteClick} variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -129,6 +145,13 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         onConfirm={handleConfirmDelete}
+      />
+
+      <RenameConversationDialog
+        conversation={conversation}
+        open={showRenameDialog}
+        onOpenChange={setShowRenameDialog}
+        onConfirm={handleConfirmRename}
       />
     </>
   )

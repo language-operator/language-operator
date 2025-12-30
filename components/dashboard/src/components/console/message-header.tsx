@@ -16,8 +16,7 @@ export function MessageHeader() {
     conversationDbId, 
     deleteConversation, 
     refreshConversationList,
-    setSelectedAgent,
-    setConversationDbId 
+    startNewConversation
   } = useConsole()
   const router = useRouter()
   const { toast } = useToast()
@@ -28,9 +27,8 @@ export function MessageHeader() {
   const handleNewConversation = () => {
     if (!selectedAgent || !selectedCluster) return
     
-    // Clear the current conversation and start fresh
-    setConversationDbId(null)
-    setSelectedAgent(selectedAgent, selectedCluster)
+    // Start a completely fresh conversation
+    startNewConversation(selectedAgent, selectedCluster)
     
     toast({
       title: 'New conversation started',

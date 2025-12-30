@@ -18,6 +18,7 @@ interface ConsoleContextType {
   selectedAgent: string | null
   selectedCluster: string | null
   setSelectedAgent: (agentName: string | null, clusterName: string | null) => void
+  startNewConversation: (agentName: string, clusterName: string) => void
 
   // Conversation state
   activeConversationId: string | null
@@ -111,6 +112,35 @@ export function ConsoleProvider({
       } else {
         setActiveConversationId(null)
       }
+    },
+    []
+  )
+
+  const startNewConversation = useCallback(
+    (agentName: string, clusterName: string) => {
+      // Clear the conversation database ID to indicate this is a new conversation
+      setConversationDbId(null)
+      
+      // Set the selected agent and cluster
+      setSelectedAgentState(agentName)
+      setSelectedClusterState(clusterName)
+
+      // Force create a fresh conversation state with empty messages
+      const key = `${clusterName}/${agentName}`
+      setConversations((prev) => {
+        const newMap = new Map(prev)
+        newMap.set(key, {
+          agentName,
+          clusterName,
+          messages: [], // Always start with empty messages
+          isLoading: false,
+          error: null,
+          lastActivity: new Date(),
+        })
+        return newMap
+      })
+      
+      setActiveConversationId(key)
     },
     []
   )
@@ -341,6 +371,7 @@ export function ConsoleProvider({
     selectedAgent,
     selectedCluster,
     setSelectedAgent,
+    startNewConversation,
     activeConversationId,
     conversations,
     getActiveConversation,

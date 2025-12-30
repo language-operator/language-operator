@@ -27,7 +27,7 @@ export function ConsoleLayout() {
       {/* Left Column: Agents & Conversations - always shown for browsing */}
       <div
         className={cn(
-          'flex-shrink-0 border-r border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm transition-all duration-300',
+          'flex-shrink-0 border-r border-stone-800/80 dark:border-stone-600/80 backdrop-blur-sm transition-all duration-300',
           isConversationSidebarVisible ? 'w-80' : 'w-16 overflow-hidden'
         )}
       >
@@ -47,7 +47,7 @@ export function ConsoleLayout() {
       {hasActiveConversation && (
         <div
           className={cn(
-            'flex-shrink-0 border-l border-stone-800/80 dark:border-stone-600/80 bg-stone-200/80 dark:bg-stone-950/80 backdrop-blur-sm transition-all duration-300',
+            'flex-shrink-0 border-l border-stone-800/80 dark:border-stone-600/80 backdrop-blur-sm transition-all duration-300',
             isWorkspaceVisible ? 'w-[420px]' : 'w-16 overflow-hidden'
           )}
         >

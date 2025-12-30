@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useClusterContext } from '@/contexts/cluster-context'
 import { ClusterSelector } from '@/components/cluster-selector'
+import { useSidebarContext } from '@/contexts/sidebar-context'
 import {
   Home,
   Bot,
@@ -15,6 +16,8 @@ import {
   Settings,
   BarChart3,
   MessageSquare,
+  Palette,
+  ChevronLeft,
 } from 'lucide-react'
 
 const globalNavigation = [
@@ -34,27 +37,55 @@ const clusterNavigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const { selectedCluster, isClusterSelected } = useClusterContext()
+  const { isCollapsed, setIsCollapsed, isLoaded } = useSidebarContext()
+  
+  // Check if we're on a console page to remove background overrides
+  const isConsolePage = pathname.includes('/console')
+
+  // Prevent hydration mismatch by not rendering until localStorage is loaded
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen w-64 flex-col bg-stone-100 border-r border-stone-800/80 dark:bg-stone-950 dark:border-stone-600/80">
+        {/* Skeleton loader while loading state */}
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-stone-100 border-r border-stone-800/80 dark:bg-stone-950 dark:border-stone-600/80">
+    <div className={cn(
+      "flex h-screen flex-col border-r border-stone-800/80 dark:border-stone-600/80 transition-all duration-300",
+      isCollapsed ? "w-16" : "w-64",
+      !isConsolePage && "bg-stone-100 dark:bg-stone-950"
+    )}>
       <div className="flex h-16 items-center border-b border-stone-800/80 px-4 dark:border-stone-600/80">
         <div className="w-full">
-          <h1 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
-            Language Operator
-            <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
-          </h1>
+          {!isCollapsed ? (
+            <h1 className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
+              Language Operator
+              <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
+            </h1>
+          ) : (
+            <div className="flex items-center justify-center">
+              <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
+            </div>
+          )}
         </div>
       </div>
       
       {/* Cluster Selector */}
-      <ClusterSelector />
+      {!isCollapsed && <ClusterSelector />}
       
-      <nav className="flex-1 space-y-1 px-4 py-6">
+      <nav className={cn(
+        "flex-1 space-y-1",
+        isCollapsed ? "px-2 py-2" : "px-4 py-6"
+      )}>
         {/* Global Navigation */}
         <div className="mb-6">
-          <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
-            Global
-          </div>
+          {!isCollapsed && (
+            <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
+              Global
+            </div>
+          )}
           {globalNavigation.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -62,14 +93,22 @@ export function Sidebar() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
+                  'flex items-center transition-colors',
+                  isCollapsed 
+                    ? 'justify-center p-3 mx-auto my-1 rounded' 
+                    : 'gap-3 px-3 py-3 border-l-2',
                   isActive
-                    ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
-                    : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+                    ? isCollapsed
+                      ? 'text-amber-400 dark:text-amber-400'
+                      : 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+                    : isCollapsed
+                      ? 'text-stone-600 hover:bg-stone-100 hover:text-amber-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-amber-500'
+                      : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
                 )}
+                title={isCollapsed ? item.name : undefined}
               >
-                <item.icon className="h-5 w-5" />
-                {item.name}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="text-sm font-light">{item.name}</span>}
               </Link>
             )
           })}
@@ -78,9 +117,11 @@ export function Sidebar() {
         {/* Cluster-Specific Navigation */}
         {isClusterSelected && (
           <div>
-            <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
-              {selectedCluster}
-            </div>
+            {!isCollapsed && (
+              <div className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400 px-3 pb-2">
+                {selectedCluster}
+              </div>
+            )}
             {clusterNavigation.map((item) => {
               const href = item.href === '' 
                 ? `/clusters/${selectedCluster}` 
@@ -94,21 +135,29 @@ export function Sidebar() {
                   key={item.name}
                   href={href}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
+                    'flex items-center transition-colors',
+                    isCollapsed 
+                      ? 'justify-center p-3 mx-auto my-1 rounded' 
+                      : 'gap-3 px-3 py-3 border-l-2',
                     isActive
-                      ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
-                      : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+                      ? isCollapsed
+                        ? 'text-amber-400 dark:text-amber-400'
+                        : 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+                      : isCollapsed
+                        ? 'text-stone-600 hover:bg-stone-100 hover:text-amber-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-amber-500'
+                        : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
                   )}
+                  title={isCollapsed ? item.name : undefined}
                 >
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
+                  {!isCollapsed && <span className="text-sm font-light">{item.name}</span>}
                 </Link>
               )
             })}
           </div>
         )}
         
-        {!isClusterSelected && (
+        {!isClusterSelected && !isCollapsed && (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
               <Boxes className="h-12 w-12 mx-auto text-stone-400 dark:text-stone-500 mb-2" />
@@ -119,32 +168,71 @@ export function Sidebar() {
         )}
       </nav>
       
-      <div className="border-t border-stone-800/80 dark:border-stone-600/80 p-4 space-y-1">
+      <div className={cn(
+        "border-t border-stone-800/80 dark:border-stone-600/80 space-y-1",
+        isCollapsed ? "p-2" : "p-4"
+      )}>
         <Link
           href="/settings/users"
           className={cn(
-            'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
+            'flex items-center transition-colors',
+            isCollapsed 
+              ? 'justify-center p-3 mx-auto my-1 rounded' 
+              : 'gap-3 px-3 py-3 border-l-2',
             pathname.startsWith('/settings')
-              ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
-              : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+              ? isCollapsed
+                ? 'text-amber-400 dark:text-amber-400'
+                : 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+              : isCollapsed
+                ? 'text-stone-600 hover:bg-stone-100 hover:text-amber-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-amber-500'
+                : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
           )}
+          title={isCollapsed ? 'Settings' : undefined}
         >
-          <Settings className="h-5 w-5" />
-          Settings
+          <Settings className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && <span className="text-sm font-light">Settings</span>}
         </Link>
         
         <Link
           href="/styleguide"
+          target="_blank"
+          rel="noopener noreferrer"
           className={cn(
-            'flex items-center gap-3 px-3 py-2 text-sm font-light transition-colors border-l-2',
+            'flex items-center transition-colors',
+            isCollapsed 
+              ? 'justify-center p-3 mx-auto my-1 rounded' 
+              : 'gap-3 px-3 py-3 border-l-2',
             pathname === '/styleguide'
-              ? 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
-              : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+              ? isCollapsed
+                ? 'text-amber-400 dark:text-amber-400'
+                : 'bg-stone-100 text-stone-900 border-stone-900 dark:bg-stone-800 dark:text-stone-300 dark:border-amber-400'
+              : isCollapsed
+                ? 'text-stone-600 hover:bg-stone-100 hover:text-amber-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-amber-500'
+                : 'text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
           )}
+          title={isCollapsed ? 'Style Guide' : undefined}
         >
-          <div className="h-5 w-5 bg-stone-600 dark:bg-stone-400" />
-          Style Guide
+          <Palette className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && <span className="text-sm font-light">Style Guide</span>}
         </Link>
+        
+        {/* Collapse Toggle */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            'flex items-center transition-all duration-300',
+            isCollapsed 
+              ? 'justify-center p-3 mx-auto my-1 rounded text-stone-600 hover:bg-stone-100 hover:text-amber-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-amber-500'
+              : 'gap-3 px-3 py-3 border-l-2 text-stone-600 border-transparent hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500'
+          )}
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          <ChevronLeft className={cn(
+            "h-5 w-5 transition-transform duration-300 flex-shrink-0",
+            isCollapsed && "rotate-180"
+          )} />
+          {!isCollapsed && <span className="text-sm font-light">Collapse</span>}
+        </button>
       </div>
     </div>
   )
