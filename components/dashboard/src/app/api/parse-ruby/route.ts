@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
       
       if (paramsStr) {
         // Extract instructions - handle both double and single quoted strings with proper escaping
-        let instructionsMatch = paramsStr.match(/instructions:\s*"((?:[^"\\]|\\.)*)"/s)
+        let instructionsMatch = paramsStr.match(/instructions:\s*"((?:[^"\\]|\\.*)*)"/)
         if (!instructionsMatch) {
-          instructionsMatch = paramsStr.match(/instructions:\s*'((?:[^'\\]|\\.)*)'/s)
+          instructionsMatch = paramsStr.match(/instructions:\s*'((?:[^'\\]|\\.*)*)'/)
         }
         if (instructionsMatch) {
           instructions = instructionsMatch[1]
