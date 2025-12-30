@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Extract inputs hash with key: type pairs
-        const inputsMatch = paramsStr.match(/inputs:\s*\{([^}]*)\}/s)
+        const inputsMatch = paramsStr.match(/inputs:\s*\{([^}]*)\}/)
         if (inputsMatch) {
           const inputContent = inputsMatch[1]
           const inputMatches = inputContent.match(/(\w+):\s*['"](.*?)['"],?/g)
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Extract outputs hash with key: type pairs  
-        const outputsMatch = paramsStr.match(/outputs:\s*\{([^}]*)\}/s)
+        const outputsMatch = paramsStr.match(/outputs:\s*\{([^}]*)\}/)
         if (outputsMatch) {
           const outputContent = outputsMatch[1]
           const outputMatches = outputContent.match(/(\w+):\s*['"](.*?)['"],?/g)
