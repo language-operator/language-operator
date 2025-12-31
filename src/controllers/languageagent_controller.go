@@ -63,17 +63,18 @@ type RegistryManager interface {
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme                 *runtime.Scheme
-	Log                    logr.Logger
-	Recorder               record.EventRecorder
-	MaxSelfHealingAttempts int32
-	SelfHealingEnabled     bool
-	RateLimiter            *synthesis.RateLimiter
-	QuotaManager           *synthesis.QuotaManager
-	RegistryManager        RegistryManager
-	NetworkPolicyTimeout   time.Duration
-	NetworkPolicyRetries   int
-	gatewayCache           *gatewayAPICache
+	Scheme                  *runtime.Scheme
+	Log                     logr.Logger
+	Recorder                record.EventRecorder
+	MaxSelfHealingAttempts  int32
+	SelfHealingEnabled      bool
+	RateLimiter             *synthesis.RateLimiter
+	QuotaManager            *synthesis.QuotaManager
+	RegistryManager         RegistryManager
+	NetworkPolicyTimeout    time.Duration
+	NetworkPolicyRetries    int
+	NetworkIsolationEnabled bool
+	gatewayCache            *gatewayAPICache
 }
 
 // agentTracer is used by methods that haven't been refactored yet
@@ -244,61 +245,70 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile NetworkPolicy for network isolation
-	if err := r.reconcileNetworkPolicy(ctx, agent); err != nil {
-		log.Error(err, "Failed to reconcile NetworkPolicy")
-		span.RecordError(err)
+	// Reconcile NetworkPolicy for network isolation (if enabled)
+	if r.NetworkIsolationEnabled {
+		if err := r.reconcileNetworkPolicy(ctx, agent); err != nil {
+			log.Error(err, "Failed to reconcile NetworkPolicy")
+			span.RecordError(err)
 
-		// Determine if this is a timeout error vs other error
-		isTimeout := strings.Contains(err.Error(), "context deadline exceeded") ||
-			strings.Contains(err.Error(), "timeout")
+			// Determine if this is a timeout error vs other error
+			isTimeout := strings.Contains(err.Error(), "context deadline exceeded") ||
+				strings.Contains(err.Error(), "timeout")
 
-		if isTimeout {
-			// For timeout errors, set a specific condition but continue reconciliation
-			SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionFalse, "NetworkPolicyTimeout",
-				fmt.Sprintf("NetworkPolicy creation timed out after %v with %d retries. This may indicate slow CNI response. The operator will continue to retry. Error: %v",
-					r.NetworkPolicyTimeout, r.NetworkPolicyRetries, err), agent.Generation)
+			if isTimeout {
+				// For timeout errors, set a specific condition but continue reconciliation
+				SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionFalse, "NetworkPolicyTimeout",
+					fmt.Sprintf("NetworkPolicy creation timed out after %v with %d retries. This may indicate slow CNI response. The operator will continue to retry. Error: %v",
+						r.NetworkPolicyTimeout, r.NetworkPolicyRetries, err), agent.Generation)
 
-			log.Info("NetworkPolicy timeout detected - continuing reconciliation with degraded network isolation",
-				"timeout", r.NetworkPolicyTimeout,
-				"retries", r.NetworkPolicyRetries,
-				"error", err.Error())
+				log.Info("NetworkPolicy timeout detected - continuing reconciliation with degraded network isolation",
+					"timeout", r.NetworkPolicyTimeout,
+					"retries", r.NetworkPolicyRetries,
+					"error", err.Error())
 
-			// Record warning event
-			if r.Recorder != nil {
-				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyTimeout",
-					"NetworkPolicy creation timed out. Network isolation may be degraded. Consider increasing --network-policy-timeout flag for slow CNI.")
+				// Record warning event
+				if r.Recorder != nil {
+					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyTimeout",
+						"NetworkPolicy creation timed out. Network isolation may be degraded. Consider increasing --network-policy-timeout flag for slow CNI.")
+				}
+
+				// Don't fail the entire reconciliation for timeout - continue with degraded state
+			} else {
+				// For non-timeout errors, fail the reconciliation
+				span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
+				SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
+				if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+					log.Error(updateErr, "Failed to update status after NetworkPolicy error")
+				}
+				reconcileErr = err
+				return ctrl.Result{}, err
 			}
-
-			// Don't fail the entire reconciliation for timeout - continue with degraded state
 		} else {
-			// For non-timeout errors, fail the reconciliation
-			span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
-			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
-			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after NetworkPolicy error")
-			}
-			reconcileErr = err
-			return ctrl.Result{}, err
+			// NetworkPolicy succeeded
+			SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+				"NetworkPolicy created successfully", agent.Generation)
 		}
-	} else {
-		// NetworkPolicy succeeded
-		SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
-			"NetworkPolicy created successfully", agent.Generation)
-	}
 
-	// Detect if NetworkPolicy enforcement is supported
-	if supported, cni := r.detectNetworkPolicySupport(ctx); !supported {
-		message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cni)
-		SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
-		if r.Recorder != nil {
-			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyUnsupported", "CNI '%s' does not enforce NetworkPolicy", cni)
+		// Detect if NetworkPolicy enforcement is supported
+		if supported, cni := r.detectNetworkPolicySupport(ctx); !supported {
+			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cni)
+			SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
+			if r.Recorder != nil {
+				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyUnsupported", "CNI '%s' does not enforce NetworkPolicy", cni)
+			}
+			log.Info("NetworkPolicy enforcement not supported", "cni", cni)
+		} else {
+			message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cni)
+			SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionTrue, "Enforced", message, agent.Generation)
+			log.V(1).Info("NetworkPolicy enforcement supported", "cni", cni)
 		}
-		log.Info("NetworkPolicy enforcement not supported", "cni", cni)
 	} else {
-		message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cni)
-		SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionTrue, "Enforced", message, agent.Generation)
-		log.V(1).Info("NetworkPolicy enforcement supported", "cni", cni)
+		// Network isolation disabled - skip NetworkPolicy creation
+		SetCondition(&agent.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
+			"NetworkPolicy creation disabled via networkIsolation.enabled=false", agent.Generation)
+		SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionTrue, "Disabled",
+			"NetworkPolicy enforcement disabled - unrestricted network access allowed", agent.Generation)
+		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
 	// Ensure agent has a UUID for webhook routing

@@ -213,6 +213,9 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Read network isolation configuration from environment
+	networkIsolationEnabled := os.Getenv("LANGOP_NETWORK_ISOLATION_ENABLED") != "false"
+
 	// Initialize OpenTelemetry tracing with startup timeout
 	startupTimeout := 60 * time.Second
 	if timeoutStr := os.Getenv("STARTUP_TIMEOUT"); timeoutStr != "" {
@@ -374,13 +377,14 @@ func main() {
 
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
-		Client:               mgr.GetClient(),
-		Scheme:               mgr.GetScheme(),
-		Log:                  ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
-		Recorder:             mgr.GetEventRecorderFor("languageagent-controller"),
-		RegistryManager:      registryManager,
-		NetworkPolicyTimeout: networkPolicyTimeout,
-		NetworkPolicyRetries: networkPolicyRetries,
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder:                mgr.GetEventRecorderFor("languageagent-controller"),
+		RegistryManager:         registryManager,
+		NetworkPolicyTimeout:    networkPolicyTimeout,
+		NetworkPolicyRetries:    networkPolicyRetries,
+		NetworkIsolationEnabled: networkIsolationEnabled,
 	}
 
 	// Initialize Gateway API cache
