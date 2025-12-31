@@ -30,17 +30,13 @@ spec:
         args:
         - |
           echo "Waiting for database migrations to complete..."
-          until psql "$DATABASE_URL" -c "SELECT 1 FROM _prisma_migrations LIMIT 1;" > /dev/null 2>&1; do
+          export PGPASSWORD="{{ include "dashboard.postgresqlPassword" . }}"
+          
+          until psql -h "{{ include "dashboard.fullname" . }}-postgresql" -p 5432 -U "{{ .Values.dashboard.postgresql.auth.username }}" -d "{{ .Values.dashboard.postgresql.auth.database }}" -c "SELECT 1 FROM _prisma_migrations LIMIT 1;" > /dev/null 2>&1; do
             echo "Database migrations not complete, waiting..."
             sleep 5
           done
           echo "Database migrations completed - ready for tenant initialization!"
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "dashboard.fullname" . }}
-              key: DATABASE_URL
       containers:
       - name: dashboard-init
         image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
