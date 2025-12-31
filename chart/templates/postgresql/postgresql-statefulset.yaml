@@ -16,7 +16,8 @@ spec:
       targetPort: postgresql
       protocol: TCP
   selector:
-    {{- include "dashboard.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ include "dashboard.fullname" . }}-postgresql
+    app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: postgresql
 ---
 apiVersion: apps/v1
@@ -31,12 +32,14 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "dashboard.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/name: {{ include "dashboard.fullname" . }}-postgresql
+      app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: postgresql
   template:
     metadata:
       labels:
-        {{- include "dashboard.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ include "dashboard.fullname" . }}-postgresql
+        app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: postgresql
     spec:
       containers:
