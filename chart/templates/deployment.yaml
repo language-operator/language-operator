@@ -98,6 +98,9 @@ spec:
         # Learning system task schema extraction - allow gem to load files from dedicated directory
         - name: LANGOP_ALLOWED_PATHS
           value: "/tmp/task-schemas"
+        # Network isolation configuration  
+        - name: LANGOP_NETWORK_ISOLATION_ENABLED
+          value: {{ .Values.networkIsolation.enabled | quote }}
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:

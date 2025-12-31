@@ -1,5 +1,5 @@
 {{- if .Values.dashboard.enabled }}
-{{- if .Values.dashboard.networkPolicy.enabled }}
+{{- if and .Values.networkIsolation.enabled .Values.dashboard.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

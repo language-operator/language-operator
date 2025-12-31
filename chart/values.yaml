@@ -14,6 +14,14 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Network isolation configuration
+# Controls whether NetworkPolicy resources are created for security isolation
+networkIsolation:
+  # Enable/disable NetworkPolicy creation for all Language Operator resources
+  # When disabled, no NetworkPolicy resources will be created, allowing unrestricted network access
+  # When enabled, strict network isolation is enforced for agents, tools, models, and dashboard
+  enabled: true
+
 # ServiceAccount configuration
 serviceAccount:
   # Specifies whether a service account should be created
