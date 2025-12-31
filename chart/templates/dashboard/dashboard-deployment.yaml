@@ -31,6 +31,39 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "⏳ Waiting for PostgreSQL to be ready..."
+          {{- if not .Values.dashboard.externalDatabase.enabled }}
+          export PGPASSWORD="{{ include "dashboard.postgresqlPassword" . }}"
+          until pg_isready -h "{{ include "dashboard.fullname" . }}-postgresql" -p 5432 -U "{{ .Values.dashboard.postgresql.auth.username }}" -d "{{ .Values.dashboard.postgresql.auth.database }}"; do
+            echo "PostgreSQL not ready, waiting 2s..."
+            sleep 2
+          done
+          {{- else }}
+          # For external database, extract details from DATABASE_URL
+          until psql "$DATABASE_URL" -c "SELECT 1;" > /dev/null 2>&1; do
+            echo "External database not ready, waiting 2s..."
+            sleep 2
+          done
+          {{- end }}
+          echo "✅ PostgreSQL is ready!"
+        env:
+        {{- if not .Values.dashboard.externalDatabase.enabled }}
+        - name: PGUSER
+          value: "{{ .Values.dashboard.postgresql.auth.username }}"
+        - name: PGDATABASE  
+          value: "{{ .Values.dashboard.postgresql.auth.database }}"
+        {{- else }}
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "dashboard.fullname" . }}
+              key: DATABASE_URL
+        {{- end }}
       - name: db-migrate
         image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
