@@ -46,9 +46,10 @@ import (
 // LanguageModelReconciler reconciles a LanguageModel object
 type LanguageModelReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Log      logr.Logger
-	Recorder record.EventRecorder
+	Scheme                  *runtime.Scheme
+	Log                     logr.Logger
+	Recorder                record.EventRecorder
+	NetworkIsolationEnabled bool
 }
 
 // modelTracer is used by methods that haven't been refactored yet
@@ -171,22 +172,32 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile NetworkPolicy for network isolation
-	if err := r.reconcileNetworkPolicy(ctx, model); err != nil {
-		log.Error(err, "Failed to reconcile NetworkPolicy")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(model, corev1.EventTypeWarning, "NetworkPolicyFailed",
-				"Failed to configure network isolation: %v", err)
+	// Reconcile NetworkPolicy for network isolation (if enabled)
+	if r.NetworkIsolationEnabled {
+		if err := r.reconcileNetworkPolicy(ctx, model); err != nil {
+			log.Error(err, "Failed to reconcile NetworkPolicy")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+			if r.Recorder != nil {
+				r.Recorder.Eventf(model, corev1.EventTypeWarning, "NetworkPolicyFailed",
+					"Failed to configure network isolation: %v", err)
+			}
+			SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
+			model.Status.Phase = "Failed"
+			if statusErr := r.Status().Update(ctx, model); statusErr != nil {
+				log.Error(statusErr, "Failed to update status")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
+		} else {
+			SetCondition(&model.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+				"NetworkPolicy created successfully", model.Generation)
 		}
-		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
-		model.Status.Phase = "Failed"
-		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
-			log.Error(statusErr, "Failed to update status")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
+	} else {
+		// Network isolation disabled - skip NetworkPolicy creation
+		SetCondition(&model.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
+			"NetworkPolicy creation disabled via networkIsolation.enabled=false", model.Generation)
+		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
 	// Update status

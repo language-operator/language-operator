@@ -45,9 +45,10 @@ import (
 // LanguageClusterReconciler reconciles a LanguageCluster object
 type LanguageClusterReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Log      logr.Logger
-	Recorder record.EventRecorder
+	Scheme                  *runtime.Scheme
+	Log                     logr.Logger
+	Recorder                record.EventRecorder
+	NetworkIsolationEnabled bool
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
@@ -155,22 +156,31 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// Ensure NetworkPolicy exists for agent communication
-	if err := r.reconcileNetworkPolicy(ctx, cluster); err != nil {
-		log.Error(err, "Failed to reconcile NetworkPolicy")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "NetworkPolicyFailed",
-				"Failed to configure cluster network isolation: %v", err)
+	// Ensure NetworkPolicy exists for agent communication (if enabled)
+	if r.NetworkIsolationEnabled {
+		if err := r.reconcileNetworkPolicy(ctx, cluster); err != nil {
+			log.Error(err, "Failed to reconcile NetworkPolicy")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+			if r.Recorder != nil {
+				r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "NetworkPolicyFailed",
+					"Failed to configure cluster network isolation: %v", err)
+			}
+			SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+				"NetworkPolicyError", err.Error(), cluster.Generation)
+			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after NetworkPolicy error")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
+		} else {
+			SetCondition(&cluster.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+				"NetworkPolicy created successfully", cluster.Generation)
 		}
-		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
-			"NetworkPolicyError", err.Error(), cluster.Generation)
-		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after NetworkPolicy error")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
+	} else {
+		SetCondition(&cluster.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
+			"NetworkPolicy creation disabled via networkIsolation.enabled=false", cluster.Generation)
+		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
 	// LanguageCluster is now just a logical grouping - no namespace management

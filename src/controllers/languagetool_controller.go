@@ -36,10 +36,11 @@ import (
 // LanguageToolReconciler reconciles a LanguageTool object
 type LanguageToolReconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	Log             logr.Logger
-	RegistryManager RegistryManager
-	Recorder        record.EventRecorder
+	Scheme                  *runtime.Scheme
+	Log                     logr.Logger
+	RegistryManager         RegistryManager
+	Recorder                record.EventRecorder
+	NetworkIsolationEnabled bool
 }
 
 // MCPRequest represents an MCP JSON-RPC request
@@ -242,19 +243,29 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	// Reconcile NetworkPolicy for network isolation
-	if err := r.reconcileNetworkPolicy(ctx, tool); err != nil {
-		log.Error(err, "Failed to reconcile NetworkPolicy")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "NetworkPolicyFailed",
-				"Failed to configure network isolation: %v", err)
+	// Reconcile NetworkPolicy for network isolation (if enabled)
+	if r.NetworkIsolationEnabled {
+		if err := r.reconcileNetworkPolicy(ctx, tool); err != nil {
+			log.Error(err, "Failed to reconcile NetworkPolicy")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+			if r.Recorder != nil {
+				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "NetworkPolicyFailed",
+					"Failed to configure network isolation: %v", err)
+			}
+			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
+			r.Status().Update(ctx, tool)
+			reconcileErr = err
+			return ctrl.Result{}, err
+		} else {
+			SetCondition(&tool.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+				"NetworkPolicy created successfully", tool.Generation)
 		}
-		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
-		r.Status().Update(ctx, tool)
-		reconcileErr = err
-		return ctrl.Result{}, err
+	} else {
+		// Network isolation disabled - skip NetworkPolicy creation
+		SetCondition(&tool.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
+			"NetworkPolicy creation disabled via networkIsolation.enabled=false", tool.Generation)
+		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
 	// Update status based on actual pod readiness

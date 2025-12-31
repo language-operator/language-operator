@@ -354,11 +354,12 @@ func main() {
 
 	// Setup LanguageTool controller
 	if err = (&controllers.LanguageToolReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		Log:             ctrl.Log.WithName("controllers").WithName("LanguageTool"),
-		RegistryManager: registryManager,
-		Recorder:        mgr.GetEventRecorderFor("languagetool-controller"),
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageTool"),
+		RegistryManager:         registryManager,
+		Recorder:                mgr.GetEventRecorderFor("languagetool-controller"),
+		NetworkIsolationEnabled: networkIsolationEnabled,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
 		os.Exit(1)
@@ -366,10 +367,11 @@ func main() {
 
 	// Setup LanguageModel controller
 	if err = (&controllers.LanguageModelReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Log:      ctrl.Log.WithName("controllers").WithName("LanguageModel"),
-		Recorder: mgr.GetEventRecorderFor("languagemodel-controller"),
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageModel"),
+		Recorder:                mgr.GetEventRecorderFor("languagemodel-controller"),
+		NetworkIsolationEnabled: networkIsolationEnabled,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageModel")
 		os.Exit(1)
@@ -423,10 +425,11 @@ func main() {
 
 	// Setup LanguageCluster controller
 	if err = (&controllers.LanguageClusterReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Log:      ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
-		Recorder: mgr.GetEventRecorderFor("languagecluster-controller"),
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
+		Recorder:                mgr.GetEventRecorderFor("languagecluster-controller"),
+		NetworkIsolationEnabled: networkIsolationEnabled,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)

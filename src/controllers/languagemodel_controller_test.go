@@ -38,9 +38,10 @@ func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -106,9 +107,10 @@ func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -192,9 +194,10 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -279,9 +282,10 @@ func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -356,9 +360,10 @@ func TestLanguageModelController_NotFoundHandling(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -415,9 +420,10 @@ func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -490,9 +496,10 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -571,9 +578,10 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 		Build()
 
 	reconciler2 := &LanguageModelReconciler{
-		Client: fakeClient2,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient2,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	req2 := ctrl.Request{
@@ -629,9 +637,10 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 		Build()
 
 	reconciler3 := &LanguageModelReconciler{
-		Client: fakeClient3,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient3,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	req3 := ctrl.Request{
@@ -688,9 +697,10 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
@@ -762,9 +772,10 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 		Build()
 
 	reconciler2 := &LanguageModelReconciler{
-		Client: fakeClient2,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient2,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	req2 := ctrl.Request{
@@ -819,9 +830,10 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client: fakeClient,
-		Scheme: scheme,
-		Log:    logr.Discard(),
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
 	}
 
 	ctx := context.Background()
