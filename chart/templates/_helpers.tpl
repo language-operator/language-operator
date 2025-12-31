@@ -251,11 +251,14 @@ Get PostgreSQL password
 {{- if .Values.dashboard.postgresql.auth.password }}
 {{- .Values.dashboard.postgresql.auth.password }}
 {{- else }}
-{{- $secret := lookup "v1" "Secret" .Release.Namespace (printf "%s-postgresql" (include "dashboard.fullname" .)) }}
+{{- $secretName := printf "%s-postgresql-password" (include "dashboard.fullname" .) }}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace $secretName }}
 {{- if $secret }}
 {{- index $secret.data "password" | b64dec }}
 {{- else }}
-{{- randAlphaNum 32 }}
+{{- /* Use a deterministic password based on release name and namespace during initial install */ -}}
+{{- $seed := printf "%s-%s-postgres" .Release.Name .Release.Namespace }}
+{{- $seed | sha256sum | trunc 32 }}
 {{- end }}
 {{- end }}
 {{- end }}
