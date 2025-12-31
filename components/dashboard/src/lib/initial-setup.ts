@@ -1,5 +1,6 @@
 import { db } from './db'
 import { randomBytes } from 'crypto'
+import { k8sClient } from './k8s-client'
 
 /**
  * Check if initial setup should be performed
@@ -94,6 +95,16 @@ export async function performInitialSetup(): Promise<void> {
       })
       
       console.log(`🏢 [INITIAL-SETUP] Created organization: ${organization.name} (namespace: ${orgNamespace})`)
+      
+      // Create Kubernetes namespace for the organization
+      try {
+        await k8sClient.createOrganizationNamespace(orgNamespace, organization.id, organization.plan)
+        console.log(`🔧 [INITIAL-SETUP] Created Kubernetes namespace: ${orgNamespace}`)
+      } catch (err: any) {
+        console.error(`❌ [INITIAL-SETUP] Failed to create Kubernetes namespace ${orgNamespace}:`, err.message)
+        // Don't fail the whole setup - the namespace can be created later through the UI
+        console.log(`⚠️ [INITIAL-SETUP] Continuing without namespace - can be created later via dashboard`)
+      }
       
       // Add admin user as organization owner
       await tx.organizationMember.create({
