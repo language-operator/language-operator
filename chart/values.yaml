@@ -971,6 +971,15 @@ dashboard:
     billing: false
     invites: true
 
+  # Initial setup configuration (set by CLI install command)
+  # Used to create the first admin user when dashboard starts up with an empty database
+  initialSetup:
+    enabled: false  # CLI will set to true when providing admin credentials
+    adminUser:
+      name: ""      # CLI will populate with admin's full name
+      email: ""     # CLI will populate with admin's email address
+      passwordHash: ""  # CLI will populate with bcrypt hash of admin's password
+
   # NetworkPolicy configuration for network isolation
   networkPolicy:
     # Enable NetworkPolicy creation

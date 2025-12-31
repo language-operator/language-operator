@@ -156,6 +156,15 @@ spec:
           value: {{ .Values.dashboard.features.billing | quote }}
         - name: NEXT_PUBLIC_INVITES_ENABLED
           value: {{ .Values.dashboard.features.invites | quote }}
+        {{- if .Values.dashboard.initialSetup.enabled }}
+        # Initial setup environment variables (set by CLI install command)
+        - name: LANGOP_INIT_ADMIN_NAME
+          value: {{ .Values.dashboard.initialSetup.adminUser.name | quote }}
+        - name: LANGOP_INIT_ADMIN_EMAIL
+          value: {{ .Values.dashboard.initialSetup.adminUser.email | quote }}
+        - name: LANGOP_INIT_ADMIN_PASSWORD_HASH
+          value: {{ .Values.dashboard.initialSetup.adminUser.passwordHash | quote }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /
