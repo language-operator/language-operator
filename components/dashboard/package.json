@@ -16,7 +16,8 @@
     "db:migrate": "prisma db push",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
-    "migrate:namespaces": "npx tsx src/scripts/migrate-organization-namespaces.ts"
+    "migrate:namespaces": "npx tsx src/scripts/migrate-organization-namespaces.ts",
+    "initialize-tenant": "npx tsx src/scripts/initialize-tenant.ts"
   },
   "dependencies": {
     "@clickhouse/client": "^1.15.0",
