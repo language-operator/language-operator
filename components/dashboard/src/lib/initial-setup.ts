@@ -1,6 +1,6 @@
 import { db } from './db'
-import { randomBytes } from 'crypto'
 import { k8sClient } from './k8s-client'
+import { generateOrganizationNamespace } from './namespace-utils'
 
 /**
  * Check if initial setup should be performed
@@ -47,14 +47,6 @@ export async function shouldPerformInitialSetup(): Promise<boolean> {
   }
 }
 
-/**
- * Generate a unique namespace for an organization
- * Format: org-xxxxxxxx (8 random hex characters)
- */
-function generateOrgNamespace(): string {
-  const randomHex = randomBytes(4).toString('hex')
-  return `org-${randomHex}`
-}
 
 /**
  * Perform initial setup by creating the admin user and default organization
@@ -84,7 +76,7 @@ export async function performInitialSetup(): Promise<void> {
       console.log(`✅ [INITIAL-SETUP] Created admin user with ID: ${user.id}`)
       
       // Create default organization
-      const orgNamespace = generateOrgNamespace()
+      const orgNamespace = generateOrganizationNamespace()
       const organization = await tx.organization.create({
         data: {
           name: "Default Organization",
