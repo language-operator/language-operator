@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MoreHorizontal, UserPlus, Trash2, Edit, ChevronDown } from 'lucide-react'
+import { Users, MoreHorizontal, UserPlus, Trash2, Edit, ChevronDown, Mail, Copy, Link } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +22,9 @@ import {
 } from '@/components/ui/table'
 import { EditUserDialog } from '@/components/users/edit-user-dialog'
 import { AddUserDialog } from '@/components/users/add-user-dialog'
+import { InviteMemberDialog } from '@/components/organization/invite-member-dialog'
+import { toast } from 'sonner'
+import { config } from '@/lib/config'
 
 interface User {
   id: string
@@ -44,11 +47,22 @@ interface Organization {
   name: string
 }
 
+interface Invite {
+  id: string
+  email: string
+  role: string
+  token: string
+  expiresAt: string
+  createdAt: string
+}
+
 
 export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
+  const [showInviteMember, setShowInviteMember] = useState(false)
   const [users, setUsers] = useState<User[]>([])
+  const [invites, setInvites] = useState<Invite[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
@@ -80,6 +94,13 @@ export default function UsersPage() {
         // Set current organization (assuming first org for now)
         if (orgsData.organizations && orgsData.organizations.length > 0) {
           setCurrentOrganization(orgsData.organizations[0])
+          
+          // Fetch invitations for the current organization
+          const invitesResponse = await fetch(`/api/organizations/${orgsData.organizations[0].id}/invites`)
+          if (invitesResponse.ok) {
+            const invitesData = await invitesResponse.json()
+            setInvites(invitesData.invites || [])
+          }
         }
 
         // Find current user from the users list (assuming it's based on session)
@@ -253,6 +274,16 @@ export default function UsersPage() {
     }
   }
 
+  const handleCopyInviteLink = async (invite: Invite) => {
+    try {
+      const invitationUrl = `${config.dashboardUrl}/invites/${invite.token}`
+      await navigator.clipboard.writeText(invitationUrl)
+      toast.success('Invitation link copied to clipboard')
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+      toast.error('Failed to copy link to clipboard')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -308,10 +339,16 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold">Users</h1>
           <p className="text-gray-600">Manage user access and organization memberships</p>
         </div>
-        <Button onClick={() => setShowAddUser(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowAddUser(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+          <Button onClick={() => setShowInviteMember(true)}>
+            <Mail className="mr-2 h-4 w-4" />
+            Invite Member
+          </Button>
+        </div>
       </div>
 
 
@@ -458,6 +495,99 @@ export default function UsersPage() {
           </CardContent>
         </Card>
 
+      {/* Pending Invitations */}
+      {invites.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Pending Invitations ({invites.length})
+            </CardTitle>
+            <CardDescription>
+              Invitations that have been sent but not yet accepted
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Invited</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead className="w-[70px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invites.map((invite) => (
+                  <TableRow key={invite.id}>
+                    <TableCell className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{invite.email}</div>
+                        <div className="text-sm text-gray-500">
+                          <Badge variant="outline" className="text-yellow-600 bg-yellow-50">
+                            Pending
+                          </Badge>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="secondary" 
+                        className={getRoleBadgeColor(invite.role)}
+                      >
+                        {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {new Date(invite.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500">
+                      {new Date(invite.expiresAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyInviteLink(invite)}
+                          className="h-8 px-3"
+                        >
+                          <Copy className="mr-1 h-3 w-3" />
+                          Copy Link
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => handleCopyInviteLink(invite)}
+                            >
+                              <Link className="mr-2 h-4 w-4" />
+                              Copy invitation link
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Cancel invitation
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add User Dialog */}
       <AddUserDialog
         open={showAddUser}
@@ -475,6 +605,15 @@ export default function UsersPage() {
         onOpenChange={(open) => !open && setEditingUser(null)}
         onSave={handleSaveUser}
       />
+
+      {/* Invite Member Dialog */}
+      {currentOrganization && (
+        <InviteMemberDialog
+          open={showInviteMember}
+          onOpenChange={setShowInviteMember}
+          organizationId={currentOrganization.id}
+        />
+      )}
     </div>
   )
 }
