@@ -121,6 +121,7 @@ export async function performInitialSetup(): Promise<void> {
  * Checks if setup is needed and performs it if so
  */
 export async function checkAndPerformInitialSetup(): Promise<boolean> {
+  console.log('🚀 [INITIAL-SETUP] Entry point called - checking for initial setup')
   try {
     if (await shouldPerformInitialSetup()) {
       await performInitialSetup()
