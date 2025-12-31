@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Plus, MoreHorizontal, Mail, UserCheck, UserX, Crown, Shield, Edit, Eye, Trash2 } from 'lucide-react'
+import { Plus, MoreHorizontal, Mail, UserCheck, UserX, Crown, Shield, Edit, Eye, Trash2, Copy, Link } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -35,6 +35,7 @@ import {
 } from '@/hooks/use-organizations'
 import { toast } from 'sonner'
 import { InviteMemberDialog } from '@/components/organization/invite-member-dialog'
+import { config } from '@/lib/config'
 
 interface Member {
   id: string
@@ -53,6 +54,7 @@ interface Invite {
   id: string
   email: string
   role: string
+  token: string
   expiresAt: string
   createdAt: string
 }
@@ -142,6 +144,17 @@ export default function OrganizationMembersPage() {
       setInviteToDelete(null)
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete invitation')
+    }
+  }
+
+  const handleCopyInviteLink = async (invite: Invite) => {
+    try {
+      const invitationUrl = `${config.dashboardUrl}/invites/${invite.token}`
+      await navigator.clipboard.writeText(invitationUrl)
+      toast.success('Invitation link copied to clipboard')
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+      toast.error('Failed to copy link to clipboard')
     }
   }
 
@@ -320,24 +333,43 @@ export default function OrganizationMembersPage() {
                     </div>
                   </div>
 
-                  {canManageMembers && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="text-red-600"
-                          onClick={() => setInviteToDelete(invite)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Cancel invitation
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {canManageMembers && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyInviteLink(invite)}
+                        className="h-8 px-3"
+                      >
+                        <Copy className="mr-1 h-3 w-3" />
+                        Copy Link
+                      </Button>
+                    )}
+                    {canManageMembers && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => handleCopyInviteLink(invite)}
+                          >
+                            <Link className="mr-2 h-4 w-4" />
+                            Copy invitation link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => setInviteToDelete(invite)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Cancel invitation
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

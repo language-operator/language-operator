@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { config } from '@/lib/config'
 import { z } from 'zod'
 import crypto from 'crypto'
 
@@ -142,7 +143,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // TODO: Send invitation email here
     // You can integrate with your email service (SendGrid, SES, etc.)
 
-    return NextResponse.json({ invite }, { status: 201 })
+    // Generate invitation URL
+    const invitationUrl = `${config.dashboardUrl}/invites/${token}`
+
+    return NextResponse.json({ 
+      invite: {
+        ...invite,
+        invitationUrl
+      }
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating organization invite:', error)
     

@@ -2,6 +2,7 @@ export const config = {
   isSaaS: process.env.NEXT_PUBLIC_SAAS_MODE === 'true',
   signozUrl: process.env.SIGNOZ_URL,
   prometheusUrl: process.env.PROMETHEUS_URL,
+  dashboardUrl: process.env.NEXT_PUBLIC_DASHBOARD_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000',
 
   // Auth providers
   auth: {
