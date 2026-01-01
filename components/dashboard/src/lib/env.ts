@@ -24,6 +24,9 @@ const envSchema = z.object({
   
   // Signup control
   LANGOP_SIGNUPS_DISABLED: z.string().optional(),
+  
+  // Organization namespace prefix
+  LANGOP_ORGANIZATION_NAMESPACE_PREFIX: z.string().optional(),
 })
 
 // Validate environment variables
@@ -49,5 +52,9 @@ export const isBuildOnly = isCIBuild && !hasDatabaseUrl
 
 // Check if signups are disabled (require invitation tokens)
 export const isSignupsDisabled = env.LANGOP_SIGNUPS_DISABLED === 'true'
+
+// Get organization namespace prefix (defaults to "language-operator-")
+export const getOrganizationNamespacePrefix = () => 
+  env.LANGOP_ORGANIZATION_NAMESPACE_PREFIX || 'language-operator-'
 
 export default env

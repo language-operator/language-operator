@@ -981,6 +981,11 @@ dashboard:
     # Control signup access - when true, signups require invitation tokens
     signupsDisabled: false
 
+  # Organization namespace configuration
+  organization:
+    # Prefix for organization namespaces (default: "language-operator-")
+    namespacePrefix: "language-operator-"
+
   # Initial setup configuration (set by CLI install command)
   # Used to create the first admin user when dashboard starts up with an empty database
   initialSetup:

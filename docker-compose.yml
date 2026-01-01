@@ -67,6 +67,8 @@ services:
       CLICKHOUSE_PASSWORD: "langop"
       # Signup control
       LANGOP_SIGNUPS_DISABLED: "${LANGOP_SIGNUPS_DISABLED:-false}"
+      # Organization namespace prefix
+      LANGOP_ORGANIZATION_NAMESPACE_PREFIX: "${LANGOP_ORGANIZATION_NAMESPACE_PREFIX:-language-operator-}"
     depends_on:
       postgres-dev:
         condition: service_healthy

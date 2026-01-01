@@ -191,6 +191,8 @@ spec:
           value: {{ .Values.dashboard.features.invites | quote }}
         - name: LANGOP_SIGNUPS_DISABLED
           value: {{ .Values.dashboard.features.signupsDisabled | quote }}
+        - name: LANGOP_ORGANIZATION_NAMESPACE_PREFIX
+          value: {{ .Values.dashboard.organization.namespacePrefix | quote }}
         {{- if .Values.dashboard.initialSetup.enabled }}
         # Initial setup environment variables (set by CLI install command)
         - name: LANGOP_INIT_ADMIN_NAME

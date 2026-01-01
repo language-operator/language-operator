@@ -58,6 +58,8 @@ spec:
           value: {{ .Values.dashboard.initialSetup.adminUser.email | quote }}
         - name: LANGOP_INIT_ADMIN_PASSWORD_HASH
           value: {{ .Values.dashboard.initialSetup.adminUser.passwordHash | quote }}
+        - name: LANGOP_ORGANIZATION_NAMESPACE_PREFIX
+          value: {{ .Values.dashboard.organization.namespacePrefix | quote }}
         resources:
           limits:
             cpu: 100m
