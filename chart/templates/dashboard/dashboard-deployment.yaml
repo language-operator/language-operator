@@ -156,6 +156,10 @@ spec:
         {{- if .Values.telemetry.clickhouse.enabled }}
         - name: CLICKHOUSE_URL
           value: "http://{{ include "language-operator.fullname" . }}-clickhouse:8123"
+        - name: CLICKHOUSE_DATABASE
+          value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
+        - name: CLICKHOUSE_USERNAME
+          value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
         - name: CLICKHOUSE_PASSWORD
           valueFrom:
             secretKeyRef:

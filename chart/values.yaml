@@ -581,7 +581,7 @@ telemetry:
     # Database configuration
     database: "langop"
     
-    # Authentication settings
+    # Authentication configuration
     auth:
       username: "langop"
       # Set password for authentication (optional, uses no auth if empty)
