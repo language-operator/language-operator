@@ -12,6 +12,7 @@ spec:
   selector:
     matchLabels:
       {{- include "language-operator.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: operator
   template:
     metadata:
       annotations:
@@ -21,6 +22,7 @@ spec:
         {{- end }}
       labels:
         {{- include "language-operator.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: operator
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

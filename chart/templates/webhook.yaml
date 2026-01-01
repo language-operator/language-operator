@@ -16,6 +16,8 @@ spec:
     name: webhook
   selector:
     {{- include "language-operator.selectorLabels" . | nindent 4 }}
+    # Exclude components like otel-collector that also have the operator labels
+    app.kubernetes.io/component: operator
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
