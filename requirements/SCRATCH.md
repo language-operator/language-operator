@@ -7,7 +7,10 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
-### Recently Completed (Dec 30, 2025)
+### Recently Completed (Jan 1, 2026)
+- ✅ **Issue #226**: Add support for disabling signups - Implemented `LANGOP_SIGNUPS_DISABLED` environment variable to control signup access. When enabled, signup page shows error message and redirects to login, API returns 403 for direct signups, and login page hides "Create Account" link. Invitation system continues to work normally with disabled signups. Added Helm chart configuration via `dashboard.features.signupsDisabled` value. Maintains backward compatibility with default disabled=false (commit pending)
+
+### Previously Completed (Dec 30, 2025)  
 - ✅ **Issue #224**: Agent code synthesizer produces poorly formatted Ruby code - Implemented pattern-based Ruby code formatter to fix LLM-generated code formatting issues. Added FormatRubyCode function with task definition parameter alignment fixes, empty hash normalization ({  } → {}), and excessive blank line removal. Integrated into both agent and task synthesis pipelines with comprehensive test coverage. Addresses the main formatting problems observed in ConfigMaps where task parameters had poor indentation and spacing (commit 2311d2e)
 
 ### Previously Completed (Dec 28, 2025)
@@ -53,7 +56,7 @@
 - **Dashboard**: ROOT directory `docker compose up` only → http://localhost:3000
 - **Login**: "james@theryans.io" / "password123"  
 - ❌ **NEVER**: components/dashboard/docker-compose.yml (deprecated)
-- ❌ **NEVER**: `npm run build` directly (crashes system)
+- ❌ **NEVER**: `npm run build` locally (causes file watch issues & memory bloat that breaks dev environment)
 
 ### Key Patterns
 - **k8s-client.ts**: Handles demo/live mode differences: `{ body: { items: [...] } }` vs `{ data: { items: [] } }`

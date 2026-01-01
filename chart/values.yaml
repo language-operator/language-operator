@@ -978,6 +978,8 @@ dashboard:
     emailAuth: true
     billing: false
     invites: true
+    # Control signup access - when true, signups require invitation tokens
+    signupsDisabled: false
 
   # Initial setup configuration (set by CLI install command)
   # Used to create the first admin user when dashboard starts up with an empty database

@@ -3,10 +3,21 @@ import { hash } from 'bcryptjs'
 import { db } from '@/lib/db'
 import { k8sClient } from '@/lib/k8s-client'
 import { generateOrganizationNamespace } from '@/lib/namespace-utils'
+import { isSignupsDisabled } from '@/lib/env'
+import { isSignupAllowed } from '@/lib/invitation-utils'
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json()
+    const { name, email, password, callbackUrl } = await req.json()
+
+    // Check if signup is allowed
+    const signupAllowed = await isSignupAllowed(isSignupsDisabled, callbackUrl)
+    if (!signupAllowed) {
+      return NextResponse.json(
+        { error: 'Signup is currently disabled. Please use an invitation link to create an account.' },
+        { status: 403 }
+      )
+    }
 
     // Validate input
     if (!name || !email || !password) {

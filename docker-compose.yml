@@ -65,6 +65,8 @@ services:
       CLICKHOUSE_DATABASE: "langop"
       CLICKHOUSE_USERNAME: "langop"
       CLICKHOUSE_PASSWORD: "langop"
+      # Signup control
+      LANGOP_SIGNUPS_DISABLED: "${LANGOP_SIGNUPS_DISABLED:-false}"
     depends_on:
       postgres-dev:
         condition: service_healthy

@@ -2,7 +2,7 @@
 
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -10,6 +10,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [signupEnabled, setSignupEnabled] = useState(true)
+
+  // Check if signup is enabled
+  useEffect(() => {
+    const checkSignupEnabled = async () => {
+      try {
+        const response = await fetch('/api/auth/signup-enabled')
+        const data = await response.json()
+        setSignupEnabled(data.signupEnabled)
+      } catch (error) {
+        console.error('Error checking signup status:', error)
+        // Default to enabled on error
+        setSignupEnabled(true)
+      }
+    }
+    
+    checkSignupEnabled()
+  }, [])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,14 +123,16 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-stone-800/80 dark:border-stone-600/80 p-12">
-            <a
-              href="/signup"
-              className="block text-[11px] tracking-[0.15em] uppercase font-light text-stone-600 hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500 transition-colors"
-            >
-              Create Account
-            </a>
-          </div>
+          {signupEnabled && (
+            <div className="border-t border-stone-800/80 dark:border-stone-600/80 p-12">
+              <a
+                href="/signup"
+                className="block text-[11px] tracking-[0.15em] uppercase font-light text-stone-600 hover:text-amber-900 dark:text-stone-400 dark:hover:text-amber-500 transition-colors"
+              >
+                Create Account
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>

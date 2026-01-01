@@ -21,6 +21,9 @@ const envSchema = z.object({
   
   // Kubernetes (optional for development)
   KUBECONFIG: z.string().optional(),
+  
+  // Signup control
+  LANGOP_SIGNUPS_DISABLED: z.string().optional(),
 })
 
 // Validate environment variables
@@ -43,5 +46,8 @@ export const hasDatabaseUrl = Boolean(env.DATABASE_URL)
 
 // Check if we're in a build-only environment (CI without database)
 export const isBuildOnly = isCIBuild && !hasDatabaseUrl
+
+// Check if signups are disabled (require invitation tokens)
+export const isSignupsDisabled = env.LANGOP_SIGNUPS_DISABLED === 'true'
 
 export default env
