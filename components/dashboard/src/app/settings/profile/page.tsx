@@ -148,7 +148,7 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Profile Settings</h1>
-        <p className="text-gray-600">Manage your account information and preferences</p>
+        <p className="text-stone-600 dark:text-stone-400">Manage your account information and preferences</p>
       </div>
 
       <Card>
@@ -168,19 +168,19 @@ export default function ProfilePage() {
             </Avatar>
             <div>
               <h3 className="text-lg font-semibold">{session?.user?.name || 'Unknown'}</h3>
-              <p className="text-gray-600">{session?.user?.email}</p>
+              <p className="text-stone-600 dark:text-stone-400">{session?.user?.email}</p>
             </div>
           </div>
 
           {!isEditing && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">Name</label>
-                <p className="mt-1 text-sm text-gray-900">{session?.user?.name || 'Not provided'}</p>
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Name</label>
+                <p className="mt-1 text-sm text-stone-900 dark:text-stone-100">{session?.user?.name || 'Not provided'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-sm text-gray-900">{session?.user?.email}</p>
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Email</label>
+                <p className="mt-1 text-sm text-stone-900 dark:text-stone-100">{session?.user?.email}</p>
               </div>
             </div>
           )}
@@ -240,7 +240,7 @@ export default function ProfilePage() {
                   {errors.image && (
                     <p className="text-xs text-red-600 mt-1">{errors.image}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
                     Leave empty to use default avatar with initials
                   </p>
                 </div>
@@ -270,7 +270,7 @@ export default function ProfilePage() {
             <Badge variant="default" className="bg-green-100 text-green-800">
               Active
             </Badge>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-stone-600 dark:text-stone-400">
               Account is active and verified
             </span>
           </div>

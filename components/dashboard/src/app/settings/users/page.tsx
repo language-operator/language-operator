@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, MoreHorizontal, UserPlus, Trash2, Edit, ChevronDown, Mail, Copy, Link } from 'lucide-react'
+import { Users, MoreHorizontal, UserPlus, Trash2, Edit, ChevronDown, Copy, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EditUserDialog } from '@/components/users/edit-user-dialog'
-import { AddUserDialog } from '@/components/users/add-user-dialog'
 import { InviteMemberDialog } from '@/components/organization/invite-member-dialog'
 import { toast } from 'sonner'
 import { config } from '@/lib/config'
@@ -59,7 +58,6 @@ interface Invite {
 
 export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [showAddUser, setShowAddUser] = useState(false)
   const [showInviteMember, setShowInviteMember] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [invites, setInvites] = useState<Invite[]>([])
@@ -122,6 +120,20 @@ export default function UsersPage() {
     fetchData()
   }, [])
 
+  const refreshInvites = async () => {
+    if (currentOrganization) {
+      try {
+        const invitesResponse = await fetch(`/api/organizations/${currentOrganization.id}/invites`)
+        if (invitesResponse.ok) {
+          const invitesData = await invitesResponse.json()
+          setInvites(invitesData.invites || [])
+        }
+      } catch (error) {
+        console.error('Failed to refresh invites:', error)
+      }
+    }
+  }
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'owner':
@@ -131,9 +143,9 @@ export default function UsersPage() {
       case 'editor':
         return 'bg-green-100 text-green-800 hover:bg-green-100'
       case 'viewer':
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100'
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100'
     }
   }
 
@@ -199,33 +211,6 @@ export default function UsersPage() {
     }
   }
 
-  const handleAddUser = async (userData: { name: string; email: string; password: string }) => {
-    try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create user')
-      }
-
-      const result = await response.json()
-      
-      // Add the new user to the local state
-      setUsers(prevUsers => [...prevUsers, result.user])
-      
-      setShowAddUser(false)
-    } catch (error) {
-      console.error('Error creating user:', error)
-      setError(error instanceof Error ? error.message : 'Failed to create user')
-      throw error // Re-throw to let the modal handle the error state
-    }
-  }
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
@@ -285,20 +270,42 @@ export default function UsersPage() {
     }
   }
 
+  const handleCancelInvitation = async (invite: Invite) => {
+    if (!currentOrganization) return
+
+    try {
+      const response = await fetch(`/api/organizations/${currentOrganization.id}/invites/${invite.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to cancel invitation')
+      }
+
+      // Remove the invitation from local state
+      setInvites(prevInvites => prevInvites.filter(i => i.id !== invite.id))
+      toast.success(`Invitation to ${invite.email} has been cancelled`)
+    } catch (error) {
+      console.error('Error cancelling invitation:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel invitation')
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Users</h1>
-            <p className="text-gray-600">Manage user access and organization memberships</p>
+            <p className="text-stone-600 dark:text-stone-400">Manage user access and organization memberships</p>
           </div>
         </div>
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-stone-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-stone-200 rounded"></div>
             ))}
           </div>
         </div>
@@ -311,8 +318,8 @@ export default function UsersPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Users</h1>
-            <p className="text-gray-600">Manage user access and organization memberships</p>
+            <h1 className="text-3xl font-bold font-mono">Users</h1>
+            <p className="text-stone-600 dark:text-stone-400 mt-2">Manage user access and organization memberships</p>
           </div>
         </div>
         <Card>
@@ -337,15 +344,11 @@ export default function UsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Users</h1>
-          <p className="text-gray-600">Manage user access and organization memberships</p>
+          <p className="text-stone-600 dark:text-stone-400">Manage user access and organization memberships</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowAddUser(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
           <Button onClick={() => setShowInviteMember(true)}>
-            <Mail className="mr-2 h-4 w-4" />
+            <UserPlus className="mr-2 h-4 w-4" />
             Invite Member
           </Button>
         </div>
@@ -369,14 +372,14 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Last Seen</TableHead>
+                  <TableHead>Created At</TableHead>
                   <TableHead className="w-[70px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={4} className="text-center py-8 text-stone-500 dark:text-stone-400">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -400,7 +403,7 @@ export default function UsersPage() {
                           </Avatar>
                           <div>
                             <div className="font-medium">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
+                            <div className="text-sm text-stone-500 dark:text-stone-400">{user.email}</div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -420,28 +423,28 @@ export default function UsersPage() {
                                   <DropdownMenuItem 
                                     onClick={() => handleChangeRole(user.id, 'owner')}
                                     disabled={primaryMembership.role === 'owner'}
-                                    className={primaryMembership.role === 'owner' ? 'text-gray-400' : ''}
+                                    className={primaryMembership.role === 'owner' ? 'text-stone-400' : ''}
                                   >
                                     Owner
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => handleChangeRole(user.id, 'admin')}
                                     disabled={primaryMembership.role === 'admin'}
-                                    className={primaryMembership.role === 'admin' ? 'text-gray-400' : ''}
+                                    className={primaryMembership.role === 'admin' ? 'text-stone-400' : ''}
                                   >
                                     Admin
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => handleChangeRole(user.id, 'editor')}
                                     disabled={primaryMembership.role === 'editor'}
-                                    className={primaryMembership.role === 'editor' ? 'text-gray-400' : ''}
+                                    className={primaryMembership.role === 'editor' ? 'text-stone-400' : ''}
                                   >
                                     Editor
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     onClick={() => handleChangeRole(user.id, 'viewer')}
                                     disabled={primaryMembership.role === 'viewer'}
-                                    className={primaryMembership.role === 'viewer' ? 'text-gray-400' : ''}
+                                    className={primaryMembership.role === 'viewer' ? 'text-stone-400' : ''}
                                   >
                                     Viewer
                                   </DropdownMenuItem>
@@ -457,8 +460,8 @@ export default function UsersPage() {
                             )
                           ) : '-'}
                         </TableCell>
-                        <TableCell className="text-sm text-gray-500">
-                          {formatLastSeen(user.lastSeen)}
+                        <TableCell className="text-sm text-stone-500 dark:text-stone-400">
+                          {new Date(user.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -522,16 +525,13 @@ export default function UsersPage() {
                 {invites.map((invite) => (
                   <TableRow key={invite.id}>
                     <TableCell className="flex items-center gap-3">
-                      <div className="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                      </div>
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          <Mail className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="font-medium">{invite.email}</div>
-                        <div className="text-sm text-gray-500">
-                          <Badge variant="outline" className="text-yellow-600 bg-yellow-50">
-                            Pending
-                          </Badge>
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -542,43 +542,35 @@ export default function UsersPage() {
                         {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
+                    <TableCell className="text-sm text-stone-500 dark:text-stone-400">
                       {new Date(invite.createdAt).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
+                    <TableCell className="text-sm text-stone-500 dark:text-stone-400">
                       {new Date(invite.expiresAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyInviteLink(invite)}
-                          className="h-8 px-3"
-                        >
-                          <Copy className="mr-1 h-3 w-3" />
-                          Copy Link
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleCopyInviteLink(invite)}
-                            >
-                              <Link className="mr-2 h-4 w-4" />
-                              Copy invitation link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Cancel invitation
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => handleCopyInviteLink(invite)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy invitation link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => handleCancelInvitation(invite)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Cancel invitation
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -587,14 +579,6 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* Add User Dialog */}
-      <AddUserDialog
-        open={showAddUser}
-        onOpenChange={setShowAddUser}
-        onSave={handleAddUser}
-      />
-
 
       {/* Edit User Dialog */}
       <EditUserDialog
@@ -612,6 +596,7 @@ export default function UsersPage() {
           open={showInviteMember}
           onOpenChange={setShowInviteMember}
           organizationId={currentOrganization.id}
+          onSuccess={refreshInvites}
         />
       )}
     </div>

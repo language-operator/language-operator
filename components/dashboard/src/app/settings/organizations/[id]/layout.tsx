@@ -1,13 +1,12 @@
 'use client'
 
-import { useParams, usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { Settings, Users, BarChart3, Building2, Copy } from 'lucide-react'
+import { useParams, usePathname, useRouter } from 'next/navigation'
+import { Settings, BarChart3, Building2, Copy } from 'lucide-react'
 import { ResourceHeader } from '@/components/ui/resource-header'
-import { cn } from '@/lib/utils'
 import { useOrganization } from '@/hooks/use-organizations'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface OrganizationLayoutProps {
   children: React.ReactNode
@@ -16,31 +15,22 @@ interface OrganizationLayoutProps {
 export default function OrganizationLayout({ children }: OrganizationLayoutProps) {
   const params = useParams()
   const pathname = usePathname()
+  const router = useRouter()
   const organizationId = params.id as string
   
   const { data: organizationData, isLoading } = useOrganization(organizationId)
   const organization = organizationData?.organization
 
-  const tabs = [
-    {
-      name: 'General',
-      href: `/settings/organizations/${organizationId}`,
-      icon: Settings,
-      current: pathname === `/settings/organizations/${organizationId}`
-    },
-    {
-      name: 'Usage Limits',
-      href: `/settings/organizations/${organizationId}/edit`,
-      icon: BarChart3,
-      current: pathname === `/settings/organizations/${organizationId}/edit`
-    },
-    {
-      name: 'Members',
-      href: `/settings/organizations/${organizationId}/members`,
-      icon: Users,
-      current: pathname === `/settings/organizations/${organizationId}/members`
+  // Determine current tab based on pathname
+  const currentTab = pathname === `/settings/organizations/${organizationId}/edit` ? 'usage-limits' : 'general'
+
+  const handleTabChange = (value: string) => {
+    if (value === 'general') {
+      router.push(`/settings/organizations/${organizationId}`)
+    } else if (value === 'usage-limits') {
+      router.push(`/settings/organizations/${organizationId}/edit`)
     }
-  ]
+  }
 
   const handleCopyNamespace = () => {
     if (organization?.namespace) {
@@ -61,7 +51,7 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
           subtitle={
             <div className="flex items-center gap-2">
               <span>Organization</span>
-              <span className="text-gray-400">|</span>
+              <span className="text-stone-400 dark:text-stone-500">|</span>
               <span className="font-mono">{organization.namespace}</span>
               <Button
                 variant="ghost"
@@ -78,37 +68,30 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
 
       {isLoading && (
         <div className="space-y-2">
-          <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+          <div className="h-8 bg-stone-200 rounded w-1/4 animate-pulse dark:bg-stone-700"></div>
+          <div className="h-4 bg-stone-200 rounded w-1/3 animate-pulse dark:bg-stone-700"></div>
         </div>
       )}
 
       {/* Tabs Navigation */}
       {organization && (
-        <div className="bg-muted text-muted-foreground inline-flex h-12 w-fit items-center justify-center rounded-lg p-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <Link
-                key={tab.name}
-                href={tab.href}
-                className={cn(
-                  'inline-flex h-[calc(100%-8px)] items-center justify-center gap-2 rounded-md border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap transition-[color,box-shadow]',
-                  tab.current
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-foreground hover:bg-background/50'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.name}
-              </Link>
-            )
-          })}
-        </div>
+        <Tabs value={currentTab} onValueChange={handleTabChange}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="usage-limits" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Usage Limits
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value={currentTab} className="mt-6">
+            {children}
+          </TabsContent>
+        </Tabs>
       )}
-
-      {/* Page Content */}
-      {children}
     </div>
   )
 }

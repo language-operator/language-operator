@@ -58,9 +58,9 @@ export default function OrganizationSettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+        <div className="h-6 bg-stone-200 rounded w-1/4 animate-pulse dark:bg-stone-700"></div>
         <div className="space-y-4">
-          <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-32 bg-stone-200 rounded animate-pulse dark:bg-stone-700"></div>
         </div>
       </div>
     )
@@ -86,12 +86,12 @@ export default function OrganizationSettingsPage() {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700">Name</label>
-                <p className="text-sm text-gray-900">{organization.name}</p>
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Name</label>
+                <p className="text-sm text-stone-900 dark:text-stone-100">{organization.name}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Plan</label>
-                <p className="text-sm text-gray-900 capitalize">{organization.plan}</p>
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Plan</label>
+                <p className="text-sm text-stone-900 dark:text-stone-100 capitalize">{organization.plan}</p>
               </div>
             </div>
           </CardContent>
@@ -110,7 +110,7 @@ export default function OrganizationSettingsPage() {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium">Delete Organization</h4>
-                  <p className="text-xs text-gray-600 mb-3">
+                  <p className="text-xs text-stone-600 dark:text-stone-400 mb-3">
                     Permanently delete this organization and all its resources. This action cannot be undone.
                   </p>
                   

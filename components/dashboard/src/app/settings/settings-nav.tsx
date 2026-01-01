@@ -27,7 +27,7 @@ export function SettingsNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="flex flex-col w-24 gap-2 border-r pr-4">
+    <nav className="flex flex-col w-24 gap-2 pr-4">
       {settingsNavigation.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
         const Icon = item.icon
@@ -38,8 +38,8 @@ export function SettingsNav() {
             className={cn(
               'flex flex-col items-center gap-1 rounded-lg px-2 py-3 text-xs font-medium transition-colors',
               isActive
-                ? 'bg-green-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-300'
             )}
           >
             <Icon className="w-6 h-6" />

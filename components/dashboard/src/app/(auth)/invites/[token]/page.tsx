@@ -145,7 +145,7 @@ export default function InviteAcceptancePage() {
       }
 
       toast.success(`Successfully joined ${invite.organization.name}!`)
-      router.push(`/settings/organizations/${invite.organization.id}`)
+      router.push('/')
     } catch (error: unknown) {
       console.error('Error accepting invite:', error)
       toast.error((error as Error).message || 'Failed to accept invitation')
@@ -271,78 +271,99 @@ export default function InviteAcceptancePage() {
 
     if (inviteStatus === 'valid' && invite) {
       return (
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <Building2 className="w-6 h-6 text-blue-600" />
+        /* Precise rectangular form */
+        <div className="bg-white/95 backdrop-blur-sm border border-stone-800/90 shadow-[0_8px_32px_rgba(120,53,15,0.08)] dark:bg-stone-900/95 dark:border-stone-700/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+          {/* Header - stark typography */}
+          <div className="border-b border-stone-800/80 dark:border-stone-600/80 p-12">
+            <h1 className="text-[13px] font-light tracking-[0.2em] uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
+              Language Operator
+              <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
+            </h1>
+          </div>
+
+          {/* Content area - generous spacing */}
+          <div className="p-12 space-y-8">
+            {/* Invitation header */}
+            <div>
+              <h2 className="text-[11px] font-light tracking-[0.15em] uppercase text-stone-900 dark:text-stone-300">
+                Accept Invitation
+              </h2>
             </div>
-            <CardTitle>You're Invited!</CardTitle>
-            <CardDescription>
-              You&apos;ve been invited to join <strong>{invite.organization.name}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="border rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Organization:</span>
-                <span className="text-sm text-gray-600">{invite.organization.name}</span>
+
+            {/* Properties - clean vertical rhythm */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] tracking-[0.2em] uppercase font-light text-stone-600 dark:text-stone-400">
+                  Organization
+                </span>
+                <span className="text-sm font-light text-stone-900 dark:text-stone-300">
+                  {invite.organization.name}
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Your Role:</span>
-                <Badge className={`${getRoleColor(invite.role)} flex items-center gap-1`}>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] tracking-[0.2em] uppercase font-light text-stone-600 dark:text-stone-400">
+                  Your Role
+                </span>
+                <span className="text-sm font-light text-stone-900 dark:text-stone-300 flex items-center gap-2">
                   {getRoleIcon(invite.role)}
                   {invite.role}
-                </Badge>
+                </span>
               </div>
-              <div className="text-xs text-gray-500 pt-2 border-t">
-                {getRoleDescription(invite.role)}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Invited Email:</span>
-                <span className="text-sm text-gray-600">{invite.email}</span>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] tracking-[0.2em] uppercase font-light text-stone-600 dark:text-stone-400">
+                  Email
+                </span>
+                <span className="text-sm font-light text-stone-600 dark:text-stone-400">
+                  {invite.email}
+                </span>
               </div>
             </div>
 
+            {/* Actions */}
             {!session?.user ? (
               <div className="space-y-3">
-                <p className="text-sm text-center text-gray-600">
-                  Sign in with your account to accept this invitation
-                </p>
-                <Button
-                  onClick={() => signIn(undefined, { 
-                    callbackUrl: `/invites/${token}` 
-                  })}
-                  className="w-full"
-                  disabled={accepting}
-                >
-                  Sign In to Accept
-                </Button>
+                  <button
+                    onClick={() => router.push(`/signup?callbackUrl=${encodeURIComponent(`/invites/${token}`)}&email=${encodeURIComponent(invite.email)}`)}
+                    disabled={accepting}
+                    className="w-full h-12 bg-gradient-to-r from-stone-800 to-stone-950 text-stone-50 text-[11px] tracking-[0.15em] uppercase font-light hover:from-amber-900 hover:to-amber-950 transition-all duration-300 disabled:opacity-50 shadow-[0_2px_8px_rgba(120,53,15,0.12)] dark:from-stone-700 dark:to-stone-800 dark:hover:from-amber-600 dark:hover:to-orange-600 dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
+                  >
+                    Create Account
+                  </button>
+                  <button
+                    onClick={() => signIn(undefined, { callbackUrl: `/invites/${token}` })}
+                    disabled={accepting}
+                    className="w-full h-12 border border-stone-200 text-stone-600 text-[11px] tracking-[0.15em] uppercase font-light hover:border-amber-900/40 hover:text-amber-900 transition-all disabled:opacity-50 bg-stone-50/30 dark:bg-stone-800/30 dark:border-stone-600 dark:text-stone-300 dark:hover:border-amber-600/60 dark:hover:text-amber-600"
+                  >
+                    Sign In with Existing Account
+                  </button>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleDeclineInvite}
-                  className="flex-1"
-                  disabled={accepting}
-                >
-                  Decline
-                </Button>
-                <Button
+              <div className="space-y-3">
+                <button
                   onClick={handleAcceptInvite}
-                  className="flex-1"
                   disabled={accepting}
+                  className="w-full h-12 bg-gradient-to-r from-stone-800 to-stone-950 text-stone-50 text-[11px] tracking-[0.15em] uppercase font-light hover:from-amber-900 hover:to-amber-950 transition-all duration-300 disabled:opacity-50 shadow-[0_2px_8px_rgba(120,53,15,0.12)] dark:from-stone-700 dark:to-stone-800 dark:hover:from-amber-600 dark:hover:to-orange-600 dark:shadow-[0_2px_8px_rgba(0,0,0,0.3)]"
                 >
                   {accepting ? 'Joining...' : 'Accept Invitation'}
-                </Button>
+                </button>
+                <button
+                  onClick={handleDeclineInvite}
+                  disabled={accepting}
+                  className="w-full h-12 border border-stone-200 text-stone-600 text-[11px] tracking-[0.15em] uppercase font-light hover:border-amber-900/40 hover:text-amber-900 transition-all disabled:opacity-50 bg-stone-50/30 dark:bg-stone-800/30 dark:border-stone-600 dark:text-stone-300 dark:hover:border-amber-600/60 dark:hover:text-amber-600"
+                >
+                  Decline
+                </button>
               </div>
             )}
 
-            <p className="text-xs text-center text-gray-500">
-              Expires on {new Date(invite.expiresAt).toLocaleDateString()}
+            {/* Footer note */}
+            <p className="text-[10px] font-light text-center text-stone-500 dark:text-stone-500 tracking-[0.1em]">
+              Expires {new Date(invite.expiresAt).toLocaleDateString()}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )
     }
 
@@ -350,8 +371,9 @@ export default function InviteAcceptancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950 flex items-center justify-center p-8">
+      {/* Judd-inspired geometric container */}
+      <div className="w-full max-w-[480px]">
         {renderContent()}
       </div>
     </div>

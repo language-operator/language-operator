@@ -48,9 +48,9 @@ export default function OrganizationsPage() {
       case 'editor':
         return 'bg-green-100 text-green-800 hover:bg-green-100'
       case 'viewer':
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100 dark:bg-stone-700 dark:text-stone-300'
       default:
-        return 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+        return 'bg-stone-100 text-stone-800 hover:bg-stone-100 dark:bg-stone-700 dark:text-stone-300'
     }
   }
 
@@ -92,7 +92,7 @@ export default function OrganizationsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Organizations</h1>
-            <p className="text-gray-600">Manage your organizations and switch between them</p>
+            <p className="text-stone-600 dark:text-stone-400">Manage your organizations and switch between them</p>
           </div>
         </div>
         <div className="grid gap-4">
@@ -118,7 +118,7 @@ export default function OrganizationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Organizations</h1>
-          <p className="text-gray-600">Manage your organizations and switch between them</p>
+          <p className="text-stone-600 dark:text-stone-400">Manage your organizations and switch between them</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -155,10 +155,10 @@ export default function OrganizationsPage() {
                   <TableCell colSpan={5} className="text-center py-12">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 bg-stone-100 border border-stone-200 flex items-center justify-center mb-4 dark:bg-stone-800 dark:border-stone-700">
-                        <Settings className="w-6 h-6 text-gray-400" />
+                        <Settings className="w-6 h-6 text-stone-400 dark:text-stone-500" />
                       </div>
                       <h3 className="text-lg font-semibold mb-2">No organizations</h3>
-                      <p className="text-gray-600 mb-4">
+                      <p className="text-stone-600 dark:text-stone-400 mb-4">
                         Create your first organization to start managing Language Operator resources
                       </p>
                       <Button onClick={() => setShowCreateDialog(true)}>

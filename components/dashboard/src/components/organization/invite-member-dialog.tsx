@@ -24,12 +24,14 @@ interface InviteMemberDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   organizationId: string
+  onSuccess?: () => void
 }
 
 export function InviteMemberDialog({
   open,
   onOpenChange,
-  organizationId
+  organizationId,
+  onSuccess
 }: InviteMemberDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null)
@@ -61,6 +63,9 @@ export function InviteMemberDialog({
         form.reset()
         toast.success(`Invitation sent to ${data.email}`)
       }
+      
+      // Call onSuccess callback to refresh parent data
+      onSuccess?.()
       
       setIsLoading(false)
     } catch (error: any) {
@@ -124,14 +129,13 @@ export function InviteMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         {!invitationUrl ? (
           <>
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
               <DialogDescription>
-                Send an invitation to add someone to your organization.
-                They'll receive a shareable link to join.
+                Generate a shareable invitation link.
               </DialogDescription>
             </DialogHeader>
             
@@ -173,35 +177,14 @@ export function InviteMemberDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="admin">
-                            <div>
-                              <div className="font-medium">Admin</div>
-                              <div className="text-xs text-gray-500">
-                                Can manage members and all resources
-                              </div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="editor">
-                            <div>
-                              <div className="font-medium">Editor</div>
-                              <div className="text-xs text-gray-500">
-                                Can create and edit resources
-                              </div>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="viewer">
-                            <div>
-                              <div className="font-medium">Viewer</div>
-                              <div className="text-xs text-gray-500">
-                                Read-only access to resources
-                              </div>
-                            </div>
-                          </SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="editor">Editor</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                       {form.watch('role') && (
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-stone-600 dark:text-stone-400">
                           {getRoleDescription(form.watch('role'))}
                         </p>
                       )}
@@ -233,40 +216,29 @@ export function InviteMemberDialog({
                 Invitation Created
               </DialogTitle>
               <DialogDescription>
-                Share this link with {copiedEmail} to invite them to join your organization.
                 The link expires in 7 days and can only be used once.
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4">
-              <div className="border rounded-lg p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-700 mb-1">Invitation Link</p>
-                    <p className="text-sm text-gray-600 font-mono truncate">
-                      {invitationUrl}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-stone-700 dark:text-stone-300">Invitation Link</p>
+                <div className="relative">
+                  <Input
+                    value={invitationUrl}
+                    disabled
+                    className="font-mono text-sm pr-10"
+                  />
+                  <button
                     onClick={handleCopyInvitationUrl}
-                    className="shrink-0"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-stone-100 dark:hover:bg-stone-700 rounded transition-colors"
                   >
-                    <Copy className="mr-1 h-3 w-3" />
-                    Copy
-                  </Button>
+                    <Copy className="h-4 w-4 text-stone-500 dark:text-stone-400" />
+                  </button>
                 </div>
               </div>
-              
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-800">
-                  💡 <strong>Next steps:</strong> Share this link with the person you're inviting. 
-                  They can click it to accept the invitation and join your organization.
-                </p>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-4">
                 <Button
                   variant="outline"
                   onClick={handleCopyInvitationUrl}
@@ -275,7 +247,7 @@ export function InviteMemberDialog({
                   Copy Link
                 </Button>
                 <Button onClick={handleDone}>
-                  Done
+                  Close
                 </Button>
               </div>
             </div>

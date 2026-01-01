@@ -1,16 +1,25 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Pre-fill email from invitation if provided
+  useEffect(() => {
+    const emailParam = searchParams.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
+    }
+  }, [searchParams])
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,7 +50,8 @@ export default function SignupPage() {
       if (result?.error) {
         setError('Account created but login failed. Please try signing in.')
       } else {
-        router.push('/')
+        const callbackUrl = searchParams.get('callbackUrl') || '/'
+        router.push(callbackUrl)
         router.refresh()
       }
     } catch (err) {
