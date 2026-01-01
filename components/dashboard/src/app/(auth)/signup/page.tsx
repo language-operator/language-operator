@@ -2,9 +2,9 @@
 
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [name, setName] = useState('')
@@ -160,5 +160,29 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950 flex items-center justify-center p-8">
+        <div className="w-full max-w-[480px]">
+          <div className="bg-white/95 backdrop-blur-sm border border-stone-800/90 shadow-[0_8px_32px_rgba(120,53,15,0.08)] dark:bg-stone-900/95 dark:border-stone-700/90 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="border-b border-stone-800/80 dark:border-stone-600/80 p-12">
+              <h1 className="text-[13px] font-light tracking-[0.2em] uppercase text-stone-900 dark:text-stone-300 flex items-center gap-1">
+                Language Operator
+                <span className="inline-block w-2 h-3.5 bg-stone-900 dark:bg-amber-400 animate-pulse" />
+              </h1>
+            </div>
+            <div className="p-12 flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-stone-900 dark:border-amber-400"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   )
 }
