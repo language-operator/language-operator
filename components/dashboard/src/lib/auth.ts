@@ -9,7 +9,7 @@ import { db } from './db'
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
-    strategy: 'database', // Use database sessions for persistence across pod restarts
+    strategy: 'jwt', // CredentialsProvider requires JWT sessions
     maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // 24 hours
   },
@@ -75,11 +75,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      console.log('🔧 [SESSION] Building database session for user:', user?.id || session.user?.id)
+    async jwt({ token, user }) {
+      // Store user ID in JWT token when user first logs in
+      if (user) {
+        token.sub = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      console.log('🔧 [SESSION] Building JWT session for user:', token.sub)
       
-      // With database sessions, user comes directly from database
-      const userId = user?.id || session.user?.id
+      // With JWT sessions, user ID comes from token
+      const userId = token.sub
       
       if (session.user && userId) {
         session.user.id = userId
