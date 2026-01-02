@@ -75,43 +75,20 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      // Store user ID in JWT token when user first logs in
-      if (user) {
-        token.sub = user.id
-      }
-      return token
-    },
-    async session({ session, token }) {
-      console.log('🔧 [SESSION] Building JWT session for user:', token.sub)
+    async session({ session, user }) {
+      console.log('🔧 [SESSION] Building database session for user:', user?.id || session.user?.id)
       
-      if (session.user && token.sub) {
-        session.user.id = token.sub
+      // With database sessions, user comes directly from database
+      const userId = user?.id || session.user?.id
+      
+      if (session.user && userId) {
+        session.user.id = userId
 
         try {
-          // Get fresh user data from database
-          console.log('👤 [SESSION] Fetching fresh user data for:', token.sub)
-          const user = await db.user.findUnique({
-            where: { id: token.sub },
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          })
-
-          if (user) {
-            // Update session with fresh user data
-            session.user.name = user.name
-            session.user.email = user.email
-            session.user.image = user.image
-          }
-
-          console.log('👥 [SESSION] Fetching organizations for user:', token.sub)
+          console.log('👥 [SESSION] Fetching organizations for user:', userId)
           // Get user's organizations and active organization
           const memberships = await db.organizationMember.findMany({
-            where: { userId: token.sub },
+            where: { userId: userId },
             include: {
               organization: true,
             },
