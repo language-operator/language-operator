@@ -9,7 +9,9 @@ import { db } from './db'
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
-    strategy: 'jwt', // Use JWT sessions instead of database sessions
+    strategy: 'database', // Use database sessions for persistence across pod restarts
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
   },
   pages: {
     signIn: '/login',
