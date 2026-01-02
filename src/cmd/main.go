@@ -486,6 +486,13 @@ func main() {
 		os.Exit(1)
 	}
 	setupLog.Info("LanguageAgent validation webhook registered")
+
+	// Setup LanguageTool webhook for resource defaults
+	if err = (&langopv1alpha1.LanguageTool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageTool")
+		os.Exit(1)
+	}
+	setupLog.Info("LanguageTool validation webhook registered")
 	//+kubebuilder:scaffold:builder
 
 	// Add health and readiness checks
