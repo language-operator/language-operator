@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { fetchWithOrganization } from '@/lib/api-client'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { AlertCircle, ChevronDown } from 'lucide-react'
 import { LanguageModel } from '@/types/model'
-import { convertAnsiToHtml } from '../agents/utils'
+import { useLogViewer } from '@/hooks/useLogViewer'
+import { PodLogViewer } from '@/components/ui/pod-log-viewer'
+import { PodSelector, type PodInfo } from '@/components/ui/pod-selector'
 
 interface ModelLogsProps {
   model: LanguageModel
@@ -14,53 +13,55 @@ interface ModelLogsProps {
 }
 
 export function ModelLogs({ model, clusterName }: ModelLogsProps) {
-  const [logs, setLogs] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isAtBottom, setIsAtBottom] = useState(true)
-  const [userScrolledUp, setUserScrolledUp] = useState(false)
-  const logsEndRef = useRef<HTMLDivElement>(null)
-  const logsContainerRef = useRef<HTMLDivElement>(null)
-
-
-  const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    setIsAtBottom(true)
-    setUserScrolledUp(false)
+  const logs = useLogViewer()
+  const [pods, setPods] = useState<PodInfo[]>([])
+  const [selectedPod, setSelectedPod] = useState<string>('')
+  const [podsLoading, setPodsLoading] = useState(false)
+  
+  // Placeholder streaming functions for UI consistency
+  const startStreaming = () => {
+    // TODO: Implement streaming for model logs
+    console.log('Model streaming not yet implemented')
+  }
+  
+  const stopStreaming = () => {
+    // TODO: Implement streaming for model logs  
+    console.log('Model streaming not yet implemented')
   }
 
-  const checkScrollPosition = () => {
-    if (logsContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
-      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 10
-      setIsAtBottom(isNearBottom)
-    }
-  }
+  const fetchPods = useCallback(async () => {
+    try {
+      setPodsLoading(true)
+      logs.setError(null)
 
-  const handleScroll = () => {
-    checkScrollPosition()
-    if (logsContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = logsContainerRef.current
-      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 10
-      if (!isNearBottom) {
-        setUserScrolledUp(true)
+      const response = await fetchWithOrganization(`/api/clusters/${clusterName}/models/${model.metadata.name}/pods`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pods: ${response.status} ${response.statusText}`)
       }
-    }
-  }
 
-  // Only auto-scroll if user is at bottom and hasn't scrolled up
-  useEffect(() => {
-    if (isAtBottom && !userScrolledUp) {
-      scrollToBottom()
+      const data = await response.json()
+      setPods(data.data || [])
+
+      // Auto-select the recommended pod
+      if (data.recommendedPod && data.data.length > 0) {
+        setSelectedPod(data.recommendedPod)
+      }
+    } catch (err) {
+      console.error('Error fetching pods:', err)
+      logs.setError(err instanceof Error ? err.message : 'Failed to load pods')
+    } finally {
+      setPodsLoading(false)
     }
-  }, [logs, isAtBottom, userScrolledUp])
+  }, [model.metadata.name, clusterName])
 
   const fetchLogs = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    if (!selectedPod) return
 
-      const url = `/api/clusters/${clusterName}/models/${model.metadata.name}/logs`
+    try {
+      logs.setLoading(true)
+      logs.setError(null)
+
+      const url = `/api/clusters/${clusterName}/models/${model.metadata.name}/logs?podName=${selectedPod}`
 
       const response = await fetchWithOrganization(url)
       if (!response.ok) {
@@ -69,130 +70,56 @@ export function ModelLogs({ model, clusterName }: ModelLogsProps) {
 
       const data = await response.json()
       const logLines = data.logs ? data.logs.split('\n').filter((line: string) => line.trim()) : []
-      setLogs(logLines)
-
-      // Check scroll position after logs are loaded
-      setTimeout(() => {
-        checkScrollPosition()
-      }, 100)
+      logs.setLogs(logLines)
     } catch (err) {
       console.error('Error fetching model logs:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load logs')
+      logs.setError(err instanceof Error ? err.message : 'Failed to load logs')
     } finally {
-      setLoading(false)
+      logs.setLoading(false)
     }
-  }, [model.metadata.name, clusterName])
+  }, [model.metadata.name, clusterName, selectedPod])
 
   useEffect(() => {
-    fetchLogs()
-  }, [fetchLogs])
+    fetchPods()
+  }, [fetchPods])
 
-  const clearLogs = () => {
-    setLogs([])
-    setIsAtBottom(true)
-    setUserScrolledUp(false)
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading logs...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (selectedPod) {
+      fetchLogs()
+    }
+  }, [fetchLogs, selectedPod])
 
   return (
     <div className="space-y-6">
-      {/* Log Controls */}
-      <Card className="flex-shrink-0">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h4 className="text-sm font-medium">LiteLLM Proxy Logs</h4>
-              <p className="text-xs text-muted-foreground">
-                Viewing logs for model &ldquo;{model.metadata.name}&rdquo;
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {!isAtBottom && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={scrollToBottom}
-                  className="animate-pulse"
-                >
-                  <ChevronDown className="h-4 w-4 mr-1" />
-                  Scroll to Bottom
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearLogs}
-                disabled={logs.length === 0}
-              >
-                Clear
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchLogs}
-              >
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      {/* Pod Selection */}
+      <PodSelector
+        pods={pods.map(pod => ({
+          ...pod,
+          isRunning: pod.status === 'Running'
+        }))}
+        selectedPod={selectedPod}
+        selectedContainer={null}
+        podType="model"
+        onPodChange={(value) => {
+          setSelectedPod(value)
+          logs.clearLogs()
+        }}
+        onContainerChange={() => {}} // Model logs don't use container selection
+        onRefresh={fetchPods}
+        loading={podsLoading}
+        layout="horizontal"
+      />
 
-      {/* Error Display */}
-      {error && (
-        <Card className="flex-shrink-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Log Output */}
-      <Card>
-        <CardContent className="p-0">
-          <div
-            ref={logsContainerRef}
-            className="bg-black text-white font-mono text-sm max-h-[60vh] overflow-y-auto p-4"
-            onScroll={handleScroll}
-          >
-            {logs.length === 0 ? (
-              <div className="flex items-center justify-center h-32 text-gray-500">
-                {error ? 'Failed to load logs' : 'No logs available'}
-              </div>
-            ) : (
-              <div>
-                {logs.map((log, index) => (
-                  <div
-                    key={index}
-                    className="whitespace-pre-wrap break-words"
-                    dangerouslySetInnerHTML={{
-                      __html: convertAnsiToHtml(log)
-                    }}
-                  />
-                ))}
-                <div ref={logsEndRef} />
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Log Viewer */}
+      <PodLogViewer
+        logs={logs}
+        onRefresh={fetchLogs}
+        refreshDisabled={!selectedPod}
+        isStreaming={false}
+        onStartStreaming={startStreaming}
+        onStopStreaming={stopStreaming}
+        streamingDisabled={!selectedPod}
+      />
     </div>
   )
 }

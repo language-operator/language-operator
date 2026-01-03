@@ -211,6 +211,8 @@ class KubernetesClient {
     tailLines?: number
     timestamps?: boolean
     sinceSeconds?: number
+    container?: string
+    previous?: boolean
   }) {
     if (!this.coreV1Api) {
       throw new Error('Kubernetes API not available')
@@ -221,6 +223,8 @@ class KubernetesClient {
       tailLines: options?.tailLines || 100,
       timestamps: options?.timestamps || false,
       sinceSeconds: options?.sinceSeconds,
+      container: options?.container,
+      previous: options?.previous,
     })
   }
 
