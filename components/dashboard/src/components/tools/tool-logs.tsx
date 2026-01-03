@@ -122,11 +122,10 @@ export function ToolLogs({ tool, clusterName }: ToolLogsProps) {
     const currentPod = getCurrentPod()
     if (!currentPod) return `Viewing logs for tool "${tool.metadata.name}"`
 
-    const containerInfo = selectedContainer ? ` container "${selectedContainer}"` : ''
     if (deploymentMode === 'sidecar') {
-      return `Viewing logs from agent pod "${selectedPod}"${containerInfo} using sidecar tool "${tool.metadata.name}"`
+      return `Viewing logs from agent pod "${selectedPod}" using sidecar tool "${tool.metadata.name}"`
     } else {
-      return `Viewing logs from ${podType} pod "${selectedPod}"${containerInfo} for tool "${tool.metadata.name}"`
+      return `Viewing logs from ${podType} pod "${selectedPod}" for tool "${tool.metadata.name}"`
     }
   }
 
