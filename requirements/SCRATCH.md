@@ -10,6 +10,12 @@
 ### Recently Completed (Jan 4, 2026)
 - ✅ **Event Recording Centralization**: Successfully implemented centralized EventManager utility to eliminate 40+ duplicate event recording patterns across controllers. Created `/src/pkg/events/manager.go` with 25+ standardized event reason constants and type-safe recording methods. Refactored LanguageAgentReconciler and LanguageToolReconciler to use EventManager, reducing repetitive code and providing consistent event taxonomy. All tests pass and build successful. Remaining controllers (LanguageModel, LanguagePersona, LanguageCluster) can follow same pattern for complete migration.
 
+### Recently Completed (Jan 4, 2026) - Optimization
+- ✅ **Status Phase Constants Centralization**: Eliminated 40+ hardcoded status phase magic strings (`"Pending"`, `"Ready"`, `"Failed"`, `"Running"`, `"Updating"`) across 8 controllers by centralizing them as constants in `/src/pkg/events/manager.go`. Created 5 standardized constants (`PhaseStatusPending`, `PhaseStatusReady`, `PhaseStatusFailed`, `PhaseStatusRunning`, `PhaseStatusUpdating`) and refactored all controllers to use them. Also migrated `LanguageAgentVersionReconciler` to follow ReconcileHelper pattern for consistency. Achieved type safety, reduced maintenance burden, and ensured consistent status reporting. All tests pass.
+
+### Technical Debt Identified (Jan 4, 2026)
+- ✅ **Status Phase Magic Strings**: RESOLVED - centralized as constants
+
 ### Recently Completed (Jan 2, 2026)
 - ✅ **Issue #228**: Network policy issue with web tool - Root cause was incomplete egress configuration in web tool catalog template (missing `to` field in egress rules). Fixed deployed instance by patching LanguageTool with proper DNS targets (`*.duckduckgo.com`) and CIDR blocks (`0.0.0.0/0`). Verified NetworkPolicy now allows external HTTPS access and web search functionality restored. Opened upstream issue language-tools#8 for permanent catalog fix. Key lesson: egress rules need both `ports` and `to` fields, operator skips rules with `rule.To == nil`
 
