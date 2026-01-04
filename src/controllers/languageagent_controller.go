@@ -3298,8 +3298,8 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		"validationErrors", len(errorContext.ValidationErrors))
 
 	if r.Recorder != nil {
-		r.Recorder.Event(agent, corev1.EventTypeNormal, "SelfHealingSynthesisStarted",
-			"Starting self-healing code synthesis with error context")
+		r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingSynthesisStarted",
+			"Starting self-healing code synthesis for '%s' with error context", agent.Name)
 	}
 
 	// Create synthesizer from agent's model
@@ -3314,7 +3314,7 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		span.SetStatus(codes.Error, "Self-healing synthesis failed")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingSynthesisFailed",
-				"Self-healing synthesis failed: %v", err)
+				"Self-healing synthesis failed for '%s': %v", agent.Name, err)
 		}
 		return fmt.Errorf("self-healing synthesis failed: %w", err)
 	}
@@ -3325,7 +3325,7 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 		span.SetStatus(codes.Error, "Self-healing validation failed")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingValidationFailed",
-				"Self-healing validation failed: %s", resp.Error)
+				"Self-healing validation failed for '%s': %s", agent.Name, resp.Error)
 		}
 		return fmt.Errorf("self-healing validation failed: %s", resp.Error)
 	}
@@ -3376,7 +3376,7 @@ func (r *LanguageAgentReconciler) performSelfHealingSynthesis(ctx context.Contex
 
 	if r.Recorder != nil {
 		r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingSynthesisSucceeded",
-			"Self-healing synthesis succeeded in %.2fs (attempt %d)", resp.DurationSeconds, agent.Status.SelfHealingAttempts)
+			"Self-healing synthesis succeeded for '%s' in %.2fs (attempt %d)", agent.Name, resp.DurationSeconds, agent.Status.SelfHealingAttempts)
 	}
 
 	// Mark span as successful
@@ -3519,7 +3519,7 @@ func (r *LanguageAgentReconciler) detectPodFailures(ctx context.Context, agent *
 				// Record event
 				if r.Recorder != nil {
 					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RuntimeError",
-						"Pod %s failed: %s", pod.Name, runtimeError.ErrorMessage)
+						"LanguageAgent '%s' pod %s failed: %s", agent.Name, pod.Name, runtimeError.ErrorMessage)
 				}
 			}
 		}

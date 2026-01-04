@@ -200,7 +200,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "ConfigMapFailed",
-				"Failed to reconcile configuration: %v", err)
+				"Failed to reconcile configuration for LanguageTool '%s': %v", tool.Name, err)
 		}
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), tool.Generation)
 		r.Status().Update(ctx, tool)
@@ -218,7 +218,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile Deployment")
 			if r.Recorder != nil {
 				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "DeploymentFailed",
-					"Failed to create or update deployment: %v", err)
+					"Failed to create or update deployment for LanguageTool '%s': %v", tool.Name, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
@@ -233,7 +233,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile Service")
 			if r.Recorder != nil {
 				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "ServiceFailed",
-					"Failed to create or update service: %v", err)
+					"Failed to create or update service for LanguageTool '%s': %v", tool.Name, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)
@@ -250,7 +250,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 			if r.Recorder != nil {
 				r.Recorder.Eventf(tool, corev1.EventTypeWarning, "NetworkPolicyFailed",
-					"Failed to configure network isolation: %v", err)
+					"Failed to configure network isolation for LanguageTool '%s': %v", tool.Name, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 			r.Status().Update(ctx, tool)

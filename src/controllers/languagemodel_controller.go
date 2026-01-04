@@ -125,7 +125,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ConfigMapFailed",
-				"Failed to reconcile configuration: %v", err)
+				"Failed to reconcile configuration for LanguageModel '%s': %v", model.Name, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -143,7 +143,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "Failed to reconcile Deployment")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ProxyDeploymentFailed",
-				"Failed to create or update proxy deployment: %v", err)
+				"Failed to create or update proxy deployment for LanguageModel '%s': %v", model.Name, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -161,7 +161,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "Failed to reconcile Service")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ServiceFailed",
-				"Failed to create or update service: %v", err)
+				"Failed to create or update service for LanguageModel '%s': %v", model.Name, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -180,7 +180,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 			if r.Recorder != nil {
 				r.Recorder.Eventf(model, corev1.EventTypeWarning, "NetworkPolicyFailed",
-					"Failed to configure network isolation: %v", err)
+					"Failed to configure network isolation for LanguageModel '%s': %v", model.Name, err)
 			}
 			SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
 			model.Status.Phase = "Failed"
@@ -208,7 +208,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	if r.Recorder != nil {
 		r.Recorder.Eventf(model, corev1.EventTypeNormal, "ModelReady",
-			"Model proxy is ready for provider %s", model.Spec.Provider)
+			"LanguageModel '%s' proxy is ready for provider %s", model.Name, model.Spec.Provider)
 	}
 
 	if err := r.Status().Update(ctx, model); err != nil {

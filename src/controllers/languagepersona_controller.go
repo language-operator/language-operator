@@ -92,7 +92,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		if r.Recorder != nil {
 			r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaCreated",
-				"LanguagePersona created: %s", persona.Spec.DisplayName)
+				"LanguagePersona '%s' created: %s", persona.Name, persona.Spec.DisplayName)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -104,7 +104,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(persona, corev1.EventTypeWarning, "ConfigurationFailed",
-				"Failed to store persona configuration: %v", err)
+				"Failed to store persona configuration for LanguagePersona '%s': %v", persona.Name, err)
 		}
 		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
 		persona.Status.Phase = "Failed"
@@ -123,7 +123,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if r.Recorder != nil {
 		r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaReady",
-			"Persona '%s' is ready for agent assignment", persona.Spec.DisplayName)
+			"LanguagePersona '%s' (%s) is ready for agent assignment", persona.Name, persona.Spec.DisplayName)
 	}
 
 	if err := r.Status().Update(ctx, persona); err != nil {
