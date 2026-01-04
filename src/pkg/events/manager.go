@@ -74,6 +74,15 @@ const (
 	ReasonProxyDeploymentFailed = "ProxyDeploymentFailed"
 )
 
+// Resource status phase constants - standardized across all controllers
+const (
+	PhaseStatusPending  = "Pending"
+	PhaseStatusReady    = "Ready"
+	PhaseStatusFailed   = "Failed"
+	PhaseStatusRunning  = "Running"
+	PhaseStatusUpdating = "Updating"
+)
+
 // EventManager provides centralized, type-safe event recording for all controllers
 type EventManager struct {
 	recorder record.EventRecorder

@@ -455,7 +455,7 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		}
 
 		// Wait for cluster to be ready
-		if cluster.Status.Phase != "Ready" {
+		if cluster.Status.Phase != events.PhaseStatusReady {
 			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
 		}
 
@@ -618,7 +618,7 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
 	// For sidecar mode tools, just set as ready (no deployment to check)
 	if tool.Spec.DeploymentMode == "sidecar" {
-		tool.Status.Phase = "Running"
+		tool.Status.Phase = events.PhaseStatusRunning
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
 		// Note: Sidecar tools don't have a service endpoint, so we can't discover schemas
@@ -633,7 +633,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Deployment doesn't exist yet
-			tool.Status.Phase = "Pending"
+			tool.Status.Phase = events.PhaseStatusPending
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentNotFound", "Deployment not found", tool.Generation)
 			return r.Status().Update(ctx, tool)
 		}
@@ -654,14 +654,14 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 	// Check if deployment is updating
 	if deployment.Status.UpdatedReplicas < desiredReplicas {
-		tool.Status.Phase = "Updating"
+		tool.Status.Phase = events.PhaseStatusUpdating
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "Updating", "Deployment is updating", tool.Generation)
 		return r.Status().Update(ctx, tool)
 	}
 
 	// Check if any pods are ready
 	if deployment.Status.ReadyReplicas > 0 {
-		tool.Status.Phase = "Running"
+		tool.Status.Phase = events.PhaseStatusRunning
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
 		// Discover MCP tool schemas for service mode tools
@@ -690,13 +690,13 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	// No pods ready - check if deployment has been created recently
 	if deployment.Status.AvailableReplicas == 0 && deployment.Status.UnavailableReplicas > 0 {
 		// Pods exist but none are ready - likely CrashLoopBackOff or similar
-		tool.Status.Phase = "Failed"
+		tool.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "PodsNotReady", "No pods are ready", tool.Generation)
 		return r.Status().Update(ctx, tool)
 	}
 
 	// Deployment exists but no replicas yet
-	tool.Status.Phase = "Pending"
+	tool.Status.Phase = events.PhaseStatusPending
 	SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "Pending", "Waiting for pods to be scheduled", tool.Generation)
 	return r.Status().Update(ctx, tool)
 }

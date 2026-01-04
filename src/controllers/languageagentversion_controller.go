@@ -17,13 +17,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
 // LanguageAgentVersionReconciler reconciles a LanguageAgentVersion object
 type LanguageAgentVersionReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme       *runtime.Scheme
+	Recorder     record.EventRecorder
+	EventManager *events.EventManager
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentversions,verbs=get;list;watch;create;update;patch;delete
@@ -34,48 +37,63 @@ type LanguageAgentVersionReconciler struct {
 
 // Reconcile manages the lifecycle of LanguageAgentVersion resources
 func (r *LanguageAgentVersionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	// Use the reconciler helper for common setup
+	helper := &reconciler.ReconcileHelper[*langopv1alpha1.LanguageAgentVersion]{
+		Client:       r.Client,
+		TracerName:   "language-operator/agentversion-controller",
+		ResourceType: "agentversion",
+	}
 
-	// Fetch the LanguageAgentVersion instance
-	version := &langopv1alpha1.LanguageAgentVersion{}
-	if err := r.Get(ctx, req.NamespacedName, version); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Object not found, return without error (may have been deleted)
-			return ctrl.Result{}, nil
-		}
-		log.Error(err, "Failed to get LanguageAgentVersion")
+	// Start reconciliation with tracing and resource fetching
+	result, err := helper.StartReconcile(ctx, req, &langopv1alpha1.LanguageAgentVersion{})
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if result == nil {
+		// Resource not found (deleted)
+		return ctrl.Result{}, nil
+	}
+
+	version := result.Resource
+	var reconcileErr error
+
+	// Defer span completion
+	defer func() {
+		result.CompleteReconcile(reconcileErr)
+	}()
 
 	// Set initial status if not set
 	if version.Status.Phase == "" {
-		version.Status.Phase = "Pending"
-		if err := r.Status().Update(ctx, version); err != nil {
-			log.Error(err, "Failed to initialize status")
-			return ctrl.Result{RequeueAfter: time.Second * 30}, err
+		version.Status.Phase = events.PhaseStatusPending
+		if err := r.Status().Update(result.Ctx, version); err != nil {
+			reconcileErr = fmt.Errorf("failed to initialize status: %w", err)
+			return ctrl.Result{RequeueAfter: time.Second * 30}, reconcileErr
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Validate the version resource
-	if err := r.validateVersion(ctx, version); err != nil {
-		return r.updateStatusWithError(ctx, version, "ValidationFailed", err)
+	if err := r.validateVersion(result.Ctx, version); err != nil {
+		reconcileErr = err
+		return r.updateStatusWithError(result.Ctx, version, "ValidationFailed", err)
 	}
 
 	// Ensure the referenced agent exists
-	agent, err := r.validateAgentReference(ctx, version)
+	agent, err := r.validateAgentReference(result.Ctx, version)
 	if err != nil {
-		return r.updateStatusWithError(ctx, version, "AgentNotFound", err)
+		reconcileErr = err
+		return r.updateStatusWithError(result.Ctx, version, "AgentNotFound", err)
 	}
 
 	// Create or update the underlying ConfigMap
-	if err := r.reconcileConfigMap(ctx, version, agent); err != nil {
-		return r.updateStatusWithError(ctx, version, "ConfigMapFailed", err)
+	if err := r.reconcileConfigMap(result.Ctx, version, agent); err != nil {
+		reconcileErr = err
+		return r.updateStatusWithError(result.Ctx, version, "ConfigMapFailed", err)
 	}
 
 	// Update status to Ready
-	if version.Status.Phase != "Ready" {
-		version.Status.Phase = "Ready"
+	if version.Status.Phase != events.PhaseStatusReady {
+		version.Status.Phase = events.PhaseStatusReady
 		now := metav1.Now()
 		version.Status.AppliedAt = &now
 		version.Status.Message = "LanguageAgentVersion is ready and ConfigMap has been created"
@@ -84,20 +102,15 @@ func (r *LanguageAgentVersionReconciler) Reconcile(ctx context.Context, req ctrl
 		r.setCondition(version, "Ready", metav1.ConditionTrue, "ConfigMapCreated",
 			"Successfully created underlying ConfigMap")
 
-		if err := r.Status().Update(ctx, version); err != nil {
-			log.Error(err, "Failed to update status to Ready")
-			return ctrl.Result{RequeueAfter: time.Second * 30}, err
+		if err := r.Status().Update(result.Ctx, version); err != nil {
+			reconcileErr = fmt.Errorf("failed to update status to Ready: %w", err)
+			return ctrl.Result{RequeueAfter: time.Second * 30}, reconcileErr
 		}
 
 		r.Recorder.Event(version, corev1.EventTypeNormal, "Ready",
 			fmt.Sprintf("LanguageAgentVersion v%d for agent %s is ready",
 				version.Spec.Version, version.Spec.AgentRef.Name))
 	}
-
-	log.Info("LanguageAgentVersion reconciled successfully",
-		"version", version.Spec.Version,
-		"agent", version.Spec.AgentRef.Name,
-		"phase", version.Status.Phase)
 
 	return ctrl.Result{}, nil
 }
@@ -231,7 +244,7 @@ func (r *LanguageAgentVersionReconciler) reconcileConfigMap(ctx context.Context,
 func (r *LanguageAgentVersionReconciler) updateStatusWithError(ctx context.Context, version *langopv1alpha1.LanguageAgentVersion, reason string, err error) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	version.Status.Phase = "Failed"
+	version.Status.Phase = events.PhaseStatusFailed
 	version.Status.Message = err.Error()
 
 	// Add failed condition

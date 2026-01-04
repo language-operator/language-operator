@@ -40,6 +40,7 @@ import (
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/network"
 )
 
@@ -99,7 +100,7 @@ func ValidateClusterReference(ctx context.Context, c client.Client, clusterRef, 
 		return fmt.Errorf("failed to get cluster %s: %w", clusterRef, err)
 	}
 
-	if cluster.Status.Phase != "Ready" {
+	if cluster.Status.Phase != events.PhaseStatusReady {
 		return fmt.Errorf("cluster %s is not ready yet (phase: %s)", clusterRef, cluster.Status.Phase)
 	}
 

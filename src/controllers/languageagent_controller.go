@@ -425,8 +425,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Update status only if something changed
 	statusChanged := runCounterIncremented
-	if agent.Status.Phase != "Running" {
-		agent.Status.Phase = "Running"
+	if agent.Status.Phase != events.PhaseStatusRunning {
+		agent.Status.Phase = events.PhaseStatusRunning
 		statusChanged = true
 	}
 	if SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation) {
@@ -532,7 +532,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 				"MaxAttemptsExceeded",
 				fmt.Sprintf("Self-healing failed after %d attempts", r.MaxSelfHealingAttempts),
 				agent.Generation)
-			agent.Status.Phase = "Failed"
+			agent.Status.Phase = events.PhaseStatusFailed
 			if err := r.Status().Update(ctx, agent); err != nil {
 				return err
 			}
@@ -892,7 +892,7 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 				log.Error(err, "Failed to check current AgentVersionRef, keeping current reference",
 					"agent", agent.Name, "currentRef", agent.Spec.AgentVersionRef.Name)
 			}
-		} else if currentVersion.Status.Phase != "Ready" {
+		} else if currentVersion.Status.Phase != events.PhaseStatusReady {
 			// Check if version is locked before auto-updating
 			if agent.Spec.AgentVersionRef.Lock {
 				log.Info("Current AgentVersionRef is locked and unready, keeping locked reference",
@@ -2246,7 +2246,7 @@ func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *lango
 		}
 
 		// Check if persona is ready
-		if persona.Status.Phase != "Ready" {
+		if persona.Status.Phase != events.PhaseStatusReady {
 			return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", namespace, ref.Name, persona.Status.Phase)
 		}
 
@@ -3877,7 +3877,7 @@ func (r *LanguageAgentReconciler) resolveCodeConfigMapName(ctx context.Context, 
 	}
 
 	// Check if the version is ready
-	if agentVersion.Status.Phase != "Ready" {
+	if agentVersion.Status.Phase != events.PhaseStatusReady {
 		return "", fmt.Errorf("referenced LanguageAgentVersion %s is not ready (phase: %s)",
 			agent.Spec.AgentVersionRef.Name, agentVersion.Status.Phase)
 	}
