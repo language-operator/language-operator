@@ -16,6 +16,7 @@
     "db:migrate": "prisma db push",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
+    "dev:seed": "npx tsx src/scripts/dev-seed.ts",
     "migrate:namespaces": "npx tsx src/scripts/migrate-organization-namespaces.ts",
     "initialize-tenant": "npx tsx src/scripts/initialize-tenant.ts"
   },

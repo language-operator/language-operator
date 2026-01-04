@@ -70,42 +70,12 @@ spec:
         command: ['sh', '-c']
         args:
         - |
-          echo "Running database migrations..."
-
-          # Note: Prisma client is already generated at build time
-          # We only need to run migrations
-
-          echo "Deploying migrations..."
-
-          # Handle the case where the database schema exists but migrations weren't tracked
-          # This can happen if the database was initialized with 'db push' instead of 'migrate deploy'
-          npx prisma migrate deploy 2>&1 | tee /tmp/migrate.log
-          EXIT_CODE=$?
-
-          # Check for P3005 error (database not empty)
-          if grep -q "P3005" /tmp/migrate.log; then
-            echo "Database schema exists but migrations not tracked. Resolving..."
-            # Mark all pending migrations as applied
-            npx prisma migrate resolve --applied 20241210_000000_init
-            # Try deploy again
-            npx prisma migrate deploy
-          # Check for P3009 error (failed migration)
-          elif grep -q "P3009" /tmp/migrate.log; then
-            echo "Found failed migration. Resolving..."
-            # Hardcode the known failed migration name for now
-            FAILED_MIGRATION="20251224210132_add_conversation_models"
-            echo "Failed migration: $FAILED_MIGRATION"
-            # Mark the failed migration as rolled back
-            npx prisma migrate resolve --rolled-back "$FAILED_MIGRATION"
-            # Try deploy again
-            npx prisma migrate deploy
-          elif [ $EXIT_CODE -ne 0 ]; then
-            echo "Migration failed with unexpected error (exit code: $EXIT_CODE)"
-            cat /tmp/migrate.log
-            exit $EXIT_CODE
-          fi
-
-          echo "Database migrations completed successfully"
+          echo "🔄 Running database migrations..."
+          
+          # Deploy all pending migrations
+          npx prisma migrate deploy
+          
+          echo "✅ Database migrations completed successfully"
         env:
         - name: DATABASE_URL
           valueFrom:

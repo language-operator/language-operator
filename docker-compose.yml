@@ -85,7 +85,7 @@ services:
         source: ${HOME}/.kube/config
         target: /app/.kube/config
         read_only: true
-    command: sh -c "npx prisma generate && npx prisma db push && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev:seed && npm run dev"
 
   # Prisma Studio for database management
   prisma-studio:
