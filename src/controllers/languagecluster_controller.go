@@ -126,8 +126,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 		if r.Recorder != nil {
-			r.Recorder.Event(cluster, corev1.EventTypeNormal, "ClusterCreated",
-				"LanguageCluster resource created")
+			r.Recorder.Eventf(cluster, corev1.EventTypeNormal, "ClusterCreated",
+				"LanguageCluster '%s' created", cluster.Name)
 		}
 		// Requeue after adding finalizer
 		return ctrl.Result{Requeue: true}, nil
@@ -145,7 +145,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.SetStatus(codes.Error, "Failed to reconcile agent RBAC")
 		if r.Recorder != nil {
 			r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "RBACFailed",
-				"Failed to configure agent permissions: %v", err)
+				"Failed to configure agent RBAC permissions for '%s': %v", cluster.Name, err)
 		}
 		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 			"RBACError", err.Error(), cluster.Generation)
@@ -164,7 +164,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 			if r.Recorder != nil {
 				r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "NetworkPolicyFailed",
-					"Failed to configure cluster network isolation: %v", err)
+					"Failed to configure network isolation for '%s': %v", cluster.Name, err)
 			}
 			SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 				"NetworkPolicyError", err.Error(), cluster.Generation)
@@ -190,8 +190,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"ReconcileSuccess", "LanguageCluster is ready", cluster.Generation)
 
 	if r.Recorder != nil {
-		r.Recorder.Event(cluster, corev1.EventTypeNormal, "ClusterReady",
-			"LanguageCluster is ready for agent deployment")
+		r.Recorder.Eventf(cluster, corev1.EventTypeNormal, "ClusterReady",
+			"LanguageCluster '%s' is ready", cluster.Name)
 	}
 
 	if err := r.Status().Update(ctx, cluster); err != nil {

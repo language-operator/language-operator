@@ -112,8 +112,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 		if r.Recorder != nil {
-			r.Recorder.Event(model, corev1.EventTypeNormal, "ModelCreated",
-				"LanguageModel resource created")
+			r.Recorder.Eventf(model, corev1.EventTypeNormal, "ModelCreated",
+				"LanguageModel '%s' created", model.Name)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
