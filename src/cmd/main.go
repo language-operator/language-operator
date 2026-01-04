@@ -44,6 +44,7 @@ import (
 	"github.com/language-operator/language-operator/controllers"
 	"github.com/language-operator/language-operator/pkg/cni"
 	registryconfig "github.com/language-operator/language-operator/pkg/config"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
@@ -359,6 +360,7 @@ func main() {
 		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageTool"),
 		RegistryManager:         registryManager,
 		Recorder:                mgr.GetEventRecorderFor("languagetool-controller"),
+		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languagetool-controller")),
 		NetworkIsolationEnabled: networkIsolationEnabled,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
@@ -383,6 +385,7 @@ func main() {
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
 		Recorder:                mgr.GetEventRecorderFor("languageagent-controller"),
+		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languageagent-controller")),
 		RegistryManager:         registryManager,
 		NetworkPolicyTimeout:    networkPolicyTimeout,
 		NetworkPolicyRetries:    networkPolicyRetries,

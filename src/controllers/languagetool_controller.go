@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/validation"
 )
@@ -40,6 +41,7 @@ type LanguageToolReconciler struct {
 	Log                     logr.Logger
 	RegistryManager         RegistryManager
 	Recorder                record.EventRecorder
+	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
 }
 
@@ -166,9 +168,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.Recorder != nil {
-			r.Recorder.Eventf(tool, corev1.EventTypeNormal, "ToolCreated",
-				"LanguageTool created with type %s", tool.Spec.Type)
+		if r.EventManager != nil {
+			r.EventManager.RecordToolCreated(tool, tool.Spec.Type)
 		}
 	}
 
@@ -177,9 +178,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(tool, corev1.EventTypeWarning, "RegistryValidationFailed",
-				"Image registry not in whitelist: %s", tool.Spec.Image)
+		if r.EventManager != nil {
+			r.EventManager.RecordRegistryValidationFailed(tool, tool.Spec.Image)
 		}
 		SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), tool.Generation)
 		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
@@ -189,9 +189,8 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionTrue, "Validated", "Image registry is in whitelist", tool.Generation)
-	if r.Recorder != nil {
-		r.Recorder.Event(tool, corev1.EventTypeNormal, "RegistryValidated",
-			"Container image registry validated successfully")
+	if r.EventManager != nil {
+		r.EventManager.RecordRegistryValidated(tool)
 	}
 
 	// Reconcile ConfigMap

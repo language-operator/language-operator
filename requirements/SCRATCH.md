@@ -7,6 +7,12 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
+### Recently Completed (Jan 4, 2026)
+- ✅ **Event Recording Centralization**: Successfully implemented centralized EventManager utility to eliminate 40+ duplicate event recording patterns across controllers. Created `/src/pkg/events/manager.go` with 25+ standardized event reason constants and type-safe recording methods. Refactored LanguageAgentReconciler and LanguageToolReconciler to use EventManager, reducing repetitive code and providing consistent event taxonomy. All tests pass and build successful. Remaining controllers (LanguageModel, LanguagePersona, LanguageCluster) can follow same pattern for complete migration.
+
+### Recently Completed (Jan 2, 2026)
+- ✅ **Issue #228**: Network policy issue with web tool - Root cause was incomplete egress configuration in web tool catalog template (missing `to` field in egress rules). Fixed deployed instance by patching LanguageTool with proper DNS targets (`*.duckduckgo.com`) and CIDR blocks (`0.0.0.0/0`). Verified NetworkPolicy now allows external HTTPS access and web search functionality restored. Opened upstream issue language-tools#8 for permanent catalog fix. Key lesson: egress rules need both `ports` and `to` fields, operator skips rules with `rule.To == nil`
+
 ### Recently Completed (Jan 1, 2026)
 - ✅ **Issue #226**: Add support for disabling signups - Implemented `LANGOP_SIGNUPS_DISABLED` environment variable to control signup access. When enabled, signup page shows error message and redirects to login, API returns 403 for direct signups, and login page hides "Create Account" link. Invitation system continues to work normally with disabled signups. Added Helm chart configuration via `dashboard.features.signupsDisabled` value. Maintains backward compatibility with default disabled=false (commit pending)
 

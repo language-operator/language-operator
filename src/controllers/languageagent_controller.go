@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/validation"
@@ -66,6 +67,7 @@ type LanguageAgentReconciler struct {
 	Scheme                  *runtime.Scheme
 	Log                     logr.Logger
 	Recorder                record.EventRecorder
+	EventManager            *events.EventManager
 	MaxSelfHealingAttempts  int32
 	SelfHealingEnabled      bool
 	RateLimiter             *synthesis.RateLimiter
@@ -184,8 +186,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
 		SetCondition(&agent.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), agent.Generation)
-		if r.Recorder != nil {
-			r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RegistryValidationFailed", "Image registry not in whitelist: %s", agent.Spec.Image)
+		if r.EventManager != nil {
+			r.EventManager.RecordRegistryValidationFailed(agent, agent.Spec.Image)
 		}
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after registry validation failure")
@@ -267,9 +269,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					"error", err.Error())
 
 				// Record warning event
-				if r.Recorder != nil {
-					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyTimeout",
-						"NetworkPolicy creation timed out. Network isolation may be degraded. Consider increasing --network-policy-timeout flag for slow CNI.")
+				if r.EventManager != nil {
+					r.EventManager.RecordNetworkPolicyTimeout(agent)
 				}
 
 				// Don't fail the entire reconciliation for timeout - continue with degraded state
@@ -294,7 +295,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cni)
 			SetCondition(&agent.Status.Conditions, "NetworkPolicyEnforced", metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
 			if r.Recorder != nil {
-				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "NetworkPolicyUnsupported", "CNI '%s' does not enforce NetworkPolicy", cni)
+				r.EventManager.RecordNetworkPolicyUnsupported(agent, cni)
 			}
 			log.Info("NetworkPolicy enforcement not supported", "cni", cni)
 		} else {
@@ -535,9 +536,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			if err := r.Status().Update(ctx, agent); err != nil {
 				return err
 			}
-			if r.Recorder != nil {
-				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SelfHealingMaxAttempts",
-					"Self-healing max attempts (%d) reached, agent marked as failed", r.MaxSelfHealingAttempts)
+			if r.EventManager != nil {
+				r.EventManager.RecordSelfHealingMaxAttempts(agent, int(r.MaxSelfHealingAttempts))
 			}
 			return fmt.Errorf("max self-healing attempts exceeded")
 		}
@@ -557,10 +557,9 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		log.Info("Triggering self-healing synthesis",
 			"attempt", agent.Status.SelfHealingAttempts+1,
 			"maxAttempts", r.MaxSelfHealingAttempts)
-		if r.Recorder != nil {
-			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SelfHealingTriggered",
-				"Self-healing synthesis triggered after %d consecutive failures (attempt %d/%d)",
-				agent.Status.ConsecutiveFailures, agent.Status.SelfHealingAttempts+1, r.MaxSelfHealingAttempts)
+		if r.EventManager != nil {
+			r.EventManager.RecordSelfHealingTriggered(agent, int(agent.Status.ConsecutiveFailures),
+				int(agent.Status.SelfHealingAttempts+1), int(r.MaxSelfHealingAttempts))
 		}
 
 		agent.Status.SelfHealingAttempts++
@@ -679,8 +678,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		// Check rate limit before synthesis
 		if r.RateLimiter != nil {
 			if err := r.RateLimiter.CheckAndConsume(ctx, agent.Namespace); err != nil {
-				if r.Recorder != nil {
-					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "RateLimitExceeded", "Synthesis rate limit exceeded: %v", err)
+				if r.EventManager != nil {
+					r.EventManager.RecordRateLimitExceeded(agent, err)
 				}
 				log.Info("Synthesis rate limit exceeded", "agent", agent.Name, "namespace", agent.Namespace)
 				// Record rate limit metric
@@ -697,8 +696,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		if r.QuotaManager != nil {
 			// Check attempt quota
 			if err := r.QuotaManager.CheckAttemptQuota(ctx, agent.Namespace); err != nil {
-				if r.Recorder != nil {
-					r.Recorder.Eventf(agent, corev1.EventTypeWarning, "QuotaExceeded", "Synthesis attempt quota exceeded: %v", err)
+				if r.EventManager != nil {
+					r.EventManager.RecordQuotaExceeded(agent, err)
 				}
 				log.Info("Synthesis attempt quota exceeded", "agent", agent.Name, "namespace", agent.Namespace)
 				// Record quota exceeded metric
@@ -712,8 +711,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 
 		// Synthesize code
 		log.Info("Synthesizing agent code", "agent", agent.Name)
-		if r.Recorder != nil {
-			r.Recorder.Event(agent, corev1.EventTypeNormal, "SynthesisStarted", "Starting code synthesis from natural language instructions")
+		if r.EventManager != nil {
+			r.EventManager.RecordSynthesisStarted(agent)
 		}
 
 		// Create synthesizer from agent's model
@@ -736,8 +735,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			r.QuotaManager.RecordAttempt(ctx, agent.Namespace, agent.Name, success, errorMsg)
 		}
 		if err != nil {
-			if r.Recorder != nil {
-				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "SynthesisFailed", "Code synthesis failed: %v", err)
+			if r.EventManager != nil {
+				r.EventManager.RecordSynthesisFailed(agent, err)
 			}
 			// Record failure metrics
 			synthesis.RecordSynthesisRequest(agent.Namespace, "failed")
@@ -749,8 +748,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		}
 
 		if resp.Error != "" {
-			if r.Recorder != nil {
-				r.Recorder.Eventf(agent, corev1.EventTypeWarning, "ValidationFailed", "Synthesized code validation failed: %s", resp.Error)
+			if r.EventManager != nil {
+				r.EventManager.RecordValidationFailed(agent, resp.Error)
 			}
 			// Record validation failure metrics
 			synthesis.RecordSynthesisRequest(agent.Namespace, "validation_failed")
@@ -775,8 +774,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 		)
 		span.SetStatus(codes.Ok, "Synthesis successful")
 
-		if r.Recorder != nil {
-			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "SynthesisSucceeded", "Code synthesized successfully in %.2fs", resp.DurationSeconds)
+		if r.EventManager != nil {
+			r.EventManager.RecordSynthesisSucceeded(agent, resp.DurationSeconds)
 		}
 
 		// Record synthesis cost if available
@@ -846,8 +845,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 				log.Error(err, "Failed to re-distill persona")
 			} else {
 				log.Info("Persona re-distilled successfully")
-				if r.Recorder != nil {
-					r.Recorder.Event(agent, corev1.EventTypeNormal, "PersonaUpdated", "Persona re-distilled without code re-synthesis")
+				if r.EventManager != nil {
+					r.EventManager.RecordPersonaUpdated(agent)
 				}
 			}
 		}
@@ -964,9 +963,8 @@ func (r *LanguageAgentReconciler) reconcileCodeConfigMap(ctx context.Context, ag
 			"agent", agent.Name,
 			"executionMode", agent.Spec.ExecutionMode,
 			"schedule", agent.Spec.Schedule)
-		if r.Recorder != nil {
-			r.Recorder.Eventf(agent, corev1.EventTypeNormal, "ExecutionModeDetected",
-				"Auto-detected executionMode: %s", detectedMode)
+		if r.EventManager != nil {
+			r.EventManager.RecordExecutionModeDetected(agent, detectedMode)
 		}
 	}
 
