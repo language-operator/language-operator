@@ -71,21 +71,22 @@ dev-up:
 	@echo "Starting development dashboard and database..."
 	@docker compose up -d
 	@echo ""
-	@echo "⏳ Waiting for services to start..."
-	@sleep 5
+	@echo "⏳ Waiting for services to be ready..."
+	@until curl -s http://localhost:3000 > /dev/null 2>&1; do \
+		echo "  Dashboard not ready yet, waiting..."; \
+		sleep 2; \
+	done
 	@echo ""
 	@echo "✅ Services running:"
-	@echo "   📊 Dashboard:      http://localhost:3000"
-	@echo "   🗄️  Database:       postgresql://dev:dev@localhost:5433/language_operator_dev"
-	@echo "   🎛️  Prisma Studio:  http://localhost:5555"
+	@echo "   Dashboard:      http://localhost:3000"
+	@echo "   Database:       postgresql://dev:dev@localhost:5433/language_operator_dev"
+	@echo "   Prisma Studio:  http://localhost:5555"
 	@echo ""
-	@echo "📝 Database migrations and seeding are automatically applied during startup"
-	@echo "🔑 Development login: james@theryans.io / password123"
+	@echo "🔑 Credentials:"
+	@echo "   Email: james@theryans.io"
+	@echo "   Password: password123"
 	@echo ""
-	@echo "📝 Next steps:"
-	@echo "   • View logs: make dev-logs"
-	@echo "   • Check status: make dev-status"
-	@echo "   • Access via kubectl proxy for K8s service discovery"
+	@echo "You can now open http:/localhost:3000/ in your browser to log in."
 
 dev-down:
 	@echo "Stopping development environment..."

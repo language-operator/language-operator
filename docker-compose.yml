@@ -69,6 +69,10 @@ services:
       LANGOP_SIGNUPS_DISABLED: "${LANGOP_SIGNUPS_DISABLED:-false}"
       # Organization namespace prefix
       LANGOP_ORGANIZATION_NAMESPACE_PREFIX: "${LANGOP_ORGANIZATION_NAMESPACE_PREFIX:-language-operator-}"
+      # Initial admin user setup (matches Helm chart pattern)
+      LANGOP_INIT_ADMIN_NAME: "Development Admin"
+      LANGOP_INIT_ADMIN_EMAIL: "james@theryans.io"
+      LANGOP_INIT_ADMIN_PASSWORD_HASH: "$2b$12$4vaIe9Y1vKrtQSCg7JWkwuwCPFPcZfkk19YraHEL6P2YHRcHK6PiS"
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -85,7 +89,7 @@ services:
         source: ${HOME}/.kube/config
         target: /app/.kube/config
         read_only: true
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev:seed && npm run dev"
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run initialize-tenant && npm run dev"
 
   # Prisma Studio for database management
   prisma-studio:

@@ -18,15 +18,17 @@ import {
   MessageSquare,
   Palette,
   ChevronLeft,
+  Gauge,
 } from 'lucide-react'
 
 const globalNavigation = [
   { name: 'Overview', href: '/', icon: Home },
+  { name: 'Usage', href: '/usage', icon: BarChart3 },
   { name: 'Clusters', href: '/clusters', icon: Boxes },
 ]
 
 const clusterNavigation = [
-  { name: 'Dashboard', href: '', icon: BarChart3 }, // Will be prefixed with /clusters/[name]
+  { name: 'Dashboard', href: '', icon: Gauge }, // Will be prefixed with /clusters/[name]
   { name: 'Console', href: '/console', icon: MessageSquare },
   { name: 'Agents', href: '/agents', icon: Bot },
   { name: 'Tools', href: '/tools', icon: Wrench },
