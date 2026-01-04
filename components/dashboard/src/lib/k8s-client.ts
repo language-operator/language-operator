@@ -78,6 +78,12 @@ class KubernetesClient {
       this.batchV1Api = this.kc.makeApiClient(k8s.BatchV1Api)
     } catch (error) {
       console.error('❌ Failed to configure Kubernetes client:', error instanceof Error ? error.message : String(error))
+      console.error('❌ Full error details:', error)
+      console.error('❌ Environment variables:')
+      console.error('  KUBERNETES_SERVER_URL:', process.env.KUBERNETES_SERVER_URL)
+      console.error('  KUBERNETES_TOKEN:', process.env.KUBERNETES_TOKEN ? '***SET***' : 'NOT_SET')
+      console.error('  NODE_ENV:', process.env.NODE_ENV)
+      console.error('  KUBECONFIG:', process.env.KUBECONFIG)
       throw new Error('Kubernetes configuration is required')
     }
   }
