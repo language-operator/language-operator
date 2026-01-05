@@ -3,37 +3,45 @@
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { USAGE_STATUS_COLORS, type UsageCardData } from '@/types/usage'
+import { getResourceIcon } from '@/components/ui/icons'
 
 interface ResourceUsageCardProps {
   data: UsageCardData
   className?: string
 }
 
-function UsageStatusBadge({ percentage }: { percentage: number }) {
-  if (percentage >= 96) {
-    return (
-      <span className="text-[10px] tracking-widest uppercase font-light text-red-600 dark:text-red-400">
-        Exceeded
-      </span>
-    )
-  } else if (percentage >= 86) {
-    return (
-      <span className="text-[10px] tracking-widest uppercase font-light text-orange-600 dark:text-orange-400">
-        Critical
-      </span>
-    )
-  } else if (percentage >= 71) {
-    return (
-      <span className="text-[10px] tracking-widest uppercase font-light text-amber-600 dark:text-amber-400">
-        Warning
-      </span>
-    )
-  } else {
-    return (
-      <span className="text-[10px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400">
-        Healthy
-      </span>
-    )
+function UsageStatusBadge({ status }: { status: 'healthy' | 'warning' | 'critical' | 'limit' | 'exceeded' }) {
+  switch (status) {
+    case 'exceeded':
+      return (
+        <span className="text-[10px] tracking-widest uppercase font-light text-red-600 dark:text-red-400">
+          Exceeded
+        </span>
+      )
+    case 'limit':
+      return (
+        <span className="text-[10px] tracking-widest uppercase font-light text-amber-600 dark:text-amber-400">
+          Limit
+        </span>
+      )
+    case 'critical':
+      return (
+        <span className="text-[10px] tracking-widest uppercase font-light text-orange-600 dark:text-orange-400">
+          Critical
+        </span>
+      )
+    case 'warning':
+      return (
+        <span className="text-[10px] tracking-widest uppercase font-light text-amber-600 dark:text-amber-400">
+          Warning
+        </span>
+      )
+    default:
+      return (
+        <span className="text-stone-600 dark:text-stone-400">
+          ✓
+        </span>
+      )
   }
 }
 
@@ -41,12 +49,18 @@ export function ResourceUsageCard({ data, className }: ResourceUsageCardProps) {
   const { resource, current, limit, percentage, status, description } = data
   const statusColor = USAGE_STATUS_COLORS[status]
 
+
   return (
     <Card className={cn("gap-6 py-6", className)}>
       <CardHeader className="px-8 space-y-4">
-        <CardTitle className="text-sm font-light text-stone-600 dark:text-stone-400">
-          {resource}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-light text-stone-600 dark:text-stone-400">
+            {resource}
+          </CardTitle>
+          <div className="text-stone-400 dark:text-stone-500">
+            {getResourceIcon(resource, { className: "h-4 w-4" })}
+          </div>
+        </div>
       </CardHeader>
       
       <CardContent className="px-8">
@@ -82,7 +96,7 @@ export function ResourceUsageCard({ data, className }: ResourceUsageCardProps) {
             <span className="text-stone-600 dark:text-stone-400">
               {percentage.toFixed(1)}% used
             </span>
-            <UsageStatusBadge percentage={percentage} />
+            <UsageStatusBadge status={status} />
           </div>
           
           {/* Description */}

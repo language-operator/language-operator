@@ -3,34 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { usePlanInfo } from '@/hooks/useOrganizationUsage'
-import { ArrowRight, Zap, Users, Cpu, Building } from 'lucide-react'
+import { PlanFeatureIcon } from '@/components/ui/icons'
+import { ArrowRight } from 'lucide-react'
 
-const PLAN_FEATURES = {
-  free: {
-    title: 'Free Plan',
-    subtitle: 'Perfect for exploring the frontier',
-    features: ['3 agents', '2 models', '1 GB memory', '1 CPU core'],
-    limitations: 'Limited resources for small experiments'
-  },
-  pro: {
-    title: 'Professional Plan',
-    subtitle: 'Built for the modern operator',
-    features: ['25 agents', '10 models', '16 GB memory', '8 CPU cores'],
-    limitations: 'Designed for growing AI operations'
-  },
-  enterprise: {
-    title: 'Enterprise Plan',
-    subtitle: 'Unlimited horizons await',
-    features: ['Unlimited agents', 'Unlimited models', '64 GB memory', '32 CPU cores'],
-    limitations: 'Full-scale AI deployment capabilities'
-  },
-  custom: {
-    title: 'Custom Plan',
-    subtitle: 'Tailored for your landscape',
-    features: ['Custom resources', 'Flexible quotas', 'Dedicated support'],
-    limitations: 'Configured specifically for your organization'
-  }
-}
 
 const UPGRADE_PATHS = {
   free: {
@@ -47,30 +22,20 @@ const UPGRADE_PATHS = {
   }
 }
 
-function PlanFeatureIcon({ feature }: { feature: string }) {
-  if (feature.includes('agent')) return <Users className="h-3 w-3" />
-  if (feature.includes('model')) return <Zap className="h-3 w-3" />
-  if (feature.includes('memory') || feature.includes('CPU')) return <Cpu className="h-3 w-3" />
-  return <Building className="h-3 w-3" />
-}
 
 function CurrentPlanDisplay() {
-  const { currentPlan, displayName, description } = usePlanInfo()
-  const planInfo = PLAN_FEATURES[currentPlan as keyof typeof PLAN_FEATURES]
+  const { displayName, description, features } = usePlanInfo()
 
   return (
     <div className="space-y-6">
       {/* Current Plan Header */}
       <div className="space-y-2">
-        <h3 className="text-[13px] tracking-widest uppercase font-light text-stone-600 dark:text-stone-400">
-          Current Plan
-        </h3>
         <div className="space-y-1">
           <h4 className="text-lg font-light text-stone-900 dark:text-stone-300">
-            {planInfo.title}
+            {displayName} Plan
           </h4>
           <p className="text-sm font-light text-stone-600 dark:text-stone-400">
-            {planInfo.subtitle}
+            {description}
           </p>
         </div>
       </div>
@@ -81,9 +46,9 @@ function CurrentPlanDisplay() {
           Included Resources
         </h5>
         <div className="grid grid-cols-2 gap-2">
-          {planInfo.features.map((feature, index) => (
+          {features.map((feature, index) => (
             <div key={index} className="flex items-center gap-2">
-              <PlanFeatureIcon feature={feature} />
+              <PlanFeatureIcon feature={feature} className="h-3 w-3" />
               <span className="text-xs font-light text-stone-700 dark:text-stone-300">
                 {feature}
               </span>
@@ -157,7 +122,7 @@ export function PlanUpgradeBanner() {
     <Card className="gap-0 py-0">
       <CardHeader className="px-8 py-6">
         <CardTitle className="text-sm font-light text-stone-600 dark:text-stone-400">
-          Organization Plan
+          Current Plan
         </CardTitle>
       </CardHeader>
       

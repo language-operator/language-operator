@@ -37,11 +37,11 @@ export const QUOTA_FIELDS = [
 ] as const
 
 export const QUOTA_LABELS: Record<string, string> = {
-  'count/languageagents': 'Language Agents',
-  'count/languagemodels': 'Language Models',
-  'count/languagetools': 'Language Tools',
-  'count/languagepersonas': 'Language Personas',
-  'count/languageclusters': 'Language Clusters',
+  'count/languageagents': 'Agents',
+  'count/languagemodels': 'Models',
+  'count/languagetools': 'Tools',
+  'count/languagepersonas': 'Personas',
+  'count/languageclusters': 'Clusters',
   'count/members': 'Members',
   'requests.cpu': 'CPU Requests',
   'requests.memory': 'Memory Requests',

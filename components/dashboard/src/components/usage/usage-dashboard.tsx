@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { ResourceUsageCard } from './resource-usage-card'
+import { ComputeMemoryCard } from './compute-memory-card'
 import { PlanUpgradeBanner } from './plan-upgrade-banner'
 import { useResourceMetrics, useUsageWarnings } from '@/hooks/useOrganizationUsage'
 
@@ -100,18 +101,19 @@ export function UsageDashboard() {
 
   return (
     <div className="space-y-12">
-      {/* Usage Warnings */}
-      <UsageWarnings />
+      {/* Top Row: Compute and Memory Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <ComputeMemoryCard data={metrics.compute} />
+        <ComputeMemoryCard data={metrics.memory} />
+      </div>
 
-      {/* Usage Grid - Marfa 2x3 responsive layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Resource Cards */}
-        <ResourceUsageCard data={metrics.cpu} />
-        <ResourceUsageCard data={metrics.memory} />
+      {/* Bottom Row: Resource Count Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <ResourceUsageCard data={metrics.clusters} />
         <ResourceUsageCard data={metrics.agents} />
-        <ResourceUsageCard data={metrics.tools} />
         <ResourceUsageCard data={metrics.models} />
-        <ResourceUsageCard data={metrics.members} />
+        <ResourceUsageCard data={metrics.tools} />
+        <ResourceUsageCard data={metrics.personas} />
       </div>
 
       {/* Plan Section */}

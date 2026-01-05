@@ -493,9 +493,94 @@ class KubernetesClient {
       })
 
       const quota = (response as any).spec?.hard || {}
-      const used = (response as any).status?.used || {}
+      const used = { ...(response as any).status?.used || {} }
       const available: Record<string, string> = {}
       const percentUsed: Record<string, number> = {}
+
+      // Manually count custom resources since Kubernetes doesn't track them automatically
+      if (!this.customObjectsApi) {
+        throw new Error('Custom Objects API not available')
+      }
+
+      // Count LanguageModels
+      if (quota['count/languagemodels'] && !used['count/languagemodels']) {
+        try {
+          const modelsResponse = await this.customObjectsApi.listNamespacedCustomObject({
+            group: 'langop.io',
+            version: 'v1alpha1',
+            namespace,
+            plural: 'languagemodels',
+          })
+          used['count/languagemodels'] = ((modelsResponse as any).items?.length || 0).toString()
+        } catch (error) {
+          console.error('Failed to count LanguageModels:', error)
+          used['count/languagemodels'] = '0'
+        }
+      }
+
+      // Count LanguageAgents
+      if (quota['count/languageagents'] && !used['count/languageagents']) {
+        try {
+          const agentsResponse = await this.customObjectsApi.listNamespacedCustomObject({
+            group: 'langop.io',
+            version: 'v1alpha1',
+            namespace,
+            plural: 'languageagents',
+          })
+          used['count/languageagents'] = ((agentsResponse as any).items?.length || 0).toString()
+        } catch (error) {
+          console.error('Failed to count LanguageAgents:', error)
+          used['count/languageagents'] = '0'
+        }
+      }
+
+      // Count LanguageClusters
+      if (quota['count/languageclusters'] && !used['count/languageclusters']) {
+        try {
+          const clustersResponse = await this.customObjectsApi.listNamespacedCustomObject({
+            group: 'langop.io',
+            version: 'v1alpha1',
+            namespace,
+            plural: 'languageclusters',
+          })
+          used['count/languageclusters'] = ((clustersResponse as any).items?.length || 0).toString()
+        } catch (error) {
+          console.error('Failed to count LanguageClusters:', error)
+          used['count/languageclusters'] = '0'
+        }
+      }
+
+      // Count LanguageTools
+      if (quota['count/languagetools'] && !used['count/languagetools']) {
+        try {
+          const toolsResponse = await this.customObjectsApi.listNamespacedCustomObject({
+            group: 'langop.io',
+            version: 'v1alpha1',
+            namespace,
+            plural: 'languagetools',
+          })
+          used['count/languagetools'] = ((toolsResponse as any).items?.length || 0).toString()
+        } catch (error) {
+          console.error('Failed to count LanguageTools:', error)
+          used['count/languagetools'] = '0'
+        }
+      }
+
+      // Count LanguagePersonas
+      if (quota['count/languagepersonas'] && !used['count/languagepersonas']) {
+        try {
+          const personasResponse = await this.customObjectsApi.listNamespacedCustomObject({
+            group: 'langop.io',
+            version: 'v1alpha1',
+            namespace,
+            plural: 'languagepersonas',
+          })
+          used['count/languagepersonas'] = ((personasResponse as any).items?.length || 0).toString()
+        } catch (error) {
+          console.error('Failed to count LanguagePersonas:', error)
+          used['count/languagepersonas'] = '0'
+        }
+      }
 
       // Calculate available resources and usage percentages
       Object.keys(quota).forEach(resource => {

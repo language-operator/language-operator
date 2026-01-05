@@ -19,11 +19,12 @@ import {
   Palette,
   ChevronLeft,
   Gauge,
+  Server,
 } from 'lucide-react'
 
 const globalNavigation = [
   { name: 'Overview', href: '/', icon: Home },
-  { name: 'Usage', href: '/usage', icon: BarChart3 },
+  { name: 'Capacity', href: '/capacity', icon: Server },
   { name: 'Clusters', href: '/clusters', icon: Boxes },
 ]
 

@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
+import { ResourceHeader } from '@/components/ui/resource-header'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClusterSelectionModal } from '@/components/cluster-selection-modal'
 import { EventsActivity } from '@/components/ui/events-activity'
-import { Bot, Cpu, Wrench, Users, Boxes, Activity, TrendingUp, Clock, ExternalLink, Settings } from 'lucide-react'
+import { Bot, Cpu, Wrench, Users, Boxes, Activity, TrendingUp, Clock, ExternalLink, Settings, Home as HomeIcon } from 'lucide-react'
 import { useResourceCounts } from '@/hooks/useResourceCounts'
 import { useClusters } from '@/hooks/use-clusters'
 import { useAggregatedAgents } from '@/hooks/use-aggregated-agents'
@@ -94,12 +95,12 @@ export default function Home() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold font-mono">System Overview</h1>
-          <p className="text-stone-600 dark:text-stone-400 mt-2">
-            Monitor and manage your Language Operator resources
-          </p>
-        </div>
+        {/* Standard Resource Header */}
+        <ResourceHeader
+          icon={HomeIcon}
+          title="System Overview"
+          subtitle="Monitor and manage your Language Operator resources"
+        />
 
         {/* Stats Grid */}
         <div className="grid gap-4 grid-cols-5">

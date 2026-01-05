@@ -48,9 +48,77 @@ export async function GET(
     const quotaUsage = await k8sClient.getResourceQuotaUsage(organization.namespace)
     console.log('[QUOTA API GET] Returning quota:', JSON.stringify(quotaUsage.quota))
 
-    // Calculate warnings (80% threshold)
+    // Helper function to convert memory values to bytes
+    function convertMemoryToBytes(value: string): number {
+      if (!value || value === '0') return 0
+      
+      const num = parseFloat(value.replace(/[^\d.]/g, ''))
+      
+      if (value.includes('Ki')) return num * 1024
+      if (value.includes('Mi')) return num * 1024 * 1024
+      if (value.includes('Gi')) return num * 1024 * 1024 * 1024
+      if (value.includes('Ti')) return num * 1024 * 1024 * 1024 * 1024
+      if (value.includes('k')) return num * 1000
+      if (value.includes('M')) return num * 1000 * 1000
+      if (value.includes('G')) return num * 1000 * 1000 * 1000
+      if (value.includes('T')) return num * 1000 * 1000 * 1000 * 1000
+      
+      // Assume bytes if no unit
+      return num
+    }
+
+    // Recalculate percentages correctly (the k8s client calculation is wrong for CPU)
+    const correctedPercentUsed: Record<string, number> = {}
+    
+    Object.entries(quotaUsage.quota).forEach(([resource, limit]) => {
+      const used = quotaUsage.used[resource] || '0'
+      const limitValue = limit || '0'
+      
+      if (limitValue === '0') {
+        correctedPercentUsed[resource] = 0
+        return
+      }
+      
+      // Handle CPU values specifically
+      if (resource.includes('cpu') || (!used.includes('i') && !used.includes('B') && !resource.includes('count/'))) {
+        // Convert CPU values to millicores for comparison
+        const usedMillicores = used.endsWith('m') ? parseInt(used.slice(0, -1)) : parseFloat(used) * 1000
+        const limitMillicores = limitValue.endsWith('m') ? parseInt(limitValue.slice(0, -1)) : parseFloat(limitValue) * 1000
+        
+        if (limitMillicores === 0) {
+          correctedPercentUsed[resource] = 0
+        } else {
+          correctedPercentUsed[resource] = Math.min((usedMillicores / limitMillicores) * 100, 100)
+        }
+      } else {
+        // Handle memory and count values
+        if (resource.includes('memory')) {
+          // Convert memory values to bytes for comparison
+          const usedBytes = convertMemoryToBytes(used)
+          const limitBytes = convertMemoryToBytes(limitValue)
+          
+          if (limitBytes === 0) {
+            correctedPercentUsed[resource] = 0
+          } else {
+            correctedPercentUsed[resource] = Math.min((usedBytes / limitBytes) * 100, 100)
+          }
+        } else {
+          // Handle count values (extract just the number)
+          const usedNum = parseFloat(used.replace(/[^\d.]/g, ''))
+          const limitNum = parseFloat(limitValue.replace(/[^\d.]/g, ''))
+          
+          if (limitNum === 0) {
+            correctedPercentUsed[resource] = 0
+          } else {
+            correctedPercentUsed[resource] = Math.min((usedNum / limitNum) * 100, 100)
+          }
+        }
+      }
+    })
+
+    // Calculate warnings (80% threshold) using corrected percentages
     const warnings: string[] = []
-    Object.entries(quotaUsage.percentUsed).forEach(([resource, percent]) => {
+    Object.entries(correctedPercentUsed).forEach(([resource, percent]) => {
       if (percent >= 80) {
         warnings.push(`${resource}: ${percent.toFixed(1)}% used`)
       }
@@ -68,7 +136,7 @@ export async function GET(
         quota: quotaUsage.quota,
         used: quotaUsage.used,
         available: quotaUsage.available,
-        percentUsed: quotaUsage.percentUsed,
+        percentUsed: correctedPercentUsed,
         warnings,
         isNearLimit: warnings.length > 0
       }

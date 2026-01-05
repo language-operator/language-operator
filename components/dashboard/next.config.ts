@@ -14,7 +14,16 @@ const nextConfig: NextConfig = {
     '@evilmartians/agent-prism-data',
     '@evilmartians/agent-prism-types',
     '@clickhouse/client'
-  ]
+  ],
+  async redirects() {
+    return [
+      {
+        source: '/usage',
+        destination: '/capacity',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default nextConfig;
