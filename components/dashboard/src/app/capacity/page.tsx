@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { UsageDashboard } from '@/components/usage/usage-dashboard'
 import { ResourceHeader } from '@/components/ui/resource-header'
-import { CapacityIcon } from '@/components/ui/icons'
+import { Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useActiveOrganization } from '@/hooks/use-organizations'
 import { Settings } from 'lucide-react'
@@ -17,7 +17,7 @@ export default function UsagePage() {
       <div className="space-y-6">
         {/* Standard Resource Header */}
         <ResourceHeader
-          icon={CapacityIcon}
+          icon={Server}
           title="Capacity"
           subtitle="Monitor your organization's resource consumption and plan limits"
           actions={
