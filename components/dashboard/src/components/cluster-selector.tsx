@@ -25,7 +25,7 @@ export function ClusterSelector() {
 
   const handleClusterSelect = (clusterName: string) => {
     setSelectedCluster(clusterName)
-    router.push(`/clusters/${clusterName}`)
+    router.push(getOrgUrl(`/clusters/${clusterName}`))
   }
 
   const selectedClusterData = clusters.find((c: any) => c.metadata?.name === selectedCluster)

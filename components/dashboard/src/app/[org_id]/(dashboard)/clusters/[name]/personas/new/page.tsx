@@ -71,7 +71,7 @@ export default function CreateClusterPersonaPage() {
   }
 
   const handleCancel = () => {
-    router.push(`/clusters/${clusterName}/personas`)
+    router.push(getOrgUrl(`/clusters/${clusterName}/personas`))
   }
 
   const handleAutofillGenerated = (data: Partial<PersonaFormData>) => {

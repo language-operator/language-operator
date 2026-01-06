@@ -6,11 +6,13 @@ import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { ToolEditForm, ToolEditFormData } from '@/components/forms/tool-edit-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { useTool } from '@/hooks/use-tools'
+import { useOrganization } from '@/components/organization-provider'
 import { Wrench } from 'lucide-react'
 
 export default function EditClusterToolPage() {
   const router = useRouter()
   const params = useParams()
+  const { getOrgUrl } = useOrganization()
   const clusterName = params?.name as string
   const toolName = params?.toolName as string
   
@@ -72,7 +74,7 @@ export default function EditClusterToolPage() {
       console.log('Update tool result:', result)
       
       // Redirect to tool detail page
-      router.push(`/clusters/${clusterName}/tools/${toolName}`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/tools/${toolName}`))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update tool'
       console.error('Error updating tool:', err)
@@ -83,7 +85,7 @@ export default function EditClusterToolPage() {
   }
 
   const handleCancel = () => {
-    router.push(`/clusters/${clusterName}/tools/${toolName}`)
+    router.push(getOrgUrl(`/clusters/${clusterName}/tools/${toolName}`))
   }
 
   if (isLoadingTool) {

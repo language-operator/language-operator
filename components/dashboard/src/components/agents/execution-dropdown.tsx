@@ -5,6 +5,7 @@ import { ChevronDown, Clock, CheckCircle, XCircle, AlertCircle, ExternalLink } f
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useOrganization } from '@/components/organization-provider'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,7 @@ export function ExecutionDropdown({
   clusterName,
   agentName
 }: ExecutionDropdownProps) {
+  const { getOrgUrl } = useOrganization()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [triggerWidth, setTriggerWidth] = useState<number>(0)
 
@@ -176,7 +178,7 @@ export function ExecutionDropdown({
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/clusters/${clusterName}/agents/${agentName}/traces/trace/${execution.traceId}`}
+                    href={getOrgUrl(`/clusters/${clusterName}/agents/${agentName}/traces/trace/${execution.traceId}`)}
                     className="p-1 hover:bg-accent rounded"
                     onClick={(e) => e.stopPropagation()}
                   >

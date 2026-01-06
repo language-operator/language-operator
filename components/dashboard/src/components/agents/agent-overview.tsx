@@ -7,6 +7,7 @@ import { AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { useModels } from '@/hooks/use-models'
 import { useTools } from '@/hooks/use-tools'
 import { usePersonas } from '@/hooks/use-personas'
+import { useOrganization } from '@/components/organization-provider'
 import { ResourceEventsActivity } from '@/components/ui/events-activity'
 import { LanguageAgent } from '@/types/agent'
 import { formatTimeAgo } from './utils'
@@ -17,7 +18,7 @@ interface AgentOverviewProps {
 }
 
 export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
-  
+  const { getOrgUrl } = useOrganization()
   const { data: modelsResponse } = useModels({ clusterName })
   const { data: toolsResponse } = useTools({ clusterName })
   const { data: personasResponse } = usePersonas({ clusterName })
@@ -103,7 +104,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 {agent.spec.model?.name && (
                   <>
                     {referencedModel ? (
-                      <Link href={`/clusters/${clusterName}/models/${agent.spec.model.name}`}>
+                      <Link href={getOrgUrl(`/clusters/${clusterName}/models/${agent.spec.model.name}`)}>
                         <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                           {agent.spec.model.name}
                         </Badge>
@@ -121,7 +122,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                   return (
                     <div key={index}>
                       {foundModel ? (
-                        <Link href={`/clusters/${clusterName}/models/${modelRef.name}`}>
+                        <Link href={getOrgUrl(`/clusters/${clusterName}/models/${modelRef.name}`)}>
                           <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                             {modelRef.name}
                           </Badge>
@@ -154,7 +155,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                   return (
                     <div key={`old-${index}`}>
                       {referencedTool ? (
-                        <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
+                        <Link href={getOrgUrl(`/clusters/${clusterName}/tools/${toolRef.name}`)}>
                           <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                             {toolRef.name}
                           </Badge>
@@ -173,7 +174,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                   return (
                     <div key={`new-${index}`}>
                       {referencedTool ? (
-                        <Link href={`/clusters/${clusterName}/tools/${toolRef.name}`}>
+                        <Link href={getOrgUrl(`/clusters/${clusterName}/tools/${toolRef.name}`)}>
                           <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                             {toolRef.name}
                           </Badge>
@@ -204,7 +205,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                 {agent.spec.persona?.name && (
                   <>
                     {referencedPersona ? (
-                      <Link href={`/clusters/${clusterName}/personas/${agent.spec.persona.name}`}>
+                      <Link href={getOrgUrl(`/clusters/${clusterName}/personas/${agent.spec.persona.name}`)}>
                         <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                           {agent.spec.persona.name}
                         </Badge>
@@ -222,7 +223,7 @@ export function AgentOverview({ agent, clusterName }: AgentOverviewProps) {
                   return (
                     <div key={index}>
                       {foundPersona ? (
-                        <Link href={`/clusters/${clusterName}/personas/${personaRef.name}`}>
+                        <Link href={getOrgUrl(`/clusters/${clusterName}/personas/${personaRef.name}`)}>
                           <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
                             {personaRef.name}
                           </Badge>

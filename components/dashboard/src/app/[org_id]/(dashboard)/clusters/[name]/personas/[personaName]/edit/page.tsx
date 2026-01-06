@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { PersonaFormSimple, PersonaFormData } from '@/components/forms/persona-form-simple'
 import { usePersona, useUpdatePersona } from '@/hooks/use-personas'
+import { useOrganization } from '@/components/organization-provider'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Users } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,6 +14,7 @@ import { ResourceHeader } from '@/components/ui/resource-header'
 export default function EditClusterPersonaPage() {
   const router = useRouter()
   const params = useParams()
+  const { getOrgUrl } = useOrganization()
   const clusterName = params?.name as string
   const personaName = params?.personaName as string
 
@@ -56,7 +58,7 @@ export default function EditClusterPersonaPage() {
       })
 
       // Redirect to persona detail page
-      router.push(`/clusters/${clusterName}/personas/${personaName}`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/personas/${personaName}`))
     } catch (err: any) {
       console.error('Error updating persona:', err)
       setSubmitError(err.message || 'Failed to update persona')
@@ -64,7 +66,7 @@ export default function EditClusterPersonaPage() {
   }
 
   const handleCancel = () => {
-    router.push(`/clusters/${clusterName}/personas/${personaName}`)
+    router.push(getOrgUrl(`/clusters/${clusterName}/personas/${personaName}`))
   }
 
 
