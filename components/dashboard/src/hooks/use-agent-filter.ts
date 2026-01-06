@@ -33,6 +33,7 @@ interface UseAgentFilterResult {
   agentOptions: AgentOption[]
   isLoading: boolean
   error: string | null
+  orphanedConversations: Conversation[]
 }
 
 export function useAgentFilter(clusterName: string | null, conversations: Conversation[]): UseAgentFilterResult {
@@ -71,44 +72,52 @@ export function useAgentFilter(clusterName: string | null, conversations: Conver
     fetchAgents()
   }, [clusterName])
 
-  const agentOptions = useMemo(() => {
-    // Get conversation counts by agent name
-    const conversationCounts = conversations.reduce((acc, conv) => {
+  const { agentOptions, orphanedConversations } = useMemo(() => {
+    const availableAgentNames = new Set(agents.map(agent => agent.metadata.name))
+    
+    // Separate valid and orphaned conversations
+    const validConversations = conversations.filter(conv => 
+      // Check if the conversation references an existing agent AND the current cluster
+      availableAgentNames.has(conv.agentName) && conv.clusterName === clusterName
+    )
+    
+    const orphaned = conversations.filter(conv => 
+      // Orphaned if agent doesn't exist OR conversation is from different cluster
+      !availableAgentNames.has(conv.agentName) || conv.clusterName !== clusterName
+    )
+
+    // Get conversation counts by agent name (only for valid conversations)
+    const conversationCounts = validConversations.reduce((acc, conv) => {
       acc[conv.agentName] = (acc[conv.agentName] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
-    // Get unique agent names from conversations and available agents
-    const agentNamesFromConversations = Object.keys(conversationCounts)
-    const agentNamesFromAgents = agents.map(agent => agent.metadata.name)
-    
-    // Combine and deduplicate agent names
-    const allAgentNames = [...new Set([...agentNamesFromConversations, ...agentNamesFromAgents])]
-    
-    // Create options for agents that have conversations
-    const options: AgentOption[] = allAgentNames
-      .filter(agentName => conversationCounts[agentName] > 0) // Only include agents with conversations
-      .map(agentName => ({
+    // Create options for agents that have valid conversations
+    const options: AgentOption[] = Object.entries(conversationCounts)
+      .map(([agentName, count]) => ({
         value: agentName,
-        label: `${agentName} (${conversationCounts[agentName]})`,
-        count: conversationCounts[agentName]
+        label: `${agentName} (${count})`,
+        count: count
       }))
       .sort((a, b) => a.value.localeCompare(b.value))
 
     // Add "All Agents" option at the beginning
-    return [
+    const agentOptions = [
       {
         value: 'all',
-        label: `All Agents (${conversations.length})`,
-        count: conversations.length
+        label: `All Agents (${validConversations.length})`,
+        count: validConversations.length
       },
       ...options
     ]
-  }, [agents, conversations])
+
+    return { agentOptions, orphanedConversations: orphaned }
+  }, [agents, conversations, clusterName])
 
   return {
     agentOptions,
     isLoading,
-    error
+    error,
+    orphanedConversations
   }
 }

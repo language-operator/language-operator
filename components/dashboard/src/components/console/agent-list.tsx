@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useConsole } from '@/contexts/console-context'
 import { AgentListItem } from './agent-list-item'
-import { Loader2, MessageSquare } from 'lucide-react'
+import { Loader2, MessageSquare, AlertTriangle } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { fetchWithOrganization } from '@/lib/api-client'
 import { useAgentFilter } from '@/hooks/use-agent-filter'
@@ -30,8 +30,8 @@ export function AgentList({ selectedAgentFilter, onAgentFilterChange, refreshTri
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // Get agent filter options
-  const { agentOptions, isLoading: isLoadingAgents } = useAgentFilter(selectedCluster, conversations)
+  // Get agent filter options and orphaned conversations
+  const { agentOptions, isLoading: isLoadingAgents, orphanedConversations } = useAgentFilter(selectedCluster, conversations)
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -57,7 +57,12 @@ export function AgentList({ selectedAgentFilter, onAgentFilterChange, refreshTri
     fetchConversations()
   }, [refreshTrigger])
 
-  const filteredConversations = conversations.filter((conversation) =>
+  // Filter out orphaned conversations from the main list
+  const validConversations = conversations.filter(conv => 
+    !orphanedConversations.some(orphaned => orphaned.id === conv.id)
+  )
+  
+  const filteredConversations = validConversations.filter((conversation) =>
     selectedAgentFilter === 'all' || conversation.agentName === selectedAgentFilter
   )
 
@@ -115,6 +120,30 @@ export function AgentList({ selectedAgentFilter, onAgentFilterChange, refreshTri
                 conversation={conversation}
               />
             ))}
+          </div>
+        )}
+        
+        {/* Orphaned Conversations Section */}
+        {orphanedConversations.length > 0 && (
+          <div className="border-t border-stone-800/80 dark:border-stone-600/80 mt-4 pt-4">
+            <div className="px-4 mb-2">
+              <div className="flex items-center gap-2 text-[11px] font-light text-amber-600 dark:text-amber-400 uppercase tracking-widest">
+                <AlertTriangle className="h-3 w-3" />
+                Orphaned Conversations
+              </div>
+              <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-1">
+                These conversations reference deleted agents or clusters
+              </p>
+            </div>
+            <div className="py-2">
+              {orphanedConversations.map((conversation) => (
+                <AgentListItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  isOrphaned={true}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

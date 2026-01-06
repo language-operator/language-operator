@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useConsole } from '@/contexts/console-context'
 import { cn } from '@/lib/utils'
-import { MessageSquare, MoreVertical, ExternalLink, Trash2, Edit3 } from 'lucide-react'
+import { MessageSquare, MoreVertical, ExternalLink, Trash2, Edit3, AlertTriangle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { DeleteConversationDialog } from './delete-conversation-dialog'
 import { RenameConversationDialog } from './rename-conversation-dialog'
@@ -29,9 +29,10 @@ interface Conversation {
 
 interface AgentListItemProps {
   conversation: Conversation
+  isOrphaned?: boolean
 }
 
-export function AgentListItem({ conversation }: AgentListItemProps) {
+export function AgentListItem({ conversation, isOrphaned = false }: AgentListItemProps) {
   const { selectedAgent, selectedCluster, conversationDbId, loadConversation, deleteConversation, refreshConversationList } = useConsole()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showRenameDialog, setShowRenameDialog] = useState(false)
@@ -39,6 +40,10 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
   const isActive = conversationDbId === conversation.id
 
   const handleConversationClick = () => {
+    if (isOrphaned) {
+      toast.error(`Cannot load conversation: Agent "${conversation.agentName}" or cluster "${conversation.clusterName}" no longer exists`)
+      return
+    }
     loadConversation(conversation.id, conversation.agentName, conversation.clusterName)
   }
 
@@ -77,17 +82,25 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
     <>
       <div
         className={cn(
-          'w-full px-4 py-3 text-left transition-colors border-l-2 border-b border-b-stone-200 dark:border-b-stone-700 relative group cursor-pointer',
-          // Active state styling - enhanced background and left border
-          isActive
-            ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-l-amber-400'
-            : 'border-l-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30'
+          'w-full px-4 py-3 text-left transition-colors border-l-2 border-b border-b-stone-200 dark:border-b-stone-700 relative group',
+          // Orphaned state styling
+          isOrphaned 
+            ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-amber-500/50 cursor-not-allowed opacity-75'
+            // Active state styling
+            : isActive
+            ? 'bg-stone-100 border-stone-900 dark:bg-stone-800/70 dark:border-l-amber-400 cursor-pointer'
+            // Normal state styling
+            : 'border-l-transparent hover:bg-stone-50 dark:hover:bg-stone-800/30 cursor-pointer'
         )}
         onClick={handleConversationClick}
       >
         <div className="flex items-start gap-3">
           <div className="mt-1">
-            <MessageSquare className="h-4 w-4 text-stone-600 dark:text-stone-400" />
+            {isOrphaned ? (
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            ) : (
+              <MessageSquare className="h-4 w-4 text-stone-600 dark:text-stone-400" />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -108,15 +121,19 @@ export function AgentListItem({ conversation }: AgentListItemProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={handleOpenClick}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Open Conversation
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleRenameClick}>
-                    <Edit3 className="mr-2 h-4 w-4" />
-                    Rename Conversation
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {!isOrphaned && (
+                    <>
+                      <DropdownMenuItem onClick={handleOpenClick}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open Conversation
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleRenameClick}>
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Rename Conversation
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleDeleteClick} variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Conversation

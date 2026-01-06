@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
 import { ChatMessage } from '@/types/chat'
 import { saveLastConversation, clearLastConversation } from '@/lib/conversation-storage'
+import { fetchWithOrganization } from '@/lib/api-client'
 
 interface ConversationState {
   agentName: string
@@ -256,19 +257,25 @@ export function ConsoleProvider({
 
   const loadConversation = useCallback(
     async (conversationId: string, agentName: string, clusterName: string) => {
-      // Set the selected agent and cluster
-      setSelectedAgentState(agentName)
-      setSelectedClusterState(clusterName)
-      setConversationDbId(conversationId)
-      
-      // Save to localStorage for auto-restore
-      saveLastConversation(conversationId, agentName, clusterName)
-
-      const key = `${clusterName}/${agentName}`
-      setActiveConversationId(key)
-
-      // Fetch messages from database
       try {
+        // First, validate that the agent still exists
+        const agentResponse = await fetchWithOrganization(`/api/clusters/${clusterName}/agents/${agentName}`)
+        if (!agentResponse.ok) {
+          throw new Error(`Agent "${agentName}" no longer exists in cluster "${clusterName}"`)
+        }
+        
+        // Set the selected agent and cluster
+        setSelectedAgentState(agentName)
+        setSelectedClusterState(clusterName)
+        setConversationDbId(conversationId)
+        
+        // Save to localStorage for auto-restore
+        saveLastConversation(conversationId, agentName, clusterName)
+
+        const key = `${clusterName}/${agentName}`
+        setActiveConversationId(key)
+
+        // Fetch messages from database
         const response = await fetch(`/api/conversations/${conversationId}/messages`)
 
         if (!response.ok) {
@@ -306,7 +313,9 @@ export function ConsoleProvider({
         })
       } catch (error) {
         console.error('Error loading conversation:', error)
-        // Initialize with empty messages on error
+        const key = `${clusterName}/${agentName}`
+        
+        // Initialize with error state for orphaned conversations
         setConversations((prev) => {
           const newMap = new Map(prev)
           newMap.set(key, {
@@ -314,11 +323,22 @@ export function ConsoleProvider({
             clusterName,
             messages: [],
             isLoading: false,
-            error: 'Failed to load conversation',
+            error: error instanceof Error ? error.message : 'Failed to load conversation',
             lastActivity: new Date(),
           })
           return newMap
         })
+        
+        // For orphaned conversations, don't re-throw to prevent unhandled errors
+        // Callers can check the error state in the conversation object
+        if (error instanceof Error && error.message.includes('no longer exists')) {
+          // Clear from localStorage since this conversation is orphaned
+          clearLastConversation()
+          console.warn('Orphaned conversation detected and cleared from localStorage:', error.message)
+        } else {
+          // Re-throw other types of errors for proper handling
+          throw error
+        }
       }
     },
     []
