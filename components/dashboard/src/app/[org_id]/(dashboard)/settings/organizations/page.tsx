@@ -220,7 +220,7 @@ export default function OrganizationsPage() {
                               <Users className="mr-2 h-4 w-4" />
                               Switch to Organization
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(getOrgUrl(`/settings/organizations/${org.id}/edit`))}>
+                            <DropdownMenuItem onClick={() => router.push(getOrgUrl(`/settings/organizations/${org.id}`))}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Organization
                             </DropdownMenuItem>

@@ -150,29 +150,24 @@ export default function OrganizationSettingsPage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Organization Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            disabled={!canEditOrganization || isSaving}
-                            placeholder="Enter organization name"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div>
-                    <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Plan</label>
-                    <p className="text-sm text-stone-900 dark:text-stone-100 capitalize mt-2">{organization.plan}</p>
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          disabled={!canEditOrganization || isSaving}
+                          placeholder="Enter organization name"
+                          className="max-w-md"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 {canEditOrganization && (
                   <div className="flex justify-start">
