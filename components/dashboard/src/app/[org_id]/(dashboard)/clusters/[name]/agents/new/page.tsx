@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -146,8 +145,7 @@ export default function CreateClusterAgentPage() {
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -373,6 +371,5 @@ export default function CreateClusterAgentPage() {
 
         </div>
       </div>
-    </AuthenticatedLayout>
   )
 }

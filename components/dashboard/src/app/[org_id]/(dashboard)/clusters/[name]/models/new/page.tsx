@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
@@ -76,28 +75,26 @@ export default function CreateClusterModelPage() {
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <ResourceHeader
-          backHref={`/clusters/${clusterName}/models`}
-          backLabel="Back to Models"
-          icon={Cpu}
-          title="Create Language Model"
-          subtitle={`Add a new language model to the ${clusterName} cluster`}
-        />
+    <div className="space-y-6">
+      {/* Header */}
+      <ResourceHeader
+        backHref={`/clusters/${clusterName}/models`}
+        backLabel="Back to Models"
+        icon={Cpu}
+        title="Create Language Model"
+        subtitle={`Add a new language model to the ${clusterName} cluster`}
+      />
 
-        {/* Form */}
-        <div className="max-w-2xl">
-          <ModelForm
-            isLoading={isLoading}
-            error={error}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            clusterName={clusterName}
-          />
-        </div>
+      {/* Form */}
+      <div className="max-w-2xl">
+        <ModelForm
+          isLoading={isLoading}
+          error={error}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          clusterName={clusterName}
+        />
       </div>
-    </AuthenticatedLayout>
+    </div>
   )
 }
