@@ -4,13 +4,13 @@
 
 Please read the following context files:
 
-* Persona: requirements/personas/go-engineer.md
+* Persona: requirements/personas/:persona.md
 * Feature Spec: requirements/proposals/nextjs-dashboard.md
 * Scratch: requirements/SCRATCH.md
 
 ## Persona
 
-**CRITICAL**: Adopt the go-engineer persona while executing these instructions, please.
+**CRITICAL**: Adopt the given persona while executing these instructions, please.
 
 ## Instructions
 

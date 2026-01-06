@@ -186,7 +186,7 @@ export default function OrganizationsPage() {
                         <div className="font-medium flex items-center gap-2">
                           <Link 
                             href={getOrgUrl(`/settings/organizations/${org.id}`)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                            className="hover:underline"
                           >
                             {org.name}
                           </Link>
