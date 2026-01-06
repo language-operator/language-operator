@@ -4,6 +4,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation'
 import { Settings, BarChart3, Building2, Copy } from 'lucide-react'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { useOrganization } from '@/hooks/use-organizations'
+import { useOrganization as useOrgContext } from '@/components/organization-provider'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -17,6 +18,7 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
   const pathname = usePathname()
   const router = useRouter()
   const organizationId = params.id as string
+  const { getOrgUrl } = useOrgContext()
   
   const { data: organizationData, isLoading } = useOrganization(organizationId)
   const organization = organizationData?.organization
@@ -26,9 +28,9 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
 
   const handleTabChange = (value: string) => {
     if (value === 'general') {
-      router.push(`/settings/organizations/${organizationId}`)
+      router.push(getOrgUrl(`/settings/organizations/${organizationId}`))
     } else if (value === 'usage-limits') {
-      router.push(`/settings/organizations/${organizationId}/edit`)
+      router.push(getOrgUrl(`/settings/organizations/${organizationId}/edit`))
     }
   }
 
@@ -44,7 +46,7 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
       {/* Resource Header */}
       {organization && (
         <ResourceHeader
-          backHref="/settings/organizations"
+          backHref={getOrgUrl("/settings/organizations")}
           backLabel="Back to Organizations"
           icon={Building2}
           title={organization.name}

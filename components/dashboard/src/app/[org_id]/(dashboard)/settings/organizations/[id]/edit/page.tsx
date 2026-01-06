@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useOrganizations } from '@/hooks/use-organizations'
 import { fetchWithOrganization } from '@/lib/api-client'
 import type { Organization } from '@/store/organization-store'
+import { useOrganization } from '@/components/organization-provider'
 import type { OrganizationQuota, QUOTA_DESCRIPTIONS } from '@/types/quota'
 import { QUOTA_LABELS } from '@/types/quota'
 import { Boxes, Bot, Wrench, Users, Cpu, UserPlus, Plus, Minus } from 'lucide-react'
@@ -45,6 +46,7 @@ export default function EditOrganizationPage() {
   const router = useRouter()
   const params = useParams()
   const organizationId = params.id as string
+  const { getOrgUrl } = useOrganization()
 
   const [isLoadingQuota, setIsLoadingQuota] = useState(true)
   const [quotaData, setQuotaData] = useState<QuotaData | null>(null)
@@ -181,7 +183,7 @@ export default function EditOrganizationPage() {
   }
 
   const handleCancel = () => {
-    router.push('/settings/organizations')
+    router.push(getOrgUrl('/settings/organizations'))
   }
 
   // Check permissions
