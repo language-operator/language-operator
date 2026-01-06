@@ -1,28 +1,91 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { useOrganization, useActiveOrganization } from '@/hooks/use-organizations'
 import { useOrganizationStore } from '@/store/organization-store'
 import { toast } from 'sonner'
-import { Building2, Trash2 } from 'lucide-react'
+import { Building2, Trash2, Save } from 'lucide-react'
+
+// Organization edit form schema
+const organizationFormSchema = z.object({
+  name: z.string().min(1, 'Organization name is required').max(100, 'Organization name is too long'),
+})
 
 export default function OrganizationSettingsPage() {
   const params = useParams()
   const router = useRouter()
   const organizationId = params.id as string
   
-  const { data: organizationData, isLoading } = useOrganization(organizationId)
+  const { data: organizationData, isLoading, refetch } = useOrganization(organizationId)
   const organization = organizationData?.organization
   const userRole = organizationData?.userRole
   
   const { organization: activeOrganization } = useActiveOrganization()
   const { setActiveOrganization } = useOrganizationStore()
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Organization edit form
+  const form = useForm<z.infer<typeof organizationFormSchema>>({
+    resolver: zodResolver(organizationFormSchema),
+    defaultValues: {
+      name: '',
+    }
+  })
+
+  // Load organization data into form
+  useEffect(() => {
+    if (organization) {
+      form.reset({
+        name: organization.name,
+      })
+    }
+  }, [organization, form])
+
+  // Handle organization name update
+  const onSubmit = async (values: z.infer<typeof organizationFormSchema>) => {
+    if (!organization) return
+
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/organizations/${organization.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: values.name })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update organization')
+      }
+
+      const data = await response.json()
+      toast.success('Organization updated successfully')
+      
+      // Refetch organization data to update the UI
+      refetch()
+      
+      // Update active organization name if this is the active one
+      if (activeOrganization?.id === organization.id) {
+        setActiveOrganization({ ...activeOrganization, name: values.name })
+      }
+    } catch (error) {
+      console.error('Error updating organization:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to update organization')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const handleDeleteOrganization = async () => {
     if (!organization) return
@@ -71,11 +134,12 @@ export default function OrganizationSettingsPage() {
   }
 
   const isOwner = userRole === 'owner'
+  const canEditOrganization = userRole === 'owner' || userRole === 'admin'
 
   return (
     <div className="space-y-6">
       <div className="grid gap-6">
-        {/* Organization Info */}
+        {/* Organization Edit Form */}
         <Card>
           <CardHeader>
             <CardTitle>Organization Information</CardTitle>
@@ -84,16 +148,46 @@ export default function OrganizationSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Name</label>
-                <p className="text-sm text-stone-900 dark:text-stone-100">{organization.name}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Plan</label>
-                <p className="text-sm text-stone-900 dark:text-stone-100 capitalize">{organization.plan}</p>
-              </div>
-            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            disabled={!canEditOrganization || isSaving}
+                            placeholder="Enter organization name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div>
+                    <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Plan</label>
+                    <p className="text-sm text-stone-900 dark:text-stone-100 capitalize mt-2">{organization.plan}</p>
+                  </div>
+                </div>
+                
+                {canEditOrganization && (
+                  <div className="flex justify-start">
+                    <Button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </Form>
           </CardContent>
         </Card>
 

@@ -24,7 +24,7 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
   const organization = organizationData?.organization
 
   // Determine current tab based on pathname
-  const currentTab = pathname === `/settings/organizations/${organizationId}/edit` ? 'usage-limits' : 'general'
+  const currentTab = pathname.endsWith('/edit') ? 'usage-limits' : 'general'
 
   const handleTabChange = (value: string) => {
     if (value === 'general') {
@@ -89,8 +89,11 @@ export default function OrganizationLayout({ children }: OrganizationLayoutProps
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value={currentTab} className="mt-6">
-            {children}
+          <TabsContent value="general" className="mt-6">
+            {currentTab === 'general' && children}
+          </TabsContent>
+          <TabsContent value="usage-limits" className="mt-6">
+            {currentTab === 'usage-limits' && children}
           </TabsContent>
         </Tabs>
       )}
