@@ -297,27 +297,12 @@ export default function ClusterPersonaDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {persona.spec.instructions.map((instruction: any, index: number) => (
-                      <div key={index} className="border border-stone-200 overflow-hidden dark:border-stone-700">
-                        <SyntaxHighlighter
-                          language="markdown"
-                          style={theme === 'dark' ? oneDark : oneLight}
-                          customStyle={{
-                            margin: 0,
-                            padding: '1rem',
-                            background: 'rgb(250 250 249)', // stone-50
-                            fontSize: '0.875rem',
-                            lineHeight: '1.5',
-                          }}
-                          codeTagProps={{
-                            style: {
-                              fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
-                            }
-                          }}
-                        >
+                      <div key={index} className="bg-stone-50 border border-stone-200 p-4 dark:bg-stone-800/50 dark:border-stone-700">
+                        <pre className="whitespace-pre-wrap text-sm font-mono text-stone-900 dark:text-stone-300">
                           {instruction}
-                        </SyntaxHighlighter>
+                        </pre>
                       </div>
                     ))}
                   </div>
