@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { ResourceUsageCard } from './resource-usage-card'
 import { ComputeMemoryCard } from './compute-memory-card'
-import { PlanUpgradeBanner } from './plan-upgrade-banner'
+import { PlanComparison } from './plan-comparison'
 import { useResourceMetrics, useUsageWarnings } from '@/hooks/useOrganizationUsage'
 
 function LoadingSkeleton() {
@@ -116,8 +116,8 @@ export function UsageDashboard() {
         <ResourceUsageCard data={metrics.personas} />
       </div>
 
-      {/* Plan Section */}
-      <PlanUpgradeBanner />
+      {/* Plan Comparison Section */}
+      <PlanComparison />
     </div>
   )
 }

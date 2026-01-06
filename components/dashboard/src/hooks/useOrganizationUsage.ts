@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
-import { useActiveOrganization } from './use-organizations'
+import { useOrganization } from '@/components/organization-provider'
 import type { OrganizationUsage, UsageApiResponse, ResourceMetrics, ComputeMemoryCardData } from '@/types/usage'
 import { getUsageStatus, formatResourceValue, calculateUsagePercentage } from '@/types/usage'
 import { QUOTA_LABELS } from '@/types/quota'
 
 export function useOrganizationUsage() {
   const { data: session } = useSession()
-  const { organization } = useActiveOrganization()
+  const { organization } = useOrganization()
 
   return useQuery<OrganizationUsage>({
     queryKey: ['organization-usage', organization?.id],
@@ -16,7 +16,7 @@ export function useOrganizationUsage() {
         throw new Error('No active organization')
       }
 
-      const response = await fetch(`/api/organizations/${organization.id}/quota`)
+      const response = await fetch(`/api/${organization.id}/quota`)
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to fetch usage data')
@@ -162,7 +162,7 @@ export function useUsageWarnings() {
 
 // Helper hook for getting plan display information
 export function usePlanInfo() {
-  const { organization } = useActiveOrganization()
+  const { organization } = useOrganization()
   const { data: usage } = useOrganizationUsage()
   
   const planDisplayNames = {

@@ -23,7 +23,7 @@ export function ConsoleLayout() {
   const hasActiveConversation = selectedAgent !== null
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950 relative">
+    <div className="flex h-full bg-gradient-to-br from-stone-100 via-amber-50/30 to-neutral-100 dark:from-neutral-950 dark:via-stone-900/50 dark:to-stone-950 relative">
       {/* Left Column: Agents & Conversations - always shown for browsing */}
       <div
         className={cn(

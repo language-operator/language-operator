@@ -17,10 +17,12 @@ import { ConnectionStatus } from '@/components/ui/connection-status'
 import { useWatchClusters } from '@/hooks/use-watch'
 import { useActiveOrganization } from '@/hooks/use-organizations'
 import { toast } from 'sonner'
+import { useOrganization } from '@/components/organization-provider'
 
 export function Header() {
   const { data: session } = useSession()
   const { organization: activeOrganization } = useActiveOrganization()
+  const { getOrgUrl } = useOrganization()
 
   // Connect to cluster watch for connection status (disabled in dev if no K8s)
   const isDev = process.env.NODE_ENV === 'development'
@@ -99,13 +101,13 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href="/settings/organizations" className="flex items-center cursor-pointer">
+              <a href={getOrgUrl('/settings/organizations')} className="flex items-center cursor-pointer">
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>Organizations</span>
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <a href="/settings/profile" className="flex items-center cursor-pointer">
+              <a href={getOrgUrl('/settings/profile')} className="flex items-center cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </a>

@@ -15,6 +15,14 @@ export type ApiErrorCode =
   | 'INTERNAL_ERROR'
   | 'TIMEOUT_ERROR'
   | 'ORPHANED_RESOURCE'
+  // Organization-specific error codes
+  | 'ORGANIZATION_NOT_FOUND'
+  | 'ORGANIZATION_MISMATCH'
+  | 'ORGANIZATION_ACCESS_DENIED'
+  | 'INVALID_ORGANIZATION_ID'
+  | 'ORGANIZATION_CONTEXT_MISSING'
+  | 'RATE_LIMITED'
+  | 'INSUFFICIENT_PERMISSIONS'
 
 export interface ApiErrorResponse {
   error: string
@@ -299,5 +307,142 @@ export function createResourceConflictError(
     reason,
     { resourceType, resourceName }
   )
+}
+
+// Organization-specific error helpers
+export class OrganizationNotFoundError extends ApiError {
+  constructor(organizationId: string) {
+    super(
+      `Organization '${organizationId}' not found`,
+      'ORGANIZATION_NOT_FOUND',
+      404,
+      `The organization '${organizationId}' does not exist or you don't have access to it`,
+      { organizationId }
+    )
+  }
+}
+
+export class OrganizationMismatchError extends ApiError {
+  constructor(urlOrgId: string, contextOrgId?: string) {
+    super(
+      'Organization ID mismatch',
+      'ORGANIZATION_MISMATCH',
+      400,
+      'Organization ID in URL does not match the organization context',
+      { urlOrgId, contextOrgId }
+    )
+  }
+}
+
+export class OrganizationAccessDeniedError extends ApiError {
+  constructor(organizationId: string, userId?: string) {
+    super(
+      `Access denied to organization '${organizationId}'`,
+      'ORGANIZATION_ACCESS_DENIED',
+      403,
+      `You don't have permission to access organization '${organizationId}'`,
+      { organizationId, userId }
+    )
+  }
+}
+
+export class InvalidOrganizationIdError extends ApiError {
+  constructor(organizationId: string) {
+    super(
+      `Invalid organization ID '${organizationId}'`,
+      'INVALID_ORGANIZATION_ID',
+      400,
+      'Organization ID must be a valid UUID or CUID',
+      { organizationId }
+    )
+  }
+}
+
+export class OrganizationContextMissingError extends ApiError {
+  constructor() {
+    super(
+      'Organization context not found',
+      'ORGANIZATION_CONTEXT_MISSING',
+      400,
+      'Organization context was not set by middleware. This may indicate a configuration issue.'
+    )
+  }
+}
+
+export class RateLimitError extends ApiError {
+  constructor(userId: string, organizationId?: string) {
+    super(
+      'Too many requests',
+      'RATE_LIMITED',
+      429,
+      'Too many failed access attempts. Please try again later.',
+      { userId, organizationId }
+    )
+  }
+}
+
+export class InsufficientPermissionsError extends ApiError {
+  constructor(action: string, resource: string, userRole?: string, organizationId?: string) {
+    super(
+      `Insufficient permissions to ${action} ${resource}`,
+      'INSUFFICIENT_PERMISSIONS', 
+      403,
+      `Your current role does not allow you to ${action} ${resource}`,
+      { action, resource, userRole, organizationId }
+    )
+  }
+}
+
+/**
+ * Enhanced error response creator with organization context
+ */
+export function createOrganizationErrorResponse(
+  error: unknown,
+  organizationId?: string,
+  userId?: string,
+  defaultMessage: string = 'An unexpected error occurred'
+): NextResponse {
+  // Log security-relevant errors with organization context
+  if (error instanceof ApiError && ['ORGANIZATION_ACCESS_DENIED', 'INSUFFICIENT_PERMISSIONS', 'RATE_LIMITED'].includes(error.code)) {
+    console.warn(`[Security] ${error.code}: ${error.message}`, {
+      organizationId: organizationId || error.context?.organizationId,
+      userId: userId || error.context?.userId,
+      timestamp: new Date().toISOString()
+    })
+  }
+
+  return createErrorResponse(error, defaultMessage)
+}
+
+/**
+ * Validate organization context helper for API routes
+ */
+export function validateOrganizationContext(
+  urlOrgId: string,
+  contextOrgId?: string | null,
+  userId?: string
+): void {
+  if (!contextOrgId) {
+    throw new OrganizationContextMissingError()
+  }
+
+  if (urlOrgId !== contextOrgId) {
+    throw new OrganizationMismatchError(urlOrgId, contextOrgId)
+  }
+}
+
+/**
+ * Wrapper for org-aware API handlers with enhanced error handling
+ */
+export function withOrganizationErrorHandler<T extends any[], R>(
+  handler: (...args: T) => Promise<Response>
+) {
+  return async (...args: T): Promise<Response> => {
+    try {
+      return await handler(...args)
+    } catch (error) {
+      return createOrganizationErrorResponse(error)
+    }
+  }
 }
 

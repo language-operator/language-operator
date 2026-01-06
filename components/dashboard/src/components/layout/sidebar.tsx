@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useClusterContext } from '@/contexts/cluster-context'
 import { ClusterSelector } from '@/components/cluster-selector'
 import { useSidebarContext } from '@/contexts/sidebar-context'
+import { useOrganization } from '@/components/organization-provider'
 import {
   Home,
   Bot,
@@ -41,6 +42,17 @@ export function Sidebar() {
   const pathname = usePathname()
   const { selectedCluster, isClusterSelected } = useClusterContext()
   const { isCollapsed, setIsCollapsed, isLoaded } = useSidebarContext()
+  
+  // Try to get organization context, but don't crash if not available (e.g., settings pages)
+  const orgContext = (() => {
+    try {
+      return useOrganization()
+    } catch {
+      return null
+    }
+  })()
+  
+  const getOrgUrl = orgContext?.getOrgUrl || ((path: string) => path)
   
   // Check if we're on a console page to remove background overrides
   const isConsolePage = pathname.includes('/console')
@@ -90,11 +102,12 @@ export function Sidebar() {
             </div>
           )}
           {globalNavigation.map((item) => {
-            const isActive = pathname === item.href
+            const href = getOrgUrl(item.href)
+            const isActive = pathname === href
             return (
               <Link
                 key={item.name}
-                href={item.href}
+                href={href}
                 className={cn(
                   'flex items-center transition-colors',
                   isCollapsed 
@@ -126,9 +139,10 @@ export function Sidebar() {
               </div>
             )}
             {clusterNavigation.map((item) => {
-              const href = item.href === '' 
+              const clusterPath = item.href === '' 
                 ? `/clusters/${selectedCluster}` 
                 : `/clusters/${selectedCluster}${item.href}`
+              const href = getOrgUrl(clusterPath)
               // Use exact match for Dashboard, prefix match for sub-routes
               const isActive = item.href === '' 
                 ? pathname === href 
@@ -176,7 +190,7 @@ export function Sidebar() {
         isCollapsed ? "p-2" : "p-4"
       )}>
         <Link
-          href="/settings/users"
+          href={getOrgUrl('/settings/users')}
           className={cn(
             'flex items-center transition-colors',
             isCollapsed 

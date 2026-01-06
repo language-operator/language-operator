@@ -317,6 +317,11 @@ export function useWatchEvents(options: Omit<UseWatchOptions, 'queryKey'> & {
   
   // Build query parameters for the watch endpoint
   const buildEndpoint = () => {
+    // Only build endpoint on client side to avoid SSR issues
+    if (typeof window === 'undefined') {
+      return '/api/watch/events'
+    }
+    
     const url = new URL('/api/watch/events', window.location.origin)
     if (clusterName) url.searchParams.set('cluster', clusterName)
     if (resourceType) url.searchParams.set('resourceType', resourceType)

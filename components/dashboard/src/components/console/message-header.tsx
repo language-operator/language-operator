@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useConsole } from '@/contexts/console-context'
 import { DeleteConversationDialog } from './delete-conversation-dialog'
 import { useToast } from '@/hooks/use-toast'
+import { useOrganization } from '@/components/organization-provider'
 
 export function MessageHeader() {
   const { 
@@ -18,6 +19,7 @@ export function MessageHeader() {
     refreshConversationList,
     startNewConversation
   } = useConsole()
+  const { getOrgUrl } = useOrganization()
   const router = useRouter()
   const { toast } = useToast()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -49,7 +51,7 @@ export function MessageHeader() {
       })
       
       // Navigate to console without a specific conversation
-      router.push(`/clusters/${selectedCluster}/console`)
+      router.push(getOrgUrl(`/clusters/${selectedCluster}/console`))
     } catch (error) {
       toast({
         title: 'Failed to delete conversation',
@@ -80,7 +82,7 @@ export function MessageHeader() {
         </Button>
 
         <Link 
-          href={`/clusters/${selectedCluster}/agents/${selectedAgent}`}
+          href={getOrgUrl(`/clusters/${selectedCluster}/agents/${selectedAgent}`)}
           className="text-[13px] font-light tracking-widest uppercase text-stone-900 dark:text-stone-300 hover:text-stone-600 dark:hover:text-stone-400 transition-colors cursor-pointer"
         >
           {selectedAgent}
