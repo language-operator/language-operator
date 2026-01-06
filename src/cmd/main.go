@@ -433,6 +433,7 @@ func main() {
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageCluster"),
 		Recorder:                mgr.GetEventRecorderFor("languagecluster-controller"),
+		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languagecluster-controller")),
 		NetworkIsolationEnabled: networkIsolationEnabled,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")

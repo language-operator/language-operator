@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
@@ -48,6 +49,7 @@ type LanguageClusterReconciler struct {
 	Scheme                  *runtime.Scheme
 	Log                     logr.Logger
 	Recorder                record.EventRecorder
+	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
 }
 
@@ -125,9 +127,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.Recorder != nil {
-			r.Recorder.Eventf(cluster, corev1.EventTypeNormal, "ClusterCreated",
-				"LanguageCluster '%s' created", cluster.Name)
+		if r.EventManager != nil {
+			r.EventManager.RecordClusterCreated(cluster)
 		}
 		// Requeue after adding finalizer
 		return ctrl.Result{Requeue: true}, nil
@@ -143,9 +144,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile agent RBAC")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile agent RBAC")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "RBACFailed",
-				"Failed to configure agent RBAC permissions for '%s': %v", cluster.Name, err)
+		if r.EventManager != nil {
+			r.EventManager.RecordRBACFailed(cluster, err)
 		}
 		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 			"RBACError", err.Error(), cluster.Generation)
@@ -162,9 +162,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, "Failed to reconcile NetworkPolicy")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-			if r.Recorder != nil {
-				r.Recorder.Eventf(cluster, corev1.EventTypeWarning, "NetworkPolicyFailed",
-					"Failed to configure network isolation for '%s': %v", cluster.Name, err)
+			if r.EventManager != nil {
+				r.EventManager.RecordNetworkPolicyFailed(cluster, err)
 			}
 			SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 				"NetworkPolicyError", err.Error(), cluster.Generation)
@@ -189,9 +188,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionTrue,
 		"ReconcileSuccess", "LanguageCluster is ready", cluster.Generation)
 
-	if r.Recorder != nil {
-		r.Recorder.Eventf(cluster, corev1.EventTypeNormal, "ClusterReady",
-			"LanguageCluster '%s' is ready", cluster.Name)
+	if r.EventManager != nil {
+		r.EventManager.RecordClusterReady(cluster)
 	}
 
 	if err := r.Status().Update(ctx, cluster); err != nil {
