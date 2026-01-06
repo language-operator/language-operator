@@ -75,7 +75,7 @@ export default function EditClusterPersonaPage() {
       <AuthenticatedLayout>
         <div className="space-y-6">
           <ResourceHeader
-            backHref={`/clusters/${clusterName}/personas`}
+            backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
             backLabel="Back to Personas"
             icon={Users}
             title="Loading..."
@@ -92,7 +92,7 @@ export default function EditClusterPersonaPage() {
       <AuthenticatedLayout>
         <div className="space-y-6">
           <ResourceHeader
-            backHref={`/clusters/${clusterName}/personas`}
+            backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
             backLabel="Back to Personas"
             icon={Users}
             title="Persona Not Found"
@@ -108,7 +108,7 @@ export default function EditClusterPersonaPage() {
       <div className="space-y-6">
         {/* Header */}
         <ResourceHeader
-          backHref={`/clusters/${clusterName}/personas`}
+          backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
           backLabel="Back to Personas"
           icon={Users}
           title="Edit Language Persona"
