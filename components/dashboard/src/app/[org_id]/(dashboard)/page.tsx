@@ -63,7 +63,7 @@ export default function OrganizationDashboard() {
         router.push(getOrgUrl(`/clusters/${clusterName}/models/new`))
         break
       case 'tool':
-        router.push(getOrgUrl(`/clusters/${clusterName}/tools/new`))
+        router.push(getOrgUrl(`/clusters/${clusterName}/tools`))
         break
     }
   }
