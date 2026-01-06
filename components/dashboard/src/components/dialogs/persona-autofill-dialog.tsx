@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Sparkles, AlertCircle, RefreshCw, ExternalLink } from 'lucide-react'
 import { useGeneratePersona } from '@/hooks/use-personas'
 import { useModels } from '@/hooks/use-models'
 import { PersonaFormData } from '@/components/forms/persona-form-simple'
@@ -16,6 +16,124 @@ interface PersonaAutofillDialogProps {
   onOpenChange: (open: boolean) => void
   onGenerated: (data: Partial<PersonaFormData>) => void
   clusterName: string
+}
+
+interface ErrorDisplayProps {
+  error: any
+  onRetry?: () => void
+  clusterName?: string
+}
+
+function ErrorDisplay({ error, onRetry, clusterName }: ErrorDisplayProps) {
+  if (!error) return null
+  
+  let errorMessage = 'An unexpected error occurred'
+  let errorCode: string | undefined
+  let details: string | undefined
+  let canRetry = false
+  let showModelLink = false
+  
+  // Handle different error structures from React Query
+  let apiError: any = error
+  
+  // React Query may wrap the error or store response in different places
+  if (error.response) {
+    // Axios-style error
+    apiError = error.response.data
+  } else if (error.message && typeof error.message === 'string' && error.message.startsWith('{')) {
+    // JSON string in message
+    try {
+      apiError = JSON.parse(error.message)
+    } catch {
+      errorMessage = error.message
+    }
+  } else if (error instanceof Error) {
+    errorMessage = error.message
+  }
+  
+  // Extract error details if it's our API error format
+  if (apiError && typeof apiError === 'object') {
+    errorCode = apiError.code
+    details = apiError.details || apiError.error
+    errorMessage = apiError.error || errorMessage
+  }
+  
+  // Determine error type and messaging
+  let icon = <AlertCircle className="h-4 w-4 text-red-500" />
+  let title = 'Generation Failed'
+  let actionButtons: React.ReactNode = null
+  
+  switch (errorCode) {
+    case 'MODEL_NOT_AVAILABLE':
+      icon = <AlertCircle className="h-4 w-4 text-amber-500" />
+      title = 'Model Not Available'
+      showModelLink = true
+      break
+      
+    case 'MODEL_ENDPOINT_ERROR':
+      icon = <AlertCircle className="h-4 w-4 text-red-500" />
+      title = 'Model Service Unavailable'
+      canRetry = true
+      break
+      
+    case 'MODEL_RESPONSE_ERROR':
+      const is500Error = details?.includes('500')
+      icon = <AlertCircle className="h-4 w-4 text-red-500" />
+      title = 'Model Error'
+      canRetry = is500Error
+      break
+      
+    case 'GENERATION_TIMEOUT':
+      icon = <AlertCircle className="h-4 w-4 text-amber-500" />
+      title = 'Generation Timeout'
+      canRetry = true
+      break
+      
+    case 'GENERATION_PARSING_ERROR':
+      icon = <AlertCircle className="h-4 w-4 text-orange-500" />
+      title = 'Invalid Response Format'
+      canRetry = true
+      break
+      
+    default:
+      canRetry = true
+      break
+  }
+  
+  if (canRetry && onRetry) {
+    actionButtons = (
+      <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">
+        <RefreshCw className="mr-2 h-3 w-3" />
+        Try Again
+      </Button>
+    )
+  }
+  
+  if (showModelLink && clusterName) {
+    actionButtons = (
+      <Button variant="outline" size="sm" asChild className="mt-2">
+        <a href={`/clusters/${clusterName}/models`} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="mr-2 h-3 w-3" />
+          Check Models
+        </a>
+      </Button>
+    )
+  }
+  
+  return (
+    <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+      <div className="flex items-start gap-2">
+        {icon}
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-red-900 text-sm">{title}</div>
+          <div className="text-red-700 text-sm mt-1">
+            {details || errorMessage}
+          </div>
+          {actionButtons}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function PersonaAutofillDialog({
@@ -54,7 +172,13 @@ export function PersonaAutofillDialog({
       }
     } catch (error) {
       console.error('Failed to generate persona:', error)
+      // Error will be displayed by the ErrorDisplay component
     }
+  }
+
+  const handleRetry = () => {
+    generatePersona.reset() // Clear the error state
+    handleGenerate()
   }
 
   return (
@@ -121,9 +245,11 @@ export function PersonaAutofillDialog({
           </div>
 
           {generatePersona.isError && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-              {generatePersona.error instanceof Error ? generatePersona.error.message : 'Failed to generate persona'}
-            </div>
+            <ErrorDisplay 
+              error={generatePersona.error} 
+              onRetry={handleRetry}
+              clusterName={clusterName}
+            />
           )}
         </div>
 

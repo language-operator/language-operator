@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserOrganization } from '@/lib/organization-context'
 import { requirePermission } from '@/lib/permissions'
-import { createErrorResponse, createAuthenticationRequiredError, createPermissionDeniedError } from '@/lib/api-error-handler'
+import { 
+  createErrorResponse, 
+  createAuthenticationRequiredError, 
+  createPermissionDeniedError,
+  ModelNotAvailableError,
+  ModelEndpointError,
+  ModelResponseError,
+  GenerationParsingError,
+  GenerationTimeoutError
+} from '@/lib/api-error-handler'
 import { k8sClient } from '@/lib/k8s-client'
 import { serviceResolver } from '@/lib/service-resolver'
 
@@ -68,19 +77,38 @@ Guidelines:
 
     // Fetch the LanguageModel resource to get the actual model name
     let actualModelName: string
+    let modelStatus: string | undefined
     try {
       const modelResource = await k8sClient.getLanguageModel(organization.namespace, modelName)
       const modelBody = (modelResource as any)?.body || modelResource
       actualModelName = modelBody.spec?.modelName
+      modelStatus = modelBody.status?.phase
 
       if (!actualModelName) {
-        throw new Error(`LanguageModel ${modelName} does not have spec.modelName`)
+        throw new ModelNotAvailableError(modelName, organization.namespace, 'missing_spec')
       }
 
-      console.log(`Resolved model name: ${modelName} -> ${actualModelName}`)
+      // Check if model is ready
+      if (modelStatus && modelStatus !== 'Ready') {
+        throw new ModelNotAvailableError(modelName, organization.namespace, modelStatus)
+      }
+
+      console.log(`Resolved model name: ${modelName} -> ${actualModelName} (status: ${modelStatus})`)
     } catch (error: any) {
       console.error('Failed to fetch LanguageModel:', error)
-      throw new Error(`Failed to fetch model information: ${error.message}`)
+      
+      // Check if it's a 404 error (model not found)
+      if (error?.response?.statusCode === 404 || error?.statusCode === 404) {
+        throw new ModelNotAvailableError(modelName, organization.namespace, 'not_found')
+      }
+      
+      // Re-throw our custom errors
+      if (error instanceof ModelNotAvailableError) {
+        throw error
+      }
+      
+      // For other errors, wrap in a generic model availability error
+      throw new ModelNotAvailableError(modelName, organization.namespace, 'fetch_failed')
     }
 
     // Resolve model endpoint based on environment (K8s vs Docker Compose)  
@@ -89,30 +117,64 @@ Guidelines:
     console.log(`Environment: ${JSON.stringify(serviceResolver.getEnvironmentInfo())}`)
     console.log(`Resolved model endpoint: ${modelEndpoint}`)
 
-    const response = await fetch(modelEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: actualModelName, // LiteLLM expects the actual model name from spec.modelName
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 2048,
-        temperature: 0.7,
+    // Set a timeout for the generation request
+    const timeoutSeconds = 60
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutSeconds * 1000)
+
+    let response: Response
+    try {
+      response = await fetch(modelEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: actualModelName, // LiteLLM expects the actual model name from spec.modelName
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_tokens: 2048,
+          temperature: 0.7,
+        }),
+        signal: controller.signal
       })
-    })
+    } catch (error: any) {
+      clearTimeout(timeoutId)
+      console.error('Model endpoint error:', error)
+      
+      if (error.name === 'AbortError') {
+        throw new GenerationTimeoutError(modelName, timeoutSeconds)
+      }
+      
+      // Map different network errors to specific error types
+      const errorMessage = error.message || ''
+      throw new ModelEndpointError(modelName, modelEndpoint, errorMessage)
+    }
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorData = await response.text()
-      console.error('Model API error:', errorData)
-      throw new Error(`Failed to generate persona: ${response.statusText}`)
+      console.error('Model API error:', response.status, errorData)
+      throw new ModelResponseError(modelName, response.status, errorData)
     }
 
-    const data = await response.json()
-    const generatedText = data.choices[0].message.content
+    let data: any
+    try {
+      data = await response.json()
+    } catch (error) {
+      console.error('Failed to parse model response as JSON:', error)
+      const responseText = await response.text()
+      throw new ModelResponseError(modelName, response.status, `Invalid JSON response: ${responseText.slice(0, 200)}`)
+    }
+
+    const generatedText = data.choices?.[0]?.message?.content
+    if (!generatedText) {
+      console.error('No generated text in model response:', data)
+      throw new ModelResponseError(modelName, response.status, 'Model response missing generated text')
+    }
 
     console.log('Generated text:', generatedText)
 
@@ -123,9 +185,17 @@ Guidelines:
       const jsonMatch = generatedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
       const jsonText = jsonMatch ? jsonMatch[1] : generatedText
       personaData = JSON.parse(jsonText.trim())
+      
+      // Validate that required fields are present
+      if (!personaData.displayName || !personaData.systemPrompt) {
+        throw new GenerationParsingError(generatedText)
+      }
     } catch (parseError) {
-      console.error('Failed to parse generated JSON:', generatedText)
-      throw new Error('Generated response was not valid JSON')
+      console.error('Failed to parse generated JSON:', parseError, generatedText)
+      if (parseError instanceof GenerationParsingError) {
+        throw parseError
+      }
+      throw new GenerationParsingError(generatedText)
     }
 
     console.log('Parsed persona data:', personaData)
@@ -137,6 +207,17 @@ Guidelines:
 
   } catch (error: any) {
     console.error('Error generating persona:', error)
-    return createErrorResponse(error, 'Failed to generate persona')
+    
+    // Our custom errors already have detailed messages, pass them through
+    if (error instanceof ModelNotAvailableError ||
+        error instanceof ModelEndpointError ||
+        error instanceof ModelResponseError ||
+        error instanceof GenerationParsingError ||
+        error instanceof GenerationTimeoutError) {
+      return createErrorResponse(error)
+    }
+    
+    // For unexpected errors, provide a generic fallback
+    return createErrorResponse(error, 'Failed to generate persona due to an unexpected error')
   }
 }

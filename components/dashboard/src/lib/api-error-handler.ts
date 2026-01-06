@@ -23,6 +23,12 @@ export type ApiErrorCode =
   | 'ORGANIZATION_CONTEXT_MISSING'
   | 'RATE_LIMITED'
   | 'INSUFFICIENT_PERMISSIONS'
+  // Persona generation error codes
+  | 'MODEL_NOT_AVAILABLE'
+  | 'MODEL_ENDPOINT_ERROR'
+  | 'MODEL_RESPONSE_ERROR'
+  | 'GENERATION_PARSING_ERROR'
+  | 'GENERATION_TIMEOUT'
 
 export interface ApiErrorResponse {
   error: string
@@ -443,6 +449,101 @@ export function withOrganizationErrorHandler<T extends any[], R>(
     } catch (error) {
       return createOrganizationErrorResponse(error)
     }
+  }
+}
+
+// Persona generation error classes
+export class ModelNotAvailableError extends ApiError {
+  constructor(modelName: string, namespace: string, status?: string) {
+    const details = status === 'NotReady' 
+      ? `Model '${modelName}' is not ready yet. Please wait for it to become available.`
+      : `Model '${modelName}' was not found in namespace '${namespace}'. Please check if the model exists and is properly configured.`
+    
+    super(
+      `Model '${modelName}' is not available`,
+      'MODEL_NOT_AVAILABLE',
+      404,
+      details,
+      { modelName, namespace, status }
+    )
+  }
+}
+
+export class ModelEndpointError extends ApiError {
+  constructor(modelName: string, endpoint: string, cause?: string) {
+    let details = `Unable to connect to model service at ${endpoint}.`
+    
+    if (cause?.includes('ECONNREFUSED')) {
+      details += ' The model service may be down or not yet started.'
+    } else if (cause?.includes('ETIMEDOUT')) {
+      details += ' The request timed out. The model service may be overloaded.'
+    } else if (cause?.includes('ENOTFOUND')) {
+      details += ' The model endpoint could not be found. Check your cluster configuration.'
+    } else {
+      details += ' Please verify the model is running and accessible.'
+    }
+    
+    super(
+      `Cannot reach model '${modelName}'`,
+      'MODEL_ENDPOINT_ERROR',
+      503,
+      details,
+      { modelName, endpoint, cause }
+    )
+  }
+}
+
+export class ModelResponseError extends ApiError {
+  constructor(modelName: string, statusCode: number, responseText?: string) {
+    let details = `Model '${modelName}' returned an error response (${statusCode}).`
+    
+    if (statusCode === 400) {
+      details += ' The request format may be invalid or unsupported by this model.'
+    } else if (statusCode === 401 || statusCode === 403) {
+      details += ' Authentication failed. Check if the model requires API keys.'
+    } else if (statusCode === 429) {
+      details += ' Rate limit exceeded. Please wait before trying again.'
+    } else if (statusCode >= 500) {
+      details += ' The model service is experiencing issues. Try again later.'
+    }
+    
+    if (responseText) {
+      details += ` Error details: ${responseText.slice(0, 200)}${responseText.length > 200 ? '...' : ''}`
+    }
+    
+    super(
+      `Model '${modelName}' error`,
+      'MODEL_RESPONSE_ERROR',
+      statusCode >= 500 ? 502 : 400,
+      details,
+      { modelName, statusCode, responseText }
+    )
+  }
+}
+
+export class GenerationParsingError extends ApiError {
+  constructor(generatedText: string) {
+    const preview = generatedText.slice(0, 100) + (generatedText.length > 100 ? '...' : '')
+    
+    super(
+      'Invalid generation response format',
+      'GENERATION_PARSING_ERROR',
+      502,
+      `The model generated text that could not be parsed as valid JSON. This usually means the model didn't follow the expected format. Generated text preview: "${preview}"`,
+      { generatedText: preview }
+    )
+  }
+}
+
+export class GenerationTimeoutError extends ApiError {
+  constructor(modelName: string, timeoutSeconds: number) {
+    super(
+      `Persona generation timed out`,
+      'GENERATION_TIMEOUT',
+      504,
+      `Generation with model '${modelName}' timed out after ${timeoutSeconds} seconds. The model may be overloaded or the request too complex.`,
+      { modelName, timeoutSeconds }
+    )
   }
 }
 
