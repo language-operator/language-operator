@@ -113,7 +113,7 @@ export function useResourceMetrics() {
 
 export function useUpdateOrganizationQuota() {
   const queryClient = useQueryClient()
-  const { organization } = useActiveOrganization()
+  const { organization } = useOrganization()
 
   return useMutation({
     mutationFn: async (data: { plan?: string; quotas?: Record<string, string> }) => {
@@ -121,7 +121,7 @@ export function useUpdateOrganizationQuota() {
         throw new Error('No active organization')
       }
 
-      const response = await fetch(`/api/organizations/${organization.id}/quota`, {
+      const response = await fetch(`/api/${organization.id}/quota`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

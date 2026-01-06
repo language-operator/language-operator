@@ -163,6 +163,7 @@ export default function ClusterPersonaDetailPage() {
   }
 
   return (
+    <>
       <div className="space-y-6">
         {/* Header */}
         <ResourceHeader
@@ -185,7 +186,7 @@ export default function ClusterPersonaDetailPage() {
             <>
               <Button 
                 variant="outline"
-                onClick={() => router.push(getOrgUrl(`/clusters/${clusterName}/personas/${personaName}/edit`)))
+                onClick={() => router.push(getOrgUrl(`/clusters/${clusterName}/personas/${personaName}/edit`))}
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
@@ -404,6 +405,6 @@ export default function ClusterPersonaDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
+    </>
   )
 }
