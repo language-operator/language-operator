@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useClusters } from '@/hooks/use-clusters'
+import { useOrganization } from '@/components/organization-provider'
 import {
   Dialog,
   DialogContent,
@@ -31,6 +33,8 @@ export function ClusterSelectionModal({
   actionTitle,
   actionDescription,
 }: ClusterSelectionModalProps) {
+  const router = useRouter()
+  const { getOrgUrl } = useOrganization()
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const { data: clustersData, isLoading, error } = useClusters({ limit: 100 })
   const clusters = clustersData?.data || []
@@ -89,7 +93,7 @@ export function ClusterSelectionModal({
                 You need to create a cluster before you can {actionType === 'agent' ? 'deploy agents' : actionType === 'model' ? 'add models' : 'configure tools'}.
               </p>
               <Button 
-                onClick={() => window.location.href = '/clusters/new'}
+                onClick={() => router.push(getOrgUrl('/clusters/new'))}
                 variant="outline"
                 className="gap-2"
               >

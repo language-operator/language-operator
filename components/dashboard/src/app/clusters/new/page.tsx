@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
@@ -53,27 +52,25 @@ export default function CreateClusterPage() {
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <ResourceHeader
-          backHref="/clusters"
-          backLabel="Back to Clusters"
-          icon={Boxes}
-          title="Create Language Cluster"
-          subtitle="Set up a new cluster for deploying language agents"
-        />
+    <div className="space-y-6">
+      {/* Header */}
+      <ResourceHeader
+        backHref="/clusters"
+        backLabel="Back to Clusters"
+        icon={Boxes}
+        title="Create Language Cluster"
+        subtitle="Set up a new cluster for deploying language agents"
+      />
 
-        {/* Form */}
-        <div className="max-w-2xl">
-          <ClusterForm
-            isLoading={isLoading}
-            error={error}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-          />
-        </div>
+      {/* Form */}
+      <div className="max-w-2xl">
+        <ClusterForm
+          isLoading={isLoading}
+          error={error}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </div>
-    </AuthenticatedLayout>
+    </div>
   )
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useClusterContext } from '@/contexts/cluster-context'
 import { useClusters } from '@/hooks/use-clusters'
+import { useOrganization } from '@/components/organization-provider'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +18,7 @@ import { Boxes, ChevronDown, Plus } from 'lucide-react'
 
 export function ClusterSelector() {
   const router = useRouter()
+  const { getOrgUrl } = useOrganization()
   const { selectedCluster, setSelectedCluster } = useClusterContext()
   const { data: clustersData, isLoading } = useClusters({ limit: 100 })
   const clusters = clustersData?.data || []
@@ -80,13 +82,13 @@ export function ClusterSelector() {
             </div>
           )}
           <DropdownMenuItem asChild>
-            <Link href="/clusters/new" className="flex items-center gap-2">
+            <Link href={getOrgUrl('/clusters/new')} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Create New Cluster
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/clusters" className="flex items-center gap-2">
+            <Link href={getOrgUrl('/clusters')} className="flex items-center gap-2">
               <Boxes className="h-4 w-4" />
               Manage All Clusters
             </Link>

@@ -2,15 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { Button } from '@/components/ui/button'
 import { ClusterForm, ClusterFormData } from '@/components/forms/cluster-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Boxes } from 'lucide-react'
 import { useApiClient } from '@/lib/api-client'
+import { useOrganization } from '@/components/organization-provider'
 
 export default function CreateClusterPage() {
   const router = useRouter()
+  const { getOrgUrl } = useOrganization()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const apiClient = useApiClient()
@@ -39,7 +40,7 @@ export default function CreateClusterPage() {
       
       // Redirect to cluster details page
       const clusterName = result.data?.metadata?.name || formData.name
-      router.push(`/clusters/${clusterName}`)
+      router.push(getOrgUrl(`/clusters/${clusterName}`))
     } catch (err: any) {
       console.error('Error creating cluster:', err)
       setError(err.message || 'Failed to create cluster')
@@ -49,31 +50,29 @@ export default function CreateClusterPage() {
   }
 
   const handleCancel = () => {
-    router.push('/clusters')
+    router.push(getOrgUrl('/clusters'))
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <ResourceHeader
-          backHref="/clusters"
-          backLabel="Back to Clusters"
-          icon={Boxes}
-          title="Create Language Cluster"
-          subtitle="Set up a new cluster for deploying language agents"
-        />
+    <div className="space-y-6">
+      {/* Header */}
+      <ResourceHeader
+        backHref={getOrgUrl('/clusters')}
+        backLabel="Back to Clusters"
+        icon={Boxes}
+        title="Create Language Cluster"
+        subtitle="Set up a new cluster for deploying language agents"
+      />
 
-        {/* Form */}
-        <div className="max-w-2xl">
-          <ClusterForm
-            isLoading={isLoading}
-            error={error}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-          />
-        </div>
+      {/* Form */}
+      <div className="max-w-2xl">
+        <ClusterForm
+          isLoading={isLoading}
+          error={error}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </div>
-    </AuthenticatedLayout>
+    </div>
   )
 }
