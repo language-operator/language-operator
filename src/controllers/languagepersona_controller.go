@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -32,15 +31,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
 // LanguagePersonaReconciler reconciles a LanguagePersona object
 type LanguagePersonaReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Log      logr.Logger
-	Recorder record.EventRecorder
+	Scheme       *runtime.Scheme
+	Log          logr.Logger
+	Recorder     record.EventRecorder
+	EventManager *events.EventManager
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
@@ -90,9 +91,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.Recorder != nil {
-			r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaCreated",
-				"LanguagePersona '%s' created: %s", persona.Name, persona.Spec.DisplayName)
+		if r.EventManager != nil {
+			r.EventManager.RecordPersonaCreated(persona, persona.Spec.DisplayName)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -102,9 +102,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(persona, corev1.EventTypeWarning, "ConfigurationFailed",
-				"Failed to store persona configuration for LanguagePersona '%s': %v", persona.Name, err)
+		if r.EventManager != nil {
+			r.EventManager.RecordConfigurationFailed(persona, err)
 		}
 		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
 		persona.Status.Phase = "Failed"
@@ -121,9 +120,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Status fields updated
 	SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Persona configuration is ready", persona.Generation)
 
-	if r.Recorder != nil {
-		r.Recorder.Eventf(persona, corev1.EventTypeNormal, "PersonaReady",
-			"LanguagePersona '%s' (%s) is ready for agent assignment", persona.Name, persona.Spec.DisplayName)
+	if r.EventManager != nil {
+		r.EventManager.RecordPersonaReady(persona, persona.Spec.DisplayName)
 	}
 
 	if err := r.Status().Update(ctx, persona); err != nil {

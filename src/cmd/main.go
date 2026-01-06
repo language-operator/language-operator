@@ -417,10 +417,11 @@ func main() {
 
 	// Setup LanguagePersona controller
 	if err = (&controllers.LanguagePersonaReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Log:      ctrl.Log.WithName("controllers").WithName("LanguagePersona"),
-		Recorder: mgr.GetEventRecorderFor("languagepersona-controller"),
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		Log:          ctrl.Log.WithName("controllers").WithName("LanguagePersona"),
+		Recorder:     mgr.GetEventRecorderFor("languagepersona-controller"),
+		EventManager: events.NewEventManager(mgr.GetEventRecorderFor("languagepersona-controller")),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguagePersona")
 		os.Exit(1)
