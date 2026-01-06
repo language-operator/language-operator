@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
@@ -49,6 +50,7 @@ type LanguageModelReconciler struct {
 	Scheme                  *runtime.Scheme
 	Log                     logr.Logger
 	Recorder                record.EventRecorder
+	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
 }
 
@@ -111,9 +113,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.Recorder != nil {
-			r.Recorder.Eventf(model, corev1.EventTypeNormal, "ModelCreated",
-				"LanguageModel '%s' created", model.Name)
+		if r.EventManager != nil {
+			r.EventManager.RecordModelCreated(model)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -123,9 +124,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ConfigMapFailed",
-				"Failed to reconcile configuration for LanguageModel '%s': %v", model.Name, err)
+		if r.EventManager != nil {
+			r.EventManager.RecordConfigMapFailed(model, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -141,9 +141,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile Deployment")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ProxyDeploymentFailed",
-				"Failed to create or update proxy deployment for LanguageModel '%s': %v", model.Name, err)
+		if r.EventManager != nil {
+			r.EventManager.RecordProxyDeploymentFailed(model, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -159,9 +158,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Service")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile Service")
-		if r.Recorder != nil {
-			r.Recorder.Eventf(model, corev1.EventTypeWarning, "ServiceFailed",
-				"Failed to create or update service for LanguageModel '%s': %v", model.Name, err)
+		if r.EventManager != nil {
+			r.EventManager.RecordServiceFailed(model, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
 		model.Status.Phase = "Failed"
@@ -178,9 +176,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Error(err, "Failed to reconcile NetworkPolicy")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-			if r.Recorder != nil {
-				r.Recorder.Eventf(model, corev1.EventTypeWarning, "NetworkPolicyFailed",
-					"Failed to configure network isolation for LanguageModel '%s': %v", model.Name, err)
+			if r.EventManager != nil {
+				r.EventManager.RecordNetworkPolicyFailed(model, err)
 			}
 			SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
 			model.Status.Phase = "Failed"
@@ -206,9 +203,8 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Status fields updated
 	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model proxy is ready", model.Generation)
 
-	if r.Recorder != nil {
-		r.Recorder.Eventf(model, corev1.EventTypeNormal, "ModelReady",
-			"LanguageModel '%s' proxy is ready for provider %s", model.Name, model.Spec.Provider)
+	if r.EventManager != nil {
+		r.EventManager.RecordModelReady(model, model.Spec.Provider)
 	}
 
 	if err := r.Status().Update(ctx, model); err != nil {
