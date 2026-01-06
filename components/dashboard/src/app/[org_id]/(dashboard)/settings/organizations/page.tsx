@@ -184,7 +184,12 @@ export default function OrganizationsPage() {
                     <TableRow key={org.id} className={isActive ? 'bg-stone-50 dark:bg-stone-800/50' : ''}>
                       <TableCell>
                         <div className="font-medium flex items-center gap-2">
-                          {org.name}
+                          <Link 
+                            href={getOrgUrl(`/settings/organizations/${org.id}`)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                          >
+                            {org.name}
+                          </Link>
                           {isActive && (
                             <Badge variant="default" className="bg-blue-100 text-blue-800">
                               Selected
