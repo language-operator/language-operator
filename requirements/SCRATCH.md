@@ -5,6 +5,13 @@
 - 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
 - **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
 
+## Recently Completed
+- ✅ **Issue #242**: Organization edit page fixes - organization name editing and Usage tab error resolved
+  - Fixed tab routing logic to separate General (name editing) and Usage Limits (quotas) content
+  - Added organization name editing form with validation and save functionality  
+  - Resolved Usage Limits tab error - now displays quota management without issues
+  - Improved UX: removed Plan column, fixed Edit Organization dropdown navigation
+
 ## Development Environment
 
 ### Deployment Rules
