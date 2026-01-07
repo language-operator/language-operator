@@ -34,6 +34,7 @@ import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgentFormData, LanguageAgent } from '@/types/agent'
 import { useToast } from '@/hooks/use-toast'
 import { kubernetesNameValidation } from '@/lib/validation'
+import { useOrganization } from '@/components/organization-provider'
 
 // Simplified form validation schema - only 5 essential fields
 const agentFormSchema = z.object({
@@ -58,6 +59,7 @@ export default function CreateClusterAgentPage() {
   const clusterName = params?.name as string
   
   const { toast } = useToast()
+  const { getOrgUrl } = useOrganization()
   
   const createAgent = useCreateAgent(clusterName)
   
@@ -121,7 +123,7 @@ export default function CreateClusterAgentPage() {
       })
       
       // Redirect to cluster agents page
-      router.push(`/clusters/${clusterName}/agents`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/agents`))
     } catch (error) {
       console.error('Failed to create agent:', error)
       toast({
@@ -152,7 +154,7 @@ export default function CreateClusterAgentPage() {
             <Button 
               variant="outline" 
               size="icon"
-              onClick={() => router.push(`/clusters/${clusterName}/agents`)}
+              onClick={() => router.push(getOrgUrl(`/clusters/${clusterName}/agents`))}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -345,7 +347,7 @@ export default function CreateClusterAgentPage() {
                   <Button 
                     type="button" 
                     variant="outline"
-                    onClick={() => router.push(`/clusters/${clusterName}/agents`)}
+                    onClick={() => router.push(getOrgUrl(`/clusters/${clusterName}/agents`))}
                   >
                     Cancel
                   </Button>

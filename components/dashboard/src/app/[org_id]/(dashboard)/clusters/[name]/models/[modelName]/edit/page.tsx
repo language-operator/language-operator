@@ -4,12 +4,14 @@ import { useParams, useRouter } from 'next/navigation'
 import { ModelForm, ModelFormData } from '@/components/forms/model-form'
 import { useModel, useUpdateModel } from '@/hooks/use-models'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useOrganization } from '@/components/organization-provider'
 
 export default function ClusterEditModelPage() {
   const params = useParams()
   const router = useRouter()
   const clusterName = params.name as string
   const modelName = params.modelName as string
+  const { getOrgUrl } = useOrganization()
   const { data: modelResponse, isLoading: isLoadingModel } = useModel(modelName, clusterName)
   const model = modelResponse?.data
   
@@ -100,7 +102,7 @@ export default function ClusterEditModelPage() {
       })
 
       // Redirect to model detail page
-      router.push(`/clusters/${clusterName}/models/${modelName}`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/models/${modelName}`))
     } catch (err: any) {
       console.error('Error updating model:', err)
       // Error is handled by the mutation hook

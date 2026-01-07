@@ -33,6 +33,7 @@ import { usePersonas } from '@/hooks/use-personas'
 import { LanguageAgentFormData, LanguageAgent } from '@/types/agent'
 import { useToast } from '@/hooks/use-toast'
 import { kubernetesNameValidation } from '@/lib/validation'
+import { useOrganization } from '@/components/organization-provider'
 
 // Form validation schema
 const agentFormSchema = z.object({
@@ -86,6 +87,7 @@ export default function EditClusterAgentPage() {
   
   const [activeTab, setActiveTab] = useState('basic')
   const { toast } = useToast()
+  const { getOrgUrl } = useOrganization()
   
   const { data: agentResponse, isLoading: isLoadingAgent } = useAgent(agentName, clusterName)
   const updateAgent = useUpdateAgent(clusterName)
@@ -173,7 +175,7 @@ export default function EditClusterAgentPage() {
       })
       
       // Redirect to agent detail page
-      router.push(`/clusters/${clusterName}/agents/${agentName}`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/agents/${agentName}`))
     } catch (error) {
       console.error('Failed to update agent:', error)
       toast({

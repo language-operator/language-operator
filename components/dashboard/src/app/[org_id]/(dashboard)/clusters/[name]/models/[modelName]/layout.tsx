@@ -77,7 +77,7 @@ export default function ModelDetailLayout({ children }: ModelDetailLayoutProps) 
     if (confirm(`Are you sure you want to delete model "${model.metadata.name}"?`)) {
       try {
         await deleteModel.mutateAsync(model.metadata.name)
-        router.push(`/clusters/${clusterName}/models`)
+        router.push(getOrgUrl(`/clusters/${clusterName}/models`))
       } catch (error) {
         console.error('Failed to delete model:', error)
         alert('Failed to delete model. Please try again.')

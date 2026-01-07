@@ -7,11 +7,13 @@ import { ModelForm, ModelFormData } from '@/components/forms/model-form'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Cpu } from 'lucide-react'
 import { fetchWithOrganization } from '@/lib/api-client'
+import { useOrganization } from '@/components/organization-provider'
 
 export default function CreateClusterModelPage() {
   const router = useRouter()
   const params = useParams()
   const clusterName = params?.name as string
+  const { getOrgUrl } = useOrganization()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -61,7 +63,7 @@ export default function CreateClusterModelPage() {
       console.log('Create model result:', result)
       
       // Redirect to cluster models list page (since model detail pages may not exist yet)
-      router.push(`/clusters/${clusterName}/models`)
+      router.push(getOrgUrl(`/clusters/${clusterName}/models`))
     } catch (err: any) {
       console.error('Error creating model:', err)
       setError(err.message || 'Failed to create model')
