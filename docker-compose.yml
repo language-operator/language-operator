@@ -25,12 +25,12 @@ services:
     restart: always
     network_mode: host
     environment:
-      KUBECONFIG: /root/.kube/dev-config
+      KUBECONFIG: /root/.kube/config
     command: ["proxy", "--address=0.0.0.0", "--accept-hosts=^.*$", "--port=8001"]
     volumes:
       - type: bind
-        source: /tmp/dev-kubeconfig-final.yaml
-        target: /root/.kube/dev-config
+        source: ${HOME}/.kube/config
+        target: /root/.kube/config
         read_only: true
 
   # Development dashboard (with hot reload)

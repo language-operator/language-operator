@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useOrganization } from '@/components/organization-provider'
 import { ToolCatalogEntry } from '@/types/tool-catalog'
 import { ResourceHeader } from '@/components/ui/resource-header'
 import { Wrench } from 'lucide-react'
@@ -26,6 +27,7 @@ import { fetchWithOrganization } from '@/lib/api-client'
 export default function InstallToolPage() {
   const params = useParams()
   const router = useRouter()
+  const { getOrgUrl } = useOrganization()
   const clusterName = params?.name as string
   const toolName = params?.toolName as string
   
@@ -92,7 +94,7 @@ export default function InstallToolPage() {
       
       // Redirect after a short delay
       setTimeout(() => {
-        router.push(`/clusters/${clusterName}/tools`)
+        router.push(getOrgUrl(`/clusters/${clusterName}/tools`))
       }, 2000)
     } catch (err) {
       console.error('Error installing tool:', err)
@@ -127,7 +129,7 @@ export default function InstallToolPage() {
                 {error}
               </CardDescription>
               <Button asChild variant="outline">
-                <Link href={`/clusters/${clusterName}/tools`}>
+                <Link href={getOrgUrl(`/clusters/${clusterName}/tools`)}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Tools
                 </Link>
@@ -148,7 +150,7 @@ export default function InstallToolPage() {
       <div className="space-y-6">
         {/* Header */}
         <ResourceHeader
-          backHref={`/clusters/${clusterName}/tools`}
+          backHref={getOrgUrl(`/clusters/${clusterName}/tools`)}
           backLabel="Back to Tools"
           icon={Wrench}
           title={`Install ${tool.displayName}`}
@@ -273,7 +275,7 @@ export default function InstallToolPage() {
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Button
                 variant="outline"
-                onClick={() => router.push(`/clusters/${clusterName}/tools`)}
+                onClick={() => router.push(getOrgUrl(`/clusters/${clusterName}/tools`))}
                 disabled={installing}
               >
                 Cancel

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { AuthenticatedLayout } from '@/components/layout/authenticated-layout'
 import { PersonaFormSimple, PersonaFormData } from '@/components/forms/persona-form-simple'
 import { usePersona, useUpdatePersona } from '@/hooks/use-personas'
 import { useOrganization } from '@/components/organization-provider'
@@ -72,71 +71,65 @@ export default function EditClusterPersonaPage() {
 
   if (isLoadingPersona) {
     return (
-      <AuthenticatedLayout>
-        <div className="space-y-6">
-          <ResourceHeader
-            backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
-            backLabel="Back to Personas"
-            icon={Users}
-            title="Loading..."
-            subtitle="Loading persona details..."
-          />
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </AuthenticatedLayout>
+      <div className="space-y-6">
+        <ResourceHeader
+          backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
+          backLabel="Back to Personas"
+          icon={Users}
+          title="Loading..."
+          subtitle="Loading persona details..."
+        />
+        <Skeleton className="h-96 w-full" />
+      </div>
     )
   }
 
   if (error || !persona) {
     return (
-      <AuthenticatedLayout>
-        <div className="space-y-6">
-          <ResourceHeader
-            backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
-            backLabel="Back to Personas"
-            icon={Users}
-            title="Persona Not Found"
-            subtitle={`The persona "${personaName}" was not found in cluster "${clusterName}"`}
-          />
-        </div>
-      </AuthenticatedLayout>
-    )
-  }
-
-  return (
-    <AuthenticatedLayout>
       <div className="space-y-6">
-        {/* Header */}
         <ResourceHeader
           backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
           backLabel="Back to Personas"
           icon={Users}
-          title="Edit Language Persona"
-          subtitle={`Edit "${persona.spec.displayName || persona.metadata.name}" in the ${clusterName} cluster`}
+          title="Persona Not Found"
+          subtitle={`The persona "${personaName}" was not found in cluster "${clusterName}"`}
         />
-
-        {/* Form */}
-        <div className="max-w-4xl">
-          {initialData ? (
-            <>
-              {submitError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-800">{submitError}</p>
-                </div>
-              )}
-              <PersonaFormSimple
-                initialData={initialData}
-                onSubmit={handleSubmit}
-                onCancel={handleCancel}
-                submitLabel={updatePersona.isPending ? 'Updating...' : 'Update Persona'}
-                isEdit={true}
-              />
-            </>
-          ) : (
-            <Skeleton className="h-96 w-full" />
-          )}
-        </div>
       </div>
-    </AuthenticatedLayout>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <ResourceHeader
+        backHref={getOrgUrl(`/clusters/${clusterName}/personas`)}
+        backLabel="Back to Personas"
+        icon={Users}
+        title="Edit Language Persona"
+        subtitle={`Edit "${persona.spec.displayName || persona.metadata.name}" in the ${clusterName} cluster`}
+      />
+
+      {/* Form */}
+      <div className="max-w-4xl">
+        {initialData ? (
+          <>
+            {submitError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">{submitError}</p>
+              </div>
+            )}
+            <PersonaFormSimple
+              initialData={initialData}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              submitLabel={updatePersona.isPending ? 'Updating...' : 'Update Persona'}
+              isEdit={true}
+            />
+          </>
+        ) : (
+          <Skeleton className="h-96 w-full" />
+        )}
+      </div>
+    </div>
   )
 }
