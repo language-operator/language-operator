@@ -4,7 +4,7 @@
 
 ### Deployment Rules
 - ⚠️ **Operator**: CI pipeline only, no local Docker builds
-- **Dashboard**: ROOT directory `docker compose up postgres-dev dashboard-dev` → http://localhost:3000 IF NOT ALREADY RUNNING.
+- **Dashboard**: http://localhost:3000 should be available.  if not, run "make dev-up" or "docker compose up"
 - **Login**: "james@theryans.io" / "password123"  
 - ❌ **NEVER**: components/dashboard/docker-compose.yml (deprecated)
 - ❌ **NEVER**: `npm run build` outside of docker compose (causes file watch issues & memory bloat)

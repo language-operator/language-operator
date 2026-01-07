@@ -1,4 +1,4 @@
-.PHONY: help k8s-status test test-unit test-integration setup-hooks dev-up dev-down dev-logs dev-status dev-clean dev-k3s-bridge dev-k3s-bridge-clean build-dashboard-server test-telemetry-integration
+.PHONY: help k8s-status test test-unit test-integration setup-hooks
 
 QA_PROMPT := "/task test"
 ITERATE_PROMPT := "/task iterate"
@@ -65,75 +65,10 @@ test-integration:
 	@echo ""
 	@echo "✓ Integration tests passed!"
 
-# Development Environment Commands
-
-dev-up:
-	@echo "Starting development dashboard and database..."
-	@docker compose up -d
-	@echo ""
-	@echo "⏳ Waiting for services to be ready..."
-	@until curl -s http://localhost:3000 > /dev/null 2>&1; do \
-		echo "  Dashboard not ready yet, waiting..."; \
-		sleep 2; \
-	done
-	@echo ""
-	@echo "✅ Services running:"
-	@echo "   Dashboard:      http://localhost:3000"
-	@echo "   Database:       postgresql://dev:dev@localhost:5433/language_operator_dev"
-	@echo "   Prisma Studio:  http://localhost:5555"
-	@echo ""
-	@echo "🔑 Credentials:"
-	@echo "   Email: james@theryans.io"
-	@echo "   Password: password123"
-	@echo ""
-	@echo "You can now open http:/localhost:3000/ in your browser to log in."
-
-dev-down:
-	@echo "Stopping development environment..."
-	@docker compose down
-
-dev-logs:
-	@docker compose logs -f
-
-dev-status:
-	@echo "📊 Development Environment Status:"
-	@echo ""
-	@echo "🐳 Docker Services:"
-	@docker compose ps
-	@echo ""
-	@echo "☸️ Kubernetes Cluster:"
-	@if kubectl get nodes 2>/dev/null | grep -q "Ready"; then \
-		echo "   ✅ K3s cluster accessible"; \
-		echo "   Nodes: $$(kubectl get nodes --no-headers | wc -l)"; \
-	else \
-		echo "   ❌ K3s cluster not accessible"; \
-	fi
-	@echo ""
-	@echo "🌐 Kubectl Proxy:"
-	@if docker compose ps kubectl-proxy | grep -q "Up"; then \
-		echo "   ✅ kubectl proxy running"; \
-	else \
-		echo "   ❌ kubectl proxy not running"; \
-	fi
-
-dev-clean:
-	@echo "🧹 Cleaning up development environment..."
-	@docker compose down -v
-	@echo "✓ Docker services stopped and volumes cleaned"
 
 # Show help
 help:
 	@echo "Hi :-)"
-	@echo ""
-	@echo "Development Environment:"
-	@echo "  dev-up            - Start dashboard and database"
-	@echo "  dev-down          - Stop development environment"
-	@echo "  dev-logs          - Show logs from all services"
-	@echo "  dev-status        - Show status of development services"
-	@echo "  dev-clean         - Clean up volumes and containers"
-	@echo ""
-	@echo "Building:"
-	@echo "  build-dashboard-server - Build dashboard server with real telemetry integration"
 	@echo ""
 	@echo "Development Tools:"
 	@echo "  docs              - Generate CRD API reference documentation"
@@ -143,12 +78,9 @@ help:
 	@echo "  test              - Run all tests"
 	@echo "  test-unit         - Run fast unit tests (no K8s required)"
 	@echo "  test-integration  - Run integration tests (fake K8s client)"
-	@echo "  test-telemetry-integration - Test telemetry integration with real ClickHouse adapter"
 	@echo ""
 	@echo "Kubernetes Operations:"
 	@echo "  k8s-status        - Check status of all language resources"
-	@echo ""
-	@echo "Quick Start: run 'make dev-up' to start everything!"
 
 fetch-synthesis-templates:
 	@echo "Fetching synthesis templates from language-operator-gem..."
@@ -157,29 +89,3 @@ fetch-synthesis-templates:
 	@curl -fsSL https://raw.githubusercontent.com/language-operator/language-operator-gem/main/lib/language_operator/templates/persona_distillation.tmpl -o src/pkg/synthesis/persona_distillation.tmpl
 	@echo "✓ Synthesis templates updated successfully!"
 
-# Build dashboard server with real telemetry integration  
-build-dashboard-server:
-	@echo "🔨 Building dashboard server with real telemetry integration..."
-	cd src && go build -o ../bin/dashboard-server ../cmd/dashboard/main.go
-	@echo "✓ Dashboard server built successfully!"
-
-# Test telemetry integration end-to-end
-test-telemetry-integration: build-dashboard-server
-	@echo "🧪 Testing telemetry integration end-to-end..."
-	@echo "🧹 Cleaning up any existing servers on port 8080..."
-	@-pkill -f "dashboard-server" || true
-	@sleep 1
-	@echo "🚀 Starting dashboard server in NoOp mode..."
-	@TELEMETRY_ADAPTER_TYPE=noop PORT=8080 ./bin/dashboard-server > /tmp/dashboard-test.log 2>&1 &
-	@echo "⏳ Waiting for server to start..."
-	@sleep 3
-	@echo "🏥 Testing health endpoint..."
-	@curl -f http://localhost:8080/api/health | jq '.'
-	@echo "📊 Testing agent executions endpoint..."
-	@curl -f "http://localhost:8080/api/clusters/test/agents/test-agent/executions?limit=10" | jq '.'
-	@echo "📈 Testing trace details endpoint..."
-	@curl -f "http://localhost:8080/api/clusters/test/agents/test-agent/executions/exec_123/traces" | jq '.'
-	@echo "🛑 Stopping server..."
-	@-pkill -f "dashboard-server"
-	@echo "✅ All telemetry integration tests passed!"
-	@echo "📝 Server logs saved to /tmp/dashboard-test.log"

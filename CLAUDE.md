@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-Language Operator is a Kubernetes operator for managing AI agents and language models across clusters. It provides declarative YAML configuration for AI workloads, integrated telemetry collection via OpenTelemetry, and a comprehensive dashboard for monitoring and management.
+Language Operator is a Kubernetes operator for managing AI agents and language models across clusters. It provides declarative YAML configuration for AI workloads and integrated telemetry collection via OpenTelemetry.
 
-The project consists of the Kubernetes operator (Go), web dashboard (Next.js), and supporting infrastructure including ClickHouse for telemetry storage.
+The project consists of the Kubernetes operator (Go) and supporting infrastructure including ClickHouse for telemetry storage.
 
 ## Repository Structure
 
@@ -15,13 +15,6 @@ language-operator/
 │   ├── controllers/              # Kubernetes controllers
 │   ├── pkg/telemetry/           # Telemetry collection and adapters
 │   └── config/                   # Kubernetes manifests and RBAC
-├── components/dashboard/         # Next.js dashboard application
-│   ├── src/
-│   │   ├── app/                 # Next.js 15 App Router pages
-│   │   ├── components/          # React components (shadcn/ui)
-│   │   ├── hooks/              # React hooks for data fetching
-│   │   └── lib/                # Utilities and API clients
-│   └── public/                  # Static assets
 ├── chart/                        # Helm chart for deployment
 ├── examples/                     # Example AI agent configurations
 ├── scripts/                      # Development and deployment scripts
@@ -34,7 +27,6 @@ This is a **Kubernetes-native Go operator** with the following components:
 
 ### Core Applications
 - **`/src/`** - Go Kubernetes operator managing LanguageCluster and Agent CRDs
-- **`/components/dashboard/`** - Next.js 15 dashboard for monitoring and management
 - **`/chart/`** - Helm chart for production deployment
 
 ### Supporting Infrastructure
@@ -52,10 +44,7 @@ make dev-setup
 # Build and deploy operator to local cluster  
 make dev-deploy
 
-# Start dashboard development server
-cd components/dashboard && npm run dev
-
-# Run all tests (operator + dashboard)
+# Run all tests
 make test
 ```
 
@@ -83,7 +72,6 @@ helm install language-operator ./chart
 make build              # Build Go operator binary
 make test               # Run all Go tests
 make test-integration   # Run integration tests with real Kubernetes
-cd components/dashboard && npm test  # Dashboard unit tests
 ```
 
 ## Technology Stack
@@ -96,16 +84,6 @@ cd components/dashboard && npm test  # Dashboard unit tests
 - **Testing**: Ginkgo/Gomega for BDD-style tests
 - **Build**: Make, Go modules
 
-### Dashboard (`/components/dashboard/`)
-- **Framework**: Next.js 15 (App Router)
-- **APIs**: REST APIs proxying to Kubernetes API and ClickHouse
-- **Authentication**: Kubernetes RBAC (no separate auth system)
-- **Database**: ClickHouse (read-only telemetry queries)
-- **Validation**: Zod schemas for API validation
-- **Styling**: Tailwind CSS with CSS variables
-- **Components**: shadcn/ui (Radix UI primitives)
-- **State Management**: React Query + React hooks
-- **Charts**: Recharts for telemetry visualization
 
 ### Infrastructure
 - **Telemetry Storage**: ClickHouse (high-volume trace/metric data)
@@ -122,12 +100,6 @@ cd components/dashboard && npm test  # Dashboard unit tests
 - All features must integrate with **real Kubernetes APIs** before commit
 - Infrastructure dependencies must be working locally before development
 
-### **✅ COMPLIANCE VERIFICATION**
-The telemetry visualization feature (GitHub #209) now fully complies with these standards:
-- ✅ Uses real ClickHouse adapter (not mock data)
-- ✅ Proxies through Go telemetry service (not Next.js mock APIs)
-- ✅ Tested with `make test-telemetry-integration`
-- ✅ Gracefully handles unavailable telemetry (returns empty data, not errors)
 
 ### Definition of Done
 A feature is **ONLY complete** when:
@@ -138,12 +110,6 @@ A feature is **ONLY complete** when:
 5. ✅ Linting and type checking passing
 6. ✅ No mock data or temporary workarounds
 
-### Frontend Development
-- All dashboard features in `/components/dashboard/src/app/[feature]/`
-- Use React Server Components where possible (Next.js 15 App Router)
-- API routes proxy to either Kubernetes API or ClickHouse
-- Follow existing component patterns for consistency
-- Use shadcn/ui components from `@/components/ui`
 
 ### Kubernetes Integration
 - All operator logic in `/src/controllers/`
@@ -161,15 +127,12 @@ A feature is **ONLY complete** when:
 ### Testing Requirements
 - **Go**: Ginkgo/Gomega for all controller tests
 - **Integration**: Tests against real kind cluster with ClickHouse
-- **Dashboard**: Jest for React component tests
 - **E2E**: Manual verification with real telemetry data required
 - Tests must be independent and run concurrently
 - **NO COMMITS without passing tests**
 
 ### Code Standards
 - **Go**: Follow standard Go conventions, use gofmt
-- **TypeScript**: Strict TypeScript throughout dashboard
-- **Validation**: Zod for all API input validation
 - **Error Handling**: Proper error propagation and logging
 - **Documentation**: Inline comments for complex logic
 
@@ -177,7 +140,6 @@ A feature is **ONLY complete** when:
 
 ### Prerequisites
 - **Go**: Version 1.21+ (see `go.mod`)
-- **Node.js**: Version 18+ for dashboard
 - **Docker**: For building container images
 - **kubectl**: For Kubernetes cluster interaction
 - **kind**: For local Kubernetes development cluster
@@ -191,12 +153,7 @@ make dev-setup
 # 2. Deploy operator to cluster
 make dev-deploy
 
-# 3. Start dashboard development
-cd components/dashboard
-npm install
-npm run dev  # http://localhost:3000
-
-# 4. Verify telemetry data flow
+# 3. Verify telemetry data flow
 kubectl logs -n kube-system deployment/otel-collector
 ```
 
@@ -221,16 +178,19 @@ kubectl exec -it clickhouse-0 -- clickhouse-client \
   -q "SELECT count() FROM otel_traces WHERE SpanName LIKE '%agent%'"
 ```
 
-### Dashboard Verification
+### Operator Verification
 ```sh
-# 1. Start dashboard
-cd components/dashboard && npm run dev
+# 1. Check operator is running
+kubectl logs -n kube-system deployment/language-operator
 
-# 2. Navigate to agent details page
-open http://localhost:3000/clusters/docker/agents/[agent-name]/traces
+# 2. Apply test resources
+kubectl apply -f examples/
 
-# 3. Verify real trace data displays (no mock data)
-# 4. Test all interactions work with real ClickHouse queries
+# 3. Verify CRDs are processed correctly
+kubectl get languageclusters,languageagents -A
+
+# 4. Check telemetry data is being collected
+kubectl exec -it clickhouse-0 -- clickhouse-client -q "SELECT count() FROM otel_traces"
 ```
 
 ## Common Issues

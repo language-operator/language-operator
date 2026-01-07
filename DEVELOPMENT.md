@@ -1,171 +1,148 @@
 # Development Environment
 
-This document describes how to set up and use the Language Operator development environment.
+This document describes how to set up the Language Operator Kubernetes operator for development.
 
 ## Quick Start
 
 ```bash
-# 1. Set up Docker network bridge to K3s (one-time setup)
-make dev-k3s-bridge
+# 1. Set up local Kubernetes cluster with dependencies
+make dev-setup
 
-# 2. Start dashboard and database
-make dev-up
+# 2. Build and deploy operator to local cluster  
+make dev-deploy
 
-# 3. View logs from all services
-make dev-logs
+# 3. Run tests
+make test
 
-# 4. Check status
-make dev-status
-
-# 5. Stop everything
-make dev-down
+# 4. View operator logs
+kubectl logs -n kube-system deployment/language-operator
 ```
 
 ## Architecture
 
-The development environment separates concerns for better reliability:
+The development environment focuses on the Kubernetes operator functionality:
 
-### Docker Compose Services
-- **postgres-dev**: PostgreSQL database for the dashboard  
-- **dashboard-dev**: Next.js dashboard with hot reload at `http://localhost:3000`
-- **prisma-studio**: Database management UI at `http://localhost:5555`
+### Core Components
+- **Language Operator**: Go-based Kubernetes operator managing Language* CRDs
+- **ClickHouse**: High-performance telemetry storage
+- **OpenTelemetry Collector**: Telemetry collection and forwarding
+- **Kind/K3s Cluster**: Local Kubernetes development cluster
 
-### K3s Cluster Integration
-- **Network Bridge**: Docker containers can resolve Kubernetes service DNS
-- **Direct Communication**: Dashboard talks directly to `my-service.default.svc.cluster.local`
-- **Existing K3s Cluster**: Uses your existing K3s cluster at `dl4:6443`
-
-This approach provides:
-- **Real service discovery**: No port-forwarding or proxies needed
-- **Production-like networking**: Same DNS resolution as in-cluster workloads  
-- **Minimal complexity**: Leverages your existing K3s infrastructure
-
-## Service Details
-
-### Dashboard
-- **URL**: `http://localhost:3000`
-- **Hot Reload**: Changes to `components/dashboard/` are automatically reflected
-- **Database**: Connects to `postgres-dev:5432`
-- **Kubernetes**: Connects to your K3s cluster via the network bridge
-
-### Database
-- **URL**: `postgresql://dev:dev@localhost:5433/language_operator_dev`
-- **Admin**: Use Prisma Studio at `http://localhost:5555`
+### Note on Dashboard
+The web dashboard has been moved to a separate repository and is deployed as a container image. For dashboard development, see the [dashboard repository](https://github.com/language-operator/dashboard).
 
 ## Development Workflow
 
-### 1. Start Development Environment
+### 1. Set up Local Environment
 ```bash
-make dev-up
+# Set up local Kubernetes cluster with all dependencies
+make dev-setup
 ```
 
 This will:
-- Start PostgreSQL database
-- Set up Docker network bridge to your K3s cluster
-- Start the dashboard with hot reload
-- Start Prisma Studio
+- Create a local Kind cluster
+- Deploy ClickHouse for telemetry storage
+- Deploy OpenTelemetry Collector
+- Install necessary CRDs and RBAC
 
 ### 2. Develop
-- **Dashboard changes**: Edit files in `components/dashboard/` - changes are hot-reloaded
-- **Operator changes**: Deploy to your K3s cluster using Helm
-- **Database changes**: Use Prisma Studio at `http://localhost:5555`
+- **Operator changes**: Build and deploy to your local cluster using `make dev-deploy`
+- **CRD changes**: Run `make manifests` to regenerate Kubernetes manifests
+- **Test changes**: Use `make test` for unit tests, `make test-integration` for integration tests
 
 ### 3. Test Kubernetes Resources
 ```bash
-# Check dashboard status
-make dev-status
+# Build and deploy operator
+make dev-deploy
 
-# Apply test resources to your K3s cluster
+# Apply test resources to your cluster
 kubectl apply -f examples/
 
-# Watch operator logs (in K3s cluster)
-kubectl logs -f -n language-operator deployment/language-operator
+# Watch operator logs
+kubectl logs -f -n kube-system deployment/language-operator
 ```
 
 ### 4. Access Services
-- **Dashboard**: `http://localhost:3000`
-- **Prisma Studio**: `http://localhost:5555`
-- **Kubernetes API**: Your K3s cluster endpoint
+- **Operator Logs**: `kubectl logs -n kube-system deployment/language-operator`
+- **ClickHouse**: Port-forward to access telemetry database
+- **Kubernetes API**: Your local cluster endpoint
 
 ## Troubleshooting
 
-### Services Won't Start
+### Operator Won't Start
 ```bash
-# Check service status
-make dev-status
+# Check operator logs
+kubectl logs -n kube-system deployment/language-operator
 
-# View logs for specific service
-docker compose logs dashboard-dev
-docker compose logs postgres-dev
+# Check if CRDs are installed
+kubectl get crd | grep langop.io
+
+# Verify RBAC permissions
+kubectl describe clusterrole language-operator-manager-role
 ```
 
-### K3s Network Bridge Issues
+### Build Issues
 ```bash
-# Recreate the bridge
-make dev-k3s-bridge
+# Clean and rebuild
+make clean
+make build
 
-# Test DNS resolution
-docker run --rm --network=langop-k3s alpine nslookup kubernetes.default.svc.cluster.local
+# Run tests to verify
+make test
 ```
 
-### Dashboard Issues
+### ClickHouse/Telemetry Issues
 ```bash
-# Rebuild dashboard
-docker compose build dashboard-dev
-docker compose up -d dashboard-dev
+# Check ClickHouse status
+kubectl get pods -l app=clickhouse
 
-# Check database connection
-docker compose exec postgres-dev psql -U dev -d language_operator_dev -c "SELECT NOW();"
+# Check OpenTelemetry Collector
+kubectl get pods -l app=otel-collector
+
+# View collector logs
+kubectl logs -l app=otel-collector
 ```
 
 ### Clean Reset
 ```bash
-# Remove all containers, volumes, and data
-make dev-clean
+# Remove local cluster and start fresh
+kind delete cluster --name language-operator
+make dev-setup
 ```
 
 ## Configuration
 
 ### Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string  
-- `NEXTAUTH_SECRET`: Dashboard authentication secret
-- `KUBECONFIG`: Path to your K3s cluster configuration
-
-### Volumes
-- `postgres_dev_data`: Database storage
+- `KUBECONFIG`: Path to your cluster configuration
+- `TELEMETRY_ADAPTER_TYPE`: Type of telemetry adapter (clickhouse, signoz, noop)
+- `TELEMETRY_ADAPTER_ENDPOINT`: ClickHouse or SigNoz endpoint URL
+- `TELEMETRY_ADAPTER_API_KEY`: API key for telemetry service (if required)
 
 ## Advanced Usage
 
-### Using Different K3s Cluster
-To use a different K3s cluster:
+### Using Different Cluster
+To use a different Kubernetes cluster:
 
-1. Update the K3s host in the bridge setup script:
-```bash
-# Edit scripts/setup-k3s-bridge.sh
-K3S_HOST="your-k3s-host"
-```
-
-2. Set your kubeconfig to point to the cluster:
+1. Set your kubeconfig to point to the cluster:
 ```bash
 export KUBECONFIG=/path/to/your/kubeconfig
 ```
 
-3. Set up the bridge and start development:
+2. Deploy the operator:
 ```bash
-make dev-k3s-bridge
-make dev-up
+make dev-deploy
 ```
 
 ### Custom Configuration
-Create a `docker-compose.override.yml` file to customize the setup without modifying the main configuration.
+Modify the Helm values in `chart/values.yaml` to customize the operator deployment.
 
 ## Next Steps
 
 Once your development environment is running:
 
-1. Visit the dashboard at `http://localhost:3000`
-2. Create your first LanguageCluster resource
-3. Deploy some example agents from the `examples/` directory
-4. Monitor the operator logs to see it working
+1. Create your first LanguageCluster resource
+2. Deploy some example agents from the `examples/` directory
+3. Monitor the operator logs to see it working
+4. Access telemetry data through ClickHouse queries
 
 Happy developing! 🚀
