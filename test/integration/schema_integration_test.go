@@ -20,6 +20,7 @@ import (
 // - Bundler must be installed
 // - language_operator gem must be available (via bundle exec langop)
 func TestSchemaIntegrationEndToEnd(t *testing.T) {
+	// Hook test: This test is disabled as the function was removed
 	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
 }
 
