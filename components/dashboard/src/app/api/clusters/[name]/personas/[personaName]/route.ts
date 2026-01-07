@@ -77,7 +77,7 @@ export async function GET(
 
     console.log(`Successfully fetched persona ${personaName} for cluster ${clusterName}`)
 
-    return createSuccessResponse(persona, undefined, {
+    return createSuccessResponse({ persona }, undefined, {
       cluster: clusterName,
     })
 
