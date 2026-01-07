@@ -77,7 +77,7 @@ function ErrorDisplay({ error, onRetry, clusterName }: ErrorDisplayProps) {
       break
       
     case 'MODEL_RESPONSE_ERROR':
-      const is500Error = details?.includes('500')
+      const is500Error = details?.includes('500') ?? false
       icon = <AlertCircle className="h-4 w-4 text-red-500" />
       title = 'Model Error'
       canRetry = is500Error
