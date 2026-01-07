@@ -23,9 +23,10 @@ interface ErrorDisplayProps {
   error: any
   onRetry?: () => void
   clusterName?: string
+  getOrgUrl: (path: string) => string
 }
 
-function ErrorDisplay({ error, onRetry, clusterName }: ErrorDisplayProps) {
+function ErrorDisplay({ error, onRetry, clusterName, getOrgUrl }: ErrorDisplayProps) {
   if (!error) return null
   
   let errorMessage = 'An unexpected error occurred'
@@ -251,6 +252,7 @@ export function PersonaAutofillDialog({
               error={generatePersona.error} 
               onRetry={handleRetry}
               clusterName={clusterName}
+              getOrgUrl={getOrgUrl}
             />
           )}
         </div>
