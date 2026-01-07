@@ -1,18 +1,14 @@
 # Agent Memory Bank
 
-## Active Work
-- 🎯 **Issue #77**: Learning controller ConfigMap serialization failures - **READY**
-- 🎯 **Issue #61**: Registry whitelist configuration drift - **READY** 
-- **Issue #55**: Telemetry adapter endpoint validation panics - **BACKLOG**
-
 ## Development Environment
 
 ### Deployment Rules
 - ⚠️ **Operator**: CI pipeline only, no local Docker builds
-- **Dashboard**: ROOT directory `docker compose up postgres-dev dashboard-dev` → http://localhost:3000
+- **Dashboard**: ROOT directory `docker compose up postgres-dev dashboard-dev` → http://localhost:3000 IF NOT ALREADY RUNNING.
 - **Login**: "james@theryans.io" / "password123"  
 - ❌ **NEVER**: components/dashboard/docker-compose.yml (deprecated)
-- ❌ **NEVER**: `npm run build` locally (causes file watch issues & memory bloat)
+- ❌ **NEVER**: `npm run build` outside of docker compose (causes file watch issues & memory bloat)
+- ❌ **NEVER**: `npm run dev` outside of docker compose (causes port conflict)
 
 ### Port Conflict Debugging
 - **Symptom**: Dashboard starts on port 3001 instead of 3000
@@ -95,6 +91,7 @@
 - **Pattern**: UI issues often affect multiple components sharing the same broken pattern
 
 ### Technical Debt Tracking
-- **EventManager adoption**: 3 controllers need migration to centralized events
+- **EventManager adoption**: ✅ **COMPLETED** - All controllers migrated to centralized events
 - **Status Phase Constants**: Check for remaining hardcoded status strings
 - **Organization-scoped navigation**: Audit settings pages for hardcoded paths
+- **CI Optimization**: ✅ **COMPLETED** - Dashboard builds now use path filtering to reduce CI execution time
