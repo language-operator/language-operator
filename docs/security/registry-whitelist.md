@@ -368,7 +368,7 @@ status:
 ### CLI Visibility
 
 ```bash
-$ aictl agent status my-agent
+$ langop agent status my-agent
 
 Agent: my-agent
 Phase: Pending

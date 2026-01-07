@@ -97,24 +97,24 @@ This directory contains built-in personas that ship with the language-operator H
 
 ## Usage
 
-### Using with aictl CLI
+### Using with langop CLI
 
 Create an agent with a persona from the library:
 
 ```bash
-aictl agent create "Analyze the Q3 earnings report for AAPL" --persona financial-analyst
+langop agent create "Analyze the Q3 earnings report for AAPL" --persona financial-analyst
 ```
 
 List available personas:
 
 ```bash
-aictl persona list
+langop persona list
 ```
 
 View persona details:
 
 ```bash
-aictl persona show financial-analyst
+langop persona show financial-analyst
 ```
 
 ### Using with Kubernetes
@@ -139,7 +139,7 @@ You can create your own personas based on these templates:
 
 ```bash
 # Create a custom persona based on financial-analyst
-aictl persona create my-crypto-analyst --from financial-analyst
+langop persona create my-crypto-analyst --from financial-analyst
 ```
 
 Or apply a custom persona directly:

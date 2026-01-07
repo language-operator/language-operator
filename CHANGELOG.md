@@ -160,7 +160,7 @@ Integration between the Go operator and the Ruby gem's DSL schema, enabling runt
 **Features:**
 
 - **Schema Fetching** ([#1](https://github.com/language-operator/language-operator/issues/1))
-  - Added `FetchDSLSchema()` function to retrieve JSON Schema from language-operator gem via `aictl system schema`
+  - Added `FetchDSLSchema()` function to retrieve JSON Schema from language-operator gem via `langop system schema`
   - Added `GetSchemaVersion()` for efficient version-only queries
   - Implemented command execution with timeout handling and context cancellation
   - Schema is fetched from the installed gem, ensuring operator uses the correct DSL specification
@@ -193,13 +193,13 @@ Integration between the Go operator and the Ruby gem's DSL schema, enabling runt
 - End-to-end schema integration test ([#7](https://github.com/language-operator/language-operator/issues/7))
   - Tests full Go→Ruby schema flow in `test/integration/schema_integration_test.go`
   - Validates schema fetching, validation, compatibility checking, and error handling
-  - Skips gracefully when `aictl` unavailable (CI-friendly)
+  - Skips gracefully when `langop` unavailable (CI-friendly)
 - All tests pass with >80% coverage on schema code
 
 **Dependencies:**
 
 - Requires `language-operator` gem v0.1.31 or compatible version
-- Uses `bundle exec aictl` for schema access
+- Uses `bundle exec langop` for schema access
 - Validator script: `scripts/validate-dsl-schema.rb`
 
 **Breaking Changes:**
@@ -222,7 +222,7 @@ Language Operator is a Kubernetes operator that transforms natural language desc
 
 ### Core Capabilities
 
-- **Natural Language Interface**: Describe tasks in plain English via `aictl` CLI
+- **Natural Language Interface**: Describe tasks in plain English via `langop` CLI
 - **Autonomous Agent Synthesis**: Automatically generates Ruby code from task descriptions
 - **Kubernetes-Native**: Deploys agents as CRDs (LanguageAgent, LanguageCluster, LanguageModel, LanguageTool)
 - **Scheduled Execution**: Cron-based scheduling for recurring tasks

@@ -18,7 +18,7 @@ import (
 // Requirements:
 // - Ruby must be installed
 // - Bundler must be installed
-// - language_operator gem must be available (via bundle exec aictl)
+// - language_operator gem must be available (via bundle exec langop)
 func TestSchemaIntegrationEndToEnd(t *testing.T) {
 	t.Skip("Test disabled - FetchDSLSchema function was removed as dead code")
 }
