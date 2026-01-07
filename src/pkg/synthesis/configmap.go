@@ -519,9 +519,9 @@ func (cm *ConfigMapManager) CreateCleanupCronJob(ctx context.Context, agent *lan
 							Containers: []corev1.Container{
 								{
 									Name:  "cleanup",
-									Image: "ghcr.io/language-operator/aictl:latest", // Use existing CLI image
+									Image: "ghcr.io/language-operator/langop:latest", // Use existing CLI image
 									Command: []string{
-										"/usr/local/bin/aictl",
+										"/usr/local/bin/langop",
 										"agent", "cleanup",
 										"--agent", agent.Name,
 										"--namespace", agent.Namespace,

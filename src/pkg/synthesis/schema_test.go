@@ -34,8 +34,8 @@ func TestGetSchemaVersion_Success(t *testing.T) {
 	}
 
 	// This test requires language-operator gem to be installed
-	if _, err := exec.LookPath("aictl"); err != nil {
-		t.Skip("aictl command not found, skipping test")
+	if _, err := exec.LookPath("langop"); err != nil {
+		t.Skip("langop command not found, skipping test")
 	}
 
 	ctx := context.Background()
@@ -168,8 +168,8 @@ func TestGetSchemaVersion_DefaultTimeout(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	if _, err := exec.LookPath("aictl"); err != nil {
-		t.Skip("aictl command not found, skipping test")
+	if _, err := exec.LookPath("langop"); err != nil {
+		t.Skip("langop command not found, skipping test")
 	}
 
 	// Use a context without a deadline
@@ -465,9 +465,9 @@ func TestValidateSchemaCompatibility_Integration(t *testing.T) {
 		}
 	})
 
-	// If aictl is available, test version fetching
-	if _, err := exec.LookPath("aictl"); err == nil {
-		t.Run("with aictl available", func(t *testing.T) {
+	// If langop is available, test version fetching
+	if _, err := exec.LookPath("langop"); err == nil {
+		t.Run("with langop available", func(t *testing.T) {
 			version, err := GetSchemaVersion(ctx)
 			if err != nil {
 				t.Logf("Could not fetch version: %v", err)

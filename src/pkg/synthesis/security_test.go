@@ -14,8 +14,8 @@ func TestValidateCommandSecurity_AllowedCommands(t *testing.T) {
 		args    []string
 	}{
 		{
-			name:    "aictl command",
-			command: "aictl",
+			name:    "langop command",
+			command: "langop",
 			args:    []string{"system", "schema", "--format=json"},
 		},
 		{

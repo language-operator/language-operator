@@ -49,9 +49,9 @@ func GetSchemaVersion(ctx context.Context) (string, error) {
 	}
 
 	// Execute the command to fetch version
-	output, err := executeCommand(ctx, "aictl", "system", "schema", "--version")
+	output, err := executeCommand(ctx, "langop", "system", "schema", "--version")
 	if err != nil {
-		return "", fmt.Errorf("failed to execute aictl system schema --version command: %w", err)
+		return "", fmt.Errorf("failed to execute langop system schema --version command: %w", err)
 	}
 
 	// Trim whitespace and return version
@@ -66,7 +66,7 @@ func GetSchemaVersion(ctx context.Context) (string, error) {
 // allowedCommands defines the allowlist of commands that can be executed for security.
 // This prevents command injection attacks by restricting execution to known-safe binaries.
 var allowedCommands = map[string]bool{
-	"aictl":  true, // Language operator CLI tool
+	"langop": true, // Language operator CLI tool
 	"bundle": true, // Ruby bundler for executing validation scripts
 	"ruby":   true, // Ruby interpreter for schema validation
 }

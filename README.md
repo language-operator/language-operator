@@ -7,7 +7,7 @@ A Kubernetes operator that synthesizes autonomous agents from natural language d
 Language Operator converts natural language goals into executable agents that run in your Kubernetes cluster:
 
 ```bash
-aictl agent create "monitor our API error rates and alert on spikes"
+langop agent create "monitor our API error rates and alert on spikes"
 ```
 
 This creates a complete agent with:
@@ -82,11 +82,11 @@ helm repo add language-operator https://charts.langop.io
 # Install operator
 helm install language-operator language-operator/language-operator
 
-# Install aictl
+# Install langop CLI
 gem install language-operator
 
 # Set up your first cluster
-aictl quickstart
+langop quickstart
 ```
 
 ## Development Setup

@@ -520,10 +520,10 @@ func TestConfigMapManager_CreateCleanupCronJob(t *testing.T) {
 	require.Len(t, containers, 1)
 	container := containers[0]
 	assert.Equal(t, "cleanup", container.Name)
-	assert.Equal(t, "ghcr.io/language-operator/aictl:latest", container.Image)
+	assert.Equal(t, "ghcr.io/language-operator/langop:latest", container.Image)
 
 	expectedCommand := []string{
-		"/usr/local/bin/aictl",
+		"/usr/local/bin/langop",
 		"agent", "cleanup",
 		"--agent", "test-agent",
 		"--namespace", "test-namespace",
