@@ -575,7 +575,7 @@ telemetry:
     
     # ClickHouse image configuration
     image:
-      tag: "24.1-alpine"
+      tag: "25.12-alpine"
       pullPolicy: IfNotPresent
     
     # Database configuration
