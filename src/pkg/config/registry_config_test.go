@@ -77,7 +77,7 @@ func TestLoadRegistries(t *testing.T) {
 			name: "Valid ConfigMap",
 			configMap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "operator-config",
+					Name:      "language-operator-config",
 					Namespace: "kube-system",
 				},
 				Data: map[string]string{
@@ -91,7 +91,7 @@ func TestLoadRegistries(t *testing.T) {
 			name: "Missing allowed-registries key",
 			configMap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "operator-config",
+					Name:      "language-operator-config",
 					Namespace: "kube-system",
 				},
 				Data: map[string]string{
@@ -104,7 +104,7 @@ func TestLoadRegistries(t *testing.T) {
 			name: "Invalid field in ConfigMap",
 			configMap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "operator-config",
+					Name:      "language-operator-config",
 					Namespace: "kube-system",
 				},
 				Data: map[string]string{
@@ -118,7 +118,7 @@ func TestLoadRegistries(t *testing.T) {
 			name: "Empty registries list",
 			configMap: &v1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "operator-config",
+					Name:      "language-operator-config",
 					Namespace: "kube-system",
 				},
 				Data: map[string]string{

@@ -68,7 +68,7 @@ func (r *RegistryConfigManager) StartWatcher(ctx context.Context) error {
 		r.clientset.CoreV1().RESTClient(),
 		"configmaps",
 		r.operatorNamespace,
-		fields.OneTermEqualSelector("metadata.name", "operator-config"),
+		fields.OneTermEqualSelector("metadata.name", "language-operator-config"),
 	)
 
 	// Create informer
@@ -131,9 +131,9 @@ func (r *RegistryConfigManager) Stop() {
 func (r *RegistryConfigManager) loadRegistries(ctx context.Context) error {
 	logger := log.FromContext(ctx).WithName("registry-config-manager")
 
-	configMap, err := r.clientset.CoreV1().ConfigMaps(r.operatorNamespace).Get(ctx, "operator-config", metav1.GetOptions{})
+	configMap, err := r.clientset.CoreV1().ConfigMaps(r.operatorNamespace).Get(ctx, "language-operator-config", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get operator-config ConfigMap: %w", err)
+		return fmt.Errorf("failed to get language-operator-config ConfigMap: %w", err)
 	}
 
 	// Validate ConfigMap structure

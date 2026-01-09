@@ -183,13 +183,6 @@ SELECT * FROM langop.otel_metrics LIMIT 10;
 | `agentTelemetry.endpoint` | OTLP endpoint override for agents | `""` (inherits from operator) |
 | `agentTelemetry.samplingRate` | Sampling rate override for agents | `null` (inherits from operator) |
 
-### Persona Library
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `personaLibrary.enabled` | Install built-in persona ConfigMaps | `true` |
-| `personaLibrary.personas` | List of personas to install | See values.yaml |
-
 ### Webhook
 
 | Parameter | Description | Default |

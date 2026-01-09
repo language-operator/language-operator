@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: operator-config
+  name: language-operator-config
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "language-operator.labels" . | nindent 4 }}
