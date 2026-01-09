@@ -43,6 +43,11 @@ rules:
   resources: ["events"]
   verbs: ["get", "list", "watch", "create"]
 
+# ConfigMap access for registry whitelist management
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "update", "patch"]
+
 # Job and CronJob access for manual agent execution
 - apiGroups: ["batch"]
   resources: ["jobs", "cronjobs"]
