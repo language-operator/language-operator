@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: language-operator-config
   namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/resource-policy: keep
   labels:
     {{- include "language-operator.labels" . | nindent 4 }}
 data:
