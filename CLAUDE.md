@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project Overview
 
 Language Operator is a Kubernetes operator for managing AI agents and language models across clusters. It provides declarative YAML configuration for AI workloads and integrated telemetry collection via OpenTelemetry.
@@ -36,52 +38,48 @@ This is a **Kubernetes-native Go operator** with the following components:
 
 ## Development Commands
 
-### Local Development
+### Building & Testing (Go Operator)
 ```sh
-# Start local Kubernetes cluster with all dependencies
-make dev-setup
-
-# Build and deploy operator to local cluster  
-make dev-deploy
-
-# Run all tests
-make test
+cd src                  # Navigate to Go operator directory
+make test              # Run all Go tests with linting and formatting
+make build             # Build Go operator binary
+make run               # Run operator locally (requires K8s cluster)
+make fmt               # Run go fmt
+make vet               # Run go vet
+make generate          # Generate DeepCopy methods
+make manifests         # Generate CRDs and RBAC
 ```
 
-### Database Management
+### Repository-Level Testing
 ```sh
-# ClickHouse is managed via Helm chart - no manual migrations needed
-# Data is ingested automatically via OpenTelemetry Collector
-
-# To reset telemetry data in development:
-kubectl delete -n kube-system deployment/otel-collector
-helm upgrade language-operator ./chart --reset-values
+make test              # Run all tests (Go operator + integration)
+make test-unit         # Run fast unit tests (no K8s required)
+make test-integration  # Run integration tests with fake K8s client
 ```
 
-### Infrastructure
+### Development Tools
 ```sh
-# Deploy full infrastructure to local kind cluster
-make dev-kind
-
-# Deploy to existing Kubernetes cluster
-helm install language-operator ./chart
+make docs              # Generate CRD API reference documentation
+make setup-hooks       # Install git pre-commit hooks
+make k8s-status        # Check status of deployed language resources
 ```
 
-### Building & Testing
+### Helm Chart Development
 ```sh
-make build              # Build Go operator binary
-make test               # Run all Go tests
-make test-integration   # Run integration tests with real Kubernetes
+cd chart               # Navigate to Helm chart directory
+helm lint .            # Validate Helm chart syntax
+helm template . --debug  # Render templates locally for validation
+cd ../src && make helm-crds  # Copy generated CRDs to chart
 ```
 
 ## Technology Stack
 
 ### Kubernetes Operator (`/src/`)
-- **Language**: Go 1.21+
+- **Language**: Go 1.23+ (see `src/go.mod`)
 - **Framework**: controller-runtime (Kubernetes operator framework)
-- **CRDs**: LanguageCluster, Agent custom resources
-- **Telemetry**: OpenTelemetry Go SDK with ClickHouse adapter
-- **Testing**: Ginkgo/Gomega for BDD-style tests
+- **CRDs**: LanguageCluster, LanguageAgent, LanguageAgentVersion, LanguageModel, LanguageTool custom resources
+- **Telemetry**: OpenTelemetry and ClickHouse
+- **Testing**: Standard Go testing with testify
 - **Build**: Make, Go modules
 
 
@@ -208,9 +206,9 @@ kubectl exec -it clickhouse-0 -- clickhouse-client -q "SELECT count() FROM otel_
 ## Commit Standards
 
 ### Before Any Commit
-1. ✅ Run full test suite: `make test && cd components/dashboard && npm test`
+1. ✅ Run full test suite: `make test`
 2. ✅ Verify with real data: Manual testing with actual ClickHouse traces
-3. ✅ Check linting: `make lint && cd components/dashboard && npm run lint`
+3. ✅ Check linting: `cd src && make fmt && make vet`
 4. ✅ Confirm no mock data or shortcuts remain
 5. ✅ All features work end-to-end
 
