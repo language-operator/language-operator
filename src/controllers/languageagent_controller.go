@@ -692,34 +692,6 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 		MountPath: "/tmp",
 	})
 
-	// /home/langop/.bundle - Ruby bundler cache
-	volumes = append(volumes, corev1.Volume{
-		Name: "ruby-bundle",
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory, // Use tmpfs
-			},
-		},
-	})
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      "ruby-bundle",
-		MountPath: "/home/langop/.bundle",
-	})
-
-	// /home/langop/.gem - Ruby gem installation directory
-	volumes = append(volumes, corev1.Volume{
-		Name: "ruby-gem",
-		VolumeSource: corev1.VolumeSource{
-			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory, // Use tmpfs
-			},
-		},
-	})
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      "ruby-gem",
-		MountPath: "/home/langop/.gem",
-	})
-
 	// TODO: Add instructions mounting from InstructionsFrom ConfigMap/Secret
 	// TODO: Add persona mounting from PersonaRefs
 
