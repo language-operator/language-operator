@@ -22,10 +22,10 @@ import (
 )
 
 // TelemetryAdapter provides an interface for querying observability backends
-// to retrieve historical execution data for the learning system.
+// to retrieve historical execution data for agent analysis and monitoring.
 //
 // Implementations should handle backend-specific protocols (gRPC, HTTP, etc.)
-// and data formats while presenting a unified interface to the learning controller.
+// and data formats while presenting a unified interface to controllers.
 //
 // The adapter is responsible for:
 // - Querying trace data for task execution patterns
@@ -74,9 +74,9 @@ type TelemetryAdapter interface {
 	// Available returns true if the telemetry backend is reachable and healthy.
 	//
 	// Should perform a lightweight health check (e.g., ping, version query).
-	// Used by learning controller to decide whether to attempt queries.
+	// Used by controllers to decide whether to attempt queries.
 	//
-	// If this returns false, learning controller should gracefully degrade
+	// If this returns false, controllers should gracefully degrade
 	// rather than failing hard.
 	Available() bool
 }
@@ -100,8 +100,8 @@ type SpanFilter struct {
 	//
 	// Common attributes:
 	// - "agent.name": Agent instance name
-	// - "task.type": "neural" or "symbolic"
-	// - "synthesis.version": ConfigMap version
+	// - "agent.namespace": Agent namespace
+	// - "task.type": Task type identifier
 	Attributes map[string]string
 
 	// Limit restricts the maximum number of spans returned.
@@ -157,8 +157,8 @@ func (tr TimeRange) Contains(t time.Time) bool {
 
 // Span represents a single execution span from the telemetry backend.
 //
-// This is a simplified, learning-focused view of OpenTelemetry spans.
-// It contains only the fields needed for pattern detection and analysis.
+// This is a simplified view of OpenTelemetry spans for agent execution tracking.
+// It contains only the fields needed for monitoring and analysis.
 type Span struct {
 	// SpanID uniquely identifies this span within its trace.
 	SpanID string
@@ -194,7 +194,7 @@ type Span struct {
 	ErrorMessage string
 
 	// Attributes contains key-value pairs from the span.
-	// Common learning-relevant attributes:
+	// Common observability attributes:
 	// - "task.inputs": JSON string of task inputs
 	// - "task.outputs": JSON string of task outputs
 	// - "tool.name": Name of tool called
@@ -202,7 +202,7 @@ type Span struct {
 	// - "llm.model": Model name for LLM calls
 	// - "llm.tokens.input": Input token count
 	// - "llm.tokens.output": Output token count
-	// - "synthesis.version": ConfigMap version
+	// - "agent.image": Container image used
 	Attributes map[string]string
 
 	// Events contains timestamped log events within the span.
@@ -242,7 +242,7 @@ type MetricPoint struct {
 // MockAdapter provides a no-op implementation for testing and development.
 //
 // Always returns empty results and reports as available.
-// Useful for unit testing learning controller logic without requiring
+// Useful for unit testing controller logic without requiring
 // a real telemetry backend.
 type MockAdapter struct {
 	// AvailableReturn controls what Available() returns.

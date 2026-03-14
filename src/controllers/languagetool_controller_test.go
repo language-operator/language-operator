@@ -15,6 +15,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// mockRegistryManager is a mock implementation of RegistryManager for testing
+type mockRegistryManager struct {
+	registries []string
+}
+
+func (m *mockRegistryManager) GetRegistries() []string {
+	if m.registries == nil {
+		return []string{"docker.io", "gcr.io", "ghcr.io"}
+	}
+	return m.registries
+}
+
 func TestLanguageToolController_SidecarMode(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

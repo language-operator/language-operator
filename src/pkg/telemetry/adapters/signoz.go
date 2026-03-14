@@ -986,7 +986,7 @@ func (s *SignozAdapter) extractMetricUnit(labels map[string]string) string {
 // Performs a lightweight health check by calling the SigNoz version endpoint.
 // Uses caching to avoid frequent health checks (30 second TTL).
 //
-// If this returns false, learning controller should gracefully degrade
+// If this returns false, controllers should gracefully degrade
 // rather than failing hard.
 func (s *SignozAdapter) Available() bool {
 	now := s.availabilityCache.timeNow()

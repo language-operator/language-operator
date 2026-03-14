@@ -946,28 +946,6 @@ spec:
                         type: array
                     type: object
                 type: object
-              agentVersionRef:
-                description: |-
-                  AgentVersionRef specifies which LanguageAgentVersion to use for optimized agent code
-                  If not specified, uses the base agent code. When learning creates
-                  optimized versions, this can be set to reference specific LanguageAgentVersion resources
-                properties:
-                  lock:
-                    default: false
-                    description: |-
-                      Lock prevents automatic version updates by the learning controller
-                      When true, the learning controller will not modify this agentVersionRef
-                    type: boolean
-                  name:
-                    description: Name is the name of the LanguageAgentVersion
-                    type: string
-                  namespace:
-                    description: Namespace is the namespace of the LanguageAgentVersion
-                      (defaults to same namespace)
-                    type: string
-                required:
-                - name
-                type: object
               backoffLimit:
                 default: 3
                 description: BackoffLimit specifies the number of retries before marking
@@ -1479,6 +1457,53 @@ spec:
                 maxLength: 10000
                 minLength: 10
                 type: string
+              instructionsFrom:
+                description: InstructionsFrom allows referencing instructions from
+                  a ConfigMap or Secret
+                properties:
+                  configMapRef:
+                    description: ConfigMapRef references a ConfigMap key containing
+                      instructions
+                    properties:
+                      key:
+                        description: The key to select.
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?
+                        type: string
+                      optional:
+                        description: Specify whether the ConfigMap or its key must
+                          be defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  secretRef:
+                    description: SecretRef references a Secret key containing instructions
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
               maxIterations:
                 default: 50
                 description: MaxIterations limits the number of reasoning/action loops
@@ -1486,58 +1511,6 @@ spec:
                 maximum: 1000
                 minimum: 1
                 type: integer
-              memoryStore:
-                description: MemoryStore configures conversation memory persistence
-                properties:
-                  connectionSecretRef:
-                    description: ConnectionSecretRef references a secret with connection
-                      details
-                    properties:
-                      key:
-                        default: api-key
-                        description: Key is the key within the secret containing the
-                          value
-                        type: string
-                      name:
-                        description: Name is the name of the secret
-                        type: string
-                      namespace:
-                        description: Namespace is the namespace of the secret (defaults
-                          to same namespace as LanguageModel)
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  maxConversations:
-                    description: MaxConversations limits the number of concurrent
-                      conversations
-                    format: int32
-                    type: integer
-                  retentionPolicy:
-                    description: RetentionPolicy defines how long to keep conversation
-                      history
-                    properties:
-                      maxAge:
-                        description: MaxAge is the maximum age of data to retain (e.g.,
-                          "7d", "30d")
-                        pattern: ^[0-9]+(d|w|m|y)$
-                        type: string
-                      maxMessages:
-                        description: MaxMessages is the maximum number of messages
-                          to retain per conversation
-                        format: int32
-                        type: integer
-                    type: object
-                  type:
-                    default: ephemeral
-                    description: Type specifies the memory backend
-                    enum:
-                    - ephemeral
-                    - redis
-                    - postgres
-                    - s3
-                    type: string
-                type: object
               modelRefs:
                 description: ModelRefs is a list of LanguageModel references this
                   agent can use
@@ -3887,10 +3860,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              consecutiveFailures:
-                description: ConsecutiveFailures tracks consecutive pod failures
-                format: int32
-                type: integer
               costMetrics:
                 description: CostMetrics contains cost tracking data
                 properties:
@@ -3933,18 +3902,11 @@ spec:
                 description: FailedExecutions is the number of failed executions
                 format: int64
                 type: integer
-              failureReason:
-                description: FailureReason categorizes the failure type (Synthesis|Runtime|Infrastructure)
-                type: string
               iterationCount:
                 description: IterationCount is the current iteration in the reasoning
                   loop
                 format: int32
                 type: integer
-              lastCrashLog:
-                description: LastCrashLog contains the last 100 lines of logs before
-                  crash
-                type: string
               lastExecutionResult:
                 description: LastExecutionResult describes the result of the last
                   execution
@@ -3953,19 +3915,10 @@ spec:
                 description: LastExecutionTime is the timestamp of the last execution
                 format: date-time
                 type: string
-              lastSuccessfulCode:
-                description: LastSuccessfulCode stores the last known working code
-                  for rollback
-                type: string
               lastUpdateTime:
                 description: LastUpdateTime is the last time the status was updated
                 format: date-time
                 type: string
-              learningRequestPending:
-                description: |-
-                  LearningRequestPending indicates a manual optimization request is pending
-                  Set to true to trigger manual learning, automatically reset to false after processing
-                type: boolean
               message:
                 description: Message provides human-readable details about the current
                   state
@@ -3981,41 +3934,9 @@ spec:
                     description: AverageIterations is the average number of iterations
                       per execution
                     type: number
-                  learningHealthCategory:
-                    description: LearningHealthCategory provides a human-readable
-                      health category
-                    enum:
-                    - excellent
-                    - good
-                    - fair
-                    - poor
-                    - critical
-                    type: string
-                  learningHealthScore:
-                    description: LearningHealthScore is an overall health score for
-                      the learning system (0.0-1.0)
-                    type: number
-                  learningSuccessRate:
-                    description: LearningSuccessRate is the percentage of successful
-                      learning attempts
-                    type: number
-                  neuralTaskCount:
-                    description: NeuralTaskCount is the number of tasks still using
-                      neural execution
-                    format: int32
-                    type: integer
-                  projectedMonthlyCostSavings:
-                    description: ProjectedMonthlyCostSavings is the estimated monthly
-                      cost savings from learning (USD)
-                    type: number
                   successRate:
                     description: SuccessRate is the percentage of successful executions
                     type: number
-                  symbolicTaskCount:
-                    description: SymbolicTaskCount is the number of tasks that have
-                      been learned (converted to symbolic)
-                    format: int32
-                    type: integer
                   totalTokens:
                     description: TotalTokens is the total number of tokens consumed
                     format: int64
@@ -4081,87 +4002,10 @@ spec:
                 description: Reason provides a machine-readable reason for the current
                   state
                 type: string
-              runsPendingLearning:
-                description: |-
-                  RunsPendingLearning is the number of runs since the last learning optimization
-                  Resets to 0 when learning optimization is triggered
-                format: int32
-                type: integer
-              runtimeErrors:
-                description: RuntimeErrors contains recent runtime errors for self-healing
-                items:
-                  description: RuntimeError captures runtime failure information for
-                    self-healing
-                  properties:
-                    errorMessage:
-                      description: ErrorMessage is the error message
-                      type: string
-                    errorType:
-                      description: ErrorType is the exception class or error type
-                      type: string
-                    exitCode:
-                      description: ContainerExitCode is the container exit code
-                      format: int32
-                      type: integer
-                    stackTrace:
-                      description: StackTrace contains the error stack trace
-                      items:
-                        type: string
-                      type: array
-                    synthesisAttempt:
-                      description: SynthesisAttempt indicates which synthesis iteration
-                        this error occurred in
-                      format: int32
-                      type: integer
-                    timestamp:
-                      description: Timestamp is when the error occurred
-                      format: date-time
-                      type: string
-                  type: object
-                type: array
-              selfHealingAttempts:
-                description: SelfHealingAttempts tracks how many self-healing synthesis
-                  attempts have been made
-                format: int32
-                type: integer
               successfulExecutions:
                 description: SuccessfulExecutions is the number of successful executions
                 format: int64
                 type: integer
-              synthesisInfo:
-                description: SynthesisInfo contains information about code synthesis
-                properties:
-                  codeHash:
-                    description: CodeHash is the SHA256 hash of the current synthesized
-                      code
-                    type: string
-                  instructionsHash:
-                    description: InstructionsHash is the SHA256 hash of the instructions
-                      that generated the code
-                    type: string
-                  lastSynthesisTime:
-                    description: LastSynthesisTime is when the code was last synthesized
-                    format: date-time
-                    type: string
-                  synthesisAttempts:
-                    description: SynthesisAttempts is the number of synthesis attempts
-                      for current instructions
-                    format: int32
-                    type: integer
-                  synthesisDuration:
-                    description: SynthesisDuration is how long synthesis took (in
-                      seconds)
-                    type: number
-                  synthesisModel:
-                    description: SynthesisModel is the LLM model used for synthesis
-                    type: string
-                  validationErrors:
-                    description: ValidationErrors contains any validation errors from
-                      the last synthesis
-                    items:
-                      type: string
-                    type: array
-                type: object
               toolUsage:
                 description: ToolUsage tracks tool invocation statistics
                 items:

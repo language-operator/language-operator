@@ -26,12 +26,6 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.usageCount
-      name: Usage
-      type: integer
-    - jsonPath: .status.validationResult.valid
-      name: Valid
-      type: boolean
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -109,11 +103,9 @@ spec:
                 type: object
               description:
                 description: Description describes the persona's role and behavior
-                minLength: 1
                 type: string
               displayName:
                 description: DisplayName is the human-readable name for this persona
-                minLength: 1
                 type: string
               examples:
                 description: Examples provide few-shot learning examples
@@ -303,7 +295,6 @@ spec:
               systemPrompt:
                 description: SystemPrompt is the base system instruction for this
                   persona
-                minLength: 1
                 type: string
               tone:
                 default: professional
@@ -353,19 +344,10 @@ spec:
               version:
                 description: Version tracks the persona version
                 type: string
-            required:
-            - description
-            - displayName
-            - systemPrompt
             type: object
           status:
             description: LanguagePersonaStatus defines the observed state of LanguagePersona
             properties:
-              activeAgents:
-                description: ActiveAgents lists agents currently using this persona
-                items:
-                  type: string
-                type: array
               conditions:
                 description: Conditions represent the latest available observations
                   of the persona's state
@@ -448,125 +430,17 @@ spec:
                 description: Message provides human-readable details about the current
                   state
                 type: string
-              metrics:
-                description: Metrics contains usage metrics for this persona
-                properties:
-                  averageResponseLength:
-                    description: AverageResponseLength is the average response length
-                      in characters
-                    format: int32
-                    type: integer
-                  averageToolCalls:
-                    description: AverageToolCalls is the average number of tool calls
-                      per interaction
-                    type: number
-                  ruleActivations:
-                    additionalProperties:
-                      format: int64
-                      type: integer
-                    description: RuleActivations tracks how often each rule triggers
-                    type: object
-                  topTools:
-                    description: TopTools lists most frequently used tools
-                    items:
-                      description: ToolFrequency tracks tool usage frequency
-                      properties:
-                        count:
-                          description: Count is the number of times this tool was
-                            used
-                          format: int64
-                          type: integer
-                        percentage:
-                          description: Percentage is the percentage of total tool
-                            usage
-                          type: number
-                        toolName:
-                          description: ToolName is the name of the tool
-                          type: string
-                      required:
-                      - count
-                      - toolName
-                      type: object
-                    type: array
-                  topTopics:
-                    description: TopTopics lists most frequently discussed topics
-                    items:
-                      description: TopicFrequency tracks topic discussion frequency
-                      properties:
-                        count:
-                          description: Count is the number of times this topic was
-                            discussed
-                          format: int64
-                          type: integer
-                        percentage:
-                          description: Percentage is the percentage of total interactions
-                          type: number
-                        topic:
-                          description: Topic is the topic name
-                          type: string
-                      required:
-                      - count
-                      - topic
-                      type: object
-                    type: array
-                  totalInteractions:
-                    description: TotalInteractions is the total number of interactions
-                    format: int64
-                    type: integer
-                  userSatisfaction:
-                    description: UserSatisfaction is an optional satisfaction score
-                      (0-100)
-                    type: number
-                type: object
               observedGeneration:
                 description: ObservedGeneration reflects the generation of the most
                   recently observed LanguagePersona
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase (Ready, NotReady,
-                  Validating)
+                description: Phase represents the current phase (Ready, NotReady)
                 enum:
                 - Ready
                 - NotReady
-                - Validating
-                - Error
                 type: string
-              reason:
-                description: Reason provides a machine-readable reason for the current
-                  state
-                type: string
-              usageCount:
-                description: UsageCount tracks how many agents use this persona
-                format: int32
-                type: integer
-              validationResult:
-                description: ValidationResult contains persona validation results
-                properties:
-                  errors:
-                    description: Errors lists validation errors
-                    items:
-                      type: string
-                    type: array
-                  score:
-                    description: Score is an optional quality score (0-100)
-                    format: int32
-                    type: integer
-                  valid:
-                    description: Valid indicates if the persona passed validation
-                    type: boolean
-                  validationTime:
-                    description: ValidationTime is when validation was performed
-                    format: date-time
-                    type: string
-                  warnings:
-                    description: Warnings lists validation warnings
-                    items:
-                      type: string
-                    type: array
-                required:
-                - valid
-                type: object
             type: object
         type: object
     served: true

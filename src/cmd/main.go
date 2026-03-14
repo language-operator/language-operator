@@ -45,7 +45,6 @@ import (
 	"github.com/language-operator/language-operator/pkg/cni"
 	registryconfig "github.com/language-operator/language-operator/pkg/config"
 	"github.com/language-operator/language-operator/pkg/events"
-	"github.com/language-operator/language-operator/pkg/synthesis"
 	"github.com/language-operator/language-operator/pkg/telemetry"
 	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
 	//+kubebuilder:scaffold:imports
@@ -277,10 +276,6 @@ func main() {
 
 	setupLog.Info("Registry configuration manager started", "registries", registryManager.GetRegistries())
 
-	// Validate schema compatibility between operator and gem
-	setupLog.Info("Checking schema compatibility with language_operator gem")
-	synthesis.ValidateSchemaCompatibility(ctx, setupLog)
-
 	if cniErr != nil {
 		setupLog.Info("CNI detection failed", "error", cniErr.Error())
 		if requireNetworkPolicy {
@@ -396,21 +391,6 @@ func main() {
 	// Initialize Gateway API cache
 	agentReconciler.InitializeGatewayCache()
 
-	// Initialize rate limiter and quota manager for synthesis cost controls
-	maxSynthesisPerHour := getEnvInt("SYNTHESIS_MAX_PER_HOUR", 500) // Default: 500 synthesis per namespace per hour
-	rateLimiter := synthesis.NewRateLimiter(maxSynthesisPerHour, ctrl.Log.WithName("rate-limiter"))
-	agentReconciler.RateLimiter = rateLimiter
-	setupLog.Info("Synthesis rate limiter initialized", "maxPerHour", maxSynthesisPerHour)
-
-	maxCostPerDay := 10.0                                                 // Default: $10 per namespace per day
-	maxAttemptsPerDay := getEnvInt("SYNTHESIS_MAX_ATTEMPTS_PER_DAY", 100) // Default: 100 attempts per namespace per day
-	quotaManager := synthesis.NewQuotaManager(maxCostPerDay, maxAttemptsPerDay, "USD", ctrl.Log.WithName("quota-manager"))
-	agentReconciler.QuotaManager = quotaManager
-	setupLog.Info("Synthesis quota manager initialized", "maxCostPerDay", maxCostPerDay, "maxAttemptsPerDay", maxAttemptsPerDay)
-
-	// Synthesis is now configured per-agent via ModelRefs - no global setup needed
-	setupLog.Info("Synthesis engine uses per-agent ModelRefs configuration")
-
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgent")
 		os.Exit(1)
@@ -441,52 +421,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup Learning controller
-	learningLog := ctrl.Log.WithName("controllers").WithName("Learning")
-
-	configMapManager := &synthesis.ConfigMapManager{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    learningLog.WithName("configmap"),
-	}
-
-	// Initialize telemetry adapter for learning system
-	telemetryAdapter := initializeTelemetryAdapter()
-
-	if err = (&controllers.LearningReconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		Log:                   learningLog,
-		Recorder:              mgr.GetEventRecorderFor("learning-controller"),
-		ConfigMapManager:      configMapManager,
-		TelemetryAdapter:      telemetryAdapter,
-		LearningEnabled:       true,
-		LearningThreshold:     10,              // Trigger learning after 10 traces
-		LearningInterval:      5 * time.Minute, // 5 minute cooldown between attempts
-		PatternConfidenceMin:  0.8,             // Require 80% confidence
-		VersionRetentionCount: 5,               // Keep last 5 versions, delete older ones
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Learning")
-		os.Exit(1)
-	}
-
-	// Setup LanguageAgentVersion controller
-	if err = (&controllers.LanguageAgentVersionReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("languageagentversion-controller"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgentVersion")
-		os.Exit(1)
-	}
-
 	// Setup LanguageCluster webhook
 	if err = (&langopv1alpha1.LanguageCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")
 		os.Exit(1)
 	}
 
-	// Setup LanguageAgent webhook for synthesis cost controls
+	// Setup LanguageAgent webhook
 	if err = (&langopv1alpha1.LanguageAgent{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgent")
 		os.Exit(1)

@@ -19,17 +19,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - events
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - persistentvolumeclaims
   verbs:
   - create
@@ -80,8 +69,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - apps
@@ -163,32 +150,6 @@ rules:
   - langop.io
   resources:
   - languageagents/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languageagentversions
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languageagentversions/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languageagentversions/status
   verbs:
   - get
   - patch

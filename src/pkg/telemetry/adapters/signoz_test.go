@@ -145,14 +145,14 @@ func TestNewSignozAdapter(t *testing.T) {
 		_, err := NewSignozAdapter("https://[invalid::ipv6::address]:3000", "test-api-key", 30*time.Second)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "hostname contains colon but is not valid IPv6")
+		assert.Contains(t, err.Error(), "invalid endpoint URL")
 	})
 
 	t.Run("Invalid IPv4 in IPv6 brackets", func(t *testing.T) {
 		_, err := NewSignozAdapter("https://[192.168.1.1]:3000", "test-api-key", 30*time.Second)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "IPv4 address in IPv6 brackets")
+		assert.Contains(t, err.Error(), "invalid endpoint URL")
 	})
 
 	t.Run("Valid edge case ports", func(t *testing.T) {
@@ -1405,7 +1405,7 @@ func TestQueryBuilderV5Payload(t *testing.T) {
 		assert.Equal(t, 0, spec["offset"])
 		assert.Equal(t, false, spec["disabled"])
 
-		// Check selectFields - includes semantic attributes for learning system integration
+		// Check selectFields - includes semantic attributes for observability integration
 		selectFields := spec["selectFields"].([]map[string]string)
 		expectedFields := []string{"spanID", "traceID", "timestamp", "durationNano", "name", "serviceName", "task.name", "task.inputs", "task.outputs", "gen_ai.operation.name", "gen_ai.tool.name", "gen_ai.tool.call.arguments", "gen_ai.tool.call.result"}
 		assert.Len(t, selectFields, len(expectedFields))

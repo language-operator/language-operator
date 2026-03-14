@@ -251,8 +251,8 @@ type LanguagePersonaStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase represents the current phase (Ready, NotReady, Validating)
-	// +kubebuilder:validation:Enum=Ready;NotReady;Validating;Error
+	// Phase represents the current phase (Ready, NotReady)
+	// +kubebuilder:validation:Enum=Ready;NotReady
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
@@ -264,22 +264,6 @@ type LanguagePersonaStatus struct {
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// UsageCount tracks how many agents use this persona
-	// +optional
-	UsageCount int32 `json:"usageCount,omitempty"`
-
-	// ActiveAgents lists agents currently using this persona
-	// +optional
-	ActiveAgents []string `json:"activeAgents,omitempty"`
-
-	// ValidationResult contains persona validation results
-	// +optional
-	ValidationResult *PersonaValidation `json:"validationResult,omitempty"`
-
-	// Metrics contains usage metrics for this persona
-	// +optional
-	Metrics *PersonaMetrics `json:"metrics,omitempty"`
-
 	// LastUpdateTime is the last time the status was updated
 	// +optional
 	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
@@ -287,89 +271,6 @@ type LanguagePersonaStatus struct {
 	// Message provides human-readable details about the current state
 	// +optional
 	Message string `json:"message,omitempty"`
-
-	// Reason provides a machine-readable reason for the current state
-	// +optional
-	Reason string `json:"reason,omitempty"`
-}
-
-// PersonaValidation contains validation results
-type PersonaValidation struct {
-	// Valid indicates if the persona passed validation
-	Valid bool `json:"valid"`
-
-	// ValidationTime is when validation was performed
-	// +optional
-	ValidationTime *metav1.Time `json:"validationTime,omitempty"`
-
-	// Errors lists validation errors
-	// +optional
-	Errors []string `json:"errors,omitempty"`
-
-	// Warnings lists validation warnings
-	// +optional
-	Warnings []string `json:"warnings,omitempty"`
-
-	// Score is an optional quality score (0-100)
-	// +optional
-	Score *int32 `json:"score,omitempty"`
-}
-
-// PersonaMetrics contains persona usage metrics
-type PersonaMetrics struct {
-	// TotalInteractions is the total number of interactions
-	// +optional
-	TotalInteractions int64 `json:"totalInteractions,omitempty"`
-
-	// AverageResponseLength is the average response length in characters
-	// +optional
-	AverageResponseLength *int32 `json:"averageResponseLength,omitempty"`
-
-	// AverageToolCalls is the average number of tool calls per interaction
-	// +optional
-	AverageToolCalls *float64 `json:"averageToolCalls,omitempty"`
-
-	// RuleActivations tracks how often each rule triggers
-	// +optional
-	RuleActivations map[string]int64 `json:"ruleActivations,omitempty"`
-
-	// TopTools lists most frequently used tools
-	// +optional
-	TopTools []ToolFrequency `json:"topTools,omitempty"`
-
-	// TopTopics lists most frequently discussed topics
-	// +optional
-	TopTopics []TopicFrequency `json:"topTopics,omitempty"`
-
-	// UserSatisfaction is an optional satisfaction score (0-100)
-	// +optional
-	UserSatisfaction *float64 `json:"userSatisfaction,omitempty"`
-}
-
-// ToolFrequency tracks tool usage frequency
-type ToolFrequency struct {
-	// ToolName is the name of the tool
-	ToolName string `json:"toolName"`
-
-	// Count is the number of times this tool was used
-	Count int64 `json:"count"`
-
-	// Percentage is the percentage of total tool usage
-	// +optional
-	Percentage *float64 `json:"percentage,omitempty"`
-}
-
-// TopicFrequency tracks topic discussion frequency
-type TopicFrequency struct {
-	// Topic is the topic name
-	Topic string `json:"topic"`
-
-	// Count is the number of times this topic was discussed
-	Count int64 `json:"count"`
-
-	// Percentage is the percentage of total interactions
-	// +optional
-	Percentage *float64 `json:"percentage,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -378,8 +279,6 @@ type TopicFrequency struct {
 // +kubebuilder:printcolumn:name="Display Name",type=string,JSONPath=`.spec.displayName`
 // +kubebuilder:printcolumn:name="Tone",type=string,JSONPath=`.spec.tone`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-// +kubebuilder:printcolumn:name="Usage",type=integer,JSONPath=`.status.usageCount`
-// +kubebuilder:printcolumn:name="Valid",type=boolean,JSONPath=`.status.validationResult.valid`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguagePersona is the Schema for the languagepersonas API

@@ -51,11 +51,9 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
-	// AgentVersionRef specifies which LanguageAgentVersion to use for optimized agent code
-	// If not specified, uses the base agent code. When learning creates
-	// optimized versions, this can be set to reference specific LanguageAgentVersion resources
+	// InstructionsFrom allows referencing instructions from a ConfigMap or Secret
 	// +optional
-	AgentVersionRef *AgentVersionReference `json:"agentVersionRef,omitempty"`
+	InstructionsFrom *InstructionsSource `json:"instructionsFrom,omitempty"`
 
 	// ExecutionMode defines how the agent operates
 	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
@@ -152,10 +150,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 
-	// MemoryStore configures conversation memory persistence
-	// +optional
-	MemoryStore *MemoryStoreSpec `json:"memoryStore,omitempty"`
-
 	// Observability defines monitoring and tracing configuration
 	// +optional
 	Observability *AgentObservabilitySpec `json:"observability,omitempty"`
@@ -242,6 +236,17 @@ type PersonaReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// InstructionsSource references instructions from a ConfigMap or Secret
+type InstructionsSource struct {
+	// ConfigMapRef references a ConfigMap key containing instructions
+	// +optional
+	ConfigMapRef *corev1.ConfigMapKeySelector `json:"configMapRef,omitempty"`
+
+	// SecretRef references a Secret key containing instructions
+	// +optional
+	SecretRef *corev1.SecretKeySelector `json:"secretRef,omitempty"`
+}
+
 // EventTriggerSpec defines an event trigger
 type EventTriggerSpec struct {
 	// Type is the event type (webhook, kubernetes-event, message-queue)
@@ -256,38 +261,6 @@ type EventTriggerSpec struct {
 	// Filter defines filtering criteria for events
 	// +optional
 	Filter map[string]string `json:"filter,omitempty"`
-}
-
-// MemoryStoreSpec configures conversation memory
-type MemoryStoreSpec struct {
-	// Type specifies the memory backend
-	// +kubebuilder:validation:Enum=ephemeral;redis;postgres;s3
-	// +kubebuilder:default=ephemeral
-	Type string `json:"type,omitempty"`
-
-	// ConnectionSecretRef references a secret with connection details
-	// +optional
-	ConnectionSecretRef *SecretReference `json:"connectionSecretRef,omitempty"`
-
-	// RetentionPolicy defines how long to keep conversation history
-	// +optional
-	RetentionPolicy *RetentionPolicySpec `json:"retentionPolicy,omitempty"`
-
-	// MaxConversations limits the number of concurrent conversations
-	// +optional
-	MaxConversations *int32 `json:"maxConversations,omitempty"`
-}
-
-// RetentionPolicySpec defines data retention policy
-type RetentionPolicySpec struct {
-	// MaxAge is the maximum age of data to retain (e.g., "7d", "30d")
-	// +kubebuilder:validation:Pattern=`^[0-9]+(d|w|m|y)$`
-	// +optional
-	MaxAge string `json:"maxAge,omitempty"`
-
-	// MaxMessages is the maximum number of messages to retain per conversation
-	// +optional
-	MaxMessages *int32 `json:"maxMessages,omitempty"`
 }
 
 // AgentObservabilitySpec defines agent monitoring
@@ -485,10 +458,6 @@ type LanguageAgentStatus struct {
 	// +optional
 	Reason string `json:"reason,omitempty"`
 
-	// SynthesisInfo contains information about code synthesis
-	// +optional
-	SynthesisInfo *SynthesisInfo `json:"synthesisInfo,omitempty"`
-
 	// UUID is a unique identifier for this agent instance
 	// Used for webhook routing (e.g., <uuid>.domain.com)
 	// +optional
@@ -497,98 +466,6 @@ type LanguageAgentStatus struct {
 	// WebhookURLs contains the URLs where this agent can receive webhooks
 	// +optional
 	WebhookURLs []string `json:"webhookURLs,omitempty"`
-
-	// RuntimeErrors contains recent runtime errors for self-healing
-	// +optional
-	RuntimeErrors []RuntimeError `json:"runtimeErrors,omitempty"`
-
-	// LastCrashLog contains the last 100 lines of logs before crash
-	// +optional
-	LastCrashLog string `json:"lastCrashLog,omitempty"`
-
-	// ConsecutiveFailures tracks consecutive pod failures
-	// +optional
-	ConsecutiveFailures int32 `json:"consecutiveFailures,omitempty"`
-
-	// FailureReason categorizes the failure type (Synthesis|Runtime|Infrastructure)
-	// +optional
-	FailureReason string `json:"failureReason,omitempty"`
-
-	// SelfHealingAttempts tracks how many self-healing synthesis attempts have been made
-	// +optional
-	SelfHealingAttempts int32 `json:"selfHealingAttempts,omitempty"`
-
-	// LastSuccessfulCode stores the last known working code for rollback
-	// +optional
-	LastSuccessfulCode string `json:"lastSuccessfulCode,omitempty"`
-
-	// RunsPendingLearning is the number of runs since the last learning optimization
-	// Resets to 0 when learning optimization is triggered
-	// +optional
-	RunsPendingLearning int32 `json:"runsPendingLearning,omitempty"`
-
-	// LearningRequestPending indicates a manual optimization request is pending
-	// Set to true to trigger manual learning, automatically reset to false after processing
-	// +optional
-	LearningRequestPending bool `json:"learningRequestPending,omitempty"`
-}
-
-// SynthesisInfo contains metadata about agent code synthesis
-type SynthesisInfo struct {
-	// LastSynthesisTime is when the code was last synthesized
-	// +optional
-	LastSynthesisTime *metav1.Time `json:"lastSynthesisTime,omitempty"`
-
-	// SynthesisModel is the LLM model used for synthesis
-	// +optional
-	SynthesisModel string `json:"synthesisModel,omitempty"`
-
-	// SynthesisDuration is how long synthesis took (in seconds)
-	// +optional
-	SynthesisDuration float64 `json:"synthesisDuration,omitempty"`
-
-	// CodeHash is the SHA256 hash of the current synthesized code
-	// +optional
-	CodeHash string `json:"codeHash,omitempty"`
-
-	// InstructionsHash is the SHA256 hash of the instructions that generated the code
-	// +optional
-	InstructionsHash string `json:"instructionsHash,omitempty"`
-
-	// ValidationErrors contains any validation errors from the last synthesis
-	// +optional
-	ValidationErrors []string `json:"validationErrors,omitempty"`
-
-	// SynthesisAttempts is the number of synthesis attempts for current instructions
-	// +optional
-	SynthesisAttempts int32 `json:"synthesisAttempts,omitempty"`
-}
-
-// RuntimeError captures runtime failure information for self-healing
-type RuntimeError struct {
-	// Timestamp is when the error occurred
-	// +optional
-	Timestamp metav1.Time `json:"timestamp"`
-
-	// ErrorType is the exception class or error type
-	// +optional
-	ErrorType string `json:"errorType,omitempty"`
-
-	// ErrorMessage is the error message
-	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty"`
-
-	// StackTrace contains the error stack trace
-	// +optional
-	StackTrace []string `json:"stackTrace,omitempty"`
-
-	// ContainerExitCode is the container exit code
-	// +optional
-	ContainerExitCode int32 `json:"exitCode,omitempty"`
-
-	// SynthesisAttempt indicates which synthesis iteration this error occurred in
-	// +optional
-	SynthesisAttempt int32 `json:"synthesisAttempt,omitempty"`
 }
 
 // AgentMetrics contains agent execution metrics
@@ -612,31 +489,6 @@ type AgentMetrics struct {
 	// SuccessRate is the percentage of successful executions
 	// +optional
 	SuccessRate *float64 `json:"successRate,omitempty"`
-
-	// LearningHealthScore is an overall health score for the learning system (0.0-1.0)
-	// +optional
-	LearningHealthScore *float64 `json:"learningHealthScore,omitempty"`
-
-	// LearningHealthCategory provides a human-readable health category
-	// +kubebuilder:validation:Enum=excellent;good;fair;poor;critical
-	// +optional
-	LearningHealthCategory string `json:"learningHealthCategory,omitempty"`
-
-	// LearningSuccessRate is the percentage of successful learning attempts
-	// +optional
-	LearningSuccessRate *float64 `json:"learningSuccessRate,omitempty"`
-
-	// SymbolicTaskCount is the number of tasks that have been learned (converted to symbolic)
-	// +optional
-	SymbolicTaskCount int32 `json:"symbolicTaskCount,omitempty"`
-
-	// NeuralTaskCount is the number of tasks still using neural execution
-	// +optional
-	NeuralTaskCount int32 `json:"neuralTaskCount,omitempty"`
-
-	// ProjectedMonthlyCostSavings is the estimated monthly cost savings from learning (USD)
-	// +optional
-	ProjectedMonthlyCostSavings *float64 `json:"projectedMonthlyCostSavings,omitempty"`
 }
 
 // ToolUsageSpec tracks tool usage
