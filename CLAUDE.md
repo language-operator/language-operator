@@ -2,225 +2,102 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Project
 
-Language Operator is a Kubernetes operator for managing AI agents and language models across clusters. It provides declarative YAML configuration for AI workloads and integrated telemetry collection via OpenTelemetry.
+Language Operator is a Kubernetes operator that runs AI agents as native workloads. Agents are container images — the operator handles lifecycle, configuration injection, networking, and task observability. There is no code generation or synthesis.
 
-The project consists of the Kubernetes operator (Go) and supporting infrastructure including ClickHouse for telemetry storage.
+See `requirements/ARCHITECTURE.md` for full design. See `spec/agents.md` and `spec/tools.md` for the runtime contracts agents and tools must implement.
 
-## Repository Structure
+## Development Commands
 
+All Go work runs from `src/`:
+
+```bash
+cd src
+make build       # compile operator binary
+make test        # fmt + vet + all tests
+make fmt         # go fmt
+make vet         # go vet
 ```
-language-operator/
-├── src/                           # Go Kubernetes operator
-│   ├── api/v1alpha1/             # Custom Resource Definitions (CRDs)
-│   ├── controllers/              # Kubernetes controllers
-│   ├── pkg/telemetry/           # Telemetry collection and adapters
-│   └── config/                   # Kubernetes manifests and RBAC
-├── chart/                        # Helm chart for deployment
-├── examples/                     # Example AI agent configurations
-├── scripts/                      # Development and deployment scripts
-└── docs/                        # Documentation
+
+Run a single test package:
+```bash
+cd src && go test ./controllers/... -run TestReconcile -v
+```
+
+After modifying any type in `src/api/v1alpha1/`:
+```bash
+cd src && make generate   # regenerate zz_generated.deepcopy.go
+cd src && make helm-crds  # regenerate CRD YAMLs and copy to chart/crds/
+```
+
+**The pre-commit hook will fail if generated files are modified but not staged.** Always stage `zz_generated.deepcopy.go`, `src/config/crd/bases/`, and `chart/crds/` together with type changes.
+
+Helm chart validation:
+```bash
+cd chart && helm lint .
+cd chart && helm template . --debug
 ```
 
 ## Architecture
 
-This is a **Kubernetes-native Go operator** with the following components:
+### Controllers (`src/controllers/`)
 
-### Core Applications
-- **`/src/`** - Go Kubernetes operator managing LanguageCluster and Agent CRDs
-- **`/chart/`** - Helm chart for production deployment
+One controller per CRD. Each follows the same pattern:
+- `StartReconcile` via `reconciler.ReconcileHelper` (handles fetch, span setup, deleted-resource short-circuit)
+- Finalizer added on first reconcile; cleanup logic in `handleDeletion`
+- ConfigMap reconciled via `CreateOrUpdateConfigMap` / `DeleteConfigMap` helpers in `utils.go`
+- Status updated last; `SetCondition` helper manages the conditions slice
 
-### Supporting Infrastructure
-- **ClickHouse** - High-performance telemetry storage via OpenTelemetry Collector
-- **Kubernetes APIs** - Native integration with cluster resources
-- **Prometheus/OTel** - Metrics and tracing collection
+Key controllers:
+- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config)
+- `languagepersona_controller.go` — creates a ConfigMap with the persona's JSON spec for agent mounting
+- `languagetool_controller.go` — validates tool image registry, reconciles tool Deployment/Service
+- `languageagenttask_controller.go` — *(to be implemented)* watches LanguageAgentTask; sends `POST /messages` to unblock paused tasks
 
-## Development Commands
+Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOrUpdateConfigMap`, `DeleteConfigMap`, `SetCondition`, `FinalizerName`.
 
-### Building & Testing (Go Operator)
-```sh
-cd src                  # Navigate to Go operator directory
-make test              # Run all Go tests with linting and formatting
-make build             # Build Go operator binary
-make run               # Run operator locally (requires K8s cluster)
-make fmt               # Run go fmt
-make vet               # Run go vet
-make generate          # Generate DeepCopy methods
-make manifests         # Generate CRDs and RBAC
-```
+### CRDs (`src/api/v1alpha1/`)
 
-### Repository-Level Testing
-```sh
-make test              # Run all tests (Go operator + integration)
-make test-unit         # Run fast unit tests (no K8s required)
-make test-integration  # Run integration tests with fake K8s client
-```
+- `LanguageAgent` — agent deployment spec (image, instructions, instructionsFrom, personaRefs, modelRefs, toolRefs, executionMode)
+- `LanguageAgentTask` — in-flight A2A task state (agentRef, taskId, contextId; status mirrors A2A states: submitted/working/input-required/auth-required/completed/failed/canceled/rejected)
+- `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
+- `LanguageTool` — MCP tool server (serviceRef, port)
+- `LanguageModel` — LLM endpoint config
+- `LanguageCluster` — multi-cluster grouping
 
-### Development Tools
-```sh
-make docs              # Generate CRD API reference documentation
-make setup-hooks       # Install git pre-commit hooks
-make k8s-status        # Check status of deployed language resources
-```
+Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` is auto-generated — never edit by hand.
 
-### Helm Chart Development
-```sh
-cd chart               # Navigate to Helm chart directory
-helm lint .            # Validate Helm chart syntax
-helm template . --debug  # Render templates locally for validation
-cd ../src && make helm-crds  # Copy generated CRDs to chart
-```
+### Agent Configuration Injection
 
-## Technology Stack
+The operator mounts two files into every agent pod:
+- `/etc/agent/instructions.txt` — from `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret ref)
+- `/etc/agent/config.yaml` — assembled from referenced personas, resolved tool endpoints, model configs, and agent identity
 
-### Kubernetes Operator (`/src/`)
-- **Language**: Go 1.23+ (see `src/go.mod`)
-- **Framework**: controller-runtime (Kubernetes operator framework)
-- **CRDs**: LanguageCluster, LanguageAgent, LanguageAgentVersion, LanguageModel, LanguageTool custom resources
-- **Telemetry**: OpenTelemetry and ClickHouse
-- **Testing**: Standard Go testing with testify
-- **Build**: Make, Go modules
+Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_OPERATOR_WEBHOOK_URL`, `AGENT_OPERATOR_WEBHOOK_TOKEN`.
 
+### A2A Protocol
 
-### Infrastructure
-- **Telemetry Storage**: ClickHouse (high-volume trace/metric data)
-- **Orchestration**: Kubernetes (native integration)
-- **Telemetry Collection**: OpenTelemetry Collector
-- **Packaging**: Helm charts for deployment
+Agents implement Google's A2A protocol on port 8080. The operator registers itself as a push notification subscriber per agent on startup (`AGENT_OPERATOR_WEBHOOK_URL`). When an agent reports `input-required` or `auth-required` state, the operator creates/updates a `LanguageAgentTask` CR — these are pauses, not failures.
 
-## Development Guidelines
+NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
 
-### **CRITICAL: Real-First Development**
-- **NO MOCK DATA** unless explicitly requested for demos
-- **NO "demo mode", "fallback mode", or similar shortcuts**
-- All features must work with **real ClickHouse data** before commit
-- All features must integrate with **real Kubernetes APIs** before commit
-- Infrastructure dependencies must be working locally before development
+### Telemetry (`src/pkg/telemetry/`)
 
+All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelper`. The ClickHouse adapter (`adapters/clickhouse.go` and `adapters/signoz.go`) queries `otel_traces` and `otel_metrics` tables. No mock data — features must work with real ClickHouse data.
 
-### Definition of Done
-A feature is **ONLY complete** when:
-1. ✅ Works end-to-end with real ClickHouse telemetry data
-2. ✅ Integrates properly with Kubernetes APIs
-3. ✅ All tests passing (unit + integration)
-4. ✅ Manual verification completed with real data
-5. ✅ Linting and type checking passing
-6. ✅ No mock data or temporary workarounds
+### Package Layout
 
+- `pkg/events/` — Kubernetes event recording (lifecycle events: created, ready, failed, deleted)
+- `pkg/reconciler/` — shared `ReconcileHelper` used by all controllers
+- `pkg/telemetry/` — OTel adapter interface + ClickHouse/SigNoz implementations
+- `pkg/validation/` — image registry validation (`ValidateImageRegistry`)
+- `pkg/network/` — NetworkPolicy helpers
 
-### Kubernetes Integration
-- All operator logic in `/src/controllers/`
-- Use controller-runtime patterns and best practices
-- Implement proper RBAC for all resource access
-- Add comprehensive unit tests for all controller logic
-- Integration tests must use real Kubernetes cluster (kind)
+## Critical Rules
 
-### Telemetry Integration
-- **Required**: Use existing ClickHouse adapter at `/src/pkg/telemetry/adapters/clickhouse.go`
-- Query real OpenTelemetry schema tables: `otel_traces`, `otel_metrics`
-- Implement proper error handling for ClickHouse connectivity
-- All telemetry features must work with real trace data
+**No mock data.** Features must work with real ClickHouse telemetry and real Kubernetes APIs before commit.
 
-### Testing Requirements
-- **Go**: Ginkgo/Gomega for all controller tests
-- **Integration**: Tests against real kind cluster with ClickHouse
-- **E2E**: Manual verification with real telemetry data required
-- Tests must be independent and run concurrently
-- **NO COMMITS without passing tests**
+**Generated files must be staged.** Any change to `src/api/v1alpha1/` requires running `make generate && make helm-crds` and staging the output before committing.
 
-### Code Standards
-- **Go**: Follow standard Go conventions, use gofmt
-- **Error Handling**: Proper error propagation and logging
-- **Documentation**: Inline comments for complex logic
-
-## Environment Setup
-
-### Prerequisites
-- **Go**: Version 1.21+ (see `go.mod`)
-- **Docker**: For building container images
-- **kubectl**: For Kubernetes cluster interaction
-- **kind**: For local Kubernetes development cluster
-- **Helm**: For chart management
-
-### Local Development Setup
-```sh
-# 1. Setup local Kubernetes with ClickHouse
-make dev-setup
-
-# 2. Deploy operator to cluster
-make dev-deploy
-
-# 3. Verify telemetry data flow
-kubectl logs -n kube-system deployment/otel-collector
-```
-
-## ClickHouse Schema
-
-The OpenTelemetry Collector writes to these ClickHouse tables:
-- **`otel_traces`**: Span data with attributes, timing, status
-- **`otel_metrics`**: Metric points with labels and values
-- **`otel_logs`**: Structured log data with context
-
-Always query these real tables - no mock data allowed.
-
-## Testing with Real Data
-
-### Generate Test Telemetry
-```sh
-# Deploy sample agent to generate traces
-kubectl apply -f examples/simple-agent/
-
-# Verify traces appear in ClickHouse
-kubectl exec -it clickhouse-0 -- clickhouse-client \
-  -q "SELECT count() FROM otel_traces WHERE SpanName LIKE '%agent%'"
-```
-
-### Operator Verification
-```sh
-# 1. Check operator is running
-kubectl logs -n kube-system deployment/language-operator
-
-# 2. Apply test resources
-kubectl apply -f examples/
-
-# 3. Verify CRDs are processed correctly
-kubectl get languageclusters,languageagents -A
-
-# 4. Check telemetry data is being collected
-kubectl exec -it clickhouse-0 -- clickhouse-client -q "SELECT count() FROM otel_traces"
-```
-
-## Common Issues
-
-### ClickHouse Connection
-- Ensure TELEMETRY_ADAPTER_ENDPOINT points to correct ClickHouse service
-- Check ClickHouse logs: `kubectl logs clickhouse-0`
-- Verify network connectivity from operator pod
-
-### Missing Telemetry Data  
-- Check OpenTelemetry Collector configuration
-- Verify agent pods are generating traces
-- Check ClickHouse table structure matches expectations
-
-## Commit Standards
-
-### Before Any Commit
-1. ✅ Run full test suite: `make test`
-2. ✅ Verify with real data: Manual testing with actual ClickHouse traces
-3. ✅ Check linting: `cd src && make fmt && make vet`
-4. ✅ Confirm no mock data or shortcuts remain
-5. ✅ All features work end-to-end
-
-### Commit Messages
-- Use conventional commits format
-- **Never claim "complete" unless fully functional**
-- Use "WIP:" prefix for partial implementations
-- Include verification steps in commit messages
-
-**Examples:**
-- ❌ `feat: complete telemetry visualization` (when using mock data)
-- ✅ `feat: add telemetry UI components (WIP: needs ClickHouse integration)`
-- ✅ `feat: telemetry visualization with real ClickHouse queries`
-
-This document enforces enterprise software standards with no shortcuts, ensuring all development uses real infrastructure and data from day one.
+**Conventional commits.** Use `feat:`, `fix:`, `clean:`, `docs:` prefixes. Use `WIP:` for partial implementations.

@@ -1,129 +1,125 @@
 # Language Operator
 
-A Kubernetes operator that synthesizes autonomous agents from natural language descriptions.
+A Kubernetes operator for running AI agents as native workloads.
 
 ## What It Does
 
-Language Operator converts natural language goals into executable agents that run in your Kubernetes cluster:
+Language Operator deploys AI agents as standard Kubernetes Deployments. You bring the container image; the operator handles everything else: configuration injection, networking, observability, and task state visibility.
 
-```bash
-langop agent create "monitor our API error rates and alert on spikes"
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: data-analyst
+spec:
+  image: myregistry/agent-runtime:v1.0.0
+  instructions: |
+    You are a data analyst. Analyze CSV files and generate insights.
+    Focus on trends, anomalies, and actionable recommendations.
+  modelRefs:
+    - name: claude-sonnet
+  toolRefs:
+    - name: python-executor
+  executionMode: autonomous
 ```
 
-This creates a complete agent with:
-- Code synthesized from your description
-- Kubernetes deployment (pod, service, network policies)
-- Observability integration (OpenTelemetry traces)
-- Security isolation (AST validation, network policies)
+Apply it and the agent is running, reachable over A2A, and visible in `kubectl`.
 
 ## How It Works
 
-**1. Natural Language → Code**
+**The operator manages infrastructure. Your container manages reasoning.**
 
-The operator calls an LLM to generate Ruby code from your instructions. You can use cloud models (GPT-4, Claude) or local quantized models (Llama, Mistral).
+For every `LanguageAgent`, the operator:
 
-**2. Organic Functions**
+- Deploys a Kubernetes Deployment with your image
+- Mounts `/etc/agent/instructions.txt` — task instructions (plain text)
+- Mounts `/etc/agent/config.yaml` — personas, tools, models, agent identity
+- Creates a Service on port 8080 for agent-to-agent communication
+- Creates a NetworkPolicy so agents can call each other directly
+- Watches for task state changes via push notifications and surfaces blocked tasks as `LanguageAgentTask` resources
 
-Agents are composed of tasks with stable input/output contracts. Tasks can be:
-- **Neural**: LLM decides implementation at runtime
-- **Symbolic**: Explicit Ruby code
+## A2A Protocol
 
-The caller doesn't know which type it's calling - the contract is the interface.
+Every agent speaks [Google's A2A protocol](https://a2a-protocol.org/latest/specification/). Agents discover each other, delegate tasks, and stream results without any orchestration from the operator.
 
-**3. Progressive Optimization**
+```bash
+# Discover what an agent can do
+curl http://data-analyst.default.svc.cluster.local:8080/.well-known/agent.json
 
-After execution, the system analyzes OpenTelemetry traces to detect patterns. Deterministic neural tasks are automatically converted to symbolic code, reducing cost and latency while preserving the contract.
-
-## Example
-
-**Initial (fully neural):**
-```ruby
-task(:check_api,
-  instructions: "Check API health",
-  outputs: { status: 'string' })
-
-task(:send_alert,
-  instructions: "Send alert if unhealthy",
-  inputs: { status: 'string' },
-  outputs: { sent: 'boolean' })
-
-main do
-  result = execute_task(:check_api)
-  execute_task(:send_alert, inputs: result)
-end
+# Send it a task
+curl -X POST http://data-analyst.default.svc.cluster.local:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"message": {"role": "user", "parts": [{"text": "Analyze sales_q1.csv"}]}}'
 ```
 
-**After learning (hybrid):**
-```ruby
-task(:check_api,
-  outputs: { status: 'string' }) do |inputs|
-  execute_tool('http', 'get', url: 'https://api.example.com/health')
-end
+## Task Observability
 
-task(:send_alert,  # Kept neural - decision logic varies
-  instructions: "Send alert if unhealthy",
-  inputs: { status: 'string' },
-  outputs: { sent: 'boolean' })
+When an agent pauses waiting for input or credentials, the operator surfaces that state as a Kubernetes resource — not a failure:
 
-main do  # Unchanged
-  result = execute_task(:check_api)
-  execute_task(:send_alert, inputs: result)
-end
+```bash
+kubectl get latask -A
+# NAME                    AGENT          STATE            AGE
+# data-analyst-abc123     data-analyst   input-required   2m
+
+kubectl describe latask data-analyst-abc123
+# ...
+# Status:
+#   State: input-required
+#   Input Required:
+#     Prompt: Which date range should I analyze?
+#     Since:  2025-03-14T10:00:00Z
 ```
 
-The `main` block never changes. Implementations evolve without breaking callers.
+## CRDs
+
+| Resource | Purpose |
+|----------|---------|
+| `LanguageAgent` | Agent deployment — image, instructions, personas, tools, models |
+| `LanguageAgentTask` | In-flight task state — surfaced from A2A push notifications |
+| `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
+| `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
+| `LanguageModel` | LLM endpoint — provider, credentials, injected into agents |
+| `LanguageCluster` | Multi-cluster agent grouping |
 
 ## Installation
 
 ```bash
-# Add Helm repository
 helm repo add language-operator https://charts.langop.io
-
-# Install operator
 helm install language-operator language-operator/language-operator
-
-# Install langop CLI
-gem install language-operator
-
-# Set up your first cluster
-langop quickstart
-```
-
-## Development Setup
-
-### Setting Up Git Hooks
-
-To ensure code quality, set up the pre-commit hooks:
-
-```bash
-# Run the setup script to install git hooks
-./scripts/setup-hooks
-```
-
-This installs a pre-commit hook that automatically:
-- Checks code formatting with `go fmt`
-- Runs static analysis with `go vet`  
-- Runs tests for modified packages
-- Verifies generated files are up-to-date
-
-To bypass the hook temporarily (not recommended), use:
-```bash
-git commit --no-verify
 ```
 
 ## Requirements
 
 - Kubernetes 1.26+
-- NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)  
-- **Wildcard DNS** for agent webhooks (see [DNS Setup](docs/dns.md))
-- Optional: GPU nodes for local model inference
+- NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
+- Wildcard DNS for agent HTTPRoutes
+
+## Development
+
+```bash
+# Install git hooks
+./scripts/setup-hooks
+
+# Build
+cd src && make build
+
+# Test
+cd src && make test
+
+# Regenerate CRDs and deepcopy after type changes
+cd src && make generate && make helm-crds
+```
+
+## Further Reading
+
+- [Architecture](requirements/ARCHITECTURE.md) — system design and component interaction
+- [Agent Runtime Contract](spec/agents.md) — what the operator provides and what agent images must implement
+- [Tool Contract](spec/tools.md) — how to implement a compatible MCP tool server
 
 ## Status
 
-**Pre-alpha** - Core functionality works, but this project is currently experimental.
+**Pre-alpha** — core functionality works, actively developing toward stable A2A runtime.
 
 ## License
 
-[FSL 1.1](LICENSE) - Converts to Apache 2.0 on 2028-01-01
-
-**Use Limitation**: Cannot offer Language Operator as a commercial managed service until 2028. Internal use, consulting, and custom deployments are permitted.
+[MIT](LICENSE)
