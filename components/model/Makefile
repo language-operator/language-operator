@@ -3,8 +3,20 @@ IMAGE_NAME := ghcr.io/language-operator/model
 IMAGE_TAG := latest
 IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 
-# Include shared targets (build, scan, shell from Makefile.common)
-include ../../Makefile.common
+# Build the Docker image
+.PHONY: build
+build:
+	docker build -t $(IMAGE_FULL) .
+
+# Scan the Docker image with Trivy
+.PHONY: scan
+scan:
+	trivy image $(IMAGE_FULL)
+
+# Run interactive shell in container
+.PHONY: shell
+shell:
+	docker run --rm -it $(IMAGE_FULL) /bin/sh
 
 # Default target
 .PHONY: help
