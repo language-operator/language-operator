@@ -83,16 +83,129 @@ kubectl describe latask data-analyst-abc123
 
 ## Installation
 
-```bash
-helm repo add language-operator https://charts.langop.io
-helm install language-operator language-operator/language-operator
-```
-
-## Requirements
+### Requirements
 
 - Kubernetes 1.26+
 - NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
-- Wildcard DNS for agent HTTPRoutes
+
+### Install the Operator
+
+```bash
+helm repo add language-operator \
+  https://language-operator.github.io/language-operator
+helm install language-operator language-operator/language-operator
+```
+
+## Getting Started
+
+### Create an Agent Cluster
+
+A `LanguageCluster` is a logical grouping for agents, models, and tools in a namespace.
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: my-cluster
+spec:
+  domain: agents.example.com
+EOF
+```
+
+### Register a Model
+
+```bash
+kubectl create secret generic anthropic-credentials \
+  --from-literal=api-key=sk-ant-...
+
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-5
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key
+EOF
+```
+
+### Deploy an Agent
+
+See [spec/agents.md](spec/agents.md) for the full agent runtime contract — what the operator injects and what your image must implement.
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: data-analyst
+spec:
+  image: myregistry/agent-runtime:v1.0.0
+  instructions: |
+    You are a data analyst. Analyze CSV files and generate insights.
+  modelRefs:
+    - name: claude-sonnet
+  executionMode: autonomous
+EOF
+
+kubectl get languageagents
+```
+
+### Deploy a Tool
+
+Tools are MCP servers. They can run as a shared service or as a sidecar in each agent pod. See [spec/tools.md](spec/tools.md) for the tool implementation contract.
+
+**Standalone service** (shared across agents):
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: python-executor
+spec:
+  image: myregistry/python-executor:v1.0.0
+  deploymentMode: service
+EOF
+```
+
+**Sidecar** (one instance per agent pod, has access to the agent's workspace):
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: file-tools
+spec:
+  image: myregistry/file-tools:v1.0.0
+  deploymentMode: sidecar
+EOF
+```
+
+### Deploy a Tool-enabled Agent
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: data-analyst
+spec:
+  image: myregistry/agent-runtime:v1.0.0
+  instructions: |
+    You are a data analyst. Use the python-executor tool to analyze CSV files.
+  modelRefs:
+    - name: claude-sonnet
+  toolRefs:
+    - name: python-executor
+  executionMode: autonomous
+EOF
+```
 
 ## Development
 
