@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -26,10 +27,7 @@ func clusterRequest(name string) ctrl.Request {
 func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"},
-		Spec:       langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster")
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -82,10 +80,8 @@ func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
 func TestLanguageClusterController_ReadyCondition(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cluster-condition", Generation: 5},
-		Spec:       langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster-condition")
+	cluster.Generation = 5
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -159,10 +155,8 @@ func TestLanguageClusterController_NotFoundHandling(t *testing.T) {
 func TestLanguageClusterController_MultipleReconciles(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cluster-multiple", Generation: 2},
-		Spec:       langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster-multiple")
+	cluster.Generation = 2
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -195,10 +189,7 @@ func TestLanguageClusterController_MultipleReconciles(t *testing.T) {
 func TestLanguageClusterController_Finalizer(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cluster-finalizer"},
-		Spec:       langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster-finalizer")
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -235,14 +226,9 @@ func TestLanguageClusterController_Finalizer(t *testing.T) {
 func TestLanguageClusterController_DeletionWithoutDependents(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-cluster-deletion",
-			Finalizers:        []string{FinalizerName},
-			DeletionTimestamp: &metav1.Time{Time: time.Now()},
-		},
-		Spec: langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster-deletion")
+	cluster.Finalizers = []string{FinalizerName}
+	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: cluster.Name},
@@ -283,36 +269,19 @@ func TestLanguageClusterController_DeletionWithoutDependents(t *testing.T) {
 func TestLanguageClusterController_DeletionWithDependents(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "test-cluster-with-deps",
-			Finalizers:        []string{FinalizerName},
-			DeletionTimestamp: &metav1.Time{Time: time.Now()},
-		},
-		Spec: langopv1alpha1.LanguageClusterSpec{},
-	}
+	cluster := gen.LanguageCluster("test-cluster-with-deps")
+	cluster.Finalizers = []string{FinalizerName}
+	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: "test-cluster-with-deps",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			ClusterRef:   "test-cluster-with-deps",
-			Instructions: "test agent",
-		},
-	}
+	agent := gen.LanguageAgent("test-agent", "test-cluster-with-deps",
+		gen.SetAgentClusterRef("test-cluster-with-deps"),
+		gen.SetAgentInstructions("test agent"),
+	)
 
-	tool := &langopv1alpha1.LanguageTool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-tool",
-			Namespace: "test-cluster-with-deps",
-		},
-		Spec: langopv1alpha1.LanguageToolSpec{
-			ClusterRef: "test-cluster-with-deps",
-			Type:       "shell",
-		},
-	}
+	tool := gen.LanguageTool("test-tool", "test-cluster-with-deps",
+		gen.SetToolClusterRef("test-cluster-with-deps"),
+		gen.SetToolType("shell"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).

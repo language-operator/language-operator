@@ -73,3 +73,10 @@ func SetModelEndpoint(endpoint string) LanguageModelModifier {
 		m.Spec.Endpoint = endpoint
 	}
 }
+
+// SetModelEgress sets spec.egress network rules.
+func SetModelEgress(rules []langopv1alpha1.NetworkRule) LanguageModelModifier {
+	return func(m *langopv1alpha1.LanguageModel) {
+		m.Spec.Egress = rules
+	}
+}

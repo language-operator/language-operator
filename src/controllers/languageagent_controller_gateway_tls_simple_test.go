@@ -6,9 +6,9 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -113,22 +113,18 @@ func TestReconcileHTTPRoute_TLSValidation(t *testing.T) {
 
 	t.Run("HTTPRoute creation fails when TLS enabled but Gateway has no HTTPS", func(t *testing.T) {
 		// Create cluster with TLS enabled
-		cluster := &langopv1alpha1.LanguageCluster{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-cluster", Namespace: "test-namespace"},
-			Spec: langopv1alpha1.LanguageClusterSpec{
-				IngressConfig: &langopv1alpha1.IngressConfig{
-					GatewayName: "http-only-gateway", GatewayNamespace: "gateway-system",
-					TLS: &langopv1alpha1.IngressTLSConfig{Enabled: true},
-				},
-			},
-		}
+		cluster := gen.LanguageCluster("test-cluster",
+			gen.SetClusterGatewayName("http-only-gateway"),
+			gen.SetClusterGatewayNamespace("gateway-system"),
+		)
+		cluster.Namespace = "test-namespace"
+		cluster.Spec.IngressConfig.TLS = &langopv1alpha1.IngressTLSConfig{Enabled: true}
 
 		// Create agent
-		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-agent", Namespace: "test-namespace"},
-			Spec:       langopv1alpha1.LanguageAgentSpec{ClusterRef: "test-cluster"},
-			Status:     langopv1alpha1.LanguageAgentStatus{UUID: "test-uuid-123"},
-		}
+		agent := gen.LanguageAgent("test-agent", "test-namespace",
+			gen.SetAgentClusterRef("test-cluster"),
+		)
+		agent.Status.UUID = "test-uuid-123"
 
 		// Create HTTP-only Gateway
 		gateway := &unstructured.Unstructured{

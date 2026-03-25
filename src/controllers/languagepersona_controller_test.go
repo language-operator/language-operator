@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,15 +18,9 @@ import (
 func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	persona := &langopv1alpha1.LanguagePersona{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-persona",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguagePersonaSpec{
-			SystemPrompt: "You are a helpful assistant specializing in Ruby programming.",
-		},
-	}
+	persona := gen.LanguagePersona("test-persona", "default",
+		gen.SetPersonaSystemPrompt("You are a helpful assistant specializing in Ruby programming."),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -78,16 +73,10 @@ func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
 func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	persona := &langopv1alpha1.LanguagePersona{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-persona-status",
-			Namespace:  "default",
-			Generation: 1,
-		},
-		Spec: langopv1alpha1.LanguagePersonaSpec{
-			SystemPrompt: "You are a helpful assistant.",
-		},
-	}
+	persona := gen.LanguagePersona("test-persona-status", "default",
+		gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+	)
+	persona.Generation = 1
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).

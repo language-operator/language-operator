@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -20,16 +21,9 @@ import (
 func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "anthropic",
-			ModelName: "claude-3-5-sonnet-20241022",
-		},
-	}
+	model := gen.LanguageModel("test-model", "default",
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -89,16 +83,10 @@ func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
 func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-deployment",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai",
-			ModelName: "gpt-4",
-		},
-	}
+	model := gen.LanguageModel("test-model-deployment", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -175,17 +163,10 @@ func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 func TestLanguageModelController_StatusUpdates(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-model-status",
-			Namespace:  "default",
-			Generation: 1,
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "anthropic",
-			ModelName: "claude-3-5-sonnet-20241022",
-		},
-	}
+	model := gen.LanguageModel("test-model-status", "default",
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+	)
+	model.Generation = 1
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -260,20 +241,11 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-secret",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai",
-			ModelName: "gpt-4",
-			APIKeySecretRef: &langopv1alpha1.SecretReference{
-				Name: "openai-api-key",
-				Key:  "api-key",
-			},
-		},
-	}
+	model := gen.LanguageModel("test-model-secret", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+		gen.SetModelAPIKeySecretRef("openai-api-key", "api-key"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -388,30 +360,23 @@ func TestLanguageModelController_NotFoundHandling(t *testing.T) {
 func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-netpol",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "anthropic",
-			ModelName: "claude-3-5-sonnet-20241022",
-			Egress: []langopv1alpha1.NetworkRule{
-				{
-					Description: "Allow Anthropic API",
-					To: &langopv1alpha1.NetworkPeer{
-						DNS: []string{"api.anthropic.com"},
-					},
-					Ports: []langopv1alpha1.NetworkPort{
-						{
-							Port:     443,
-							Protocol: "TCP",
-						},
+	model := gen.LanguageModel("test-model-netpol", "default",
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+		gen.SetModelEgress([]langopv1alpha1.NetworkRule{
+			{
+				Description: "Allow Anthropic API",
+				To: &langopv1alpha1.NetworkPeer{
+					DNS: []string{"api.anthropic.com"},
+				},
+				Ports: []langopv1alpha1.NetworkPort{
+					{
+						Port:     443,
+						Protocol: "TCP",
 					},
 				},
 			},
-		},
-	}
+		}),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -475,19 +440,14 @@ func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
 
 func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
+	ctx := context.Background()
 
 	// Test with IP address endpoint
-	modelWithIP := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-ip-endpoint",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai-compatible",
-			ModelName: "mistralai/magistral-small-2509",
-			Endpoint:  "http://192.168.68.54:1234",
-		},
-	}
+	modelWithIP := gen.LanguageModel("test-model-ip-endpoint", "default",
+		gen.SetModelProvider("openai-compatible"),
+		gen.SetModelName("mistralai/magistral-small-2509"),
+		gen.SetModelEndpoint("http://192.168.68.54:1234"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -502,7 +462,6 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 		NetworkIsolationEnabled: true,
 	}
 
-	ctx := context.Background()
 	req := ctrl.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      modelWithIP.Name,
@@ -559,17 +518,11 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 	}
 
 	// Test with HTTPS endpoint (default port 443)
-	modelWithHTTPS := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-https",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "azure",
-			ModelName: "gpt-4",
-			Endpoint:  "https://my-azure.openai.azure.com",
-		},
-	}
+	modelWithHTTPS := gen.LanguageModel("test-model-https", "default",
+		gen.SetModelProvider("azure"),
+		gen.SetModelName("gpt-4"),
+		gen.SetModelEndpoint("https://my-azure.openai.azure.com"),
+	)
 
 	fakeClient2 := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -618,17 +571,10 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 	}
 
 	// Test that non-compatible providers don't get auto-egress
-	modelOpenAI := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-openai",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai",
-			ModelName: "gpt-4",
-			// No endpoint - should not get auto-egress
-		},
-	}
+	modelOpenAI := gen.LanguageModel("test-model-openai", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+	)
 
 	fakeClient3 := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -676,19 +622,13 @@ func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.
 
 func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
+	ctx := context.Background()
 
 	// Test OpenAI provider gets auto-egress for api.openai.com
-	modelOpenAI := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-openai-auto",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai",
-			ModelName: "gpt-4",
-			// No endpoint specified - should use default
-		},
-	}
+	modelOpenAI := gen.LanguageModel("test-openai-auto", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -703,7 +643,6 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 		NetworkIsolationEnabled: true,
 	}
 
-	ctx := context.Background()
 	req := ctrl.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      modelOpenAI.Name,
@@ -754,16 +693,9 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 	}
 
 	// Test Anthropic provider gets auto-egress for api.anthropic.com
-	modelAnthropic := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-anthropic-auto",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "anthropic",
-			ModelName: "claude-3-5-sonnet-20241022",
-		},
-	}
+	modelAnthropic := gen.LanguageModel("test-anthropic-auto", "default",
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+	)
 
 	fakeClient2 := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -812,16 +744,10 @@ func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
 func TestLanguageModelController_Finalizer(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	model := &langopv1alpha1.LanguageModel{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-model-finalizer",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageModelSpec{
-			Provider:  "openai",
-			ModelName: "gpt-4",
-		},
-	}
+	model := gen.LanguageModel("test-model-finalizer", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).

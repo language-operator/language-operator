@@ -6,6 +6,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,18 +31,11 @@ func (m *mockRegistryManager) GetRegistries() []string {
 func TestLanguageToolController_SidecarMode(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	tool := &langopv1alpha1.LanguageTool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-sidecar-tool",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageToolSpec{
-			Type:           "mcp",
-			Image:          "test:latest",
-			DeploymentMode: "sidecar",
-			Port:           8080,
-		},
-	}
+	tool := gen.LanguageTool("test-sidecar-tool", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(8080),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -90,18 +84,11 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 func TestLanguageToolController_ServiceMode(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	tool := &langopv1alpha1.LanguageTool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service-tool",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageToolSpec{
-			Type:           "mcp",
-			Image:          "test:latest",
-			DeploymentMode: "service",
-			Port:           8080,
-		},
-	}
+	tool := gen.LanguageTool("test-service-tool", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -215,19 +202,12 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tool := &langopv1alpha1.LanguageTool{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-tool",
-					Namespace:  "default",
-					Generation: 1,
-				},
-				Spec: langopv1alpha1.LanguageToolSpec{
-					Type:           "mcp",
-					Image:          "test:latest",
-					DeploymentMode: "service",
-					Port:           8080,
-				},
-			}
+			tool := gen.LanguageTool("test-tool", "default",
+				gen.SetToolImage("test:latest"),
+				gen.SetToolDeploymentMode("service"),
+				gen.SetToolPort(8080),
+			)
+			tool.Generation = 1
 
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{

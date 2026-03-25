@@ -58,3 +58,23 @@ func SetClusterGatewayName(name string) LanguageClusterModifier {
 		c.Spec.IngressConfig.GatewayName = name
 	}
 }
+
+// SetClusterGatewayNamespace sets spec.ingressConfig.gatewayNamespace.
+func SetClusterGatewayNamespace(ns string) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.IngressConfig == nil {
+			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
+		}
+		c.Spec.IngressConfig.GatewayNamespace = ns
+	}
+}
+
+// SetClusterGatewayClassName sets spec.ingressConfig.gatewayClassName (deprecated, kept for backward compat tests).
+func SetClusterGatewayClassName(className string) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.IngressConfig == nil {
+			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
+		}
+		c.Spec.IngressConfig.GatewayClassName = className
+	}
+}

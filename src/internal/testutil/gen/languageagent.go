@@ -107,6 +107,13 @@ func SetAgentEnv(name, value string) LanguageAgentModifier {
 	}
 }
 
+// SetAgentInstructions sets spec.instructions.
+func SetAgentInstructions(instructions string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Instructions = instructions
+	}
+}
+
 // SetAgentSchedule sets spec.schedule.
 func SetAgentSchedule(schedule string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,65 +25,51 @@ func TestLanguageAgentController_GatewayConfiguration(t *testing.T) {
 	}{
 		{
 			name: "new GatewayName field takes precedence",
-			cluster: &langopv1alpha1.LanguageCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster-new",
-					Namespace: "test-namespace",
-				},
-				Spec: langopv1alpha1.LanguageClusterSpec{
-					IngressConfig: &langopv1alpha1.IngressConfig{
-						GatewayName:      "my-gateway",
-						GatewayNamespace: "gateway-system",
-						GatewayClassName: "old-gateway", // Should be ignored
-					},
-				},
-			},
+			cluster: func() *langopv1alpha1.LanguageCluster {
+				c := gen.LanguageCluster("test-cluster-new",
+					gen.SetClusterGatewayName("my-gateway"),
+					gen.SetClusterGatewayNamespace("gateway-system"),
+					gen.SetClusterGatewayClassName("old-gateway"),
+				)
+				c.Namespace = "test-namespace"
+				return c
+			}(),
 			expectedGatewayName:      "my-gateway",
 			expectedGatewayNamespace: "gateway-system",
 		},
 		{
 			name: "GatewayName without namespace defaults to agent namespace",
-			cluster: &langopv1alpha1.LanguageCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster-default-ns",
-					Namespace: "test-namespace",
-				},
-				Spec: langopv1alpha1.LanguageClusterSpec{
-					IngressConfig: &langopv1alpha1.IngressConfig{
-						GatewayName: "my-gateway",
-					},
-				},
-			},
+			cluster: func() *langopv1alpha1.LanguageCluster {
+				c := gen.LanguageCluster("test-cluster-default-ns",
+					gen.SetClusterGatewayName("my-gateway"),
+				)
+				c.Namespace = "test-namespace"
+				return c
+			}(),
 			expectedGatewayName:      "my-gateway",
 			expectedGatewayNamespace: "test-namespace", // Agent's namespace
 		},
 		{
 			name: "fallback to deprecated GatewayClassName for backward compatibility",
-			cluster: &langopv1alpha1.LanguageCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster-legacy",
-					Namespace: "test-namespace",
-				},
-				Spec: langopv1alpha1.LanguageClusterSpec{
-					IngressConfig: &langopv1alpha1.IngressConfig{
-						GatewayClassName: "legacy-gateway",
-					},
-				},
-			},
+			cluster: func() *langopv1alpha1.LanguageCluster {
+				c := gen.LanguageCluster("test-cluster-legacy",
+					gen.SetClusterGatewayClassName("legacy-gateway"),
+				)
+				c.Namespace = "test-namespace"
+				return c
+			}(),
 			expectedGatewayName:      "legacy-gateway",
 			expectedGatewayNamespace: "test-namespace", // Agent's namespace
 		},
 		{
 			name: "empty fields default to 'default' gateway",
-			cluster: &langopv1alpha1.LanguageCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster-empty",
-					Namespace: "test-namespace",
-				},
-				Spec: langopv1alpha1.LanguageClusterSpec{
-					IngressConfig: &langopv1alpha1.IngressConfig{},
-				},
-			},
+			cluster: func() *langopv1alpha1.LanguageCluster {
+				c := gen.LanguageCluster("test-cluster-empty",
+					gen.SetClusterIngressClassName(""),
+				)
+				c.Namespace = "test-namespace"
+				return c
+			}(),
 			expectedGatewayName:      "default",
 			expectedGatewayNamespace: "default",
 		},
@@ -91,15 +77,10 @@ func TestLanguageAgentController_GatewayConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := &langopv1alpha1.LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "test-namespace",
-				},
-				Spec: langopv1alpha1.LanguageAgentSpec{
-					ClusterRef: tt.cluster.Name,
-				},
-			}
+			agent := gen.LanguageAgent("test-agent", "test-namespace",
+				gen.SetAgentClusterRef(tt.cluster.Name),
+				gen.SetAgentImage("test:latest"),
+			)
 
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -161,29 +142,16 @@ func TestLanguageAgentController_GatewayFieldPrecedence(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	// Test that GatewayName takes precedence over GatewayClassName
-	cluster := &langopv1alpha1.LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "precedence-test",
-			Namespace: "test-namespace",
-		},
-		Spec: langopv1alpha1.LanguageClusterSpec{
-			IngressConfig: &langopv1alpha1.IngressConfig{
-				GatewayName:      "new-gateway",
-				GatewayNamespace: "new-namespace",
-				GatewayClassName: "old-gateway", // Should be ignored
-			},
-		},
-	}
+	cluster := gen.LanguageCluster("precedence-test",
+		gen.SetClusterGatewayName("new-gateway"),
+		gen.SetClusterGatewayNamespace("new-namespace"),
+		gen.SetClusterGatewayClassName("old-gateway"),
+	)
+	cluster.Namespace = "test-namespace"
 
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: "test-namespace",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			ClusterRef: cluster.Name,
-		},
-	}
+	agent := gen.LanguageAgent("test-agent", "test-namespace",
+		gen.SetAgentClusterRef(cluster.Name),
+	)
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -249,12 +217,7 @@ func TestLanguageAgentController_ReferenceGrantCreation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := &langopv1alpha1.LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: tt.agentNamespace,
-				},
-			}
+			agent := gen.LanguageAgent("test-agent", tt.agentNamespace)
 
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -343,12 +306,7 @@ func TestLanguageAgentController_ReferenceGrantCreation(t *testing.T) {
 func TestLanguageAgentController_ReferenceGrantUpdate(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: "agents",
-		},
-	}
+	agent := gen.LanguageAgent("test-agent", "agents")
 
 	// Create an existing ReferenceGrant with different spec
 	existingReferenceGrant := &unstructured.Unstructured{}
