@@ -134,6 +134,20 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Ensure the namespace for this cluster exists
+	if err := r.reconcileNamespace(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile namespace")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile namespace")
+		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+			"NamespaceError", err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after namespace error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
 	// Validate DNS configuration if domain is set
 	if cluster.Spec.Domain != "" {
 		r.validateDNS(ctx, cluster)
@@ -204,10 +218,37 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
+// reconcileNamespace ensures a namespace named cluster.Name exists
+func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	ns := &corev1.Namespace{}
+	err := r.Get(ctx, client.ObjectKey{Name: cluster.Name}, ns)
+	if err == nil {
+		return nil // already exists
+	}
+	if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get namespace %s: %w", cluster.Name, err)
+	}
+	ns = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cluster.Name,
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "language-operator",
+				"langop.io/cluster":            cluster.Name,
+			},
+		},
+	}
+	if err := r.Create(ctx, ns); err != nil {
+		return fmt.Errorf("failed to create namespace %s: %w", cluster.Name, err)
+	}
+	log.Info("Created namespace", "namespace", cluster.Name)
+	return nil
+}
+
 // reconcileAgentRBAC ensures the agent RBAC resources exist in the cluster namespace
 func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
-	namespace := cluster.Namespace
+	namespace := cluster.Name
 
 	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 
@@ -314,7 +355,7 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 // reconcileNetworkPolicy ensures the NetworkPolicy for agent communication exists
 func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
-	namespace := cluster.Namespace
+	namespace := cluster.Name
 
 	log.V(1).Info("Reconciling NetworkPolicy", "cluster", cluster.Name, "namespace", namespace)
 
@@ -492,7 +533,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 	clusterName := cluster.Name
-	namespace := cluster.Namespace
+	namespace := cluster.Name
 
 	log.Info("Cleaning up dependent resources", "cluster", clusterName, "namespace", namespace)
 
@@ -566,6 +607,17 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 				}
 			}
 		}
+	}
+
+	// Delete the namespace for this cluster
+	ns := &corev1.Namespace{}
+	if err := r.Get(ctx, client.ObjectKey{Name: clusterName}, ns); err == nil {
+		log.Info("Deleting namespace", "namespace", clusterName)
+		if err := r.Delete(ctx, ns); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete namespace %s: %w", clusterName, err)
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get namespace %s: %w", clusterName, err)
 	}
 
 	log.Info("Completed cleanup of dependent resources", "cluster", clusterName)
