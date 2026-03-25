@@ -237,3 +237,201 @@ func TestWebhookClusterMembership(t *testing.T) {
 		}
 	})
 }
+
+// TestWebhookClusterMembershipTool verifies that the admission webhook enforces
+// LanguageCluster namespace membership for LanguageTool resources.
+func TestWebhookClusterMembershipTool(t *testing.T) {
+	clusterNs := &corev1.Namespace{}
+	clusterNs.Name = "webhook-tool-cluster"
+	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create cluster namespace: %v", err)
+	}
+
+	plainNs := &corev1.Namespace{}
+	plainNs.Name = "webhook-tool-plain"
+	if err := k8sClient.Create(ctx, plainNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create plain namespace: %v", err)
+	}
+
+	cluster := gen.LanguageCluster("webhook-tool-cluster", gen.SetClusterDomain("tools.example.com"))
+	if err := k8sClient.Create(ctx, cluster); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create LanguageCluster: %v", err)
+	}
+	t.Cleanup(func() { _ = k8sClient.Delete(ctx, cluster) })
+
+	t.Run("tool in cluster namespace is accepted", func(t *testing.T) {
+		tool := gen.LanguageTool("accepted-tool", "webhook-tool-cluster",
+			gen.SetToolImage("ghcr.io/test/tool:latest"),
+		)
+		if err := k8sClient.Create(ctx, tool); err != nil {
+			t.Errorf("expected success, got: %v", err)
+		} else {
+			t.Cleanup(func() { _ = k8sClient.Delete(ctx, tool) })
+		}
+	})
+
+	t.Run("tool in non-cluster namespace is rejected", func(t *testing.T) {
+		tool := gen.LanguageTool("rejected-tool", "webhook-tool-plain",
+			gen.SetToolImage("ghcr.io/test/tool:latest"),
+		)
+		err := k8sClient.Create(ctx, tool)
+		if err == nil {
+			t.Error("expected admission to reject the tool, but it was created")
+			_ = k8sClient.Delete(ctx, tool)
+		}
+	})
+
+	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
+		tool := gen.LanguageTool("defaulted-tool", "webhook-tool-cluster",
+			gen.SetToolImage("ghcr.io/test/tool:latest"),
+		)
+		tool.Spec.ClusterRef = ""
+
+		if err := k8sClient.Create(ctx, tool); err != nil {
+			t.Fatalf("create tool: %v", err)
+		}
+		t.Cleanup(func() { _ = k8sClient.Delete(ctx, tool) })
+
+		created := &langopv1alpha1.LanguageTool{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: "defaulted-tool", Namespace: "webhook-tool-cluster",
+		}, created); err != nil {
+			t.Fatalf("get tool: %v", err)
+		}
+		if got := created.Spec.ClusterRef; got != "webhook-tool-cluster" {
+			t.Errorf("clusterRef: want %q, got %q", "webhook-tool-cluster", got)
+		}
+	})
+}
+
+// TestWebhookClusterMembershipModel verifies that the admission webhook enforces
+// LanguageCluster namespace membership for LanguageModel resources.
+func TestWebhookClusterMembershipModel(t *testing.T) {
+	clusterNs := &corev1.Namespace{}
+	clusterNs.Name = "webhook-model-cluster"
+	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create cluster namespace: %v", err)
+	}
+
+	plainNs := &corev1.Namespace{}
+	plainNs.Name = "webhook-model-plain"
+	if err := k8sClient.Create(ctx, plainNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create plain namespace: %v", err)
+	}
+
+	cluster := gen.LanguageCluster("webhook-model-cluster", gen.SetClusterDomain("models.example.com"))
+	if err := k8sClient.Create(ctx, cluster); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create LanguageCluster: %v", err)
+	}
+	t.Cleanup(func() { _ = k8sClient.Delete(ctx, cluster) })
+
+	t.Run("model in cluster namespace is accepted", func(t *testing.T) {
+		model := gen.LanguageModel("accepted-model", "webhook-model-cluster",
+			gen.SetModelProvider("anthropic"),
+		)
+		if err := k8sClient.Create(ctx, model); err != nil {
+			t.Errorf("expected success, got: %v", err)
+		} else {
+			t.Cleanup(func() { _ = k8sClient.Delete(ctx, model) })
+		}
+	})
+
+	t.Run("model in non-cluster namespace is rejected", func(t *testing.T) {
+		model := gen.LanguageModel("rejected-model", "webhook-model-plain",
+			gen.SetModelProvider("anthropic"),
+		)
+		err := k8sClient.Create(ctx, model)
+		if err == nil {
+			t.Error("expected admission to reject the model, but it was created")
+			_ = k8sClient.Delete(ctx, model)
+		}
+	})
+
+	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
+		model := gen.LanguageModel("defaulted-model", "webhook-model-cluster",
+			gen.SetModelProvider("anthropic"),
+		)
+		model.Spec.ClusterRef = ""
+
+		if err := k8sClient.Create(ctx, model); err != nil {
+			t.Fatalf("create model: %v", err)
+		}
+		t.Cleanup(func() { _ = k8sClient.Delete(ctx, model) })
+
+		created := &langopv1alpha1.LanguageModel{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: "defaulted-model", Namespace: "webhook-model-cluster",
+		}, created); err != nil {
+			t.Fatalf("get model: %v", err)
+		}
+		if got := created.Spec.ClusterRef; got != "webhook-model-cluster" {
+			t.Errorf("clusterRef: want %q, got %q", "webhook-model-cluster", got)
+		}
+	})
+}
+
+// TestWebhookClusterMembershipPersona verifies that the admission webhook enforces
+// LanguageCluster namespace membership for LanguagePersona resources.
+func TestWebhookClusterMembershipPersona(t *testing.T) {
+	clusterNs := &corev1.Namespace{}
+	clusterNs.Name = "webhook-persona-cluster"
+	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create cluster namespace: %v", err)
+	}
+
+	plainNs := &corev1.Namespace{}
+	plainNs.Name = "webhook-persona-plain"
+	if err := k8sClient.Create(ctx, plainNs); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create plain namespace: %v", err)
+	}
+
+	cluster := gen.LanguageCluster("webhook-persona-cluster", gen.SetClusterDomain("personas.example.com"))
+	if err := k8sClient.Create(ctx, cluster); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create LanguageCluster: %v", err)
+	}
+	t.Cleanup(func() { _ = k8sClient.Delete(ctx, cluster) })
+
+	t.Run("persona in cluster namespace is accepted", func(t *testing.T) {
+		persona := gen.LanguagePersona("accepted-persona", "webhook-persona-cluster",
+			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+		)
+		if err := k8sClient.Create(ctx, persona); err != nil {
+			t.Errorf("expected success, got: %v", err)
+		} else {
+			t.Cleanup(func() { _ = k8sClient.Delete(ctx, persona) })
+		}
+	})
+
+	t.Run("persona in non-cluster namespace is rejected", func(t *testing.T) {
+		persona := gen.LanguagePersona("rejected-persona", "webhook-persona-plain",
+			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+		)
+		err := k8sClient.Create(ctx, persona)
+		if err == nil {
+			t.Error("expected admission to reject the persona, but it was created")
+			_ = k8sClient.Delete(ctx, persona)
+		}
+	})
+
+	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
+		persona := gen.LanguagePersona("defaulted-persona", "webhook-persona-cluster",
+			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+		)
+		persona.Spec.ClusterRef = ""
+
+		if err := k8sClient.Create(ctx, persona); err != nil {
+			t.Fatalf("create persona: %v", err)
+		}
+		t.Cleanup(func() { _ = k8sClient.Delete(ctx, persona) })
+
+		created := &langopv1alpha1.LanguagePersona{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: "defaulted-persona", Namespace: "webhook-persona-cluster",
+		}, created); err != nil {
+			t.Fatalf("get persona: %v", err)
+		}
+		if got := created.Spec.ClusterRef; got != "webhook-persona-cluster" {
+			t.Errorf("clusterRef: want %q, got %q", "webhook-persona-cluster", got)
+		}
+	})
+}
