@@ -42,7 +42,7 @@ spec:
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: my-openclaw
+  name: openclaw
   namespace: language-operator-openclaw
 spec:
   image: ghcr.io/openclaw/openclaw:latest
@@ -58,10 +58,10 @@ spec:
       # The adapter uses them to configure openclaw's provider settings.
       env:
         - name: OPENCLAW_STATE_DIR
-          value: /home/node/.openclaw
+          value: /workspace
       volumeMounts:
         - name: workspace
-          mountPath: /home/node/.openclaw
+          mountPath: /workspace
 
   livenessProbe:
     httpGet:
@@ -84,7 +84,6 @@ spec:
   workspace:
     enabled: true
     size: 10Gi
-    mountPath: /home/node/.openclaw
 
   executionMode: autonomous
   replicas: 1

@@ -10,7 +10,7 @@ Language Operator deploys AI agents as standard Kubernetes Deployments. You brin
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: my-openclaw
+  name: openclaw
 spec:
   image: ghcr.io/openclaw/openclaw:latest
   port: 18789
@@ -84,7 +84,7 @@ kind: LanguageCluster
 metadata:
   name: language-operator-openclaw
 spec:
-  domain: agents.example.com
+  domain: openclaw.langop.io
 EOF
 ```
 
@@ -128,7 +128,7 @@ kubectl apply -n language-operator-openclaw -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: my-openclaw
+  name: openclaw
 spec:
   image: ghcr.io/openclaw/openclaw:latest
   port: 18789
@@ -139,10 +139,10 @@ spec:
       image: ghcr.io/language-operator/openclaw-adapter:latest
       env:
         - name: OPENCLAW_STATE_DIR
-          value: /home/node/.openclaw
+          value: /workspace
       volumeMounts:
         - name: workspace
-          mountPath: /home/node/.openclaw
+          mountPath: /workspace
   livenessProbe:
     httpGet:
       path: /healthz
@@ -160,7 +160,6 @@ spec:
         name: openclaw-gateway
   workspace:
     size: 10Gi
-    mountPath: /home/node/.openclaw
 EOF
 ```
 

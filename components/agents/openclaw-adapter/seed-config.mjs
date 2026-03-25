@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { parse as parseYaml } from 'yaml'
 
-const stateDir = process.env.OPENCLAW_STATE_DIR ?? '/home/node/.openclaw'
+const stateDir = process.env.OPENCLAW_STATE_DIR ?? '/workspace'
 const configFile = `${stateDir}/openclaw.json`
 const workspaceDir = `${stateDir}/workspace`
 const agentName = process.env.AGENT_NAME ?? ''
@@ -44,7 +44,7 @@ if (existsSync(operatorConfigPath)) {
 const personas = operatorConfig?.personas ?? []
 
 if (personas.length > 0) {
-  const agentsSections = personas.map((persona, i) => {
+  const agentsSections = personas.map((persona) => {
     const lines = []
     if (persona.systemPrompt) {
       lines.push(persona.systemPrompt)
