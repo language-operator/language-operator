@@ -68,6 +68,9 @@ spec:
         {{- if .Values.config.watch.namespaces }}
         - --watch-namespaces={{ join "," .Values.config.watch.namespaces }}
         {{- end }}
+        {{- if .Values.config.agentIngress.className }}
+        - --agent-ingress-class-name={{ .Values.config.agentIngress.className }}
+        {{- end }}
         {{- with .Values.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}

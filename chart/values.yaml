@@ -175,6 +175,13 @@ config:
     #   - "198.51.100.0/24" # Load balancer network
     customCIDRs: []
 
+  # Agent Ingress configuration
+  agentIngress:
+    # Default IngressClass for agent Ingress resources.
+    # Can be overridden per-cluster via LanguageCluster spec.ingressConfig.ingressClassName.
+    # Example: "traefik", "nginx", "alb"
+    className: ""
+
   # Watch configuration
   watch:
     # Namespaces to watch (empty means all namespaces)

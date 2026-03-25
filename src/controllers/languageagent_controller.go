@@ -71,6 +71,7 @@ type LanguageAgentReconciler struct {
 	NetworkPolicyTimeout    time.Duration
 	NetworkPolicyRetries    int
 	NetworkIsolationEnabled bool
+	DefaultIngressClassName string
 	gatewayCache            *gatewayAPICache
 }
 
@@ -1872,22 +1873,34 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		return nil
 	}
 
-	// Build webhook hostname: <uuid>.<domain>
-	hostname := fmt.Sprintf("%s.%s", agent.Status.UUID, domain)
+	// Build agent hostname: <agent-name>.<domain>
+	hostname := fmt.Sprintf("%s.%s", agent.Name, domain)
 
-	// Check if Gateway API is available
+	// Use HTTPRoute only when Gateway API CRDs are present AND the cluster explicitly
+	// names a Gateway. Without a configured Gateway, fall through to Ingress even if
+	// the CRDs happen to be installed (e.g. via Cilium).
 	hasGateway, err := r.hasGatewayAPI(ctx)
 	if err != nil {
 		log.Error(err, "Failed to detect Gateway API availability")
-		// Fall back to Ingress on detection error
 		hasGateway = false
+	}
+
+	useHTTPRoute := false
+	if hasGateway && agent.Spec.ClusterRef != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err == nil {
+			if cluster.Spec.IngressConfig != nil &&
+				(cluster.Spec.IngressConfig.GatewayName != "" || cluster.Spec.IngressConfig.GatewayClassName != "") {
+				useHTTPRoute = true
+			}
+		}
 	}
 
 	var routeReady bool
 	var routeReadyMsg string
 
-	if hasGateway {
-		log.Info("Gateway API detected, creating HTTPRoute", "hostname", hostname)
+	if useHTTPRoute {
+		log.Info("Gateway API configured, creating HTTPRoute", "hostname", hostname)
 		if err := r.reconcileHTTPRoute(ctx, agent, hostname); err != nil {
 			// Set WebhookRouteCreated condition to false on failure
 			SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "HTTPRouteCreationFailed", err.Error(), agent.Generation)
@@ -2336,7 +2349,7 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 				"backendRefs": []map[string]interface{}{
 					{
 						"name": agent.Name,
-						"port": int64(80),
+						"port": int64(agentPort(agent)),
 					},
 				},
 			},
@@ -2407,7 +2420,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 										Service: &networkingv1.IngressServiceBackend{
 											Name: agent.Name,
 											Port: networkingv1.ServiceBackendPort{
-												Number: 80,
+												Number: agentPort(agent),
 											},
 										},
 									},
@@ -2419,10 +2432,11 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 			},
 		}
 
-		// Add TLS configuration if cluster has TLS enabled
+		// Add TLS and IngressClassName from cluster config (with operator-level defaults)
+		ingressClass := r.DefaultIngressClassName
 		if agent.Spec.ClusterRef != "" {
 			cluster := &langopv1alpha1.LanguageCluster{}
-			if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
+			if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err == nil {
 				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
 					secretName := cluster.Spec.IngressConfig.TLS.SecretName
 					if secretName == "" {
@@ -2448,11 +2462,14 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 					}
 				}
 
-				// Add IngressClassName if specified
+				// Cluster-level IngressClassName overrides operator default
 				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.IngressClassName != "" {
-					ingress.Spec.IngressClassName = &cluster.Spec.IngressConfig.IngressClassName
+					ingressClass = cluster.Spec.IngressConfig.IngressClassName
 				}
 			}
+		}
+		if ingressClass != "" {
+			ingress.Spec.IngressClassName = &ingressClass
 		}
 
 		return nil
@@ -2602,19 +2619,8 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		return nil
 	}
 
-	// Determine target namespace
+	// ServiceAccount always lives in the agent's own namespace
 	targetNamespace := agent.Namespace
-	if agent.Spec.ClusterRef != "" {
-		// Validate cluster ref and get namespace
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			if apierrors.IsNotFound(err) {
-				return fmt.Errorf("cluster %s not found in namespace %s", agent.Spec.ClusterRef, agent.Namespace)
-			}
-			return fmt.Errorf("failed to get cluster %s: %w", agent.Spec.ClusterRef, err)
-		}
-		targetNamespace = cluster.Namespace
-	}
 
 	// Create ServiceAccount
 	serviceAccount := &corev1.ServiceAccount{
