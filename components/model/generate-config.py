@@ -206,11 +206,13 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
     """Build litellm_settings for retries, fallbacks, etc."""
     settings: Dict[str, Any] = {}
 
+    # Drop unknown/provider-specific params universally — agents (e.g. openclaw) may
+    # send OpenAI-style fields (like `store`) that are not accepted by all providers.
+    settings["drop_params"] = True
+
     # For openai-compatible providers, disable strict response validation
     provider = spec.get("provider")
     if provider in ["openai-compatible", "custom"]:
-        # Disable strict validation for non-standard OpenAI-compatible responses
-        settings["drop_params"] = True
         settings["disable_strict_validation"] = True
         # Allow non-standard response fields
         settings["allowed_fails"] = 3

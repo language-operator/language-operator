@@ -47,7 +47,6 @@ metadata:
 spec:
   image: ghcr.io/openclaw/openclaw:latest
   port: 18789
-
   modelRefs:
     - name: claude-sonnet
 
@@ -58,24 +57,18 @@ spec:
       # The adapter uses them to configure openclaw's provider settings.
       env:
         - name: OPENCLAW_STATE_DIR
-          value: /workspace
+          value: /workspace/.openclaw
       volumeMounts:
         - name: workspace
           mountPath: /workspace
 
-  livenessProbe:
-    httpGet:
-      path: /healthz
-      port: 18789
-    initialDelaySeconds: 15
-    periodSeconds: 30
+  # livenessProbe / readinessProbe omitted: openclaw gateway binds to loopback
+  # (ws://127.0.0.1:18789), so kubelet httpGet probes cannot reach it.
+  # Add probes back once openclaw exposes a health endpoint on 0.0.0.0.
 
-  readinessProbe:
-    httpGet:
-      path: /readyz
-      port: 18789
-    initialDelaySeconds: 5
-    periodSeconds: 10
+  env:
+    - name: OPENCLAW_HOME
+      value: /workspace   # openclaw uses $OPENCLAW_HOME/.openclaw as its state dir
 
   envFrom:
     - secretRef:

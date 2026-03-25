@@ -139,22 +139,13 @@ spec:
       image: ghcr.io/language-operator/openclaw-adapter:latest
       env:
         - name: OPENCLAW_STATE_DIR
-          value: /workspace
+          value: /workspace/.openclaw
       volumeMounts:
         - name: workspace
           mountPath: /workspace
-  livenessProbe:
-    httpGet:
-      path: /healthz
-      port: 18789
-    initialDelaySeconds: 15
-    periodSeconds: 30
-  readinessProbe:
-    httpGet:
-      path: /readyz
-      port: 18789
-    initialDelaySeconds: 5
-    periodSeconds: 10
+  env:
+    - name: OPENCLAW_HOME
+      value: /workspace
   envFrom:
     - secretRef:
         name: openclaw-gateway

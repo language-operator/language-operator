@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { parse as parseYaml } from 'yaml'
 
-const stateDir = process.env.OPENCLAW_STATE_DIR ?? '/workspace'
+const stateDir = process.env.OPENCLAW_STATE_DIR ?? '/workspace/.openclaw'
 const configFile = `${stateDir}/openclaw.json`
 const workspaceDir = `${stateDir}/workspace`
 const agentName = process.env.AGENT_NAME ?? ''
