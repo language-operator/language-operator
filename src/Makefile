@@ -43,6 +43,11 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet ## Run tests.
 	go test ./... -coverprofile cover.out
 
+.PHONY: integration-test
+integration-test: manifests generate fmt vet envtest ## Run integration tests against a real envtest API server.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+		go test -tags integration -v -timeout 120s ./...
+
 .PHONY: docs
 docs: crd-ref-docs ## Generate CRD API reference documentation.
 	$(CRD_REF_DOCS) --source-path=./api/v1alpha1 --config=.crd-ref-docs.yaml --renderer=markdown --output-path=./docs/api-reference.md
@@ -86,10 +91,12 @@ $(LOCALBIN):
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
+ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 CRD_REF_DOCS_VERSION ?= v0.2.0
+ENVTEST_K8S_VERSION ?= 1.29.0
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -100,3 +107,8 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
 $(CRD_REF_DOCS): $(LOCALBIN)
 	test -s $(LOCALBIN)/crd-ref-docs || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest

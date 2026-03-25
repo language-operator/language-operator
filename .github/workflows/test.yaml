@@ -59,6 +59,29 @@ jobs:
         run: |
           go tool cover -func=coverage.out | tail -1
 
+  # Integration tests against a real envtest API server
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'src/go.mod'
+          cache-dependency-path: 'src/go.sum'
+
+      - name: Install setup-envtest
+        working-directory: src
+        run: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+      - name: Run integration tests
+        working-directory: src
+        run: |
+          KUBEBUILDER_ASSETS="$(setup-envtest use 1.29.0 -p path)" \
+            go test -tags integration -v -timeout 120s ./...
+
   # Validate CRD manifests
   validate-manifests:
     runs-on: ubuntu-latest
