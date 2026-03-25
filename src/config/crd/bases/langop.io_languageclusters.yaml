@@ -12,7 +12,7 @@ spec:
     listKind: LanguageClusterList
     plural: languageclusters
     singular: languagecluster
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.phase
