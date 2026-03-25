@@ -187,7 +187,7 @@ cd src && make generate && make helm-crds
 
 ## Status
 
-**Pre-alpha** — core functionality works, actively developing toward stable agent deployment runtime.
+**Pre-release** — not ready for production.
 
 ## License
 
