@@ -68,6 +68,46 @@ webhooks:
     resources:
     - languagetools
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-langop-io-v1alpha1-languagemodel
+  failurePolicy: Fail
+  name: mlanguagemodel.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languagemodels
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-langop-io-v1alpha1-languagepersona
+  failurePolicy: Fail
+  name: mlanguagepersona.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languagepersonas
+  sideEffects: None
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -138,6 +178,46 @@ webhooks:
     - UPDATE
     resources:
     - languagetools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /validate-langop-io-v1alpha1-languagemodel
+  failurePolicy: Fail
+  name: vlanguagemodel.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languagemodels
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /validate-langop-io-v1alpha1-languagepersona
+  failurePolicy: Fail
+  name: vlanguagepersona.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languagepersonas
   sideEffects: None
 ---
 apiVersion: cert-manager.io/v1

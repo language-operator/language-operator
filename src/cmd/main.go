@@ -83,6 +83,7 @@ func main() {
 	var requireNetworkPolicy bool
 	var networkPolicyTimeout time.Duration
 	var networkPolicyRetries int
+	var agentIngressClassName string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -108,6 +109,8 @@ func main() {
 		"Comma-separated list of namespaces to watch. Empty means all namespaces.")
 	flag.IntVar(&concurrency, "concurrency", 5,
 		"The number of concurrent reconciles per controller.")
+	flag.StringVar(&agentIngressClassName, "agent-ingress-class-name", "",
+		"Default IngressClass name for agent Ingress resources. Can be overridden per LanguageCluster.")
 
 	opts := zap.Options{
 		Development: true,
@@ -290,6 +293,7 @@ func main() {
 		NetworkPolicyTimeout:    networkPolicyTimeout,
 		NetworkPolicyRetries:    networkPolicyRetries,
 		NetworkIsolationEnabled: networkIsolationEnabled,
+		DefaultIngressClassName: agentIngressClassName,
 	}
 
 	// Initialize Gateway API cache
@@ -332,18 +336,32 @@ func main() {
 	}
 
 	// Setup LanguageAgent webhook
-	if err = (&langopv1alpha1.LanguageAgent{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = langopv1alpha1.SetupLanguageAgentWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgent")
 		os.Exit(1)
 	}
-	setupLog.Info("LanguageAgent validation webhook registered")
+	setupLog.Info("LanguageAgent webhook registered")
 
-	// Setup LanguageTool webhook for resource defaults
-	if err = (&langopv1alpha1.LanguageTool{}).SetupWebhookWithManager(mgr); err != nil {
+	// Setup LanguageTool webhook
+	if err = langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageTool")
 		os.Exit(1)
 	}
-	setupLog.Info("LanguageTool validation webhook registered")
+	setupLog.Info("LanguageTool webhook registered")
+
+	// Setup LanguageModel webhook
+	if err = langopv1alpha1.SetupLanguageModelWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageModel")
+		os.Exit(1)
+	}
+	setupLog.Info("LanguageModel webhook registered")
+
+	// Setup LanguagePersona webhook
+	if err = langopv1alpha1.SetupLanguagePersonaWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LanguagePersona")
+		os.Exit(1)
+	}
+	setupLog.Info("LanguagePersona webhook registered")
 	//+kubebuilder:scaffold:builder
 
 	// Add health and readiness checks

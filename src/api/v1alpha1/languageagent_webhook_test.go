@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,8 +108,8 @@ func TestLanguageAgentDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Call the Default method
-			tt.agent.Default()
+			// Call the Default method via the webhook handler (nil client: Default makes no API calls)
+			_ = (&LanguageAgentWebhook{}).Default(context.Background(), tt.agent)
 
 			// Check workspace was set appropriately
 			if tt.agent.Spec.Workspace == nil {
@@ -205,9 +206,9 @@ func TestLanguageAgentValidateCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.agent.ValidateCreate()
+			err := tt.agent.validateSpec()
 			if (err != nil) != tt.expectErr {
-				t.Errorf("ValidateCreate() error = %v, expectErr %v", err, tt.expectErr)
+				t.Errorf("validateSpec() error = %v, expectErr %v", err, tt.expectErr)
 			}
 		})
 	}
@@ -285,8 +286,7 @@ func TestLanguageAgentValidateWorkspaceSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			agent := &LanguageAgent{}
-			err := agent.validateWorkspaceSize(tt.size)
+			err := validateWorkspaceSize(tt.size)
 
 			if (err != nil) != tt.expectErr {
 				t.Errorf("validateWorkspaceSize(%q) error = %v, expectErr %v", tt.size, err, tt.expectErr)
@@ -428,16 +428,16 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.agent.ValidateCreate()
+			err := tt.agent.validateSpec()
 
 			if (err != nil) != tt.expectErr {
-				t.Errorf("ValidateCreate() error = %v, expectErr %v", err, tt.expectErr)
+				t.Errorf("validateSpec() error = %v, expectErr %v", err, tt.expectErr)
 				return
 			}
 
 			if tt.expectErr && err != nil && tt.errMsg != "" {
 				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("ValidateCreate() error = %v, expected to contain %q", err.Error(), tt.errMsg)
+					t.Errorf("validateSpec() error = %v, expected to contain %q", err.Error(), tt.errMsg)
 				}
 			}
 		})
@@ -750,16 +750,16 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.agent.ValidateCreate()
+			err := tt.agent.validateSpec()
 
 			if (err != nil) != tt.expectErr {
-				t.Errorf("ValidateCreate() error = %v, expectErr %v", err, tt.expectErr)
+				t.Errorf("validateSpec() error = %v, expectErr %v", err, tt.expectErr)
 				return
 			}
 
 			if tt.expectErr && err != nil && tt.errMsg != "" {
 				if !contains(err.Error(), tt.errMsg) {
-					t.Errorf("ValidateCreate() error = %v, expected to contain %q", err.Error(), tt.errMsg)
+					t.Errorf("validateSpec() error = %v, expected to contain %q", err.Error(), tt.errMsg)
 				}
 			}
 		})

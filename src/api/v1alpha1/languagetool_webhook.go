@@ -17,10 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -28,12 +33,24 @@ import (
 //+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languagetool,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=mlanguagetool.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagetool,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=vlanguagetool.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &LanguageTool{}
-var _ webhook.Validator = &LanguageTool{}
+// LanguageToolWebhook handles defaulting and validation for LanguageTool.
+//
+// +kubebuilder:object:generate=false
+type LanguageToolWebhook struct {
+	client.Client
+}
 
-// Default implements webhook.Defaulter
-func (t *LanguageTool) Default() {
-	// Default resources if not specified
+var _ webhook.CustomDefaulter = &LanguageToolWebhook{}
+var _ webhook.CustomValidator = &LanguageToolWebhook{}
+
+// Default implements webhook.CustomDefaulter
+func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) error {
+	t := obj.(*LanguageTool)
+
+	if t.Spec.ClusterRef == "" {
+		t.Spec.ClusterRef = t.Namespace
+	}
+
 	if t.Spec.Resources.Requests == nil && t.Spec.Resources.Limits == nil {
 		t.Spec.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -46,37 +63,47 @@ func (t *LanguageTool) Default() {
 			},
 		}
 	}
+
+	return nil
 }
 
-// ValidateCreate implements webhook.Validator
-func (t *LanguageTool) ValidateCreate() (admission.Warnings, error) {
-	return t.validateTool()
-}
-
-// ValidateUpdate implements webhook.Validator
-func (t *LanguageTool) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	return t.validateTool()
-}
-
-// ValidateDelete implements webhook.Validator
-func (t *LanguageTool) ValidateDelete() (admission.Warnings, error) {
-	// No validation needed for delete
+// ValidateCreate implements webhook.CustomValidator
+func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	t := obj.(*LanguageTool)
+	if err := h.validateClusterMembership(ctx, t.Spec.ClusterRef, t.Namespace); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
-// validateTool performs common validation for LanguageTool
-func (t *LanguageTool) validateTool() (admission.Warnings, error) {
-	var warnings admission.Warnings
-
-	// Basic spec validation is handled by kubebuilder annotations
-	// Add any custom validation logic here if needed
-
-	return warnings, nil
+// ValidateUpdate implements webhook.CustomValidator
+func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+	t := obj.(*LanguageTool)
+	if err := h.validateClusterMembership(ctx, t.Spec.ClusterRef, t.Namespace); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
-// SetupWebhookWithManager sets up the webhook with the Manager
-func (t *LanguageTool) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// ValidateDelete implements webhook.CustomValidator
+func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, clusterRef, namespace string) error {
+	cluster := &LanguageCluster{}
+	if err := h.Get(ctx, types.NamespacedName{Name: clusterRef}, cluster); err != nil {
+		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, clusterRef)
+	}
+	return nil
+}
+
+// SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
+func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager) error {
+	h := &LanguageToolWebhook{Client: mgr.GetClient()}
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(t).
+		For(&LanguageTool{}).
+		WithDefaulter(h).
+		WithValidator(h).
 		Complete()
 }
