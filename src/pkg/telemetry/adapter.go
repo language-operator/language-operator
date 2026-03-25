@@ -34,7 +34,6 @@ import (
 // - Handling errors gracefully with appropriate timeouts
 //
 // Example implementations:
-// - ClickhouseAdapter: Query ClickHouse otel_traces and otel_metrics tables directly
 // - JaegerAdapter: Query Jaeger via gRPC or HTTP API
 // - PrometheusAdapter: Query metrics via PromQL
 type TelemetryAdapter interface {
