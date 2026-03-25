@@ -28,9 +28,8 @@ type LanguageAgentSpec struct {
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// ModelRefs is a list of LanguageModel references this agent can use
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:Required
-	ModelRefs []ModelReference `json:"modelRefs"`
+	// +optional
+	ModelRefs []ModelReference `json:"modelRefs,omitempty"`
 
 	// ToolRefs is a list of LanguageTool references available to this agent
 	// +optional
@@ -45,9 +44,8 @@ type LanguageAgentSpec struct {
 	// +optional
 	Goal string `json:"goal,omitempty"`
 
-	// Instructions provides system instructions for the agent
-	// +kubebuilder:validation:MinLength=10
-	// +kubebuilder:validation:MaxLength=10000
+	// Instructions provides system instructions for the agent.
+	// Mounted at /etc/agent/instructions.txt if set.
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
@@ -170,6 +168,29 @@ type LanguageAgentSpec struct {
 	// By default, agents can access all resources within the cluster but no external endpoints
 	// +optional
 	Egress []NetworkRule `json:"egress,omitempty"`
+
+	// Port is the port the agent container listens on.
+	// Used for the ClusterIP Service and NetworkPolicy ingress rules.
+	// Defaults to 8080.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	Port *int32 `json:"port,omitempty"`
+
+	// LivenessProbe defines the liveness probe for the agent container.
+	// If not set, no liveness probe is configured.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// ReadinessProbe defines the readiness probe for the agent container.
+	// If not set, no readiness probe is configured.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// InitContainers are additional init containers injected before the agent container starts.
+	// Useful for seeding config, migrating workspace data, or other pre-start setup.
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 
 // ModelReference references a LanguageModel

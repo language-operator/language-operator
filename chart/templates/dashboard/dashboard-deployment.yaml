@@ -123,19 +123,6 @@ spec:
             secretKeyRef:
               name: {{ include "dashboard.fullname" . }}
               key: NEXTAUTH_SECRET
-        {{- if .Values.telemetry.clickhouse.enabled }}
-        - name: CLICKHOUSE_URL
-          value: "http://{{ include "language-operator.fullname" . }}-clickhouse:8123"
-        - name: CLICKHOUSE_DATABASE
-          value: {{ .Values.telemetry.clickhouse.database | default "langop" | quote }}
-        - name: CLICKHOUSE_USERNAME
-          value: {{ .Values.telemetry.clickhouse.auth.username | default "langop" | quote }}
-        - name: CLICKHOUSE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ include "language-operator.fullname" . }}-clickhouse
-              key: password
-        {{- end }}
         {{- if .Values.dashboard.oauth.google.clientId }}
         - name: GOOGLE_CLIENT_ID
           valueFrom:

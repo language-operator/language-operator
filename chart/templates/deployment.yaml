@@ -97,10 +97,6 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         env:
-        # Learning system task schema extraction - allow gem to load files from dedicated directory
-        - name: LANGOP_ALLOWED_PATHS
-          value: "/tmp/task-schemas"
-        # Network isolation configuration  
         - name: LANGOP_NETWORK_ISOLATION_ENABLED
           value: {{ .Values.networkIsolation.enabled | quote }}
         - name: POD_NAMESPACE
@@ -111,66 +107,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        {{- if .Values.config.synthesis.rateLimits }}
-        # Synthesis rate limiting configuration
-        {{- if .Values.config.synthesis.rateLimits.perHour }}
-        - name: SYNTHESIS_MAX_PER_HOUR
-          value: {{ .Values.config.synthesis.rateLimits.perHour | quote }}
-        {{- end }}
-        {{- if .Values.config.synthesis.rateLimits.perDay }}
-        - name: SYNTHESIS_MAX_ATTEMPTS_PER_DAY
-          value: {{ .Values.config.synthesis.rateLimits.perDay | quote }}
-        {{- end }}
-        {{- end }}
-        {{- if .Values.opentelemetry.collector.enabled }}
-        # OpenTelemetry data collection configuration
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: {{ include "language-operator.otelCollector.endpoint" . | quote }}
-        - name: OTEL_SERVICE_NAME
-          value: "language-operator"
-        - name: OTEL_TRACES_SAMPLER
-          value: "traceidratio"
-        - name: OTEL_TRACES_SAMPLER_ARG
-          value: {{ .Values.opentelemetry.collector.sampling.rate | quote }}
-        - name: OTEL_RESOURCE_ATTRIBUTES
-          value: {{ include "language-operator.otelResourceAttributes" . | quote }}
-        {{- end }}
-        {{- if include "language-operator.telemetryAdapter.enabled" . }}
-        # Telemetry query backend configuration for learning system
-        - name: TELEMETRY_ADAPTER_TYPE
-          value: {{ include "language-operator.telemetryAdapter.type" . | quote }}
-        - name: TELEMETRY_ADAPTER_ENDPOINT
-          value: {{ include "language-operator.telemetryAdapter.endpoint" . | quote }}
-        {{- if and .Values.telemetry.clickhouse.enabled .Values.telemetry.clickhouse.auth.password }}
-        - name: TELEMETRY_ADAPTER_PASSWORD
-          value: {{ .Values.telemetry.clickhouse.auth.password | quote }}
-        {{- end }}
-        {{- if .Values.telemetry.clickhouse.enabled }}
-        - name: TELEMETRY_ADAPTER_DATABASE
-          value: {{ .Values.telemetry.clickhouse.database | quote }}
-        - name: TELEMETRY_ADAPTER_USERNAME
-          value: {{ .Values.telemetry.clickhouse.auth.username | quote }}
-        {{- end }}
-        - name: TELEMETRY_ADAPTER_TIMEOUT
-          value: {{ .Values.telemetry.queryBackend.connection.timeout | quote }}
-        - name: TELEMETRY_ADAPTER_RETRY_ATTEMPTS
-          value: {{ .Values.telemetry.queryBackend.connection.retryAttempts | quote }}
-        - name: TELEMETRY_ADAPTER_RETRY_BACKOFF
-          value: {{ .Values.telemetry.queryBackend.connection.retryBackoff | quote }}
-        - name: TELEMETRY_ADAPTER_MAX_TRACES
-          value: {{ .Values.telemetry.queryBackend.query.maxTraces | quote }}
-        - name: TELEMETRY_ADAPTER_LOOKBACK_PERIOD
-          value: {{ .Values.telemetry.queryBackend.query.lookbackPeriod | quote }}
-        - name: TELEMETRY_ADAPTER_QUERY_TIMEOUT
-          value: {{ .Values.telemetry.queryBackend.query.timeout | quote }}
-        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED
-          value: {{ .Values.telemetry.queryBackend.healthCheck.enabled | quote }}
-        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL
-          value: {{ .Values.telemetry.queryBackend.healthCheck.interval | quote }}
-        - name: TELEMETRY_ADAPTER_HEALTH_CHECK_TIMEOUT
-          value: {{ .Values.telemetry.queryBackend.healthCheck.timeout | quote }}
-        {{/* No custom headers needed for ClickHouse authentication */}}
-        {{- end }}
         {{- if .Values.config.networkPolicy }}
         # NetworkPolicy configuration for agent pods
         {{- if .Values.config.networkPolicy.apiServerCIDRs }}

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Language Operator is a Kubernetes operator that runs AI agents as native workloads. Agents are container images — the operator handles lifecycle, configuration injection, networking, and task observability. There is no code generation or synthesis.
+Language Operator is a Kubernetes operator that runs AI agents as native workloads. Agents are container images — the operator handles lifecycle, configuration injection, networking, and observability. There is no code generation or synthesis.
 
 See `requirements/ARCHITECTURE.md` for full design. See `spec/agents.md` and `spec/tools.md` for the runtime contracts agents and tools must implement.
 
@@ -53,14 +53,12 @@ Key controllers:
 - `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config)
 - `languagepersona_controller.go` — creates a ConfigMap with the persona's JSON spec for agent mounting
 - `languagetool_controller.go` — validates tool image registry, reconciles tool Deployment/Service
-- `languageagenttask_controller.go` — *(to be implemented)* watches LanguageAgentTask; sends `POST /messages` to unblock paused tasks
 
 Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOrUpdateConfigMap`, `DeleteConfigMap`, `SetCondition`, `FinalizerName`.
 
 ### CRDs (`src/api/v1alpha1/`)
 
 - `LanguageAgent` — agent deployment spec (image, instructions, instructionsFrom, personaRefs, modelRefs, toolRefs, executionMode)
-- `LanguageAgentTask` — in-flight A2A task state (agentRef, taskId, contextId; status mirrors A2A states: submitted/working/input-required/auth-required/completed/failed/canceled/rejected)
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
 - `LanguageModel` — LLM endpoint config
@@ -74,23 +72,19 @@ The operator mounts two files into every agent pod:
 - `/etc/agent/instructions.txt` — from `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret ref)
 - `/etc/agent/config.yaml` — assembled from referenced personas, resolved tool endpoints, model configs, and agent identity
 
-Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_OPERATOR_WEBHOOK_URL`, `AGENT_OPERATOR_WEBHOOK_TOKEN`.
-
-### A2A Protocol
-
-Agents implement Google's A2A protocol on port 8080. The operator registers itself as a push notification subscriber per agent on startup (`AGENT_OPERATOR_WEBHOOK_URL`). When an agent reports `input-required` or `auth-required` state, the operator creates/updates a `LanguageAgentTask` CR — these are pauses, not failures.
+Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
 
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
 
 ### Telemetry (`src/pkg/telemetry/`)
 
-All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelper`. The ClickHouse adapter (`adapters/clickhouse.go` and `adapters/signoz.go`) queries `otel_traces` and `otel_metrics` tables. No mock data — features must work with real ClickHouse data.
+All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelper`. The ClickHouse adapter (`adapters/clickhouse.go`) queries `otel_traces` and `otel_metrics` tables. No mock data — features must work with real ClickHouse data.
 
 ### Package Layout
 
 - `pkg/events/` — Kubernetes event recording (lifecycle events: created, ready, failed, deleted)
 - `pkg/reconciler/` — shared `ReconcileHelper` used by all controllers
-- `pkg/telemetry/` — OTel adapter interface + ClickHouse/SigNoz implementations
+- `pkg/telemetry/` — OTel adapter interface + ClickHouse implementation
 - `pkg/validation/` — image registry validation (`ValidateImageRegistry`)
 - `pkg/network/` — NetworkPolicy helpers
 

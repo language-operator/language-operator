@@ -11,7 +11,6 @@ rules:
 - apiGroups: ["langop.io"]
   resources:
   - languageagents
-  - languageagentversions
   - languagemodels
   - languagetools
   - languagepersonas

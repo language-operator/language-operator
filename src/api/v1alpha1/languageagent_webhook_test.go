@@ -182,23 +182,6 @@ func TestLanguageAgentValidateCreate(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "missing instructions",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Image: "test:latest",
-					ModelRefs: []ModelReference{
-						{Name: "test-model"},
-					},
-					Instructions: "",
-				},
-			},
-			expectErr: true,
-		},
-		{
 			name: "negative rate limit",
 			agent: &LanguageAgent{
 				ObjectMeta: metav1.ObjectMeta{

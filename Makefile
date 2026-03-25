@@ -44,7 +44,7 @@ uninstall:
 # Check Kubernetes resources status
 k8s-status:
 	@echo "Language Operator Resources:"
-	@kubectl get languageclusters,languageagents,languageagenttasks,languagetools,languagemodels -A
+	@kubectl get languageclusters,languageagents,languagetools,languagemodels -A
 	@echo ""
 	@echo "Operator Status:"
 	@kubectl get pods -n language-operator

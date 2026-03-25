@@ -29,10 +29,9 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		errMsg    string
 	}{
 		{
-			name:      "no model references should fail",
+			name:      "no model references is valid (modelRefs is optional)",
 			modelRefs: []ModelReference{},
-			expectErr: true,
-			errMsg:    "at least one model reference is required",
+			expectErr: false,
 		},
 		{
 			name: "valid model reference should pass",

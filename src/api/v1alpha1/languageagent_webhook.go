@@ -46,6 +46,12 @@ func (a *LanguageAgent) Default() {
 		}
 	}
 
+	// Default port to 8080
+	if a.Spec.Port == nil {
+		port := int32(8080)
+		a.Spec.Port = &port
+	}
+
 	// Default resources if not specified
 	if a.Spec.Resources.Requests == nil && a.Spec.Resources.Limits == nil {
 		a.Spec.Resources = corev1.ResourceRequirements{
@@ -93,14 +99,11 @@ func (a *LanguageAgent) ValidateDelete() (admission.Warnings, error) {
 
 // validateSpec performs basic spec validation
 func (a *LanguageAgent) validateSpec() error {
-	// Instructions are required
-	if a.Spec.Instructions == "" {
-		return fmt.Errorf("spec.instructions is required")
-	}
-
-	// Validate model references
-	if err := a.validateModelReferences(); err != nil {
-		return fmt.Errorf("spec.modelRefs: %w", err)
+	// Validate model references if any are provided
+	if len(a.Spec.ModelRefs) > 0 {
+		if err := a.validateModelReferences(); err != nil {
+			return fmt.Errorf("spec.modelRefs: %w", err)
+		}
 	}
 
 	// Validate execution mode dependencies
@@ -191,12 +194,10 @@ func (a *LanguageAgent) validateSchedule() error {
 	return nil
 }
 
-// validateCost performs cost validation to prevent expensive agents during controller lag
 func (a *LanguageAgent) validateModelReferences() error {
 	if len(a.Spec.ModelRefs) == 0 {
-		return fmt.Errorf("at least one model reference is required")
+		return nil
 	}
-
 	primaryCount := 0
 	for i, modelRef := range a.Spec.ModelRefs {
 		// Validate basic fields

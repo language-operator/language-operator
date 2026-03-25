@@ -29,10 +29,8 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `spec.uuid` or generated) |
 | `AGENT_MODE` | Execution mode: `autonomous`, `interactive`, `scheduled`, or `event-driven` |
-| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to (from `spec.clusterRef`) |
-| `AGENT_CLUSTER_UUID` | Stable UUID of the LanguageCluster (from the referenced LanguageCluster's `spec.uuid`) |
-| `AGENT_OPERATOR_WEBHOOK_URL` | The operator's push notification endpoint for task state changes |
-| `AGENT_OPERATOR_WEBHOOK_TOKEN` | Token the agent includes in push notification requests for operator-side validation |
+| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to (empty if none) |
+| `AGENT_CLUSTER_UUID` | Stable UUID of the LanguageCluster (empty if none) |
 
 Additional environment variables from `spec.env` and `spec.envFrom` are passed through unchanged.
 
@@ -48,128 +46,25 @@ Every agent gets:
 
 ## What the Agent Must Implement
 
-### A2A Protocol (Required)
-
-Agents must implement the [Agent-to-Agent (A2A) protocol](https://a2a-protocol.org/latest/specification/) on port 8080. This enables agent discovery and task delegation without custom orchestration. The A2A spec defines paths without a version prefix — do not add `/v1/` to these endpoints.
-
-#### Agent Discovery
-
-```
-GET /.well-known/agent.json   # Minimal Agent Card (public, no auth required)
-GET /agentCard                # Extended Agent Card (may require auth)
-```
-
-The Agent Card describes this agent's identity, capabilities, and skills:
-
-```json
-{
-  "name": "data-analyst",
-  "description": "Analyzes CSV files and generates insights",
-  "version": "1.0.0",
-  "url": "http://data-analyst.default.svc.cluster.local:8080",
-  "capabilities": {
-    "streaming": true,
-    "pushNotifications": false
-  },
-  "skills": [
-    {
-      "id": "analyze-csv",
-      "name": "Analyze CSV",
-      "description": "Load and analyze a CSV file, returning statistical insights"
-    }
-  ]
-}
-```
-
-#### Message Sending
-
-```
-POST /messages                # Send a message, receive response synchronously
-POST /messages:stream         # Send a message, receive response as SSE stream
-```
-
-Request:
-
-```json
-{
-  "message": {
-    "role": "user",
-    "parts": [{ "text": "Analyze sales_data.csv and summarize the trends." }]
-  }
-}
-```
-
-#### Task Management
-
-```
-GET  /tasks                              # List tasks
-GET  /tasks/{taskId}                     # Get task status and results
-POST /tasks/{taskId}:cancel              # Cancel a task
-GET  /tasks/{taskId}:subscribe           # Subscribe to task updates (SSE)
-```
-
-Task states: `submitted`, `working`, `completed`, `failed`, `canceled`.
-
-#### Push Notification Configuration
-
-```
-POST   /tasks/{taskId}/pushNotificationConfigs          # Create notification config
-GET    /tasks/{taskId}/pushNotificationConfigs          # List notification configs
-GET    /tasks/{taskId}/pushNotificationConfigs/{id}     # Get specific config
-DELETE /tasks/{taskId}/pushNotificationConfigs/{id}     # Delete config
-```
-
-### Operator Push Notification Registration (Required)
-
-The operator registers itself as a push notification subscriber for every agent on startup. Agents **must** accept this registration and send state-change notifications to the operator throughout the task lifecycle.
-
-The operator registers by calling:
-
-```
-POST /tasks/{taskId}/pushNotificationConfigs
-Content-Type: application/json
-
-{
-  "url": "http://language-operator.language-operator.svc.cluster.local:8081/hooks/tasks",
-  "token": "<per-agent-token injected via AGENT_OPERATOR_WEBHOOK_TOKEN env var>"
-}
-```
-
-The operator webhook URL and token are injected as environment variables:
-
-| Variable | Value |
-|----------|-------|
-| `AGENT_OPERATOR_WEBHOOK_URL` | The operator's push notification endpoint |
-| `AGENT_OPERATOR_WEBHOOK_TOKEN` | Token the agent must include in push notification requests for validation |
-
-Agents must send push notifications to the operator on **every task state transition**, including:
-
-- `submitted` → `working` (task started)
-- `working` → `input-required` (agent is blocked, needs caller input)
-- `working` → `auth-required` (agent is blocked, needs credentials)
-- Any state → `completed`, `failed`, `canceled`, `rejected` (terminal)
-- Artifact generation (intermediate results)
-
-**`input-required` and `auth-required` are not errors.** The operator will create or update a `LanguageAgentTask` Kubernetes resource surfacing the blocked state so external actors can observe and resolve it. The task remains alive on the agent — the operator will `POST /messages` with the resolution when one is provided.
-
-Agents must **not** time out or discard a task in `input-required` or `auth-required` state without emitting a final `canceled` or `failed` notification.
-
 ### Health Check (Required)
 
 ```
 GET /health
 ```
 
-Returns `200 OK` when the agent is ready to accept tasks. Used by Kubernetes readiness probes.
+Returns `200 OK` when the agent is ready to accept requests. Used by Kubernetes readiness and liveness probes.
+
+### Port 8080 (Required)
+
+The agent must listen on port 8080. What it serves there is up to the agent — HTTP, gRPC, A2A, OpenAI-compatible API, or anything else.
 
 ### Startup Behaviour
 
-On startup, the agent must:
+On startup, the agent should:
 
 1. Read `/etc/agent/instructions.txt` for task definition
 2. Read `/etc/agent/config.yaml` for all other configuration (personas, tools, models)
-3. Start listening on port 8080 and expose the A2A endpoints and `/health`
-4. Register the operator as a push notification subscriber for all future tasks using `AGENT_OPERATOR_WEBHOOK_URL` and `AGENT_OPERATOR_WEBHOOK_TOKEN`
+3. Start listening on port 8080
 
 ## File Formats
 
@@ -232,11 +127,6 @@ models:
     endpoint: https://api.anthropic.com/v1
     model: claude-sonnet-4-6
     secretRef: claude-credentials
-  gpt-4:
-    role: fallback
-    provider: openai
-    endpoint: https://api.openai.com/v1
-    model: gpt-4o
 ```
 
 ## Example LanguageAgent YAML
@@ -258,17 +148,14 @@ spec:
   personaRefs:
     - name: analytical-persona
 
-  mode: autonomous
+  executionMode: autonomous
 
-  tools:
+  toolRefs:
     - name: mem0-memory
-      enabled: true
     - name: python-executor
-      enabled: true
 
-  models:
+  modelRefs:
     - name: claude-sonnet
-      role: primary
 
   replicas: 1
   resources:
@@ -281,13 +168,8 @@ spec:
 
 A compliant agent image must:
 
-- [ ] Expose `GET /.well-known/agent.json` and `GET /agentCard` returning valid A2A Agent Cards
-- [ ] Expose `POST /messages` and `POST /messages:stream` for synchronous and streaming message sending
-- [ ] Expose `GET /tasks`, `GET /tasks/{id}`, `POST /tasks/{id}:cancel`, `GET /tasks/{id}:subscribe` for task management
-- [ ] Expose `GET /health` returning `200 OK` when ready
 - [ ] Listen on port **8080**
+- [ ] Expose `GET /health` returning `200 OK` when ready
 - [ ] Read task instructions from `/etc/agent/instructions.txt` on startup
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup
-- [ ] Register the operator as a push notification subscriber on startup using `AGENT_OPERATOR_WEBHOOK_URL` and `AGENT_OPERATOR_WEBHOOK_TOKEN`
-- [ ] Send push notifications to the operator on every task state transition, including `input-required` and `auth-required`
-- [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_OPERATOR_WEBHOOK_URL`, `AGENT_OPERATOR_WEBHOOK_TOKEN` environment variables
+- [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables

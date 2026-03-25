@@ -4,26 +4,32 @@ A Kubernetes operator for running AI agents as native workloads.
 
 ## What It Does
 
-Language Operator deploys AI agents as standard Kubernetes Deployments. You bring the container image; the operator handles everything else: configuration injection, networking, observability, and task state visibility.
+Language Operator deploys AI agents as standard Kubernetes Deployments. You bring the container image; the operator handles everything else: configuration injection, networking, and observability.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: data-analyst
+  name: my-openclaw
 spec:
-  image: myregistry/agent-runtime:v1.0.0
-  instructions: |
-    You are a data analyst. Analyze CSV files and generate insights.
-    Focus on trends, anomalies, and actionable recommendations.
-  modelRefs:
-    - name: claude-sonnet
-  toolRefs:
-    - name: python-executor
-  executionMode: autonomous
+  image: ghcr.io/openclaw/openclaw:latest
+  port: 18789
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 18789
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: 18789
+  envFrom:
+    - secretRef:
+        name: openclaw-api-keys
+  workspace:
+    size: 10Gi
 ```
 
-Apply it and the agent is running, reachable over A2A, and visible in `kubectl`.
+Apply it and the agent is running, reachable on port 18789, and visible in `kubectl`.
 
 ## How It Works
 
@@ -32,50 +38,17 @@ Apply it and the agent is running, reachable over A2A, and visible in `kubectl`.
 For every `LanguageAgent`, the operator:
 
 - Deploys a Kubernetes Deployment with your image
-- Mounts `/etc/agent/instructions.txt` — task instructions (plain text)
-- Mounts `/etc/agent/config.yaml` — personas, tools, models, agent identity
-- Creates a Service on port 8080 for agent-to-agent communication
-- Creates a NetworkPolicy so agents can call each other directly
-- Watches for task state changes via push notifications and surfaces blocked tasks as `LanguageAgentTask` resources
-
-## A2A Protocol
-
-Every agent speaks [Google's A2A protocol](https://a2a-protocol.org/latest/specification/). Agents discover each other, delegate tasks, and stream results without any orchestration from the operator.
-
-```bash
-# Discover what an agent can do
-curl http://data-analyst.default.svc.cluster.local:8080/.well-known/agent.json
-
-# Send it a task
-curl -X POST http://data-analyst.default.svc.cluster.local:8080/messages \
-  -H "Content-Type: application/json" \
-  -d '{"message": {"role": "user", "parts": [{"text": "Analyze sales_q1.csv"}]}}'
-```
-
-## Task Observability
-
-When an agent pauses waiting for input or credentials, the operator surfaces that state as a Kubernetes resource — not a failure:
-
-```bash
-kubectl get latask -A
-# NAME                    AGENT          STATE            AGE
-# data-analyst-abc123     data-analyst   input-required   2m
-
-kubectl describe latask data-analyst-abc123
-# ...
-# Status:
-#   State: input-required
-#   Input Required:
-#     Prompt: Which date range should I analyze?
-#     Since:  2025-03-14T10:00:00Z
-```
+- Mounts `/etc/agent/instructions.txt` — task instructions (plain text, optional)
+- Mounts `/etc/agent/config.yaml` — personas, tools, models, agent identity (optional)
+- Creates a Service on the configured port (default 8080)
+- Creates an HTTPRoute for external access
+- Creates a NetworkPolicy so agents can reach each other
 
 ## CRDs
 
 | Resource | Purpose |
 |----------|---------|
 | `LanguageAgent` | Agent deployment — image, instructions, personas, tools, models |
-| `LanguageAgentTask` | In-flight task state — surfaced from A2A push notifications |
 | `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
 | `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
 | `LanguageModel` | LLM endpoint — provider, credentials, injected into agents |
@@ -98,28 +71,33 @@ helm install language-operator language-operator/language-operator
 
 ## Getting Started
 
-### Create an Agent Cluster
+This example deploys [openclaw](https://github.com/openclaw/openclaw) — a self-hosted AI assistant — to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
 
-A `LanguageCluster` is a logical grouping for agents, models, and tools in a namespace.
+### 1. Create a cluster
+
+A `LanguageCluster` is a managed namespace for logically grouped agents, models, and tools.
 
 ```bash
 kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
-  name: my-cluster
+  name: language-operator-openclaw
 spec:
   domain: agents.example.com
 EOF
 ```
 
-### Register a Model
+### 2. Register a model
+
+The `LanguageModel` holds the real API credential and exposes a LiteLLM proxy inside the cluster.
 
 ```bash
 kubectl create secret generic anthropic-credentials \
+  -n language-operator-openclaw \
   --from-literal=api-key=sk-ant-...
 
-kubectl apply -f - <<EOF
+kubectl apply -n language-operator-openclaw -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
@@ -133,79 +111,67 @@ spec:
 EOF
 ```
 
-### Deploy an Agent
-
-See [spec/agents.md](spec/agents.md) for the full agent runtime contract — what the operator injects and what your image must implement.
+### 3. Create an openclaw gateway token
 
 ```bash
-kubectl apply -f - <<EOF
+kubectl create secret generic openclaw-gateway \
+  -n language-operator-openclaw \
+  --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+```
+
+### 4. Deploy openclaw
+
+The `openclaw-adapter` init container receives the resolved LiteLLM proxy URL via `MODEL_ENDPOINTS` (injected by the operator) and seeds `openclaw.json` so openclaw routes through the proxy on first run.
+
+```bash
+kubectl apply -n language-operator-openclaw -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: data-analyst
+  name: my-openclaw
 spec:
-  image: myregistry/agent-runtime:v1.0.0
-  instructions: |
-    You are a data analyst. Analyze CSV files and generate insights.
+  image: ghcr.io/openclaw/openclaw:latest
+  port: 18789
   modelRefs:
     - name: claude-sonnet
-  executionMode: autonomous
+  initContainers:
+    - name: openclaw-adapter
+      image: ghcr.io/language-operator/openclaw-adapter:latest
+      env:
+        - name: OPENCLAW_STATE_DIR
+          value: /home/node/.openclaw
+      volumeMounts:
+        - name: workspace
+          mountPath: /home/node/.openclaw
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 18789
+    initialDelaySeconds: 15
+    periodSeconds: 30
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: 18789
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  envFrom:
+    - secretRef:
+        name: openclaw-gateway
+  workspace:
+    size: 10Gi
+    mountPath: /home/node/.openclaw
 EOF
-
-kubectl get languageagents
 ```
 
-### Deploy a Tool
-
-Tools are MCP servers. They can run as a shared service or as a sidecar in each agent pod. See [spec/tools.md](spec/tools.md) for the tool implementation contract.
-
-**Standalone service** (shared across agents):
+### 5. Check status
 
 ```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: python-executor
-spec:
-  image: myregistry/python-executor:v1.0.0
-  deploymentMode: service
-EOF
+kubectl get languageagents -n language-operator-openclaw
+kubectl get pods -n language-operator-openclaw
 ```
 
-**Sidecar** (one instance per agent pod, has access to the agent's workspace):
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: file-tools
-spec:
-  image: myregistry/file-tools:v1.0.0
-  deploymentMode: sidecar
-EOF
-```
-
-### Deploy a Tool-enabled Agent
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: data-analyst
-spec:
-  image: myregistry/agent-runtime:v1.0.0
-  instructions: |
-    You are a data analyst. Use the python-executor tool to analyze CSV files.
-  modelRefs:
-    - name: claude-sonnet
-  toolRefs:
-    - name: python-executor
-  executionMode: autonomous
-EOF
-```
+See [examples/openclaw.yaml](examples/openclaw.yaml) for the full annotated example.
 
 ## Development
 
@@ -226,12 +192,12 @@ cd src && make generate && make helm-crds
 ## Further Reading
 
 - [Architecture](requirements/ARCHITECTURE.md) — system design and component interaction
-- [Agent Runtime Contract](spec/agents.md) — what the operator provides and what agent images must implement
+- [Agent Contract](spec/agents.md) — what the operator injects into agent pods
 - [Tool Contract](spec/tools.md) — how to implement a compatible MCP tool server
 
 ## Status
 
-**Pre-alpha** — core functionality works, actively developing toward stable A2A runtime.
+**Pre-alpha** — core functionality works, actively developing toward stable agent deployment runtime.
 
 ## License
 

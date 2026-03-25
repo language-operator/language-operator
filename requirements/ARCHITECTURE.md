@@ -1,6 +1,6 @@
 # Language Operator Architecture
 
-**Language Operator** is a Kubernetes operator that runs AI agents as native Kubernetes workloads. It handles agent lifecycle, configuration injection, networking, observability, and task state visibility — so agent runtime containers can focus entirely on doing work.
+**Language Operator** is a Kubernetes operator that runs AI agents as native Kubernetes workloads. It handles agent lifecycle, configuration injection, networking, and observability — so agent runtime containers can focus entirely on doing work.
 
 ---
 
@@ -10,11 +10,9 @@
 2. [System Overview](#system-overview)
 3. [Custom Resource Definitions](#custom-resource-definitions)
 4. [Agent Runtime Contract](#agent-runtime-contract)
-5. [A2A Protocol](#a2a-protocol)
-6. [Task Lifecycle](#task-lifecycle)
-7. [Network Architecture](#network-architecture)
-8. [Observability](#observability)
-9. [Extensibility](#extensibility)
+5. [Network Architecture](#network-architecture)
+6. [Observability](#observability)
+7. [Extensibility](#extensibility)
 
 ---
 
@@ -25,8 +23,8 @@
 Agents are container images. The operator deploys them as standard Kubernetes Deployments (or CronJobs for scheduled agents). There is no code generation, no synthesis, and no language-specific runtime baked into the operator.
 
 **Separation of concerns:**
-- **Operator**: lifecycle, configuration injection, networking, task observability
-- **Agent image**: reasoning, tool use, A2A protocol, task execution
+- **Operator**: lifecycle, configuration injection, networking, observability
+- **Agent image**: reasoning, tool use, task execution, inter-agent communication
 
 ### 2. Configuration over Code
 
@@ -39,17 +37,7 @@ The operator injects two files into every agent container:
 
 Instructions are what the agent does. The image is how it does it. Changing instructions requires no image rebuild.
 
-### 3. A2A by Design
-
-Every agent speaks [Google's Agent-to-Agent (A2A) protocol](https://a2a-protocol.org/latest/specification/) on port 8080. A2A is how agents discover each other, delegate work, and stream results — without the operator acting as an intermediary or orchestrator.
-
-The operator adds a NetworkPolicy ingress rule allowing any agent pod to reach any other agent on port 8080. Agent-to-agent communication flows directly.
-
-### 4. Kubernetes-Native Task Observability
-
-The operator surfaces agent task state as Kubernetes resources. Blocked tasks (`input-required`, `auth-required`) appear as `LanguageAgentTask` CRs so operators, humans, and other controllers can observe and resolve them with standard `kubectl` commands.
-
-### 5. Delegate Specialised Concerns
+### 3. Delegate Specialised Concerns
 
 Memory, knowledge retrieval, and code execution are handled by MCP tool servers (`LanguageTool` CRDs), not by the operator. The operator resolves tool endpoints and injects them into agent config — it does not proxy or inspect tool traffic.
 
@@ -66,15 +54,11 @@ Memory, knowledge retrieval, and code execution are handled by MCP tool servers 
 │  │                      │    │                              │   │
 │  │  Reconciles:         │    │  /etc/agent/instructions.txt │   │
 │  │  · LanguageAgent     │───▶│  /etc/agent/config.yaml      │   │
-│  │  · LanguageAgentTask │    │                              │   │
-│  │  · LanguagePersona   │    │  Exposes (port 8080):        │   │
-│  │  · LanguageTool      │    │  · A2A endpoints             │   │
+│  │  · LanguagePersona   │    │                              │   │
+│  │  · LanguageTool      │    │  Exposes (port 8080):        │   │
 │  │  · LanguageModel     │    │  · GET /health               │   │
-│  │  · LanguageCluster   │    │                              │   │
-│  │                      │◀───│  Push notifications →        │   │
-│  │  Webhook handler:    │    │  operator task hook          │   │
-│  │  · Task state changes│    └──────────────────────────────┘   │
-│  └──────────────────────┘                                        │
+│  │  · LanguageCluster   │    │  · whatever the agent serves │   │
+│  └──────────────────────┘    └──────────────────────────────┘   │
 │                                                                  │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 │  │    MCP Tool Servers  │    │       ClickHouse             │   │
@@ -112,28 +96,6 @@ spec:
 ```
 
 The operator creates: Deployment, Service (port 8080), HTTPRoute, NetworkPolicy, and two ConfigMaps (instructions, config).
-
-### LanguageAgentTask
-
-Created by the operator when an agent reports a task state change via push notification. Read-only for most consumers — the operator manages the lifecycle.
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgentTask
-metadata:
-  name: data-analyst-abc123
-spec:
-  agentRef: data-analyst
-  taskId: "abc123"
-  contextId: "ctx-456"
-status:
-  state: input-required                    # submitted|working|input-required|auth-required|completed|failed|canceled|rejected
-  inputRequired:
-    prompt: "Which date range should I analyze?"
-    since: "2025-03-14T10:00:00Z"
-```
-
-When a task enters `input-required` or `auth-required`, the operator emits a Kubernetes Event on the parent `LanguageAgent` and creates/updates the `LanguageAgentTask` CR. External actors patch a resolution onto the CR; the controller sends `POST /messages` to unblock the agent.
 
 ### LanguagePersona
 
@@ -188,70 +150,14 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 **Operator provides:**
 - `/etc/agent/instructions.txt` — plain text task instructions
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models
-- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_OPERATOR_WEBHOOK_URL`, `AGENT_OPERATOR_WEBHOOK_TOKEN`
+- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
 - ClusterIP Service on port 8080
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic on port 8080
 
 **Agent image must:**
-- Implement the A2A protocol on port 8080
-- Expose `GET /health` for readiness probes
-- Register the operator as a push notification subscriber on startup
-- Send push notifications on every task state transition
-
----
-
-## A2A Protocol
-
-Agents implement [A2A](https://a2a-protocol.org/latest/specification/) — Google's open standard for agent interoperability. All paths are on port 8080 with no version prefix.
-
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /.well-known/agent.json` | Public Agent Card (discovery) |
-| `GET /agentCard` | Extended Agent Card (post-auth) |
-| `POST /messages` | Send message, synchronous response |
-| `POST /messages:stream` | Send message, SSE stream response |
-| `GET /tasks` | List tasks |
-| `GET /tasks/{id}` | Get task status and artifacts |
-| `POST /tasks/{id}:cancel` | Cancel a task |
-| `GET /tasks/{id}:subscribe` | Subscribe to task updates (SSE) |
-| `POST /tasks/{id}/pushNotificationConfigs` | Register push notification webhook |
-
-The **Agent Card** (`/.well-known/agent.json`) is the discovery entry point. It declares the agent's name, description, skills, capabilities (streaming, push notifications), and security requirements. Other agents and external clients use this to understand what the agent can do before sending tasks.
-
-Agent-to-agent communication is direct (agent → service → agent). The operator does not intermediate. Orchestration patterns (fan-out, pipelines, loops) are the agent's responsibility, not the operator's.
-
----
-
-## Task Lifecycle
-
-```
-Client/Agent
-    │
-    ▼
-POST /messages
-    │
-    ▼
-Agent processes → push notification → Operator webhook
-                                          │
-                                          ▼
-                                   LanguageAgentTask CR
-                                   (state: working)
-    │
-    ├─ Normal completion ──────────────────────────────────────────▶ state: completed
-    │
-    ├─ input-required ─────────────────────────────────────────────▶ state: input-required
-    │       │                                                         K8s Event emitted
-    │       │   External actor patches resolution
-    │       └─▶ Operator sends POST /messages ──────────────────────▶ state: working → completed
-    │
-    └─ auth-required ──────────────────────────────────────────────▶ state: auth-required
-            │                                                         K8s Event emitted
-            │   Operator resolves credential from Secret
-            └─▶ Operator sends POST /messages ──────────────────────▶ state: working → completed
-```
-
-`input-required` and `auth-required` are **not errors**. They are pauses. The agent holds the task open; the operator provides the path to resume it.
+- Listen on port 8080
+- Expose `GET /health` for readiness/liveness probes
 
 ---
 
@@ -259,10 +165,10 @@ Agent processes → push notification → Operator webhook
 
 Each `LanguageAgent` gets:
 
-- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local:8080`) — in-cluster A2A access
+- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local:8080`) — in-cluster access
 - **HTTPRoute** — external access via the cluster Gateway
 - **NetworkPolicy** with ingress rules allowing:
-  - Agent pods (`langop.io/kind=LanguageAgent`) on port 8080 — A2A traffic
+  - Agent pods (`langop.io/kind=LanguageAgent`) on port 8080 — agent-to-agent traffic
   - Operator dashboard
   - Configured trigger pods
 
@@ -276,15 +182,7 @@ All operator reconciliation loops emit OpenTelemetry spans. Traces are collected
 
 **Key trace attributes:**
 - `agent.name`, `agent.namespace`, `agent.uuid`
-- `task.id`, `task.context_id`, `task.state`
 - `persona.name`, `tool.name`, `model.name`
-
-**LanguageAgentTask** status provides real-time task state visibility via `kubectl`:
-
-```bash
-kubectl get latask -A
-kubectl describe latask data-analyst-abc123
-```
 
 ---
 
@@ -296,4 +194,3 @@ kubectl describe latask data-analyst-abc123
 
 **Custom models**: Any LLM endpoint can be registered as a `LanguageModel` and injected into agent config.
 
-**Protocol extensions**: The A2A spec defines a formal extension system. Extensions are declared in the Agent Card with a URI and optional `required` flag. The operator passes through extension declarations without interpreting them.

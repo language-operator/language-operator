@@ -721,15 +721,6 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 }
 
 func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-
-	// Fetch persona if referenced
-	persona, err := r.fetchPersona(ctx, agent)
-	if err != nil {
-		// Log warning but continue without persona
-		log.Error(err, "Failed to fetch persona for deployment, continuing without it")
-	}
-
 	// Resolve model URLs and names
 	modelURLs, modelNames, err := r.resolveModels(ctx, agent)
 	if err != nil {
@@ -784,11 +775,29 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Build container list starting with the agent
 		containers := []corev1.Container{
 			{
-				Name:  "agent",
-				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs, persona),
+				Name:            "agent",
+				Image:           agent.Spec.Image,
+				ImagePullPolicy: agent.Spec.ImagePullPolicy,
+				Env:             r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs),
+				EnvFrom:         agent.Spec.EnvFrom,
+				Resources:       agent.Spec.Resources,
+				LivenessProbe:   agent.Spec.LivenessProbe,
+				ReadinessProbe:  agent.Spec.ReadinessProbe,
 			},
 		}
+
+		// Inject resolved model/tool env vars into user-specified init containers
+		// so adapters (e.g. openclaw-adapter) can configure the agent runtime
+		// to route through the operator-managed LiteLLM proxies.
+		userInitContainers := make([]corev1.Container, len(agent.Spec.InitContainers))
+		copy(userInitContainers, agent.Spec.InitContainers)
+		modelEnv := r.buildModelEnv(modelURLs, modelNames)
+		for i := range userInitContainers {
+			userInitContainers[i].Env = append(modelEnv, userInitContainers[i].Env...)
+		}
+
+		// User-specified init containers run before operator-managed sidecar containers
+		allInitContainers := append(userInitContainers, sidecarContainers...)
 
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -801,8 +810,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName:    r.getServiceAccountName(agent),
-					ShareProcessNamespace: &[]bool{len(sidecarContainers) > 0}[0],
-					InitContainers:        sidecarContainers, // Sidecars as init containers with restartPolicy: Always
+					ShareProcessNamespace: &[]bool{len(allInitContainers) > 0}[0],
+					InitContainers:        allInitContainers,
 					Containers:            containers,
 					SecurityContext:       r.buildPodSecurityContext(),
 				},
@@ -811,33 +820,6 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 
 		// Add container security context for agent container
 		deployment.Spec.Template.Spec.Containers[0].SecurityContext = r.buildContainerSecurityContext()
-
-		// Add resource requirements if specified
-		deployment.Spec.Template.Spec.Containers[0].Resources = agent.Spec.Resources
-
-		// Add health and readiness probes
-		// All agents now run web servers with operational endpoints
-		deployment.Spec.Template.Spec.Containers[0].LivenessProbe = &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/health",
-					Port: intstr.FromInt(8080),
-				},
-			},
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       30,
-		}
-
-		deployment.Spec.Template.Spec.Containers[0].ReadinessProbe = &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.FromInt(8080),
-				},
-			},
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
-		}
 
 		// Build and apply volumes and volume mounts
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
@@ -855,13 +837,6 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 }
 
 func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-	persona, err := r.fetchPersona(ctx, agent)
-	if err != nil {
-		// Log warning but continue without persona
-		log.Error(err, "Failed to fetch persona for cronjob, continuing without it")
-	}
-
 	// Resolve model URLs and names
 	modelURLs, modelNames, err := r.resolveModels(ctx, agent)
 	if err != nil {
@@ -917,7 +892,7 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 			{
 				Name:  "agent",
 				Image: agent.Spec.Image,
-				Env:   r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs, persona),
+				Env:   r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs),
 			},
 		}
 
@@ -1142,10 +1117,12 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 	// This is required for:
 	// 1. Scheduled agents: CronJob trigger pods POST to /api/v1/execute
 	// 2. Dashboard: UI connects to agent endpoints for status and control
+	port := agentPort(agent)
+	agentPortIntStr := intstr.IntOrString{Type: intstr.Int, IntVal: port}
 	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 		{
-			// Allow trigger pods in same namespace to connect to agent on port 8080
+			// Allow trigger pods in same namespace to connect to agent
 			From: []networkingv1.NetworkPolicyPeer{
 				{
 					PodSelector: &metav1.LabelSelector{
@@ -1158,12 +1135,12 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+					Port:     &agentPortIntStr,
 				},
 			},
 		},
 		{
-			// Allow dashboard pods from language-operator namespace to connect on port 8080
+			// Allow dashboard pods from language-operator namespace to connect
 			From: []networkingv1.NetworkPolicyPeer{
 				{
 					NamespaceSelector: &metav1.LabelSelector{
@@ -1181,7 +1158,25 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
+					Port:     &agentPortIntStr,
+				},
+			},
+		},
+		{
+			// Allow other agent pods to connect (agent-to-agent traffic)
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"langop.io/kind": "LanguageAgent",
+						},
+					},
+				},
+			},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{
+					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Port:     &agentPortIntStr,
 				},
 			},
 		},
@@ -1357,12 +1352,28 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	return toolURLs, nil
 }
 
-func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string, persona *langopv1alpha1.LanguagePersona) []corev1.EnvVar {
+// buildModelEnv returns the minimal env vars needed to reach operator-managed
+// LiteLLM proxies. Injected into user-specified init containers so adapters
+// can configure the agent runtime without connecting to model APIs directly.
+func (r *LanguageAgentReconciler) buildModelEnv(modelURLs []string, modelNames []string) []corev1.EnvVar {
+	var env []corev1.EnvVar
+	if len(modelURLs) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "MODEL_ENDPOINTS",
+			Value: strings.Join(modelURLs, ","),
+		})
+	}
+	if len(modelNames) > 0 {
+		env = append(env, corev1.EnvVar{
+			Name:  "LLM_MODEL",
+			Value: strings.Join(modelNames, ","),
+		})
+	}
+	return env
+}
+
+func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
-		{
-			Name:  "CONFIG_PATH",
-			Value: "/nonexistent/config.yaml", // Force config to load from env vars
-		},
 		{
 			Name:  "AGENT_NAME",
 			Value: agent.Name,
@@ -1377,84 +1388,36 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		},
 	}
 
-	// Note: We don't inject TRACEPARENT here because it changes on every reconciliation
-	// (new span ID each time), which would cause unnecessary CronJob/Deployment updates
-	// and trigger reconciliation loops. The agent pod will create its own traces.
-
-	// Inject OpenTelemetry configuration from operator environment
-	// Agents use the collector endpoint for sending telemetry data
+	// Pass through OpenTelemetry collector endpoint from operator environment.
+	// Agents are responsible for configuring their own OTEL SDK.
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
-		// Ruby OpenTelemetry exporter uses HTTP (port 4318) not gRPC (port 4317)
-		// Replace :4317 with :4318 for Ruby agents
-		agentEndpoint := strings.Replace(endpoint, ":4317", ":4318", 1)
-
-		// Ensure http:// protocol is present (required by Ruby OTLP exporter)
-		if !strings.HasPrefix(agentEndpoint, "http://") && !strings.HasPrefix(agentEndpoint, "https://") {
-			agentEndpoint = "http://" + agentEndpoint
-		}
-
-		// Configure Ruby OpenTelemetry auto-instrumentation via standard env vars
 		env = append(env, corev1.EnvVar{
 			Name:  "OTEL_EXPORTER_OTLP_ENDPOINT",
-			Value: agentEndpoint,
+			Value: endpoint,
 		})
 		env = append(env, corev1.EnvVar{
-			Name:  "OTEL_TRACES_EXPORTER",
-			Value: "otlp",
-		})
-		env = append(env, corev1.EnvVar{
-			Name:  "OTEL_EXPORTER_OTLP_PROTOCOL",
-			Value: "http/protobuf",
-		})
-		env = append(env, corev1.EnvVar{
-			Name:  "OTEL_LOGS_EXPORTER",
-			Value: "otlp",
+			Name:  "OTEL_SERVICE_NAME",
+			Value: fmt.Sprintf("agent-%s", agent.Name),
 		})
 
-		// Inject additional OTEL variables from operator environment if present
 		if resourceAttrs := os.Getenv("OTEL_RESOURCE_ATTRIBUTES"); resourceAttrs != "" {
 			env = append(env, corev1.EnvVar{
 				Name:  "OTEL_RESOURCE_ATTRIBUTES",
 				Value: resourceAttrs,
 			})
 		}
-
 		if sampler := os.Getenv("OTEL_TRACES_SAMPLER"); sampler != "" {
 			env = append(env, corev1.EnvVar{
 				Name:  "OTEL_TRACES_SAMPLER",
 				Value: sampler,
 			})
 		}
-
 		if samplerArg := os.Getenv("OTEL_TRACES_SAMPLER_ARG"); samplerArg != "" {
 			env = append(env, corev1.EnvVar{
 				Name:  "OTEL_TRACES_SAMPLER_ARG",
 				Value: samplerArg,
 			})
 		}
-	}
-
-	// Set unique service name for agent
-	env = append(env, corev1.EnvVar{
-		Name:  "OTEL_SERVICE_NAME",
-		Value: fmt.Sprintf("language-operator-agent-%s", agent.Name),
-	})
-
-	// Enable task I/O capture for observability
-	env = append(env, corev1.EnvVar{
-		Name:  "CAPTURE_TASK_INPUTS",
-		Value: "true",
-	})
-	env = append(env, corev1.EnvVar{
-		Name:  "CAPTURE_TASK_OUTPUTS",
-		Value: "true",
-	})
-
-	if agent.Spec.Goal != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AGENT_GOAL",
-			Value: agent.Spec.Goal,
-		})
 	}
 
 	if agent.Spec.Instructions != "" {
@@ -1464,36 +1427,13 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		})
 	}
 
-	// Add persona environment variables if persona is set
-	if persona != nil {
-		env = append(env, corev1.EnvVar{
-			Name:  "PERSONA_NAME",
-			Value: persona.Name,
-		})
-		if persona.Spec.Tone != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  "PERSONA_TONE",
-				Value: persona.Spec.Tone,
-			})
-		}
-		if persona.Spec.Language != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  "PERSONA_LANGUAGE",
-				Value: persona.Spec.Language,
-			})
-		}
-	}
-
-	// Add LiteLLM model proxy URLs (comma-separated)
+	// Model proxy URLs and names (comma-separated)
 	if len(modelURLs) > 0 {
 		env = append(env, corev1.EnvVar{
 			Name:  "MODEL_ENDPOINTS",
 			Value: strings.Join(modelURLs, ","),
 		})
 	}
-
-	// Add model names (comma-separated)
-	// This tells the agent which model to request from the proxy
 	if len(modelNames) > 0 {
 		env = append(env, corev1.EnvVar{
 			Name:  "LLM_MODEL",
@@ -1501,23 +1441,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		})
 	}
 
-	// Add dummy API key for local proxies (LiteLLM doesn't need auth)
-	// RubyLLM requires an API key to be set, so we provide a placeholder
-	if len(modelURLs) > 0 {
-		env = append(env, corev1.EnvVar{
-			Name:  "OPENAI_API_KEY",
-			Value: "sk-dummy-key-for-local-proxy",
-		})
-	}
-
-	// Disable HTTPX io_uring to avoid permission errors in containers
-	// HTTPX's io_uring implementation can fail with EPERM in restricted environments
-	env = append(env, corev1.EnvVar{
-		Name:  "HTTPX_NO_IO_URING",
-		Value: "1",
-	})
-
-	// Add MCP tool server URLs (comma-separated)
+	// MCP tool server URLs (comma-separated)
 	if len(toolURLs) > 0 {
 		env = append(env, corev1.EnvVar{
 			Name:  "MCP_SERVERS",
@@ -1525,7 +1449,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		})
 	}
 
-	// Add environment variables from spec
+	// User-specified env vars (may override any of the above)
 	env = append(env, agent.Spec.Env...)
 
 	return env
@@ -1878,7 +1802,15 @@ func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, o
 	}
 }
 
-// reconcileService creates a Service for the agent's webhook server
+// agentPort returns the port the agent container listens on.
+func agentPort(agent *langopv1alpha1.LanguageAgent) int32 {
+	if agent.Spec.Port != nil {
+		return *agent.Spec.Port
+	}
+	return 8080
+}
+
+// reconcileService creates a Service for the agent
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	labels["langop.io/component"] = "agent" // Only route to agent pods, not trigger pods
@@ -1896,14 +1828,14 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 			return err
 		}
 
-		// All agents expose webhook server on port 8080
+		port := agentPort(agent)
 		service.Spec = corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
-					Port:       8080,
-					TargetPort: intstr.FromInt(8080),
+					Port:       port,
+					TargetPort: intstr.FromInt32(port),
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -46,7 +45,6 @@ import (
 	registryconfig "github.com/language-operator/language-operator/pkg/config"
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/telemetry"
-	"github.com/language-operator/language-operator/pkg/telemetry/adapters"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -70,100 +68,6 @@ func getEnvInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
-}
-
-// initializeTelemetryAdapter creates and initializes a telemetry adapter based on environment configuration
-func initializeTelemetryAdapter() telemetry.TelemetryAdapter {
-	adapterType := os.Getenv("TELEMETRY_ADAPTER_TYPE")
-
-	// Default to NoOpAdapter if no type specified
-	if adapterType == "" {
-		setupLog.Info("No telemetry adapter type specified, using NoOpAdapter")
-		return telemetry.NewNoOpAdapter()
-	}
-
-	switch strings.ToLower(adapterType) {
-	case "signoz":
-		return initializeSigNozAdapter()
-	case "clickhouse":
-		return initializeClickhouseAdapter()
-	case "noop", "disabled":
-		setupLog.Info("Telemetry adapter explicitly disabled")
-		return telemetry.NewNoOpAdapter()
-	default:
-		setupLog.Info("Unknown telemetry adapter type, falling back to NoOpAdapter",
-			"type", adapterType)
-		return telemetry.NewNoOpAdapter()
-	}
-}
-
-// initializeSigNozAdapter creates a SigNoz telemetry adapter from environment variables
-func initializeSigNozAdapter() telemetry.TelemetryAdapter {
-	endpoint := os.Getenv("TELEMETRY_ADAPTER_ENDPOINT")
-	apiKey := os.Getenv("TELEMETRY_ADAPTER_API_KEY")
-
-	// Validate required configuration
-	if endpoint == "" {
-		setupLog.Error(nil, "SigNoz adapter requires TELEMETRY_ADAPTER_ENDPOINT environment variable")
-		return telemetry.NewNoOpAdapter()
-	}
-
-	if apiKey == "" {
-		setupLog.Error(nil, "SigNoz adapter requires TELEMETRY_ADAPTER_API_KEY environment variable")
-		return telemetry.NewNoOpAdapter()
-	}
-
-	// Parse timeout with default
-	timeout := 30 * time.Second
-	if timeoutStr := os.Getenv("TELEMETRY_ADAPTER_TIMEOUT"); timeoutStr != "" {
-		if parsedTimeout, err := time.ParseDuration(timeoutStr); err == nil {
-			timeout = parsedTimeout
-		} else {
-			setupLog.Error(err, "Invalid TELEMETRY_ADAPTER_TIMEOUT, using default 30s", "value", timeoutStr)
-		}
-	}
-
-	// Create SigNoz adapter
-	adapter, err := adapters.NewSignozAdapter(endpoint, apiKey, timeout)
-	if err != nil {
-		setupLog.Error(err, "Failed to create SigNoz telemetry adapter, falling back to NoOpAdapter")
-		return telemetry.NewNoOpAdapter()
-	}
-
-	// Log configuration details (excluding sensitive information)
-	setupLog.Info("SigNoz telemetry adapter initialized successfully",
-		"endpoint", endpoint,
-		"timeout", timeout,
-		"retryAttempts", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_ATTEMPTS", "3"),
-		"retryBackoff", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_BACKOFF", "1s"),
-		"maxTraces", getEnvOrDefault("TELEMETRY_ADAPTER_MAX_TRACES", "100"),
-		"lookbackPeriod", getEnvOrDefault("TELEMETRY_ADAPTER_LOOKBACK_PERIOD", "24h"),
-		"queryTimeout", getEnvOrDefault("TELEMETRY_ADAPTER_QUERY_TIMEOUT", "10s"),
-		"healthCheckEnabled", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_ENABLED", "true"),
-		"healthCheckInterval", getEnvOrDefault("TELEMETRY_ADAPTER_HEALTH_CHECK_INTERVAL", "5m"))
-
-	return adapter
-}
-
-// initializeClickhouseAdapter creates a ClickHouse telemetry adapter from environment variables
-func initializeClickhouseAdapter() telemetry.TelemetryAdapter {
-	// Create ClickHouse adapter - it reads configuration from environment variables
-	adapter, err := adapters.NewClickhouseAdapter()
-	if err != nil {
-		setupLog.Error(err, "Failed to create ClickHouse telemetry adapter - operator cannot start without telemetry")
-		panic(fmt.Sprintf("ClickHouse telemetry adapter initialization failed: %v", err))
-	}
-
-	// Log configuration details (excluding sensitive information)
-	setupLog.Info("ClickHouse telemetry adapter initialized successfully",
-		"endpoint", getEnvOrDefault("TELEMETRY_ADAPTER_ENDPOINT", ""),
-		"database", getEnvOrDefault("TELEMETRY_ADAPTER_DATABASE", "otel"),
-		"username", getEnvOrDefault("TELEMETRY_ADAPTER_USERNAME", "default"),
-		"timeout", getEnvOrDefault("TELEMETRY_ADAPTER_TIMEOUT", "30s"),
-		"retryAttempts", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_ATTEMPTS", "3"),
-		"retryBackoff", getEnvOrDefault("TELEMETRY_ADAPTER_RETRY_BACKOFF", "1s"))
-
-	return adapter
 }
 
 func main() {
@@ -505,12 +409,4 @@ func trimSpace(s string) string {
 		end--
 	}
 	return s[start:end]
-}
-
-// getEnvOrDefault returns environment variable value or default if not set
-func getEnvOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

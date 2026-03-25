@@ -1,0 +1,98 @@
+---
+# Example: deploying openclaw via language-operator
+#
+# The LanguageModel CR registers a LiteLLM proxy. The operator resolves the
+# proxy endpoint and injects MODEL_ENDPOINTS into all containers (including
+# init containers). The openclaw-adapter reads MODEL_ENDPOINTS and seeds
+# openclaw.json so openclaw routes LLM traffic through the proxy rather than
+# connecting to model APIs directly.
+#
+# Prerequisites:
+#
+#   kubectl create secret generic anthropic-credentials \
+#     -n language-operator-openclaw \
+#     --from-literal=api-key=sk-ant-...
+#
+#   kubectl create secret generic openclaw-gateway \
+#     -n language-operator-openclaw \
+#     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: language-operator-openclaw
+spec:
+  domain: agents.example.com
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+  namespace: language-operator-openclaw
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-5
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: my-openclaw
+  namespace: language-operator-openclaw
+spec:
+  image: ghcr.io/openclaw/openclaw:latest
+  port: 18789
+
+  modelRefs:
+    - name: claude-sonnet
+
+  initContainers:
+    - name: openclaw-adapter
+      image: ghcr.io/language-operator/openclaw-adapter:latest
+      # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
+      # The adapter uses them to configure openclaw's provider settings.
+      env:
+        - name: OPENCLAW_STATE_DIR
+          value: /home/node/.openclaw
+      volumeMounts:
+        - name: workspace
+          mountPath: /home/node/.openclaw
+
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 18789
+    initialDelaySeconds: 15
+    periodSeconds: 30
+
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: 18789
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  envFrom:
+    - secretRef:
+        name: openclaw-gateway   # OPENCLAW_GATEWAY_TOKEN
+
+  workspace:
+    enabled: true
+    size: 10Gi
+    mountPath: /home/node/.openclaw
+
+  executionMode: autonomous
+  replicas: 1
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
