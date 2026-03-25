@@ -26,3 +26,6 @@ components/dashboard/docker-compose*.yml
 components/dashboard/.kube/
 .claude/hooks/node_modules/
 .claude/hooks/package-lock.json
+
+# Node.js
+node_modules/
