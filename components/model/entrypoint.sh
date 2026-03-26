@@ -5,14 +5,7 @@ set -e
 
 echo "🚀 Starting LanguageModel Proxy (LiteLLM)"
 
-# Check if model config exists
-if [ ! -f "/etc/langop/model.json" ]; then
-    echo "✗ Error: Model configuration not found at /etc/langop/model.json"
-    echo "  Make sure the LanguageModel ConfigMap is mounted correctly"
-    exit 1
-fi
-
-# Generate LiteLLM config from LanguageModel spec
+# Generate LiteLLM config from LanguageModel spec(s)
 echo "🔧 Generating LiteLLM configuration..."
 if ! /usr/local/bin/generate-config.py > /app/config.yaml; then
     echo "✗ Error: Failed to generate LiteLLM config"

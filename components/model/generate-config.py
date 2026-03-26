@@ -41,8 +41,8 @@ def load_model_specs(models_dir: str = "/etc/langop/models",
         print(f"✓ Loaded model spec from {legacy_path}", file=sys.stderr)
         return [spec]
     except FileNotFoundError:
-        print(f"✗ No model configs found in {models_dir}/ or at {legacy_path}", file=sys.stderr)
-        sys.exit(1)
+        print(f"⚠ No model configs found in {models_dir}/ or at {legacy_path} — starting with empty model list", file=sys.stderr)
+        return []
     except json.JSONDecodeError as e:
         print(f"✗ Invalid JSON in model config: {e}", file=sys.stderr)
         sys.exit(1)
@@ -324,9 +324,12 @@ def main():
     output = yaml.dump(litellm_config, default_flow_style=False, sort_keys=False)
     print(output)
 
-    print(f"✅ LiteLLM config generated successfully ({len(specs)} model(s))", file=sys.stderr)
-    for spec in specs:
-        print(f"   {spec.get('provider')}/{spec.get('modelName')}", file=sys.stderr)
+    if specs:
+        print(f"✅ LiteLLM config generated successfully ({len(specs)} model(s))", file=sys.stderr)
+        for spec in specs:
+            print(f"   {spec.get('provider')}/{spec.get('modelName')}", file=sys.stderr)
+    else:
+        print("✅ LiteLLM config generated with empty model list (no models registered yet)", file=sys.stderr)
 
 
 if __name__ == "__main__":
