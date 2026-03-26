@@ -53,6 +53,8 @@ One controller per CRD. Each follows the same pattern:
 
 Key controllers:
 - `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config)
+- `languagecluster_controller.go` — reconciles the shared LiteLLM proxy (Deployment `proxy`, Service `proxy`, ConfigMap `proxy-config`) and optional Ingress/HTTPRoute at `proxy.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
+- `languagemodel_controller.go` — writes model spec into a ConfigMap only (key `model__<name>.json`); no longer owns a Deployment or Service — those are the cluster proxy's responsibility
 - `languagepersona_controller.go` — creates a ConfigMap with the persona's JSON spec for agent mounting
 - `languagetool_controller.go` — validates tool image registry, reconciles tool Deployment/Service
 
@@ -79,6 +81,8 @@ Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, 
 `MODEL_ENDPOINTS` and `LLM_MODEL` are injected into the main container and all init containers. `TOOL_ENDPOINTS` contains resolved MCP tool server URLs.
 
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
+
+The shared proxy image (`ghcr.io/language-operator/model:latest`) is configured via `config.proxy.image` and `config.proxy.imagePullPolicy` in the Helm chart. For local development, `make dev` in `components/model/` builds and imports the image into k3s.
 
 ### Telemetry (`src/pkg/telemetry/`)
 

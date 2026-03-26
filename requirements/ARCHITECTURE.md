@@ -43,7 +43,7 @@ Instructions are what the agent does. The image is how it does it. Changing inst
 
 Memory, knowledge retrieval, and code execution are handled by MCP tool servers (`LanguageTool` CRDs), not by the operator. The operator resolves tool endpoints and injects them into agent config — it does not proxy or inspect tool traffic.
 
-LLM access is handled by `LanguageModel` CRDs, which back a per-model LiteLLM proxy. Agents route all LLM traffic through the proxy rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally.
+LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a single shared LiteLLM proxy (`proxy` Deployment + Service) that is dynamically configured as models are added or removed. Agents route all LLM traffic through this shared proxy rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally, and enables cross-model reporting through LiteLLM's unified dashboard.
 
 ---
 
@@ -65,9 +65,10 @@ LLM access is handled by `LanguageModel` CRDs, which back a per-model LiteLLM pr
 │  └──────────────────────┘    │  · TOOL_ENDPOINTS            │   │
 │                               └──────────────────────────────┘   │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
-│  │    MCP Tool Servers  │    │     LiteLLM Proxies          │   │
-│  │  (LanguageTool CRDs) │    │   (LanguageModel CRDs)       │   │
-│  └──────────────────────┘    └──────────────────────────────┘   │
+│  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
+│  │  (LanguageTool CRDs) │    │  proxy.<namespace>.svc:8000  │   │
+│  └──────────────────────┘    │  (one per LanguageCluster)   │   │
+│                               └──────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -165,7 +166,7 @@ Agents connect to tools directly over MCP. The operator does not proxy tool traf
 
 ### LanguageModel
 
-An LLM endpoint backed by a LiteLLM proxy. The operator deploys a per-model LiteLLM proxy that holds the real API credential. The proxy URL is injected as `MODEL_ENDPOINTS` into every agent container (main container and all init containers).
+Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM proxy (`proxy` Deployment + Service). The proxy URL is injected as `MODEL_ENDPOINTS` into every agent container (main container and all init containers). Agents never hold real API credentials.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -176,12 +177,13 @@ metadata:
 spec:
   provider: anthropic
   modelName: claude-sonnet-4-5
+  clusterRef: language-operator-myapp
   apiKeySecretRef:
     name: anthropic-credentials
     key: api-key
 ```
 
-Agents route all LLM traffic through the proxy. They never hold real API credentials.
+Adding or removing a `LanguageModel` triggers a rolling restart of the shared proxy with the updated model list. No agent redeploy is required.
 
 ### LanguageCluster
 
@@ -194,9 +196,12 @@ metadata:
   name: language-operator-myapp
 spec:
   domain: agents.example.com
+  proxy:
+    ingressEnabled: true    # expose proxy at proxy.agents.example.com (default when domain is set)
+    replicas: 1
 ```
 
-The operator creates the namespace, configures shared networking, and sets up default RBAC for agent service accounts within the cluster.
+The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM proxy. The proxy is exposed externally at `proxy.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
 
 ---
 
@@ -208,8 +213,8 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 - `/etc/agent/instructions.txt` — plain text task instructions (optional)
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
-- `MODEL_ENDPOINTS` — comma-separated LiteLLM proxy URLs (one per `modelRef`), injected into main container and all init containers
-- `LLM_MODEL` — comma-separated model names corresponding to each proxy URL
+- `MODEL_ENDPOINTS` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
+- `LLM_MODEL` — comma-separated model names registered in the proxy (from all `modelRefs`)
 - `TOOL_ENDPOINTS` — resolved MCP tool server URLs
 - ClusterIP Service on `spec.port`
 - HTTPRoute for external access
@@ -232,7 +237,7 @@ Each `LanguageAgent` gets:
 
 Tool servers (`LanguageTool`) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.
 
-LiteLLM proxies (`LanguageModel`) get their own Services and NetworkPolicy rules that permit outbound HTTPS to the upstream model provider.
+The shared LiteLLM proxy (`proxy.<namespace>.svc.cluster.local:8000`) is deployed per `LanguageCluster`. NetworkPolicy allows agent pods to reach the proxy, and the proxy has outbound HTTPS egress to upstream model providers.
 
 ---
 
