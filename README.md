@@ -14,32 +14,6 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 | `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
 | `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
 
-You bring the container image; the operator handles everything else: configuration injection, shared LLM routing, networking, and observability.
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: openclaw
-spec:
-  image: ghcr.io/openclaw/openclaw:latest
-  port: 18789
-  livenessProbe:
-    httpGet:
-      path: /healthz
-      port: 18789
-  readinessProbe:
-    httpGet:
-      path: /readyz
-      port: 18789
-  envFrom:
-    - secretRef:
-        name: openclaw-api-keys
-  workspace:
-    size: 10Gi
-```
-
-Apply it and the agent is running, reachable on port 18789, and visible in `kubectl`.
 
 ## Installation
 
@@ -75,7 +49,7 @@ spec:
 EOF
 ```
 
-### 2. Register a model
+### 2. Configure an LLM
 
 The `LanguageModel` holds the real API credential and exposes a LiteLLM proxy inside the cluster.
 
