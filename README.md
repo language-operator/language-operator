@@ -1,10 +1,20 @@
 # Language Operator
 
-A Kubernetes operator for running AI agents as native workloads.
+A Kubernetes operator for running AI agent clusters as native workloads.
 
 ## What It Does
 
-Language Operator deploys AI agents as standard Kubernetes Deployments. You bring the container image; the operator handles everything else: configuration injection, networking, and observability.
+Language Operator provides a purpose-built set of CRDs for deploying and managing scalable AI agent clusters on Kubernetes:
+
+| Resource | Purpose |
+|----------|---------|
+| `LanguageCluster` | Managed namespace for a group of agents — provisions shared networking, a LiteLLM proxy, and optional external ingress |
+| `LanguageAgent` | Agent deployment — image, instructions, personas, tools, models |
+| `LanguageModel` | LLM endpoint — provider, credentials, rate limits; served through the cluster's shared proxy |
+| `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
+| `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
+
+You bring the container image; the operator handles everything else: configuration injection, shared LLM routing, networking, and observability.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -43,16 +53,6 @@ For every `LanguageAgent`, the operator:
 - Creates a Service on the configured port (default 8080)
 - Creates an HTTPRoute for external access
 - Creates a NetworkPolicy so agents can reach each other
-
-## CRDs
-
-| Resource | Purpose |
-|----------|---------|
-| `LanguageAgent` | Agent deployment — image, instructions, personas, tools, models |
-| `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
-| `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
-| `LanguageModel` | LLM endpoint — provider, credentials, injected into agents |
-| `LanguageCluster` | Multi-cluster agent grouping |
 
 ## Installation
 
