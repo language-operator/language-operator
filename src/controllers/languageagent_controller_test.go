@@ -3,13 +3,17 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
+	"github.com/language-operator/language-operator/internal/testutil/gen"
+	"github.com/language-operator/language-operator/pkg/events"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1544,4 +1548,852 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 	if crb.RoleRef.Name != "language-operator" {
 		t.Errorf("Expected ClusterRoleBinding to reference 'language-operator' ClusterRole, got %q", crb.RoleRef.Name)
 	}
+}
+
+// --- Group 1: Pure/stateless functions ---
+
+func TestLanguageAgentController_HashString(t *testing.T) {
+	h1 := hashString("hello")
+	h2 := hashString("hello")
+	h3 := hashString("world")
+
+	if h1 != h2 {
+		t.Errorf("hashString not deterministic: %s vs %s", h1, h2)
+	}
+	if h1 == h3 {
+		t.Error("hashString should differ for different inputs")
+	}
+	if h1 == "" {
+		t.Error("hashString returned empty string")
+	}
+}
+
+func TestLanguageAgentController_ParseDSLMode(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantMode  string
+		wantSched string
+	}{
+		{"no_directive", "# nothing here", "autonomous", ""},
+		{"autonomous", "mode :autonomous", "autonomous", ""},
+		{"scheduled", "mode :scheduled", "scheduled", ""},
+		{"interactive", "mode :interactive", "interactive", ""},
+		{"event_driven", "mode :event_driven", "event-driven", ""},
+		{"schedule_overrides_mode", "mode :autonomous\nschedule \"*/10 * * * *\"", "scheduled", "*/10 * * * *"},
+		{"single_quoted_schedule", "schedule '0 * * * *'", "scheduled", "0 * * * *"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mode, sched := parseDSLMode(tc.input)
+			if mode != tc.wantMode {
+				t.Errorf("mode: got %q, want %q", mode, tc.wantMode)
+			}
+			if sched != tc.wantSched {
+				t.Errorf("schedule: got %q, want %q", sched, tc.wantSched)
+			}
+		})
+	}
+}
+
+func TestLanguageAgentController_GetNames(t *testing.T) {
+	r := &LanguageAgentReconciler{}
+
+	t.Run("get_tool_names", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{
+					{Name: "tool-a"},
+					{Name: "tool-b"},
+				},
+			},
+		}
+		names := r.getToolNames(agent)
+		if len(names) != 2 || names[0] != "tool-a" || names[1] != "tool-b" {
+			t.Errorf("getToolNames: got %v", names)
+		}
+	})
+
+	t.Run("get_model_names", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ModelRefs: []langopv1alpha1.ModelReference{
+					{Name: "model-x"},
+				},
+			},
+		}
+		names := r.getModelNames(agent)
+		if len(names) != 1 || names[0] != "model-x" {
+			t.Errorf("getModelNames: got %v", names)
+		}
+	})
+
+	t.Run("get_persona_names", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				PersonaRefs: []langopv1alpha1.PersonaReference{
+					{Name: "persona-1"},
+					{Name: "persona-2"},
+				},
+			},
+		}
+		names := r.getPersonaNames(agent)
+		if len(names) != 2 || names[0] != "persona-1" || names[1] != "persona-2" {
+			t.Errorf("getPersonaNames: got %v", names)
+		}
+	})
+
+	t.Run("empty_refs", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{}
+		if got := r.getToolNames(agent); len(got) != 0 {
+			t.Errorf("expected empty tool names, got %v", got)
+		}
+		if got := r.getModelNames(agent); len(got) != 0 {
+			t.Errorf("expected empty model names, got %v", got)
+		}
+		if got := r.getPersonaNames(agent); len(got) != 0 {
+			t.Errorf("expected empty persona names, got %v", got)
+		}
+	})
+}
+
+func TestLanguageAgentController_IsOwnedByAgent(t *testing.T) {
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-agent",
+			Namespace: "default",
+			UID:       "abc-123",
+		},
+	}
+
+	t.Run("owned_by_agent", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				OwnerReferences: []metav1.OwnerReference{
+					{UID: "abc-123"},
+				},
+			},
+		}
+		if !isOwnedByAgent(cm, agent) {
+			t.Error("expected isOwnedByAgent to return true")
+		}
+	})
+
+	t.Run("different_owner", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				OwnerReferences: []metav1.OwnerReference{
+					{UID: "other-uid"},
+				},
+			},
+		}
+		if isOwnedByAgent(cm, agent) {
+			t.Error("expected isOwnedByAgent to return false")
+		}
+	})
+
+	t.Run("no_owners", func(t *testing.T) {
+		cm := &corev1.ConfigMap{}
+		if isOwnedByAgent(cm, agent) {
+			t.Error("expected isOwnedByAgent to return false")
+		}
+	})
+}
+
+// --- Group 2: NetworkPolicy ---
+
+func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "np-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "ghcr.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:               fakeClient,
+		Scheme:               scheme,
+		Log:                  logr.Discard(),
+		Recorder:             &record.FakeRecorder{},
+		RegistryManager:      &mockRegistryManager{},
+		NetworkPolicyTimeout: 30 * time.Second,
+		NetworkPolicyRetries: 3,
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	if err := reconciler.reconcileNetworkPolicy(ctx, agent); err != nil {
+		t.Fatalf("reconcileNetworkPolicy failed: %v", err)
+	}
+
+	t.Run("network_policy_created", func(t *testing.T) {
+		np := &networkingv1.NetworkPolicy{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np); err != nil {
+			t.Fatalf("expected NetworkPolicy to exist: %v", err)
+		}
+	})
+
+	t.Run("network_policy_has_ingress_rules", func(t *testing.T) {
+		np := &networkingv1.NetworkPolicy{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np); err != nil {
+			t.Fatalf("NetworkPolicy not found: %v", err)
+		}
+		if len(np.Spec.Ingress) == 0 {
+			t.Error("expected ingress rules to be set on NetworkPolicy")
+		}
+		hasIngress := false
+		for _, pt := range np.Spec.PolicyTypes {
+			if pt == networkingv1.PolicyTypeIngress {
+				hasIngress = true
+			}
+		}
+		if !hasIngress {
+			t.Error("expected PolicyTypeIngress to be in PolicyTypes")
+		}
+	})
+}
+
+// --- Group 3: Ingress ---
+
+func TestLanguageAgentController_IngressCreation(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ing-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:         "ghcr.io/language-operator/agent:latest",
+			ExecutionMode: "autonomous",
+		},
+	}
+
+	t.Run("ingress_with_class_name", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(agent).
+			WithStatusSubresource(agent).
+			Build()
+
+		reconciler := &LanguageAgentReconciler{
+			Client:                  fakeClient,
+			Scheme:                  scheme,
+			Log:                     logr.Discard(),
+			Recorder:                &record.FakeRecorder{},
+			RegistryManager:         &mockRegistryManager{},
+			DefaultIngressClassName: "nginx",
+		}
+		reconciler.InitializeGatewayCache()
+
+		ctx := context.Background()
+		if err := reconciler.reconcileIngress(ctx, agent, "agent.example.com"); err != nil {
+			t.Fatalf("reconcileIngress failed: %v", err)
+		}
+
+		ing := &networkingv1.Ingress{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing); err != nil {
+			t.Fatalf("expected Ingress to exist: %v", err)
+		}
+		if ing.Spec.IngressClassName == nil || *ing.Spec.IngressClassName != "nginx" {
+			t.Errorf("expected IngressClassName 'nginx', got %v", ing.Spec.IngressClassName)
+		}
+	})
+
+	t.Run("ingress_without_class_name", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(agent).
+			WithStatusSubresource(agent).
+			Build()
+
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		reconciler.InitializeGatewayCache()
+
+		ctx := context.Background()
+		if err := reconciler.reconcileIngress(ctx, agent, "agent.example.com"); err != nil {
+			t.Fatalf("reconcileIngress failed: %v", err)
+		}
+
+		ing := &networkingv1.Ingress{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing); err != nil {
+			t.Fatalf("expected Ingress to exist: %v", err)
+		}
+		if ing.Spec.IngressClassName != nil {
+			t.Errorf("expected no IngressClassName, got %v", *ing.Spec.IngressClassName)
+		}
+	})
+
+	t.Run("ingress_has_correct_host_and_path", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(agent).
+			WithStatusSubresource(agent).
+			Build()
+
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		reconciler.InitializeGatewayCache()
+
+		ctx := context.Background()
+		hostname := "my-agent.example.com"
+		if err := reconciler.reconcileIngress(ctx, agent, hostname); err != nil {
+			t.Fatalf("reconcileIngress failed: %v", err)
+		}
+
+		ing := &networkingv1.Ingress{}
+		if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing); err != nil {
+			t.Fatalf("expected Ingress to exist: %v", err)
+		}
+		if len(ing.Spec.Rules) == 0 {
+			t.Fatal("expected at least one ingress rule")
+		}
+		if ing.Spec.Rules[0].Host != hostname {
+			t.Errorf("expected host %q, got %q", hostname, ing.Spec.Rules[0].Host)
+		}
+		if ing.Spec.Rules[0].HTTP == nil || len(ing.Spec.Rules[0].HTTP.Paths) == 0 {
+			t.Fatal("expected HTTP paths on ingress rule")
+		}
+		if ing.Spec.Rules[0].HTTP.Paths[0].Path != "/" {
+			t.Errorf("expected path '/', got %q", ing.Spec.Rules[0].HTTP.Paths[0].Path)
+		}
+	})
+}
+
+func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("not_found", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		ready, _, err := r.checkIngressReadiness(context.Background(), "no-ingress", "default")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ready {
+			t.Error("expected not ready when ingress not found")
+		}
+	})
+
+	t.Run("no_lb_ip", func(t *testing.T) {
+		ing := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{Name: "my-ing", Namespace: "default"},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ready {
+			t.Error("expected not ready when no LB ingress points")
+		}
+	})
+
+	t.Run("lb_with_ip", func(t *testing.T) {
+		ing := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{Name: "my-ing", Namespace: "default"},
+			Status: networkingv1.IngressStatus{
+				LoadBalancer: networkingv1.IngressLoadBalancerStatus{
+					Ingress: []networkingv1.IngressLoadBalancerIngress{
+						{IP: "10.0.0.1"},
+					},
+				},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !ready {
+			t.Error("expected ready when LB has IP")
+		}
+	})
+
+	t.Run("lb_with_hostname", func(t *testing.T) {
+		ing := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{Name: "my-ing", Namespace: "default"},
+			Status: networkingv1.IngressStatus{
+				LoadBalancer: networkingv1.IngressLoadBalancerStatus{
+					Ingress: []networkingv1.IngressLoadBalancerIngress{
+						{Hostname: "lb.example.com"},
+					},
+				},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !ready {
+			t.Error("expected ready when LB has hostname")
+		}
+	})
+}
+
+// --- Group 4: Resource resolution and persona ---
+
+func TestLanguageAgentController_ResolveTools(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("service_mode_tool", func(t *testing.T) {
+		tool := gen.LanguageTool("my-tool", "default",
+			gen.SetToolDeploymentMode("service"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "my-tool"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 1 {
+			t.Fatalf("expected 1 URL, got %d", len(urls))
+		}
+		expected := "http://my-tool.default.svc.cluster.local:8080"
+		if urls[0] != expected {
+			t.Errorf("expected %q, got %q", expected, urls[0])
+		}
+	})
+
+	t.Run("sidecar_mode_tool", func(t *testing.T) {
+		tool := gen.LanguageTool("sidecar-tool", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+			gen.SetToolPort(9090),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "sidecar-tool"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 1 {
+			t.Fatalf("expected 1 URL, got %d", len(urls))
+		}
+		expected := "http://localhost:9090"
+		if urls[0] != expected {
+			t.Errorf("expected %q, got %q", expected, urls[0])
+		}
+	})
+
+	t.Run("missing_tool", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "nonexistent"}},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		_, err := r.resolveTools(context.Background(), agent)
+		if err == nil {
+			t.Error("expected error for missing tool")
+		}
+	})
+
+	t.Run("custom_port", func(t *testing.T) {
+		tool := gen.LanguageTool("port-tool", "default",
+			gen.SetToolDeploymentMode("service"),
+			gen.SetToolPort(9999),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "port-tool"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		expected := "http://port-tool.default.svc.cluster.local:9999"
+		if len(urls) != 1 || urls[0] != expected {
+			t.Errorf("expected %q, got %v", expected, urls)
+		}
+	})
+}
+
+func TestLanguageAgentController_ResolveModels(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("single_model", func(t *testing.T) {
+		model := gen.LanguageModel("my-model", "default",
+			gen.SetModelName("claude-3-sonnet"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ModelRefs: []langopv1alpha1.ModelReference{{Name: "my-model"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(model).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, names, err := r.resolveModels(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		expectedURL := "http://my-model.default.svc.cluster.local:8000"
+		if len(urls) != 1 || urls[0] != expectedURL {
+			t.Errorf("unexpected URLs: %v", urls)
+		}
+		if len(names) != 1 || names[0] != "claude-3-sonnet" {
+			t.Errorf("unexpected names: %v", names)
+		}
+	})
+
+	t.Run("multiple_models", func(t *testing.T) {
+		m1 := gen.LanguageModel("model-a", "default", gen.SetModelName("gpt-4"))
+		m2 := gen.LanguageModel("model-b", "default", gen.SetModelName("claude-3"))
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ModelRefs: []langopv1alpha1.ModelReference{
+					{Name: "model-a"},
+					{Name: "model-b"},
+				},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(m1, m2).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, names, err := r.resolveModels(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 2 {
+			t.Fatalf("expected 2 URLs, got %d: %v", len(urls), urls)
+		}
+		if len(names) != 2 {
+			t.Fatalf("expected 2 names, got %d: %v", len(names), names)
+		}
+	})
+
+	t.Run("missing_model", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ModelRefs: []langopv1alpha1.ModelReference{{Name: "nonexistent"}},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		_, _, err := r.resolveModels(context.Background(), agent)
+		if err == nil {
+			t.Error("expected error for missing model")
+		}
+	})
+}
+
+func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("sidecar_tool_added", func(t *testing.T) {
+		tool := gen.LanguageTool("my-sidecar", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+			gen.SetToolImage("my-tool:v1"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "my-sidecar"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 1 {
+			t.Fatalf("expected 1 container, got %d", len(containers))
+		}
+		if containers[0].Image != "my-tool:v1" {
+			t.Errorf("expected image 'my-tool:v1', got %q", containers[0].Image)
+		}
+	})
+
+	t.Run("service_mode_skipped", func(t *testing.T) {
+		tool := gen.LanguageTool("svc-tool", "default",
+			gen.SetToolDeploymentMode("service"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "svc-tool"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 0 {
+			t.Errorf("expected 0 containers for service-mode tool, got %d", len(containers))
+		}
+	})
+
+	t.Run("default_resources_applied", func(t *testing.T) {
+		tool := gen.LanguageTool("def-sidecar", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				ToolRefs: []langopv1alpha1.ToolReference{{Name: "def-sidecar"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 1 {
+			t.Fatalf("expected 1 container, got %d", len(containers))
+		}
+		if containers[0].Resources.Requests.Cpu().IsZero() {
+			t.Error("expected default CPU request to be set on sidecar container")
+		}
+	})
+}
+
+func TestLanguageAgentController_FetchPersona(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("no_refs", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		persona, err := r.fetchPersona(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if persona != nil {
+			t.Error("expected nil persona when no refs")
+		}
+	})
+
+	t.Run("single_ready_persona", func(t *testing.T) {
+		p := gen.LanguagePersona("my-persona", "default")
+		p.Status.Phase = events.PhaseStatusReady
+
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "my-persona"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(p).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		persona, err := r.fetchPersona(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if persona == nil {
+			t.Fatal("expected persona to be returned")
+		}
+	})
+
+	t.Run("persona_not_ready", func(t *testing.T) {
+		p := gen.LanguagePersona("pending-persona", "default")
+		p.Status.Phase = "Pending"
+
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "pending-persona"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(p).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		_, err := r.fetchPersona(context.Background(), agent)
+		if err == nil {
+			t.Error("expected error when persona not ready")
+		}
+	})
+
+	t.Run("persona_not_found", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "missing"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		_, err := r.fetchPersona(context.Background(), agent)
+		if err == nil {
+			t.Error("expected error when persona not found")
+		}
+	})
+}
+
+func TestLanguageAgentController_ComposePersonas(t *testing.T) {
+	r := &LanguageAgentReconciler{}
+
+	t.Run("single_persona", func(t *testing.T) {
+		p := gen.LanguagePersona("p1", "default",
+			gen.SetPersonaSystemPrompt("be helpful"),
+		)
+		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p})
+		if result == nil || result.Spec.SystemPrompt != "be helpful" {
+			t.Errorf("expected single persona returned as-is, got %v", result)
+		}
+	})
+
+	t.Run("later_overrides_scalar", func(t *testing.T) {
+		p1 := gen.LanguagePersona("p1", "default",
+			gen.SetPersonaSystemPrompt("first"),
+		)
+		p2 := gen.LanguagePersona("p2", "default",
+			gen.SetPersonaSystemPrompt("second"),
+		)
+		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p1, p2})
+		if result == nil || result.Spec.SystemPrompt != "second" {
+			t.Errorf("expected second persona to override, got %q", result.Spec.SystemPrompt)
+		}
+	})
+
+	t.Run("array_fields_appended", func(t *testing.T) {
+		p1 := &langopv1alpha1.LanguagePersona{
+			ObjectMeta: metav1.ObjectMeta{Name: "p1"},
+			Spec: langopv1alpha1.LanguagePersonaSpec{
+				Capabilities: []string{"read"},
+			},
+		}
+		p2 := &langopv1alpha1.LanguagePersona{
+			ObjectMeta: metav1.ObjectMeta{Name: "p2"},
+			Spec: langopv1alpha1.LanguagePersonaSpec{
+				Capabilities: []string{"write"},
+			},
+		}
+		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p1, p2})
+		if len(result.Spec.Capabilities) != 2 {
+			t.Errorf("expected 2 capabilities, got %d: %v", len(result.Spec.Capabilities), result.Spec.Capabilities)
+		}
+	})
+}
+
+// --- Group 5: CNI detection ---
+
+func TestLanguageAgentController_DetectNetworkPolicySupport(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tests := []struct {
+		name        string
+		dsName      string
+		wantSupport bool
+		wantCNI     string
+	}{
+		{"cilium_detected", "cilium", true, "cilium"},
+		{"calico_detected", "calico-node", true, "calico"},
+		{"weave_detected", "weave-net", true, "weave-net"},
+		{"antrea_detected", "antrea-agent", true, "antrea"},
+		{"flannel_returns_false", "kube-flannel-ds", false, "flannel"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ds := &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      tc.dsName,
+					Namespace: "kube-system",
+				},
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ds).Build()
+			r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+			supported, cni := r.detectNetworkPolicySupport(context.Background())
+			if supported != tc.wantSupport {
+				t.Errorf("supported: got %v, want %v", supported, tc.wantSupport)
+			}
+			if cni != tc.wantCNI {
+				t.Errorf("CNI: got %q, want %q", cni, tc.wantCNI)
+			}
+		})
+	}
+
+	t.Run("no_cni_returns_false", func(t *testing.T) {
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		supported, cni := r.detectNetworkPolicySupport(context.Background())
+		if supported {
+			t.Error("expected not supported when no CNI detected")
+		}
+		if cni != "unknown" {
+			t.Errorf("expected 'unknown', got %q", cni)
+		}
+	})
 }
