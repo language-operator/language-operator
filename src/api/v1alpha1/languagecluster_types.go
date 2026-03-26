@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +41,27 @@ type LanguageClusterSpec struct {
 	// NetworkPolicies defines egress network policies for agents in this cluster
 	// +optional
 	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
+
+	// Proxy configures the shared LiteLLM proxy deployed per cluster
+	// +optional
+	Proxy *ProxyConfig `json:"proxy,omitempty"`
+}
+
+// ProxyConfig configures the shared LiteLLM proxy for a LanguageCluster
+type ProxyConfig struct {
+	// IngressEnabled controls whether an Ingress/HTTPRoute is created for the proxy.
+	// Defaults to true when cluster.spec.domain is set.
+	// +optional
+	IngressEnabled *bool `json:"ingressEnabled,omitempty"`
+
+	// Resources sets CPU/memory requests and limits for the proxy Deployment.
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Replicas sets the number of proxy pod replicas.
+	// +kubebuilder:default=1
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty"`
 }
 
 // IngressConfig defines ingress/gateway configuration
@@ -185,6 +207,14 @@ type LanguageClusterStatus struct {
 
 	// Conditions
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// ProxyEndpoint is the in-cluster URL for the shared LiteLLM proxy
+	// +optional
+	ProxyEndpoint string `json:"proxyEndpoint,omitempty"`
+
+	// ProxyReady indicates whether the shared proxy Deployment is available
+	// +optional
+	ProxyReady bool `json:"proxyReady,omitempty"`
 }
 
 //+kubebuilder:object:root=true

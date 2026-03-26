@@ -18,25 +18,37 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
@@ -63,6 +75,10 @@ type LanguageClusterReconciler struct {
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -195,6 +211,41 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			"NetworkPolicy creation disabled via networkIsolation.enabled=false", cluster.Generation)
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
+
+	// Reconcile shared LiteLLM proxy Deployment + Service + ConfigMap
+	if err := r.reconcileProxy(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile proxy")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile proxy")
+		SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionFalse,
+			"ProxyError", err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after proxy error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile proxy Ingress/HTTPRoute if domain is configured
+	if cluster.Spec.Domain != "" {
+		if err := r.reconcileProxyIngress(ctx, cluster); err != nil {
+			log.Error(err, "Failed to reconcile proxy ingress")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile proxy ingress")
+			SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionFalse,
+				"ProxyIngressError", err.Error(), cluster.Generation)
+			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after proxy ingress error")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+	}
+
+	SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionTrue,
+		"ProxyReady", "Shared LiteLLM proxy is ready", cluster.Generation)
+	cluster.Status.ProxyEndpoint = fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", cluster.Name)
+	cluster.Status.ProxyReady = true
 
 	// LanguageCluster is now just a logical grouping - no namespace management
 	// Child resources reference the cluster and live in the same namespace
@@ -675,9 +726,385 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 	}
 }
 
+// reconcileProxy creates/updates the shared LiteLLM proxy Deployment, Service, and ConfigMap.
+func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	namespace := cluster.Name
+
+	// List all LanguageModels in this cluster's namespace
+	modelList := &langopv1alpha1.LanguageModelList{}
+	if err := r.List(ctx, modelList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list models: %w", err)
+	}
+
+	// Build ConfigMap data: one model.json entry per model under models/<name>.json
+	cmData := make(map[string]string)
+	for _, model := range modelList.Items {
+		specJSON, err := json.Marshal(model.Spec)
+		if err != nil {
+			return fmt.Errorf("failed to marshal model spec %s: %w", model.Name, err)
+		}
+		cmData["models/"+model.Name+".json"] = string(specJSON)
+	}
+
+	// Compute a hash of the config for rolling-restart annotation
+	h := sha256.New()
+	keys := make([]string, 0, len(cmData))
+	for k := range cmData {
+		keys = append(keys, k)
+	}
+	for _, k := range keys {
+		h.Write([]byte(k))
+		h.Write([]byte(cmData[k]))
+	}
+	configHash := hex.EncodeToString(h.Sum(nil))[:16]
+
+	// Reconcile ConfigMap
+	proxyLabels := map[string]string{
+		"app.kubernetes.io/name":       "language-operator",
+		"app.kubernetes.io/managed-by": "language-operator",
+		"app.kubernetes.io/component":  "proxy",
+		"langop.io/cluster":            cluster.Name,
+		"langop.io/kind":               "proxy",
+	}
+	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "proxy-config", namespace, cmData); err != nil {
+		return fmt.Errorf("failed to reconcile proxy ConfigMap: %w", err)
+	}
+
+	// Build volumes and mounts: ConfigMap at /etc/langop/models/ + one Secret per model API key
+	volumes := []corev1.Volume{
+		{
+			Name: "models-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "proxy-config"},
+				},
+			},
+		},
+	}
+	mounts := []corev1.VolumeMount{
+		{Name: "models-config", MountPath: "/etc/langop/models", ReadOnly: true},
+	}
+	mountedSecrets := map[string]bool{}
+	for _, model := range modelList.Items {
+		if model.Spec.APIKeySecretRef == nil {
+			continue
+		}
+		secretName := model.Spec.APIKeySecretRef.Name
+		if mountedSecrets[secretName] {
+			continue
+		}
+		mountedSecrets[secretName] = true
+		secretKey := model.Spec.APIKeySecretRef.Key
+		if secretKey == "" {
+			secretKey = "api-key"
+		}
+		volName := "secret-" + strings.ReplaceAll(secretName, ".", "-")
+		volumes = append(volumes, corev1.Volume{
+			Name: volName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: secretName,
+					Items: []corev1.KeyToPath{
+						{Key: secretKey, Path: secretName + "/" + secretKey},
+					},
+				},
+			},
+		})
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      volName,
+			MountPath: "/etc/secrets",
+			ReadOnly:  true,
+		})
+	}
+
+	// Determine replicas and resources from ProxyConfig
+	replicas := int32(1)
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1000m"),
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
+		},
+	}
+	if cluster.Spec.Proxy != nil {
+		if cluster.Spec.Proxy.Replicas != nil {
+			replicas = *cluster.Spec.Proxy.Replicas
+		}
+		if cluster.Spec.Proxy.Resources.Requests != nil || cluster.Spec.Proxy.Resources.Limits != nil {
+			resources = cluster.Spec.Proxy.Resources
+		}
+	}
+
+	// Reconcile Deployment
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		if err := controllerutil.SetControllerReference(cluster, deployment, r.Scheme); err != nil {
+			return err
+		}
+		deployment.Labels = proxyLabels
+		maxUnavailable := intstr.FromInt(0)
+		maxSurge := intstr.FromInt(1)
+		deployment.Spec = appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{MatchLabels: proxyLabels},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &maxUnavailable,
+					MaxSurge:       &maxSurge,
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: proxyLabels,
+					Annotations: map[string]string{
+						"langop.io/config-hash": configHash,
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:         "proxy",
+							Image:        "ghcr.io/language-operator/model:latest",
+							Resources:    resources,
+							VolumeMounts: mounts,
+							Ports: []corev1.ContainerPort{
+								{Name: "http", ContainerPort: 4000, Protocol: corev1.ProtocolTCP},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/health/liveliness",
+										Port: intstr.FromInt(4000),
+									},
+								},
+								InitialDelaySeconds: 30,
+								PeriodSeconds:       300,
+								TimeoutSeconds:      30,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/health/readiness",
+										Port: intstr.FromInt(4000),
+									},
+								},
+								InitialDelaySeconds: 30,
+								PeriodSeconds:       300,
+								TimeoutSeconds:      30,
+							},
+						},
+					},
+					Volumes: volumes,
+				},
+			},
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reconcile proxy Deployment: %w", err)
+	}
+
+	// Reconcile Service
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+	}
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
+		if err := controllerutil.SetControllerReference(cluster, svc, r.Scheme); err != nil {
+			return err
+		}
+		svc.Labels = proxyLabels
+		svc.Spec = corev1.ServiceSpec{
+			Selector: proxyLabels,
+			Type:     corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       8000,
+					TargetPort: intstr.FromInt(4000),
+				},
+			},
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reconcile proxy Service: %w", err)
+	}
+
+	log.Info("Reconciled shared proxy", "namespace", namespace, "models", len(modelList.Items))
+	return nil
+}
+
+// reconcileProxyIngress creates an Ingress or HTTPRoute for proxy.<cluster.domain>.
+func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+
+	// Skip if proxy ingress explicitly disabled
+	if cluster.Spec.Proxy != nil && cluster.Spec.Proxy.IngressEnabled != nil && !*cluster.Spec.Proxy.IngressEnabled {
+		log.V(1).Info("Proxy ingress disabled, skipping")
+		return nil
+	}
+
+	hostname := fmt.Sprintf("proxy.%s", cluster.Spec.Domain)
+	namespace := cluster.Name
+
+	// Decide Gateway API vs Ingress using the same logic as agent webhooks
+	useHTTPRoute := false
+	if cluster.Spec.IngressConfig != nil {
+		gatewayName := cluster.Spec.IngressConfig.GatewayName
+		if gatewayName == "" {
+			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+		}
+		if gatewayName != "" {
+			useHTTPRoute = true
+		}
+	}
+
+	if useHTTPRoute {
+		gatewayName := cluster.Spec.IngressConfig.GatewayName
+		if gatewayName == "" {
+			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+		}
+		gatewayNamespace := cluster.Spec.IngressConfig.GatewayNamespace
+		if gatewayNamespace == "" {
+			gatewayNamespace = namespace
+		}
+
+		httpRoute := &unstructured.Unstructured{}
+		httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "gateway.networking.k8s.io",
+			Version: "v1",
+			Kind:    "HTTPRoute",
+		})
+		httpRoute.SetName("proxy")
+		httpRoute.SetNamespace(namespace)
+
+		spec := map[string]interface{}{
+			"parentRefs": []map[string]interface{}{
+				{"name": gatewayName, "namespace": gatewayNamespace},
+			},
+			"hostnames": []string{hostname},
+			"rules": []map[string]interface{}{
+				{
+					"matches": []map[string]interface{}{
+						{"path": map[string]interface{}{"type": "PathPrefix", "value": "/"}},
+					},
+					"backendRefs": []map[string]interface{}{
+						{"name": "proxy", "port": int64(8000)},
+					},
+				},
+			},
+		}
+
+		existing := &unstructured.Unstructured{}
+		existing.SetGroupVersionKind(httpRoute.GroupVersionKind())
+		err := r.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: namespace}, existing)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return err
+			}
+			httpRoute.Object["spec"] = spec
+			if err := controllerutil.SetControllerReference(cluster, httpRoute, r.Scheme); err != nil {
+				return err
+			}
+			log.Info("Creating proxy HTTPRoute", "hostname", hostname)
+			return r.Create(ctx, httpRoute)
+		}
+		existing.Object["spec"] = spec
+		log.Info("Updating proxy HTTPRoute", "hostname", hostname)
+		return r.Update(ctx, existing)
+	}
+
+	// Fallback: Ingress
+	ingressClass := ""
+	if cluster.Spec.IngressConfig != nil {
+		ingressClass = cluster.Spec.IngressConfig.IngressClassName
+	}
+
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
+		if err := controllerutil.SetControllerReference(cluster, ingress, r.Scheme); err != nil {
+			return err
+		}
+		pathType := networkingv1.PathTypePrefix
+		ingress.Spec = networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: hostname,
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "proxy",
+											Port: networkingv1.ServiceBackendPort{Number: 8000},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
+			secretName := cluster.Spec.IngressConfig.TLS.SecretName
+			if secretName == "" {
+				if ingress.Annotations == nil {
+					ingress.Annotations = make(map[string]string)
+				}
+				if cluster.Spec.IngressConfig.TLS.IssuerRef != nil {
+					kind := cluster.Spec.IngressConfig.TLS.IssuerRef.Kind
+					if kind == "" {
+						kind = "ClusterIssuer"
+					}
+					ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.IngressConfig.TLS.IssuerRef.Name
+				}
+				secretName = "proxy-tls"
+			}
+			ingress.Spec.TLS = []networkingv1.IngressTLS{
+				{Hosts: []string{hostname}, SecretName: secretName},
+			}
+		}
+		if ingressClass != "" {
+			ingress.Spec.IngressClassName = &ingressClass
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reconcile proxy Ingress: %w", err)
+	}
+	log.Info("Reconciled proxy Ingress", "hostname", hostname)
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LanguageClusterReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageCluster{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.ConfigMap{}).
+		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, obj client.Object) []reconcile.Request {
+				// Re-reconcile the LanguageCluster whose namespace matches the model's namespace
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}},
+				}
+			},
+		)).
+		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Complete(r)
 }

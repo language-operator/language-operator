@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Generate LiteLLM configuration from LanguageModel CRD ConfigMap.
+Generate LiteLLM configuration from LanguageModel CRD ConfigMap(s).
 
-This script reads the LanguageModel spec from a mounted ConfigMap
-and generates a LiteLLM-compatible config.yaml file.
+Supports two modes:
+  - Multi-model (cluster proxy): reads all *.json files from /etc/langop/models/
+  - Single-model (legacy):       reads /etc/langop/model.json
 """
 
+import glob
 import json
 import os
 import sys
@@ -14,15 +16,32 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
-def load_model_spec(config_path: str = "/etc/langop/model.json") -> Dict[str, Any]:
-    """Load the LanguageModel spec from ConfigMap."""
+def load_model_specs(models_dir: str = "/etc/langop/models",
+                     legacy_path: str = "/etc/langop/model.json") -> List[Dict[str, Any]]:
+    """Load one or more LanguageModel specs from ConfigMap files."""
+    # Multi-model mode: directory with one file per model
+    pattern = os.path.join(models_dir, "*.json")
+    paths = sorted(glob.glob(pattern))
+    if paths:
+        specs = []
+        for p in paths:
+            try:
+                with open(p) as f:
+                    specs.append(json.load(f))
+                print(f"✓ Loaded model spec from {p}", file=sys.stderr)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"✗ Failed to load {p}: {e}", file=sys.stderr)
+                sys.exit(1)
+        return specs
+
+    # Legacy single-model mode
     try:
-        with open(config_path, 'r') as f:
+        with open(legacy_path) as f:
             spec = json.load(f)
-        print(f"✓ Loaded model spec from {config_path}", file=sys.stderr)
-        return spec
+        print(f"✓ Loaded model spec from {legacy_path}", file=sys.stderr)
+        return [spec]
     except FileNotFoundError:
-        print(f"✗ Model config not found at {config_path}", file=sys.stderr)
+        print(f"✗ No model configs found in {models_dir}/ or at {legacy_path}", file=sys.stderr)
         sys.exit(1)
     except json.JSONDecodeError as e:
         print(f"✗ Invalid JSON in model config: {e}", file=sys.stderr)
@@ -258,60 +277,56 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
     return settings
 
 
-def generate_litellm_config(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[str, Any]:
-    """Generate complete LiteLLM config from LanguageModel spec."""
+def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Generate complete LiteLLM config from one or more LanguageModel specs."""
     config: Dict[str, Any] = {}
 
-    # Build model list
-    config["model_list"] = build_model_list(spec, api_key)
+    # Build combined model list across all specs
+    all_models: List[Dict[str, Any]] = []
+    for spec in specs:
+        api_key = load_api_key(spec.get("apiKeySecretRef"))
+        all_models.extend(build_model_list(spec, api_key))
+    config["model_list"] = all_models
 
-    # Build router settings
-    router_settings = build_router_settings(spec)
-    if router_settings:
-        config["router_settings"] = router_settings
+    # Router settings from the first spec that defines load balancing
+    for spec in specs:
+        router_settings = build_router_settings(spec)
+        if router_settings:
+            config["router_settings"] = router_settings
+            break
 
-    # Build litellm settings
-    litellm_settings = build_litellm_settings(spec)
-    if litellm_settings:
-        config["litellm_settings"] = litellm_settings
+    # litellm_settings: merge across all specs (first writer wins per key)
+    merged_settings: Dict[str, Any] = {}
+    for spec in specs:
+        for k, v in build_litellm_settings(spec).items():
+            merged_settings.setdefault(k, v)
+    if merged_settings:
+        config["litellm_settings"] = merged_settings
 
-    # Add general settings
-    config["general_settings"] = {
-        "background_health_checks": False
-    }
+    config["general_settings"] = {"background_health_checks": False}
 
-    # Add observability settings
-    observability = spec.get("observability", {})
-    if observability:
-        if observability.get("metrics", True):
+    # Enable prometheus if any spec requests metrics
+    for spec in specs:
+        if spec.get("observability", {}).get("metrics", True):
             config["success_callback"] = ["prometheus"]
+            break
 
     return config
 
 
 def main():
     """Main entry point."""
-    print("🔧 Generating LiteLLM config from LanguageModel spec...", file=sys.stderr)
+    print("🔧 Generating LiteLLM config from LanguageModel spec(s)...", file=sys.stderr)
 
-    # Load model spec
-    spec = load_model_spec()
+    specs = load_model_specs()
+    litellm_config = generate_litellm_config(specs)
 
-    # Load API key
-    api_key_ref = spec.get("apiKeySecretRef")
-    api_key = load_api_key(api_key_ref)
-
-    # Generate LiteLLM config
-    litellm_config = generate_litellm_config(spec, api_key)
-
-    # Write config to stdout (can be redirected to file)
     output = yaml.dump(litellm_config, default_flow_style=False, sort_keys=False)
     print(output)
 
-    print("✅ LiteLLM config generated successfully", file=sys.stderr)
-    print(f"   Provider: {spec.get('provider')}", file=sys.stderr)
-    print(f"   Model: {spec.get('modelName')}", file=sys.stderr)
-    if spec.get("rateLimits"):
-        print(f"   Rate limits: {spec['rateLimits']}", file=sys.stderr)
+    print(f"✅ LiteLLM config generated successfully ({len(specs)} model(s))", file=sys.stderr)
+    for spec in specs:
+        print(f"   {spec.get('provider')}/{spec.get('modelName')}", file=sys.stderr)
 
 
 if __name__ == "__main__":

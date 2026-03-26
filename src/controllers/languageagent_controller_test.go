@@ -2085,7 +2085,8 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		expectedURL := "http://my-model.default.svc.cluster.local:8000"
+		// All models in a namespace share the single cluster proxy
+		expectedURL := "http://proxy.default.svc.cluster.local:8000"
 		if len(urls) != 1 || urls[0] != expectedURL {
 			t.Errorf("unexpected URLs: %v", urls)
 		}
@@ -2114,8 +2115,9 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(urls) != 2 {
-			t.Fatalf("expected 2 URLs, got %d: %v", len(urls), urls)
+		// Multiple models in the same namespace → single shared proxy URL, two model names
+		if len(urls) != 1 {
+			t.Fatalf("expected 1 proxy URL (deduplicated), got %d: %v", len(urls), urls)
 		}
 		if len(names) != 2 {
 			t.Fatalf("expected 2 names, got %d: %v", len(names), names)

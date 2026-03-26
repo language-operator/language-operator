@@ -1204,13 +1204,19 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 			return nil, nil, fmt.Errorf("failed to get model %s/%s: %w", namespace, modelRef.Name, err)
 		}
 
-		// Build LiteLLM proxy URL
-		// Format: http://<service-name>.<namespace>.svc.cluster.local:<port>
-		// TODO: Once LanguageModel controller creates Service, get actual port from service
-		port := 8000 // Default LiteLLM port
-
-		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", model.Name, namespace, port)
-		modelURLs = append(modelURLs, serviceURL)
+		// All models in a cluster are served by the shared proxy named "proxy"
+		// in the cluster namespace. Deduplicate: only add the proxy URL once.
+		proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", namespace)
+		alreadyAdded := false
+		for _, u := range modelURLs {
+			if u == proxyURL {
+				alreadyAdded = true
+				break
+			}
+		}
+		if !alreadyAdded {
+			modelURLs = append(modelURLs, proxyURL)
+		}
 
 		// Collect model name from spec
 		if model.Spec.ModelName != "" {

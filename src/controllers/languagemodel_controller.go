@@ -19,20 +19,14 @@ package controllers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"os"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,7 +113,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Reconcile the ConfigMap
+	// Reconcile the ConfigMap (read by the cluster's shared proxy)
 	if err := r.reconcileConfigMap(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
@@ -136,72 +130,11 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile the Deployment
-	if err := r.reconcileDeployment(ctx, model); err != nil {
-		log.Error(err, "Failed to reconcile Deployment")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile Deployment")
-		if r.EventManager != nil {
-			r.EventManager.RecordProxyDeploymentFailed(model, err)
-		}
-		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), model.Generation)
-		model.Status.Phase = "Failed"
-		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
-			log.Error(statusErr, "Failed to update status")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
-	// Reconcile the Service
-	if err := r.reconcileService(ctx, model); err != nil {
-		log.Error(err, "Failed to reconcile Service")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile Service")
-		if r.EventManager != nil {
-			r.EventManager.RecordServiceFailed(model, err)
-		}
-		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), model.Generation)
-		model.Status.Phase = "Failed"
-		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
-			log.Error(statusErr, "Failed to update status")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
-	// Reconcile NetworkPolicy for network isolation (if enabled)
-	if r.NetworkIsolationEnabled {
-		if err := r.reconcileNetworkPolicy(ctx, model); err != nil {
-			log.Error(err, "Failed to reconcile NetworkPolicy")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-			if r.EventManager != nil {
-				r.EventManager.RecordNetworkPolicyFailed(model, err)
-			}
-			SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), model.Generation)
-			model.Status.Phase = "Failed"
-			if statusErr := r.Status().Update(ctx, model); statusErr != nil {
-				log.Error(statusErr, "Failed to update status")
-			}
-			reconcileErr = err
-			return ctrl.Result{}, err
-		} else {
-			SetCondition(&model.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
-				"NetworkPolicy created successfully", model.Generation)
-		}
-	} else {
-		// Network isolation disabled - skip NetworkPolicy creation
-		SetCondition(&model.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
-			"NetworkPolicy creation disabled via networkIsolation.enabled=false", model.Generation)
-		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
-	}
-
-	// Update status
+	// Update status — model is managed by the cluster's shared proxy
 	model.Status.ObservedGeneration = model.Generation
-	model.Status.Phase = "Ready"
-	// Status fields updated
-	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model proxy is ready", model.Generation)
+	model.Status.Phase = "Managed"
+	model.Status.Message = "Model is managed by the cluster shared proxy"
+	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster proxy", model.Generation)
 
 	if r.EventManager != nil {
 		r.EventManager.RecordModelReady(model, model.Spec.Provider)
@@ -274,272 +207,6 @@ func (r *LanguageModelReconciler) reconcileConfigMap(ctx context.Context, model 
 	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, model, configMapName, model.Namespace, data)
 }
 
-// reconcileDeployment creates or updates the LiteLLM proxy Deployment
-func (r *LanguageModelReconciler) reconcileDeployment(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
-	// Start child span for deployment creation
-	ctx, span := modelTracer.Start(ctx, "model.deployment.create")
-	defer span.End()
-
-	span.SetAttributes(
-		attribute.String("model.name", model.Name),
-		attribute.String("model.namespace", model.Namespace),
-	)
-
-	labels := GetCommonLabels(model.Name, "LanguageModel")
-	configMapName := GenerateConfigMapName(model.Name, "model")
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      model.Name,
-			Namespace: model.Namespace,
-			Labels:    labels,
-		},
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
-		if err := controllerutil.SetControllerReference(model, deployment, r.Scheme); err != nil {
-			return err
-		}
-
-		replicas := int32(1) // Default to 1 replica
-
-		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "proxy",
-							Image: "ghcr.io/language-operator/model:latest",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: 4000,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "config",
-									MountPath: "/etc/langop",
-									ReadOnly:  true,
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health/liveliness",
-										Port: intstr.FromInt(4000),
-									},
-								},
-								InitialDelaySeconds: 30,
-								TimeoutSeconds:      30,
-								PeriodSeconds:       300, // 5 minutes
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health/readiness",
-										Port: intstr.FromInt(4000),
-									},
-								},
-								InitialDelaySeconds: 30,
-								TimeoutSeconds:      30,
-								PeriodSeconds:       300, // 5 minutes
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configMapName,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		// Add environment variables for openai-compatible providers (like LM Studio)
-		// to enable lenient response parsing
-		if model.Spec.Provider == "openai-compatible" || model.Spec.Provider == "custom" {
-			deployment.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
-				{
-					Name:  "LITELLM_DROP_PARAMS",
-					Value: "true",
-				},
-			}
-		}
-
-		// Mount API key secret if specified
-		if model.Spec.APIKeySecretRef != nil {
-			secretName := model.Spec.APIKeySecretRef.Name
-			secretKey := model.Spec.APIKeySecretRef.Key
-			if secretKey == "" {
-				secretKey = "api-key"
-			}
-
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: "secrets",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: secretName,
-						Items: []corev1.KeyToPath{
-							{
-								Key:  secretKey,
-								Path: fmt.Sprintf("%s/%s", secretName, secretKey),
-							},
-						},
-					},
-				},
-			})
-
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-				corev1.VolumeMount{
-					Name:      "secrets",
-					MountPath: "/etc/secrets",
-					ReadOnly:  true,
-				},
-			)
-		}
-
-		// Add resource requirements if specified, otherwise use sensible defaults
-		if model.Spec.Resources.Requests == nil && model.Spec.Resources.Limits == nil {
-			deployment.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
-					corev1.ResourceMemory: resource.MustParse("128Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1000m"),
-					corev1.ResourceMemory: resource.MustParse("512Mi"),
-				},
-			}
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].Resources = model.Spec.Resources
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to create/update deployment")
-		return err
-	}
-
-	span.SetStatus(codes.Ok, "Deployment reconciled successfully")
-	return nil
-}
-
-// reconcileService creates or updates the Service for the LiteLLM proxy
-func (r *LanguageModelReconciler) reconcileService(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
-	labels := GetCommonLabels(model.Name, "LanguageModel")
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      model.Name,
-			Namespace: model.Namespace,
-			Labels:    labels,
-		},
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
-		if err := controllerutil.SetControllerReference(model, service, r.Scheme); err != nil {
-			return err
-		}
-
-		port := int32(8000) // Default port for model proxy
-
-		service.Spec = corev1.ServiceSpec{
-			Selector: labels,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       port,
-					TargetPort: intstr.FromInt(4000),
-				},
-			},
-			Type: corev1.ServiceTypeClusterIP,
-		}
-
-		return nil
-	})
-
-	return err
-}
-
-func (r *LanguageModelReconciler) reconcileNetworkPolicy(ctx context.Context, model *langopv1alpha1.LanguageModel) error {
-	labels := GetCommonLabels(model.Name, "LanguageModel")
-
-	// Get OTEL endpoint from operator environment
-	// This ensures models can send traces to the collector
-	otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-
-	// Build NetworkPolicy using helper from utils.go
-	networkPolicy := BuildEgressNetworkPolicy(
-		ctx,
-		r.Client,
-		model.Name,
-		model.Namespace,
-		labels,
-		model.Spec.Provider,
-		model.Spec.Endpoint,
-		otelEndpoint,
-		model.Spec.Egress,
-	)
-
-	// Add Ingress rules to allow agents and dashboard to connect to the model service
-	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
-	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-		{
-			// Allow from LanguageAgent pods in the same namespace
-			From: []networkingv1.NetworkPolicyPeer{
-				{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"langop.io/kind": "LanguageAgent",
-						},
-					},
-				},
-			},
-		},
-		{
-			// Allow from Dashboard pods in the language-operator namespace
-			From: []networkingv1.NetworkPolicyPeer{
-				{
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "language-operator",
-						},
-					},
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"langop.io/kind": "Dashboard",
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Create or update the NetworkPolicy with owner reference
-	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, model, networkPolicy)
-}
-
 // handleDeletion handles the deletion of the LanguageModel
 func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *langopv1alpha1.LanguageModel) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
@@ -567,9 +234,6 @@ func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *lan
 func (r *LanguageModelReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageModel{}).
-		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
-		Owns(&networkingv1.NetworkPolicy{}).
 		Complete(r)
 }

@@ -8,9 +8,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -80,7 +78,10 @@ func TestLanguageModelController_ConfigMapCreation(t *testing.T) {
 	}
 }
 
-func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
+// TestLanguageModelController_OnlyCreatesConfigMap verifies that the LanguageModel
+// controller no longer creates a Deployment or Service — those are owned by the
+// cluster's shared proxy. Only a ConfigMap should be created.
+func TestLanguageModelController_OnlyCreatesConfigMap(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	model := gen.LanguageModel("test-model-deployment", "default",
@@ -95,68 +96,31 @@ func TestLanguageModelController_DeploymentAndServiceCreation(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
 	}
 
 	ctx := context.Background()
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      model.Name,
-			Namespace: model.Namespace,
-		},
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
+
+	_, _ = reconciler.Reconcile(ctx, req)
+	_, _ = reconciler.Reconcile(ctx, req)
+
+	// ConfigMap must exist
+	cm := &corev1.ConfigMap{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: GenerateConfigMapName(model.Name, "model"), Namespace: model.Namespace}, cm); err != nil {
+		t.Fatalf("Expected ConfigMap to exist: %v", err)
+	}
+	if cm.Data["model.json"] == "" {
+		t.Error("Expected ConfigMap to contain model.json key")
 	}
 
-	// First reconcile adds finalizer, second creates resources
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("First reconcile failed: %v", err)
-	}
-	_, err = reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Second reconcile failed: %v", err)
-	}
-
-	// Verify Deployment was created
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      model.Name,
-		Namespace: model.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
-	}
-
-	// Verify Deployment configuration
-	if len(deployment.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("Expected 1 container, got %d", len(deployment.Spec.Template.Spec.Containers))
-	}
-	container := deployment.Spec.Template.Spec.Containers[0]
-	if container.Name != "proxy" {
-		t.Errorf("Expected container name 'proxy', got '%s'", container.Name)
-	}
-	if container.Image != "ghcr.io/language-operator/model:latest" {
-		t.Errorf("Expected image 'ghcr.io/language-operator/model:latest', got '%s'", container.Image)
-	}
-
-	// Verify Service was created
-	service := &corev1.Service{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      model.Name,
-		Namespace: model.Namespace,
-	}, service)
-	if err != nil {
-		t.Fatalf("Expected Service to exist, but got error: %v", err)
-	}
-
-	// Verify Service configuration
-	if len(service.Spec.Ports) != 1 {
-		t.Errorf("Expected 1 port, got %d", len(service.Spec.Ports))
-	}
-	if service.Spec.Ports[0].Port != 8000 {
-		t.Errorf("Expected port 8000, got %d", service.Spec.Ports[0].Port)
+	// No Service should be created
+	svc := &corev1.Service{}
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, svc)
+	if err == nil {
+		t.Error("LanguageModel controller should not create a Service; that is the cluster proxy's responsibility")
 	}
 }
 
@@ -209,9 +173,9 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 		t.Fatalf("Failed to fetch updated model: %v", err)
 	}
 
-	// Verify status phase
-	if updatedModel.Status.Phase != "Ready" {
-		t.Errorf("Expected phase 'Ready', got '%s'", updatedModel.Status.Phase)
+	// Model is now managed by the cluster proxy, not its own deployment
+	if updatedModel.Status.Phase != "Managed" {
+		t.Errorf("Expected phase 'Managed', got '%s'", updatedModel.Status.Phase)
 	}
 
 	// Verify ObservedGeneration
@@ -238,7 +202,9 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 	}
 }
 
-func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
+// TestLanguageModelController_APIKeySecretRefInConfigMap verifies that the secret
+// reference is persisted in the ConfigMap so the cluster proxy can mount it.
+func TestLanguageModelController_APIKeySecretRefInConfigMap(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	model := gen.LanguageModel("test-model-secret", "default",
@@ -254,73 +220,23 @@ func TestLanguageModelController_APIKeySecretMount(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
 	}
 
 	ctx := context.Background()
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      model.Name,
-			Namespace: model.Namespace,
-		},
-	}
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
 
-	// First reconcile adds finalizer, second creates resources
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("First reconcile failed: %v", err)
-	}
-	_, err = reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Second reconcile failed: %v", err)
-	}
+	_, _ = reconciler.Reconcile(ctx, req)
+	_, _ = reconciler.Reconcile(ctx, req)
 
-	// Verify Deployment has secret volume
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      model.Name,
-		Namespace: model.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
+	cm := &corev1.ConfigMap{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: GenerateConfigMapName(model.Name, "model"), Namespace: model.Namespace}, cm); err != nil {
+		t.Fatalf("Expected ConfigMap to exist: %v", err)
 	}
-
-	// Check for secrets volume
-	foundSecretsVolume := false
-	for _, vol := range deployment.Spec.Template.Spec.Volumes {
-		if vol.Name == "secrets" {
-			foundSecretsVolume = true
-			if vol.Secret == nil {
-				t.Error("Expected secrets volume to use Secret source")
-			} else if vol.Secret.SecretName != "openai-api-key" {
-				t.Errorf("Expected secret name 'openai-api-key', got '%s'", vol.Secret.SecretName)
-			}
-			break
-		}
-	}
-	if !foundSecretsVolume {
-		t.Error("Expected secrets volume to be mounted")
-	}
-
-	// Check for secrets volume mount
-	foundSecretsMount := false
-	for _, mount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
-		if mount.Name == "secrets" {
-			foundSecretsMount = true
-			if mount.MountPath != "/etc/secrets" {
-				t.Errorf("Expected mount path '/etc/secrets', got '%s'", mount.MountPath)
-			}
-			if !mount.ReadOnly {
-				t.Error("Expected secrets mount to be read-only")
-			}
-			break
-		}
-	}
-	if !foundSecretsMount {
-		t.Error("Expected secrets volume mount on container")
+	if cm.Data["apiKeySecretRef.json"] == "" {
+		t.Error("Expected ConfigMap to contain apiKeySecretRef.json so the cluster proxy can mount the secret")
 	}
 }
 
@@ -357,395 +273,13 @@ func TestLanguageModelController_NotFoundHandling(t *testing.T) {
 	}
 }
 
-func TestLanguageModelController_NetworkPolicyCreation(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	model := gen.LanguageModel("test-model-netpol", "default",
-		gen.SetModelName("claude-3-5-sonnet-20241022"),
-		gen.SetModelEgress([]langopv1alpha1.NetworkRule{
-			{
-				Description: "Allow Anthropic API",
-				To: &langopv1alpha1.NetworkPeer{
-					DNS: []string{"api.anthropic.com"},
-				},
-				Ports: []langopv1alpha1.NetworkPort{
-					{
-						Port:     443,
-						Protocol: "TCP",
-					},
-				},
-			},
-		}),
-	)
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(model).
-		WithStatusSubresource(model).
-		Build()
-
-	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	ctx := context.Background()
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      model.Name,
-			Namespace: model.Namespace,
-		},
-	}
-
-	// First reconcile adds finalizer, second creates resources
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("First reconcile failed: %v", err)
-	}
-	_, err = reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Second reconcile failed: %v", err)
-	}
-
-	// Verify NetworkPolicy was created
-	netpol := &networkingv1.NetworkPolicy{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      model.Name,
-		Namespace: model.Namespace,
-	}, netpol)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy to exist, but got error: %v", err)
-	}
-
-	// Verify NetworkPolicy has both Ingress and Egress rules
-	foundIngress := false
-	foundEgress := false
-	for _, policyType := range netpol.Spec.PolicyTypes {
-		if policyType == networkingv1.PolicyTypeIngress {
-			foundIngress = true
-		}
-		if policyType == networkingv1.PolicyTypeEgress {
-			foundEgress = true
-		}
-	}
-	if !foundIngress {
-		t.Error("Expected NetworkPolicy to have Ingress policy type")
-	}
-	if !foundEgress {
-		t.Error("Expected NetworkPolicy to have Egress policy type")
-	}
-}
-
-func TestLanguageModelController_NetworkPolicyAutoEgressFromEndpoint(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-	ctx := context.Background()
-
-	// Test with IP address endpoint
-	modelWithIP := gen.LanguageModel("test-model-ip-endpoint", "default",
-		gen.SetModelProvider("openai-compatible"),
-		gen.SetModelName("mistralai/magistral-small-2509"),
-		gen.SetModelEndpoint("http://192.168.68.54:1234"),
-	)
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(modelWithIP).
-		WithStatusSubresource(modelWithIP).
-		Build()
-
-	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      modelWithIP.Name,
-			Namespace: modelWithIP.Namespace,
-		},
-	}
-
-	// First reconcile adds finalizer, second creates resources
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("First reconcile failed: %v", err)
-	}
-	_, err = reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Second reconcile failed: %v", err)
-	}
-
-	// Verify NetworkPolicy was created
-	netpol := &networkingv1.NetworkPolicy{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      modelWithIP.Name,
-		Namespace: modelWithIP.Namespace,
-	}, netpol)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy to exist, but got error: %v", err)
-	}
-
-	// Verify auto-generated egress rule for endpoint
-	foundAutoEgress := false
-	for _, egressRule := range netpol.Spec.Egress {
-		for _, peer := range egressRule.To {
-			if peer.IPBlock != nil && peer.IPBlock.CIDR == "192.168.68.54/32" {
-				foundAutoEgress = true
-				// Verify port is also included
-				foundPort := false
-				for _, port := range egressRule.Ports {
-					if port.Port != nil && port.Port.IntVal == 1234 {
-						foundPort = true
-						break
-					}
-				}
-				if !foundPort {
-					t.Error("Expected auto-generated egress rule to include port 1234")
-				}
-				break
-			}
-		}
-		if foundAutoEgress {
-			break
-		}
-	}
-	if !foundAutoEgress {
-		t.Error("Expected NetworkPolicy to have auto-generated egress rule for endpoint IP 192.168.68.54/32")
-	}
-
-	// Test with HTTPS endpoint (default port 443)
-	modelWithHTTPS := gen.LanguageModel("test-model-https", "default",
-		gen.SetModelProvider("azure"),
-		gen.SetModelName("gpt-4"),
-		gen.SetModelEndpoint("https://my-azure.openai.azure.com"),
-	)
-
-	fakeClient2 := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(modelWithHTTPS).
-		WithStatusSubresource(modelWithHTTPS).
-		Build()
-
-	reconciler2 := &LanguageModelReconciler{
-		Client:                  fakeClient2,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	req2 := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      modelWithHTTPS.Name,
-			Namespace: modelWithHTTPS.Namespace,
-		},
-	}
-
-	// Reconcile twice
-	_, err = reconciler2.Reconcile(ctx, req2)
-	if err != nil {
-		t.Fatalf("First reconcile failed for HTTPS model: %v", err)
-	}
-	_, err = reconciler2.Reconcile(ctx, req2)
-	if err != nil {
-		t.Fatalf("Second reconcile failed for HTTPS model: %v", err)
-	}
-
-	// Verify NetworkPolicy was created with auto-egress for DNS-resolved endpoint
-	netpol2 := &networkingv1.NetworkPolicy{}
-	err = fakeClient2.Get(ctx, types.NamespacedName{
-		Name:      modelWithHTTPS.Name,
-		Namespace: modelWithHTTPS.Namespace,
-	}, netpol2)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy for HTTPS model to exist, but got error: %v", err)
-	}
-
-	// Verify that some egress rule was created (DNS resolution will happen at runtime)
-	// We expect at least 3 rules: internal cluster, DNS, and auto-generated (if DNS resolves)
-	if len(netpol2.Spec.Egress) < 2 {
-		t.Errorf("Expected at least 2 egress rules (internal + DNS), got %d", len(netpol2.Spec.Egress))
-	}
-
-	// Test that non-compatible providers don't get auto-egress
-	modelOpenAI := gen.LanguageModel("test-model-openai", "default",
-		gen.SetModelProvider("openai"),
-		gen.SetModelName("gpt-4"),
-	)
-
-	fakeClient3 := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(modelOpenAI).
-		WithStatusSubresource(modelOpenAI).
-		Build()
-
-	reconciler3 := &LanguageModelReconciler{
-		Client:                  fakeClient3,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	req3 := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      modelOpenAI.Name,
-			Namespace: modelOpenAI.Namespace,
-		},
-	}
-
-	_, err = reconciler3.Reconcile(ctx, req3)
-	if err != nil {
-		t.Fatalf("First reconcile failed for OpenAI model: %v", err)
-	}
-	_, err = reconciler3.Reconcile(ctx, req3)
-	if err != nil {
-		t.Fatalf("Second reconcile failed for OpenAI model: %v", err)
-	}
-
-	netpol3 := &networkingv1.NetworkPolicy{}
-	err = fakeClient3.Get(ctx, types.NamespacedName{
-		Name:      modelOpenAI.Name,
-		Namespace: modelOpenAI.Namespace,
-	}, netpol3)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy for OpenAI model to exist, but got error: %v", err)
-	}
-
-	// Should have 3 rules: internal cluster + DNS + auto-generated for api.openai.com
-	if len(netpol3.Spec.Egress) < 3 {
-		t.Errorf("Expected at least 3 egress rules (internal + DNS + api.openai.com), got %d", len(netpol3.Spec.Egress))
-	}
-}
-
-func TestLanguageModelController_WellKnownProviderAutoEgress(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-	ctx := context.Background()
-
-	// Test OpenAI provider gets auto-egress for api.openai.com
-	modelOpenAI := gen.LanguageModel("test-openai-auto", "default",
-		gen.SetModelProvider("openai"),
-		gen.SetModelName("gpt-4"),
-	)
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(modelOpenAI).
-		WithStatusSubresource(modelOpenAI).
-		Build()
-
-	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      modelOpenAI.Name,
-			Namespace: modelOpenAI.Namespace,
-		},
-	}
-
-	// Reconcile twice
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("First reconcile failed: %v", err)
-	}
-	_, err = reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Second reconcile failed: %v", err)
-	}
-
-	// Verify NetworkPolicy was created
-	netpol := &networkingv1.NetworkPolicy{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      modelOpenAI.Name,
-		Namespace: modelOpenAI.Namespace,
-	}, netpol)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy to exist, but got error: %v", err)
-	}
-
-	// Should have at least 3 rules: internal cluster + DNS + api.openai.com
-	if len(netpol.Spec.Egress) < 3 {
-		t.Errorf("Expected at least 3 egress rules, got %d", len(netpol.Spec.Egress))
-	}
-
-	// Verify there's an egress rule with port 443 (for api.openai.com)
-	foundHTTPSPort := false
-	for _, egressRule := range netpol.Spec.Egress {
-		for _, port := range egressRule.Ports {
-			if port.Port != nil && port.Port.IntVal == 443 && *port.Protocol == corev1.ProtocolTCP {
-				foundHTTPSPort = true
-				break
-			}
-		}
-		if foundHTTPSPort {
-			break
-		}
-	}
-	if !foundHTTPSPort {
-		t.Error("Expected NetworkPolicy to have egress rule with TCP port 443 for api.openai.com")
-	}
-
-	// Test Anthropic provider gets auto-egress for api.anthropic.com
-	modelAnthropic := gen.LanguageModel("test-anthropic-auto", "default",
-		gen.SetModelName("claude-3-5-sonnet-20241022"),
-	)
-
-	fakeClient2 := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(modelAnthropic).
-		WithStatusSubresource(modelAnthropic).
-		Build()
-
-	reconciler2 := &LanguageModelReconciler{
-		Client:                  fakeClient2,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
-	}
-
-	req2 := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      modelAnthropic.Name,
-			Namespace: modelAnthropic.Namespace,
-		},
-	}
-
-	_, err = reconciler2.Reconcile(ctx, req2)
-	if err != nil {
-		t.Fatalf("First reconcile failed for Anthropic: %v", err)
-	}
-	_, err = reconciler2.Reconcile(ctx, req2)
-	if err != nil {
-		t.Fatalf("Second reconcile failed for Anthropic: %v", err)
-	}
-
-	netpol2 := &networkingv1.NetworkPolicy{}
-	err = fakeClient2.Get(ctx, types.NamespacedName{
-		Name:      modelAnthropic.Name,
-		Namespace: modelAnthropic.Namespace,
-	}, netpol2)
-	if err != nil {
-		t.Fatalf("Expected NetworkPolicy for Anthropic to exist, but got error: %v", err)
-	}
-
-	// Should have at least 3 rules: internal cluster + DNS + api.anthropic.com
-	if len(netpol2.Spec.Egress) < 3 {
-		t.Errorf("Expected at least 3 egress rules for Anthropic, got %d", len(netpol2.Spec.Egress))
-	}
-}
+// NetworkPolicy tests removed: LanguageModel no longer owns NetworkPolicies.
+// The cluster controller manages network isolation for the shared proxy.
 
 func TestLanguageModelController_Finalizer(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	model := gen.LanguageModel("test-model-finalizer", "default",
-		gen.SetModelProvider("openai"),
 		gen.SetModelName("gpt-4"),
 	)
 
@@ -756,10 +290,9 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageModelReconciler{
-		Client:                  fakeClient,
-		Scheme:                  scheme,
-		Log:                     logr.Discard(),
-		NetworkIsolationEnabled: true,
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
 	}
 
 	ctx := context.Background()
@@ -775,22 +308,14 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("First reconcile failed: %v", err)
 	}
-	// Should requeue for finalizer
 	if !result.Requeue {
 		t.Error("Expected requeue after adding finalizer")
 	}
 
-	// Fetch model to verify finalizer
 	updatedModel := &langopv1alpha1.LanguageModel{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      model.Name,
-		Namespace: model.Namespace,
-	}, updatedModel)
-	if err != nil {
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, updatedModel); err != nil {
 		t.Fatalf("Failed to fetch updated model: %v", err)
 	}
-
-	// Verify finalizer was added
 	if !controllerutil.ContainsFinalizer(updatedModel, FinalizerName) {
 		t.Error("Expected finalizer to be added after first reconcile")
 	}
