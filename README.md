@@ -41,19 +41,6 @@ spec:
 
 Apply it and the agent is running, reachable on port 18789, and visible in `kubectl`.
 
-## How It Works
-
-**The operator manages infrastructure. Your container manages reasoning.**
-
-For every `LanguageAgent`, the operator:
-
-- Deploys a Kubernetes Deployment with your image
-- Mounts `/etc/agent/instructions.txt` — task instructions (plain text, optional)
-- Mounts `/etc/agent/config.yaml` — personas, tools, models, agent identity (optional)
-- Creates a Service on the configured port (default 8080)
-- Creates an HTTPRoute for external access
-- Creates a NetworkPolicy so agents can reach each other
-
 ## Installation
 
 ### Requirements
