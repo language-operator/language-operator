@@ -20,7 +20,7 @@ def load_model_specs(models_dir: str = "/etc/langop/models",
                      legacy_path: str = "/etc/langop/model.json") -> List[Dict[str, Any]]:
     """Load one or more LanguageModel specs from ConfigMap files."""
     # Multi-model mode: directory with one file per model
-    pattern = os.path.join(models_dir, "*.json")
+    pattern = os.path.join(models_dir, "model__*.json")
     paths = sorted(glob.glob(pattern))
     if paths:
         specs = []

@@ -753,7 +753,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 		if err != nil {
 			return fmt.Errorf("failed to marshal model spec %s: %w", model.Name, err)
 		}
-		cmData["models/"+model.Name+".json"] = string(specJSON)
+		cmData["model__"+model.Name+".json"] = string(specJSON)
 	}
 
 	// Compute a hash of the config for rolling-restart annotation
