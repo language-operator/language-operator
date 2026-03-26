@@ -29,6 +29,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -84,6 +85,8 @@ func main() {
 	var networkPolicyTimeout time.Duration
 	var networkPolicyRetries int
 	var agentIngressClassName string
+	var proxyImage string
+	var proxyImagePullPolicy string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -111,6 +114,10 @@ func main() {
 		"The number of concurrent reconciles per controller.")
 	flag.StringVar(&agentIngressClassName, "agent-ingress-class-name", "",
 		"Default IngressClass name for agent Ingress resources. Can be overridden per LanguageCluster.")
+	flag.StringVar(&proxyImage, "proxy-image", "",
+		"Image for the shared LiteLLM proxy. Defaults to ghcr.io/language-operator/model:latest.")
+	flag.StringVar(&proxyImagePullPolicy, "proxy-image-pull-policy", "",
+		"ImagePullPolicy for the shared LiteLLM proxy (Always, IfNotPresent, Never).")
 
 	opts := zap.Options{
 		Development: true,
@@ -324,6 +331,8 @@ func main() {
 		Recorder:                mgr.GetEventRecorderFor("languagecluster-controller"),
 		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languagecluster-controller")),
 		NetworkIsolationEnabled: networkIsolationEnabled,
+		ProxyImage:              proxyImage,
+		ProxyImagePullPolicy:    corev1.PullPolicy(proxyImagePullPolicy),
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)

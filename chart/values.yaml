@@ -182,6 +182,14 @@ config:
     # Example: "traefik", "nginx", "alb"
     className: ""
 
+  proxy:
+    # Image for the shared LiteLLM proxy deployed per LanguageCluster.
+    # Defaults to ghcr.io/language-operator/model:latest when empty.
+    image: ""
+    # ImagePullPolicy for the proxy (Always, IfNotPresent, Never).
+    # Defaults to Kubernetes default (IfNotPresent, or Always for :latest).
+    imagePullPolicy: ""
+
   # Watch configuration
   watch:
     # Namespaces to watch (empty means all namespaces)

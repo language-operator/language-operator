@@ -8,6 +8,12 @@ IMAGE_FULL := $(IMAGE_NAME):$(IMAGE_TAG)
 build:
 	docker build -t $(IMAGE_FULL) .
 
+# Build and import into k3s (development inner loop)
+.PHONY: dev
+dev: build
+	docker save $(IMAGE_FULL) | sudo k3s ctr images import -
+	@echo "✅ $(IMAGE_FULL) imported into k3s"
+
 # Scan the Docker image with Trivy
 .PHONY: scan
 scan:
@@ -23,6 +29,7 @@ shell:
 help:
 	@echo "Available targets:"
 	@echo "  build          - Build the Docker image"
+	@echo "  dev            - Build and import into k3s (development inner loop)"
 	@echo "  push           - Push the Docker image to the registry"
 	@echo "  scan           - Scan the Docker image with Trivy"
 	@echo "  shell          - Run the image and exec into it with an interactive shell"

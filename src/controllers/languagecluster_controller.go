@@ -63,6 +63,15 @@ type LanguageClusterReconciler struct {
 	Recorder                record.EventRecorder
 	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
+	ProxyImage              string
+	ProxyImagePullPolicy    corev1.PullPolicy
+}
+
+func (r *LanguageClusterReconciler) proxyImage() string {
+	if r.ProxyImage != "" {
+		return r.ProxyImage
+	}
+	return "ghcr.io/language-operator/model:latest"
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
@@ -870,10 +879,11 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:         "proxy",
-							Image:        "ghcr.io/language-operator/model:latest",
-							Resources:    resources,
-							VolumeMounts: mounts,
+							Name:            "proxy",
+							Image:           r.proxyImage(),
+							ImagePullPolicy: r.ProxyImagePullPolicy,
+							Resources:       resources,
+							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
 								{Name: "http", ContainerPort: 4000, Protocol: corev1.ProtocolTCP},
 							},

@@ -71,6 +71,12 @@ spec:
         {{- if .Values.config.agentIngress.className }}
         - --agent-ingress-class-name={{ .Values.config.agentIngress.className }}
         {{- end }}
+        {{- if .Values.config.proxy.image }}
+        - --proxy-image={{ .Values.config.proxy.image }}
+        {{- end }}
+        {{- if .Values.config.proxy.imagePullPolicy }}
+        - --proxy-image-pull-policy={{ .Values.config.proxy.imagePullPolicy }}
+        {{- end }}
         {{- with .Values.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
