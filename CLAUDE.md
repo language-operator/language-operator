@@ -18,11 +18,13 @@ make build       # compile operator binary
 make test        # fmt + vet + all tests
 make fmt         # go fmt
 make vet         # go vet
+make integration-test  # run envtest integration tests (requires setup-envtest)
 ```
 
-Run a single test package:
+Run a single test or package:
 ```bash
-cd src && go test ./controllers/... -run TestReconcile -v
+cd src && go test ./controllers/... -run TestLanguageAgentController -v
+cd src && go test -tags integration -v ./controllers/...  # integration tests only
 ```
 
 After modifying any type in `src/api/v1alpha1/`:
@@ -74,6 +76,8 @@ The operator mounts two files into every agent pod:
 
 Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
 
+`MODEL_ENDPOINTS` and `LLM_MODEL` are injected into the main container and all init containers. `TOOL_ENDPOINTS` contains resolved MCP tool server URLs.
+
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
 
 ### Telemetry (`src/pkg/telemetry/`)
@@ -82,11 +86,34 @@ All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelpe
 
 ### Package Layout
 
-- `pkg/events/` — Kubernetes event recording (lifecycle events: created, ready, failed, deleted)
+- `pkg/events/` — Kubernetes event recording via `EventManager`; use its constants (`ReasonResourceCreated`, etc.) rather than raw strings
 - `pkg/reconciler/` — shared `ReconcileHelper` used by all controllers
 - `pkg/telemetry/` — OTel adapter interface + ClickHouse implementation
 - `pkg/validation/` — image registry validation (`ValidateImageRegistry`)
 - `pkg/network/` — NetworkPolicy helpers
+- `internal/testutil/gen/` — fluent fixture builders for tests (`gen.LanguageAgent(name, ns, mods...)`)
+
+### Test Infrastructure
+
+Unit tests use `sigs.k8s.io/controller-runtime/pkg/client/fake` with a real scheme. Two reconcile calls are always needed: first adds the finalizer, second creates resources. Setup pattern:
+
+```go
+scheme := testutil.SetupTestScheme(t)  // controllers/testutil/scheme.go
+fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(obj).WithStatusSubresource(obj).Build()
+reconciler := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard(), ...}
+```
+
+Integration tests use `//go:build integration` tag and run against a real envtest API server (see `suite_test.go`). The `LanguageAgentReconciler` has additional required fields beyond `Client`/`Scheme`: `Recorder`, `EventManager`, `RegistryManager`, `NetworkIsolationEnabled`, `DefaultIngressClassName`. Use `mockRegistryManager` from the disabled test file as a reference.
+
+### Dashboard (`components/dashboard/`)
+
+Next.js dashboard. Run via docker compose only — never `npm run dev` or `npm run build` directly.
+
+```bash
+make dev-up   # or: docker compose up  (from repo root)
+```
+
+Dashboard is at http://localhost:3000. All API routes are cluster-scoped: `/api/clusters/[name]/...`. Use `getOrgUrl()` for all internal navigation paths — never hardcode `/settings/...` style paths.
 
 ## Critical Rules
 
@@ -94,4 +121,6 @@ All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelpe
 
 **Generated files must be staged.** Any change to `src/api/v1alpha1/` requires running `make generate && make helm-crds` and staging the output before committing.
 
-**Conventional commits.** Use `feat:`, `fix:`, `clean:`, `docs:` prefixes. Use `WIP:` for partial implementations.
+**Conventional commits.** Use `feat:`, `fix:`, `clean:`, `docs:`, `test:` prefixes. Use `WIP:` for partial implementations. PR titles must also follow this convention (enforced by CI).
+
+**Operator deploys via CI only** — no local Docker builds for the operator image.
