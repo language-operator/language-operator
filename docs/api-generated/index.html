@@ -1,0 +1,5670 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Kubernetes operator that runs AI agents as native workloads">
+      
+      
+        <meta name="author" content="Language Operator Contributors">
+      
+      
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/api-generated/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>API Reference - Language Operator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Language Operator" class="md-header__button md-logo" aria-label="Language Operator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Language Operator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/language-operator/language-operator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    language-operator/language-operator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/overview/" class="md-tabs__link">
+          
+  
+  
+  CRD Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../helm/installation/" class="md-tabs__link">
+          
+  
+  
+  Helm Chart
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../development/contributing/" class="md-tabs__link">
+          
+  
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Language Operator" class="md-nav__button md-logo" aria-label="Language Operator" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Language Operator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/language-operator/language-operator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    language-operator/language-operator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/controllers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Controllers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tool Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CRD Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/languageagent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguageAgent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/languagecluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguageCluster
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/languagemodel/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguageModel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/languagetool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguageTool
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/languagepersona/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguagePersona
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Helm Chart
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Helm Chart
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../helm/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../helm/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../helm/repository/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Repository
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packages
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#langopiov1alpha1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        langop.io/v1alpha1
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="langop.io/v1alpha1">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resource-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resource Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentcontentfilterspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentContentFilterSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentcostmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentCostMetrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentMetrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentobservabilityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentObservabilitySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentratelimitspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRateLimitSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cachingspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CachingSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#certissuerreference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CertIssuerReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#costmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CostMetrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#costtrackingspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CostTrackingSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endpointspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EndpointSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#endpointstatusspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EndpointStatusSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#eventtriggerspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EventTriggerSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#healthcheckspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HealthCheckSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ingressconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IngressConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ingresstlsconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IngressTLSConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructionssource" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InstructionsSource
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#knowledgesourcespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        KnowledgeSourceSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagecluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageCluster
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageclusterspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageClusterSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageclusterstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageClusterStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagemodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageModel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagemodelspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageModelSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagemodelstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageModelStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagepersona" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguagePersona
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagepersonaspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguagePersonaSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagepersonastatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguagePersonaStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagetool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageTool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagetoolspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageToolSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languagetoolstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageToolStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#loadbalancingspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoadBalancingSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelcostspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelCostSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelfallbackspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelFallbackSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelloggingspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelLoggingSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelMetrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelreference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelusagespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ModelUsageSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkpeer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkPeer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkPort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkrule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkRule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#observabilityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ObservabilitySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personaconstraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersonaConstraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personaexample" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersonaExample
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personareference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersonaReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#personarule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PersonaRule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#poddisruptionbudgetspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PodDisruptionBudgetSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#providerconfiguration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProviderConfiguration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxyconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ProxyConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ratelimitspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RateLimitSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regionspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RegionSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regionstatusspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RegionStatusSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#responseformatspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ResponseFormatSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retrypolicyspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RetryPolicySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rollingupdatespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RollingUpdateSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#safetyconfigspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SafetyConfigSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#secretreference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SecretReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#servicereference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ServiceReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolpreferencesspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolPreferencesSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolproperty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolProperty
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolreference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolschema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolSchema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolschemadefinition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolSchemaDefinition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toolusagespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolUsageSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updatestrategyspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UpdateStrategySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspacespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WorkspaceSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<h2 id="packages">Packages<a class="headerlink" href="#packages" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#langopiov1alpha1">langop.io/v1alpha1</a></li>
+</ul>
+<h2 id="langopiov1alpha1">langop.io/v1alpha1<a class="headerlink" href="#langopiov1alpha1" title="Permanent link">&para;</a></h2>
+<p>Package v1alpha1 contains API Schema definitions for the language v1alpha1 API group</p>
+<h3 id="resource-types">Resource Types<a class="headerlink" href="#resource-types" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="#languageagent">LanguageAgent</a></li>
+<li><a href="#languagecluster">LanguageCluster</a></li>
+<li><a href="#languagemodel">LanguageModel</a></li>
+<li><a href="#languagepersona">LanguagePersona</a></li>
+<li><a href="#languagetool">LanguageTool</a></li>
+</ul>
+<h4 id="agentcontentfilterspec">AgentContentFilterSpec<a class="headerlink" href="#agentcontentfilterspec" title="Permanent link">&para;</a></h4>
+<p>AgentContentFilterSpec defines a content filter</p>
+<p><em>Appears in:</em>
+- <a href="#safetyconfigspec">SafetyConfigSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type is the filter type (profanity, pii, toxic, custom)</td>
+<td></td>
+<td>Enum: [profanity pii toxic custom] <br /></td>
+</tr>
+<tr>
+<td><code>action</code> <em>string</em></td>
+<td>Action defines what to do when filter matches (block, warn, log)</td>
+<td>block</td>
+<td>Enum: [block warn log] <br /></td>
+</tr>
+<tr>
+<td><code>pattern</code> <em>string</em></td>
+<td>Pattern is a regex pattern for custom filters</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentcostmetrics">AgentCostMetrics<a class="headerlink" href="#agentcostmetrics" title="Permanent link">&para;</a></h4>
+<p>AgentCostMetrics contains agent cost tracking</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentstatus">LanguageAgentStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>totalCost</code> <em>float</em></td>
+<td>TotalCost is the total cost incurred by this agent</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>modelCosts</code> <em><a href="#modelcostspec">ModelCostSpec</a> array</em></td>
+<td>ModelCosts breaks down cost by model</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>currency</code> <em>string</em></td>
+<td>Currency is the currency for cost metrics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastReset</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastReset is when cost metrics were last reset</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentmetrics">AgentMetrics<a class="headerlink" href="#agentmetrics" title="Permanent link">&para;</a></h4>
+<p>AgentMetrics contains agent execution metrics</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentstatus">LanguageAgentStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>averageIterations</code> <em>float</em></td>
+<td>AverageIterations is the average number of iterations per execution</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>averageExecutionTime</code> <em>float</em></td>
+<td>AverageExecutionTime is the average execution time in seconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalTokens</code> <em>integer</em></td>
+<td>TotalTokens is the total number of tokens consumed</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalToolCalls</code> <em>integer</em></td>
+<td>TotalToolCalls is the total number of tool invocations</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>successRate</code> <em>float</em></td>
+<td>SuccessRate is the percentage of successful executions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentobservabilityspec">AgentObservabilitySpec<a class="headerlink" href="#agentobservabilityspec" title="Permanent link">&para;</a></h4>
+<p>AgentObservabilitySpec defines agent monitoring</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code> <em>boolean</em></td>
+<td>Metrics enables metrics collection</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracing</code> <em>boolean</em></td>
+<td>Tracing enables distributed tracing</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>logLevel</code> <em>string</em></td>
+<td>LogLevel defines the logging level</td>
+<td>info</td>
+<td>Enum: [debug info warn error] <br /></td>
+</tr>
+<tr>
+<td><code>logConversations</code> <em>boolean</em></td>
+<td>LogConversations enables conversation logging</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentratelimitspec">AgentRateLimitSpec<a class="headerlink" href="#agentratelimitspec" title="Permanent link">&para;</a></h4>
+<p>AgentRateLimitSpec defines agent-level rate limiting</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requestsPerMinute</code> <em>integer</em></td>
+<td>RequestsPerMinute limits requests per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tokensPerMinute</code> <em>integer</em></td>
+<td>TokensPerMinute limits tokens per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>toolCallsPerMinute</code> <em>integer</em></td>
+<td>ToolCallsPerMinute limits tool invocations per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="cachingspec">CachingSpec<a class="headerlink" href="#cachingspec" title="Permanent link">&para;</a></h4>
+<p>CachingSpec defines response caching configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled enables response caching</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ttl</code> <em>string</em></td>
+<td>TTL is the cache time-to-live (e.g., "5m")</td>
+<td></td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxSize</code> <em>integer</em></td>
+<td>MaxSize is the maximum cache size in MB</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>backend</code> <em>string</em></td>
+<td>Backend specifies the caching backend (memory, redis, etc.)</td>
+<td>memory</td>
+<td>Enum: [memory redis memcached] <br />Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="certissuerreference">CertIssuerReference<a class="headerlink" href="#certissuerreference" title="Permanent link">&para;</a></h4>
+<p>CertIssuerReference references a cert-manager issuer</p>
+<p><em>Appears in:</em>
+- <a href="#ingresstlsconfig">IngressTLSConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name of the Issuer or ClusterIssuer</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td>Kind is either "Issuer" or "ClusterIssuer"</td>
+<td>ClusterIssuer</td>
+<td>Enum: [Issuer ClusterIssuer] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>group</code> <em>string</em></td>
+<td>Group is the API group of the issuer</td>
+<td>cert-manager.io</td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="costmetrics">CostMetrics<a class="headerlink" href="#costmetrics" title="Permanent link">&para;</a></h4>
+<p>CostMetrics contains cost tracking data</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelstatus">LanguageModelStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>totalCost</code> <em>float</em></td>
+<td>TotalCost is the total cost incurred</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>inputTokenCost</code> <em>float</em></td>
+<td>InputTokenCost is the cost for input tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputTokenCost</code> <em>float</em></td>
+<td>OutputTokenCost is the cost for output tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>currency</code> <em>string</em></td>
+<td>Currency is the currency for cost metrics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastReset</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastReset is when cost metrics were last reset</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="costtrackingspec">CostTrackingSpec<a class="headerlink" href="#costtrackingspec" title="Permanent link">&para;</a></h4>
+<p>CostTrackingSpec defines cost tracking configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled enables cost tracking</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>currency</code> <em>string</em></td>
+<td>Currency is the currency for cost tracking (e.g., "USD")</td>
+<td>USD</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>inputTokenCost</code> <em>float</em></td>
+<td>InputTokenCost is the cost per 1000 input tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputTokenCost</code> <em>float</em></td>
+<td>OutputTokenCost is the cost per 1000 output tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="endpointspec">EndpointSpec<a class="headerlink" href="#endpointspec" title="Permanent link">&para;</a></h4>
+<p>EndpointSpec defines an endpoint for load balancing</p>
+<p><em>Appears in:</em>
+- <a href="#loadbalancingspec">LoadBalancingSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the endpoint URL</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>weight</code> <em>integer</em></td>
+<td>Weight for weighted load balancing</td>
+<td>100</td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>region</code> <em>string</em></td>
+<td>Region specifies the region for this endpoint</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>priority</code> <em>integer</em></td>
+<td>Priority for priority-based routing (lower is higher priority)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="endpointstatusspec">EndpointStatusSpec<a class="headerlink" href="#endpointstatusspec" title="Permanent link">&para;</a></h4>
+<p>EndpointStatusSpec shows the status of a load-balanced endpoint</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelstatus">LanguageModelStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the endpoint URL</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>healthy</code> <em>boolean</em></td>
+<td>Healthy indicates if the endpoint is healthy</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>lastCheck</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastCheck is the timestamp of the last health check</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>failureCount</code> <em>integer</em></td>
+<td>FailureCount is the number of consecutive failures</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>latency</code> <em>integer</em></td>
+<td>Latency is the average latency in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="eventtriggerspec">EventTriggerSpec<a class="headerlink" href="#eventtriggerspec" title="Permanent link">&para;</a></h4>
+<p>EventTriggerSpec defines an event trigger</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type is the event type (webhook, kubernetes-event, message-queue)</td>
+<td></td>
+<td>Enum: [webhook kubernetes-event message-queue schedule] <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>source</code> <em>string</em></td>
+<td>Source identifies the event source</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>filter</code> <em>object (keys:string, values:string)</em></td>
+<td>Filter defines filtering criteria for events</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="healthcheckspec">HealthCheckSpec<a class="headerlink" href="#healthcheckspec" title="Permanent link">&para;</a></h4>
+<p>HealthCheckSpec defines health checking configuration</p>
+<p><em>Appears in:</em>
+- <a href="#loadbalancingspec">LoadBalancingSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled enables health checking</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>interval</code> <em>string</em></td>
+<td>Interval is the health check interval (e.g., "30s")</td>
+<td>30s</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>timeout</code> <em>string</em></td>
+<td>Timeout is the health check timeout (e.g., "5s")</td>
+<td>5s</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>unhealthyThreshold</code> <em>integer</em></td>
+<td>UnhealthyThreshold is the number of failures before marking unhealthy</td>
+<td>3</td>
+<td>Minimum: 1 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>healthyThreshold</code> <em>integer</em></td>
+<td>HealthyThreshold is the number of successes before marking healthy</td>
+<td>2</td>
+<td>Minimum: 1 <br />Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="ingressconfig">IngressConfig<a class="headerlink" href="#ingressconfig" title="Permanent link">&para;</a></h4>
+<p>IngressConfig defines ingress/gateway configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languageclusterspec">LanguageClusterSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tls</code> <em><a href="#ingresstlsconfig">IngressTLSConfig</a></em></td>
+<td>TLS configuration for agent webhooks</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>gatewayName</code> <em>string</em></td>
+<td>GatewayName specifies the Gateway resource name to use<br />If empty, will attempt auto-detection or fall back to Ingress</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>gatewayNamespace</code> <em>string</em></td>
+<td>GatewayNamespace specifies the namespace of the Gateway resource<br />If empty, defaults to the same namespace as the LanguageCluster</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>gatewayClassName</code> <em>string</em></td>
+<td>Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.<br />GatewayClassName specifies the Gateway API GatewayClass to use<br />If empty, will attempt auto-detection or fall back to Ingress</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>ingressClassName</code> <em>string</em></td>
+<td>IngressClassName specifies the Ingress class to use for fallback<br />Only used when Gateway API is not available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="ingresstlsconfig">IngressTLSConfig<a class="headerlink" href="#ingresstlsconfig" title="Permanent link">&para;</a></h4>
+<p>IngressTLSConfig defines TLS configuration</p>
+<p><em>Appears in:</em>
+- <a href="#ingressconfig">IngressConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled controls whether TLS is enabled for webhooks</td>
+<td>true</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>secretName</code> <em>string</em></td>
+<td>SecretName is the name of the TLS secret (for manual cert management)<br />If empty, cert-manager will be used if available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>issuerRef</code> <em><a href="#certissuerreference">CertIssuerReference</a></em></td>
+<td>IssuerRef references a cert-manager Issuer or ClusterIssuer</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="instructionssource">InstructionsSource<a class="headerlink" href="#instructionssource" title="Permanent link">&para;</a></h4>
+<p>InstructionsSource references instructions from a ConfigMap or Secret</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>configMapRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#configmapkeyselector-v1-core">ConfigMapKeySelector</a></em></td>
+<td>ConfigMapRef references a ConfigMap key containing instructions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>secretRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretkeyselector-v1-core">SecretKeySelector</a></em></td>
+<td>SecretRef references a Secret key containing instructions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="knowledgesourcespec">KnowledgeSourceSpec<a class="headerlink" href="#knowledgesourcespec" title="Permanent link">&para;</a></h4>
+<p>KnowledgeSourceSpec references an external knowledge base</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the knowledge source identifier</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type specifies the knowledge source type</td>
+<td></td>
+<td>Enum: [url document database api vector-store] <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the knowledge source URL (for url, api types)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>secretRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
+<td>SecretRef references credentials for accessing the knowledge source</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>query</code> <em>string</em></td>
+<td>Query defines how to query this knowledge source</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>priority</code> <em>integer</em></td>
+<td>Priority determines knowledge source precedence</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled indicates if this knowledge source is active</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageagent">LanguageAgent<a class="headerlink" href="#languageagent" title="Permanent link">&para;</a></h4>
+<p>LanguageAgent is the Schema for the languageagents API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguageAgent</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languageagentspec">LanguageAgentSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languageagentstatus">LanguageAgentStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageagentspec">LanguageAgentSpec<a class="headerlink" href="#languageagentspec" title="Permanent link">&para;</a></h4>
+<p>LanguageAgentSpec defines the desired state of LanguageAgent</p>
+<p><em>Appears in:</em>
+- <a href="#languageagent">LanguageAgent</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clusterRef</code> <em>string</em></td>
+<td>ClusterRef references a LanguageCluster to deploy this agent into</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>image</code> <em>string</em></td>
+<td>Image is the container image to run for this agent</td>
+<td></td>
+<td>MinLength: 1 <br />Pattern: <code>^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$</code> <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core">PullPolicy</a></em></td>
+<td>ImagePullPolicy defines when to pull the container image</td>
+<td>IfNotPresent</td>
+<td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+<td>ImagePullSecrets is a list of references to secrets for pulling images</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>modelRefs</code> <em><a href="#modelreference">ModelReference</a> array</em></td>
+<td>ModelRefs is a list of LanguageModel references this agent can use</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>toolRefs</code> <em><a href="#toolreference">ToolReference</a> array</em></td>
+<td>ToolRefs is a list of LanguageTool references available to this agent</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>personaRefs</code> <em><a href="#personareference">PersonaReference</a> array</em></td>
+<td>PersonaRefs is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>goal</code> <em>string</em></td>
+<td>Goal defines the agent's objective (for autonomous agents)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>instructions</code> <em>string</em></td>
+<td>Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>instructionsFrom</code> <em><a href="#instructionssource">InstructionsSource</a></em></td>
+<td>InstructionsFrom allows referencing instructions from a ConfigMap or Secret</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>executionMode</code> <em>string</em></td>
+<td>ExecutionMode defines how the agent operates</td>
+<td>autonomous</td>
+<td>Enum: [autonomous interactive scheduled event-driven] <br /></td>
+</tr>
+<tr>
+<td><code>schedule</code> <em>string</em></td>
+<td>Schedule defines when the agent runs (cron format, for scheduled mode)<br />Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.)</td>
+<td></td>
+<td>MaxLength: 100 <br />Pattern: <code>^(@(annually\|yearly\|monthly\|weekly\|daily\|hourly\|every_minute))\|(@every\s+((\d+(\.\d+)?)(ns\|us\|µs\|ms\|s\|m\|h))+)\|(((\*\|[0-9]\|[1-5][0-9]\|\*\/[0-9]+)\s+)\{4\}(\*\|[0-7]\|[1-7]\|\*\/[0-9]+))$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>eventTriggers</code> <em><a href="#eventtriggerspec">EventTriggerSpec</a> array</em></td>
+<td>EventTriggers defines events that trigger the agent (for event-driven mode)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxIterations</code> <em>integer</em></td>
+<td>MaxIterations limits the number of reasoning/action loops</td>
+<td>50</td>
+<td>Maximum: 1000 <br />Minimum: 1 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>timeout</code> <em>string</em></td>
+<td>Timeout is the maximum execution time (e.g., "10m", "1h")</td>
+<td>10m</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>replicas</code> <em>integer</em></td>
+<td>Replicas is the number of agent instances to run</td>
+<td>1</td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>env</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core">EnvVar</a> array</em></td>
+<td>Env contains environment variables for the agent container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>envFrom</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envfromsource-v1-core">EnvFromSource</a> array</em></td>
+<td>EnvFrom sources to populate environment variables</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources defines compute resource requirements</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+<td>NodeSelector is a selector which must match a node's labels</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core">Affinity</a></em></td>
+<td>Affinity defines pod affinity and anti-affinity rules</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core">Toleration</a> array</em></td>
+<td>Tolerations allow pods to schedule onto nodes with matching taints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>serviceAccountName</code> <em>string</em></td>
+<td>ServiceAccountName is the name of the ServiceAccount to use</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>securityContext</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core">PodSecurityContext</a></em></td>
+<td>SecurityContext holds pod-level security attributes</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>volumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volumemount-v1-core">VolumeMount</a> array</em></td>
+<td>VolumeMounts to mount into the agent container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>volumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volume-v1-core">Volume</a> array</em></td>
+<td>Volumes to attach to the pod</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podAnnotations</code> <em>object (keys:string, values:string)</em></td>
+<td>PodAnnotations are annotations to add to the Pods</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podLabels</code> <em>object (keys:string, values:string)</em></td>
+<td>PodLabels are additional labels to add to the Pods</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>restartPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#restartpolicy-v1-core">RestartPolicy</a></em></td>
+<td>RestartPolicy defines when to restart the agent</td>
+<td>OnFailure</td>
+<td>Enum: [Always OnFailure Never] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>backoffLimit</code> <em>integer</em></td>
+<td>BackoffLimit specifies the number of retries before marking as Failed</td>
+<td>3</td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>observability</code> <em><a href="#agentobservabilityspec">AgentObservabilitySpec</a></em></td>
+<td>Observability defines monitoring and tracing configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>rateLimits</code> <em><a href="#agentratelimitspec">AgentRateLimitSpec</a></em></td>
+<td>RateLimits defines rate limiting for this agent</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>safetyConfig</code> <em><a href="#safetyconfigspec">SafetyConfigSpec</a></em></td>
+<td>SafetyConfig defines safety constraints and guardrails</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
+<td>Workspace defines persistent storage for the agent</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>Egress defines external network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>port</code> <em>integer</em></td>
+<td>Port is the port the agent container listens on.<br />Used for the ClusterIP Service and NetworkPolicy ingress rules.<br />Defaults to 8080.</td>
+<td></td>
+<td>Maximum: 65535 <br />Minimum: 1 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>livenessProbe</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core">Probe</a></em></td>
+<td>LivenessProbe defines the liveness probe for the agent container.<br />If not set, no liveness probe is configured.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>readinessProbe</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core">Probe</a></em></td>
+<td>ReadinessProbe defines the readiness probe for the agent container.<br />If not set, no readiness probe is configured.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>initContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core">Container</a> array</em></td>
+<td>InitContainers are additional init containers injected before the agent container starts.<br />Useful for seeding config, migrating workspace data, or other pre-start setup.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageagentstatus">LanguageAgentStatus<a class="headerlink" href="#languageagentstatus" title="Permanent link">&para;</a></h4>
+<p>LanguageAgentStatus defines the observed state of LanguageAgent</p>
+<p><em>Appears in:</em>
+- <a href="#languageagent">LanguageAgent</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observedGeneration</code> <em>integer</em></td>
+<td>ObservedGeneration reflects the generation of the most recently observed LanguageAgent</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase represents the current phase (Pending, Running, Succeeded, Failed, Unknown)</td>
+<td></td>
+<td>Enum: [Pending Running Succeeded Failed Unknown Suspended] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions represent the latest available observations of the agent's state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>activeReplicas</code> <em>integer</em></td>
+<td>ActiveReplicas is the number of agent pods currently running</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>readyReplicas</code> <em>integer</em></td>
+<td>ReadyReplicas is the number of agent pods ready</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>executionCount</code> <em>integer</em></td>
+<td>ExecutionCount is the total number of executions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>successfulExecutions</code> <em>integer</em></td>
+<td>SuccessfulExecutions is the number of successful executions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>failedExecutions</code> <em>integer</em></td>
+<td>FailedExecutions is the number of failed executions</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastExecutionTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastExecutionTime is the timestamp of the last execution</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastExecutionResult</code> <em>string</em></td>
+<td>LastExecutionResult describes the result of the last execution</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>currentGoal</code> <em>string</em></td>
+<td>CurrentGoal is the current goal being pursued (for autonomous agents)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>iterationCount</code> <em>integer</em></td>
+<td>IterationCount is the current iteration in the reasoning loop</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>metrics</code> <em><a href="#agentmetrics">AgentMetrics</a></em></td>
+<td>Metrics contains execution metrics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>activeConversations</code> <em>integer</em></td>
+<td>ActiveConversations is the number of active conversations</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>toolUsage</code> <em><a href="#toolusagespec">ToolUsageSpec</a> array</em></td>
+<td>ToolUsage tracks tool invocation statistics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>modelUsage</code> <em><a href="#modelusagespec">ModelUsageSpec</a> array</em></td>
+<td>ModelUsage tracks model usage statistics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>costMetrics</code> <em><a href="#agentcostmetrics">AgentCostMetrics</a></em></td>
+<td>CostMetrics contains cost tracking data</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastUpdateTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastUpdateTime is the last time the status was updated</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message provides human-readable details about the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>reason</code> <em>string</em></td>
+<td>Reason provides a machine-readable reason for the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>uuid</code> <em>string</em></td>
+<td>UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.domain.com)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>webhookURLs</code> <em>string array</em></td>
+<td>WebhookURLs contains the URLs where this agent can receive webhooks</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagecluster">LanguageCluster<a class="headerlink" href="#languagecluster" title="Permanent link">&para;</a></h4>
+<p>LanguageCluster is the Schema for the languageclusters API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguageCluster</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languageclusterspec">LanguageClusterSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languageclusterstatus">LanguageClusterStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageclusterspec">LanguageClusterSpec<a class="headerlink" href="#languageclusterspec" title="Permanent link">&para;</a></h4>
+<p>LanguageClusterSpec defines the desired state of LanguageCluster</p>
+<p><em>Appears in:</em>
+- <a href="#languagecluster">LanguageCluster</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>domain</code> <em>string</em></td>
+<td>Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <uuid>.<domain><br />Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io"</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>ingressConfig</code> <em><a href="#ingressconfig">IngressConfig</a></em></td>
+<td>IngressConfig defines ingress/gateway configuration for the cluster</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>networkPolicies</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>NetworkPolicies defines egress network policies for agents in this cluster</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>proxy</code> <em><a href="#proxyconfig">ProxyConfig</a></em></td>
+<td>Proxy configures the shared LiteLLM proxy deployed per cluster</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageclusterstatus">LanguageClusterStatus<a class="headerlink" href="#languageclusterstatus" title="Permanent link">&para;</a></h4>
+<p>LanguageClusterStatus defines the observed state</p>
+<p><em>Appears in:</em>
+- <a href="#languagecluster">LanguageCluster</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase of the cluster (Pending, Ready, Failed)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>proxyEndpoint</code> <em>string</em></td>
+<td>ProxyEndpoint is the in-cluster URL for the shared LiteLLM proxy</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>proxyReady</code> <em>boolean</em></td>
+<td>ProxyReady indicates whether the shared proxy Deployment is available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagemodel">LanguageModel<a class="headerlink" href="#languagemodel" title="Permanent link">&para;</a></h4>
+<p>LanguageModel is the Schema for the languagemodels API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguageModel</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languagemodelspec">LanguageModelSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languagemodelstatus">LanguageModelStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagemodelspec">LanguageModelSpec<a class="headerlink" href="#languagemodelspec" title="Permanent link">&para;</a></h4>
+<p>LanguageModelSpec defines the desired state of LanguageModel</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodel">LanguageModel</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>provider</code> <em>string</em></td>
+<td>Provider specifies the LLM provider type</td>
+<td></td>
+<td>Enum: [openai anthropic openai-compatible azure bedrock vertex custom] <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>modelName</code> <em>string</em></td>
+<td>ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus")</td>
+<td></td>
+<td>MinLength: 1 <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>clusterRef</code> <em>string</em></td>
+<td>ClusterRef references a LanguageCluster to deploy this model into</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>endpoint</code> <em>string</em></td>
+<td>Endpoint is the API endpoint URL (required for openai-compatible, azure, custom)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>apiKeySecretRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
+<td>APIKeySecretRef references a secret containing the API key</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>configuration</code> <em><a href="#providerconfiguration">ProviderConfiguration</a></em></td>
+<td>Configuration contains provider-specific configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>rateLimits</code> <em><a href="#ratelimitspec">RateLimitSpec</a></em></td>
+<td>RateLimits defines rate limiting configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>timeout</code> <em>string</em></td>
+<td>Timeout specifies request timeout duration (e.g., "5m", "30s")</td>
+<td>5m</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>retryPolicy</code> <em><a href="#retrypolicyspec">RetryPolicySpec</a></em></td>
+<td>RetryPolicy defines retry behavior for failed requests</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>fallbacks</code> <em><a href="#modelfallbackspec">ModelFallbackSpec</a> array</em></td>
+<td>Fallbacks is an ordered list of fallback models to use if this model fails</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>loadBalancing</code> <em><a href="#loadbalancingspec">LoadBalancingSpec</a></em></td>
+<td>LoadBalancing defines load balancing strategy across multiple endpoints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>caching</code> <em><a href="#cachingspec">CachingSpec</a></em></td>
+<td>Caching defines response caching configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>observability</code> <em><a href="#observabilityspec">ObservabilitySpec</a></em></td>
+<td>Observability defines monitoring and tracing configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>costTracking</code> <em><a href="#costtrackingspec">CostTrackingSpec</a></em></td>
+<td>CostTracking enables cost tracking for this model</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>regions</code> <em><a href="#regionspec">RegionSpec</a> array</em></td>
+<td>Regions specifies which regions this model is deployed in (for multi-region)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>Egress defines external network access rules for this model proxy.<br />By default, model proxies can access all resources within the cluster but no external endpoints.<br />Common patterns:<br /># Azure OpenAI Service<br />egress:<br />- description: "Allow Azure OpenAI API"<br />  to:<br />    dns: ["<em>.openai.azure.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># AWS Bedrock<br />egress:<br />- description: "Allow AWS Bedrock API"<br />  to:<br />    dns: ["bedrock-runtime.</em>.amazonaws.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># Corporate proxy<br />egress:<br />- description: "Allow corporate proxy"<br />  to:<br />    cidr: "10.0.0.0/8"<br />  ports:<br />  - port: 8080<br />    protocol: TCP<br /># Local LM Studio<br />egress:<br />- description: "Allow LM Studio API"<br />  to:<br />    cidr: "192.168.1.0/24"<br />  ports:<br />  - port: 1234<br />    protocol: TCP</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources defines CPU and memory resource requirements for the model proxy.<br />If not specified, defaults to:<br />  requests: cpu=100m, memory=128Mi<br />  limits: cpu=1000m, memory=512Mi</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagemodelstatus">LanguageModelStatus<a class="headerlink" href="#languagemodelstatus" title="Permanent link">&para;</a></h4>
+<p>LanguageModelStatus defines the observed state of LanguageModel</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodel">LanguageModel</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observedGeneration</code> <em>integer</em></td>
+<td>ObservedGeneration reflects the generation of the most recently observed LanguageModel</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase represents the current phase (Ready, NotReady, Error, Configuring)</td>
+<td></td>
+<td>Enum: [Ready NotReady Error Configuring Degraded] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions represent the latest available observations of the model's state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>healthy</code> <em>boolean</em></td>
+<td>Healthy indicates if the model is healthy and available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastHealthCheck</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastHealthCheck is the timestamp of the last health check</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>endpointStatus</code> <em><a href="#endpointstatusspec">EndpointStatusSpec</a> array</em></td>
+<td>EndpointStatus shows status of each load-balanced endpoint</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>regionStatus</code> <em><a href="#regionstatusspec">RegionStatusSpec</a> array</em></td>
+<td>RegionStatus shows status of each region</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>metrics</code> <em><a href="#modelmetrics">ModelMetrics</a></em></td>
+<td>Metrics contains usage metrics</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>costMetrics</code> <em><a href="#costmetrics">CostMetrics</a></em></td>
+<td>CostMetrics contains cost tracking data</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastUpdateTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastUpdateTime is the last time the status was updated</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message provides human-readable details about the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>reason</code> <em>string</em></td>
+<td>Reason provides a machine-readable reason for the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagepersona">LanguagePersona<a class="headerlink" href="#languagepersona" title="Permanent link">&para;</a></h4>
+<p>LanguagePersona is the Schema for the languagepersonas API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguagePersona</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languagepersonaspec">LanguagePersonaSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languagepersonastatus">LanguagePersonaStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagepersonaspec">LanguagePersonaSpec<a class="headerlink" href="#languagepersonaspec" title="Permanent link">&para;</a></h4>
+<p>LanguagePersonaSpec defines the desired state of LanguagePersona</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersona">LanguagePersona</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>displayName</code> <em>string</em></td>
+<td>DisplayName is the human-readable name for this persona</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description describes the persona's role and behavior</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>systemPrompt</code> <em>string</em></td>
+<td>SystemPrompt is the base system instruction for this persona</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>clusterRef</code> <em>string</em></td>
+<td>ClusterRef references a LanguageCluster to deploy this persona into</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>instructions</code> <em>string array</em></td>
+<td>Instructions provides additional behavioral guidelines</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>rules</code> <em><a href="#personarule">PersonaRule</a> array</em></td>
+<td>Rules define conditional behaviors and policies</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>examples</code> <em><a href="#personaexample">PersonaExample</a> array</em></td>
+<td>Examples provide few-shot learning examples</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>capabilities</code> <em>string array</em></td>
+<td>Capabilities lists what this persona can do</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>limitations</code> <em>string array</em></td>
+<td>Limitations lists what this persona should not do</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tone</code> <em>string</em></td>
+<td>Tone defines the communication style</td>
+<td>professional</td>
+<td>Enum: [professional casual friendly formal technical empathetic concise detailed] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>language</code> <em>string</em></td>
+<td>Language specifies the primary language for responses</td>
+<td>en</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>responseFormat</code> <em><a href="#responseformatspec">ResponseFormatSpec</a></em></td>
+<td>ResponseFormat defines preferred response structure</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>toolPreferences</code> <em><a href="#toolpreferencesspec">ToolPreferencesSpec</a></em></td>
+<td>ToolPreferences defines how this persona uses tools</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>knowledgeSources</code> <em><a href="#knowledgesourcespec">KnowledgeSourceSpec</a> array</em></td>
+<td>KnowledgeSources references external knowledge bases</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>constraints</code> <em><a href="#personaconstraints">PersonaConstraints</a></em></td>
+<td>Constraints define operational constraints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em>object (keys:string, values:string)</em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>version</code> <em>string</em></td>
+<td>Version tracks the persona version</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>parentPersona</code> <em><a href="#personareference">PersonaReference</a></em></td>
+<td>ParentPersona references a parent persona to inherit from</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagepersonastatus">LanguagePersonaStatus<a class="headerlink" href="#languagepersonastatus" title="Permanent link">&para;</a></h4>
+<p>LanguagePersonaStatus defines the observed state of LanguagePersona</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersona">LanguagePersona</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observedGeneration</code> <em>integer</em></td>
+<td>ObservedGeneration reflects the generation of the most recently observed LanguagePersona</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase represents the current phase (Ready, NotReady)</td>
+<td></td>
+<td>Enum: [Ready NotReady] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions represent the latest available observations of the persona's state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastUpdateTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastUpdateTime is the last time the status was updated</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message provides human-readable details about the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagetool">LanguageTool<a class="headerlink" href="#languagetool" title="Permanent link">&para;</a></h4>
+<p>LanguageTool is the Schema for the languagetools API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguageTool</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languagetoolspec">LanguageToolSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languagetoolstatus">LanguageToolStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagetoolspec">LanguageToolSpec<a class="headerlink" href="#languagetoolspec" title="Permanent link">&para;</a></h4>
+<p>LanguageToolSpec defines the desired state of LanguageTool</p>
+<p><em>Appears in:</em>
+- <a href="#languagetool">LanguageTool</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clusterRef</code> <em>string</em></td>
+<td>ClusterRef references a LanguageCluster to deploy this tool into</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>image</code> <em>string</em></td>
+<td>Image is the container image to run for this tool</td>
+<td></td>
+<td>MinLength: 1 <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>imagePullPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core">PullPolicy</a></em></td>
+<td>ImagePullPolicy defines when to pull the container image</td>
+<td>IfNotPresent</td>
+<td>Enum: [Always Never IfNotPresent] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>imagePullSecrets</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a> array</em></td>
+<td>ImagePullSecrets is a list of references to secrets for pulling images</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type specifies the tool protocol type (e.g., "mcp", "openapi")</td>
+<td>mcp</td>
+<td>Enum: [mcp openapi] <br /></td>
+</tr>
+<tr>
+<td><code>deploymentMode</code> <em>string</em></td>
+<td>DeploymentMode specifies how this tool should be deployed<br />- "service": Deployed as a standalone Deployment+Service (default, shared across agents)<br />- "sidecar": Deployed as a sidecar container in each agent pod (dedicated, with workspace access)</td>
+<td>service</td>
+<td>Enum: [service sidecar] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>port</code> <em>integer</em></td>
+<td>Port is the port the tool listens on</td>
+<td>8080</td>
+<td>Maximum: 65535 <br />Minimum: 1 <br /></td>
+</tr>
+<tr>
+<td><code>replicas</code> <em>integer</em></td>
+<td>Replicas is the number of pod replicas to run</td>
+<td>1</td>
+<td>Minimum: 0 <br /></td>
+</tr>
+<tr>
+<td><code>env</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core">EnvVar</a> array</em></td>
+<td>Env contains environment variables for the tool container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>envFrom</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envfromsource-v1-core">EnvFromSource</a> array</em></td>
+<td>EnvFrom sources to populate environment variables</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources defines compute resource requirements</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>nodeSelector</code> <em>object (keys:string, values:string)</em></td>
+<td>NodeSelector is a selector which must match a node's labels for the pod to be scheduled</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>affinity</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core">Affinity</a></em></td>
+<td>Affinity defines pod affinity and anti-affinity rules</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tolerations</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core">Toleration</a> array</em></td>
+<td>Tolerations allow pods to schedule onto nodes with matching taints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>topologySpreadConstraints</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#topologyspreadconstraint-v1-core">TopologySpreadConstraint</a> array</em></td>
+<td>TopologySpreadConstraints describes how pods should spread across topology domains</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>serviceAccountName</code> <em>string</em></td>
+<td>ServiceAccountName is the name of the ServiceAccount to use for this tool</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>securityContext</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core">PodSecurityContext</a></em></td>
+<td>SecurityContext holds pod-level security attributes</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>volumeMounts</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volumemount-v1-core">VolumeMount</a> array</em></td>
+<td>VolumeMounts to mount into the tool container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>volumes</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#volume-v1-core">Volume</a> array</em></td>
+<td>Volumes to attach to the pod</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>livenessProbe</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core">Probe</a></em></td>
+<td>LivenessProbe defines the liveness probe for the tool container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>readinessProbe</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core">Probe</a></em></td>
+<td>ReadinessProbe defines the readiness probe for the tool container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>startupProbe</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core">Probe</a></em></td>
+<td>StartupProbe defines the startup probe for the tool container</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>serviceType</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#servicetype-v1-core">ServiceType</a></em></td>
+<td>ServiceType specifies the type of Service to create (ClusterIP, NodePort, LoadBalancer)</td>
+<td>ClusterIP</td>
+<td>Enum: [ClusterIP NodePort LoadBalancer] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>serviceAnnotations</code> <em>object (keys:string, values:string)</em></td>
+<td>ServiceAnnotations are annotations to add to the Service</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podAnnotations</code> <em>object (keys:string, values:string)</em></td>
+<td>PodAnnotations are annotations to add to the Pods</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podLabels</code> <em>object (keys:string, values:string)</em></td>
+<td>PodLabels are additional labels to add to the Pods</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podDisruptionBudget</code> <em><a href="#poddisruptionbudgetspec">PodDisruptionBudgetSpec</a></em></td>
+<td>PodDisruptionBudget defines the PDB for this tool</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>updateStrategy</code> <em><a href="#updatestrategyspec">UpdateStrategySpec</a></em></td>
+<td>UpdateStrategy defines the update strategy for the Deployment</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>Egress defines external network access rules for this tool<br />By default, tools can access all resources within the cluster but no external endpoints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languagetoolstatus">LanguageToolStatus<a class="headerlink" href="#languagetoolstatus" title="Permanent link">&para;</a></h4>
+<p>LanguageToolStatus defines the observed state of LanguageTool</p>
+<p><em>Appears in:</em>
+- <a href="#languagetool">LanguageTool</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observedGeneration</code> <em>integer</em></td>
+<td>ObservedGeneration reflects the generation of the most recently observed LanguageTool</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>phase</code> <em>string</em></td>
+<td>Phase represents the current phase of the tool (Pending, Running, Failed, Unknown)</td>
+<td></td>
+<td>Enum: [Pending Running Failed Unknown Updating] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
+<td>Conditions represent the latest available observations of the tool's state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>endpoint</code> <em>string</em></td>
+<td>Endpoint is the service endpoint where the tool is accessible</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>availableTools</code> <em>string array</em></td>
+<td>AvailableTools lists the tools discovered from this service</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>toolSchemas</code> <em><a href="#toolschema">ToolSchema</a> array</em></td>
+<td>ToolSchemas contains the complete MCP tool schemas discovered from this service</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>readyReplicas</code> <em>integer</em></td>
+<td>ReadyReplicas is the number of pods ready and passing health checks</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>availableReplicas</code> <em>integer</em></td>
+<td>AvailableReplicas is the number of pods targeted by this LanguageTool with at least one available condition</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>updatedReplicas</code> <em>integer</em></td>
+<td>UpdatedReplicas is the number of pods targeted by this LanguageTool that have the desired spec</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>unavailableReplicas</code> <em>integer</em></td>
+<td>UnavailableReplicas is the number of pods targeted by this LanguageTool that are unavailable</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastUpdateTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastUpdateTime is the last time the status was updated</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastTransitionTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastTransitionTime is the last time the phase transitioned</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message provides human-readable details about the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>reason</code> <em>string</em></td>
+<td>Reason provides a machine-readable reason for the current state</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="loadbalancingspec">LoadBalancingSpec<a class="headerlink" href="#loadbalancingspec" title="Permanent link">&para;</a></h4>
+<p>LoadBalancingSpec defines load balancing configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategy</code> <em>string</em></td>
+<td>Strategy specifies the load balancing strategy</td>
+<td>round-robin</td>
+<td>Enum: [round-robin least-connections random weighted latency-based] <br /></td>
+</tr>
+<tr>
+<td><code>endpoints</code> <em><a href="#endpointspec">EndpointSpec</a> array</em></td>
+<td>Endpoints is a list of endpoint configurations for load balancing</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>healthCheck</code> <em><a href="#healthcheckspec">HealthCheckSpec</a></em></td>
+<td>HealthCheck defines health checking for endpoints</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelcostspec">ModelCostSpec<a class="headerlink" href="#modelcostspec" title="Permanent link">&para;</a></h4>
+<p>ModelCostSpec tracks cost per model</p>
+<p><em>Appears in:</em>
+- <a href="#agentcostmetrics">AgentCostMetrics</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modelName</code> <em>string</em></td>
+<td>ModelName is the name of the model</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>cost</code> <em>float</em></td>
+<td>Cost is the total cost for this model</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelfallbackspec">ModelFallbackSpec<a class="headerlink" href="#modelfallbackspec" title="Permanent link">&para;</a></h4>
+<p>ModelFallbackSpec defines a fallback model</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modelRef</code> <em>string</em></td>
+<td>ModelRef is a reference to another LanguageModel</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>conditions</code> <em>string array</em></td>
+<td>Conditions specifies when to use this fallback</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelloggingspec">ModelLoggingSpec<a class="headerlink" href="#modelloggingspec" title="Permanent link">&para;</a></h4>
+<p>ModelLoggingSpec defines logging configuration</p>
+<p><em>Appears in:</em>
+- <a href="#observabilityspec">ObservabilitySpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>level</code> <em>string</em></td>
+<td>Level is the log level (debug, info, warn, error)</td>
+<td>info</td>
+<td>Enum: [debug info warn error] <br /></td>
+</tr>
+<tr>
+<td><code>logRequests</code> <em>boolean</em></td>
+<td>LogRequests enables request logging</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>logResponses</code> <em>boolean</em></td>
+<td>LogResponses enables response logging</td>
+<td>false</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelmetrics">ModelMetrics<a class="headerlink" href="#modelmetrics" title="Permanent link">&para;</a></h4>
+<p>ModelMetrics contains usage metrics</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelstatus">LanguageModelStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>totalRequests</code> <em>integer</em></td>
+<td>TotalRequests is the total number of requests</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>successfulRequests</code> <em>integer</em></td>
+<td>SuccessfulRequests is the number of successful requests</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>failedRequests</code> <em>integer</em></td>
+<td>FailedRequests is the number of failed requests</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalTokens</code> <em>integer</em></td>
+<td>TotalTokens is the total number of tokens processed</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>inputTokens</code> <em>integer</em></td>
+<td>InputTokens is the total number of input tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputTokens</code> <em>integer</em></td>
+<td>OutputTokens is the total number of output tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>averageLatency</code> <em>integer</em></td>
+<td>AverageLatency is the average request latency in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>p95Latency</code> <em>integer</em></td>
+<td>P95Latency is the 95th percentile latency in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>p99Latency</code> <em>integer</em></td>
+<td>P99Latency is the 99th percentile latency in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelreference">ModelReference<a class="headerlink" href="#modelreference" title="Permanent link">&para;</a></h4>
+<p>ModelReference references a LanguageModel</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the LanguageModel</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Namespace is the namespace of the LanguageModel (defaults to same namespace)</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>role</code> <em>string</em></td>
+<td>Role defines the purpose of this model (primary, fallback, specialized)</td>
+<td>primary</td>
+<td>Enum: [primary fallback reasoning tool-calling summarization] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>priority</code> <em>integer</em></td>
+<td>Priority for model selection (lower is higher priority)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="modelusagespec">ModelUsageSpec<a class="headerlink" href="#modelusagespec" title="Permanent link">&para;</a></h4>
+<p>ModelUsageSpec tracks model usage</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentstatus">LanguageAgentStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modelName</code> <em>string</em></td>
+<td>ModelName is the name of the model</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>requestCount</code> <em>integer</em></td>
+<td>RequestCount is the number of requests to this model</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>totalTokens</code> <em>integer</em></td>
+<td>TotalTokens is the total tokens consumed by this model</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>inputTokens</code> <em>integer</em></td>
+<td>InputTokens is the total input tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputTokens</code> <em>integer</em></td>
+<td>OutputTokens is the total output tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="networkpeer">NetworkPeer<a class="headerlink" href="#networkpeer" title="Permanent link">&para;</a></h4>
+<p>NetworkPeer defines the source/destination of network traffic</p>
+<p><em>Appears in:</em>
+- <a href="#networkrule">NetworkRule</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>group</code> <em>string</em></td>
+<td>Group selects pods with matching langop.io/group label<br />Used to allow communication with specific labeled resources</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>cidr</code> <em>string</em></td>
+<td>CIDR block</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>dns</code> <em>string array</em></td>
+<td>DNS names (supports wildcards with <em>)<br />Examples: "api.openai.com", "</em>.googleapis.com"</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>service</code> <em><a href="#servicereference">ServiceReference</a></em></td>
+<td>Kubernetes service reference</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespaceSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#labelselector-v1-meta">LabelSelector</a></em></td>
+<td>Namespace selector (for cross-namespace rules)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>podSelector</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#labelselector-v1-meta">LabelSelector</a></em></td>
+<td>Pod selector (within namespace)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="networkport">NetworkPort<a class="headerlink" href="#networkport" title="Permanent link">&para;</a></h4>
+<p>NetworkPort defines a port and protocol</p>
+<p><em>Appears in:</em>
+- <a href="#networkrule">NetworkRule</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>protocol</code> <em>string</em></td>
+<td>Protocol (TCP, UDP, SCTP)</td>
+<td>TCP</td>
+<td>Enum: [TCP UDP SCTP] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>port</code> <em>integer</em></td>
+<td>Port number</td>
+<td></td>
+<td>Maximum: 65535 <br />Minimum: 1 <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="networkrule">NetworkRule<a class="headerlink" href="#networkrule" title="Permanent link">&para;</a></h4>
+<p>NetworkRule defines a single network policy rule</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a>
+- <a href="#languageclusterspec">LanguageClusterSpec</a>
+- <a href="#languagemodelspec">LanguageModelSpec</a>
+- <a href="#languagetoolspec">LanguageToolSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description of this rule</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>from</code> <em><a href="#networkpeer">NetworkPeer</a></em></td>
+<td>From selector for ingress rules</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>to</code> <em><a href="#networkpeer">NetworkPeer</a></em></td>
+<td>To selector for egress rules</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>ports</code> <em><a href="#networkport">NetworkPort</a> array</em></td>
+<td>Ports allowed by this rule</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="observabilityspec">ObservabilitySpec<a class="headerlink" href="#observabilityspec" title="Permanent link">&para;</a></h4>
+<p>ObservabilitySpec defines monitoring and tracing</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code> <em>boolean</em></td>
+<td>Metrics enables metrics collection</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracing</code> <em>boolean</em></td>
+<td>Tracing enables distributed tracing</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>logging</code> <em><a href="#modelloggingspec">ModelLoggingSpec</a></em></td>
+<td>Logging defines logging configuration</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="personaconstraints">PersonaConstraints<a class="headerlink" href="#personaconstraints" title="Permanent link">&para;</a></h4>
+<p>PersonaConstraints defines operational constraints</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxResponseTokens</code> <em>integer</em></td>
+<td>MaxResponseTokens limits response length in tokens</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxToolCalls</code> <em>integer</em></td>
+<td>MaxToolCalls limits tool invocations per interaction</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxKnowledgeQueries</code> <em>integer</em></td>
+<td>MaxKnowledgeQueries limits knowledge base queries per interaction</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>responseTimeout</code> <em>string</em></td>
+<td>ResponseTimeout limits response generation time</td>
+<td></td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>requireDocumentation</code> <em>boolean</em></td>
+<td>RequireDocumentation requires citing sources for claims</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>blockedTopics</code> <em>string array</em></td>
+<td>BlockedTopics lists topics this persona should refuse to discuss</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>allowedDomains</code> <em>string array</em></td>
+<td>AllowedDomains restricts knowledge sources to specific domains</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="personaexample">PersonaExample<a class="headerlink" href="#personaexample" title="Permanent link">&para;</a></h4>
+<p>PersonaExample provides a few-shot learning example</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input</code> <em>string</em></td>
+<td>Input is the example user input</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>output</code> <em>string</em></td>
+<td>Output is the expected persona response</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>context</code> <em>string</em></td>
+<td>Context provides additional context for this example</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tags</code> <em>string array</em></td>
+<td>Tags categorize this example</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="personareference">PersonaReference<a class="headerlink" href="#personareference" title="Permanent link">&para;</a></h4>
+<p>PersonaReference references a LanguagePersona</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the LanguagePersona</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Namespace is the namespace of the LanguagePersona (defaults to same namespace)</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="personarule">PersonaRule<a class="headerlink" href="#personarule" title="Permanent link">&para;</a></h4>
+<p>PersonaRule defines a conditional behavior rule</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is a unique identifier for this rule</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description explains what this rule does</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>condition</code> <em>string</em></td>
+<td>Condition defines when this rule applies (e.g., "when asked about X")</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>action</code> <em>string</em></td>
+<td>Action defines what to do when condition matches</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>priority</code> <em>integer</em></td>
+<td>Priority determines rule evaluation order (lower is higher priority)</td>
+<td>100</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled indicates if this rule is active</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="poddisruptionbudgetspec">PodDisruptionBudgetSpec<a class="headerlink" href="#poddisruptionbudgetspec" title="Permanent link">&para;</a></h4>
+<p>PodDisruptionBudgetSpec defines PDB configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagetoolspec">LanguageToolSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minAvailable</code> <em>integer</em></td>
+<td>MinAvailable specifies the minimum number of pods that must be available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxUnavailable</code> <em>integer</em></td>
+<td>MaxUnavailable specifies the maximum number of pods that can be unavailable</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="providerconfiguration">ProviderConfiguration<a class="headerlink" href="#providerconfiguration" title="Permanent link">&para;</a></h4>
+<p>ProviderConfiguration contains provider-specific settings</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxTokens</code> <em>integer</em></td>
+<td>MaxTokens is the maximum tokens for responses</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>temperature</code> <em>float</em></td>
+<td>Temperature controls randomness (0.0 to 2.0)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>topP</code> <em>float</em></td>
+<td>TopP controls nucleus sampling</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>frequencyPenalty</code> <em>float</em></td>
+<td>FrequencyPenalty penalizes frequent tokens (-2.0 to 2.0)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>presencePenalty</code> <em>float</em></td>
+<td>PresencePenalty penalizes tokens based on presence (-2.0 to 2.0)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>stopSequences</code> <em>string array</em></td>
+<td>StopSequences are sequences that stop generation</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>additionalParameters</code> <em>object (keys:string, values:string)</em></td>
+<td>AdditionalParameters for provider-specific options</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="proxyconfig">ProxyConfig<a class="headerlink" href="#proxyconfig" title="Permanent link">&para;</a></h4>
+<p>ProxyConfig configures the shared LiteLLM proxy for a LanguageCluster</p>
+<p><em>Appears in:</em>
+- <a href="#languageclusterspec">LanguageClusterSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ingressEnabled</code> <em>boolean</em></td>
+<td>IngressEnabled controls whether an Ingress/HTTPRoute is created for the proxy.<br />Defaults to true when cluster.spec.domain is set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>resources</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core">ResourceRequirements</a></em></td>
+<td>Resources sets CPU/memory requests and limits for the proxy Deployment.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>replicas</code> <em>integer</em></td>
+<td>Replicas sets the number of proxy pod replicas.</td>
+<td>1</td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="ratelimitspec">RateLimitSpec<a class="headerlink" href="#ratelimitspec" title="Permanent link">&para;</a></h4>
+<p>RateLimitSpec defines rate limiting configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requestsPerMinute</code> <em>integer</em></td>
+<td>RequestsPerMinute limits requests per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tokensPerMinute</code> <em>integer</em></td>
+<td>TokensPerMinute limits tokens per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>concurrentRequests</code> <em>integer</em></td>
+<td>ConcurrentRequests limits concurrent requests</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="regionspec">RegionSpec<a class="headerlink" href="#regionspec" title="Permanent link">&para;</a></h4>
+<p>RegionSpec defines a region configuration</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the region name (e.g., "us-east-1", "eu-west-1")</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>endpoint</code> <em>string</em></td>
+<td>Endpoint is the region-specific endpoint URL</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>priority</code> <em>integer</em></td>
+<td>Priority for region routing (lower is higher priority)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled indicates if this region is enabled</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="regionstatusspec">RegionStatusSpec<a class="headerlink" href="#regionstatusspec" title="Permanent link">&para;</a></h4>
+<p>RegionStatusSpec shows the status of a region</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelstatus">LanguageModelStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the region name</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>available</code> <em>boolean</em></td>
+<td>Available indicates if the region is available</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>latency</code> <em>integer</em></td>
+<td>Latency is the average latency to this region in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>lastCheck</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>LastCheck is the timestamp of the last check</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="responseformatspec">ResponseFormatSpec<a class="headerlink" href="#responseformatspec" title="Permanent link">&para;</a></h4>
+<p>ResponseFormatSpec defines response structure preferences</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type specifies the response format</td>
+<td>text</td>
+<td>Enum: [text markdown json structured list table] <br /></td>
+</tr>
+<tr>
+<td><code>template</code> <em>string</em></td>
+<td>Template defines a response template</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>schema</code> <em>string</em></td>
+<td>Schema defines JSON schema for structured responses</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxLength</code> <em>integer</em></td>
+<td>MaxLength limits response length in characters</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>includeSources</code> <em>boolean</em></td>
+<td>IncludeSources indicates whether to cite sources</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>includeConfidence</code> <em>boolean</em></td>
+<td>IncludeConfidence indicates whether to include confidence scores</td>
+<td>false</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="retrypolicyspec">RetryPolicySpec<a class="headerlink" href="#retrypolicyspec" title="Permanent link">&para;</a></h4>
+<p>RetryPolicySpec defines retry behavior</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxAttempts</code> <em>integer</em></td>
+<td>MaxAttempts is the maximum number of retry attempts</td>
+<td>3</td>
+<td>Maximum: 10 <br />Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>initialBackoff</code> <em>string</em></td>
+<td>InitialBackoff is the initial backoff duration (e.g., "1s")</td>
+<td>1s</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxBackoff</code> <em>string</em></td>
+<td>MaxBackoff is the maximum backoff duration (e.g., "30s")</td>
+<td>30s</td>
+<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>backoffMultiplier</code> <em>float</em></td>
+<td>BackoffMultiplier is the multiplier for exponential backoff</td>
+<td>2</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>retryableStatusCodes</code> <em>integer array</em></td>
+<td>RetryableStatusCodes are HTTP status codes that trigger retry</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="rollingupdatespec">RollingUpdateSpec<a class="headerlink" href="#rollingupdatespec" title="Permanent link">&para;</a></h4>
+<p>RollingUpdateSpec defines rolling update parameters</p>
+<p><em>Appears in:</em>
+- <a href="#updatestrategyspec">UpdateStrategySpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxUnavailable</code> <em>integer</em></td>
+<td>MaxUnavailable is the maximum number of pods that can be unavailable during update</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxSurge</code> <em>integer</em></td>
+<td>MaxSurge is the maximum number of pods that can be created above desired replicas</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="safetyconfigspec">SafetyConfigSpec<a class="headerlink" href="#safetyconfigspec" title="Permanent link">&para;</a></h4>
+<p>SafetyConfigSpec defines safety constraints</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxToolCallsPerIteration</code> <em>integer</em></td>
+<td>MaxToolCallsPerIteration limits tool calls per reasoning loop</td>
+<td>10</td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>blockedTools</code> <em>string array</em></td>
+<td>BlockedTools lists tools that are explicitly blocked</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>requireApprovalFor</code> <em>string array</em></td>
+<td>RequireApprovalFor lists tools requiring human approval</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>contentFilters</code> <em><a href="#agentcontentfilterspec">AgentContentFilterSpec</a> array</em></td>
+<td>ContentFilters defines content filtering rules</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxCostPerExecution</code> <em>float</em></td>
+<td>MaxCostPerExecution limits cost per execution</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="secretreference">SecretReference<a class="headerlink" href="#secretreference" title="Permanent link">&para;</a></h4>
+<p>SecretReference references a Kubernetes Secret</p>
+<p><em>Appears in:</em>
+- <a href="#knowledgesourcespec">KnowledgeSourceSpec</a>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the secret</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Namespace is the namespace of the secret (defaults to same namespace as LanguageModel)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>key</code> <em>string</em></td>
+<td>Key is the key within the secret containing the value</td>
+<td>api-key</td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="servicereference">ServiceReference<a class="headerlink" href="#servicereference" title="Permanent link">&para;</a></h4>
+<p>ServiceReference identifies a Kubernetes Service</p>
+<p><em>Appears in:</em>
+- <a href="#networkpeer">NetworkPeer</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Service name</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Service namespace (defaults to same namespace if omitted)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolpreferencesspec">ToolPreferencesSpec<a class="headerlink" href="#toolpreferencesspec" title="Permanent link">&para;</a></h4>
+<p>ToolPreferencesSpec defines tool usage preferences</p>
+<p><em>Appears in:</em>
+- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>preferredTools</code> <em>string array</em></td>
+<td>PreferredTools lists tools to prefer using</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>avoidTools</code> <em>string array</em></td>
+<td>AvoidTools lists tools to avoid using</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>strategy</code> <em>string</em></td>
+<td>ToolUsageStrategy defines how aggressively to use tools</td>
+<td>balanced</td>
+<td>Enum: [conservative balanced aggressive minimal] <br /></td>
+</tr>
+<tr>
+<td><code>alwaysConfirm</code> <em>boolean</em></td>
+<td>AlwaysConfirm requires confirmation before tool use</td>
+<td>false</td>
+<td></td>
+</tr>
+<tr>
+<td><code>explainToolUse</code> <em>boolean</em></td>
+<td>ExplainToolUse explains tool usage to users</td>
+<td>true</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolproperty">ToolProperty<a class="headerlink" href="#toolproperty" title="Permanent link">&para;</a></h4>
+<p>ToolProperty defines an individual parameter or return field</p>
+<p><em>Appears in:</em>
+- <a href="#toolschemadefinition">ToolSchemaDefinition</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type is the JSON schema type (string, integer, boolean, etc.)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description explains what this property represents</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>example</code> <em>string</em></td>
+<td>Example provides an example value as a JSON string</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolreference">ToolReference<a class="headerlink" href="#toolreference" title="Permanent link">&para;</a></h4>
+<p>ToolReference references a LanguageTool</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the LanguageTool</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Namespace is the namespace of the LanguageTool (defaults to same namespace)</td>
+<td></td>
+<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled indicates if this tool is available to the agent</td>
+<td>true</td>
+<td></td>
+</tr>
+<tr>
+<td><code>requireApproval</code> <em>boolean</em></td>
+<td>RequireApproval requires human approval before tool execution</td>
+<td>false</td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolschema">ToolSchema<a class="headerlink" href="#toolschema" title="Permanent link">&para;</a></h4>
+<p>ToolSchema represents the complete schema of an MCP tool</p>
+<p><em>Appears in:</em>
+- <a href="#languagetoolstatus">LanguageToolStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the tool identifier</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code> <em>string</em></td>
+<td>Description is a human-readable description of the tool</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>inputSchema</code> <em><a href="#toolschemadefinition">ToolSchemaDefinition</a></em></td>
+<td>InputSchema defines the parameters this tool accepts</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>outputSchema</code> <em><a href="#toolschemadefinition">ToolSchemaDefinition</a></em></td>
+<td>OutputSchema defines the structure this tool returns</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolschemadefinition">ToolSchemaDefinition<a class="headerlink" href="#toolschemadefinition" title="Permanent link">&para;</a></h4>
+<p>ToolSchemaDefinition defines parameter or return value structure</p>
+<p><em>Appears in:</em>
+- <a href="#toolschema">ToolSchema</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type is the JSON schema type (object, array, string, etc.)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>properties</code> <em>object (keys:string, values:<a href="#toolproperty">ToolProperty</a>)</em></td>
+<td>Properties defines object properties (for type: object)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>required</code> <em>string array</em></td>
+<td>Required lists required property names (for type: object)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="toolusagespec">ToolUsageSpec<a class="headerlink" href="#toolusagespec" title="Permanent link">&para;</a></h4>
+<p>ToolUsageSpec tracks tool usage</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentstatus">LanguageAgentStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>toolName</code> <em>string</em></td>
+<td>ToolName is the name of the tool</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>invocationCount</code> <em>integer</em></td>
+<td>InvocationCount is the number of times this tool was invoked</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>successCount</code> <em>integer</em></td>
+<td>SuccessCount is the number of successful invocations</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>failureCount</code> <em>integer</em></td>
+<td>FailureCount is the number of failed invocations</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>averageLatency</code> <em>integer</em></td>
+<td>AverageLatency is the average latency in milliseconds</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="updatestrategyspec">UpdateStrategySpec<a class="headerlink" href="#updatestrategyspec" title="Permanent link">&para;</a></h4>
+<p>UpdateStrategySpec defines deployment update strategy</p>
+<p><em>Appears in:</em>
+- <a href="#languagetoolspec">LanguageToolSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type of deployment update strategy (RollingUpdate or Recreate)</td>
+<td>RollingUpdate</td>
+<td>Enum: [RollingUpdate Recreate] <br /></td>
+</tr>
+<tr>
+<td><code>rollingUpdate</code> <em><a href="#rollingupdatespec">RollingUpdateSpec</a></em></td>
+<td>RollingUpdate configuration (only used if Type is RollingUpdate)</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="workspacespec">WorkspaceSpec<a class="headerlink" href="#workspacespec" title="Permanent link">&para;</a></h4>
+<p>WorkspaceSpec defines persistent workspace storage for an agent</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled controls whether to create a workspace volume</td>
+<td>true</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>size</code> <em>string</em></td>
+<td>Size is the requested storage size (e.g., "10Gi", "1.5Ti", "500Mi")<br />Supports integer and decimal quantities with standard Kubernetes suffixes</td>
+<td>10Gi</td>
+<td>MinLength: 1 <br />Pattern: <code>^([0-9]*\.?[0-9]+)(Ei\|Pi\|Ti\|Gi\|Mi\|Ki\|E\|P\|T\|G\|M\|K\|m)?$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>storageClassName</code> <em>string</em></td>
+<td>StorageClassName specifies the StorageClass for the PVC<br />If not specified, uses the cluster default</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>accessMode</code> <em>string</em></td>
+<td>AccessMode defines the volume access mode</td>
+<td>ReadWriteOnce</td>
+<td>Enum: [ReadWriteOnce ReadWriteMany] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>mountPath</code> <em>string</em></td>
+<td>MountPath is where the workspace is mounted in containers</td>
+<td>/workspace</td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/language-operator/language-operator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
