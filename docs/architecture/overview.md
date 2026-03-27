@@ -162,7 +162,7 @@ spec:
   port: 8080
 ```
 
-Agents connect to tools directly over MCP. The operator does not proxy tool traffic. The full tool contract is defined in [`spec/tools.md`](../spec/tools.md).
+Agents connect to tools directly over MCP. The operator does not proxy tool traffic. The full tool contract is defined in [Tool Protocol](tools.md).
 
 ### LanguageModel
 
@@ -207,7 +207,7 @@ The operator creates the namespace, configures shared networking, sets up defaul
 
 ## Agent Runtime Contract
 
-The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
+The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 
 **Operator provides:**
 - `/etc/agent/instructions.txt` — plain text task instructions (optional)
@@ -255,6 +255,6 @@ All operator reconciliation loops emit OpenTelemetry spans. Configure an externa
 
 **Custom agent runtimes**: Any container image works. The operator is runtime-agnostic — Python, Node.js, Go, or anything else. Use init containers to bridge operator config injection to native runtime config formats (see `components/agents/openclaw-adapter/` for an example).
 
-**Custom tools**: Any service that implements the tool contract ([`spec/tools.md`](../spec/tools.md)) — MCP protocol on a Kubernetes Service — can be registered as a `LanguageTool`.
+**Custom tools**: Any service that implements the [Tool Protocol](tools.md) — MCP protocol on a Kubernetes Service — can be registered as a `LanguageTool`.
 
 **Custom models**: Any LLM endpoint supported by LiteLLM can be registered as a `LanguageModel`.

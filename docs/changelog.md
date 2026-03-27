@@ -62,7 +62,7 @@ This document tracks releases of the Language Operator project.
   - Removed unused `pkg/learning` import
   - Created ADR-001 documenting learning system simplification rationale and architecture
   - Final result: Clean, simplified learning system with 38% less code
-  - Documentation: [docs/architecture/adr-001-learning-system-simplification.md](docs/architecture/adr-001-learning-system-simplification.md)
+  - Documentation: See architecture documentation for details
 
 - **Deleted event processing and ConfigMap management code (Issue #101)**
   - Removed 1190 lines of unused code after migration to direct SigNoz queries (Issue #100)
@@ -241,4 +241,4 @@ Language Operator is a Kubernetes operator that transforms natural language desc
 
 ### Getting Started
 
-See [docs/quickstart.md](docs/quickstart.md) for installation and usage instructions.
+See [Quick Start](getting-started/quickstart.md) for installation and usage instructions.
