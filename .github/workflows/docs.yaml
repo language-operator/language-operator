@@ -1,0 +1,155 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'src/api/v1alpha1/**'
+      - 'src/.crd-ref-docs.yaml'
+      - '.github/workflows/docs.yaml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'src/api/v1alpha1/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install crd-ref-docs
+        run: |
+          go install github.com/elastic/crd-ref-docs@latest
+
+      - name: Generate CRD API Reference
+        run: |
+          cd src
+          crd-ref-docs \
+            --source-path=api/v1alpha1 \
+            --config=.crd-ref-docs.yaml \
+            --renderer=markdown \
+            --output-path=../docs/api-generated.md
+
+      - name: Split API Reference into Individual CRD Pages
+        run: |
+          # This script splits the generated docs into individual pages
+          # For now, we'll use the full reference on each page
+          # TODO: Create a script to split by CRD kind
+
+          # Copy generated docs to each CRD page as a starting point
+          cat > docs/api/languageagent.md << 'EOF'
+          # LanguageAgent
+
+          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
+
+          EOF
+
+          cat > docs/api/languagecluster.md << 'EOF'
+          # LanguageCluster
+
+          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
+
+          EOF
+
+          cat > docs/api/languagemodel.md << 'EOF'
+          # LanguageModel
+
+          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
+
+          EOF
+
+          cat > docs/api/languagetool.md << 'EOF'
+          # LanguageTool
+
+          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
+
+          EOF
+
+          cat > docs/api/languagepersona.md << 'EOF'
+          # LanguagePersona
+
+          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
+
+          EOF
+
+          # Extract each CRD section from the generated docs
+          # For LanguageAgent
+          awk '/^## LanguageAgent$/,/^## [A-Z]/ {
+            if (/^## [A-Z]/ && !/^## LanguageAgent$/) exit;
+            print
+          }' docs/api-generated.md >> docs/api/languageagent.md
+
+          # For LanguageCluster
+          awk '/^## LanguageCluster$/,/^## [A-Z]/ {
+            if (/^## [A-Z]/ && !/^## LanguageCluster$/) exit;
+            print
+          }' docs/api-generated.md >> docs/api/languagecluster.md
+
+          # For LanguageModel
+          awk '/^## LanguageModel$/,/^## [A-Z]/ {
+            if (/^## [A-Z]/ && !/^## LanguageModel$/) exit;
+            print
+          }' docs/api-generated.md >> docs/api/languagemodel.md
+
+          # For LanguageTool
+          awk '/^## LanguageTool$/,/^## [A-Z]/ {
+            if (/^## [A-Z]/ && !/^## LanguageTool$/) exit;
+            print
+          }' docs/api-generated.md >> docs/api/languagetool.md
+
+          # For LanguagePersona
+          awk '/^## LanguagePersona$/,/^## [A-Z]/ {
+            if (/^## [A-Z]/ && !/^## LanguagePersona$/) exit;
+            print
+          }' docs/api-generated.md >> docs/api/languagepersona.md
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install MkDocs and dependencies
+        run: |
+          pip install mkdocs-material mkdocs-awesome-pages-plugin
+
+      - name: Build MkDocs site
+        run: |
+          mkdocs build --strict
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: docs
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'docs: update documentation site'
+
+      - name: Upload artifact for PR preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-preview
+          path: ./site
+          retention-days: 7

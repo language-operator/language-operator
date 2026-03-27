@@ -41,6 +41,13 @@ cd chart && helm lint .
 cd chart && helm template . --debug
 ```
 
+Documentation:
+```bash
+cd src && make docs              # generate API reference markdown
+mkdocs serve                     # preview docs site at http://localhost:8000
+mkdocs build                     # build static site to site/
+```
+
 ## Architecture
 
 ### Controllers (`src/controllers/`)

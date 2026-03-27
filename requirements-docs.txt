@@ -1,0 +1,6 @@
+# Python dependencies for building documentation
+# Install with: pip install -r requirements-docs.txt
+
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+mkdocs-awesome-pages-plugin==2.9.2

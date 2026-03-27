@@ -29,3 +29,7 @@ components/dashboard/.kube/
 
 # Node.js
 node_modules/
+
+# MkDocs
+site/
+docs/api-generated.md
