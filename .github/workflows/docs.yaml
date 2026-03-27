@@ -48,78 +48,13 @@ jobs:
             --renderer=markdown \
             --output-path=../docs/api-generated.md
 
-      - name: Split API Reference into Individual CRD Pages
+      - name: Create API Reference Page
         run: |
-          # This script splits the generated docs into individual pages
-          # For now, we'll use the full reference on each page
-          # TODO: Create a script to split by CRD kind
+          # Copy the full generated API reference to a complete page
+          cp docs/api-generated.md docs/api/reference.md
 
-          # Copy generated docs to each CRD page as a starting point
-          cat > docs/api/languageagent.md << 'EOF'
-          # LanguageAgent
-
-          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
-
-          EOF
-
-          cat > docs/api/languagecluster.md << 'EOF'
-          # LanguageCluster
-
-          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
-
-          EOF
-
-          cat > docs/api/languagemodel.md << 'EOF'
-          # LanguageModel
-
-          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
-
-          EOF
-
-          cat > docs/api/languagetool.md << 'EOF'
-          # LanguageTool
-
-          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
-
-          EOF
-
-          cat > docs/api/languagepersona.md << 'EOF'
-          # LanguagePersona
-
-          <!-- This file is auto-generated from CRD types. Do not edit manually. -->
-
-          EOF
-
-          # Extract each CRD section from the generated docs
-          # For LanguageAgent
-          awk '/^## LanguageAgent$/,/^## [A-Z]/ {
-            if (/^## [A-Z]/ && !/^## LanguageAgent$/) exit;
-            print
-          }' docs/api-generated.md >> docs/api/languageagent.md
-
-          # For LanguageCluster
-          awk '/^## LanguageCluster$/,/^## [A-Z]/ {
-            if (/^## [A-Z]/ && !/^## LanguageCluster$/) exit;
-            print
-          }' docs/api-generated.md >> docs/api/languagecluster.md
-
-          # For LanguageModel
-          awk '/^## LanguageModel$/,/^## [A-Z]/ {
-            if (/^## [A-Z]/ && !/^## LanguageModel$/) exit;
-            print
-          }' docs/api-generated.md >> docs/api/languagemodel.md
-
-          # For LanguageTool
-          awk '/^## LanguageTool$/,/^## [A-Z]/ {
-            if (/^## [A-Z]/ && !/^## LanguageTool$/) exit;
-            print
-          }' docs/api-generated.md >> docs/api/languagetool.md
-
-          # For LanguagePersona
-          awk '/^## LanguagePersona$/,/^## [A-Z]/ {
-            if (/^## [A-Z]/ && !/^## LanguagePersona$/) exit;
-            print
-          }' docs/api-generated.md >> docs/api/languagepersona.md
+          # Update navigation to use the complete reference
+          # Individual CRD pages will link to sections in the full reference
 
       - name: Set up Python
         uses: actions/setup-python@v5

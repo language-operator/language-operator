@@ -1,13 +1,77 @@
 # LanguageCluster
 
-<!-- This file is auto-generated from CRD types. Do not edit manually. -->
+The `LanguageCluster` CRD creates a managed namespace for AI agent deployments with shared infrastructure.
 
-!!! note "Auto-Generated Documentation"
-    This page is automatically generated from the LanguageCluster CRD schema.
-    See `src/api/v1alpha1/languagecluster_types.go` for the source.
+## Overview
 
-The detailed API reference will be generated here during the documentation build process.
+A LanguageCluster provides:
+- Dedicated namespace with network isolation
+- Shared LiteLLM proxy for all models in the cluster
+- Optional external ingress at `proxy.<domain>`
+- NetworkPolicy enforcement for security
 
-For now, see:
-- [Getting Started Examples](../getting-started/examples.md)
-- [Source Code](https://github.com/language-operator/language-operator/blob/main/src/api/v1alpha1/languagecluster_types.go)
+## Quick Example
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: production-agents
+spec:
+  domain: agents.example.com
+  networkPolicies:
+    enabled: true
+```
+
+This creates a `production-agents` namespace with the shared proxy accessible at `http://proxy.production-agents.svc.cluster.local:8000`.
+
+## Complete API Reference
+
+See the [Complete API Reference](reference.md#languagecluster) for full field documentation including:
+
+- **LanguageCluster** - Top-level resource
+- **LanguageClusterSpec** - Specification fields
+- **LanguageClusterStatus** - Status and proxy information
+
+## Key Concepts
+
+### Shared Proxy Architecture
+
+Each cluster has exactly one LiteLLM proxy that:
+
+- Aggregates all `LanguageModel` resources in the namespace
+- Provides unified endpoint for all agents
+- Handles credential management centrally
+- Enables cross-model cost tracking
+
+All agents in the cluster connect to this shared proxy via the `MODEL_ENDPOINTS` environment variable.
+
+### Network Isolation
+
+When NetworkPolicy is enabled:
+
+- Agents can communicate with each other on port 8080
+- Agents can reach the shared proxy
+- Agents can reach tools in the same namespace
+- External ingress is controlled via the domain setting
+
+### External Access
+
+Configure `spec.domain` to expose the proxy externally:
+
+```yaml
+spec:
+  domain: agents.example.com
+```
+
+Creates an Ingress/HTTPRoute at `proxy.agents.example.com` for external model access.
+
+## Related Resources
+
+- [LanguageAgent](languageagent.md) - Deploy agents in the cluster
+- [LanguageModel](languagemodel.md) - Register models with the proxy
+- [Architecture Overview](../architecture/overview.md) - System design
+
+## Examples
+
+See [Examples](../getting-started/examples.md) for multi-cluster patterns.
