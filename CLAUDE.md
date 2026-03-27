@@ -66,7 +66,7 @@ Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOr
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
 - `LanguageModel` — LLM endpoint config
-- `LanguageCluster` — multi-cluster grouping
+- `LanguageCluster` — managed namespace; owns the shared LiteLLM proxy and optional external ingress at `proxy.<spec.domain>`
 
 Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` is auto-generated — never edit by hand.
 
@@ -78,7 +78,7 @@ The operator mounts two files into every agent pod:
 
 Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
 
-`MODEL_ENDPOINTS` and `LLM_MODEL` are injected into the main container and all init containers. `TOOL_ENDPOINTS` contains resolved MCP tool server URLs.
+`MODEL_ENDPOINTS` is the shared proxy URL (`http://proxy.<namespace>.svc.cluster.local:8000`) — one URL regardless of how many models are referenced. `LLM_MODEL` is a comma-separated list of model names from all `modelRefs`. Both are injected into the main container and all init containers. `TOOL_ENDPOINTS` contains resolved MCP tool server URLs.
 
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
 
