@@ -8,11 +8,11 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| `LanguageCluster` | Managed namespace for a group of agents — provisions shared networking, a LiteLLM proxy, and optional external ingress |
-| `LanguageAgent` | Agent deployment — image, instructions, personas, tools, models |
-| `LanguageModel` | LLM endpoint — provider, credentials, rate limits; served through the cluster's shared proxy |
-| `LanguageTool` | MCP tool server — endpoint resolved and injected into agents |
-| `LanguagePersona` | Behavioral config — system prompt, tone, constraints |
+| `LanguageCluster` | Managed namespace for AI clusters |
+| `LanguageAgent` | Autonomous, scheduled, and reactive agents |
+| `LanguageModel` | LLM (proxied through LiteLLM) |
+| `LanguageTool` | MCP server |
+| `LanguagePersona` | Behavior, tone, constraints |
 
 
 ## Installation
