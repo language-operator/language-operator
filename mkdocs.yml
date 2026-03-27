@@ -70,14 +70,14 @@ nav:
       - Controllers: architecture/controllers.md
       - Agent Runtime: architecture/agents.md
       - Tool Protocol: architecture/tools.md
-  - CRD Reference:
+  - API Reference:
+      - Complete Reference (Auto-generated): api/reference.md
       - Overview: api/overview.md
-      - LanguageAgent: api/languageagent.md
-      - LanguageCluster: api/languagecluster.md
-      - LanguageModel: api/languagemodel.md
-      - LanguageTool: api/languagetool.md
-      - LanguagePersona: api/languagepersona.md
-      - Complete API Reference: api/reference.md
+      - LanguageAgent Guide: api/languageagent.md
+      - LanguageCluster Guide: api/languagecluster.md
+      - LanguageModel Guide: api/languagemodel.md
+      - LanguageTool Guide: api/languagetool.md
+      - LanguagePersona Guide: api/languagepersona.md
   - Helm Chart:
       - Installation: helm/installation.md
       - Configuration: helm/configuration.md

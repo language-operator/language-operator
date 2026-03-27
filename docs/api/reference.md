@@ -1,30 +1,37 @@
-# Complete API Reference
+# API Reference
 
-<!-- This file is auto-generated from CRD Go types during CI builds. -->
+!!! info "Auto-Generated Documentation"
+    This page is automatically generated from Go type definitions in `src/api/v1alpha1/`.
 
-This page contains the complete, auto-generated API reference for all Language Operator Custom Resource Definitions.
+    When you modify CRD types and commit, this documentation updates automatically via CI.
 
-The documentation is generated from Go type definitions in `src/api/v1alpha1/` using [crd-ref-docs](https://github.com/elastic/crd-ref-docs).
+## How to Use This Reference
 
-## Generating Locally
+This reference documents all fields available in each Custom Resource Definition (CRD):
 
-To regenerate this reference locally:
+- **Field names and types** - What you can configure
+- **Descriptions** - Extracted from Go code comments
+- **Default values** - What happens if you omit a field
+- **Validation rules** - Constraints enforced by Kubernetes
 
-```bash
-cd src
-make docs
-```
+## CRDs Documented Here
 
-The generated reference will be in `src/docs/api-reference.md`.
+Click to jump to each resource:
 
-## CRD Overview
+- [LanguageAgent](#languageagent) - Deploy autonomous AI agents
+- [LanguageCluster](#languagecluster) - Managed namespace with shared proxy
+- [LanguageModel](#languagemodel) - Configure LLM access
+- [LanguageTool](#languagetool) - Deploy MCP tool servers
+- [LanguagePersona](#languagepersona) - Behavioral templates
 
-- [LanguageAgent](languageagent.md) - Autonomous AI agent deployments
-- [LanguageCluster](languagecluster.md) - Managed namespaces with shared proxy
-- [LanguageModel](languagemodel.md) - LLM endpoint configuration
-- [LanguageTool](languagetool.md) - MCP tool server deployments
-- [LanguagePersona](languagepersona.md) - Behavioral templates
+## Higher-Level Guides
+
+For conceptual overviews and examples, see:
+
+- [LanguageAgent Guide](languageagent.md)
+- [LanguageCluster Guide](languagecluster.md)
+- [LanguageModel Guide](languagemodel.md)
+- [LanguageTool Guide](languagetool.md)
+- [LanguagePersona Guide](languagepersona.md)
 
 ---
-
-*The complete API reference will appear here during CI builds.*

@@ -27,7 +27,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 - [Installation Guide](getting-started/installation.md) - Install the operator via Helm
 - [Quick Start](getting-started/quickstart.md) - Deploy your first agent in 5 minutes
-- [CRD Reference](api/overview.md) - Complete API documentation
+- **[API Reference](api/reference.md)** - Auto-generated CRD field documentation
 - [Architecture](architecture/overview.md) - System design and component interaction
 - [Helm Repository](helm/repository.md) - Chart installation and configuration
 

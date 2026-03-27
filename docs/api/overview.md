@@ -2,6 +2,10 @@
 
 Language Operator provides five Custom Resource Definitions (CRDs) for managing AI agent workloads on Kubernetes.
 
+!!! tip "Auto-Generated API Reference"
+    See the **[Complete API Reference](reference.md)** for auto-generated field documentation from Go types.
+    This reference updates automatically when CRD types are modified.
+
 ## Core Resources
 
 ### LanguageCluster
