@@ -44,7 +44,7 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -100,7 +100,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -160,7 +160,7 @@ func TestLanguageAgentController_CronJobCreation(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -246,7 +246,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -305,7 +305,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -415,7 +415,7 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -482,7 +482,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -555,7 +555,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -640,7 +640,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -738,7 +738,7 @@ func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -935,7 +935,7 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1029,7 +1029,7 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 	// Create a client that will simulate version conflicts on status updates
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1198,7 +1198,7 @@ func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1322,7 +1322,7 @@ func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1379,7 +1379,7 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1451,7 +1451,7 @@ func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1512,7 +1512,7 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1718,7 +1718,7 @@ func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -1784,7 +1784,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 	t.Run("ingress_with_class_name", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(agent).
+			WithObjects(gen.ReadyCluster("default"), agent).
 			WithStatusSubresource(agent).
 			Build()
 
@@ -1815,7 +1815,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 	t.Run("ingress_without_class_name", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(agent).
+			WithObjects(gen.ReadyCluster("default"), agent).
 			WithStatusSubresource(agent).
 			Build()
 
@@ -1845,7 +1845,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 	t.Run("ingress_has_correct_host_and_path", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
-			WithObjects(agent).
+			WithObjects(gen.ReadyCluster("default"), agent).
 			WithStatusSubresource(agent).
 			Build()
 

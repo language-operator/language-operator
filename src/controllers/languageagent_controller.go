@@ -585,9 +585,8 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 	}
 
 	// Determine target namespace - always use agent's namespace
-	// If cluster ref is set, verify cluster exists in same namespace
 	targetNamespace := agent.Namespace
-	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
 	}
 
@@ -745,15 +744,11 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	labels["langop.io/component"] = "agent" // Distinguish from trigger pods
 
-	// If cluster ref is set, verify cluster exists and is ready
-	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
 	}
 
-	// Add cluster label if cluster ref is set
-	if agent.Spec.ClusterRef != "" {
-		labels["langop.io/cluster"] = agent.Spec.ClusterRef
-	}
+	labels["langop.io/cluster"] = agent.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -860,15 +855,11 @@ func (r *LanguageAgentReconciler) reconcileCronJob(ctx context.Context, agent *l
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	// If cluster ref is set, verify cluster exists and is ready
-	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
 	}
 
-	// Add cluster label if cluster ref is set
-	if agent.Spec.ClusterRef != "" {
-		labels["langop.io/cluster"] = agent.Spec.ClusterRef
-	}
+	labels["langop.io/cluster"] = agent.Namespace
 
 	cronJob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -951,15 +942,11 @@ func (r *LanguageAgentReconciler) reconcileCronJobTrigger(ctx context.Context, a
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	labels["langop.io/component"] = "trigger" // Distinguish from agent pods
 
-	// If cluster ref is set, verify cluster exists and is ready
-	if err := ValidateClusterReference(ctx, r.Client, agent.Spec.ClusterRef, agent.Namespace); err != nil {
+	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
 	}
 
-	// Add cluster label if cluster ref is set
-	if agent.Spec.ClusterRef != "" {
-		labels["langop.io/cluster"] = agent.Spec.ClusterRef
-	}
+	labels["langop.io/cluster"] = agent.Namespace
 
 	cronJob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1861,17 +1848,15 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 
 	// Get the cluster to check for domain configuration
 	var domain string
-	if agent.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err != nil {
-			if apierrors.IsNotFound(err) {
-				log.Info("Cluster not found, skipping webhook reconciliation", "cluster", agent.Spec.ClusterRef)
-				return nil
-			}
-			return err
+	cluster := &langopv1alpha1.LanguageCluster{}
+	if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Cluster not found, skipping webhook reconciliation", "cluster", agent.Namespace)
+			return nil
 		}
-		domain = cluster.Spec.Domain
+		return err
 	}
+	domain = cluster.Spec.Domain
 
 	// Skip webhook reconciliation if no domain is configured
 	if domain == "" {
@@ -1892,13 +1877,10 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 	}
 
 	useHTTPRoute := false
-	if hasGateway && agent.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err == nil {
-			if cluster.Spec.IngressConfig != nil &&
-				(cluster.Spec.IngressConfig.GatewayName != "" || cluster.Spec.IngressConfig.GatewayClassName != "") {
-				useHTTPRoute = true
-			}
+	if hasGateway {
+		if cluster.Spec.IngressConfig != nil &&
+			(cluster.Spec.IngressConfig.GatewayName != "" || cluster.Spec.IngressConfig.GatewayClassName != "") {
+			useHTTPRoute = true
 		}
 	}
 
@@ -2278,9 +2260,9 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 	// Get cluster config for Gateway configuration and TLS settings
 	var gatewayName, gatewayNamespace string
 	var tlsEnabled bool
-	if agent.Spec.ClusterRef != "" {
+	{
 		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
 			if cluster.Spec.IngressConfig != nil {
 				// Extract TLS configuration
 				if cluster.Spec.IngressConfig.TLS != nil {
@@ -2440,9 +2422,9 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 
 		// Add TLS and IngressClassName from cluster config (with operator-level defaults)
 		ingressClass := r.DefaultIngressClassName
-		if agent.Spec.ClusterRef != "" {
+		{
 			cluster := &langopv1alpha1.LanguageCluster{}
-			if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef}, cluster); err == nil {
+			if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
 				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
 					secretName := cluster.Spec.IngressConfig.TLS.SecretName
 					if secretName == "" {

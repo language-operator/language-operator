@@ -113,17 +113,14 @@ func TestReconcileHTTPRoute_TLSValidation(t *testing.T) {
 
 	t.Run("HTTPRoute creation fails when TLS enabled but Gateway has no HTTPS", func(t *testing.T) {
 		// Create cluster with TLS enabled
-		cluster := gen.LanguageCluster("test-cluster",
+		cluster := gen.LanguageCluster("test-namespace",
 			gen.SetClusterGatewayName("http-only-gateway"),
 			gen.SetClusterGatewayNamespace("gateway-system"),
 		)
-		cluster.Namespace = "test-namespace"
 		cluster.Spec.IngressConfig.TLS = &langopv1alpha1.IngressTLSConfig{Enabled: true}
 
 		// Create agent
-		agent := gen.LanguageAgent("test-agent", "test-namespace",
-			gen.SetAgentClusterRef("test-cluster"),
-		)
+		agent := gen.LanguageAgent("test-agent", "test-namespace")
 		agent.Status.UUID = "test-uuid-123"
 
 		// Create HTTP-only Gateway

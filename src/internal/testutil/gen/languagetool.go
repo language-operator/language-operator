@@ -43,13 +43,6 @@ func SetToolImage(image string) LanguageToolModifier {
 	}
 }
 
-// SetToolClusterRef sets spec.clusterRef.
-func SetToolClusterRef(ref string) LanguageToolModifier {
-	return func(t *langopv1alpha1.LanguageTool) {
-		t.Spec.ClusterRef = ref
-	}
-}
-
 // SetToolPort sets spec.port.
 func SetToolPort(port int32) LanguageToolModifier {
 	return func(t *langopv1alpha1.LanguageTool) {

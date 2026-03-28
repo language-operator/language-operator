@@ -300,15 +300,11 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 	targetNamespace := tool.Namespace
 	labels := GetCommonLabels(tool.Name, "LanguageTool")
 
-	// If cluster ref is set, verify cluster exists and is ready
-	if err := ValidateClusterReference(ctx, r.Client, tool.Spec.ClusterRef, tool.Namespace); err != nil {
+	if err := ValidateClusterReference(ctx, r.Client, tool.Namespace); err != nil {
 		return err
 	}
 
-	// Add cluster label if cluster ref is set
-	if tool.Spec.ClusterRef != "" {
-		labels["langop.io/cluster"] = tool.Spec.ClusterRef
-	}
+	labels["langop.io/cluster"] = tool.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -443,21 +439,11 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 	targetNamespace := tool.Namespace
 	labels := GetCommonLabels(tool.Name, "LanguageTool")
 
-	// If cluster ref is set, verify cluster exists in same namespace
-	if tool.Spec.ClusterRef != "" {
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: tool.Spec.ClusterRef, Namespace: tool.Namespace}, cluster); err != nil {
-			return err
-		}
-
-		// Wait for cluster to be ready
-		if cluster.Status.Phase != events.PhaseStatusReady {
-			return fmt.Errorf("cluster %s is not ready yet", tool.Spec.ClusterRef)
-		}
-
-		// Add cluster label
-		labels["langop.io/cluster"] = tool.Spec.ClusterRef
+	if err := ValidateClusterReference(ctx, r.Client, tool.Namespace); err != nil {
+		return err
 	}
+
+	labels["langop.io/cluster"] = tool.Namespace
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

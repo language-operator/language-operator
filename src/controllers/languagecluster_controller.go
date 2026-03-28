@@ -626,13 +626,11 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 	}
 
 	for _, agent := range agentList.Items {
-		if agent.Spec.ClusterRef == clusterName {
-			log.Info("Deleting agent", "agent", agent.Name, "cluster", clusterName)
-			if err := r.Delete(ctx, &agent, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
-				if client.IgnoreNotFound(err) != nil {
-					log.Error(err, "Failed to delete agent", "agent", agent.Name)
-					// Continue with other resources, don't fail completely
-				}
+		log.Info("Deleting agent", "agent", agent.Name, "cluster", clusterName)
+		if err := r.Delete(ctx, &agent, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete agent", "agent", agent.Name)
+				// Continue with other resources, don't fail completely
 			}
 		}
 	}
@@ -644,13 +642,11 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 	}
 
 	for _, tool := range toolList.Items {
-		if tool.Spec.ClusterRef == clusterName {
-			log.Info("Deleting tool", "tool", tool.Name, "cluster", clusterName)
-			if err := r.Delete(ctx, &tool, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
-				if client.IgnoreNotFound(err) != nil {
-					log.Error(err, "Failed to delete tool", "tool", tool.Name)
-					// Continue with other resources, don't fail completely
-				}
+		log.Info("Deleting tool", "tool", tool.Name, "cluster", clusterName)
+		if err := r.Delete(ctx, &tool, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete tool", "tool", tool.Name)
+				// Continue with other resources, don't fail completely
 			}
 		}
 	}
@@ -662,13 +658,11 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 	}
 
 	for _, model := range modelList.Items {
-		if model.Spec.ClusterRef == clusterName {
-			log.Info("Deleting model", "model", model.Name, "cluster", clusterName)
-			if err := r.Delete(ctx, &model, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
-				if client.IgnoreNotFound(err) != nil {
-					log.Error(err, "Failed to delete model", "model", model.Name)
-					// Continue with other resources, don't fail completely
-				}
+		log.Info("Deleting model", "model", model.Name, "cluster", clusterName)
+		if err := r.Delete(ctx, &model, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete model", "model", model.Name)
+				// Continue with other resources, don't fail completely
 			}
 		}
 	}
@@ -680,13 +674,11 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 	}
 
 	for _, persona := range personaList.Items {
-		if persona.Spec.ClusterRef == clusterName {
-			log.Info("Deleting persona", "persona", persona.Name, "cluster", clusterName)
-			if err := r.Delete(ctx, &persona, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
-				if client.IgnoreNotFound(err) != nil {
-					log.Error(err, "Failed to delete persona", "persona", persona.Name)
-					// Continue with other resources, don't fail completely
-				}
+		log.Info("Deleting persona", "persona", persona.Name, "cluster", clusterName)
+		if err := r.Delete(ctx, &persona, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+			if client.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete persona", "persona", persona.Name)
+				// Continue with other resources, don't fail completely
 			}
 		}
 	}

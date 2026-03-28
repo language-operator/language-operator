@@ -954,10 +954,6 @@ spec:
                 format: int32
                 minimum: 0
                 type: integer
-              clusterRef:
-                description: ClusterRef references a LanguageCluster to deploy this
-                  agent into
-                type: string
               egress:
                 description: |-
                   Egress defines external network access rules for this agent

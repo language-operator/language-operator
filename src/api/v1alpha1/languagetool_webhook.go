@@ -47,10 +47,6 @@ var _ webhook.CustomValidator = &LanguageToolWebhook{}
 func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) error {
 	t := obj.(*LanguageTool)
 
-	if t.Spec.ClusterRef == "" {
-		t.Spec.ClusterRef = t.Namespace
-	}
-
 	if t.Spec.Resources.Requests == nil && t.Spec.Resources.Limits == nil {
 		t.Spec.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -70,7 +66,7 @@ func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) e
 // ValidateCreate implements webhook.CustomValidator
 func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	t := obj.(*LanguageTool)
-	if err := h.validateClusterMembership(ctx, t.Spec.ClusterRef, t.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -79,7 +75,7 @@ func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, obj runtime.Ob
 // ValidateUpdate implements webhook.CustomValidator
 func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	t := obj.(*LanguageTool)
-	if err := h.validateClusterMembership(ctx, t.Spec.ClusterRef, t.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -90,10 +86,10 @@ func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ runtime.Object
 	return nil, nil
 }
 
-func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, clusterRef, namespace string) error {
+func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
 	cluster := &LanguageCluster{}
-	if err := h.Get(ctx, types.NamespacedName{Name: clusterRef}, cluster); err != nil {
-		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, clusterRef)
+	if err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, namespace)
 	}
 	return nil
 }

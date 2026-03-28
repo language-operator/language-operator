@@ -36,13 +36,6 @@ func LanguagePersonaFrom(p *langopv1alpha1.LanguagePersona, mods ...LanguagePers
 	return clone
 }
 
-// SetPersonaClusterRef sets spec.clusterRef.
-func SetPersonaClusterRef(ref string) LanguagePersonaModifier {
-	return func(p *langopv1alpha1.LanguagePersona) {
-		p.Spec.ClusterRef = ref
-	}
-}
-
 // SetPersonaSystemPrompt sets spec.systemPrompt.
 func SetPersonaSystemPrompt(prompt string) LanguagePersonaModifier {
 	return func(p *langopv1alpha1.LanguagePersona) {

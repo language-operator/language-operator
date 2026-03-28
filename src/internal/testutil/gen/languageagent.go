@@ -46,13 +46,6 @@ func SetAgentImage(image string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentClusterRef sets spec.clusterRef.
-func SetAgentClusterRef(ref string) LanguageAgentModifier {
-	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.ClusterRef = ref
-	}
-}
-
 // SetAgentExecutionMode sets spec.executionMode.
 func SetAgentExecutionMode(mode string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

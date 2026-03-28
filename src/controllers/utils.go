@@ -89,19 +89,16 @@ func SetCondition(conditions *[]metav1.Condition, conditionType string, status m
 	return true
 }
 
-// ValidateClusterReference validates that a cluster exists and is ready
-func ValidateClusterReference(ctx context.Context, c client.Client, clusterRef, namespace string) error {
-	if clusterRef == "" {
-		return nil // No cluster reference to validate
-	}
-
+// ValidateClusterReference validates that the LanguageCluster for this namespace exists and is ready.
+// By convention, namespace name == cluster name.
+func ValidateClusterReference(ctx context.Context, c client.Client, namespace string) error {
 	cluster := &langopv1alpha1.LanguageCluster{}
-	if err := c.Get(ctx, client.ObjectKey{Name: clusterRef, Namespace: namespace}, cluster); err != nil {
-		return fmt.Errorf("failed to get cluster %s: %w", clusterRef, err)
+	if err := c.Get(ctx, client.ObjectKey{Name: namespace}, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster %s: %w", namespace, err)
 	}
 
 	if cluster.Status.Phase != events.PhaseStatusReady {
-		return fmt.Errorf("cluster %s is not ready yet (phase: %s)", clusterRef, cluster.Status.Phase)
+		return fmt.Errorf("cluster %s is not ready yet (phase: %s)", namespace, cluster.Status.Phase)
 	}
 
 	return nil

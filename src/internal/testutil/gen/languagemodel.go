@@ -50,13 +50,6 @@ func SetModelName(name string) LanguageModelModifier {
 	}
 }
 
-// SetModelClusterRef sets spec.clusterRef.
-func SetModelClusterRef(ref string) LanguageModelModifier {
-	return func(m *langopv1alpha1.LanguageModel) {
-		m.Spec.ClusterRef = ref
-	}
-}
-
 // SetModelAPIKeySecretRef sets spec.apiKeySecretRef.
 func SetModelAPIKeySecretRef(secretName, key string) LanguageModelModifier {
 	return func(m *langopv1alpha1.LanguageModel) {

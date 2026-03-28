@@ -49,11 +49,6 @@ var _ webhook.CustomValidator = &LanguageAgentWebhook{}
 func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) error {
 	a := obj.(*LanguageAgent)
 
-	// Infer clusterRef from namespace — namespace name == cluster name by convention
-	if a.Spec.ClusterRef == "" {
-		a.Spec.ClusterRef = a.Namespace
-	}
-
 	// Default workspace
 	if a.Spec.Workspace == nil {
 		a.Spec.Workspace = &WorkspaceSpec{
@@ -90,7 +85,7 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) 
 // ValidateCreate implements webhook.CustomValidator
 func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	a := obj.(*LanguageAgent)
-	if err := h.validateClusterMembership(ctx, a.Spec.ClusterRef, a.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, a.validateSpec()
@@ -99,7 +94,7 @@ func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.O
 // ValidateUpdate implements webhook.CustomValidator
 func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	a := obj.(*LanguageAgent)
-	if err := h.validateClusterMembership(ctx, a.Spec.ClusterRef, a.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, a.validateSpec()
@@ -110,11 +105,11 @@ func (h *LanguageAgentWebhook) ValidateDelete(_ context.Context, _ runtime.Objec
 	return nil, nil
 }
 
-// validateClusterMembership verifies a LanguageCluster named clusterRef exists.
-func (h *LanguageAgentWebhook) validateClusterMembership(ctx context.Context, clusterRef, namespace string) error {
+// validateClusterMembership verifies a LanguageCluster exists for this namespace.
+func (h *LanguageAgentWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
 	cluster := &LanguageCluster{}
-	if err := h.Get(ctx, types.NamespacedName{Name: clusterRef}, cluster); err != nil {
-		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, clusterRef)
+	if err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, namespace)
 	}
 	return nil
 }

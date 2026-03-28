@@ -54,10 +54,6 @@ type ToolProperty struct {
 
 // LanguageToolSpec defines the desired state of LanguageTool
 type LanguageToolSpec struct {
-	// ClusterRef references a LanguageCluster to deploy this tool into
-	// +optional
-	ClusterRef string `json:"clusterRef,omitempty"`
-
 	// Image is the container image to run for this tool
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1

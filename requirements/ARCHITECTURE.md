@@ -177,7 +177,6 @@ metadata:
 spec:
   provider: anthropic
   modelName: claude-sonnet-4-5
-  clusterRef: language-operator-myapp
   apiKeySecretRef:
     name: anthropic-credentials
     key: api-key

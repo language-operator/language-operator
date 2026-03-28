@@ -39,7 +39,7 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tool).
+		WithObjects(gen.ReadyCluster("default"), tool).
 		WithStatusSubresource(tool).
 		Build()
 
@@ -92,7 +92,7 @@ func TestLanguageToolController_ServiceMode(t *testing.T) {
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(tool).
+		WithObjects(gen.ReadyCluster("default"), tool).
 		WithStatusSubresource(tool).
 		Build()
 
@@ -222,7 +222,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
-				WithObjects(tool, deployment).
+				WithObjects(gen.ReadyCluster("default"), tool, deployment).
 				WithStatusSubresource(tool).
 				Build()
 

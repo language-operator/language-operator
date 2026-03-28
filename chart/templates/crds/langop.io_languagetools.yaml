@@ -944,10 +944,6 @@ spec:
                         type: array
                     type: object
                 type: object
-              clusterRef:
-                description: ClusterRef references a LanguageCluster to deploy this
-                  tool into
-                type: string
               deploymentMode:
                 default: service
                 description: |-

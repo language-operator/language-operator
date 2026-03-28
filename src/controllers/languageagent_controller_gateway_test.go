@@ -25,51 +25,33 @@ func TestLanguageAgentController_GatewayConfiguration(t *testing.T) {
 	}{
 		{
 			name: "new GatewayName field takes precedence",
-			cluster: func() *langopv1alpha1.LanguageCluster {
-				c := gen.LanguageCluster("test-cluster-new",
-					gen.SetClusterGatewayName("my-gateway"),
-					gen.SetClusterGatewayNamespace("gateway-system"),
-					gen.SetClusterGatewayClassName("old-gateway"),
-				)
-				c.Namespace = "test-namespace"
-				return c
-			}(),
+			cluster: gen.LanguageCluster("test-namespace",
+				gen.SetClusterGatewayName("my-gateway"),
+				gen.SetClusterGatewayNamespace("gateway-system"),
+				gen.SetClusterGatewayClassName("old-gateway"),
+			),
 			expectedGatewayName:      "my-gateway",
 			expectedGatewayNamespace: "gateway-system",
 		},
 		{
 			name: "GatewayName without namespace defaults to agent namespace",
-			cluster: func() *langopv1alpha1.LanguageCluster {
-				c := gen.LanguageCluster("test-cluster-default-ns",
-					gen.SetClusterGatewayName("my-gateway"),
-				)
-				c.Namespace = "test-namespace"
-				return c
-			}(),
+			cluster: gen.LanguageCluster("test-namespace",
+				gen.SetClusterGatewayName("my-gateway"),
+			),
 			expectedGatewayName:      "my-gateway",
 			expectedGatewayNamespace: "test-namespace", // Agent's namespace
 		},
 		{
 			name: "fallback to deprecated GatewayClassName for backward compatibility",
-			cluster: func() *langopv1alpha1.LanguageCluster {
-				c := gen.LanguageCluster("test-cluster-legacy",
-					gen.SetClusterGatewayClassName("legacy-gateway"),
-				)
-				c.Namespace = "test-namespace"
-				return c
-			}(),
+			cluster: gen.LanguageCluster("test-namespace",
+				gen.SetClusterGatewayClassName("legacy-gateway"),
+			),
 			expectedGatewayName:      "legacy-gateway",
 			expectedGatewayNamespace: "test-namespace", // Agent's namespace
 		},
 		{
-			name: "empty fields default to 'default' gateway",
-			cluster: func() *langopv1alpha1.LanguageCluster {
-				c := gen.LanguageCluster("test-cluster-empty",
-					gen.SetClusterIngressClassName(""),
-				)
-				c.Namespace = "test-namespace"
-				return c
-			}(),
+			name:                     "empty fields default to 'default' gateway",
+			cluster:                  gen.LanguageCluster("test-namespace"),
 			expectedGatewayName:      "default",
 			expectedGatewayNamespace: "default",
 		},
@@ -78,7 +60,6 @@ func TestLanguageAgentController_GatewayConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := gen.LanguageAgent("test-agent", "test-namespace",
-				gen.SetAgentClusterRef(tt.cluster.Name),
 				gen.SetAgentImage("test:latest"),
 			)
 
@@ -99,9 +80,9 @@ func TestLanguageAgentController_GatewayConfiguration(t *testing.T) {
 			// Test gateway configuration parsing by directly testing the logic
 			// Get cluster config for Gateway configuration (copied from reconcileHTTPRoute logic)
 			var gatewayName, gatewayNamespace string
-			if agent.Spec.ClusterRef != "" {
+			{
 				cluster := &langopv1alpha1.LanguageCluster{}
-				if err := reconciler.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, cluster); err == nil {
+				if err := reconciler.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
 					if cluster.Spec.IngressConfig != nil {
 						// Prefer new GatewayName field, fall back to deprecated GatewayClassName for backward compatibility
 						if cluster.Spec.IngressConfig.GatewayName != "" {
@@ -142,16 +123,13 @@ func TestLanguageAgentController_GatewayFieldPrecedence(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	// Test that GatewayName takes precedence over GatewayClassName
-	cluster := gen.LanguageCluster("precedence-test",
+	cluster := gen.LanguageCluster("test-namespace",
 		gen.SetClusterGatewayName("new-gateway"),
 		gen.SetClusterGatewayNamespace("new-namespace"),
 		gen.SetClusterGatewayClassName("old-gateway"),
 	)
-	cluster.Namespace = "test-namespace"
 
-	agent := gen.LanguageAgent("test-agent", "test-namespace",
-		gen.SetAgentClusterRef(cluster.Name),
-	)
+	agent := gen.LanguageAgent("test-agent", "test-namespace")
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -169,7 +147,7 @@ func TestLanguageAgentController_GatewayFieldPrecedence(t *testing.T) {
 
 	// Test that the reconciler can fetch and process the cluster configuration
 	fetchedCluster := &langopv1alpha1.LanguageCluster{}
-	err := reconciler.Get(ctx, types.NamespacedName{Name: agent.Spec.ClusterRef, Namespace: agent.Namespace}, fetchedCluster)
+	err := reconciler.Get(ctx, types.NamespacedName{Name: agent.Namespace}, fetchedCluster)
 	if err != nil {
 		t.Fatalf("Failed to fetch cluster: %v", err)
 	}

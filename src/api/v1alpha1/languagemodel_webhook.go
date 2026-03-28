@@ -42,18 +42,14 @@ var _ webhook.CustomDefaulter = &LanguageModelWebhook{}
 var _ webhook.CustomValidator = &LanguageModelWebhook{}
 
 // Default implements webhook.CustomDefaulter
-func (h *LanguageModelWebhook) Default(_ context.Context, obj runtime.Object) error {
-	m := obj.(*LanguageModel)
-	if m.Spec.ClusterRef == "" {
-		m.Spec.ClusterRef = m.Namespace
-	}
+func (h *LanguageModelWebhook) Default(_ context.Context, _ runtime.Object) error {
 	return nil
 }
 
 // ValidateCreate implements webhook.CustomValidator
 func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	m := obj.(*LanguageModel)
-	if err := h.validateClusterMembership(ctx, m.Spec.ClusterRef, m.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -62,7 +58,7 @@ func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, obj runtime.O
 // ValidateUpdate implements webhook.CustomValidator
 func (h *LanguageModelWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
 	m := obj.(*LanguageModel)
-	if err := h.validateClusterMembership(ctx, m.Spec.ClusterRef, m.Namespace); err != nil {
+	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -73,10 +69,10 @@ func (h *LanguageModelWebhook) ValidateDelete(_ context.Context, _ runtime.Objec
 	return nil, nil
 }
 
-func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, clusterRef, namespace string) error {
+func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
 	cluster := &LanguageCluster{}
-	if err := h.Get(ctx, types.NamespacedName{Name: clusterRef}, cluster); err != nil {
-		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, clusterRef)
+	if err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, namespace)
 	}
 	return nil
 }

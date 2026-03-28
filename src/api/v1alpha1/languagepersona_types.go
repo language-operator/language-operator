@@ -18,10 +18,6 @@ type LanguagePersonaSpec struct {
 	// +optional
 	SystemPrompt string `json:"systemPrompt,omitempty"`
 
-	// ClusterRef references a LanguageCluster to deploy this persona into
-	// +optional
-	ClusterRef string `json:"clusterRef,omitempty"`
-
 	// Instructions provides additional behavioral guidelines
 	// +optional
 	Instructions []string `json:"instructions,omitempty"`

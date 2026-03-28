@@ -275,12 +275,10 @@ func TestLanguageClusterController_DeletionWithDependents(t *testing.T) {
 	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
 	agent := gen.LanguageAgent("test-agent", "test-cluster-with-deps",
-		gen.SetAgentClusterRef("test-cluster-with-deps"),
 		gen.SetAgentInstructions("test agent"),
 	)
 
 	tool := gen.LanguageTool("test-tool", "test-cluster-with-deps",
-		gen.SetToolClusterRef("test-cluster-with-deps"),
 		gen.SetToolType("shell"),
 	)
 

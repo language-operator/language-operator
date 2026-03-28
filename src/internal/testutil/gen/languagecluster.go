@@ -79,6 +79,14 @@ func SetClusterGatewayClassName(className string) LanguageClusterModifier {
 	}
 }
 
+// ReadyCluster constructs a LanguageCluster with Status.Phase already set to "Ready".
+// Use this in unit tests that need a reconcilable namespace without setting up a full cluster reconciliation.
+func ReadyCluster(name string, mods ...LanguageClusterModifier) *langopv1alpha1.LanguageCluster {
+	c := LanguageCluster(name, mods...)
+	c.Status.Phase = "Ready"
+	return c
+}
+
 // SetClusterCapacity sets spec.capacity.
 func SetClusterCapacity(cap *langopv1alpha1.ClusterCapacitySpec) LanguageClusterModifier {
 	return func(c *langopv1alpha1.LanguageCluster) {

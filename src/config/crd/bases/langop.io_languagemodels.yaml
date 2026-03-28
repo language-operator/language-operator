@@ -103,10 +103,6 @@ spec:
                     pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
                     type: string
                 type: object
-              clusterRef:
-                description: ClusterRef references a LanguageCluster to deploy this
-                  model into
-                type: string
               configuration:
                 description: Configuration contains provider-specific configuration
                 properties:

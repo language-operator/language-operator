@@ -148,6 +148,48 @@ _Appears in:_
 | `group` _string_ | Group is the API group of the issuer | cert-manager.io |  |
 
 
+#### ClusterCapacitySpec
+
+
+
+ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.
+
+
+
+_Appears in:_
+- [LanguageClusterSpec](#languageclusterspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `maxAgents` _integer_ | MaxAgents is the maximum number of LanguageAgent objects allowed. |  |  |
+| `maxModels` _integer_ | MaxModels is the maximum number of LanguageModel objects allowed. |  |  |
+| `maxTools` _integer_ | MaxTools is the maximum number of LanguageTool objects allowed. |  |  |
+| `maxPersonas` _integer_ | MaxPersonas is the maximum number of LanguagePersona objects allowed. |  |  |
+| `maxCPU` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api)_ | MaxCPU is the aggregate CPU limit for all pods in the cluster namespace.<br />Maps to limits.cpu in the namespace ResourceQuota.<br />Example: "4", "2500m" |  |  |
+| `maxMemory` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api)_ | MaxMemory is the aggregate memory limit for all pods in the cluster namespace.<br />Maps to limits.memory in the namespace ResourceQuota.<br />Example: "8Gi", "512Mi" |  |  |
+
+
+#### ClusterCapacityStatus
+
+
+
+ClusterCapacityStatus reports observed resource usage in the cluster's namespace.
+
+
+
+_Appears in:_
+- [LanguageClusterStatus](#languageclusterstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `agentCount` _integer_ | AgentCount is the number of LanguageAgent objects in the cluster namespace. |  |  |
+| `modelCount` _integer_ | ModelCount is the number of LanguageModel objects in the cluster namespace. |  |  |
+| `toolCount` _integer_ | ToolCount is the number of LanguageTool objects in the cluster namespace. |  |  |
+| `personaCount` _integer_ | PersonaCount is the number of LanguagePersona objects in the cluster namespace. |  |  |
+| `totalCPULimits` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api)_ | TotalCPULimits is the sum of limits.cpu across all agent pod specs. |  |  |
+| `totalMemoryLimits` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api)_ | TotalMemoryLimits is the sum of limits.memory across all agent pod specs. |  |  |
+
+
 #### CostMetrics
 
 
@@ -278,7 +320,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `tls` _[IngressTLSConfig](#ingresstlsconfig)_ | TLS configuration for agent webhooks |  |  |
-| `gatewayClassName` _string_ | GatewayClassName specifies the Gateway API GatewayClass to use<br />If empty, will attempt auto-detection or fall back to Ingress |  |  |
+| `gatewayName` _string_ | GatewayName specifies the Gateway resource name to use<br />If empty, will attempt auto-detection or fall back to Ingress |  |  |
+| `gatewayNamespace` _string_ | GatewayNamespace specifies the namespace of the Gateway resource<br />If empty, defaults to the same namespace as the LanguageCluster |  |  |
+| `gatewayClassName` _string_ | Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.<br />GatewayClassName specifies the Gateway API GatewayClass to use<br />If empty, will attempt auto-detection or fall back to Ingress |  |  |
 | `ingressClassName` _string_ | IngressClassName specifies the Ingress class to use for fallback<br />Only used when Gateway API is not available |  |  |
 
 
@@ -298,6 +342,23 @@ _Appears in:_
 | `enabled` _boolean_ | Enabled controls whether TLS is enabled for webhooks | true |  |
 | `secretName` _string_ | SecretName is the name of the TLS secret (for manual cert management)<br />If empty, cert-manager will be used if available |  |  |
 | `issuerRef` _[CertIssuerReference](#certissuerreference)_ | IssuerRef references a cert-manager Issuer or ClusterIssuer |  |  |
+
+
+#### InstructionsSource
+
+
+
+InstructionsSource references instructions from a ConfigMap or Secret
+
+
+
+_Appears in:_
+- [LanguageAgentSpec](#languageagentspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `configMapRef` _[ConfigMapKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#configmapkeyselector-v1-core)_ | ConfigMapRef references a ConfigMap key containing instructions |  |  |
+| `secretRef` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretkeyselector-v1-core)_ | SecretRef references a Secret key containing instructions |  |  |
 
 
 #### KnowledgeSourceSpec
@@ -354,17 +415,17 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this agent into |  |  |
-| `image` _string_ | Image is the container image to run for this agent |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `image` _string_ | Image is the container image to run for this agent |  | MinLength: 1 <br />Pattern: `^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$` <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
-| `modelRefs` _[ModelReference](#modelreference) array_ | ModelRefs is a list of LanguageModel references this agent can use |  | MinItems: 1 <br />Required: \{\} <br /> |
+| `modelRefs` _[ModelReference](#modelreference) array_ | ModelRefs is a list of LanguageModel references this agent can use |  |  |
 | `toolRefs` _[ToolReference](#toolreference) array_ | ToolRefs is a list of LanguageTool references available to this agent |  |  |
-| `personaRef` _[PersonaReference](#personareference)_ | PersonaRef is an optional reference to a LanguagePersona |  |  |
+| `personaRefs` _[PersonaReference](#personareference) array_ | PersonaRefs is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones |  |  |
 | `goal` _string_ | Goal defines the agent's objective (for autonomous agents) |  |  |
-| `instructions` _string_ | Instructions provides system instructions for the agent |  |  |
+| `instructions` _string_ | Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set. |  |  |
+| `instructionsFrom` _[InstructionsSource](#instructionssource)_ | InstructionsFrom allows referencing instructions from a ConfigMap or Secret |  |  |
 | `executionMode` _string_ | ExecutionMode defines how the agent operates | autonomous | Enum: [autonomous interactive scheduled event-driven] <br /> |
-| `schedule` _string_ | Schedule defines when the agent runs (cron format, for scheduled mode) |  |  |
+| `schedule` _string_ | Schedule defines when the agent runs (cron format, for scheduled mode)<br />Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.) |  | MaxLength: 100 <br />Pattern: `^(@(annually\|yearly\|monthly\|weekly\|daily\|hourly\|every_minute))\|(@every\s+((\d+(\.\d+)?)(ns\|us\|µs\|ms\|s\|m\|h))+)\|(((\*\|[0-9]\|[1-5][0-9]\|\*\/[0-9]+)\s+)\{4\}(\*\|[0-7]\|[1-7]\|\*\/[0-9]+))$` <br /> |
 | `eventTriggers` _[EventTriggerSpec](#eventtriggerspec) array_ | EventTriggers defines events that trigger the agent (for event-driven mode) |  |  |
 | `maxIterations` _integer_ | MaxIterations limits the number of reasoning/action loops | 50 | Maximum: 1000 <br />Minimum: 1 <br /> |
 | `timeout` _string_ | Timeout is the maximum execution time (e.g., "10m", "1h") | 10m | Pattern: `^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$` <br /> |
@@ -383,12 +444,15 @@ _Appears in:_
 | `podLabels` _object (keys:string, values:string)_ | PodLabels are additional labels to add to the Pods |  |  |
 | `restartPolicy` _[RestartPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#restartpolicy-v1-core)_ | RestartPolicy defines when to restart the agent | OnFailure | Enum: [Always OnFailure Never] <br /> |
 | `backoffLimit` _integer_ | BackoffLimit specifies the number of retries before marking as Failed | 3 | Minimum: 0 <br /> |
-| `memoryStore` _[MemoryStoreSpec](#memorystorespec)_ | MemoryStore configures conversation memory persistence |  |  |
 | `observability` _[AgentObservabilitySpec](#agentobservabilityspec)_ | Observability defines monitoring and tracing configuration |  |  |
 | `rateLimits` _[AgentRateLimitSpec](#agentratelimitspec)_ | RateLimits defines rate limiting for this agent |  |  |
 | `safetyConfig` _[SafetyConfigSpec](#safetyconfigspec)_ | SafetyConfig defines safety constraints and guardrails |  |  |
 | `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace defines persistent storage for the agent |  |  |
 | `egress` _[NetworkRule](#networkrule) array_ | Egress defines external network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints |  |  |
+| `port` _integer_ | Port is the port the agent container listens on.<br />Used for the ClusterIP Service and NetworkPolicy ingress rules.<br />Defaults to 8080. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | LivenessProbe defines the liveness probe for the agent container.<br />If not set, no liveness probe is configured. |  |  |
+| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | ReadinessProbe defines the readiness probe for the agent container.<br />If not set, no readiness probe is configured. |  |  |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core) array_ | InitContainers are additional init containers injected before the agent container starts.<br />Useful for seeding config, migrating workspace data, or other pre-start setup. |  |  |
 
 
 #### LanguageAgentStatus
@@ -424,15 +488,10 @@ _Appears in:_
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
 | `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
-| `synthesisInfo` _[SynthesisInfo](#synthesisinfo)_ | SynthesisInfo contains information about code synthesis |  |  |
-| `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.agents.domain.com) |  |  |
+| `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.domain.com) |  |  |
 | `webhookURLs` _string array_ | WebhookURLs contains the URLs where this agent can receive webhooks |  |  |
-| `runtimeErrors` _[RuntimeError](#runtimeerror) array_ | RuntimeErrors contains recent runtime errors for self-healing |  |  |
-| `lastCrashLog` _string_ | LastCrashLog contains the last 100 lines of logs before crash |  |  |
-| `consecutiveFailures` _integer_ | ConsecutiveFailures tracks consecutive pod failures |  |  |
-| `failureReason` _string_ | FailureReason categorizes the failure type (Synthesis\|Runtime\|Infrastructure) |  |  |
-| `selfHealingAttempts` _integer_ | SelfHealingAttempts tracks how many self-healing synthesis attempts have been made |  |  |
-| `lastSuccessfulCode` _string_ | LastSuccessfulCode stores the last known working code for rollback |  |  |
+
+
 
 
 #### LanguageCluster
@@ -467,8 +526,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `domain` _string_ | Domain is the base domain for webhook routing<br />Agent webhooks will be accessible at <uuid>.agents.<domain><br />Example: "example.com" results in webhooks like "abc123.agents.example.com" |  |  |
+| `domain` _string_ | Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <uuid>.<domain><br />Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io" |  |  |
 | `ingressConfig` _[IngressConfig](#ingressconfig)_ | IngressConfig defines ingress/gateway configuration for the cluster |  |  |
+| `networkPolicies` _[NetworkRule](#networkrule) array_ | NetworkPolicies defines egress network policies for agents in this cluster |  |  |
+| `proxy` _[ProxyConfig](#proxyconfig)_ | Proxy configures the shared LiteLLM proxy deployed per cluster |  |  |
+| `capacity` _[ClusterCapacitySpec](#clustercapacityspec)_ | Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.<br />When set, the controller creates a ResourceQuota named "langop-quota".<br />When unset, any existing "langop-quota" is deleted. |  |  |
 
 
 #### LanguageClusterStatus
@@ -486,6 +548,9 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `phase` _string_ | Phase of the cluster (Pending, Ready, Failed) |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
+| `proxyEndpoint` _string_ | ProxyEndpoint is the in-cluster URL for the shared LiteLLM proxy |  |  |
+| `proxyReady` _boolean_ | ProxyReady indicates whether the shared proxy Deployment is available |  |  |
+| `capacity` _[ClusterCapacityStatus](#clustercapacitystatus)_ | Capacity reports observed resource usage in this cluster's namespace. |  |  |
 
 
 #### LanguageModel
@@ -534,7 +599,8 @@ _Appears in:_
 | `observability` _[ObservabilitySpec](#observabilityspec)_ | Observability defines monitoring and tracing configuration |  |  |
 | `costTracking` _[CostTrackingSpec](#costtrackingspec)_ | CostTracking enables cost tracking for this model |  |  |
 | `regions` _[RegionSpec](#regionspec) array_ | Regions specifies which regions this model is deployed in (for multi-region) |  |  |
-| `egress` _[NetworkRule](#networkrule) array_ | Egress defines external network access rules for this model proxy<br />By default, model proxies can access all resources within the cluster but no external endpoints |  |  |
+| `egress` _[NetworkRule](#networkrule) array_ | Egress defines external network access rules for this model proxy.<br />By default, model proxies can access all resources within the cluster but no external endpoints.<br />Common patterns:<br /># Azure OpenAI Service<br />egress:<br />- description: "Allow Azure OpenAI API"<br />  to:<br />    dns: ["*.openai.azure.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># AWS Bedrock<br />egress:<br />- description: "Allow AWS Bedrock API"<br />  to:<br />    dns: ["bedrock-runtime.*.amazonaws.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># Corporate proxy<br />egress:<br />- description: "Allow corporate proxy"<br />  to:<br />    cidr: "10.0.0.0/8"<br />  ports:<br />  - port: 8080<br />    protocol: TCP<br /># Local LM Studio<br />egress:<br />- description: "Allow LM Studio API"<br />  to:<br />    cidr: "192.168.1.0/24"<br />  ports:<br />  - port: 1234<br />    protocol: TCP |  |  |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core)_ | Resources defines CPU and memory resource requirements for the model proxy.<br />If not specified, defaults to:<br />  requests: cpu=100m, memory=128Mi<br />  limits: cpu=1000m, memory=512Mi |  |  |
 
 
 #### LanguageModelStatus
@@ -562,6 +628,8 @@ _Appears in:_
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
 | `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
+
+
 
 
 #### LanguagePersona
@@ -596,9 +664,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `displayName` _string_ | DisplayName is the human-readable name for this persona |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `description` _string_ | Description describes the persona's role and behavior |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `systemPrompt` _string_ | SystemPrompt is the base system instruction for this persona |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `displayName` _string_ | DisplayName is the human-readable name for this persona |  |  |
+| `description` _string_ | Description describes the persona's role and behavior |  |  |
+| `systemPrompt` _string_ | SystemPrompt is the base system instruction for this persona |  |  |
 | `instructions` _string array_ | Instructions provides additional behavioral guidelines |  |  |
 | `rules` _[PersonaRule](#personarule) array_ | Rules define conditional behaviors and policies |  |  |
 | `examples` _[PersonaExample](#personaexample) array_ | Examples provide few-shot learning examples |  |  |
@@ -629,15 +697,12 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguagePersona |  |  |
-| `phase` _string_ | Phase represents the current phase (Ready, NotReady, Validating) |  | Enum: [Ready NotReady Validating Error] <br /> |
+| `phase` _string_ | Phase represents the current phase (Ready, NotReady) |  | Enum: [Ready NotReady] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the persona's state |  |  |
-| `usageCount` _integer_ | UsageCount tracks how many agents use this persona |  |  |
-| `activeAgents` _string array_ | ActiveAgents lists agents currently using this persona |  |  |
-| `validationResult` _[PersonaValidation](#personavalidation)_ | ValidationResult contains persona validation results |  |  |
-| `metrics` _[PersonaMetrics](#personametrics)_ | Metrics contains usage metrics for this persona |  |  |
 | `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
-| `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
+
+
 
 
 #### LanguageTool
@@ -672,7 +737,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `clusterRef` _string_ | ClusterRef references a LanguageCluster to deploy this tool into |  |  |
 | `image` _string_ | Image is the container image to run for this tool |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
@@ -721,6 +785,7 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the tool's state |  |  |
 | `endpoint` _string_ | Endpoint is the service endpoint where the tool is accessible |  |  |
 | `availableTools` _string array_ | AvailableTools lists the tools discovered from this service |  |  |
+| `toolSchemas` _[ToolSchema](#toolschema) array_ | ToolSchemas contains the complete MCP tool schemas discovered from this service |  |  |
 | `readyReplicas` _integer_ | ReadyReplicas is the number of pods ready and passing health checks |  |  |
 | `availableReplicas` _integer_ | AvailableReplicas is the number of pods targeted by this LanguageTool with at least one available condition |  |  |
 | `updatedReplicas` _integer_ | UpdatedReplicas is the number of pods targeted by this LanguageTool that have the desired spec |  |  |
@@ -729,6 +794,8 @@ _Appears in:_
 | `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastTransitionTime is the last time the phase transitioned |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
 | `reason` _string_ | Reason provides a machine-readable reason for the current state |  |  |
+
+
 
 
 #### LoadBalancingSpec
@@ -747,25 +814,6 @@ _Appears in:_
 | `strategy` _string_ | Strategy specifies the load balancing strategy | round-robin | Enum: [round-robin least-connections random weighted latency-based] <br /> |
 | `endpoints` _[EndpointSpec](#endpointspec) array_ | Endpoints is a list of endpoint configurations for load balancing |  |  |
 | `healthCheck` _[HealthCheckSpec](#healthcheckspec)_ | HealthCheck defines health checking for endpoints |  |  |
-
-
-#### MemoryStoreSpec
-
-
-
-MemoryStoreSpec configures conversation memory
-
-
-
-_Appears in:_
-- [LanguageAgentSpec](#languageagentspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _string_ | Type specifies the memory backend | ephemeral | Enum: [ephemeral redis postgres s3] <br /> |
-| `connectionSecretRef` _[SecretReference](#secretreference)_ | ConnectionSecretRef references a secret with connection details |  |  |
-| `retentionPolicy` _[RetentionPolicySpec](#retentionpolicyspec)_ | RetentionPolicy defines how long to keep conversation history |  |  |
-| `maxConversations` _integer_ | MaxConversations limits the number of concurrent conversations |  |  |
 
 
 #### ModelCostSpec
@@ -857,8 +905,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the name of the LanguageModel |  | Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguageModel (defaults to same namespace) |  |  |
+| `name` _string_ | Name is the name of the LanguageModel |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the LanguageModel (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 | `role` _string_ | Role defines the purpose of this model (primary, fallback, specialized) | primary | Enum: [primary fallback reasoning tool-calling summarization] <br /> |
 | `priority` _integer_ | Priority for model selection (lower is higher priority) |  |  |
 
@@ -931,6 +979,7 @@ NetworkRule defines a single network policy rule
 
 _Appears in:_
 - [LanguageAgentSpec](#languageagentspec)
+- [LanguageClusterSpec](#languageclusterspec)
 - [LanguageModelSpec](#languagemodelspec)
 - [LanguageToolSpec](#languagetoolspec)
 
@@ -1001,28 +1050,6 @@ _Appears in:_
 | `tags` _string array_ | Tags categorize this example |  |  |
 
 
-#### PersonaMetrics
-
-
-
-PersonaMetrics contains persona usage metrics
-
-
-
-_Appears in:_
-- [LanguagePersonaStatus](#languagepersonastatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `totalInteractions` _integer_ | TotalInteractions is the total number of interactions |  |  |
-| `averageResponseLength` _integer_ | AverageResponseLength is the average response length in characters |  |  |
-| `averageToolCalls` _float_ | AverageToolCalls is the average number of tool calls per interaction |  |  |
-| `ruleActivations` _object (keys:string, values:integer)_ | RuleActivations tracks how often each rule triggers |  |  |
-| `topTools` _[ToolFrequency](#toolfrequency) array_ | TopTools lists most frequently used tools |  |  |
-| `topTopics` _[TopicFrequency](#topicfrequency) array_ | TopTopics lists most frequently discussed topics |  |  |
-| `userSatisfaction` _float_ | UserSatisfaction is an optional satisfaction score (0-100) |  |  |
-
-
 #### PersonaReference
 
 
@@ -1037,8 +1064,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the name of the LanguagePersona |  | Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguagePersona (defaults to same namespace) |  |  |
+| `name` _string_ | Name is the name of the LanguagePersona |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the LanguagePersona (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 
 
 #### PersonaRule
@@ -1060,26 +1087,6 @@ _Appears in:_
 | `action` _string_ | Action defines what to do when condition matches |  | Required: \{\} <br /> |
 | `priority` _integer_ | Priority determines rule evaluation order (lower is higher priority) | 100 |  |
 | `enabled` _boolean_ | Enabled indicates if this rule is active | true |  |
-
-
-#### PersonaValidation
-
-
-
-PersonaValidation contains validation results
-
-
-
-_Appears in:_
-- [LanguagePersonaStatus](#languagepersonastatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `valid` _boolean_ | Valid indicates if the persona passed validation |  |  |
-| `validationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | ValidationTime is when validation was performed |  |  |
-| `errors` _string array_ | Errors lists validation errors |  |  |
-| `warnings` _string array_ | Warnings lists validation warnings |  |  |
-| `score` _integer_ | Score is an optional quality score (0-100) |  |  |
 
 
 #### PodDisruptionBudgetSpec
@@ -1119,6 +1126,24 @@ _Appears in:_
 | `presencePenalty` _float_ | PresencePenalty penalizes tokens based on presence (-2.0 to 2.0) |  |  |
 | `stopSequences` _string array_ | StopSequences are sequences that stop generation |  |  |
 | `additionalParameters` _object (keys:string, values:string)_ | AdditionalParameters for provider-specific options |  |  |
+
+
+#### ProxyConfig
+
+
+
+ProxyConfig configures the shared LiteLLM proxy for a LanguageCluster
+
+
+
+_Appears in:_
+- [LanguageClusterSpec](#languageclusterspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ingressEnabled` _boolean_ | IngressEnabled controls whether an Ingress/HTTPRoute is created for the proxy.<br />Defaults to true when cluster.spec.domain is set. |  |  |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcerequirements-v1-core)_ | Resources sets CPU/memory requests and limits for the proxy Deployment. |  |  |
+| `replicas` _integer_ | Replicas sets the number of proxy pod replicas. | 1 |  |
 
 
 #### RateLimitSpec
@@ -1198,23 +1223,6 @@ _Appears in:_
 | `includeConfidence` _boolean_ | IncludeConfidence indicates whether to include confidence scores | false |  |
 
 
-#### RetentionPolicySpec
-
-
-
-RetentionPolicySpec defines data retention policy
-
-
-
-_Appears in:_
-- [MemoryStoreSpec](#memorystorespec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `maxAge` _string_ | MaxAge is the maximum age of data to retain (e.g., "7d", "30d") |  | Pattern: `^[0-9]+(d\|w\|m\|y)$` <br /> |
-| `maxMessages` _integer_ | MaxMessages is the maximum number of messages to retain per conversation |  |  |
-
-
 #### RetryPolicySpec
 
 
@@ -1252,27 +1260,6 @@ _Appears in:_
 | `maxSurge` _integer_ | MaxSurge is the maximum number of pods that can be created above desired replicas |  |  |
 
 
-#### RuntimeError
-
-
-
-RuntimeError captures runtime failure information for self-healing
-
-
-
-_Appears in:_
-- [LanguageAgentStatus](#languageagentstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `timestamp` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | Timestamp is when the error occurred |  |  |
-| `errorType` _string_ | ErrorType is the exception class or error type |  |  |
-| `errorMessage` _string_ | ErrorMessage is the error message |  |  |
-| `stackTrace` _string array_ | StackTrace contains the error stack trace |  |  |
-| `exitCode` _integer_ | ContainerExitCode is the container exit code |  |  |
-| `synthesisAttempt` _integer_ | SynthesisAttempt indicates which synthesis iteration this error occurred in |  |  |
-
-
 #### SafetyConfigSpec
 
 
@@ -1304,7 +1291,6 @@ SecretReference references a Kubernetes Secret
 _Appears in:_
 - [KnowledgeSourceSpec](#knowledgesourcespec)
 - [LanguageModelSpec](#languagemodelspec)
-- [MemoryStoreSpec](#memorystorespec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1330,46 +1316,6 @@ _Appears in:_
 | `namespace` _string_ | Service namespace (defaults to same namespace if omitted) |  |  |
 
 
-#### SynthesisInfo
-
-
-
-SynthesisInfo contains metadata about agent code synthesis
-
-
-
-_Appears in:_
-- [LanguageAgentStatus](#languageagentstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `lastSynthesisTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastSynthesisTime is when the code was last synthesized |  |  |
-| `synthesisModel` _string_ | SynthesisModel is the LLM model used for synthesis |  |  |
-| `synthesisDuration` _float_ | SynthesisDuration is how long synthesis took (in seconds) |  |  |
-| `codeHash` _string_ | CodeHash is the SHA256 hash of the current synthesized code |  |  |
-| `instructionsHash` _string_ | InstructionsHash is the SHA256 hash of the instructions that generated the code |  |  |
-| `validationErrors` _string array_ | ValidationErrors contains any validation errors from the last synthesis |  |  |
-| `synthesisAttempts` _integer_ | SynthesisAttempts is the number of synthesis attempts for current instructions |  |  |
-
-
-#### ToolFrequency
-
-
-
-ToolFrequency tracks tool usage frequency
-
-
-
-_Appears in:_
-- [PersonaMetrics](#personametrics)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `toolName` _string_ | ToolName is the name of the tool |  |  |
-| `count` _integer_ | Count is the number of times this tool was used |  |  |
-| `percentage` _float_ | Percentage is the percentage of total tool usage |  |  |
-
-
 #### ToolPreferencesSpec
 
 
@@ -1390,6 +1336,24 @@ _Appears in:_
 | `explainToolUse` _boolean_ | ExplainToolUse explains tool usage to users | true |  |
 
 
+#### ToolProperty
+
+
+
+ToolProperty defines an individual parameter or return field
+
+
+
+_Appears in:_
+- [ToolSchemaDefinition](#toolschemadefinition)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _string_ | Type is the JSON schema type (string, integer, boolean, etc.) |  |  |
+| `description` _string_ | Description explains what this property represents |  |  |
+| `example` _string_ | Example provides an example value as a JSON string |  |  |
+
+
 #### ToolReference
 
 
@@ -1403,10 +1367,47 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the name of the LanguageTool |  | Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguageTool (defaults to same namespace) |  |  |
+| `name` _string_ | Name is the name of the LanguageTool |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the LanguageTool (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 | `enabled` _boolean_ | Enabled indicates if this tool is available to the agent | true |  |
 | `requireApproval` _boolean_ | RequireApproval requires human approval before tool execution | false |  |
+
+
+#### ToolSchema
+
+
+
+ToolSchema represents the complete schema of an MCP tool
+
+
+
+_Appears in:_
+- [LanguageToolStatus](#languagetoolstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the tool identifier |  |  |
+| `description` _string_ | Description is a human-readable description of the tool |  |  |
+| `inputSchema` _[ToolSchemaDefinition](#toolschemadefinition)_ | InputSchema defines the parameters this tool accepts |  |  |
+| `outputSchema` _[ToolSchemaDefinition](#toolschemadefinition)_ | OutputSchema defines the structure this tool returns |  |  |
+
+
+#### ToolSchemaDefinition
+
+
+
+ToolSchemaDefinition defines parameter or return value structure
+
+
+
+_Appears in:_
+- [ToolSchema](#toolschema)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _string_ | Type is the JSON schema type (object, array, string, etc.) |  |  |
+| `properties` _object (keys:string, values:[ToolProperty](#toolproperty))_ | Properties defines object properties (for type: object) |  |  |
+| `required` _string array_ | Required lists required property names (for type: object) |  |  |
 
 
 #### ToolUsageSpec
@@ -1427,24 +1428,6 @@ _Appears in:_
 | `successCount` _integer_ | SuccessCount is the number of successful invocations |  |  |
 | `failureCount` _integer_ | FailureCount is the number of failed invocations |  |  |
 | `averageLatency` _integer_ | AverageLatency is the average latency in milliseconds |  |  |
-
-
-#### TopicFrequency
-
-
-
-TopicFrequency tracks topic discussion frequency
-
-
-
-_Appears in:_
-- [PersonaMetrics](#personametrics)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `topic` _string_ | Topic is the topic name |  |  |
-| `count` _integer_ | Count is the number of times this topic was discussed |  |  |
-| `percentage` _float_ | Percentage is the percentage of total interactions |  |  |
 
 
 #### UpdateStrategySpec
@@ -1478,7 +1461,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Enabled controls whether to create a workspace volume | true |  |
-| `size` _string_ | Size is the requested storage size (e.g., "10Gi", "1Ti") | 10Gi | Pattern: `^[0-9]+(Ei\|Pi\|Ti\|Gi\|Mi\|Ki\|E\|P\|T\|G\|M\|K)$` <br /> |
+| `size` _string_ | Size is the requested storage size (e.g., "10Gi", "1.5Ti", "500Mi")<br />Supports integer and decimal quantities with standard Kubernetes suffixes | 10Gi | MinLength: 1 <br />Pattern: `^([0-9]*\.?[0-9]+)(Ei\|Pi\|Ti\|Gi\|Mi\|Ki\|E\|P\|T\|G\|M\|K\|m)?$` <br /> |
 | `storageClassName` _string_ | StorageClassName specifies the StorageClass for the PVC<br />If not specified, uses the cluster default |  |  |
 | `accessMode` _string_ | AccessMode defines the volume access mode | ReadWriteOnce | Enum: [ReadWriteOnce ReadWriteMany] <br /> |
 | `mountPath` _string_ | MountPath is where the workspace is mounted in containers | /workspace |  |
