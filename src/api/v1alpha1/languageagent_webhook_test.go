@@ -38,7 +38,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image: "test:latest",
-					ModelRefs: []ModelReference{
+					Models: []ModelReference{
 						{Name: "test-model"},
 					},
 					Instructions: "test instructions",
@@ -61,7 +61,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image: "test:latest",
-					ModelRefs: []ModelReference{
+					Models: []ModelReference{
 						{Name: "test-model"},
 					},
 					Instructions: "test instructions",
@@ -89,7 +89,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image: "test:latest",
-					ModelRefs: []ModelReference{
+					Models: []ModelReference{
 						{Name: "test-model"},
 					},
 					Instructions: "test instructions",
@@ -174,7 +174,7 @@ func TestLanguageAgentValidateCreate(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image: "test:latest",
-					ModelRefs: []ModelReference{
+					Models: []ModelReference{
 						{Name: "test-model"},
 					},
 					Instructions: "test instructions",
@@ -191,7 +191,7 @@ func TestLanguageAgentValidateCreate(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image: "test:latest",
-					ModelRefs: []ModelReference{
+					Models: []ModelReference{
 						{Name: "test-model"},
 					},
 					Instructions: "test instructions",
@@ -318,7 +318,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Size: "10Gi",
@@ -336,7 +336,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Size: "1.5Ti",
@@ -354,7 +354,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Enabled: true,
@@ -374,7 +374,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Enabled: true,
@@ -394,7 +394,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Enabled: true,
@@ -414,7 +414,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:        "test:latest",
-					ModelRefs:    []ModelReference{{Name: "test-model"}},
+					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
 						Enabled: false,
@@ -651,7 +651,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "scheduled",
 					Schedule:      "0 9 * * *",
@@ -668,7 +668,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "scheduled",
 					Schedule:      "@daily",
@@ -685,7 +685,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "scheduled",
 					Schedule:      "",
@@ -703,7 +703,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "scheduled",
 					Schedule:      "60 * * * *",
@@ -721,7 +721,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "autonomous",
 					Schedule:      "",
@@ -738,7 +738,7 @@ func TestLanguageAgentValidateCreateWithSchedule(t *testing.T) {
 				},
 				Spec: LanguageAgentSpec{
 					Image:         "test:latest",
-					ModelRefs:     []ModelReference{{Name: "test-model"}},
+					Models:        []ModelReference{{Name: "test-model"}},
 					Instructions:  "test instructions",
 					ExecutionMode: "autonomous",
 					Schedule:      "0 9 * * *",

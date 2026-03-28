@@ -24,25 +24,25 @@ import (
 func TestLanguageAgentValidateModelReferences(t *testing.T) {
 	tests := []struct {
 		name      string
-		modelRefs []ModelReference
+		models    []ModelReference
 		expectErr bool
 		errMsg    string
 	}{
 		{
-			name:      "no model references is valid (modelRefs is optional)",
-			modelRefs: []ModelReference{},
+			name:      "no model references is valid (models is optional)",
+			models:    []ModelReference{},
 			expectErr: false,
 		},
 		{
 			name: "valid model reference should pass",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "test-model", Role: "primary"},
 			},
 			expectErr: false,
 		},
 		{
 			name: "empty model name should fail",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "", Role: "primary"},
 			},
 			expectErr: true,
@@ -50,7 +50,7 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		},
 		{
 			name: "no primary model should fail",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "test-model", Role: "fallback"},
 			},
 			expectErr: true,
@@ -58,7 +58,7 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		},
 		{
 			name: "negative priority should fail",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "test-model", Role: "primary", Priority: intPtr(-1)},
 			},
 			expectErr: true,
@@ -66,7 +66,7 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		},
 		{
 			name: "multiple models with primary should pass",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "model1", Role: "primary"},
 				{Name: "model2", Role: "fallback"},
 			},
@@ -74,7 +74,7 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		},
 		{
 			name: "model with default role is primary",
-			modelRefs: []ModelReference{
+			models: []ModelReference{
 				{Name: "model1"}, // default role should be treated as primary
 			},
 			expectErr: false,
@@ -85,7 +85,7 @@ func TestLanguageAgentValidateModelReferences(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agent := &LanguageAgent{
 				Spec: LanguageAgentSpec{
-					ModelRefs: tt.modelRefs,
+					Models: tt.models,
 				},
 			}
 

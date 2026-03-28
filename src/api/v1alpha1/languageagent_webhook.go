@@ -116,9 +116,9 @@ func (h *LanguageAgentWebhook) validateClusterMembership(ctx context.Context, na
 
 // validateSpec performs pure spec validation (no API calls)
 func (a *LanguageAgent) validateSpec() error {
-	if len(a.Spec.ModelRefs) > 0 {
+	if len(a.Spec.Models) > 0 {
 		if err := a.validateModelReferences(); err != nil {
-			return fmt.Errorf("spec.modelRefs: %w", err)
+			return fmt.Errorf("spec.models: %w", err)
 		}
 	}
 
@@ -188,19 +188,19 @@ func (a *LanguageAgent) validateSchedule() error {
 }
 
 func (a *LanguageAgent) validateModelReferences() error {
-	if len(a.Spec.ModelRefs) == 0 {
+	if len(a.Spec.Models) == 0 {
 		return nil
 	}
 	primaryCount := 0
-	for i, modelRef := range a.Spec.ModelRefs {
+	for i, modelRef := range a.Spec.Models {
 		if modelRef.Name == "" {
-			return fmt.Errorf("modelRefs[%d].name cannot be empty", i)
+			return fmt.Errorf("models[%d].name cannot be empty", i)
 		}
 		if modelRef.Role == "primary" || modelRef.Role == "" {
 			primaryCount++
 		}
 		if modelRef.Priority != nil && *modelRef.Priority < 0 {
-			return fmt.Errorf("modelRefs[%d].priority cannot be negative", i)
+			return fmt.Errorf("models[%d].priority cannot be negative", i)
 		}
 	}
 	if primaryCount == 0 {

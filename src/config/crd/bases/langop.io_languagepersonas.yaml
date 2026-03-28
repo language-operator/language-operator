@@ -211,12 +211,6 @@ spec:
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
-                  namespace:
-                    description: Namespace is the namespace of the LanguagePersona
-                      (defaults to same namespace)
-                    maxLength: 63
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
                 required:
                 - name
                 type: object

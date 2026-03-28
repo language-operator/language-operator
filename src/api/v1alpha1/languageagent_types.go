@@ -23,18 +23,18 @@ type LanguageAgentSpec struct {
 	// +optional
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
-	// ModelRefs is a list of LanguageModel references this agent can use
+	// Models is a list of LanguageModel references this agent can use
 	// +optional
-	ModelRefs []ModelReference `json:"modelRefs,omitempty"`
+	Models []ModelReference `json:"models,omitempty"`
 
-	// ToolRefs is a list of LanguageTool references available to this agent
+	// Tools is a list of LanguageTool references available to this agent
 	// +optional
-	ToolRefs []ToolReference `json:"toolRefs,omitempty"`
+	Tools []ToolReference `json:"tools,omitempty"`
 
-	// PersonaRefs is a list of LanguagePersona references that compose in order of importance
+	// Personas is a list of LanguagePersona references that compose in order of importance
 	// Personas are merged with later personas taking precedence over earlier ones
 	// +optional
-	PersonaRefs []PersonaReference `json:"personaRefs,omitempty"`
+	Personas []PersonaReference `json:"personas,omitempty"`
 
 	// Goal defines the agent's objective (for autonomous agents)
 	// +optional
@@ -197,12 +197,6 @@ type ModelReference struct {
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
-	// Namespace is the namespace of the LanguageModel (defaults to same namespace)
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	// +kubebuilder:validation:MaxLength=63
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-
 	// Role defines the purpose of this model (primary, fallback, specialized)
 	// +kubebuilder:validation:Enum=primary;fallback;reasoning;tool-calling;summarization
 	// +kubebuilder:default=primary
@@ -222,12 +216,6 @@ type ToolReference struct {
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
-	// Namespace is the namespace of the LanguageTool (defaults to same namespace)
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	// +kubebuilder:validation:MaxLength=63
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-
 	// Enabled indicates if this tool is available to the agent
 	// +kubebuilder:default=true
 	Enabled bool `json:"enabled,omitempty"`
@@ -245,12 +233,6 @@ type PersonaReference struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
-
-	// Namespace is the namespace of the LanguagePersona (defaults to same namespace)
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	// +kubebuilder:validation:MaxLength=63
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
 }
 
 // InstructionsSource references instructions from a ConfigMap or Secret

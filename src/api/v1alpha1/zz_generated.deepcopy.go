@@ -554,20 +554,20 @@ func (in *LanguageAgentSpec) DeepCopyInto(out *LanguageAgentSpec) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
-	if in.ModelRefs != nil {
-		in, out := &in.ModelRefs, &out.ModelRefs
+	if in.Models != nil {
+		in, out := &in.Models, &out.Models
 		*out = make([]ModelReference, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ToolRefs != nil {
-		in, out := &in.ToolRefs, &out.ToolRefs
+	if in.Tools != nil {
+		in, out := &in.Tools, &out.Tools
 		*out = make([]ToolReference, len(*in))
 		copy(*out, *in)
 	}
-	if in.PersonaRefs != nil {
-		in, out := &in.PersonaRefs, &out.PersonaRefs
+	if in.Personas != nil {
+		in, out := &in.Personas, &out.Personas
 		*out = make([]PersonaReference, len(*in))
 		copy(*out, *in)
 	}

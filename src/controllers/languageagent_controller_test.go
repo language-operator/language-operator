@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// Note: Synthesis is now configured per-agent via ModelRefs
+// Note: Synthesis is now configured per-agent via Models
 // Tests that need to verify synthesis behavior require integration tests with actual LanguageModel resources
 
-func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
+func TestLanguageAgentController_NoSynthesisWithoutModels(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
@@ -37,8 +37,8 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image:        "ghcr.io/language-operator/agent:latest",
-			Instructions: "Do something", // Has instructions but no ModelRefs
-			// No ModelRefs - synthesis should not happen
+			Instructions: "Do something", // Has instructions but no Models
+			// No Models - synthesis should not happen
 		},
 	}
 
@@ -68,7 +68,7 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify no code ConfigMap was created (no ModelRefs means no synthesis)
+	// Verify no code ConfigMap was created (no Models means no synthesis)
 	cm := &corev1.ConfigMap{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
 		Name:      GenerateConfigMapName(agent.Name, "code"),
@@ -81,7 +81,7 @@ func TestLanguageAgentController_NoSynthesisWithoutModelRefs(t *testing.T) {
 
 // Note: TestLanguageAgentController_SynthesisCalledWithInstructions and
 // TestLanguageAgentController_SmartChangeDetection were removed because synthesis
-// is now configured per-agent via ModelRefs. Testing synthesis behavior requires
+// is now configured per-agent via Models. Testing synthesis behavior requires
 // integration tests with actual LanguageModel CRDs and Secrets.
 
 func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
@@ -1602,7 +1602,7 @@ func TestLanguageAgentController_GetNames(t *testing.T) {
 	t.Run("get_tool_names", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{
+				Tools: []langopv1alpha1.ToolReference{
 					{Name: "tool-a"},
 					{Name: "tool-b"},
 				},
@@ -1617,7 +1617,7 @@ func TestLanguageAgentController_GetNames(t *testing.T) {
 	t.Run("get_model_names", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ModelRefs: []langopv1alpha1.ModelReference{
+				Models: []langopv1alpha1.ModelReference{
 					{Name: "model-x"},
 				},
 			},
@@ -1631,7 +1631,7 @@ func TestLanguageAgentController_GetNames(t *testing.T) {
 	t.Run("get_persona_names", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				PersonaRefs: []langopv1alpha1.PersonaReference{
+				Personas: []langopv1alpha1.PersonaReference{
 					{Name: "persona-1"},
 					{Name: "persona-2"},
 				},
@@ -1974,7 +1974,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "my-tool"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "my-tool"}},
 			},
 		}
 
@@ -2002,7 +2002,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "sidecar-tool"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "sidecar-tool"}},
 			},
 		}
 
@@ -2026,7 +2026,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "nonexistent"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "nonexistent"}},
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -2046,7 +2046,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "port-tool"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "port-tool"}},
 			},
 		}
 
@@ -2074,7 +2074,7 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ModelRefs: []langopv1alpha1.ModelReference{{Name: "my-model"}},
+				Models: []langopv1alpha1.ModelReference{{Name: "my-model"}},
 			},
 		}
 
@@ -2101,7 +2101,7 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ModelRefs: []langopv1alpha1.ModelReference{
+				Models: []langopv1alpha1.ModelReference{
 					{Name: "model-a"},
 					{Name: "model-b"},
 				},
@@ -2128,7 +2128,7 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ModelRefs: []langopv1alpha1.ModelReference{{Name: "nonexistent"}},
+				Models: []langopv1alpha1.ModelReference{{Name: "nonexistent"}},
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -2152,7 +2152,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "my-sidecar"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "my-sidecar"}},
 			},
 		}
 
@@ -2178,7 +2178,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "svc-tool"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "svc-tool"}},
 			},
 		}
 
@@ -2201,7 +2201,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				ToolRefs: []langopv1alpha1.ToolReference{{Name: "def-sidecar"}},
+				Tools: []langopv1alpha1.ToolReference{{Name: "def-sidecar"}},
 			},
 		}
 
@@ -2247,7 +2247,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "my-persona"}},
+				Personas: []langopv1alpha1.PersonaReference{{Name: "my-persona"}},
 			},
 		}
 
@@ -2270,7 +2270,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "pending-persona"}},
+				Personas: []langopv1alpha1.PersonaReference{{Name: "pending-persona"}},
 			},
 		}
 
@@ -2287,7 +2287,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				PersonaRefs: []langopv1alpha1.PersonaReference{{Name: "missing"}},
+				Personas: []langopv1alpha1.PersonaReference{{Name: "missing"}},
 			},
 		}
 

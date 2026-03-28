@@ -53,10 +53,10 @@ func SetAgentExecutionMode(mode string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentModelRef appends a ModelReference with the given name.
-func SetAgentModelRef(name string) LanguageAgentModifier {
+// SetAgentModel appends a ModelReference with the given name.
+func SetAgentModel(name string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.ModelRefs = append(a.Spec.ModelRefs, langopv1alpha1.ModelReference{Name: name})
+		a.Spec.Models = append(a.Spec.Models, langopv1alpha1.ModelReference{Name: name})
 	}
 }
 

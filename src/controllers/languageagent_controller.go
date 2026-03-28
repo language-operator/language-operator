@@ -483,20 +483,20 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 
 // distillPersona calls the synthesizer to distill a persona into a system message
 
-// getToolNames extracts tool names from agent's toolRefs
+// getToolNames extracts tool names from agent's tools
 func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
-	for _, ref := range agent.Spec.ToolRefs {
+	for _, ref := range agent.Spec.Tools {
 		names = append(names, ref.Name)
 	}
 	return names
 }
 
-// getToolSchemas extracts complete tool schemas from agent's toolRefs
+// getToolSchemas extracts complete tool schemas from agent's tools
 func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.ToolSchema {
 	var allSchemas []langopv1alpha1.ToolSchema
 
-	for _, ref := range agent.Spec.ToolRefs {
+	for _, ref := range agent.Spec.Tools {
 		// Get the LanguageTool CR
 		tool := &langopv1alpha1.LanguageTool{}
 		err := r.Get(ctx, types.NamespacedName{
@@ -520,19 +520,19 @@ func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *lan
 	return allSchemas
 }
 
-// getModelNames extracts model names from agent's modelRefs
+// getModelNames extracts model names from agent's models
 func (r *LanguageAgentReconciler) getModelNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
-	for _, ref := range agent.Spec.ModelRefs {
+	for _, ref := range agent.Spec.Models {
 		names = append(names, ref.Name)
 	}
 	return names
 }
 
-// getPersonaNames extracts persona names from agent's personaRefs
+// getPersonaNames extracts persona names from agent's personas
 func (r *LanguageAgentReconciler) getPersonaNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
-	for _, ref := range agent.Spec.PersonaRefs {
+	for _, ref := range agent.Spec.Personas {
 		names = append(names, ref.Name)
 	}
 	return names
@@ -693,7 +693,7 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 	})
 
 	// TODO: Add instructions mounting from InstructionsFrom ConfigMap/Secret
-	// TODO: Add persona mounting from PersonaRefs
+	// TODO: Add persona mounting from Personas
 
 	// Add workspace volume if enabled
 	if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
@@ -1178,22 +1178,16 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 	var modelURLs []string
 	var modelNames []string
 
-	for _, modelRef := range agent.Spec.ModelRefs {
-		// Determine namespace
-		namespace := modelRef.Namespace
-		if namespace == "" {
-			namespace = agent.Namespace
-		}
-
-		// Fetch the LanguageModel
+	for _, modelRef := range agent.Spec.Models {
+		// Fetch the LanguageModel (always in the agent's namespace)
 		model := &langopv1alpha1.LanguageModel{}
-		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: namespace}, model); err != nil {
-			return nil, nil, fmt.Errorf("failed to get model %s/%s: %w", namespace, modelRef.Name, err)
+		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
+			return nil, nil, fmt.Errorf("failed to get model %s/%s: %w", agent.Namespace, modelRef.Name, err)
 		}
 
 		// All models in a cluster are served by the shared proxy named "proxy"
 		// in the cluster namespace. Deduplicate: only add the proxy URL once.
-		proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", namespace)
+		proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", agent.Namespace)
 		alreadyAdded := false
 		for _, u := range modelURLs {
 			if u == proxyURL {
@@ -1217,17 +1211,11 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, error) {
 	var sidecarContainers []corev1.Container
 
-	for _, toolRef := range agent.Spec.ToolRefs {
-		// Determine namespace
-		namespace := toolRef.Namespace
-		if namespace == "" {
-			namespace = agent.Namespace
-		}
-
-		// Fetch the LanguageTool
+	for _, toolRef := range agent.Spec.Tools {
+		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
-		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: namespace}, tool); err != nil {
-			return nil, fmt.Errorf("failed to get tool %s/%s: %w", namespace, toolRef.Name, err)
+		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
+			return nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
 		}
 
 		// Only process sidecar tools
@@ -1311,17 +1299,11 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
 	var toolURLs []string
 
-	for _, toolRef := range agent.Spec.ToolRefs {
-		// Determine namespace
-		namespace := toolRef.Namespace
-		if namespace == "" {
-			namespace = agent.Namespace
-		}
-
-		// Fetch the LanguageTool
+	for _, toolRef := range agent.Spec.Tools {
+		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
-		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: namespace}, tool); err != nil {
-			return nil, fmt.Errorf("failed to get tool %s/%s: %w", namespace, toolRef.Name, err)
+		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
+			return nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
 		}
 
 		port := tool.Spec.Port
@@ -1339,7 +1321,7 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 
 		// Build MCP server URL (service mode)
 		// Format: http://<service-name>.<namespace>.svc.cluster.local:<port>
-		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, namespace, port)
+		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, agent.Namespace, port)
 		toolURLs = append(toolURLs, serviceURL)
 	}
 
@@ -1451,31 +1433,25 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 
 func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguagePersona, error) {
 	// Return nil if no personas are referenced
-	if len(agent.Spec.PersonaRefs) == 0 {
+	if len(agent.Spec.Personas) == 0 {
 		return nil, nil
 	}
 
 	// Fetch all personas
 	var personas []*langopv1alpha1.LanguagePersona
-	for _, ref := range agent.Spec.PersonaRefs {
-		// Determine namespace
-		namespace := ref.Namespace
-		if namespace == "" {
-			namespace = agent.Namespace
-		}
-
-		// Fetch the LanguagePersona
+	for _, ref := range agent.Spec.Personas {
+		// Fetch the LanguagePersona (always in the agent's namespace)
 		persona := &langopv1alpha1.LanguagePersona{}
-		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: namespace}, persona); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: agent.Namespace}, persona); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, fmt.Errorf("persona %s/%s not found", namespace, ref.Name)
+				return nil, fmt.Errorf("persona %s/%s not found", agent.Namespace, ref.Name)
 			}
-			return nil, fmt.Errorf("failed to get persona %s/%s: %w", namespace, ref.Name, err)
+			return nil, fmt.Errorf("failed to get persona %s/%s: %w", agent.Namespace, ref.Name, err)
 		}
 
 		// Check if persona is ready
 		if persona.Status.Phase != events.PhaseStatusReady {
-			return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", namespace, ref.Name, persona.Status.Phase)
+			return nil, fmt.Errorf("persona %s/%s is not ready (phase: %s)", agent.Namespace, ref.Name, persona.Status.Phase)
 		}
 
 		personas = append(personas, persona)

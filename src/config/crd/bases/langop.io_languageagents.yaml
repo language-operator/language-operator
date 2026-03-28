@@ -2995,20 +2995,14 @@ spec:
                 maximum: 1000
                 minimum: 1
                 type: integer
-              modelRefs:
-                description: ModelRefs is a list of LanguageModel references this
-                  agent can use
+              models:
+                description: Models is a list of LanguageModel references this agent
+                  can use
                 items:
                   description: ModelReference references a LanguageModel
                   properties:
                     name:
                       description: Name is the name of the LanguageModel
-                      maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                    namespace:
-                      description: Namespace is the namespace of the LanguageModel
-                        (defaults to same namespace)
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
@@ -3062,21 +3056,15 @@ spec:
                     description: Tracing enables distributed tracing
                     type: boolean
                 type: object
-              personaRefs:
+              personas:
                 description: |-
-                  PersonaRefs is a list of LanguagePersona references that compose in order of importance
+                  Personas is a list of LanguagePersona references that compose in order of importance
                   Personas are merged with later personas taking precedence over earlier ones
                 items:
                   description: PersonaReference references a LanguagePersona
                   properties:
                     name:
                       description: Name is the name of the LanguagePersona
-                      maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                    namespace:
-                      description: Namespace is the namespace of the LanguagePersona
-                        (defaults to same namespace)
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
@@ -3623,8 +3611,8 @@ spec:
                       type: string
                   type: object
                 type: array
-              toolRefs:
-                description: ToolRefs is a list of LanguageTool references available
+              tools:
+                description: Tools is a list of LanguageTool references available
                   to this agent
                 items:
                   description: ToolReference references a LanguageTool
@@ -3636,12 +3624,6 @@ spec:
                       type: boolean
                     name:
                       description: Name is the name of the LanguageTool
-                      maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                    namespace:
-                      description: Namespace is the namespace of the LanguageTool
-                        (defaults to same namespace)
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
