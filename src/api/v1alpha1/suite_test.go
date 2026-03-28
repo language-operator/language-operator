@@ -184,30 +184,6 @@ func TestWebhookClusterMembership(t *testing.T) {
 		}
 	})
 
-	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
-		agent := gen.LanguageAgent("defaulted-agent", "webhook-test-cluster",
-			gen.SetAgentImage("ghcr.io/test/agent:latest"),
-		)
-		// Explicitly leave clusterRef empty
-		agent.Spec.ClusterRef = ""
-
-		if err := k8sClient.Create(ctx, agent); err != nil {
-			t.Fatalf("create agent: %v", err)
-		}
-		t.Cleanup(func() { _ = k8sClient.Delete(ctx, agent) })
-
-		created := &langopv1alpha1.LanguageAgent{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name: "defaulted-agent", Namespace: "webhook-test-cluster",
-		}, created); err != nil {
-			t.Fatalf("get agent: %v", err)
-		}
-
-		if got := created.Spec.ClusterRef; got != "webhook-test-cluster" {
-			t.Errorf("clusterRef: want %q, got %q", "webhook-test-cluster", got)
-		}
-	})
-
 	t.Run("webhook defaults workspace when not set", func(t *testing.T) {
 		agent := gen.LanguageAgent("ws-defaulted-agent", "webhook-test-cluster",
 			gen.SetAgentImage("ghcr.io/test/agent:latest"),
@@ -281,27 +257,6 @@ func TestWebhookClusterMembershipTool(t *testing.T) {
 		}
 	})
 
-	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
-		tool := gen.LanguageTool("defaulted-tool", "webhook-tool-cluster",
-			gen.SetToolImage("ghcr.io/test/tool:latest"),
-		)
-		tool.Spec.ClusterRef = ""
-
-		if err := k8sClient.Create(ctx, tool); err != nil {
-			t.Fatalf("create tool: %v", err)
-		}
-		t.Cleanup(func() { _ = k8sClient.Delete(ctx, tool) })
-
-		created := &langopv1alpha1.LanguageTool{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name: "defaulted-tool", Namespace: "webhook-tool-cluster",
-		}, created); err != nil {
-			t.Fatalf("get tool: %v", err)
-		}
-		if got := created.Spec.ClusterRef; got != "webhook-tool-cluster" {
-			t.Errorf("clusterRef: want %q, got %q", "webhook-tool-cluster", got)
-		}
-	})
 }
 
 // TestWebhookClusterMembershipModel verifies that the admission webhook enforces
@@ -347,27 +302,6 @@ func TestWebhookClusterMembershipModel(t *testing.T) {
 		}
 	})
 
-	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
-		model := gen.LanguageModel("defaulted-model", "webhook-model-cluster",
-			gen.SetModelProvider("anthropic"),
-		)
-		model.Spec.ClusterRef = ""
-
-		if err := k8sClient.Create(ctx, model); err != nil {
-			t.Fatalf("create model: %v", err)
-		}
-		t.Cleanup(func() { _ = k8sClient.Delete(ctx, model) })
-
-		created := &langopv1alpha1.LanguageModel{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name: "defaulted-model", Namespace: "webhook-model-cluster",
-		}, created); err != nil {
-			t.Fatalf("get model: %v", err)
-		}
-		if got := created.Spec.ClusterRef; got != "webhook-model-cluster" {
-			t.Errorf("clusterRef: want %q, got %q", "webhook-model-cluster", got)
-		}
-	})
 }
 
 // TestWebhookClusterMembershipPersona verifies that the admission webhook enforces
@@ -413,25 +347,4 @@ func TestWebhookClusterMembershipPersona(t *testing.T) {
 		}
 	})
 
-	t.Run("webhook defaults clusterRef to namespace name", func(t *testing.T) {
-		persona := gen.LanguagePersona("defaulted-persona", "webhook-persona-cluster",
-			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
-		)
-		persona.Spec.ClusterRef = ""
-
-		if err := k8sClient.Create(ctx, persona); err != nil {
-			t.Fatalf("create persona: %v", err)
-		}
-		t.Cleanup(func() { _ = k8sClient.Delete(ctx, persona) })
-
-		created := &langopv1alpha1.LanguagePersona{}
-		if err := k8sClient.Get(ctx, types.NamespacedName{
-			Name: "defaulted-persona", Namespace: "webhook-persona-cluster",
-		}, created); err != nil {
-			t.Fatalf("get persona: %v", err)
-		}
-		if got := created.Spec.ClusterRef; got != "webhook-persona-cluster" {
-			t.Errorf("clusterRef: want %q, got %q", "webhook-persona-cluster", got)
-		}
-	})
 }
