@@ -46,6 +46,53 @@ spec:
           spec:
             description: LanguageClusterSpec defines the desired state of LanguageCluster
             properties:
+              capacity:
+                description: |-
+                  Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.
+                  When set, the controller creates a ResourceQuota named "langop-quota".
+                  When unset, any existing "langop-quota" is deleted.
+                properties:
+                  maxAgents:
+                    description: MaxAgents is the maximum number of LanguageAgent
+                      objects allowed.
+                    format: int32
+                    type: integer
+                  maxCPU:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxCPU is the aggregate CPU limit for all pods in the cluster namespace.
+                      Maps to limits.cpu in the namespace ResourceQuota.
+                      Example: "4", "2500m"
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  maxMemory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxMemory is the aggregate memory limit for all pods in the cluster namespace.
+                      Maps to limits.memory in the namespace ResourceQuota.
+                      Example: "8Gi", "512Mi"
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  maxModels:
+                    description: MaxModels is the maximum number of LanguageModel
+                      objects allowed.
+                    format: int32
+                    type: integer
+                  maxPersonas:
+                    description: MaxPersonas is the maximum number of LanguagePersona
+                      objects allowed.
+                    format: int32
+                    type: integer
+                  maxTools:
+                    description: MaxTools is the maximum number of LanguageTool objects
+                      allowed.
+                    format: int32
+                    type: integer
+                type: object
               domain:
                 description: |-
                   Domain is the base domain for the cluster and agent webhook routing
@@ -462,6 +509,52 @@ spec:
           status:
             description: LanguageClusterStatus defines the observed state
             properties:
+              capacity:
+                description: Capacity reports observed resource usage in this cluster's
+                  namespace.
+                properties:
+                  agentCount:
+                    description: AgentCount is the number of LanguageAgent objects
+                      in the cluster namespace.
+                    format: int32
+                    type: integer
+                  modelCount:
+                    description: ModelCount is the number of LanguageModel objects
+                      in the cluster namespace.
+                    format: int32
+                    type: integer
+                  personaCount:
+                    description: PersonaCount is the number of LanguagePersona objects
+                      in the cluster namespace.
+                    format: int32
+                    type: integer
+                  toolCount:
+                    description: ToolCount is the number of LanguageTool objects in
+                      the cluster namespace.
+                    format: int32
+                    type: integer
+                  totalCPULimits:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: TotalCPULimits is the sum of limits.cpu across all
+                      agent pod specs.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  totalMemoryLimits:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: TotalMemoryLimits is the sum of limits.memory across
+                      all agent pod specs.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                required:
+                - agentCount
+                - modelCount
+                - personaCount
+                - toolCount
+                type: object
               conditions:
                 description: Conditions
                 items:

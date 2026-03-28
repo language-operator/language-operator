@@ -88,6 +88,7 @@ func (r *LanguageClusterReconciler) proxyImage() string {
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=resourcequotas,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -255,6 +256,25 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		"ProxyReady", "Shared LiteLLM proxy is ready", cluster.Generation)
 	cluster.Status.ProxyEndpoint = fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", cluster.Name)
 	cluster.Status.ProxyReady = true
+
+	// Reconcile ResourceQuota for capacity limits
+	if err := r.reconcileCapacity(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile capacity quota")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile capacity quota")
+		SetCondition(&cluster.Status.Conditions, "CapacityReady", metav1.ConditionFalse,
+			"CapacityError", err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after capacity error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	// Populate status.capacity with observed usage (non-fatal)
+	if err := r.reconcileCapacityStatus(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile capacity status")
+	}
 
 	// LanguageCluster is now just a logical grouping - no namespace management
 	// Child resources reference the cluster and live in the same namespace
@@ -1117,4 +1137,117 @@ func (r *LanguageClusterReconciler) SetupWithManager(mgr ctrl.Manager, concurren
 		)).
 		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Complete(r)
+}
+
+// reconcileCapacity creates or deletes a ResourceQuota named "langop-quota" in the cluster's
+// namespace based on cluster.spec.capacity. When spec.capacity is nil the quota is deleted.
+func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	log := log.FromContext(ctx)
+	namespace := cluster.Name
+	quotaName := "langop-quota"
+	key := client.ObjectKey{Name: quotaName, Namespace: namespace}
+
+	if cluster.Spec.Capacity == nil {
+		// Remove quota if it exists
+		existing := &corev1.ResourceQuota{}
+		if err := r.Get(ctx, key, existing); err == nil {
+			if err := r.Delete(ctx, existing); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("failed to delete resourcequota: %w", err)
+			}
+			log.Info("Deleted ResourceQuota", "namespace", namespace, "name", quotaName)
+		} else if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get resourcequota: %w", err)
+		}
+		return nil
+	}
+
+	// Build hard limits from spec
+	hard := corev1.ResourceList{}
+	cap := cluster.Spec.Capacity
+	if cap.MaxAgents != nil {
+		hard[corev1.ResourceName("count/languageagents.langop.io")] = *resource.NewQuantity(int64(*cap.MaxAgents), resource.DecimalSI)
+	}
+	if cap.MaxModels != nil {
+		hard[corev1.ResourceName("count/languagemodels.langop.io")] = *resource.NewQuantity(int64(*cap.MaxModels), resource.DecimalSI)
+	}
+	if cap.MaxTools != nil {
+		hard[corev1.ResourceName("count/languagetools.langop.io")] = *resource.NewQuantity(int64(*cap.MaxTools), resource.DecimalSI)
+	}
+	if cap.MaxPersonas != nil {
+		hard[corev1.ResourceName("count/languagepersonas.langop.io")] = *resource.NewQuantity(int64(*cap.MaxPersonas), resource.DecimalSI)
+	}
+	if cap.MaxCPU != nil {
+		hard[corev1.ResourceLimitsCPU] = *cap.MaxCPU
+	}
+	if cap.MaxMemory != nil {
+		hard[corev1.ResourceLimitsMemory] = *cap.MaxMemory
+	}
+
+	quota := &corev1.ResourceQuota{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      quotaName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":       "language-operator",
+				"app.kubernetes.io/managed-by": "language-operator",
+				"app.kubernetes.io/component":  "capacity",
+				"langop.io/cluster":            cluster.Name,
+			},
+		},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, quota, func() error {
+		quota.Spec.Hard = hard
+		return controllerutil.SetControllerReference(cluster, quota, r.Scheme)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to reconcile resourcequota: %w", err)
+	}
+	log.V(1).Info("Reconciled ResourceQuota", "namespace", namespace, "name", quotaName)
+	return nil
+}
+
+// reconcileCapacityStatus populates cluster.status.capacity with observed counts and
+// the sum of limits.cpu / limits.memory across all LanguageAgent specs.
+func (r *LanguageClusterReconciler) reconcileCapacityStatus(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	namespace := cluster.Name
+	status := &langopv1alpha1.ClusterCapacityStatus{}
+
+	agents := &langopv1alpha1.LanguageAgentList{}
+	if err := r.List(ctx, agents, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list agents: %w", err)
+	}
+	status.AgentCount = int32(len(agents.Items))
+
+	models := &langopv1alpha1.LanguageModelList{}
+	if err := r.List(ctx, models, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list models: %w", err)
+	}
+	status.ModelCount = int32(len(models.Items))
+
+	tools := &langopv1alpha1.LanguageToolList{}
+	if err := r.List(ctx, tools, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list tools: %w", err)
+	}
+	status.ToolCount = int32(len(tools.Items))
+
+	personas := &langopv1alpha1.LanguagePersonaList{}
+	if err := r.List(ctx, personas, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list personas: %w", err)
+	}
+	status.PersonaCount = int32(len(personas.Items))
+
+	// Sum limits.cpu and limits.memory across all agent specs
+	totalCPU := resource.Quantity{}
+	totalMem := resource.Quantity{}
+	for _, a := range agents.Items {
+		if a.Spec.Resources.Limits != nil {
+			totalCPU.Add(*a.Spec.Resources.Limits.Cpu())
+			totalMem.Add(*a.Spec.Resources.Limits.Memory())
+		}
+	}
+	status.TotalCPULimits = totalCPU
+	status.TotalMemoryLimits = totalMem
+
+	cluster.Status.Capacity = status
+	return nil
 }

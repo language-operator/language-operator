@@ -78,3 +78,10 @@ func SetClusterGatewayClassName(className string) LanguageClusterModifier {
 		c.Spec.IngressConfig.GatewayClassName = className
 	}
 }
+
+// SetClusterCapacity sets spec.capacity.
+func SetClusterCapacity(cap *langopv1alpha1.ClusterCapacitySpec) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		c.Spec.Capacity = cap
+	}
+}

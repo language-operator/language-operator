@@ -18,8 +18,55 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.
+type ClusterCapacitySpec struct {
+	// MaxAgents is the maximum number of LanguageAgent objects allowed.
+	// +optional
+	MaxAgents *int32 `json:"maxAgents,omitempty"`
+	// MaxModels is the maximum number of LanguageModel objects allowed.
+	// +optional
+	MaxModels *int32 `json:"maxModels,omitempty"`
+	// MaxTools is the maximum number of LanguageTool objects allowed.
+	// +optional
+	MaxTools *int32 `json:"maxTools,omitempty"`
+	// MaxPersonas is the maximum number of LanguagePersona objects allowed.
+	// +optional
+	MaxPersonas *int32 `json:"maxPersonas,omitempty"`
+
+	// MaxCPU is the aggregate CPU limit for all pods in the cluster namespace.
+	// Maps to limits.cpu in the namespace ResourceQuota.
+	// Example: "4", "2500m"
+	// +optional
+	MaxCPU *resource.Quantity `json:"maxCPU,omitempty"`
+	// MaxMemory is the aggregate memory limit for all pods in the cluster namespace.
+	// Maps to limits.memory in the namespace ResourceQuota.
+	// Example: "8Gi", "512Mi"
+	// +optional
+	MaxMemory *resource.Quantity `json:"maxMemory,omitempty"`
+}
+
+// ClusterCapacityStatus reports observed resource usage in the cluster's namespace.
+type ClusterCapacityStatus struct {
+	// AgentCount is the number of LanguageAgent objects in the cluster namespace.
+	AgentCount int32 `json:"agentCount"`
+	// ModelCount is the number of LanguageModel objects in the cluster namespace.
+	ModelCount int32 `json:"modelCount"`
+	// ToolCount is the number of LanguageTool objects in the cluster namespace.
+	ToolCount int32 `json:"toolCount"`
+	// PersonaCount is the number of LanguagePersona objects in the cluster namespace.
+	PersonaCount int32 `json:"personaCount"`
+
+	// TotalCPULimits is the sum of limits.cpu across all agent pod specs.
+	// +optional
+	TotalCPULimits resource.Quantity `json:"totalCPULimits,omitempty"`
+	// TotalMemoryLimits is the sum of limits.memory across all agent pod specs.
+	// +optional
+	TotalMemoryLimits resource.Quantity `json:"totalMemoryLimits,omitempty"`
+}
 
 // LanguageClusterSpec defines the desired state of LanguageCluster
 type LanguageClusterSpec struct {
@@ -45,6 +92,12 @@ type LanguageClusterSpec struct {
 	// Proxy configures the shared LiteLLM proxy deployed per cluster
 	// +optional
 	Proxy *ProxyConfig `json:"proxy,omitempty"`
+
+	// Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.
+	// When set, the controller creates a ResourceQuota named "langop-quota".
+	// When unset, any existing "langop-quota" is deleted.
+	// +optional
+	Capacity *ClusterCapacitySpec `json:"capacity,omitempty"`
 }
 
 // ProxyConfig configures the shared LiteLLM proxy for a LanguageCluster
@@ -215,6 +268,10 @@ type LanguageClusterStatus struct {
 	// ProxyReady indicates whether the shared proxy Deployment is available
 	// +optional
 	ProxyReady bool `json:"proxyReady,omitempty"`
+
+	// Capacity reports observed resource usage in this cluster's namespace.
+	// +optional
+	Capacity *ClusterCapacityStatus `json:"capacity,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -324,4 +325,120 @@ func TestLanguageClusterController_DeletionWithDependents(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestLanguageClusterController_CapacityQuota_Created(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	maxAgents := int32(5)
+	maxCPU := resource.MustParse("4")
+	maxMemory := resource.MustParse("8Gi")
+	cluster := gen.LanguageCluster("quota-cluster",
+		gen.SetClusterCapacity(&langopv1alpha1.ClusterCapacitySpec{
+			MaxAgents: &maxAgents,
+			MaxCPU:    &maxCPU,
+			MaxMemory: &maxMemory,
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	// First reconcile adds finalizer
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	// Second reconcile creates resources
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	quota := &corev1.ResourceQuota{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "langop-quota", Namespace: cluster.Name}, quota)
+	require.NoError(t, err, "expected ResourceQuota to be created")
+
+	gotAgents := quota.Spec.Hard["count/languageagents.langop.io"]
+	gotCPU := quota.Spec.Hard[corev1.ResourceLimitsCPU]
+	gotMemory := quota.Spec.Hard[corev1.ResourceLimitsMemory]
+	assert.Equal(t, "5", gotAgents.String())
+	assert.Equal(t, "4", gotCPU.String())
+	assert.Equal(t, "8Gi", gotMemory.String())
+}
+
+func TestLanguageClusterController_CapacityQuota_Absent_When_SpecUnset(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("no-quota-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	quota := &corev1.ResourceQuota{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "langop-quota", Namespace: cluster.Name}, quota)
+	assert.True(t, errors.IsNotFound(err), "expected no ResourceQuota when spec.capacity is unset")
+}
+
+func TestLanguageClusterController_CapacityStatus_Counts(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("status-cluster")
+	agent1 := gen.LanguageAgent("agent-one", "status-cluster")
+	agent2 := gen.LanguageAgent("agent-two", "status-cluster")
+	model := gen.LanguageModel("model-one", "status-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent1, agent2, model).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+
+	require.NotNil(t, updated.Status.Capacity)
+	assert.Equal(t, int32(2), updated.Status.Capacity.AgentCount)
+	assert.Equal(t, int32(1), updated.Status.Capacity.ModelCount)
+	assert.Equal(t, int32(0), updated.Status.Capacity.ToolCount)
+	assert.Equal(t, int32(0), updated.Status.Capacity.PersonaCount)
 }
