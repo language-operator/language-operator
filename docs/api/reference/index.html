@@ -991,6 +991,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clustercapacityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterCapacitySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clustercapacitystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterCapacityStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#costmetrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2300,6 +2322,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clustercapacityspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterCapacitySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clustercapacitystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterCapacityStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#costmetrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3272,6 +3316,110 @@
 </tr>
 </tbody>
 </table>
+<h4 id="clustercapacityspec">ClusterCapacitySpec<a class="headerlink" href="#clustercapacityspec" title="Permanent link">&para;</a></h4>
+<p>ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.</p>
+<p><em>Appears in:</em>
+- <a href="#languageclusterspec">LanguageClusterSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxAgents</code> <em>integer</em></td>
+<td>MaxAgents is the maximum number of LanguageAgent objects allowed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxModels</code> <em>integer</em></td>
+<td>MaxModels is the maximum number of LanguageModel objects allowed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxTools</code> <em>integer</em></td>
+<td>MaxTools is the maximum number of LanguageTool objects allowed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxPersonas</code> <em>integer</em></td>
+<td>MaxPersonas is the maximum number of LanguagePersona objects allowed.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxCPU</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api">Quantity</a></em></td>
+<td>MaxCPU is the aggregate CPU limit for all pods in the cluster namespace.<br />Maps to limits.cpu in the namespace ResourceQuota.<br />Example: "4", "2500m"</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxMemory</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api">Quantity</a></em></td>
+<td>MaxMemory is the aggregate memory limit for all pods in the cluster namespace.<br />Maps to limits.memory in the namespace ResourceQuota.<br />Example: "8Gi", "512Mi"</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="clustercapacitystatus">ClusterCapacityStatus<a class="headerlink" href="#clustercapacitystatus" title="Permanent link">&para;</a></h4>
+<p>ClusterCapacityStatus reports observed resource usage in the cluster's namespace.</p>
+<p><em>Appears in:</em>
+- <a href="#languageclusterstatus">LanguageClusterStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agentCount</code> <em>integer</em></td>
+<td>AgentCount is the number of LanguageAgent objects in the cluster namespace.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>modelCount</code> <em>integer</em></td>
+<td>ModelCount is the number of LanguageModel objects in the cluster namespace.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>toolCount</code> <em>integer</em></td>
+<td>ToolCount is the number of LanguageTool objects in the cluster namespace.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>personaCount</code> <em>integer</em></td>
+<td>PersonaCount is the number of LanguagePersona objects in the cluster namespace.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>totalCPULimits</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api">Quantity</a></em></td>
+<td>TotalCPULimits is the sum of limits.cpu across all agent pod specs.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>totalMemoryLimits</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api">Quantity</a></em></td>
+<td>TotalMemoryLimits is the sum of limits.memory across all agent pod specs.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="costmetrics">CostMetrics<a class="headerlink" href="#costmetrics" title="Permanent link">&para;</a></h4>
 <p>CostMetrics contains cost tracking data</p>
 <p><em>Appears in:</em>
@@ -4214,6 +4362,12 @@
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>capacity</code> <em><a href="#clustercapacityspec">ClusterCapacitySpec</a></em></td>
+<td>Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.<br />When set, the controller creates a ResourceQuota named "langop-quota".<br />When unset, any existing "langop-quota" is deleted.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languageclusterstatus">LanguageClusterStatus<a class="headerlink" href="#languageclusterstatus" title="Permanent link">&para;</a></h4>
@@ -4251,6 +4405,12 @@
 <tr>
 <td><code>proxyReady</code> <em>boolean</em></td>
 <td>ProxyReady indicates whether the shared proxy Deployment is available</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>capacity</code> <em><a href="#clustercapacitystatus">ClusterCapacityStatus</a></em></td>
+<td>Capacity reports observed resource usage in this cluster's namespace.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
