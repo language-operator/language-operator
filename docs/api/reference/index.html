@@ -3915,20 +3915,20 @@
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>modelRefs</code> <em><a href="#modelreference">ModelReference</a> array</em></td>
-<td>ModelRefs is a list of LanguageModel references this agent can use</td>
+<td><code>models</code> <em><a href="#modelreference">ModelReference</a> array</em></td>
+<td>Models is a list of LanguageModel references this agent can use</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>toolRefs</code> <em><a href="#toolreference">ToolReference</a> array</em></td>
-<td>ToolRefs is a list of LanguageTool references available to this agent</td>
+<td><code>tools</code> <em><a href="#toolreference">ToolReference</a> array</em></td>
+<td>Tools is a list of LanguageTool references available to this agent</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>personaRefs</code> <em><a href="#personareference">PersonaReference</a> array</em></td>
-<td>PersonaRefs is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones</td>
+<td><code>personas</code> <em><a href="#personareference">PersonaReference</a> array</em></td>
+<td>Personas is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -5405,12 +5405,6 @@
 <td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
 </tr>
 <tr>
-<td><code>namespace</code> <em>string</em></td>
-<td>Namespace is the namespace of the LanguageModel (defaults to same namespace)</td>
-<td></td>
-<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>role</code> <em>string</em></td>
 <td>Role defines the purpose of this model (primary, fallback, specialized)</td>
 <td>primary</td>
@@ -5745,12 +5739,6 @@
 <td>Name is the name of the LanguagePersona</td>
 <td></td>
 <td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>namespace</code> <em>string</em></td>
-<td>Namespace is the namespace of the LanguagePersona (defaults to same namespace)</td>
-<td></td>
-<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
 </tr>
 </tbody>
 </table>
@@ -6374,12 +6362,6 @@
 <td>Name is the name of the LanguageTool</td>
 <td></td>
 <td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>namespace</code> <em>string</em></td>
-<td>Namespace is the namespace of the LanguageTool (defaults to same namespace)</td>
-<td></td>
-<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>enabled</code> <em>boolean</em></td>
