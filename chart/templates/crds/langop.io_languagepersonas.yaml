@@ -1,0 +1,450 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: languagepersonas.langop.io
+spec:
+  group: langop.io
+  names:
+    kind: LanguagePersona
+    listKind: LanguagePersonaList
+    plural: languagepersonas
+    shortNames:
+    - lpersona
+    singular: languagepersona
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - jsonPath: .spec.tone
+      name: Tone
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: LanguagePersona is the Schema for the languagepersonas API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LanguagePersonaSpec defines the desired state of LanguagePersona
+            properties:
+              capabilities:
+                description: Capabilities lists what this persona can do
+                items:
+                  type: string
+                type: array
+              clusterRef:
+                description: ClusterRef references a LanguageCluster to deploy this
+                  persona into
+                type: string
+              constraints:
+                description: Constraints define operational constraints
+                properties:
+                  allowedDomains:
+                    description: AllowedDomains restricts knowledge sources to specific
+                      domains
+                    items:
+                      type: string
+                    type: array
+                  blockedTopics:
+                    description: BlockedTopics lists topics this persona should refuse
+                      to discuss
+                    items:
+                      type: string
+                    type: array
+                  maxKnowledgeQueries:
+                    description: MaxKnowledgeQueries limits knowledge base queries
+                      per interaction
+                    format: int32
+                    type: integer
+                  maxResponseTokens:
+                    description: MaxResponseTokens limits response length in tokens
+                    format: int32
+                    type: integer
+                  maxToolCalls:
+                    description: MaxToolCalls limits tool invocations per interaction
+                    format: int32
+                    type: integer
+                  requireDocumentation:
+                    default: false
+                    description: RequireDocumentation requires citing sources for
+                      claims
+                    type: boolean
+                  responseTimeout:
+                    description: ResponseTimeout limits response generation time
+                    pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                    type: string
+                type: object
+              description:
+                description: Description describes the persona's role and behavior
+                type: string
+              displayName:
+                description: DisplayName is the human-readable name for this persona
+                type: string
+              examples:
+                description: Examples provide few-shot learning examples
+                items:
+                  description: PersonaExample provides a few-shot learning example
+                  properties:
+                    context:
+                      description: Context provides additional context for this example
+                      type: string
+                    input:
+                      description: Input is the example user input
+                      type: string
+                    output:
+                      description: Output is the expected persona response
+                      type: string
+                    tags:
+                      description: Tags categorize this example
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - input
+                  - output
+                  type: object
+                type: array
+              instructions:
+                description: Instructions provides additional behavioral guidelines
+                items:
+                  type: string
+                type: array
+              knowledgeSources:
+                description: KnowledgeSources references external knowledge bases
+                items:
+                  description: KnowledgeSourceSpec references an external knowledge
+                    base
+                  properties:
+                    enabled:
+                      default: true
+                      description: Enabled indicates if this knowledge source is active
+                      type: boolean
+                    name:
+                      description: Name is the knowledge source identifier
+                      type: string
+                    priority:
+                      description: Priority determines knowledge source precedence
+                      format: int32
+                      type: integer
+                    query:
+                      description: Query defines how to query this knowledge source
+                      type: string
+                    secretRef:
+                      description: SecretRef references credentials for accessing
+                        the knowledge source
+                      properties:
+                        key:
+                          default: api-key
+                          description: Key is the key within the secret containing
+                            the value
+                          type: string
+                        name:
+                          description: Name is the name of the secret
+                          type: string
+                        namespace:
+                          description: Namespace is the namespace of the secret (defaults
+                            to same namespace as LanguageModel)
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type:
+                      description: Type specifies the knowledge source type
+                      enum:
+                      - url
+                      - document
+                      - database
+                      - api
+                      - vector-store
+                      type: string
+                    url:
+                      description: URL is the knowledge source URL (for url, api types)
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+              language:
+                default: en
+                description: Language specifies the primary language for responses
+                type: string
+              limitations:
+                description: Limitations lists what this persona should not do
+                items:
+                  type: string
+                type: array
+              metadata:
+                additionalProperties:
+                  type: string
+                description: Metadata contains additional persona metadata
+                type: object
+              parentPersona:
+                description: ParentPersona references a parent persona to inherit
+                  from
+                properties:
+                  name:
+                    description: Name is the name of the LanguagePersona
+                    maxLength: 63
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the LanguagePersona
+                      (defaults to same namespace)
+                    maxLength: 63
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                required:
+                - name
+                type: object
+              responseFormat:
+                description: ResponseFormat defines preferred response structure
+                properties:
+                  includeConfidence:
+                    default: false
+                    description: IncludeConfidence indicates whether to include confidence
+                      scores
+                    type: boolean
+                  includeSources:
+                    default: false
+                    description: IncludeSources indicates whether to cite sources
+                    type: boolean
+                  maxLength:
+                    description: MaxLength limits response length in characters
+                    format: int32
+                    type: integer
+                  schema:
+                    description: Schema defines JSON schema for structured responses
+                    type: string
+                  template:
+                    description: Template defines a response template
+                    type: string
+                  type:
+                    default: text
+                    description: Type specifies the response format
+                    enum:
+                    - text
+                    - markdown
+                    - json
+                    - structured
+                    - list
+                    - table
+                    type: string
+                type: object
+              rules:
+                description: Rules define conditional behaviors and policies
+                items:
+                  description: PersonaRule defines a conditional behavior rule
+                  properties:
+                    action:
+                      description: Action defines what to do when condition matches
+                      type: string
+                    condition:
+                      description: Condition defines when this rule applies (e.g.,
+                        "when asked about X")
+                      type: string
+                    description:
+                      description: Description explains what this rule does
+                      type: string
+                    enabled:
+                      default: true
+                      description: Enabled indicates if this rule is active
+                      type: boolean
+                    name:
+                      description: Name is a unique identifier for this rule
+                      type: string
+                    priority:
+                      default: 100
+                      description: Priority determines rule evaluation order (lower
+                        is higher priority)
+                      format: int32
+                      type: integer
+                  required:
+                  - action
+                  - condition
+                  - name
+                  type: object
+                type: array
+              systemPrompt:
+                description: SystemPrompt is the base system instruction for this
+                  persona
+                type: string
+              tone:
+                default: professional
+                description: Tone defines the communication style
+                enum:
+                - professional
+                - casual
+                - friendly
+                - formal
+                - technical
+                - empathetic
+                - concise
+                - detailed
+                type: string
+              toolPreferences:
+                description: ToolPreferences defines how this persona uses tools
+                properties:
+                  alwaysConfirm:
+                    default: false
+                    description: AlwaysConfirm requires confirmation before tool use
+                    type: boolean
+                  avoidTools:
+                    description: AvoidTools lists tools to avoid using
+                    items:
+                      type: string
+                    type: array
+                  explainToolUse:
+                    default: true
+                    description: ExplainToolUse explains tool usage to users
+                    type: boolean
+                  preferredTools:
+                    description: PreferredTools lists tools to prefer using
+                    items:
+                      type: string
+                    type: array
+                  strategy:
+                    default: balanced
+                    description: ToolUsageStrategy defines how aggressively to use
+                      tools
+                    enum:
+                    - conservative
+                    - balanced
+                    - aggressive
+                    - minimal
+                    type: string
+                type: object
+              version:
+                description: Version tracks the persona version
+                type: string
+            type: object
+          status:
+            description: LanguagePersonaStatus defines the observed state of LanguagePersona
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the persona's state
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastUpdateTime:
+                description: LastUpdateTime is the last time the status was updated
+                format: date-time
+                type: string
+              message:
+                description: Message provides human-readable details about the current
+                  state
+                type: string
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed LanguagePersona
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase (Ready, NotReady)
+                enum:
+                - Ready
+                - NotReady
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

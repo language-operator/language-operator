@@ -405,6 +405,42 @@ func TestLanguageClusterController_CapacityQuota_Absent_When_SpecUnset(t *testin
 	assert.True(t, errors.IsNotFound(err), "expected no ResourceQuota when spec.capacity is unset")
 }
 
+func TestLanguageClusterController_CapacityStatus_WrittenWhenEmpty(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Cluster with no sub-resources — all counts should be zero, but status.capacity must be written.
+	cluster := gen.LanguageCluster("empty-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+
+	require.NotNil(t, updated.Status.Capacity, "status.capacity must be written even when cluster has no resources")
+	assert.Equal(t, int32(0), updated.Status.Capacity.AgentCount)
+	assert.Equal(t, int32(0), updated.Status.Capacity.ModelCount)
+	assert.Equal(t, int32(0), updated.Status.Capacity.ToolCount)
+	assert.Equal(t, int32(0), updated.Status.Capacity.PersonaCount)
+}
+
 func TestLanguageClusterController_CapacityStatus_Counts(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

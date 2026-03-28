@@ -257,6 +257,13 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	cluster.Status.ProxyEndpoint = fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", cluster.Name)
 	cluster.Status.ProxyReady = true
 
+	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
+	// field is always written even if ResourceQuota management fails (e.g. RBAC not yet applied).
+	if err := r.reconcileCapacityStatus(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile capacity status")
+		// Non-fatal: capacity counts are best-effort
+	}
+
 	// Reconcile ResourceQuota for capacity limits
 	if err := r.reconcileCapacity(ctx, cluster); err != nil {
 		log.Error(err, "Failed to reconcile capacity quota")
@@ -269,11 +276,6 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		reconcileErr = err
 		return ctrl.Result{}, err
-	}
-
-	// Populate status.capacity with observed usage (non-fatal)
-	if err := r.reconcileCapacityStatus(ctx, cluster); err != nil {
-		log.Error(err, "Failed to reconcile capacity status")
 	}
 
 	// LanguageCluster is now just a logical grouping - no namespace management
@@ -1208,9 +1210,13 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 
 // reconcileCapacityStatus populates cluster.status.capacity with observed counts and
 // the sum of limits.cpu / limits.memory across all LanguageAgent specs.
+// status.capacity is assigned unconditionally at the start so it is always written,
+// even when all counts are zero or a list call returns an error.
 func (r *LanguageClusterReconciler) reconcileCapacityStatus(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	namespace := cluster.Name
 	status := &langopv1alpha1.ClusterCapacityStatus{}
+	// Assign immediately — ensures the field is always written to the API even on early return.
+	cluster.Status.Capacity = status
 
 	agents := &langopv1alpha1.LanguageAgentList{}
 	if err := r.List(ctx, agents, client.InNamespace(namespace)); err != nil {
@@ -1247,7 +1253,5 @@ func (r *LanguageClusterReconciler) reconcileCapacityStatus(ctx context.Context,
 	}
 	status.TotalCPULimits = totalCPU
 	status.TotalMemoryLimits = totalMem
-
-	cluster.Status.Capacity = status
 	return nil
 }

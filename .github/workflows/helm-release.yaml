@@ -34,11 +34,6 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Copy CRDs to Helm chart
-        run: |
-          cd src
-          make helm-crds-copy
-
       - name: Package Helm chart
         run: |
           mkdir -p .helm-packages

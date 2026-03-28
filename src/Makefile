@@ -74,12 +74,12 @@ shell: ## Run interactive shell in container.
 # NOTE: To deploy the operator, use the Helm chart in ../chart/
 
 .PHONY: helm-crds
-helm-crds: manifests ## Generate and copy CRDs to Helm chart in ../chart/
-	cp config/crd/bases/*.yaml ../chart/crds/
-
-.PHONY: helm-crds-copy
-helm-crds-copy: ## Copy existing CRDs to Helm chart in ../chart/ (no generation, for CI).
-	cp config/crd/bases/*.yaml ../chart/crds/
+helm-crds: manifests ## Generate CRDs and copy to chart/templates/crds/ (run after changing api/v1alpha1 types)
+	cp config/crd/bases/*.yaml ../chart/templates/crds/
+	@for f in ../chart/templates/crds/*.yaml; do \
+	  grep -q 'helm.sh/resource-policy' "$$f" || \
+	  sed -i 's/    controller-gen.kubebuilder.io/    helm.sh\/resource-policy: keep\n    controller-gen.kubebuilder.io/' "$$f"; \
+	done
 
 ##@ Build Dependencies
 
