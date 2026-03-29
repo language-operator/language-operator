@@ -355,11 +355,11 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		}
 
 		// Add resource requirements if specified
-		deployment.Spec.Template.Spec.Containers[0].Resources = tool.Spec.Resources
+		deployment.Spec.Template.Spec.Containers[0].Resources = tool.Spec.Deployment.Resources
 
 		// Add affinity if specified
-		if tool.Spec.Affinity != nil {
-			deployment.Spec.Template.Spec.Affinity = tool.Spec.Affinity
+		if tool.Spec.Deployment.Affinity != nil {
+			deployment.Spec.Template.Spec.Affinity = tool.Spec.Deployment.Affinity
 		}
 
 		return nil
@@ -370,7 +370,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 
 func (r *LanguageToolReconciler) buildToolEnv(tool *langopv1alpha1.LanguageTool) []corev1.EnvVar {
 	// Start with user-specified environment variables
-	env := append([]corev1.EnvVar{}, tool.Spec.Env...)
+	env := append([]corev1.EnvVar{}, tool.Spec.Deployment.Env...)
 
 	// Inject OpenTelemetry configuration from operator environment
 	// Tools use the collector endpoint for sending telemetry data

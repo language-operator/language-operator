@@ -65,8 +65,8 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) 
 	}
 
 	// Default resources
-	if a.Spec.Resources.Requests == nil && a.Spec.Resources.Limits == nil {
-		a.Spec.Resources = corev1.ResourceRequirements{
+	if a.Spec.Deployment.Resources.Requests == nil && a.Spec.Deployment.Resources.Limits == nil {
+		a.Spec.Deployment.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("100m"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),

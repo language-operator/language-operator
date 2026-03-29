@@ -50,41 +50,41 @@ spec:
   models:
     - name: claude-sonnet
 
-  initContainers:
-    - name: openclaw-adapter
-      image: ghcr.io/language-operator/openclaw-adapter:latest
-      # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
-      # The adapter uses them to configure openclaw's provider settings.
-      env:
-        - name: OPENCLAW_STATE_DIR
-          value: /workspace/.openclaw
-      volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-
-  # livenessProbe / readinessProbe omitted: openclaw gateway binds to loopback
-  # (ws://127.0.0.1:18789), so kubelet httpGet probes cannot reach it.
-  # Add probes back once openclaw exposes a health endpoint on 0.0.0.0.
-
-  env:
-    - name: OPENCLAW_HOME
-      value: /workspace   # openclaw uses $OPENCLAW_HOME/.openclaw as its state dir
-
-  envFrom:
-    - secretRef:
-        name: openclaw-gateway   # OPENCLAW_GATEWAY_TOKEN
-
   workspace:
     enabled: true
     size: 10Gi
 
-  executionMode: autonomous
   replicas: 1
 
-  resources:
-    requests:
-      memory: 512Mi
-      cpu: 250m
-    limits:
-      memory: 2Gi
-      cpu: 1000m
+  deployment:
+    initContainers:
+      - name: openclaw-adapter
+        image: ghcr.io/language-operator/openclaw-adapter:latest
+        # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
+        # The adapter uses them to configure openclaw's provider settings.
+        env:
+          - name: OPENCLAW_STATE_DIR
+            value: /workspace/.openclaw
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+
+    # livenessProbe / readinessProbe omitted: openclaw gateway binds to loopback
+    # (ws://127.0.0.1:18789), so kubelet httpGet probes cannot reach it.
+    # Add probes back once openclaw exposes a health endpoint on 0.0.0.0.
+
+    env:
+      - name: OPENCLAW_HOME
+        value: /workspace   # openclaw uses $OPENCLAW_HOME/.openclaw as its state dir
+
+    envFrom:
+      - secretRef:
+          name: openclaw-gateway   # OPENCLAW_GATEWAY_TOKEN
+
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 2Gi
+        cpu: 1000m

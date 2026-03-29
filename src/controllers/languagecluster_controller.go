@@ -841,7 +841,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 		})
 	}
 
-	// Determine replicas and resources from ProxyConfig
+	// Determine replicas and resources from GatewaySpec
 	replicas := int32(1)
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
@@ -853,12 +853,12 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			corev1.ResourceMemory: resource.MustParse("512Mi"),
 		},
 	}
-	if cluster.Spec.Proxy != nil {
-		if cluster.Spec.Proxy.Replicas != nil {
-			replicas = *cluster.Spec.Proxy.Replicas
+	if cluster.Spec.Gateway != nil {
+		if cluster.Spec.Gateway.Deployment.Replicas != nil {
+			replicas = *cluster.Spec.Gateway.Deployment.Replicas
 		}
-		if cluster.Spec.Proxy.Resources.Requests != nil || cluster.Spec.Proxy.Resources.Limits != nil {
-			resources = cluster.Spec.Proxy.Resources
+		if cluster.Spec.Gateway.Deployment.Resources.Requests != nil || cluster.Spec.Gateway.Deployment.Resources.Limits != nil {
+			resources = cluster.Spec.Gateway.Deployment.Resources
 		}
 	}
 
@@ -970,9 +970,9 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 
-	// Skip if proxy ingress explicitly disabled
-	if cluster.Spec.Proxy != nil && cluster.Spec.Proxy.IngressEnabled != nil && !*cluster.Spec.Proxy.IngressEnabled {
-		log.V(1).Info("Proxy ingress disabled, skipping")
+	// Skip if gateway ingress explicitly disabled
+	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Enabled != nil && !*cluster.Spec.Gateway.Enabled {
+		log.V(1).Info("Gateway ingress disabled, skipping")
 		return nil
 	}
 
@@ -1238,9 +1238,9 @@ func (r *LanguageClusterReconciler) reconcileCapacityStatus(ctx context.Context,
 	totalCPU := resource.Quantity{}
 	totalMem := resource.Quantity{}
 	for _, a := range agents.Items {
-		if a.Spec.Resources.Limits != nil {
-			totalCPU.Add(*a.Spec.Resources.Limits.Cpu())
-			totalMem.Add(*a.Spec.Resources.Limits.Memory())
+		if a.Spec.Deployment.Resources.Limits != nil {
+			totalCPU.Add(*a.Spec.Deployment.Resources.Limits.Cpu())
+			totalMem.Add(*a.Spec.Deployment.Resources.Limits.Memory())
 		}
 	}
 	status.TotalCPULimits = totalCPU

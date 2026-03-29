@@ -70,10 +70,10 @@ func SetAgentWorkspace(size string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentResources sets spec.resources.
+// SetAgentResources sets spec.deployment.resources.
 func SetAgentResources(cpuRequest, memRequest, cpuLimit, memLimit string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.Resources = corev1.ResourceRequirements{
+		a.Spec.Deployment.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 				corev1.ResourceMemory: resource.MustParse(memRequest),
@@ -89,7 +89,7 @@ func SetAgentResources(cpuRequest, memRequest, cpuLimit, memLimit string) Langua
 // SetAgentEnv appends environment variables.
 func SetAgentEnv(name, value string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.Env = append(a.Spec.Env, corev1.EnvVar{Name: name, Value: value})
+		a.Spec.Deployment.Env = append(a.Spec.Deployment.Env, corev1.EnvVar{Name: name, Value: value})
 	}
 }
 

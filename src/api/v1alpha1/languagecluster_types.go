@@ -89,9 +89,9 @@ type LanguageClusterSpec struct {
 	// +optional
 	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 
-	// Proxy configures the shared LiteLLM proxy deployed per cluster
+	// Gateway configures the shared LiteLLM gateway deployed per cluster
 	// +optional
-	Proxy *ProxyConfig `json:"proxy,omitempty"`
+	Gateway *GatewaySpec `json:"gateway,omitempty"`
 
 	// Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.
 	// When set, the controller creates a ResourceQuota named "langop-quota".
@@ -100,21 +100,130 @@ type LanguageClusterSpec struct {
 	Capacity *ClusterCapacitySpec `json:"capacity,omitempty"`
 }
 
-// ProxyConfig configures the shared LiteLLM proxy for a LanguageCluster
-type ProxyConfig struct {
-	// IngressEnabled controls whether an Ingress/HTTPRoute is created for the proxy.
-	// Defaults to true when cluster.spec.domain is set.
+// DeploymentSpec groups Kubernetes deployment configuration that is common across
+// LanguageAgent, LanguageTool, and LanguageCluster gateway deployments.
+// All fields are optional; controllers only read the fields relevant to their resource.
+type DeploymentSpec struct {
+	// Replicas is the number of pod replicas to run.
+	// +kubebuilder:validation:Minimum=0
 	// +optional
-	IngressEnabled *bool `json:"ingressEnabled,omitempty"`
+	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Resources sets CPU/memory requests and limits for the proxy Deployment.
+	// ImagePullPolicy defines when to pull the container image.
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	// ImagePullSecrets is a list of references to secrets for pulling images.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// Env contains environment variables for the container.
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// EnvFrom sources to populate environment variables.
+	// +optional
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Resources defines compute resource requirements.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// Replicas sets the number of proxy pod replicas.
-	// +kubebuilder:default=1
+	// NodeSelector is a selector which must match a node's labels.
 	// +optional
-	Replicas *int32 `json:"replicas,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Affinity defines pod affinity and anti-affinity rules.
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// Tolerations allow pods to schedule onto nodes with matching taints.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// TopologySpreadConstraints describes how pods should spread across topology domains.
+	// +optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// ServiceAccountName is the name of the ServiceAccount to use.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// SecurityContext holds pod-level security attributes.
+	// +optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	// VolumeMounts to mount into the container.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Volumes to attach to the pod.
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// PodAnnotations are annotations to add to the Pods.
+	// +optional
+	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+
+	// PodLabels are additional labels to add to the Pods.
+	// +optional
+	PodLabels map[string]string `json:"podLabels,omitempty"`
+
+	// RestartPolicy defines when to restart the pod.
+	// +kubebuilder:validation:Enum=Always;OnFailure;Never
+	// +optional
+	RestartPolicy corev1.RestartPolicy `json:"restartPolicy,omitempty"`
+
+	// BackoffLimit specifies the number of retries before marking as Failed.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
+
+	// InitContainers are additional init containers injected before the main container starts.
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// LivenessProbe defines the liveness probe for the container.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// ReadinessProbe defines the readiness probe for the container.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// StartupProbe defines the startup probe for the container.
+	// +optional
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+
+	// ServiceType specifies the type of Service to create (ClusterIP, NodePort, LoadBalancer).
+	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
+	// +optional
+	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
+
+	// ServiceAnnotations are annotations to add to the Service.
+	// +optional
+	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
+
+	// PodDisruptionBudget defines the PDB for this deployment.
+	// +optional
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+
+	// UpdateStrategy defines the update strategy for the Deployment.
+	// +optional
+	UpdateStrategy *UpdateStrategySpec `json:"updateStrategy,omitempty"`
+}
+
+// GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.
+type GatewaySpec struct {
+	// Enabled controls whether an Ingress/HTTPRoute is created for the gateway.
+	// Defaults to true when cluster.spec.domain is set.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Deployment configures the Kubernetes deployment for the gateway pod.
+	// +optional
+	Deployment DeploymentSpec `json:"deployment,omitempty"`
 }
 
 // IngressConfig defines ingress/gateway configuration

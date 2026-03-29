@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -12,16 +11,6 @@ type LanguageAgentSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$`
 	Image string `json:"image"`
-
-	// ImagePullPolicy defines when to pull the container image
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	// +kubebuilder:default=IfNotPresent
-	// +optional
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
-	// ImagePullSecrets is a list of references to secrets for pulling images
-	// +optional
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 
 	// Models is a list of LanguageModel references this agent can use
 	// +optional
@@ -52,66 +41,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Env contains environment variables for the agent container
-	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
-
-	// EnvFrom sources to populate environment variables
-	// +optional
-	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
-
-	// Resources defines compute resource requirements
-	// +optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// NodeSelector is a selector which must match a node's labels
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// Affinity defines pod affinity and anti-affinity rules
-	// +optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
-
-	// Tolerations allow pods to schedule onto nodes with matching taints
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-
-	// ServiceAccountName is the name of the ServiceAccount to use
-	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
-	// SecurityContext holds pod-level security attributes
-	// +optional
-	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
-
-	// VolumeMounts to mount into the agent container
-	// +optional
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
-
-	// Volumes to attach to the pod
-	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
-
-	// PodAnnotations are annotations to add to the Pods
-	// +optional
-	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
-
-	// PodLabels are additional labels to add to the Pods
-	// +optional
-	PodLabels map[string]string `json:"podLabels,omitempty"`
-
-	// RestartPolicy defines when to restart the agent
-	// +kubebuilder:validation:Enum=Always;OnFailure;Never
-	// +kubebuilder:default=OnFailure
-	// +optional
-	RestartPolicy corev1.RestartPolicy `json:"restartPolicy,omitempty"`
-
-	// BackoffLimit specifies the number of retries before marking as Failed
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=3
-	// +optional
-	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
-
 	// Workspace defines persistent storage for the agent
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
@@ -129,20 +58,9 @@ type LanguageAgentSpec struct {
 	// +optional
 	Port *int32 `json:"port,omitempty"`
 
-	// LivenessProbe defines the liveness probe for the agent container.
-	// If not set, no liveness probe is configured.
+	// Deployment groups Kubernetes-specific pod and container configuration.
 	// +optional
-	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
-
-	// ReadinessProbe defines the readiness probe for the agent container.
-	// If not set, no readiness probe is configured.
-	// +optional
-	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
-
-	// InitContainers are additional init containers injected before the agent container starts.
-	// Useful for seeding config, migrating workspace data, or other pre-start setup.
-	// +optional
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	Deployment DeploymentSpec `json:"deployment,omitempty"`
 }
 
 // ModelReference references a LanguageModel

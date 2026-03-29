@@ -47,8 +47,8 @@ var _ webhook.CustomValidator = &LanguageToolWebhook{}
 func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) error {
 	t := obj.(*LanguageTool)
 
-	if t.Spec.Resources.Requests == nil && t.Spec.Resources.Limits == nil {
-		t.Spec.Resources = corev1.ResourceRequirements{
+	if t.Spec.Deployment.Resources.Requests == nil && t.Spec.Deployment.Resources.Limits == nil {
+		t.Spec.Deployment.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("50m"),
 				corev1.ResourceMemory: resource.MustParse("128Mi"),

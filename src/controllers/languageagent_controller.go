@@ -685,20 +685,20 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			{
 				Name:            "agent",
 				Image:           agent.Spec.Image,
-				ImagePullPolicy: agent.Spec.ImagePullPolicy,
+				ImagePullPolicy: agent.Spec.Deployment.ImagePullPolicy,
 				Env:             r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs),
-				EnvFrom:         agent.Spec.EnvFrom,
-				Resources:       agent.Spec.Resources,
-				LivenessProbe:   agent.Spec.LivenessProbe,
-				ReadinessProbe:  agent.Spec.ReadinessProbe,
+				EnvFrom:         agent.Spec.Deployment.EnvFrom,
+				Resources:       agent.Spec.Deployment.Resources,
+				LivenessProbe:   agent.Spec.Deployment.LivenessProbe,
+				ReadinessProbe:  agent.Spec.Deployment.ReadinessProbe,
 			},
 		}
 
 		// Inject resolved model/tool env vars into user-specified init containers
 		// so adapters (e.g. openclaw-adapter) can configure the agent runtime
 		// to route through the operator-managed LiteLLM proxies.
-		userInitContainers := make([]corev1.Container, len(agent.Spec.InitContainers))
-		copy(userInitContainers, agent.Spec.InitContainers)
+		userInitContainers := make([]corev1.Container, len(agent.Spec.Deployment.InitContainers))
+		copy(userInitContainers, agent.Spec.Deployment.InitContainers)
 		modelEnv := r.buildModelEnv(modelURLs, modelNames)
 		for i := range userInitContainers {
 			userInitContainers[i].Env = append(modelEnv, userInitContainers[i].Env...)
@@ -904,7 +904,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 					Protocol:      corev1.ProtocolTCP,
 				},
 			},
-			Env: tool.Spec.Env,
+			Env: tool.Spec.Deployment.Env,
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
@@ -920,7 +920,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 		}
 
 		// Add resource requirements if specified, otherwise use sensible defaults for tool containers
-		if tool.Spec.Resources.Requests == nil && tool.Spec.Resources.Limits == nil {
+		if tool.Spec.Deployment.Resources.Requests == nil && tool.Spec.Deployment.Resources.Limits == nil {
 			container.Resources = corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -932,7 +932,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 				},
 			}
 		} else {
-			container.Resources = tool.Spec.Resources
+			container.Resources = tool.Spec.Deployment.Resources
 		}
 
 		// Mount workspace if agent has workspace enabled
@@ -1082,7 +1082,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 	}
 
 	// User-specified env vars (may override any of the above)
-	env = append(env, agent.Spec.Env...)
+	env = append(env, agent.Spec.Deployment.Env...)
 
 	return env
 }
@@ -2132,7 +2132,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 	log := log.FromContext(ctx)
 
 	// Skip if custom ServiceAccount is specified - assume it exists and has proper permissions
-	if agent.Spec.ServiceAccountName != "" {
+	if agent.Spec.Deployment.ServiceAccountName != "" {
 		return nil
 	}
 
@@ -2213,8 +2213,8 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 // getServiceAccountName returns the ServiceAccount name to use for agent pods
 func (r *LanguageAgentReconciler) getServiceAccountName(agent *langopv1alpha1.LanguageAgent) string {
 	// If explicitly specified in the agent spec, use that
-	if agent.Spec.ServiceAccountName != "" {
-		return agent.Spec.ServiceAccountName
+	if agent.Spec.Deployment.ServiceAccountName != "" {
+		return agent.Spec.Deployment.ServiceAccountName
 	}
 
 	// Default to a language-agent ServiceAccount that will be created in the agent's namespace
