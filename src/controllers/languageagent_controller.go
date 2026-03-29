@@ -772,6 +772,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				Resources:       agent.Spec.Deployment.Resources,
 				LivenessProbe:   agent.Spec.Deployment.LivenessProbe,
 				ReadinessProbe:  agent.Spec.Deployment.ReadinessProbe,
+				StartupProbe:    agent.Spec.Deployment.StartupProbe,
 			},
 		}
 
@@ -788,6 +789,21 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// User-specified init containers run before operator-managed sidecar containers
 		allInitContainers := append(userInitContainers, sidecarContainers...)
 
+		// Merge user pod labels; operator-managed labels take precedence to protect selector stability.
+		podLabels := make(map[string]string, len(labels)+len(agent.Spec.Deployment.PodLabels))
+		for k, v := range agent.Spec.Deployment.PodLabels {
+			podLabels[k] = v
+		}
+		for k, v := range labels {
+			podLabels[k] = v
+		}
+
+		// Use user-supplied pod security context if set, otherwise apply operator defaults.
+		podSecCtx := r.buildPodSecurityContext()
+		if agent.Spec.Deployment.SecurityContext != nil {
+			podSecCtx = agent.Spec.Deployment.SecurityContext
+		}
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -795,14 +811,20 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      podLabels,
+					Annotations: agent.Spec.Deployment.PodAnnotations,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName:    r.getServiceAccountName(agent),
-					ShareProcessNamespace: &[]bool{len(allInitContainers) > 0}[0],
-					InitContainers:        allInitContainers,
-					Containers:            containers,
-					SecurityContext:       r.buildPodSecurityContext(),
+					ServiceAccountName:        r.getServiceAccountName(agent),
+					ShareProcessNamespace:     &[]bool{len(allInitContainers) > 0}[0],
+					InitContainers:            allInitContainers,
+					Containers:                containers,
+					SecurityContext:           podSecCtx,
+					ImagePullSecrets:          agent.Spec.Deployment.ImagePullSecrets,
+					NodeSelector:              agent.Spec.Deployment.NodeSelector,
+					Tolerations:               agent.Spec.Deployment.Tolerations,
+					TopologySpreadConstraints: agent.Spec.Deployment.TopologySpreadConstraints,
+					Affinity:                  agent.Spec.Deployment.Affinity,
 				},
 			},
 		}
@@ -810,8 +832,10 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		// Add container security context for agent container
 		deployment.Spec.Template.Spec.Containers[0].SecurityContext = r.buildContainerSecurityContext()
 
-		// Build and apply volumes and volume mounts
+		// Build operator-managed volumes and volume mounts, then append user-supplied ones.
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
+		volumes = append(volumes, agent.Spec.Deployment.Volumes...)
+		volumeMounts = append(volumeMounts, agent.Spec.Deployment.VolumeMounts...)
 		if len(volumes) > 0 {
 			deployment.Spec.Template.Spec.Volumes = volumes
 		}

@@ -391,3 +391,66 @@ func TestLanguageToolController_ServiceTypeAndAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguageToolController_SchedulingFields(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("test-sched-tool", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolPort(8080),
+	)
+	tool.Spec.Deployment.NodeSelector = map[string]string{"kubernetes.io/arch": "arm64"}
+	tool.Spec.Deployment.Tolerations = []corev1.Toleration{
+		{Key: "spot", Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+	}
+	tool.Spec.Deployment.TopologySpreadConstraints = []corev1.TopologySpreadConstraint{
+		{MaxSkew: 1, TopologyKey: "topology.kubernetes.io/zone", WhenUnsatisfiable: corev1.DoNotSchedule},
+	}
+	tool.Spec.Deployment.ImagePullSecrets = []corev1.LocalObjectReference{{Name: "tool-registry-secret"}}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+
+	if podSpec.NodeSelector["kubernetes.io/arch"] != "arm64" {
+		t.Errorf("Expected NodeSelector kubernetes.io/arch=arm64, got %v", podSpec.NodeSelector)
+	}
+	if len(podSpec.Tolerations) == 0 || podSpec.Tolerations[0].Key != "spot" {
+		t.Errorf("Expected Toleration spot, got %v", podSpec.Tolerations)
+	}
+	if len(podSpec.TopologySpreadConstraints) == 0 || podSpec.TopologySpreadConstraints[0].TopologyKey != "topology.kubernetes.io/zone" {
+		t.Errorf("Expected TopologySpreadConstraint, got %v", podSpec.TopologySpreadConstraints)
+	}
+	if len(podSpec.ImagePullSecrets) == 0 || podSpec.ImagePullSecrets[0].Name != "tool-registry-secret" {
+		t.Errorf("Expected ImagePullSecret tool-registry-secret, got %v", podSpec.ImagePullSecrets)
+	}
+}

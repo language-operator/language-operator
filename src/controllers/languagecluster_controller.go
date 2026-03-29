@@ -935,6 +935,16 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 				},
 			},
 		}
+		if cluster.Spec.Gateway != nil {
+			podSpec := &deployment.Spec.Template.Spec
+			podSpec.NodeSelector = cluster.Spec.Gateway.Deployment.NodeSelector
+			podSpec.Tolerations = cluster.Spec.Gateway.Deployment.Tolerations
+			podSpec.TopologySpreadConstraints = cluster.Spec.Gateway.Deployment.TopologySpreadConstraints
+			if cluster.Spec.Gateway.Deployment.Affinity != nil {
+				podSpec.Affinity = cluster.Spec.Gateway.Deployment.Affinity
+			}
+			podSpec.ImagePullSecrets = cluster.Spec.Gateway.Deployment.ImagePullSecrets
+		}
 		return nil
 	})
 	if err != nil {

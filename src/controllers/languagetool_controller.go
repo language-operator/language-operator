@@ -357,10 +357,14 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		// Add resource requirements if specified
 		deployment.Spec.Template.Spec.Containers[0].Resources = tool.Spec.Deployment.Resources
 
-		// Add affinity if specified
+		// Add scheduling fields
 		if tool.Spec.Deployment.Affinity != nil {
 			deployment.Spec.Template.Spec.Affinity = tool.Spec.Deployment.Affinity
 		}
+		deployment.Spec.Template.Spec.NodeSelector = tool.Spec.Deployment.NodeSelector
+		deployment.Spec.Template.Spec.Tolerations = tool.Spec.Deployment.Tolerations
+		deployment.Spec.Template.Spec.TopologySpreadConstraints = tool.Spec.Deployment.TopologySpreadConstraints
+		deployment.Spec.Template.Spec.ImagePullSecrets = tool.Spec.Deployment.ImagePullSecrets
 
 		return nil
 	})

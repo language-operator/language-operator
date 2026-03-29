@@ -2239,3 +2239,392 @@ func TestLanguageAgentController_ServiceTypeAndAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguageAgentController_SchedulingFields(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-sched-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				NodeSelector: map[string]string{"kubernetes.io/arch": "amd64"},
+				Tolerations: []corev1.Toleration{
+					{Key: "gpu", Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule},
+				},
+				TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+					{MaxSkew: 1, TopologyKey: "topology.kubernetes.io/zone", WhenUnsatisfiable: corev1.DoNotSchedule},
+				},
+				Affinity: &corev1.Affinity{
+					NodeAffinity: &corev1.NodeAffinity{
+						RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+							NodeSelectorTerms: []corev1.NodeSelectorTerm{
+								{MatchExpressions: []corev1.NodeSelectorRequirement{
+									{Key: "node-type", Operator: corev1.NodeSelectorOpIn, Values: []string{"gpu"}},
+								}},
+							},
+						},
+					},
+				},
+				ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-registry-secret"}},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+
+	if podSpec.NodeSelector["kubernetes.io/arch"] != "amd64" {
+		t.Errorf("Expected NodeSelector kubernetes.io/arch=amd64, got %v", podSpec.NodeSelector)
+	}
+	if len(podSpec.Tolerations) == 0 || podSpec.Tolerations[0].Key != "gpu" {
+		t.Errorf("Expected Toleration gpu, got %v", podSpec.Tolerations)
+	}
+	if len(podSpec.TopologySpreadConstraints) == 0 || podSpec.TopologySpreadConstraints[0].TopologyKey != "topology.kubernetes.io/zone" {
+		t.Errorf("Expected TopologySpreadConstraint, got %v", podSpec.TopologySpreadConstraints)
+	}
+	if podSpec.Affinity == nil || podSpec.Affinity.NodeAffinity == nil {
+		t.Error("Expected Affinity to be set")
+	}
+	if len(podSpec.ImagePullSecrets) == 0 || podSpec.ImagePullSecrets[0].Name != "my-registry-secret" {
+		t.Errorf("Expected ImagePullSecret my-registry-secret, got %v", podSpec.ImagePullSecrets)
+	}
+}
+
+func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-labels-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				// "app.kubernetes.io/name" is also set by the operator; operator must take precedence.
+				PodLabels: map[string]string{
+					"cost-center":            "team-a",
+					"app.kubernetes.io/name": "user-override-should-be-ignored",
+				},
+				PodAnnotations: map[string]string{
+					"prometheus.io/scrape": "true",
+					"prometheus.io/port":   "8080",
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podMeta := deployment.Spec.Template.ObjectMeta
+
+	// User label should be present
+	if podMeta.Labels["cost-center"] != "team-a" {
+		t.Errorf("Expected pod label cost-center=team-a, got %q", podMeta.Labels["cost-center"])
+	}
+	// Operator label must not be overridden by user; GetCommonLabels sets it to the agent name.
+	if podMeta.Labels["app.kubernetes.io/name"] != agent.Name {
+		t.Errorf("Operator label app.kubernetes.io/name should be %q, got %q", agent.Name, podMeta.Labels["app.kubernetes.io/name"])
+	}
+	// Selector labels must remain unchanged (operator labels only)
+	selectorLabels := deployment.Spec.Selector.MatchLabels
+	if _, hasUserLabel := selectorLabels["cost-center"]; hasUserLabel {
+		t.Error("User pod label should not appear in selector MatchLabels")
+	}
+	// PodAnnotations
+	if podMeta.Annotations["prometheus.io/scrape"] != "true" {
+		t.Errorf("Expected pod annotation prometheus.io/scrape=true, got %q", podMeta.Annotations["prometheus.io/scrape"])
+	}
+	if podMeta.Annotations["prometheus.io/port"] != "8080" {
+		t.Errorf("Expected pod annotation prometheus.io/port=8080, got %q", podMeta.Annotations["prometheus.io/port"])
+	}
+}
+
+func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-vols-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				Volumes: []corev1.Volume{
+					{
+						Name: "user-secret",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: "my-secret"},
+						},
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{Name: "user-secret", MountPath: "/etc/user-secret", ReadOnly: true},
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	// Operator-managed volumes (tmp, agent-config) must still be present
+	volumeNames := map[string]bool{}
+	for _, v := range deployment.Spec.Template.Spec.Volumes {
+		volumeNames[v.Name] = true
+	}
+	if !volumeNames["tmp"] {
+		t.Error("Expected operator-managed tmp volume to be present")
+	}
+	if !volumeNames["agent-config"] {
+		t.Error("Expected operator-managed agent-config volume to be present")
+	}
+	if !volumeNames["user-secret"] {
+		t.Error("Expected user-supplied user-secret volume to be appended")
+	}
+
+	// User mount must also be present
+	mountPaths := map[string]string{}
+	for _, m := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		mountPaths[m.Name] = m.MountPath
+	}
+	if mountPaths["user-secret"] != "/etc/user-secret" {
+		t.Errorf("Expected user-secret mounted at /etc/user-secret, got %q", mountPaths["user-secret"])
+	}
+	// Operator mount (tmp) must still be present
+	if mountPaths["tmp"] != "/tmp" {
+		t.Errorf("Expected operator tmp mount at /tmp, got %q", mountPaths["tmp"])
+	}
+}
+
+func TestLanguageAgentController_StartupProbe(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-startup-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				StartupProbe: &corev1.Probe{
+					ProbeHandler: corev1.ProbeHandler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/healthz",
+						},
+					},
+					FailureThreshold:    30,
+					PeriodSeconds:       10,
+					InitialDelaySeconds: 5,
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	container := deployment.Spec.Template.Spec.Containers[0]
+	if container.StartupProbe == nil {
+		t.Fatal("Expected StartupProbe to be set")
+	}
+	if container.StartupProbe.FailureThreshold != 30 {
+		t.Errorf("Expected StartupProbe.FailureThreshold=30, got %d", container.StartupProbe.FailureThreshold)
+	}
+	if container.StartupProbe.PeriodSeconds != 10 {
+		t.Errorf("Expected StartupProbe.PeriodSeconds=10, got %d", container.StartupProbe.PeriodSeconds)
+	}
+}
+
+func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	customUID := int64(2000)
+	customGID := int64(3000)
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-custom-sec-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				SecurityContext: &corev1.PodSecurityContext{
+					RunAsUser:  &customUID,
+					RunAsGroup: &customGID,
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	_, err = reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSec := deployment.Spec.Template.Spec.SecurityContext
+	if podSec == nil {
+		t.Fatal("Pod SecurityContext is nil")
+	}
+	if podSec.RunAsUser == nil || *podSec.RunAsUser != customUID {
+		t.Errorf("Expected RunAsUser=%d (user-supplied), got %v", customUID, podSec.RunAsUser)
+	}
+	if podSec.RunAsGroup == nil || *podSec.RunAsGroup != customGID {
+		t.Errorf("Expected RunAsGroup=%d (user-supplied), got %v", customGID, podSec.RunAsGroup)
+	}
+	// Container-level security context should still be the operator-managed one
+	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
+	if containerSec == nil {
+		t.Fatal("Container SecurityContext should still be set by operator")
+	}
+	if containerSec.AllowPrivilegeEscalation == nil || *containerSec.AllowPrivilegeEscalation {
+		t.Error("Container SecurityContext.AllowPrivilegeEscalation should be false")
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -547,5 +548,80 @@ func TestLanguageClusterController_GatewayServiceTypeAndAnnotations(t *testing.T
 				}
 			}
 		})
+	}
+}
+
+func TestLanguageClusterController_ProxySchedulingFields(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("test-cluster")
+	cluster.Spec.Gateway = &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			NodeSelector: map[string]string{"cloud.google.com/gke-nodepool": "proxy-pool"},
+			Tolerations: []corev1.Toleration{
+				{Key: "dedicated", Value: "proxy", Operator: corev1.TolerationOpEqual, Effect: corev1.TaintEffectNoSchedule},
+			},
+			TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+				{MaxSkew: 1, TopologyKey: "kubernetes.io/hostname", WhenUnsatisfiable: corev1.DoNotSchedule},
+			},
+			Affinity: &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+						{
+							Weight: 100,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								TopologyKey: "kubernetes.io/hostname",
+							},
+						},
+					},
+				},
+			},
+			ImagePullSecrets: []corev1.LocalObjectReference{{Name: "proxy-registry-secret"}},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	// First reconcile adds finalizer
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	// Second reconcile creates resources
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: cluster.Name}, deployment); err != nil {
+		t.Fatalf("expected proxy deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+
+	if podSpec.NodeSelector["cloud.google.com/gke-nodepool"] != "proxy-pool" {
+		t.Errorf("Expected NodeSelector gke-nodepool=proxy-pool, got %v", podSpec.NodeSelector)
+	}
+	if len(podSpec.Tolerations) == 0 || podSpec.Tolerations[0].Key != "dedicated" {
+		t.Errorf("Expected Toleration dedicated, got %v", podSpec.Tolerations)
+	}
+	if len(podSpec.TopologySpreadConstraints) == 0 || podSpec.TopologySpreadConstraints[0].TopologyKey != "kubernetes.io/hostname" {
+		t.Errorf("Expected TopologySpreadConstraint, got %v", podSpec.TopologySpreadConstraints)
+	}
+	if podSpec.Affinity == nil || podSpec.Affinity.PodAntiAffinity == nil {
+		t.Error("Expected Affinity.PodAntiAffinity to be set")
+	}
+	if len(podSpec.ImagePullSecrets) == 0 || podSpec.ImagePullSecrets[0].Name != "proxy-registry-secret" {
+		t.Errorf("Expected ImagePullSecret proxy-registry-secret, got %v", podSpec.ImagePullSecrets)
 	}
 }
