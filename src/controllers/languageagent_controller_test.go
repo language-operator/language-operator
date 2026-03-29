@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -2015,4 +2016,152 @@ func TestLanguageAgentController_DetectNetworkPolicySupport(t *testing.T) {
 			t.Errorf("expected 'unknown', got %q", cni)
 		}
 	})
+}
+
+func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "config-vol-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:        "ghcr.io/language-operator/agent:latest",
+			Instructions: "test instructions",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	expectedConfigMapName := GenerateConfigMapName(agent.Name, "agent")
+
+	var foundVolume bool
+	for _, vol := range deployment.Spec.Template.Spec.Volumes {
+		if vol.Name == "agent-config" {
+			foundVolume = true
+			if vol.ConfigMap == nil {
+				t.Fatal("agent-config volume has no ConfigMap source")
+			}
+			if vol.ConfigMap.Name != expectedConfigMapName {
+				t.Errorf("agent-config volume points to %q, want %q", vol.ConfigMap.Name, expectedConfigMapName)
+			}
+			break
+		}
+	}
+	if !foundVolume {
+		t.Error("expected agent-config volume in deployment, not found")
+	}
+
+	containers := deployment.Spec.Template.Spec.Containers
+	if len(containers) == 0 {
+		t.Fatal("no containers in deployment")
+	}
+	var foundMount bool
+	for _, vm := range containers[0].VolumeMounts {
+		if vm.Name == "agent-config" {
+			foundMount = true
+			if vm.MountPath != "/etc/agent" {
+				t.Errorf("agent-config mount path is %q, want /etc/agent", vm.MountPath)
+			}
+			if !vm.ReadOnly {
+				t.Error("agent-config volume mount should be read-only")
+			}
+			break
+		}
+	}
+	if !foundMount {
+		t.Error("expected agent-config volume mount in agent container, not found")
+	}
+}
+
+func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "configmap-keys-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image:        "ghcr.io/language-operator/agent:latest",
+			Instructions: "You are a helpful assistant.",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	cm := &corev1.ConfigMap{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{
+		Name:      GenerateConfigMapName(agent.Name, "agent"),
+		Namespace: agent.Namespace,
+	}, cm); err != nil {
+		t.Fatalf("Expected agent ConfigMap to exist: %v", err)
+	}
+
+	if _, ok := cm.Data["config.yaml"]; !ok {
+		t.Error("ConfigMap missing config.yaml key")
+	}
+	if _, ok := cm.Data["instructions.txt"]; !ok {
+		t.Error("ConfigMap missing instructions.txt key")
+	}
+
+	if cm.Data["instructions.txt"] != agent.Spec.Instructions {
+		t.Errorf("instructions.txt = %q, want %q", cm.Data["instructions.txt"], agent.Spec.Instructions)
+	}
+
+	configYAML := cm.Data["config.yaml"]
+	if !strings.Contains(configYAML, agent.Name) {
+		t.Errorf("config.yaml does not contain agent name %q: %s", agent.Name, configYAML)
+	}
+	if !strings.Contains(configYAML, agent.Namespace) {
+		t.Errorf("config.yaml does not contain agent namespace %q: %s", agent.Namespace, configYAML)
+	}
 }

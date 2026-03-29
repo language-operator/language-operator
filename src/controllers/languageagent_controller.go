@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -34,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
@@ -82,6 +82,38 @@ const (
 	// LangopGroupID is the group ID for the langop group
 	LangopGroupID = 101
 )
+
+// agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
+type agentConfigYAML struct {
+	Agent    agentIdentityYAML          `yaml:"agent"`
+	Personas []personaConfigYAML        `yaml:"personas,omitempty"`
+	Tools    map[string]toolConfigYAML  `yaml:"tools,omitempty"`
+	Models   map[string]modelConfigYAML `yaml:"models,omitempty"`
+}
+
+type agentIdentityYAML struct {
+	Name      string `yaml:"name"`
+	Namespace string `yaml:"namespace"`
+}
+
+type personaConfigYAML struct {
+	Name        string `yaml:"name"`
+	Tone        string `yaml:"tone,omitempty"`
+	Personality string `yaml:"personality,omitempty"`
+	Expertise   string `yaml:"expertise,omitempty"`
+}
+
+type toolConfigYAML struct {
+	Endpoint string `yaml:"endpoint"`
+	Protocol string `yaml:"protocol"`
+}
+
+type modelConfigYAML struct {
+	Role     string `yaml:"role,omitempty"`
+	Provider string `yaml:"provider"`
+	Model    string `yaml:"model"`
+	Endpoint string `yaml:"endpoint"`
+}
 
 // InitializeGatewayCache initializes the Gateway API cache
 func (r *LanguageAgentReconciler) InitializeGatewayCache() {
@@ -379,48 +411,80 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-	data := make(map[string]string)
+	l := log.FromContext(ctx)
 
-	// Fetch persona if referenced
+	cfg := agentConfigYAML{
+		Agent: agentIdentityYAML{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	}
+
+	// Persona
 	persona, err := r.fetchPersona(ctx, agent)
 	if err != nil {
-		// Log warning but continue without persona
-		log.Error(err, "Failed to fetch persona, continuing without it")
+		l.Error(err, "Failed to fetch persona, continuing without it")
 	}
-
-	// Add agent spec as JSON
-	specJSON, err := json.Marshal(agent.Spec)
-	if err != nil {
-		return err
-	}
-	data["agent.json"] = string(specJSON)
-
-	// Add persona fields if a persona is referenced
 	if persona != nil {
-		personaJSON, err := json.Marshal(persona.Spec)
-		if err != nil {
-			return err
+		cfg.Personas = []personaConfigYAML{{
+			Name:        persona.Name,
+			Tone:        persona.Spec.Tone,
+			Personality: persona.Spec.Personality,
+			Expertise:   persona.Spec.Expertise,
+		}}
+	}
+
+	// Tools
+	for _, toolRef := range agent.Spec.Tools {
+		if toolRef.Enabled != nil && !*toolRef.Enabled {
+			continue
 		}
-		data["persona.json"] = string(personaJSON)
-		data["persona_name"] = persona.Name
-		if persona.Spec.Tone != "" {
-			data["persona_tone"] = persona.Spec.Tone
+		tool := &langopv1alpha1.LanguageTool{}
+		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
+			l.Error(err, "Failed to get tool for config.yaml, skipping", "tool", toolRef.Name)
+			continue
 		}
-		if persona.Spec.Personality != "" {
-			data["persona_personality"] = persona.Spec.Personality
+		port := tool.Spec.Port
+		if port == 0 {
+			port = 8080
 		}
-		if persona.Spec.Expertise != "" {
-			data["persona_expertise"] = persona.Spec.Expertise
+		endpoint := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, agent.Namespace, port)
+		if tool.Spec.DeploymentMode == "sidecar" {
+			endpoint = fmt.Sprintf("http://localhost:%d", port)
+		}
+		if cfg.Tools == nil {
+			cfg.Tools = make(map[string]toolConfigYAML)
+		}
+		cfg.Tools[tool.Name] = toolConfigYAML{Endpoint: endpoint, Protocol: "mcp"}
+	}
+
+	// Models — all served via the shared namespace proxy
+	proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", agent.Namespace)
+	for _, modelRef := range agent.Spec.Models {
+		model := &langopv1alpha1.LanguageModel{}
+		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
+			l.Error(err, "Failed to get model for config.yaml, skipping", "model", modelRef.Name)
+			continue
+		}
+		if cfg.Models == nil {
+			cfg.Models = make(map[string]modelConfigYAML)
+		}
+		cfg.Models[modelRef.Name] = modelConfigYAML{
+			Role:     modelRef.Role,
+			Provider: model.Spec.Provider,
+			Model:    model.Spec.ModelName,
+			Endpoint: proxyURL,
 		}
 	}
 
-	// Add other useful data
-	data["name"] = agent.Name
-	data["namespace"] = agent.Namespace
-	instructions := agent.Spec.Instructions
-	if instructions != "" {
-		data["instructions"] = instructions
+	configYAMLBytes, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config.yaml: %w", err)
+	}
+
+	data := map[string]string{
+		"config.yaml":      string(configYAMLBytes),
+		"instructions.txt": agent.Spec.Instructions,
 	}
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
@@ -606,7 +670,23 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 		MountPath: "/tmp",
 	})
 
-	// TODO: Add persona mounting from Persona
+	// Mount agent config ConfigMap at /etc/agent/ (provides config.yaml and instructions.txt)
+	agentConfigMapName := GenerateConfigMapName(agent.Name, "agent")
+	volumes = append(volumes, corev1.Volume{
+		Name: "agent-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: agentConfigMapName,
+				},
+			},
+		},
+	})
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "agent-config",
+		MountPath: "/etc/agent",
+		ReadOnly:  true,
+	})
 
 	// Add workspace volume if enabled
 	if agent.Spec.Workspace != nil && (agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) {
