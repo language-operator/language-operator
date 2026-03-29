@@ -174,8 +174,8 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 	}
 
 	// Model is now managed by the cluster proxy, not its own deployment
-	if updatedModel.Status.Phase != "Managed" {
-		t.Errorf("Expected phase 'Managed', got '%s'", updatedModel.Status.Phase)
+	if updatedModel.Status.Phase != "Ready" {
+		t.Errorf("Expected phase 'Ready', got '%s'", updatedModel.Status.Phase)
 	}
 
 	// Verify ObservedGeneration
