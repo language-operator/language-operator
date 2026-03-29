@@ -696,6 +696,38 @@ func BuildEgressNetworkPolicy(
 			// which means it won't allow any traffic (fail-closed for security)
 		}
 
+		// Handle Group-based egress (pods with langop.io/group label)
+		if rule.To.Group != "" {
+			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"langop.io/group": rule.To.Group},
+				},
+			})
+		}
+
+		// Handle Service-based egress (select pods in the service's namespace)
+		if rule.To.Service != nil {
+			ns := rule.To.Service.Namespace
+			if ns == "" {
+				ns = namespace
+			}
+			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": ns},
+				},
+			})
+		}
+
+		// Handle NamespaceSelector and/or PodSelector (combined into one peer so both
+		// constraints apply simultaneously — pods matching PodSelector in namespaces
+		// matching NamespaceSelector)
+		if rule.To.NamespaceSelector != nil || rule.To.PodSelector != nil {
+			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
+				NamespaceSelector: rule.To.NamespaceSelector,
+				PodSelector:       rule.To.PodSelector,
+			})
+		}
+
 		// Handle ports
 		for _, port := range rule.Ports {
 			protocol := corev1.Protocol(port.Protocol)
