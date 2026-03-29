@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 
 	"github.com/go-logr/logr"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	corev1 "k8s.io/api/core/v1"
@@ -47,9 +46,6 @@ type LanguageModelReconciler struct {
 	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
 }
-
-// modelTracer is used by methods that haven't been refactored yet
-var modelTracer = otel.Tracer("language-operator/model-controller")
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels/status,verbs=get;update;patch

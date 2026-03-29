@@ -10,10 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -54,9 +52,6 @@ type LanguageAgentReconciler struct {
 	NetworkIsolationEnabled bool
 	DefaultIngressClassName string
 }
-
-// agentTracer is used by methods that haven't been refactored yet
-var agentTracer = otel.Tracer("language-operator/agent-controller")
 
 const (
 	// LangopUserID is the user ID for the langop user (matches Dockerfile)
@@ -104,7 +99,6 @@ type modelConfigYAML struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
@@ -1643,7 +1637,6 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&batchv1.Job{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ServiceAccount{}).
