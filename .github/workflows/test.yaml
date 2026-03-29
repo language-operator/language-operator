@@ -98,7 +98,7 @@ jobs:
       - name: Install controller-gen
         working-directory: src
         run: |
-          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
+          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.3
 
       - name: Generate manifests
         working-directory: src
