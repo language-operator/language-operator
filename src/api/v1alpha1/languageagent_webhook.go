@@ -121,10 +121,6 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
-	if err := a.validateExecutionMode(); err != nil {
-		return fmt.Errorf("spec.executionMode: %w", err)
-	}
-
 	if a.Spec.Workspace != nil && a.Spec.Workspace.Enabled {
 		if err := validateWorkspaceSize(a.Spec.Workspace.Size); err != nil {
 			return fmt.Errorf("spec.workspace.size: %w", err)
@@ -169,20 +165,6 @@ func (a *LanguageAgent) validateModelReferences() error {
 	}
 	if primaryCount == 0 {
 		return fmt.Errorf("at least one model must have role 'primary'")
-	}
-	return nil
-}
-
-func (a *LanguageAgent) validateExecutionMode() error {
-	switch a.Spec.ExecutionMode {
-	case "event-driven":
-		if len(a.Spec.EventTriggers) == 0 {
-			return fmt.Errorf("eventTriggers is required when executionMode is 'event-driven'")
-		}
-	case "autonomous", "interactive", "":
-		// no additional config required
-	default:
-		return fmt.Errorf("invalid executionMode %q, must be one of: autonomous, interactive, event-driven", a.Spec.ExecutionMode)
 	}
 	return nil
 }

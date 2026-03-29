@@ -46,13 +46,6 @@ func SetAgentImage(image string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentExecutionMode sets spec.executionMode.
-func SetAgentExecutionMode(mode string) LanguageAgentModifier {
-	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.ExecutionMode = mode
-	}
-}
-
 // SetAgentModel appends a ModelReference with the given name.
 func SetAgentModel(name string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

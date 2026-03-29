@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -135,11 +134,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx = result.Ctx
 	span := result.Span
 	log := log.FromContext(ctx)
-
-	// Add agent-specific attributes to span
-	span.SetAttributes(
-		attribute.String("agent.mode", agent.Spec.ExecutionMode),
-	)
 
 	// Handle deletion
 	if !agent.DeletionTimestamp.IsZero() {
@@ -333,23 +327,16 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile workload based on execution mode
-	switch agent.Spec.ExecutionMode {
-	case "autonomous", "interactive", "event-driven":
-		if err := r.reconcileDeployment(ctx, agent); err != nil {
-			log.Error(err, "Failed to reconcile Deployment")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Deployment reconciliation failed")
-			SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
-			if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after Deployment error")
-			}
-			reconcileErr = err
-			return ctrl.Result{}, err
+	if err := r.reconcileDeployment(ctx, agent); err != nil {
+		log.Error(err, "Failed to reconcile Deployment")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Deployment reconciliation failed")
+		SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after Deployment error")
 		}
-	case "":
-		// ExecutionMode not yet set - skip workload reconciliation
-		log.V(1).Info("ExecutionMode not set, skipping workload reconciliation")
+		reconcileErr = err
+		return ctrl.Result{}, err
 	}
 
 	// Update status only if something changed
@@ -430,8 +417,6 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	// Add other useful data
 	data["name"] = agent.Name
 	data["namespace"] = agent.Namespace
-	data["mode"] = agent.Spec.ExecutionMode
-
 	// Add merged instructions
 	if instructions != "" {
 		data["instructions"] = instructions
@@ -1033,10 +1018,6 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		{
 			Name:  "AGENT_NAMESPACE",
 			Value: agent.Namespace,
-		},
-		{
-			Name:  "AGENT_MODE",
-			Value: agent.Spec.ExecutionMode,
 		},
 	}
 

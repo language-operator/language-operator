@@ -17,9 +17,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.executionMode
-      name: Mode
-      type: string
     - jsonPath: .status.phase
       name: Phase
       type: string
@@ -1379,40 +1376,6 @@ spec:
                       x-kubernetes-map-type: atomic
                   type: object
                 type: array
-              eventTriggers:
-                description: EventTriggers defines events that trigger the agent (for
-                  event-driven mode)
-                items:
-                  description: EventTriggerSpec defines an event trigger
-                  properties:
-                    filter:
-                      additionalProperties:
-                        type: string
-                      description: Filter defines filtering criteria for events
-                      type: object
-                    source:
-                      description: Source identifies the event source
-                      type: string
-                    type:
-                      description: Type is the event type (webhook, kubernetes-event,
-                        message-queue)
-                      enum:
-                      - webhook
-                      - kubernetes-event
-                      - message-queue
-                      type: string
-                  required:
-                  - type
-                  type: object
-                type: array
-              executionMode:
-                default: autonomous
-                description: ExecutionMode defines how the agent operates
-                enum:
-                - autonomous
-                - interactive
-                - event-driven
-                type: string
               image:
                 description: Image is the container image to run for this agent
                 minLength: 1

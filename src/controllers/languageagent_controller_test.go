@@ -92,8 +92,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -151,8 +150,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 			Workspace: &langopv1alpha1.WorkspaceSpec{
 				Enabled: true,
 				Size:    "10Gi",
@@ -214,8 +212,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -314,62 +311,6 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 	}
 }
 
-func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	// Test with empty ExecutionMode (should skip workload creation until synthesis detects mode)
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-default-mode",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image: "ghcr.io/language-operator/agent:latest",
-			// ExecutionMode not specified - should NOT create any workload yet
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(gen.ReadyCluster("default"), agent).
-		WithStatusSubresource(agent).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-	reconciler.InitializeGatewayCache()
-
-	ctx := context.Background()
-	_, err := reconciler.Reconcile(ctx, ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
-	}
-
-	// Verify NO Deployment was created (should wait for synthesis to detect mode)
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err == nil {
-		t.Fatal("Expected no Deployment to exist when ExecutionMode is empty")
-	}
-	if !errors.IsNotFound(err) {
-		t.Fatalf("Expected NotFound error, got: %v", err)
-	}
-
-}
-
 func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
@@ -379,8 +320,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -452,8 +392,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -537,8 +476,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -726,8 +664,7 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 		// Status.UUID should be empty initially
 	}
@@ -817,8 +754,7 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 		Status: langopv1alpha1.LanguageAgentStatus{
 			ObservedGeneration: 0, // Outdated to simulate conflict scenario
@@ -987,8 +923,7 @@ func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -1043,9 +978,8 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
-			Instructions:  "test instructions",
+			Image:        "ghcr.io/language-operator/agent:latest",
+			Instructions: "test instructions",
 		},
 	}
 
@@ -1092,9 +1026,6 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 	if envMap["AGENT_NAMESPACE"] != agent.Namespace {
 		t.Errorf("Expected AGENT_NAMESPACE=%s, got %s", agent.Namespace, envMap["AGENT_NAMESPACE"])
 	}
-	if envMap["AGENT_MODE"] != agent.Spec.ExecutionMode {
-		t.Errorf("Expected AGENT_MODE=%s, got %s", agent.Spec.ExecutionMode, envMap["AGENT_MODE"])
-	}
 }
 
 func TestLanguageAgentController_ResourceRequests(t *testing.T) {
@@ -1106,8 +1037,7 @@ func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("200m"),
@@ -1177,8 +1107,7 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -1312,8 +1241,7 @@ func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 
@@ -1377,8 +1305,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
+			Image: "ghcr.io/language-operator/agent:latest",
 		},
 	}
 

@@ -41,15 +41,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
-	// ExecutionMode defines how the agent operates
-	// +kubebuilder:validation:Enum=autonomous;interactive;event-driven
-	// +kubebuilder:default=autonomous
-	ExecutionMode string `json:"executionMode,omitempty"`
-
-	// EventTriggers defines events that trigger the agent (for event-driven mode)
-	// +optional
-	EventTriggers []EventTriggerSpec `json:"eventTriggers,omitempty"`
-
 	// Timeout is the maximum execution time (e.g., "10m", "1h")
 	// +kubebuilder:validation:Pattern=`^[0-9]+(ns|us|µs|ms|s|m|h)$`
 	// +kubebuilder:default="10m"
@@ -199,22 +190,6 @@ type PersonaReference struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
-}
-
-// EventTriggerSpec defines an event trigger
-type EventTriggerSpec struct {
-	// Type is the event type (webhook, kubernetes-event, message-queue)
-	// +kubebuilder:validation:Enum=webhook;kubernetes-event;message-queue
-	// +kubebuilder:validation:Required
-	Type string `json:"type"`
-
-	// Source identifies the event source
-	// +optional
-	Source string `json:"source,omitempty"`
-
-	// Filter defines filtering criteria for events
-	// +optional
-	Filter map[string]string `json:"filter,omitempty"`
 }
 
 // WorkspaceSpec defines persistent workspace storage for an agent
@@ -447,7 +422,6 @@ const (
 )
 
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent
-// +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.executionMode`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.status.activeReplicas`
 // +kubebuilder:printcolumn:name="Executions",type=integer,JSONPath=`.status.executionCount`
