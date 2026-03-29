@@ -3058,8 +3058,8 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
-<td>Egress defines external network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints</td>
+<td><code>networkPolicies</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>NetworkPolicies defines network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3504,8 +3504,8 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
-<td>Egress defines external network access rules for this model proxy.<br />By default, model proxies can access all resources within the cluster but no external endpoints.<br />Common patterns:<br /># Azure OpenAI Service<br />egress:<br />- description: "Allow Azure OpenAI API"<br />  to:<br />    dns: ["<em>.openai.azure.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># AWS Bedrock<br />egress:<br />- description: "Allow AWS Bedrock API"<br />  to:<br />    dns: ["bedrock-runtime.</em>.amazonaws.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># Corporate proxy<br />egress:<br />- description: "Allow corporate proxy"<br />  to:<br />    cidr: "10.0.0.0/8"<br />  ports:<br />  - port: 8080<br />    protocol: TCP<br /># Local LM Studio<br />egress:<br />- description: "Allow LM Studio API"<br />  to:<br />    cidr: "192.168.1.0/24"<br />  ports:<br />  - port: 1234<br />    protocol: TCP</td>
+<td><code>networkPolicies</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>NetworkPolicies defines network access rules for this model proxy.<br />By default, model proxies can access all resources within the cluster but no external endpoints.<br />Common patterns:<br /># Azure OpenAI Service<br />networkPolicies:<br />- description: "Allow Azure OpenAI API"<br />  to:<br />    dns: ["<em>.openai.azure.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># AWS Bedrock<br />networkPolicies:<br />- description: "Allow AWS Bedrock API"<br />  to:<br />    dns: ["bedrock-runtime.</em>.amazonaws.com"]<br />  ports:<br />  - port: 443<br />    protocol: TCP<br /># Corporate proxy<br />networkPolicies:<br />- description: "Allow corporate proxy"<br />  to:<br />    cidr: "10.0.0.0/8"<br />  ports:<br />  - port: 8080<br />    protocol: TCP<br /># Local LM Studio<br />networkPolicies:<br />- description: "Allow LM Studio API"<br />  to:<br />    cidr: "192.168.1.0/24"<br />  ports:<br />  - port: 1234<br />    protocol: TCP</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3902,8 +3902,8 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>egress</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
-<td>Egress defines external network access rules for this tool<br />By default, tools can access all resources within the cluster but no external endpoints</td>
+<td><code>networkPolicies</code> <em><a href="#networkrule">NetworkRule</a> array</em></td>
+<td>NetworkPolicies defines network access rules for this tool<br />By default, tools can access all resources within the cluster but no external endpoints</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
