@@ -7,6 +7,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
+	"github.com/language-operator/language-operator/pkg/events"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -696,5 +697,63 @@ func TestLanguageToolController_UserSecurityContextOverride(t *testing.T) {
 	podSpec := deployment.Spec.Template.Spec
 	if podSpec.SecurityContext == nil || podSpec.SecurityContext.RunAsUser == nil || *podSpec.SecurityContext.RunAsUser != 2000 {
 		t.Errorf("Expected user-supplied SecurityContext.RunAsUser=2000, got %v", podSpec.SecurityContext)
+	}
+}
+
+func TestLanguageToolController_PhaseFailedOnRegistryError(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Image uses ghcr.io but registry whitelist only allows docker.io → validation fails
+	tool := &langopv1alpha1.LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "blocked-tool", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageToolSpec{
+			Image: "ghcr.io/language-operator/tool:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{registries: []string{"docker.io"}},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	// Single reconcile: finalizer added then registry check fires immediately → error
+	_, err := reconciler.Reconcile(ctx, req)
+	if err == nil {
+		t.Fatal("Expected reconcile error from registry validation, got nil")
+	}
+
+	updatedTool := &langopv1alpha1.LanguageTool{}
+	if err := fakeClient.Get(ctx, req.NamespacedName, updatedTool); err != nil {
+		t.Fatalf("Failed to get tool: %v", err)
+	}
+	if updatedTool.Status.Phase != events.PhaseStatusFailed {
+		t.Errorf("Expected phase %q after registry rejection, got %q", events.PhaseStatusFailed, updatedTool.Status.Phase)
+	}
+
+	var regCond *metav1.Condition
+	for i := range updatedTool.Status.Conditions {
+		if updatedTool.Status.Conditions[i].Type == "RegistryValidated" {
+			regCond = &updatedTool.Status.Conditions[i]
+			break
+		}
+	}
+	if regCond == nil {
+		t.Fatal("Expected RegistryValidated condition to be set")
+	}
+	if regCond.Status != metav1.ConditionFalse {
+		t.Errorf("Expected RegistryValidated status %q, got %q", metav1.ConditionFalse, regCond.Status)
+	}
+	if regCond.Reason != "RegistryNotAllowed" {
+		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
 	}
 }

@@ -182,6 +182,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.EventManager.RecordRegistryValidationFailed(tool, tool.Spec.Image)
 		}
 		SetCondition(&tool.Status.Conditions, "RegistryValidated", metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), tool.Generation)
+		tool.Status.Phase = events.PhaseStatusFailed
 		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after registry validation failure")
 		}

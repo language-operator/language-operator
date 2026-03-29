@@ -2889,4 +2889,21 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 	if updatedAgent.Status.Phase != events.PhaseStatusFailed {
 		t.Errorf("Expected phase %q after early-exit error, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
 	}
+
+	var regCond *metav1.Condition
+	for i := range updatedAgent.Status.Conditions {
+		if updatedAgent.Status.Conditions[i].Type == "RegistryValidated" {
+			regCond = &updatedAgent.Status.Conditions[i]
+			break
+		}
+	}
+	if regCond == nil {
+		t.Fatal("Expected RegistryValidated condition to be set")
+	}
+	if regCond.Status != metav1.ConditionFalse {
+		t.Errorf("Expected RegistryValidated status %q, got %q", metav1.ConditionFalse, regCond.Status)
+	}
+	if regCond.Reason != "RegistryNotAllowed" {
+		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
+	}
 }
