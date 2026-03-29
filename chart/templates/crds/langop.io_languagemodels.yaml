@@ -155,9 +155,111 @@ spec:
                     description: OutputTokenCost is the cost per 1000 output tokens
                     type: number
                 type: object
-              egress:
+              endpoint:
+                description: Endpoint is the API endpoint URL (required for openai-compatible,
+                  azure, custom)
+                type: string
+              fallbacks:
+                description: Fallbacks is an ordered list of fallback models to use
+                  if this model fails
+                items:
+                  description: ModelFallbackSpec defines a fallback model
+                  properties:
+                    conditions:
+                      description: Conditions specifies when to use this fallback
+                      items:
+                        type: string
+                      type: array
+                    modelRef:
+                      description: ModelRef is a reference to another LanguageModel
+                      type: string
+                  required:
+                  - modelRef
+                  type: object
+                type: array
+              loadBalancing:
+                description: LoadBalancing defines load balancing strategy across
+                  multiple endpoints
+                properties:
+                  endpoints:
+                    description: Endpoints is a list of endpoint configurations for
+                      load balancing
+                    items:
+                      description: EndpointSpec defines an endpoint for load balancing
+                      properties:
+                        priority:
+                          description: Priority for priority-based routing (lower
+                            is higher priority)
+                          format: int32
+                          type: integer
+                        region:
+                          description: Region specifies the region for this endpoint
+                          type: string
+                        url:
+                          description: URL is the endpoint URL
+                          type: string
+                        weight:
+                          default: 100
+                          description: Weight for weighted load balancing
+                          format: int32
+                          minimum: 0
+                          type: integer
+                      required:
+                      - url
+                      type: object
+                    type: array
+                  healthCheck:
+                    description: HealthCheck defines health checking for endpoints
+                    properties:
+                      enabled:
+                        default: true
+                        description: Enabled enables health checking
+                        type: boolean
+                      healthyThreshold:
+                        default: 2
+                        description: HealthyThreshold is the number of successes before
+                          marking healthy
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      interval:
+                        default: 30s
+                        description: Interval is the health check interval (e.g.,
+                          "30s")
+                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                        type: string
+                      timeout:
+                        default: 5s
+                        description: Timeout is the health check timeout (e.g., "5s")
+                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                        type: string
+                      unhealthyThreshold:
+                        default: 3
+                        description: UnhealthyThreshold is the number of failures
+                          before marking unhealthy
+                        format: int32
+                        minimum: 1
+                        type: integer
+                    type: object
+                  strategy:
+                    default: round-robin
+                    description: Strategy specifies the load balancing strategy
+                    enum:
+                    - round-robin
+                    - least-connections
+                    - random
+                    - weighted
+                    - latency-based
+                    type: string
+                type: object
+              modelName:
+                description: ModelName is the specific model identifier (e.g., "gpt-4",
+                  "claude-3-opus")
+                minLength: 1
+                type: string
+              networkPolicies:
                 description: |-
-                  Egress defines external network access rules for this model proxy.
+                  NetworkPolicies defines network access rules for this model proxy.
                   By default, model proxies can access all resources within the cluster but no external endpoints.
 
 
@@ -165,7 +267,7 @@ spec:
 
 
                   # Azure OpenAI Service
-                  egress:
+                  networkPolicies:
                   - description: "Allow Azure OpenAI API"
                     to:
                       dns: ["*.openai.azure.com"]
@@ -175,7 +277,7 @@ spec:
 
 
                   # AWS Bedrock
-                  egress:
+                  networkPolicies:
                   - description: "Allow AWS Bedrock API"
                     to:
                       dns: ["bedrock-runtime.*.amazonaws.com"]
@@ -185,7 +287,7 @@ spec:
 
 
                   # Corporate proxy
-                  egress:
+                  networkPolicies:
                   - description: "Allow corporate proxy"
                     to:
                       cidr: "10.0.0.0/8"
@@ -195,7 +297,7 @@ spec:
 
 
                   # Local LM Studio
-                  egress:
+                  networkPolicies:
                   - description: "Allow LM Studio API"
                     to:
                       cidr: "192.168.1.0/24"
@@ -473,108 +575,6 @@ spec:
                       type: object
                   type: object
                 type: array
-              endpoint:
-                description: Endpoint is the API endpoint URL (required for openai-compatible,
-                  azure, custom)
-                type: string
-              fallbacks:
-                description: Fallbacks is an ordered list of fallback models to use
-                  if this model fails
-                items:
-                  description: ModelFallbackSpec defines a fallback model
-                  properties:
-                    conditions:
-                      description: Conditions specifies when to use this fallback
-                      items:
-                        type: string
-                      type: array
-                    modelRef:
-                      description: ModelRef is a reference to another LanguageModel
-                      type: string
-                  required:
-                  - modelRef
-                  type: object
-                type: array
-              loadBalancing:
-                description: LoadBalancing defines load balancing strategy across
-                  multiple endpoints
-                properties:
-                  endpoints:
-                    description: Endpoints is a list of endpoint configurations for
-                      load balancing
-                    items:
-                      description: EndpointSpec defines an endpoint for load balancing
-                      properties:
-                        priority:
-                          description: Priority for priority-based routing (lower
-                            is higher priority)
-                          format: int32
-                          type: integer
-                        region:
-                          description: Region specifies the region for this endpoint
-                          type: string
-                        url:
-                          description: URL is the endpoint URL
-                          type: string
-                        weight:
-                          default: 100
-                          description: Weight for weighted load balancing
-                          format: int32
-                          minimum: 0
-                          type: integer
-                      required:
-                      - url
-                      type: object
-                    type: array
-                  healthCheck:
-                    description: HealthCheck defines health checking for endpoints
-                    properties:
-                      enabled:
-                        default: true
-                        description: Enabled enables health checking
-                        type: boolean
-                      healthyThreshold:
-                        default: 2
-                        description: HealthyThreshold is the number of successes before
-                          marking healthy
-                        format: int32
-                        minimum: 1
-                        type: integer
-                      interval:
-                        default: 30s
-                        description: Interval is the health check interval (e.g.,
-                          "30s")
-                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
-                        type: string
-                      timeout:
-                        default: 5s
-                        description: Timeout is the health check timeout (e.g., "5s")
-                        pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
-                        type: string
-                      unhealthyThreshold:
-                        default: 3
-                        description: UnhealthyThreshold is the number of failures
-                          before marking unhealthy
-                        format: int32
-                        minimum: 1
-                        type: integer
-                    type: object
-                  strategy:
-                    default: round-robin
-                    description: Strategy specifies the load balancing strategy
-                    enum:
-                    - round-robin
-                    - least-connections
-                    - random
-                    - weighted
-                    - latency-based
-                    type: string
-                type: object
-              modelName:
-                description: ModelName is the specific model identifier (e.g., "gpt-4",
-                  "claude-3-opus")
-                minLength: 1
-                type: string
               observability:
                 description: Observability defines monitoring and tracing configuration
                 properties:

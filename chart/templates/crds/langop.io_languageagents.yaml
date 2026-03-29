@@ -5210,9 +5210,49 @@ spec:
                       type: object
                     type: array
                 type: object
-              egress:
+              image:
+                description: Image is the container image to run for this agent
+                minLength: 1
+                pattern: ^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$
+                type: string
+              instructions:
                 description: |-
-                  Egress defines external network access rules for this agent
+                  Instructions provides system instructions for the agent.
+                  Mounted at /etc/agent/instructions.txt if set.
+                type: string
+              models:
+                description: Models is a list of LanguageModel references this agent
+                  can use
+                items:
+                  description: ModelReference references a LanguageModel
+                  properties:
+                    name:
+                      description: Name is the name of the LanguageModel
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    priority:
+                      description: Priority for model selection (lower is higher priority)
+                      format: int32
+                      type: integer
+                    role:
+                      default: primary
+                      description: Role defines the purpose of this model (primary,
+                        fallback, specialized)
+                      enum:
+                      - primary
+                      - fallback
+                      - reasoning
+                      - tool-calling
+                      - summarization
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              networkPolicies:
+                description: |-
+                  NetworkPolicies defines network access rules for this agent
                   By default, agents can access all resources within the cluster but no external endpoints
                 items:
                   description: NetworkRule defines a single network policy rule
@@ -5485,46 +5525,6 @@ spec:
                       type: object
                   type: object
                 type: array
-              image:
-                description: Image is the container image to run for this agent
-                minLength: 1
-                pattern: ^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$
-                type: string
-              instructions:
-                description: |-
-                  Instructions provides system instructions for the agent.
-                  Mounted at /etc/agent/instructions.txt if set.
-                type: string
-              models:
-                description: Models is a list of LanguageModel references this agent
-                  can use
-                items:
-                  description: ModelReference references a LanguageModel
-                  properties:
-                    name:
-                      description: Name is the name of the LanguageModel
-                      maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                    priority:
-                      description: Priority for model selection (lower is higher priority)
-                      format: int32
-                      type: integer
-                    role:
-                      default: primary
-                      description: Role defines the purpose of this model (primary,
-                        fallback, specialized)
-                      enum:
-                      - primary
-                      - fallback
-                      - reasoning
-                      - tool-calling
-                      - summarization
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
               persona:
                 description: Persona is the name of a LanguagePersona this agent uses
                 type: string
@@ -5536,12 +5536,6 @@ spec:
                 format: int32
                 maximum: 65535
                 minimum: 1
-                type: integer
-              replicas:
-                default: 1
-                description: Replicas is the number of agent instances to run
-                format: int32
-                minimum: 0
                 type: integer
               timeout:
                 default: 10m

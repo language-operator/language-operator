@@ -39,10 +39,10 @@ type LanguageAgentSpec struct {
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
 
-	// Egress defines external network access rules for this agent
+	// NetworkPolicies defines network access rules for this agent
 	// By default, agents can access all resources within the cluster but no external endpoints
 	// +optional
-	Egress []NetworkRule `json:"egress,omitempty"`
+	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 
 	// Port is the port the agent container listens on.
 	// Used for the ClusterIP Service and NetworkPolicy ingress rules.

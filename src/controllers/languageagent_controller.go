@@ -761,7 +761,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		"", // provider - not applicable for agents
 		"", // endpoint - not applicable for agents
 		otelEndpoint,
-		agent.Spec.Egress,
+		agent.Spec.NetworkPolicies,
 	)
 
 	// Add ingress rules to allow trigger pods and dashboard to connect to agent

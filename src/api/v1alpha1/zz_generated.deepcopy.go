@@ -623,8 +623,8 @@ func (in *LanguageAgentSpec) DeepCopyInto(out *LanguageAgentSpec) {
 		*out = new(WorkspaceSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Egress != nil {
-		in, out := &in.Egress, &out.Egress
+	if in.NetworkPolicies != nil {
+		in, out := &in.NetworkPolicies, &out.NetworkPolicies
 		*out = make([]NetworkRule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
@@ -944,8 +944,8 @@ func (in *LanguageModelSpec) DeepCopyInto(out *LanguageModelSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Egress != nil {
-		in, out := &in.Egress, &out.Egress
+	if in.NetworkPolicies != nil {
+		in, out := &in.NetworkPolicies, &out.NetworkPolicies
 		*out = make([]NetworkRule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
@@ -1244,8 +1244,8 @@ func (in *LanguageToolList) DeepCopyObject() runtime.Object {
 func (in *LanguageToolSpec) DeepCopyInto(out *LanguageToolSpec) {
 	*out = *in
 	in.Deployment.DeepCopyInto(&out.Deployment)
-	if in.Egress != nil {
-		in, out := &in.Egress, &out.Egress
+	if in.NetworkPolicies != nil {
+		in, out := &in.NetworkPolicies, &out.NetworkPolicies
 		*out = make([]NetworkRule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

@@ -81,10 +81,10 @@ type LanguageToolSpec struct {
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 
-	// Egress defines external network access rules for this tool
+	// NetworkPolicies defines network access rules for this tool
 	// By default, tools can access all resources within the cluster but no external endpoints
 	// +optional
-	Egress []NetworkRule `json:"egress,omitempty"`
+	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 }
 
 // PodDisruptionBudgetSpec defines PDB configuration

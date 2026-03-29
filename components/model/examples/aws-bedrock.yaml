@@ -62,7 +62,7 @@ spec:
     outputTokenCost: 0.015
 
   # Network egress rules for AWS Bedrock
-  egress:
+  networkPolicies:
   - description: "Allow AWS Bedrock API access"
     to:
       dns: ["bedrock-runtime.*.amazonaws.com"]

@@ -60,7 +60,7 @@ spec:
     outputTokenCost: 0.015  # per 1000 tokens
 
   # Network egress rules (required for Cilium/NetworkPolicy enforcement)
-  egress:
+  networkPolicies:
   - description: "Allow Anthropic API access"
     to:
       dns: ["api.anthropic.com"]

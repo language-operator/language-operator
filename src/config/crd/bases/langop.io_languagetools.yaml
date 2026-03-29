@@ -5219,9 +5219,13 @@ spec:
                 - service
                 - sidecar
                 type: string
-              egress:
+              image:
+                description: Image is the container image to run for this tool
+                minLength: 1
+                type: string
+              networkPolicies:
                 description: |-
-                  Egress defines external network access rules for this tool
+                  NetworkPolicies defines network access rules for this tool
                   By default, tools can access all resources within the cluster but no external endpoints
                 items:
                   description: NetworkRule defines a single network policy rule
@@ -5494,10 +5498,6 @@ spec:
                       type: object
                   type: object
                 type: array
-              image:
-                description: Image is the container image to run for this tool
-                minLength: 1
-                type: string
               port:
                 default: 8080
                 description: Port is the port the tool listens on

@@ -65,7 +65,7 @@ spec:
     outputTokenCost: 0.03  # per 1000 tokens
 
   # Network egress rules (required for Cilium/NetworkPolicy enforcement)
-  egress:
+  networkPolicies:
   - description: "Allow OpenAI API access"
     to:
       dns: ["api.openai.com"]

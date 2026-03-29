@@ -57,7 +57,7 @@ spec:
     outputTokenCost: 0.00375
 
   # Network egress rules for Google Vertex AI
-  egress:
+  networkPolicies:
   - description: "Allow Google Vertex AI API access"
     to:
       dns: ["generativelanguage.googleapis.com", "aiplatform.googleapis.com"]

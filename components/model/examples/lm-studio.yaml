@@ -59,7 +59,7 @@ spec:
     enabled: false
 
   # Network egress rules for LM Studio on local network
-  egress:
+  networkPolicies:
   - description: "Allow LM Studio API access"
     to:
       cidr: "192.168.1.0/24"  # Adjust to your local network range

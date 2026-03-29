@@ -496,7 +496,7 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 		"", // provider - not applicable for tools
 		"", // endpoint - not applicable for tools
 		otelEndpoint,
-		tool.Spec.Egress,
+		tool.Spec.NetworkPolicies,
 	)
 
 	// Create or update the NetworkPolicy with owner reference

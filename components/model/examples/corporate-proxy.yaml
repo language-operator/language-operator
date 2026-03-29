@@ -54,7 +54,7 @@ spec:
     outputTokenCost: 0.03
 
   # Network egress rules for corporate proxy
-  egress:
+  networkPolicies:
   - description: "Allow corporate proxy access"
     to:
       cidr: "10.0.0.0/8"  # Corporate network range
