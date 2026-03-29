@@ -194,14 +194,6 @@ type DeploymentSpec struct {
 	// ServiceAnnotations are annotations to add to the Service.
 	// +optional
 	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
-
-	// PodDisruptionBudget defines the PDB for this deployment.
-	// +optional
-	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
-
-	// UpdateStrategy defines the update strategy for the Deployment.
-	// +optional
-	UpdateStrategy *UpdateStrategySpec `json:"updateStrategy,omitempty"`
 }
 
 // GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.

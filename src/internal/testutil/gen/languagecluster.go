@@ -1,6 +1,7 @@
 package gen
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -91,5 +92,25 @@ func ReadyCluster(name string, mods ...LanguageClusterModifier) *langopv1alpha1.
 func SetClusterCapacity(cap *langopv1alpha1.ClusterCapacitySpec) LanguageClusterModifier {
 	return func(c *langopv1alpha1.LanguageCluster) {
 		c.Spec.Capacity = cap
+	}
+}
+
+// SetClusterGatewayServiceType sets spec.gateway.deployment.serviceType.
+func SetClusterGatewayServiceType(svcType corev1.ServiceType) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.Gateway == nil {
+			c.Spec.Gateway = &langopv1alpha1.GatewaySpec{}
+		}
+		c.Spec.Gateway.Deployment.ServiceType = svcType
+	}
+}
+
+// SetClusterGatewayServiceAnnotations sets spec.gateway.deployment.serviceAnnotations.
+func SetClusterGatewayServiceAnnotations(annotations map[string]string) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.Gateway == nil {
+			c.Spec.Gateway = &langopv1alpha1.GatewaySpec{}
+		}
+		c.Spec.Gateway.Deployment.ServiceAnnotations = annotations
 	}
 }

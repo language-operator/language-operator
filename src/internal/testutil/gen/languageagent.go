@@ -101,6 +101,20 @@ func SetAgentInstructions(instructions string) LanguageAgentModifier {
 	}
 }
 
+// SetAgentServiceType sets spec.deployment.serviceType.
+func SetAgentServiceType(svcType corev1.ServiceType) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Deployment.ServiceType = svcType
+	}
+}
+
+// SetAgentServiceAnnotations sets spec.deployment.serviceAnnotations.
+func SetAgentServiceAnnotations(annotations map[string]string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Deployment.ServiceAnnotations = annotations
+	}
+}
+
 // SetAgentLabel sets a label on the agent.
 func SetAgentLabel(key, value string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

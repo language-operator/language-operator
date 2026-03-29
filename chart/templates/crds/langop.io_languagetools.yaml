@@ -2640,20 +2640,6 @@ spec:
                       type: string
                     description: PodAnnotations are annotations to add to the Pods.
                     type: object
-                  podDisruptionBudget:
-                    description: PodDisruptionBudget defines the PDB for this deployment.
-                    properties:
-                      maxUnavailable:
-                        description: MaxUnavailable specifies the maximum number of
-                          pods that can be unavailable
-                        format: int32
-                        type: integer
-                      minAvailable:
-                        description: MinAvailable specifies the minimum number of
-                          pods that must be available
-                        format: int32
-                        type: integer
-                    type: object
                   podLabels:
                     additionalProperties:
                       type: string
@@ -3434,34 +3420,6 @@ spec:
                       - whenUnsatisfiable
                       type: object
                     type: array
-                  updateStrategy:
-                    description: UpdateStrategy defines the update strategy for the
-                      Deployment.
-                    properties:
-                      rollingUpdate:
-                        description: RollingUpdate configuration (only used if Type
-                          is RollingUpdate)
-                        properties:
-                          maxSurge:
-                            description: MaxSurge is the maximum number of pods that
-                              can be created above desired replicas
-                            format: int32
-                            type: integer
-                          maxUnavailable:
-                            description: MaxUnavailable is the maximum number of pods
-                              that can be unavailable during update
-                            format: int32
-                            type: integer
-                        type: object
-                      type:
-                        default: RollingUpdate
-                        description: Type of deployment update strategy (RollingUpdate
-                          or Recreate)
-                        enum:
-                        - RollingUpdate
-                        - Recreate
-                        type: string
-                    type: object
                   volumeMounts:
                     description: VolumeMounts to mount into the container.
                     items:

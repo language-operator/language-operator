@@ -1444,6 +1444,10 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 		}
 
 		port := agentPort(agent)
+		svcType := agent.Spec.Deployment.ServiceType
+		if svcType == "" {
+			svcType = corev1.ServiceTypeClusterIP
+		}
 		service.Spec = corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{
@@ -1454,7 +1458,15 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Type: corev1.ServiceTypeClusterIP,
+			Type: svcType,
+		}
+		if len(agent.Spec.Deployment.ServiceAnnotations) > 0 {
+			if service.Annotations == nil {
+				service.Annotations = make(map[string]string)
+			}
+			for k, v := range agent.Spec.Deployment.ServiceAnnotations {
+				service.Annotations[k] = v
+			}
 		}
 
 		return nil

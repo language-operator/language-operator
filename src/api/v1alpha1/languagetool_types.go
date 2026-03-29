@@ -87,40 +87,6 @@ type LanguageToolSpec struct {
 	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 }
 
-// PodDisruptionBudgetSpec defines PDB configuration
-type PodDisruptionBudgetSpec struct {
-	// MinAvailable specifies the minimum number of pods that must be available
-	// +optional
-	MinAvailable *int32 `json:"minAvailable,omitempty"`
-
-	// MaxUnavailable specifies the maximum number of pods that can be unavailable
-	// +optional
-	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
-}
-
-// UpdateStrategySpec defines deployment update strategy
-type UpdateStrategySpec struct {
-	// Type of deployment update strategy (RollingUpdate or Recreate)
-	// +kubebuilder:validation:Enum=RollingUpdate;Recreate
-	// +kubebuilder:default=RollingUpdate
-	Type string `json:"type,omitempty"`
-
-	// RollingUpdate configuration (only used if Type is RollingUpdate)
-	// +optional
-	RollingUpdate *RollingUpdateSpec `json:"rollingUpdate,omitempty"`
-}
-
-// RollingUpdateSpec defines rolling update parameters
-type RollingUpdateSpec struct {
-	// MaxUnavailable is the maximum number of pods that can be unavailable during update
-	// +optional
-	MaxUnavailable *int32 `json:"maxUnavailable,omitempty"`
-
-	// MaxSurge is the maximum number of pods that can be created above desired replicas
-	// +optional
-	MaxSurge *int32 `json:"maxSurge,omitempty"`
-}
-
 // LanguageToolStatus defines the observed state of LanguageTool
 type LanguageToolStatus struct {
 	// ObservedGeneration reflects the generation of the most recently observed LanguageTool

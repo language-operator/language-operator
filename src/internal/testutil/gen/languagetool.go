@@ -1,6 +1,7 @@
 package gen
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -61,5 +62,19 @@ func SetToolType(toolType string) LanguageToolModifier {
 func SetToolDeploymentMode(mode string) LanguageToolModifier {
 	return func(t *langopv1alpha1.LanguageTool) {
 		t.Spec.DeploymentMode = mode
+	}
+}
+
+// SetToolServiceType sets spec.deployment.serviceType.
+func SetToolServiceType(svcType corev1.ServiceType) LanguageToolModifier {
+	return func(t *langopv1alpha1.LanguageTool) {
+		t.Spec.Deployment.ServiceType = svcType
+	}
+}
+
+// SetToolServiceAnnotations sets spec.deployment.serviceAnnotations.
+func SetToolServiceAnnotations(annotations map[string]string) LanguageToolModifier {
+	return func(t *langopv1alpha1.LanguageTool) {
+		t.Spec.Deployment.ServiceAnnotations = annotations
 	}
 }

@@ -2165,3 +2165,77 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 		t.Errorf("config.yaml does not contain agent namespace %q: %s", agent.Namespace, configYAML)
 	}
 }
+
+func TestLanguageAgentController_ServiceTypeAndAnnotations(t *testing.T) {
+	tests := []struct {
+		name            string
+		serviceType     corev1.ServiceType
+		annotations     map[string]string
+		wantServiceType corev1.ServiceType
+	}{
+		{
+			name:            "defaults to ClusterIP when unset",
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+		{
+			name:            "NodePort applied",
+			serviceType:     corev1.ServiceTypeNodePort,
+			wantServiceType: corev1.ServiceTypeNodePort,
+		},
+		{
+			name:            "annotations propagated",
+			annotations:     map[string]string{"example.com/ann": "value"},
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			mods := []gen.LanguageAgentModifier{}
+			if tt.serviceType != "" {
+				mods = append(mods, gen.SetAgentServiceType(tt.serviceType))
+			}
+			if tt.annotations != nil {
+				mods = append(mods, gen.SetAgentServiceAnnotations(tt.annotations))
+			}
+			agent := gen.LanguageAgent("test-agent", "default", mods...)
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(gen.ReadyCluster("default"), agent).
+				WithStatusSubresource(agent).
+				Build()
+
+			reconciler := &LanguageAgentReconciler{
+				Client:          fakeClient,
+				Scheme:          scheme,
+				Log:             logr.Discard(),
+				Recorder:        &record.FakeRecorder{},
+				RegistryManager: &mockRegistryManager{},
+			}
+			reconciler.InitializeGatewayCache()
+
+			ctx := context.Background()
+			_, err := reconciler.Reconcile(ctx, ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+			})
+			if err != nil {
+				t.Fatalf("Reconcile failed: %v", err)
+			}
+
+			svc := &corev1.Service{}
+			if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, svc); err != nil {
+				t.Fatalf("expected service to exist: %v", err)
+			}
+			if svc.Spec.Type != tt.wantServiceType {
+				t.Errorf("service type = %q, want %q", svc.Spec.Type, tt.wantServiceType)
+			}
+			for k, v := range tt.annotations {
+				if svc.Annotations[k] != v {
+					t.Errorf("annotation %q = %q, want %q", k, svc.Annotations[k], v)
+				}
+			}
+		})
+	}
+}

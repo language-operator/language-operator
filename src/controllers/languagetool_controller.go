@@ -460,6 +460,10 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		}
 
 		// Set service spec
+		svcType := tool.Spec.Deployment.ServiceType
+		if svcType == "" {
+			svcType = corev1.ServiceTypeClusterIP
+		}
 		service.Spec = corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{
@@ -470,7 +474,15 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
-			Type: corev1.ServiceTypeClusterIP,
+			Type: svcType,
+		}
+		if len(tool.Spec.Deployment.ServiceAnnotations) > 0 {
+			if service.Annotations == nil {
+				service.Annotations = make(map[string]string)
+			}
+			for k, v := range tool.Spec.Deployment.ServiceAnnotations {
+				service.Annotations[k] = v
+			}
 		}
 
 		return nil

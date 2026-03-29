@@ -317,3 +317,77 @@ func TestLanguageToolController_NotFoundHandling(t *testing.T) {
 		t.Error("Expected no requeue for not found tool")
 	}
 }
+
+func TestLanguageToolController_ServiceTypeAndAnnotations(t *testing.T) {
+	tests := []struct {
+		name            string
+		serviceType     corev1.ServiceType
+		annotations     map[string]string
+		wantServiceType corev1.ServiceType
+	}{
+		{
+			name:            "defaults to ClusterIP when unset",
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+		{
+			name:            "NodePort applied",
+			serviceType:     corev1.ServiceTypeNodePort,
+			wantServiceType: corev1.ServiceTypeNodePort,
+		},
+		{
+			name:            "annotations propagated",
+			annotations:     map[string]string{"example.com/foo": "bar"},
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			mods := []gen.LanguageToolModifier{
+				gen.SetToolDeploymentMode("service"),
+				gen.SetToolPort(8080),
+			}
+			if tt.serviceType != "" {
+				mods = append(mods, gen.SetToolServiceType(tt.serviceType))
+			}
+			if tt.annotations != nil {
+				mods = append(mods, gen.SetToolServiceAnnotations(tt.annotations))
+			}
+			tool := gen.LanguageTool("test-tool", "default", mods...)
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(gen.ReadyCluster("default"), tool).
+				WithStatusSubresource(tool).
+				Build()
+
+			reconciler := &LanguageToolReconciler{
+				Client:          fakeClient,
+				Scheme:          scheme,
+				RegistryManager: &mockRegistryManager{},
+			}
+
+			ctx := context.Background()
+			_, err := reconciler.Reconcile(ctx, ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+			})
+			if err != nil {
+				t.Fatalf("Reconcile failed: %v", err)
+			}
+
+			svc := &corev1.Service{}
+			if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, svc); err != nil {
+				t.Fatalf("expected service to exist: %v", err)
+			}
+			if svc.Spec.Type != tt.wantServiceType {
+				t.Errorf("service type = %q, want %q", svc.Spec.Type, tt.wantServiceType)
+			}
+			for k, v := range tt.annotations {
+				if svc.Annotations[k] != v {
+					t.Errorf("annotation %q = %q, want %q", k, svc.Annotations[k], v)
+				}
+			}
+		})
+	}
+}

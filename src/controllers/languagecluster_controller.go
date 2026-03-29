@@ -853,6 +853,8 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			corev1.ResourceMemory: resource.MustParse("512Mi"),
 		},
 	}
+	proxySvcType := corev1.ServiceTypeClusterIP
+	var proxySvcAnnotations map[string]string
 	if cluster.Spec.Gateway != nil {
 		if cluster.Spec.Gateway.Deployment.Replicas != nil {
 			replicas = *cluster.Spec.Gateway.Deployment.Replicas
@@ -860,6 +862,10 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 		if cluster.Spec.Gateway.Deployment.Resources.Requests != nil || cluster.Spec.Gateway.Deployment.Resources.Limits != nil {
 			resources = cluster.Spec.Gateway.Deployment.Resources
 		}
+		if cluster.Spec.Gateway.Deployment.ServiceType != "" {
+			proxySvcType = cluster.Spec.Gateway.Deployment.ServiceType
+		}
+		proxySvcAnnotations = cluster.Spec.Gateway.Deployment.ServiceAnnotations
 	}
 
 	// Reconcile Deployment
@@ -946,7 +952,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 		svc.Labels = proxyLabels
 		svc.Spec = corev1.ServiceSpec{
 			Selector: proxyLabels,
-			Type:     corev1.ServiceTypeClusterIP,
+			Type:     proxySvcType,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
@@ -955,6 +961,14 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 					TargetPort: intstr.FromInt(4000),
 				},
 			},
+		}
+		if len(proxySvcAnnotations) > 0 {
+			if svc.Annotations == nil {
+				svc.Annotations = make(map[string]string)
+			}
+			for k, v := range proxySvcAnnotations {
+				svc.Annotations[k] = v
+			}
 		}
 		return nil
 	})

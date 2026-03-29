@@ -476,3 +476,76 @@ func TestLanguageClusterController_CapacityStatus_Counts(t *testing.T) {
 	assert.Equal(t, int32(0), updated.Status.Capacity.ToolCount)
 	assert.Equal(t, int32(0), updated.Status.Capacity.PersonaCount)
 }
+
+func TestLanguageClusterController_GatewayServiceTypeAndAnnotations(t *testing.T) {
+	tests := []struct {
+		name            string
+		serviceType     corev1.ServiceType
+		annotations     map[string]string
+		wantServiceType corev1.ServiceType
+	}{
+		{
+			name:            "defaults to ClusterIP when unset",
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+		{
+			name:            "LoadBalancer applied",
+			serviceType:     corev1.ServiceTypeLoadBalancer,
+			wantServiceType: corev1.ServiceTypeLoadBalancer,
+		},
+		{
+			name:            "annotations propagated",
+			annotations:     map[string]string{"service.beta.kubernetes.io/aws-load-balancer-type": "nlb"},
+			wantServiceType: corev1.ServiceTypeClusterIP,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			mods := []gen.LanguageClusterModifier{}
+			if tt.serviceType != "" {
+				mods = append(mods, gen.SetClusterGatewayServiceType(tt.serviceType))
+			}
+			if tt.annotations != nil {
+				mods = append(mods, gen.SetClusterGatewayServiceAnnotations(tt.annotations))
+			}
+			cluster := gen.LanguageCluster("test-cluster", mods...)
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cluster).
+				WithStatusSubresource(cluster).
+				Build()
+
+			reconciler := &LanguageClusterReconciler{
+				Client: fakeClient,
+				Scheme: scheme,
+				Log:    logr.Discard(),
+			}
+
+			ctx := context.Background()
+			req := clusterRequest(cluster.Name)
+
+			// First reconcile adds finalizer
+			_, err := reconciler.Reconcile(ctx, req)
+			require.NoError(t, err)
+			// Second reconcile creates resources
+			_, err = reconciler.Reconcile(ctx, req)
+			require.NoError(t, err)
+
+			svc := &corev1.Service{}
+			if err := fakeClient.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: cluster.Name}, svc); err != nil {
+				t.Fatalf("expected proxy service to exist: %v", err)
+			}
+			if svc.Spec.Type != tt.wantServiceType {
+				t.Errorf("service type = %q, want %q", svc.Spec.Type, tt.wantServiceType)
+			}
+			for k, v := range tt.annotations {
+				if svc.Annotations[k] != v {
+					t.Errorf("annotation %q = %q, want %q", k, svc.Annotations[k], v)
+				}
+			}
+		})
+	}
+}
