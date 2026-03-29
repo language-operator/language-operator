@@ -41,7 +41,7 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet ## Run tests.
-	go test ./... -coverprofile cover.out
+	go test $(shell go list ./... | grep -v '/testutil' | grep -v '/gen') -coverprofile cover.out -covermode=atomic
 
 .PHONY: integration-test
 integration-test: manifests generate fmt vet envtest ## Run integration tests against a real envtest API server.

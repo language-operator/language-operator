@@ -52,7 +52,7 @@ jobs:
       - name: Run tests
         working-directory: src
         run: |
-          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          go test -v -race -coverprofile=coverage.out -covermode=atomic $(go list ./... | grep -v '/testutil' | grep -v '/gen')
 
       - name: Display coverage summary
         working-directory: src
@@ -74,7 +74,7 @@ jobs:
 
       - name: Install setup-envtest
         working-directory: src
-        run: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.19.3
+        run: go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
       - name: Run integration tests
         working-directory: src
