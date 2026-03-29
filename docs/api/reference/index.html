@@ -2619,18 +2619,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>restartPolicy</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#restartpolicy-v1-core">RestartPolicy</a></em></td>
-<td>RestartPolicy defines when to restart the pod.</td>
-<td></td>
-<td>Enum: [Always OnFailure Never] <br />Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>backoffLimit</code> <em>integer</em></td>
-<td>BackoffLimit specifies the number of retries before marking as Failed.</td>
-<td></td>
-<td>Minimum: 0 <br />Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>initContainers</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core">Container</a> array</em></td>
 <td>InitContainers are additional init containers injected before the main container starts.</td>
 <td></td>
