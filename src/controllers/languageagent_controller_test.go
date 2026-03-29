@@ -11,7 +11,6 @@ import (
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -140,89 +139,6 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 	}
 	if deployment.Spec.Template.Spec.Containers[0].Image != agent.Spec.Image {
 		t.Errorf("Expected image '%s', got '%s'", agent.Spec.Image, deployment.Spec.Template.Spec.Containers[0].Image)
-	}
-}
-
-func TestLanguageAgentController_CronJobCreation(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cronjob-agent",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "scheduled",
-			Schedule:      "0 * * * *",
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(gen.ReadyCluster("default"), agent).
-		WithStatusSubresource(agent).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-	reconciler.InitializeGatewayCache()
-
-	ctx := context.Background()
-	_, err := reconciler.Reconcile(ctx, ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
-	}
-
-	// Verify Deployment was created (standby mode)
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist for scheduled agent, but got error: %v", err)
-	}
-
-	// Verify Deployment has correct image
-	if len(deployment.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("Expected 1 container in Deployment, got %d", len(deployment.Spec.Template.Spec.Containers))
-	}
-	if deployment.Spec.Template.Spec.Containers[0].Image != agent.Spec.Image {
-		t.Errorf("Expected Deployment image '%s', got '%s'", agent.Spec.Image, deployment.Spec.Template.Spec.Containers[0].Image)
-	}
-
-	// Verify CronJob trigger was created
-	cronJob := &batchv1.CronJob{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name + "-trigger",
-		Namespace: agent.Namespace,
-	}, cronJob)
-	if err != nil {
-		t.Fatalf("Expected CronJob trigger to exist for scheduled agent, but got error: %v", err)
-	}
-
-	// Verify CronJob trigger schedule
-	if cronJob.Spec.Schedule != agent.Spec.Schedule {
-		t.Errorf("Expected schedule '%s', got '%s'", agent.Spec.Schedule, cronJob.Spec.Schedule)
-	}
-
-	// Verify CronJob trigger uses curl image
-	if len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("Expected 1 container in trigger, got %d", len(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers))
-	}
-	if cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image != "curlimages/curl:latest" {
-		t.Errorf("Expected trigger image 'curlimages/curl:latest', got '%s'", cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image)
 	}
 }
 
@@ -452,18 +368,6 @@ func TestLanguageAgentController_DefaultExecutionMode(t *testing.T) {
 		t.Fatalf("Expected NotFound error, got: %v", err)
 	}
 
-	// Verify NO CronJob was created either
-	cronjob := &batchv1.CronJob{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, cronjob)
-	if err == nil {
-		t.Fatal("Expected no CronJob to exist when ExecutionMode is empty")
-	}
-	if !errors.IsNotFound(err) {
-		t.Fatalf("Expected NotFound error, got: %v", err)
-	}
 }
 
 func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
@@ -718,111 +622,6 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 		} else {
 			t.Errorf("Expected volume mount for %s at %s", volName, expectedPath)
 		}
-	}
-}
-
-func TestLanguageAgentController_CronJobSecurityContext(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cronjob-security",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "scheduled",
-			Schedule:      "0 * * * *",
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(gen.ReadyCluster("default"), agent).
-		WithStatusSubresource(agent).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-	reconciler.InitializeGatewayCache()
-
-	ctx := context.Background()
-	_, err := reconciler.Reconcile(ctx, ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
-	}
-
-	// Verify Deployment was created (standby mode)
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
-	}
-
-	// Verify Deployment Pod security context
-	podSec := deployment.Spec.Template.Spec.SecurityContext
-	if podSec == nil {
-		t.Fatal("Deployment Pod SecurityContext is nil")
-	}
-
-	if podSec.RunAsNonRoot == nil || !*podSec.RunAsNonRoot {
-		t.Error("Expected Deployment RunAsNonRoot to be true")
-	}
-
-	if podSec.RunAsUser == nil || *podSec.RunAsUser != 1000 {
-		t.Errorf("Expected Deployment RunAsUser to be 1000, got %v", podSec.RunAsUser)
-	}
-
-	// Verify Deployment container security context
-	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers found in Deployment")
-	}
-
-	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
-	if containerSec == nil {
-		t.Fatal("Deployment Container SecurityContext is nil")
-	}
-
-	if containerSec.ReadOnlyRootFilesystem == nil || !*containerSec.ReadOnlyRootFilesystem {
-		t.Error("Expected Deployment ReadOnlyRootFilesystem to be true")
-	}
-
-	// Verify CronJob trigger was created
-	cronJob := &batchv1.CronJob{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name + "-trigger",
-		Namespace: agent.Namespace,
-	}, cronJob)
-	if err != nil {
-		t.Fatalf("Expected CronJob trigger to exist, but got error: %v", err)
-	}
-
-	// Verify CronJob trigger has security context
-	triggerPodSec := cronJob.Spec.JobTemplate.Spec.Template.Spec.SecurityContext
-	if triggerPodSec == nil {
-		t.Fatal("CronJob trigger Pod SecurityContext is nil")
-	}
-
-	if triggerPodSec.RunAsNonRoot == nil || !*triggerPodSec.RunAsNonRoot {
-		t.Error("Expected trigger RunAsNonRoot to be true")
-	}
-
-	// Continue with Deployment container security validation
-	if containerSec.Capabilities == nil || len(containerSec.Capabilities.Drop) != 1 || containerSec.Capabilities.Drop[0] != "ALL" {
-		t.Error("Expected capabilities to drop ALL")
 	}
 }
 
@@ -1179,132 +978,6 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 	})
 }
 
-func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	// Create a scheduled agent (will create both deployment and trigger pods)
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-scheduled-agent",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			ExecutionMode: "scheduled",
-			Schedule:      "0 * * * *",
-			Image:         "test-image",
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(gen.ReadyCluster("default"), agent).
-		WithStatusSubresource(agent).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-
-	ctx := context.Background()
-	req := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-		},
-	}
-
-	// Reconcile to create service and deployment
-	_, err := reconciler.Reconcile(ctx, req)
-	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
-	}
-
-	// Verify service was created
-	service := &corev1.Service{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, service)
-	if err != nil {
-		t.Fatalf("Expected service to be created, got error: %v", err)
-	}
-
-	// Verify service selector includes component=agent
-	selector := service.Spec.Selector
-	if selector == nil {
-		t.Fatal("Service selector is nil")
-	}
-
-	expectedLabels := map[string]string{
-		"app.kubernetes.io/name":       agent.Name,
-		"app.kubernetes.io/managed-by": "language-operator",
-		"app.kubernetes.io/part-of":    "langop",
-		"langop.io/kind":               "LanguageAgent",
-		"langop.io/component":          "agent",
-	}
-
-	for key, expectedValue := range expectedLabels {
-		if actualValue, exists := selector[key]; !exists {
-			t.Errorf("Service selector missing expected label %s", key)
-		} else if actualValue != expectedValue {
-			t.Errorf("Service selector label %s: expected %s, got %s", key, expectedValue, actualValue)
-		}
-	}
-
-	// Verify deployment was created with component=agent label
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected deployment to be created, got error: %v", err)
-	}
-
-	// Check deployment pod template labels include component=agent
-	podLabels := deployment.Spec.Template.Labels
-	if component, exists := podLabels["langop.io/component"]; !exists {
-		t.Error("Deployment pod template missing langop.io/component label")
-	} else if component != "agent" {
-		t.Errorf("Deployment pod template component label: expected 'agent', got '%s'", component)
-	}
-
-	// Verify trigger CronJob was created with component=trigger label
-	cronJob := &batchv1.CronJob{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name + "-trigger",
-		Namespace: agent.Namespace,
-	}, cronJob)
-	if err != nil {
-		t.Fatalf("Expected trigger CronJob to be created, got error: %v", err)
-	}
-
-	// Check trigger pod template labels include component=trigger
-	triggerPodLabels := cronJob.Spec.JobTemplate.Spec.Template.Labels
-	if component, exists := triggerPodLabels["langop.io/component"]; !exists {
-		t.Error("Trigger CronJob pod template missing langop.io/component label")
-	} else if component != "trigger" {
-		t.Errorf("Trigger CronJob pod template component label: expected 'trigger', got '%s'", component)
-	}
-
-	// Ensure service selector would NOT match trigger pods (service has component=agent, trigger has component=trigger)
-	triggerWouldMatch := true
-	for key, value := range selector {
-		if triggerValue, exists := triggerPodLabels[key]; !exists || triggerValue != value {
-			triggerWouldMatch = false
-			break
-		}
-	}
-
-	if triggerWouldMatch {
-		t.Error("Service selector would incorrectly match trigger pods - this defeats the purpose of the fix")
-	}
-}
-
 func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
@@ -1567,34 +1240,6 @@ func TestLanguageAgentController_HashString(t *testing.T) {
 	}
 }
 
-func TestLanguageAgentController_ParseDSLMode(t *testing.T) {
-	tests := []struct {
-		name      string
-		input     string
-		wantMode  string
-		wantSched string
-	}{
-		{"no_directive", "# nothing here", "autonomous", ""},
-		{"autonomous", "mode :autonomous", "autonomous", ""},
-		{"scheduled", "mode :scheduled", "scheduled", ""},
-		{"interactive", "mode :interactive", "interactive", ""},
-		{"event_driven", "mode :event_driven", "event-driven", ""},
-		{"schedule_overrides_mode", "mode :autonomous\nschedule \"*/10 * * * *\"", "scheduled", "*/10 * * * *"},
-		{"single_quoted_schedule", "schedule '0 * * * *'", "scheduled", "0 * * * *"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			mode, sched := parseDSLMode(tc.input)
-			if mode != tc.wantMode {
-				t.Errorf("mode: got %q, want %q", mode, tc.wantMode)
-			}
-			if sched != tc.wantSched {
-				t.Errorf("schedule: got %q, want %q", sched, tc.wantSched)
-			}
-		})
-	}
-}
-
 func TestLanguageAgentController_GetNames(t *testing.T) {
 	r := &LanguageAgentReconciler{}
 
@@ -1652,49 +1297,6 @@ func TestLanguageAgentController_GetNames(t *testing.T) {
 		}
 		if got := r.getPersonaNames(agent); len(got) != 0 {
 			t.Errorf("expected empty persona names, got %v", got)
-		}
-	})
-}
-
-func TestLanguageAgentController_IsOwnedByAgent(t *testing.T) {
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-agent",
-			Namespace: "default",
-			UID:       "abc-123",
-		},
-	}
-
-	t.Run("owned_by_agent", func(t *testing.T) {
-		cm := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{UID: "abc-123"},
-				},
-			},
-		}
-		if !isOwnedByAgent(cm, agent) {
-			t.Error("expected isOwnedByAgent to return true")
-		}
-	})
-
-	t.Run("different_owner", func(t *testing.T) {
-		cm := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{UID: "other-uid"},
-				},
-			},
-		}
-		if isOwnedByAgent(cm, agent) {
-			t.Error("expected isOwnedByAgent to return false")
-		}
-	})
-
-	t.Run("no_owners", func(t *testing.T) {
-		cm := &corev1.ConfigMap{}
-		if isOwnedByAgent(cm, agent) {
-			t.Error("expected isOwnedByAgent to return false")
 		}
 	})
 }

@@ -42,16 +42,9 @@ type LanguageAgentSpec struct {
 	Instructions string `json:"instructions,omitempty"`
 
 	// ExecutionMode defines how the agent operates
-	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
+	// +kubebuilder:validation:Enum=autonomous;interactive;event-driven
 	// +kubebuilder:default=autonomous
 	ExecutionMode string `json:"executionMode,omitempty"`
-
-	// Schedule defines when the agent runs (cron format, for scheduled mode)
-	// Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.)
-	// +kubebuilder:validation:Pattern=`^(@(annually|yearly|monthly|weekly|daily|hourly|every_minute))|(@every\s+((\d+(\.\d+)?)(ns|us|µs|ms|s|m|h))+)|(((\*|[0-9]|[1-5][0-9]|\*\/[0-9]+)\s+){4}(\*|[0-7]|[1-7]|\*\/[0-9]+))$`
-	// +kubebuilder:validation:MaxLength=100
-	// +optional
-	Schedule string `json:"schedule,omitempty"`
 
 	// EventTriggers defines events that trigger the agent (for event-driven mode)
 	// +optional
@@ -211,7 +204,7 @@ type PersonaReference struct {
 // EventTriggerSpec defines an event trigger
 type EventTriggerSpec struct {
 	// Type is the event type (webhook, kubernetes-event, message-queue)
-	// +kubebuilder:validation:Enum=webhook;kubernetes-event;message-queue;schedule
+	// +kubebuilder:validation:Enum=webhook;kubernetes-event;message-queue
 	// +kubebuilder:validation:Required
 	Type string `json:"type"`
 

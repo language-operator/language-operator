@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/robfig/cron/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -132,10 +131,6 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
-	if err := a.validateSchedule(); err != nil {
-		return fmt.Errorf("spec.schedule: %w", err)
-	}
-
 	return nil
 }
 
@@ -152,19 +147,6 @@ func validateWorkspaceSize(size string) error {
 	}
 	if quantity.Sign() < 0 {
 		return fmt.Errorf("cannot be negative, got: %s", size)
-	}
-	return nil
-}
-
-func (a *LanguageAgent) validateSchedule() error {
-	if a.Spec.ExecutionMode == "scheduled" && a.Spec.Schedule == "" {
-		return fmt.Errorf("schedule is required when executionMode is 'scheduled'")
-	}
-	if a.Spec.Schedule != "" {
-		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-		if _, err := parser.Parse(a.Spec.Schedule); err != nil {
-			return fmt.Errorf("invalid cron expression %q: %w", a.Spec.Schedule, err)
-		}
 	}
 	return nil
 }
@@ -193,10 +175,6 @@ func (a *LanguageAgent) validateModelReferences() error {
 
 func (a *LanguageAgent) validateExecutionMode() error {
 	switch a.Spec.ExecutionMode {
-	case "scheduled":
-		if a.Spec.Schedule == "" {
-			return fmt.Errorf("schedule is required when executionMode is 'scheduled'")
-		}
 	case "event-driven":
 		if len(a.Spec.EventTriggers) == 0 {
 			return fmt.Errorf("eventTriggers is required when executionMode is 'event-driven'")
@@ -204,7 +182,7 @@ func (a *LanguageAgent) validateExecutionMode() error {
 	case "autonomous", "interactive", "":
 		// no additional config required
 	default:
-		return fmt.Errorf("invalid executionMode %q, must be one of: autonomous, interactive, scheduled, event-driven", a.Spec.ExecutionMode)
+		return fmt.Errorf("invalid executionMode %q, must be one of: autonomous, interactive, event-driven", a.Spec.ExecutionMode)
 	}
 	return nil
 }

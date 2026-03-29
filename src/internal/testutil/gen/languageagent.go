@@ -107,13 +107,6 @@ func SetAgentInstructions(instructions string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentSchedule sets spec.schedule.
-func SetAgentSchedule(schedule string) LanguageAgentModifier {
-	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.Schedule = schedule
-	}
-}
-
 // SetAgentLabel sets a label on the agent.
 func SetAgentLabel(key, value string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

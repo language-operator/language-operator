@@ -109,24 +109,10 @@ func TestLanguageAgentValidateExecutionMode(t *testing.T) {
 	tests := []struct {
 		name          string
 		executionMode string
-		schedule      string
 		eventTriggers []EventTriggerSpec
 		expectErr     bool
 		errMsg        string
 	}{
-		{
-			name:          "scheduled mode requires schedule",
-			executionMode: "scheduled",
-			schedule:      "",
-			expectErr:     true,
-			errMsg:        "schedule is required when executionMode is 'scheduled'",
-		},
-		{
-			name:          "scheduled mode with schedule should pass",
-			executionMode: "scheduled",
-			schedule:      "0 9 * * *",
-			expectErr:     false,
-		},
 		{
 			name:          "event-driven mode requires event triggers",
 			executionMode: "event-driven",
@@ -170,7 +156,6 @@ func TestLanguageAgentValidateExecutionMode(t *testing.T) {
 			agent := &LanguageAgent{
 				Spec: LanguageAgentSpec{
 					ExecutionMode: tt.executionMode,
-					Schedule:      tt.schedule,
 					EventTriggers: tt.eventTriggers,
 				},
 			}
