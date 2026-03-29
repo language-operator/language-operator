@@ -2975,31 +2975,6 @@ spec:
                 description: NodeSelector is a selector which must match a node's
                   labels
                 type: object
-              observability:
-                description: Observability defines monitoring and tracing configuration
-                properties:
-                  logConversations:
-                    default: true
-                    description: LogConversations enables conversation logging
-                    type: boolean
-                  logLevel:
-                    default: info
-                    description: LogLevel defines the logging level
-                    enum:
-                    - debug
-                    - info
-                    - warn
-                    - error
-                    type: string
-                  metrics:
-                    default: true
-                    description: Metrics enables metrics collection
-                    type: boolean
-                  tracing:
-                    default: false
-                    description: Tracing enables distributed tracing
-                    type: boolean
-                type: object
               personas:
                 description: |-
                   Personas is a list of LanguagePersona references that compose in order of importance

@@ -17,24 +17,6 @@ Package v1alpha1 contains API Schema definitions for the language v1alpha1 API g
 
 
 
-#### AgentContentFilterSpec
-
-
-
-AgentContentFilterSpec defines a content filter
-
-
-
-_Appears in:_
-- [SafetyConfigSpec](#safetyconfigspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _string_ | Type is the filter type (profanity, pii, toxic, custom) |  | Enum: [profanity pii toxic custom] <br /> |
-| `action` _string_ | Action defines what to do when filter matches (block, warn, log) | block | Enum: [block warn log] <br /> |
-| `pattern` _string_ | Pattern is a regex pattern for custom filters |  |  |
-
-
 #### AgentCostMetrics
 
 
@@ -72,43 +54,6 @@ _Appears in:_
 | `totalTokens` _integer_ | TotalTokens is the total number of tokens consumed |  |  |
 | `totalToolCalls` _integer_ | TotalToolCalls is the total number of tool invocations |  |  |
 | `successRate` _float_ | SuccessRate is the percentage of successful executions |  |  |
-
-
-#### AgentObservabilitySpec
-
-
-
-AgentObservabilitySpec defines agent monitoring
-
-
-
-_Appears in:_
-- [LanguageAgentSpec](#languageagentspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `metrics` _boolean_ | Metrics enables metrics collection | true |  |
-| `tracing` _boolean_ | Tracing enables distributed tracing | false |  |
-| `logLevel` _string_ | LogLevel defines the logging level | info | Enum: [debug info warn error] <br /> |
-| `logConversations` _boolean_ | LogConversations enables conversation logging | true |  |
-
-
-#### AgentRateLimitSpec
-
-
-
-AgentRateLimitSpec defines agent-level rate limiting
-
-
-
-_Appears in:_
-- [LanguageAgentSpec](#languageagentspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `requestsPerMinute` _integer_ | RequestsPerMinute limits requests per minute |  |  |
-| `tokensPerMinute` _integer_ | TokensPerMinute limits tokens per minute |  |  |
-| `toolCallsPerMinute` _integer_ | ToolCallsPerMinute limits tool invocations per minute |  |  |
 
 
 #### CachingSpec
@@ -344,23 +289,6 @@ _Appears in:_
 | `issuerRef` _[CertIssuerReference](#certissuerreference)_ | IssuerRef references a cert-manager Issuer or ClusterIssuer |  |  |
 
 
-#### InstructionsSource
-
-
-
-InstructionsSource references instructions from a ConfigMap or Secret
-
-
-
-_Appears in:_
-- [LanguageAgentSpec](#languageagentspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `configMapRef` _[ConfigMapKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#configmapkeyselector-v1-core)_ | ConfigMapRef references a ConfigMap key containing instructions |  |  |
-| `secretRef` _[SecretKeySelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretkeyselector-v1-core)_ | SecretRef references a Secret key containing instructions |  |  |
-
-
 #### KnowledgeSourceSpec
 
 
@@ -418,16 +346,13 @@ _Appears in:_
 | `image` _string_ | Image is the container image to run for this agent |  | MinLength: 1 <br />Pattern: `^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$` <br />Required: \{\} <br /> |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#pullpolicy-v1-core)_ | ImagePullPolicy defines when to pull the container image | IfNotPresent | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core) array_ | ImagePullSecrets is a list of references to secrets for pulling images |  |  |
-| `modelRefs` _[ModelReference](#modelreference) array_ | ModelRefs is a list of LanguageModel references this agent can use |  |  |
-| `toolRefs` _[ToolReference](#toolreference) array_ | ToolRefs is a list of LanguageTool references available to this agent |  |  |
-| `personaRefs` _[PersonaReference](#personareference) array_ | PersonaRefs is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones |  |  |
-| `goal` _string_ | Goal defines the agent's objective (for autonomous agents) |  |  |
+| `models` _[ModelReference](#modelreference) array_ | Models is a list of LanguageModel references this agent can use |  |  |
+| `tools` _[ToolReference](#toolreference) array_ | Tools is a list of LanguageTool references available to this agent |  |  |
+| `personas` _[PersonaReference](#personareference) array_ | Personas is a list of LanguagePersona references that compose in order of importance<br />Personas are merged with later personas taking precedence over earlier ones |  |  |
 | `instructions` _string_ | Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set. |  |  |
-| `instructionsFrom` _[InstructionsSource](#instructionssource)_ | InstructionsFrom allows referencing instructions from a ConfigMap or Secret |  |  |
 | `executionMode` _string_ | ExecutionMode defines how the agent operates | autonomous | Enum: [autonomous interactive scheduled event-driven] <br /> |
 | `schedule` _string_ | Schedule defines when the agent runs (cron format, for scheduled mode)<br />Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.) |  | MaxLength: 100 <br />Pattern: `^(@(annually\|yearly\|monthly\|weekly\|daily\|hourly\|every_minute))\|(@every\s+((\d+(\.\d+)?)(ns\|us\|µs\|ms\|s\|m\|h))+)\|(((\*\|[0-9]\|[1-5][0-9]\|\*\/[0-9]+)\s+)\{4\}(\*\|[0-7]\|[1-7]\|\*\/[0-9]+))$` <br /> |
 | `eventTriggers` _[EventTriggerSpec](#eventtriggerspec) array_ | EventTriggers defines events that trigger the agent (for event-driven mode) |  |  |
-| `maxIterations` _integer_ | MaxIterations limits the number of reasoning/action loops | 50 | Maximum: 1000 <br />Minimum: 1 <br /> |
 | `timeout` _string_ | Timeout is the maximum execution time (e.g., "10m", "1h") | 10m | Pattern: `^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$` <br /> |
 | `replicas` _integer_ | Replicas is the number of agent instances to run | 1 | Minimum: 0 <br /> |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core) array_ | Env contains environment variables for the agent container |  |  |
@@ -444,9 +369,6 @@ _Appears in:_
 | `podLabels` _object (keys:string, values:string)_ | PodLabels are additional labels to add to the Pods |  |  |
 | `restartPolicy` _[RestartPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#restartpolicy-v1-core)_ | RestartPolicy defines when to restart the agent | OnFailure | Enum: [Always OnFailure Never] <br /> |
 | `backoffLimit` _integer_ | BackoffLimit specifies the number of retries before marking as Failed | 3 | Minimum: 0 <br /> |
-| `observability` _[AgentObservabilitySpec](#agentobservabilityspec)_ | Observability defines monitoring and tracing configuration |  |  |
-| `rateLimits` _[AgentRateLimitSpec](#agentratelimitspec)_ | RateLimits defines rate limiting for this agent |  |  |
-| `safetyConfig` _[SafetyConfigSpec](#safetyconfigspec)_ | SafetyConfig defines safety constraints and guardrails |  |  |
 | `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace defines persistent storage for the agent |  |  |
 | `egress` _[NetworkRule](#networkrule) array_ | Egress defines external network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints |  |  |
 | `port` _integer_ | Port is the port the agent container listens on.<br />Used for the ClusterIP Service and NetworkPolicy ingress rules.<br />Defaults to 8080. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
@@ -906,7 +828,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `name` _string_ | Name is the name of the LanguageModel |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguageModel (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 | `role` _string_ | Role defines the purpose of this model (primary, fallback, specialized) | primary | Enum: [primary fallback reasoning tool-calling summarization] <br /> |
 | `priority` _integer_ | Priority for model selection (lower is higher priority) |  |  |
 
@@ -1065,7 +986,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `name` _string_ | Name is the name of the LanguagePersona |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguagePersona (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 
 
 #### PersonaRule
@@ -1260,26 +1180,6 @@ _Appears in:_
 | `maxSurge` _integer_ | MaxSurge is the maximum number of pods that can be created above desired replicas |  |  |
 
 
-#### SafetyConfigSpec
-
-
-
-SafetyConfigSpec defines safety constraints
-
-
-
-_Appears in:_
-- [LanguageAgentSpec](#languageagentspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `maxToolCallsPerIteration` _integer_ | MaxToolCallsPerIteration limits tool calls per reasoning loop | 10 | Minimum: 0 <br /> |
-| `blockedTools` _string array_ | BlockedTools lists tools that are explicitly blocked |  |  |
-| `requireApprovalFor` _string array_ | RequireApprovalFor lists tools requiring human approval |  |  |
-| `contentFilters` _[AgentContentFilterSpec](#agentcontentfilterspec) array_ | ContentFilters defines content filtering rules |  |  |
-| `maxCostPerExecution` _float_ | MaxCostPerExecution limits cost per execution |  |  |
-
-
 #### SecretReference
 
 
@@ -1368,7 +1268,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `name` _string_ | Name is the name of the LanguageTool |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the LanguageTool (defaults to same namespace) |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br /> |
 | `enabled` _boolean_ | Enabled indicates if this tool is available to the agent | true |  |
 | `requireApproval` _boolean_ | RequireApproval requires human approval before tool execution | false |  |
 

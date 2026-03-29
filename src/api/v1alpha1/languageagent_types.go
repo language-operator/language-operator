@@ -129,10 +129,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 
-	// Observability defines monitoring and tracing configuration
-	// +optional
-	Observability *AgentObservabilitySpec `json:"observability,omitempty"`
-
 	// Workspace defines persistent storage for the agent
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
@@ -226,26 +222,6 @@ type EventTriggerSpec struct {
 	// Filter defines filtering criteria for events
 	// +optional
 	Filter map[string]string `json:"filter,omitempty"`
-}
-
-// AgentObservabilitySpec defines agent monitoring
-type AgentObservabilitySpec struct {
-	// Metrics enables metrics collection
-	// +kubebuilder:default=true
-	Metrics bool `json:"metrics,omitempty"`
-
-	// Tracing enables distributed tracing
-	// +kubebuilder:default=false
-	Tracing bool `json:"tracing,omitempty"`
-
-	// LogLevel defines the logging level
-	// +kubebuilder:validation:Enum=debug;info;warn;error
-	// +kubebuilder:default=info
-	LogLevel string `json:"logLevel,omitempty"`
-
-	// LogConversations enables conversation logging
-	// +kubebuilder:default=true
-	LogConversations bool `json:"logConversations,omitempty"`
 }
 
 // WorkspaceSpec defines persistent workspace storage for an agent
