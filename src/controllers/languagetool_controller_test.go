@@ -10,8 +10,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -452,5 +454,247 @@ func TestLanguageToolController_SchedulingFields(t *testing.T) {
 	}
 	if len(podSpec.ImagePullSecrets) == 0 || podSpec.ImagePullSecrets[0].Name != "tool-registry-secret" {
 		t.Errorf("Expected ImagePullSecret tool-registry-secret, got %v", podSpec.ImagePullSecrets)
+	}
+}
+
+func TestLanguageToolController_DeploymentSpec(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("test-full-tool", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolPort(8080),
+	)
+
+	// imagePullPolicy
+	tool.Spec.Deployment.ImagePullPolicy = corev1.PullAlways
+
+	// envFrom
+	tool.Spec.Deployment.EnvFrom = []corev1.EnvFromSource{
+		{ConfigMapRef: &corev1.ConfigMapEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: "tool-config"}}},
+	}
+
+	// serviceAccountName
+	tool.Spec.Deployment.ServiceAccountName = "custom-tool-sa"
+
+	// volumes + volumeMounts
+	tool.Spec.Deployment.Volumes = []corev1.Volume{
+		{Name: "data", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+	}
+	tool.Spec.Deployment.VolumeMounts = []corev1.VolumeMount{
+		{Name: "data", MountPath: "/data"},
+	}
+
+	// podAnnotations + podLabels
+	tool.Spec.Deployment.PodAnnotations = map[string]string{"prometheus.io/scrape": "true"}
+	tool.Spec.Deployment.PodLabels = map[string]string{"custom-label": "value"}
+
+	// initContainers
+	tool.Spec.Deployment.InitContainers = []corev1.Container{
+		{Name: "init-setup", Image: "busybox:latest", Command: []string{"sh", "-c", "echo ready"}},
+	}
+
+	// probes
+	probe := &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{Path: "/health", Port: intstr.FromInt32(8080)},
+		},
+		InitialDelaySeconds: 5,
+	}
+	tool.Spec.Deployment.LivenessProbe = probe
+	tool.Spec.Deployment.ReadinessProbe = probe
+	tool.Spec.Deployment.StartupProbe = probe
+
+	// resources
+	tool.Spec.Deployment.Resources = corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}); err != nil {
+			t.Fatalf("Reconcile %d failed: %v", i+1, err)
+		}
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+	container := podSpec.Containers[0]
+
+	// imagePullPolicy
+	if container.ImagePullPolicy != corev1.PullAlways {
+		t.Errorf("ImagePullPolicy = %q, want Always", container.ImagePullPolicy)
+	}
+
+	// envFrom
+	if len(container.EnvFrom) == 0 || container.EnvFrom[0].ConfigMapRef.Name != "tool-config" {
+		t.Errorf("EnvFrom not applied: %v", container.EnvFrom)
+	}
+
+	// serviceAccountName
+	if podSpec.ServiceAccountName != "custom-tool-sa" {
+		t.Errorf("ServiceAccountName = %q, want custom-tool-sa", podSpec.ServiceAccountName)
+	}
+
+	// volumes
+	if len(podSpec.Volumes) == 0 || podSpec.Volumes[0].Name != "data" {
+		t.Errorf("Volumes not applied: %v", podSpec.Volumes)
+	}
+
+	// volumeMounts
+	if len(container.VolumeMounts) == 0 || container.VolumeMounts[0].MountPath != "/data" {
+		t.Errorf("VolumeMounts not applied: %v", container.VolumeMounts)
+	}
+
+	// podAnnotations
+	if deployment.Spec.Template.Annotations["prometheus.io/scrape"] != "true" {
+		t.Errorf("PodAnnotations not applied: %v", deployment.Spec.Template.Annotations)
+	}
+
+	// podLabels — user label present, operator labels not overwritten
+	if deployment.Spec.Template.Labels["custom-label"] != "value" {
+		t.Errorf("PodLabels not applied: %v", deployment.Spec.Template.Labels)
+	}
+	if deployment.Spec.Template.Labels["app.kubernetes.io/name"] != tool.Name {
+		t.Errorf("Operator labels overwritten: %v", deployment.Spec.Template.Labels)
+	}
+
+	// initContainers
+	if len(podSpec.InitContainers) == 0 || podSpec.InitContainers[0].Name != "init-setup" {
+		t.Errorf("InitContainers not applied: %v", podSpec.InitContainers)
+	}
+
+	// probes
+	if container.LivenessProbe == nil || container.LivenessProbe.HTTPGet.Path != "/health" {
+		t.Errorf("LivenessProbe not applied: %v", container.LivenessProbe)
+	}
+	if container.ReadinessProbe == nil || container.ReadinessProbe.HTTPGet.Path != "/health" {
+		t.Errorf("ReadinessProbe not applied: %v", container.ReadinessProbe)
+	}
+	if container.StartupProbe == nil || container.StartupProbe.HTTPGet.Path != "/health" {
+		t.Errorf("StartupProbe not applied: %v", container.StartupProbe)
+	}
+
+	// resources
+	if container.Resources.Limits.Memory().Cmp(resource.MustParse("256Mi")) != 0 {
+		t.Errorf("Resources not applied: %v", container.Resources)
+	}
+}
+
+func TestLanguageToolController_DefaultSecurityContext(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("test-sec-tool", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolPort(8080),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}); err != nil {
+			t.Fatalf("Reconcile %d failed: %v", i+1, err)
+		}
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+
+	// Operator default pod security context applied when user doesn't specify one
+	if podSpec.SecurityContext == nil {
+		t.Fatal("Expected pod SecurityContext to be set")
+	}
+	if podSpec.SecurityContext.RunAsNonRoot == nil || !*podSpec.SecurityContext.RunAsNonRoot {
+		t.Error("Expected RunAsNonRoot=true on pod SecurityContext")
+	}
+	if podSpec.SecurityContext.RunAsUser == nil || *podSpec.SecurityContext.RunAsUser != LangopUserID {
+		t.Errorf("Expected RunAsUser=%d, got %v", LangopUserID, podSpec.SecurityContext.RunAsUser)
+	}
+
+	// Container-level security context
+	container := podSpec.Containers[0]
+	if container.SecurityContext == nil {
+		t.Fatal("Expected container SecurityContext to be set")
+	}
+	if container.SecurityContext.AllowPrivilegeEscalation == nil || *container.SecurityContext.AllowPrivilegeEscalation {
+		t.Error("Expected AllowPrivilegeEscalation=false")
+	}
+	if container.SecurityContext.ReadOnlyRootFilesystem == nil || !*container.SecurityContext.ReadOnlyRootFilesystem {
+		t.Error("Expected ReadOnlyRootFilesystem=true")
+	}
+}
+
+func TestLanguageToolController_UserSecurityContextOverride(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("test-sec-override", "default",
+		gen.SetToolImage("test:latest"),
+		gen.SetToolPort(8080),
+	)
+	// User provides a custom pod security context
+	runAsUser := int64(2000)
+	tool.Spec.Deployment.SecurityContext = &corev1.PodSecurityContext{
+		RunAsUser: &runAsUser,
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}); err != nil {
+			t.Fatalf("Reconcile %d failed: %v", i+1, err)
+		}
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	podSpec := deployment.Spec.Template.Spec
+	if podSpec.SecurityContext == nil || podSpec.SecurityContext.RunAsUser == nil || *podSpec.SecurityContext.RunAsUser != 2000 {
+		t.Errorf("Expected user-supplied SecurityContext.RunAsUser=2000, got %v", podSpec.SecurityContext)
 	}
 }

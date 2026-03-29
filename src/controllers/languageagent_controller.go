@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -601,31 +600,6 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 	return err
 }
 
-// buildPodSecurityContext creates the pod-level security context for agent pods
-func (r *LanguageAgentReconciler) buildPodSecurityContext() *corev1.PodSecurityContext {
-	return &corev1.PodSecurityContext{
-		RunAsNonRoot: ptr.To(true),
-		RunAsUser:    ptr.To[int64](LangopUserID),
-		FSGroup:      ptr.To[int64](LangopGroupID),
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		},
-	}
-}
-
-// buildContainerSecurityContext creates the container-level security context for agent containers
-func (r *LanguageAgentReconciler) buildContainerSecurityContext() *corev1.SecurityContext {
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: ptr.To(false),
-		RunAsNonRoot:             ptr.To(true),
-		RunAsUser:                ptr.To[int64](LangopUserID),
-		ReadOnlyRootFilesystem:   ptr.To(true),
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
-	}
-}
-
 // buildVolumes creates the volumes and volume mounts for agent pods
 func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{}
@@ -780,7 +754,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		}
 
 		// Use user-supplied pod security context if set, otherwise apply operator defaults.
-		podSecCtx := r.buildPodSecurityContext()
+		podSecCtx := buildPodSecurityContext()
 		if agent.Spec.Deployment.SecurityContext != nil {
 			podSecCtx = agent.Spec.Deployment.SecurityContext
 		}
@@ -811,7 +785,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		}
 
 		// Add container security context for agent container
-		deployment.Spec.Template.Spec.Containers[0].SecurityContext = r.buildContainerSecurityContext()
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = buildContainerSecurityContext()
 
 		// Build operator-managed volumes and volume mounts, then append user-supplied ones.
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)

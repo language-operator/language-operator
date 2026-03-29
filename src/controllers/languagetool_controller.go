@@ -315,16 +315,31 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
-		// Set owner reference
 		if err := controllerutil.SetControllerReference(tool, deployment, r.Scheme); err != nil {
 			return err
 		}
 
-		// Set deployment spec
 		replicas := int32(1)
 		if tool.Spec.Deployment.Replicas != nil {
 			replicas = *tool.Spec.Deployment.Replicas
 		}
+
+		// Merge user pod labels; operator labels take precedence to protect selector stability.
+		podLabels := make(map[string]string, len(labels)+len(tool.Spec.Deployment.PodLabels))
+		for k, v := range tool.Spec.Deployment.PodLabels {
+			podLabels[k] = v
+		}
+		for k, v := range labels {
+			podLabels[k] = v
+		}
+
+		// Use user-supplied pod security context if set, otherwise apply operator defaults.
+		podSecCtx := buildPodSecurityContext()
+		if tool.Spec.Deployment.SecurityContext != nil {
+			podSecCtx = tool.Spec.Deployment.SecurityContext
+		}
+
+		shareProc := len(tool.Spec.Deployment.InitContainers) > 0
 
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -333,13 +348,18 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      podLabels,
+					Annotations: tool.Spec.Deployment.PodAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					ServiceAccountName:    tool.Spec.Deployment.ServiceAccountName,
+					ShareProcessNamespace: &shareProc,
+					InitContainers:        tool.Spec.Deployment.InitContainers,
 					Containers: []corev1.Container{
 						{
-							Name:  "tool",
-							Image: tool.Spec.Image,
+							Name:            "tool",
+							Image:           tool.Spec.Image,
+							ImagePullPolicy: tool.Spec.Deployment.ImagePullPolicy,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -347,24 +367,27 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							Env: r.buildToolEnv(tool),
+							Env:            r.buildToolEnv(tool),
+							EnvFrom:        tool.Spec.Deployment.EnvFrom,
+							Resources:      tool.Spec.Deployment.Resources,
+							VolumeMounts:   tool.Spec.Deployment.VolumeMounts,
+							LivenessProbe:  tool.Spec.Deployment.LivenessProbe,
+							ReadinessProbe: tool.Spec.Deployment.ReadinessProbe,
+							StartupProbe:   tool.Spec.Deployment.StartupProbe,
 						},
 					},
+					SecurityContext:           podSecCtx,
+					Volumes:                   tool.Spec.Deployment.Volumes,
+					ImagePullSecrets:          tool.Spec.Deployment.ImagePullSecrets,
+					NodeSelector:              tool.Spec.Deployment.NodeSelector,
+					Tolerations:               tool.Spec.Deployment.Tolerations,
+					TopologySpreadConstraints: tool.Spec.Deployment.TopologySpreadConstraints,
+					Affinity:                  tool.Spec.Deployment.Affinity,
 				},
 			},
 		}
 
-		// Add resource requirements if specified
-		deployment.Spec.Template.Spec.Containers[0].Resources = tool.Spec.Deployment.Resources
-
-		// Add scheduling fields
-		if tool.Spec.Deployment.Affinity != nil {
-			deployment.Spec.Template.Spec.Affinity = tool.Spec.Deployment.Affinity
-		}
-		deployment.Spec.Template.Spec.NodeSelector = tool.Spec.Deployment.NodeSelector
-		deployment.Spec.Template.Spec.Tolerations = tool.Spec.Deployment.Tolerations
-		deployment.Spec.Template.Spec.TopologySpreadConstraints = tool.Spec.Deployment.TopologySpreadConstraints
-		deployment.Spec.Template.Spec.ImagePullSecrets = tool.Spec.Deployment.ImagePullSecrets
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = buildContainerSecurityContext()
 
 		return nil
 	})
