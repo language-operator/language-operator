@@ -3504,7 +3504,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>gatewayClassName</code> <em>string</em></td>
-<td>Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.<br />GatewayClassName specifies the Gateway API GatewayClass to use<br />If empty, will attempt auto-detection or fall back to Ingress</td>
+<td>Deprecated: Use GatewayName instead. This field is treated as a Gateway resource name<br />(not a GatewayClass) for backward compatibility. The operator emits a warning when this<br />field is used without GatewayName set. Planned for removal in v1beta1.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -4382,9 +4382,9 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>type</code> <em>string</em></td>
-<td>Type specifies the tool protocol type (e.g., "mcp", "openapi")</td>
+<td>Type specifies the tool protocol type. Only "mcp" is currently implemented.</td>
 <td>mcp</td>
-<td>Enum: [mcp openapi] <br /></td>
+<td>Enum: [mcp] <br /></td>
 </tr>
 <tr>
 <td><code>deploymentMode</code> <em>string</em></td>
@@ -4728,13 +4728,13 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>role</code> <em>string</em></td>
-<td>Role defines the purpose of this model (primary, fallback, specialized)</td>
+<td>Role defines the purpose of this model — a hint for the agent runtime for model selection<br />(e.g. prefer role=primary for general calls, role=reasoning for chain-of-thought).<br />The operator does not enforce routing by role; it is surfaced in the agent config (agent.json).</td>
 <td>primary</td>
 <td>Enum: [primary fallback reasoning tool-calling summarization] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>priority</code> <em>integer</em></td>
-<td>Priority for model selection (lower is higher priority)</td>
+<td>Priority for model selection — a hint for the agent runtime (lower value = higher priority).<br />The operator does not enforce priority; it is surfaced in the agent config (agent.json).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
