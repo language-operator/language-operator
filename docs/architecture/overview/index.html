@@ -1860,7 +1860,7 @@
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  │  · LanguageTool      │    │  Env vars injected:          │   │
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  │  · LanguageModel     │    │  · AGENT_NAME, AGENT_UUID    │   │
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│  │  · LanguageCluster   │    │  · MODEL_ENDPOINTS           │   │
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  └──────────────────────┘    │  · TOOL_ENDPOINTS            │   │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  └──────────────────────┘    │  · MCP_SERVERS            │   │
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│                               └──────────────────────────────┘   │
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
@@ -1882,7 +1882,7 @@
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myregistry/agent-runtime:v1.0.0</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">18789</span><span class="w">                               </span><span class="c1"># defaults to 8080</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">modelRefs</span><span class="p">:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">models</span><span class="p">:</span>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">initContainers</span><span class="p">:</span>
@@ -1980,8 +1980,8 @@
 - <code>/etc/agent/config.yaml</code> — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: <code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code>, <code>AGENT_MODE</code>, <code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code>
 - <code>MODEL_ENDPOINTS</code> — URL of the shared LiteLLM proxy (<code>http://proxy.&lt;namespace&gt;.svc.cluster.local:8000</code>), injected into main container and all init containers
-- <code>LLM_MODEL</code> — comma-separated model names registered in the proxy (from all <code>modelRefs</code>)
-- <code>TOOL_ENDPOINTS</code> — resolved MCP tool server URLs
+- <code>LLM_MODEL</code> — comma-separated model names registered in the proxy (from all <code>models</code>)
+- <code>MCP_SERVERS</code> — resolved MCP tool server URLs
 - ClusterIP Service on <code>spec.port</code>
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic</p>

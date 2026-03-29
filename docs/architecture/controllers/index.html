@@ -1911,9 +1911,9 @@
 <p>The controller assembles configuration from:</p>
 <ul>
 <li><code>spec.instructions</code> (inline) or <code>spec.instructionsFrom</code> (ConfigMap/Secret ref)</li>
-<li>Referenced <code>LanguagePersona</code> resources (via <code>personaRefs</code>)</li>
-<li>Referenced <code>LanguageModel</code> endpoints (via <code>modelRefs</code>)</li>
-<li>Referenced <code>LanguageTool</code> endpoints (via <code>toolRefs</code>)</li>
+<li>Referenced <code>LanguagePersona</code> resource (via <code>persona</code>)</li>
+<li>Referenced <code>LanguageModel</code> endpoints (via <code>models</code>)</li>
+<li>Referenced <code>LanguageTool</code> endpoints (via <code>tools</code>)</li>
 <li>Agent metadata (name, namespace, UUID)</li>
 </ul>
 <p><strong>Environment Variables Injected:</strong></p>
@@ -1922,8 +1922,8 @@
 <li><code>AGENT_MODE</code> - from <code>spec.executionMode</code></li>
 <li><code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code></li>
 <li><code>MODEL_ENDPOINTS</code> - shared proxy URL (<code>http://proxy.&lt;namespace&gt;.svc.cluster.local:8000</code>)</li>
-<li><code>LLM_MODEL</code> - comma-separated list of model names from <code>modelRefs</code></li>
-<li><code>TOOL_ENDPOINTS</code> - resolved MCP tool server URLs</li>
+<li><code>LLM_MODEL</code> - comma-separated list of model names from <code>models</code></li>
+<li><code>MCP_SERVERS</code> - resolved MCP tool server URLs</li>
 </ul>
 <p><strong>Volume Mounts:</strong></p>
 <ul>
