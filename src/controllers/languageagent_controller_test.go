@@ -2843,3 +2843,50 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 		t.Errorf("Expected phase %q, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
 	}
 }
+
+func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Image uses ghcr.io but registry whitelist only allows docker.io → validation fails
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "early-exit-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:   fakeClient,
+		Scheme:   scheme,
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+		// Whitelist excludes ghcr.io → registry validation will fail
+		RegistryManager: &mockRegistryManager{registries: []string{"docker.io"}},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// Reconcile: finalizer added then registry validation fires immediately → early exit with error
+	_, err := reconciler.Reconcile(ctx, req)
+	if err == nil {
+		t.Fatal("Expected reconcile error from registry validation, got nil")
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusFailed {
+		t.Errorf("Expected phase %q after early-exit error, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
+	}
+}
