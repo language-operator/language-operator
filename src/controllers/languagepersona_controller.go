@@ -106,7 +106,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			r.EventManager.RecordConfigurationFailed(persona, err)
 		}
 		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
-		persona.Status.Phase = "Failed"
+		persona.Status.Phase = "NotReady"
 		if statusErr := r.Status().Update(ctx, persona); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}

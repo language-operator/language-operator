@@ -94,15 +94,6 @@ type ToolReference struct {
 	RequireApproval bool `json:"requireApproval,omitempty"`
 }
 
-// PersonaReference references a LanguagePersona
-type PersonaReference struct {
-	// Name is the name of the LanguagePersona
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	// +kubebuilder:validation:MaxLength=63
-	Name string `json:"name"`
-}
-
 // WorkspaceSpec defines persistent workspace storage for an agent
 type WorkspaceSpec struct {
 	// Enabled controls whether to create a workspace volume
@@ -261,13 +252,13 @@ type ToolUsageSpec struct {
 	ToolName string `json:"toolName"`
 
 	// InvocationCount is the number of times this tool was invoked
-	InvocationCount int64 `json:"invocationCount"`
+	InvocationCount int64 `json:"invocationCount,omitempty"`
 
 	// SuccessCount is the number of successful invocations
-	SuccessCount int64 `json:"successCount"`
+	SuccessCount int64 `json:"successCount,omitempty"`
 
 	// FailureCount is the number of failed invocations
-	FailureCount int64 `json:"failureCount"`
+	FailureCount int64 `json:"failureCount,omitempty"`
 
 	// AverageLatency is the average latency in milliseconds
 	// +optional
@@ -335,8 +326,8 @@ const (
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.status.activeReplicas`
-// +kubebuilder:printcolumn:name="Executions",type=integer,JSONPath=`.status.executionCount`
-// +kubebuilder:printcolumn:name="Success Rate",type=string,JSONPath=`.status.metrics.successRate`
+// +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
+// +kubebuilder:printcolumn:name="UUID",type=string,JSONPath=`.status.uuid`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageAgent is the Schema for the languageagents API

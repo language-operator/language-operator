@@ -24,11 +24,11 @@ spec:
     - jsonPath: .status.activeReplicas
       name: Replicas
       type: integer
-    - jsonPath: .status.executionCount
-      name: Executions
+    - jsonPath: .status.readyReplicas
+      name: Ready
       type: integer
-    - jsonPath: .status.metrics.successRate
-      name: Success Rate
+    - jsonPath: .status.uuid
+      name: UUID
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -5860,9 +5860,6 @@ spec:
                       description: ToolName is the name of the tool
                       type: string
                   required:
-                  - failureCount
-                  - invocationCount
-                  - successCount
                   - toolName
                   type: object
                 type: array
