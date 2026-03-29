@@ -8,18 +8,9 @@ rules:
   - ""
   resources:
   - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - persistentvolumeclaims
+  - resourcequotas
+  - services
   verbs:
   - create
   - delete
@@ -32,6 +23,7 @@ rules:
   - ""
   resources:
   - pods
+  - secrets
   verbs:
   - get
   - list
@@ -42,38 +34,6 @@ rules:
   - pods/log
   verbs:
   - get
-- apiGroups:
-  - ""
-  resources:
-  - resourcequotas
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - apps
   resources:
@@ -108,109 +68,9 @@ rules:
   - langop.io
   resources:
   - languageagents
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languageagents/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languageagents/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
   - languageclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languageclusters/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languageclusters/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
   - languagemodels
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languagemodels/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languagemodels/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
   - languagepersonas
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - langop.io
-  resources:
-  - languagepersonas/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - langop.io
-  resources:
-  - languagepersonas/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
   - languagetools
   verbs:
   - create
@@ -223,12 +83,20 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagents/finalizers
+  - languageclusters/finalizers
+  - languagemodels/finalizers
+  - languagepersonas/finalizers
   - languagetools/finalizers
   verbs:
   - update
 - apiGroups:
   - langop.io
   resources:
+  - languageagents/status
+  - languageclusters/status
+  - languagemodels/status
+  - languagepersonas/status
   - languagetools/status
   verbs:
   - get
@@ -238,17 +106,6 @@ rules:
   - networking.k8s.io
   resources:
   - ingresses
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - networking.k8s.io
-  resources:
   - networkpolicies
   verbs:
   - create
@@ -262,17 +119,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - roles
   verbs:
   - create
