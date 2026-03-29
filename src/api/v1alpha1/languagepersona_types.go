@@ -40,14 +40,6 @@ type LanguagePersonaStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// LastUpdateTime is the last time the status was updated
-	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
-
-	// Message provides human-readable details about the current state
-	// +optional
-	Message string `json:"message,omitempty"`
 }
 
 // +kubebuilder:object:root=true

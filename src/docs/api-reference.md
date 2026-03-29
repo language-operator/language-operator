@@ -621,8 +621,6 @@ _Appears in:_
 | `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguagePersona |  |  |
 | `phase` _string_ | Phase represents the current phase (Ready, NotReady) |  | Enum: [Ready NotReady] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the persona's state |  |  |
-| `lastUpdateTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastUpdateTime is the last time the status was updated |  |  |
-| `message` _string_ | Message provides human-readable details about the current state |  |  |
 
 
 
@@ -703,7 +701,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguageTool |  |  |
-| `phase` _string_ | Phase represents the current phase of the tool (Pending, Running, Failed, Unknown) |  | Enum: [Pending Running Failed Unknown Updating] <br /> |
+| `phase` _string_ | Phase represents the current phase of the tool (Pending, Running, Failed, Updating) |  | Enum: [Pending Running Failed Updating] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the tool's state |  |  |
 | `endpoint` _string_ | Endpoint is the service endpoint where the tool is accessible |  |  |
 | `availableTools` _string array_ | AvailableTools lists the tools discovered from this service |  |  |
@@ -1081,7 +1079,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `requestsPerMinute` _integer_ | RequestsPerMinute limits requests per minute |  |  |
 | `tokensPerMinute` _integer_ | TokensPerMinute limits tokens per minute |  |  |
-| `concurrentRequests` _integer_ | ConcurrentRequests limits concurrent requests |  |  |
 
 
 #### RegionSpec

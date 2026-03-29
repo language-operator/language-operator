@@ -95,10 +95,6 @@ spec:
               rateLimits:
                 description: RateLimits defines rate limiting configuration
                 properties:
-                  concurrentRequests:
-                    description: ConcurrentRequests limits concurrent requests
-                    format: int32
-                    type: integer
                   requestsPerMinute:
                     description: RequestsPerMinute limits requests per minute
                     format: int32

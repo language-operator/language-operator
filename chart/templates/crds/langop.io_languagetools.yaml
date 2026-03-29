@@ -5558,12 +5558,11 @@ spec:
                 type: integer
               phase:
                 description: Phase represents the current phase of the tool (Pending,
-                  Running, Failed, Unknown)
+                  Running, Failed, Updating)
                 enum:
                 - Pending
                 - Running
                 - Failed
-                - Unknown
                 - Updating
                 type: string
               readyReplicas:

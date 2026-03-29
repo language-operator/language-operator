@@ -60,10 +60,6 @@ type RateLimitSpec struct {
 	// TokensPerMinute limits tokens per minute
 	// +optional
 	TokensPerMinute *int32 `json:"tokensPerMinute,omitempty"`
-
-	// ConcurrentRequests limits concurrent requests
-	// +optional
-	ConcurrentRequests *int32 `json:"concurrentRequests,omitempty"`
 }
 
 // LanguageModelStatus defines the observed state of LanguageModel
