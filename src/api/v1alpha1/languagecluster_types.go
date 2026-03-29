@@ -242,9 +242,9 @@ type IngressConfig struct {
 	// +optional
 	GatewayNamespace string `json:"gatewayNamespace,omitempty"`
 
-	// Deprecated: Use GatewayName instead. This field actually refers to a Gateway resource name, not a GatewayClass.
-	// GatewayClassName specifies the Gateway API GatewayClass to use
-	// If empty, will attempt auto-detection or fall back to Ingress
+	// Deprecated: Use GatewayName instead. This field is treated as a Gateway resource name
+	// (not a GatewayClass) for backward compatibility. The operator emits a warning when this
+	// field is used without GatewayName set. Planned for removal in v1beta1.
 	// +optional
 	GatewayClassName string `json:"gatewayClassName,omitempty"`
 

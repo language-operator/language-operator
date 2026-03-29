@@ -65,13 +65,16 @@ type ModelReference struct {
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
-	// Role defines the purpose of this model (primary, fallback, specialized)
+	// Role defines the purpose of this model — a hint for the agent runtime for model selection
+	// (e.g. prefer role=primary for general calls, role=reasoning for chain-of-thought).
+	// The operator does not enforce routing by role; it is surfaced in the agent config (agent.json).
 	// +kubebuilder:validation:Enum=primary;fallback;reasoning;tool-calling;summarization
 	// +kubebuilder:default=primary
 	// +optional
 	Role string `json:"role,omitempty"`
 
-	// Priority for model selection (lower is higher priority)
+	// Priority for model selection — a hint for the agent runtime (lower value = higher priority).
+	// The operator does not enforce priority; it is surfaced in the agent config (agent.json).
 	// +optional
 	Priority *int32 `json:"priority,omitempty"`
 }

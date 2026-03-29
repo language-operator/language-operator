@@ -5232,13 +5232,17 @@ spec:
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     priority:
-                      description: Priority for model selection (lower is higher priority)
+                      description: |-
+                        Priority for model selection — a hint for the agent runtime (lower value = higher priority).
+                        The operator does not enforce priority; it is surfaced in the agent config (agent.json).
                       format: int32
                       type: integer
                     role:
                       default: primary
-                      description: Role defines the purpose of this model (primary,
-                        fallback, specialized)
+                      description: |-
+                        Role defines the purpose of this model — a hint for the agent runtime for model selection
+                        (e.g. prefer role=primary for general calls, role=reasoning for chain-of-thought).
+                        The operator does not enforce routing by role; it is surfaced in the agent config (agent.json).
                       enum:
                       - primary
                       - fallback

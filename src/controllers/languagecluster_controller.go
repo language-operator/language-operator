@@ -983,8 +983,9 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 	useHTTPRoute := false
 	if cluster.Spec.IngressConfig != nil {
 		gatewayName := cluster.Spec.IngressConfig.GatewayName
-		if gatewayName == "" {
+		if gatewayName == "" && cluster.Spec.IngressConfig.GatewayClassName != "" {
 			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+			log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
 		}
 		if gatewayName != "" {
 			useHTTPRoute = true
@@ -993,8 +994,9 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 
 	if useHTTPRoute {
 		gatewayName := cluster.Spec.IngressConfig.GatewayName
-		if gatewayName == "" {
+		if gatewayName == "" && cluster.Spec.IngressConfig.GatewayClassName != "" {
 			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
+			log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
 		}
 		gatewayNamespace := cluster.Spec.IngressConfig.GatewayNamespace
 		if gatewayNamespace == "" {

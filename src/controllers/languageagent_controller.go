@@ -1823,6 +1823,7 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 					// Backward compatibility: treat GatewayClassName as Gateway resource name
 					gatewayName = cluster.Spec.IngressConfig.GatewayClassName
 					gatewayNamespace = agent.Namespace
+					log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
 				}
 			}
 		}

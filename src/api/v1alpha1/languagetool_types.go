@@ -58,8 +58,8 @@ type LanguageToolSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
 
-	// Type specifies the tool protocol type (e.g., "mcp", "openapi")
-	// +kubebuilder:validation:Enum=mcp;openapi
+	// Type specifies the tool protocol type. Only "mcp" is currently implemented.
+	// +kubebuilder:validation:Enum=mcp
 	// +kubebuilder:default=mcp
 	Type string `json:"type,omitempty"`
 

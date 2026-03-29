@@ -5508,10 +5508,10 @@ spec:
                 type: integer
               type:
                 default: mcp
-                description: Type specifies the tool protocol type (e.g., "mcp", "openapi")
+                description: Type specifies the tool protocol type. Only "mcp" is
+                  currently implemented.
                 enum:
                 - mcp
-                - openapi
                 type: string
             required:
             - image
