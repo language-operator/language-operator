@@ -11,6 +11,8 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -18,10 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 )
 
 // Note: Synthesis is now configured per-agent via Models
@@ -2906,4 +2911,118 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 	if regCond.Reason != "RegistryNotAllowed" {
 		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
 	}
+}
+
+// parseAgentConfigMap reconciles the agent once and returns the parsed config.yaml and the raw
+// instructions.txt from the agent ConfigMap.
+func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client.Object) (agentConfigYAML, string) {
+	t.Helper()
+
+	// The agent must be the last object passed so we can extract its name/namespace.
+	agentObj := objects[len(objects)-1]
+	agent := agentObj.(*langopv1alpha1.LanguageAgent)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objects...).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	require.NoError(t, err, "Reconcile failed")
+
+	cm := &corev1.ConfigMap{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+		Name:      GenerateConfigMapName(agent.Name, "agent"),
+		Namespace: agent.Namespace,
+	}, cm), "agent ConfigMap not found")
+
+	var cfg agentConfigYAML
+	require.NoError(t, yaml.Unmarshal([]byte(cm.Data["config.yaml"]), &cfg), "failed to parse config.yaml")
+
+	return cfg, cm.Data["instructions.txt"]
+}
+
+func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	t.Run("model_section", func(t *testing.T) {
+		model := gen.LanguageModel("claude-model", "default",
+			gen.SetModelProvider("anthropic"),
+			gen.SetModelName("claude-sonnet-4-5"),
+		)
+		agent := gen.LanguageAgent("model-agent", "default",
+			gen.SetAgentInstructions("do the thing"),
+		)
+		agent.Spec.Models = []langopv1alpha1.ModelReference{
+			{Name: "claude-model", Role: "primary"},
+		}
+
+		cfg, instructions := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), model, agent)
+
+		assert.Equal(t, "do the thing", instructions)
+		require.Contains(t, cfg.Models, "claude-model", "config.yaml missing model entry")
+		m := cfg.Models["claude-model"]
+		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", m.Endpoint)
+		assert.Equal(t, "anthropic", m.Provider)
+		assert.Equal(t, "claude-sonnet-4-5", m.Model)
+		assert.Equal(t, "primary", m.Role)
+	})
+
+	t.Run("tool_service_mode", func(t *testing.T) {
+		tool := gen.LanguageTool("search-tool", "default") // service mode by default, port 0 → 8080
+		agent := gen.LanguageAgent("tool-agent", "default")
+		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "search-tool"}}
+
+		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+
+		require.Contains(t, cfg.Tools, "search-tool", "config.yaml missing tool entry")
+		tool_cfg := cfg.Tools["search-tool"]
+		assert.Equal(t, "http://search-tool.default.svc.cluster.local:8080", tool_cfg.Endpoint)
+		assert.Equal(t, "mcp", tool_cfg.Protocol)
+	})
+
+	t.Run("tool_sidecar_mode", func(t *testing.T) {
+		tool := gen.LanguageTool("sidecar-tool", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+		)
+		agent := gen.LanguageAgent("sidecar-agent", "default")
+		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "sidecar-tool"}}
+
+		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+
+		require.Contains(t, cfg.Tools, "sidecar-tool", "config.yaml missing sidecar tool entry")
+		assert.Equal(t, "http://localhost:8080", cfg.Tools["sidecar-tool"].Endpoint)
+		assert.Equal(t, "mcp", cfg.Tools["sidecar-tool"].Protocol)
+	})
+
+	t.Run("persona_section", func(t *testing.T) {
+		persona := gen.LanguagePersona("my-persona", "default",
+			gen.SetPersonaTone("professional"),
+			gen.SetPersonaPersonality("concise and precise"),
+		)
+		persona.Status.Phase = events.PhaseStatusReady
+
+		agent := gen.LanguageAgent("persona-agent", "default")
+		agent.Spec.Persona = "my-persona"
+
+		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), persona, agent)
+
+		require.Len(t, cfg.Personas, 1, "config.yaml should contain exactly one persona")
+		p := cfg.Personas[0]
+		assert.Equal(t, "my-persona", p.Name)
+		assert.Equal(t, "professional", p.Tone)
+		assert.Equal(t, "concise and precise", p.Personality)
+	})
 }
