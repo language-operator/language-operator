@@ -5444,11 +5444,6 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
-              timeout:
-                default: 10m
-                description: Timeout is the maximum execution time (e.g., "10m", "1h")
-                pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
-                type: string
               tools:
                 description: Tools is a list of LanguageTool references available
                   to this agent

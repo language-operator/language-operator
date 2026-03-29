@@ -35,12 +35,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	ExecutionMode string `json:"executionMode,omitempty"`
 
-	// Timeout is the maximum execution time (e.g., "10m", "1h")
-	// +kubebuilder:validation:Pattern=`^[0-9]+(ns|us|µs|ms|s|m|h)$`
-	// +kubebuilder:default="10m"
-	// +optional
-	Timeout string `json:"timeout,omitempty"`
-
 	// Workspace defines persistent storage for the agent
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
