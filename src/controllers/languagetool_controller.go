@@ -203,6 +203,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.EventManager.RecordConfigMapFailed(tool, err)
 		}
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), tool.Generation)
+		tool.Status.Phase = events.PhaseStatusFailed
 		r.Status().Update(ctx, tool)
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -220,6 +221,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				r.EventManager.RecordDeploymentFailed(tool, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
+			tool.Status.Phase = events.PhaseStatusFailed
 			r.Status().Update(ctx, tool)
 			reconcileErr = err
 			return ctrl.Result{}, err
@@ -234,6 +236,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				r.EventManager.RecordServiceFailed(tool, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
+			tool.Status.Phase = events.PhaseStatusFailed
 			r.Status().Update(ctx, tool)
 			reconcileErr = err
 			return ctrl.Result{}, err
@@ -250,6 +253,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				r.EventManager.RecordNetworkPolicyFailed(tool, err)
 			}
 			SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
+			tool.Status.Phase = events.PhaseStatusFailed
 			r.Status().Update(ctx, tool)
 			reconcileErr = err
 			return ctrl.Result{}, err
