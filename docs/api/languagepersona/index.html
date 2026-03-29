@@ -1080,6 +1080,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#spec-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#key-concepts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1107,28 +1118,6 @@
     <span class="md-ellipsis">
       
         Referencing a Persona
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#persona-inheritance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persona Inheritance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tool-preferences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tool Preferences
       
     </span>
   </a>
@@ -1187,17 +1176,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#persona-composition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persona Composition
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1616,6 +1594,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#spec-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec Fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#key-concepts" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1643,28 +1632,6 @@
     <span class="md-ellipsis">
       
         Referencing a Persona
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#persona-inheritance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persona Inheritance
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tool-preferences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tool Preferences
       
     </span>
   </a>
@@ -1727,17 +1694,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#persona-composition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Persona Composition
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#related-resources" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1780,14 +1736,12 @@
 
 
 <h1 id="languagepersona">LanguagePersona<a class="headerlink" href="#languagepersona" title="Permanent link">&para;</a></h1>
-<p>The <code>LanguagePersona</code> CRD defines reusable behavioral and instruction templates for agents.</p>
+<p>The <code>LanguagePersona</code> CRD defines reusable behavioral templates for agents.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>A LanguagePersona provides:
-- System prompts and personality traits
-- Tone and style guidelines
-- Capability preferences
-- Behavioral constraints
-- Template inheritance</p>
+<p>A LanguagePersona configures:
+- Tone and communication style
+- Personality and character traits
+- Domain expertise</p>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
@@ -1795,14 +1749,9 @@
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">helpful-assistant</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-cluster</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">systemPrompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">AI</span><span class="nv"> </span><span class="s">assistant</span><span class="nv"> </span><span class="s">focused</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">clarity</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">accuracy.&quot;</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;professional</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">friendly&quot;</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Always</span><span class="nv"> </span><span class="s">cite</span><span class="nv"> </span><span class="s">sources</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">factual</span><span class="nv"> </span><span class="s">claims&quot;</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Ask</span><span class="nv"> </span><span class="s">clarifying</span><span class="nv"> </span><span class="s">questions</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">ambiguous&quot;</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">capabilities</span><span class="p">:</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web-search</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-execution</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;professional</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">friendly&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;curious,</span><span class="nv"> </span><span class="s">patient,</span><span class="nv"> </span><span class="s">always</span><span class="nv"> </span><span class="s">explains</span><span class="nv"> </span><span class="s">reasoning</span><span class="nv"> </span><span class="s">step</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">step&quot;</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general-purpose</span><span class="nv"> </span><span class="s">assistant</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">strong</span><span class="nv"> </span><span class="s">research</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">writing</span><span class="nv"> </span><span class="s">skills&quot;</span>
 </code></pre></div>
 <h2 id="complete-api-reference">Complete API Reference<a class="headerlink" href="#complete-api-reference" title="Permanent link">&para;</a></h2>
 <p>See the <a href="../reference/#languagepersona">Complete API Reference</a> for full field documentation including:</p>
@@ -1811,135 +1760,82 @@
 <li><strong>LanguagePersonaSpec</strong> - Specification fields</li>
 <li><strong>LanguagePersonaStatus</strong> - Status information</li>
 </ul>
+<h2 id="spec-fields">Spec Fields<a class="headerlink" href="#spec-fields" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tone</code></td>
+<td>string</td>
+<td>Communication style, e.g. <code>"professional"</code>, <code>"concise and direct"</code></td>
+</tr>
+<tr>
+<td><code>personality</code></td>
+<td>string</td>
+<td>Character and behavioural traits, e.g. <code>"methodical, explains reasoning"</code></td>
+</tr>
+<tr>
+<td><code>expertise</code></td>
+<td>string</td>
+<td>Domain knowledge and skills, e.g. <code>"senior Go engineer specialising in distributed systems"</code></td>
+</tr>
+</tbody>
+</table>
+<p>All fields are optional strings.</p>
 <h2 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">&para;</a></h2>
 <h3 id="configuration-injection">Configuration Injection<a class="headerlink" href="#configuration-injection" title="Permanent link">&para;</a></h3>
 <p>When an agent references a persona:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">persona</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">helpful-assistant</span>
 </code></pre></div>
-<p>The operator:
-1. Reads the persona's ConfigMap
-2. Merges persona configuration into <code>/etc/agent/config.yaml</code>
-3. Makes it available to the agent at runtime</p>
+<p>The operator reads the persona resource and merges its fields into <code>/etc/agent/config.yaml</code> under the <code>personas:</code> key:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">personas</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">helpful-assistant</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;professional</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">friendly&quot;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;curious,</span><span class="nv"> </span><span class="s">patient,</span><span class="nv"> </span><span class="s">always</span><span class="nv"> </span><span class="s">explains</span><span class="nv"> </span><span class="s">reasoning</span><span class="nv"> </span><span class="s">step</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">step&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general-purpose</span><span class="nv"> </span><span class="s">assistant</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">strong</span><span class="nv"> </span><span class="s">research</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">writing</span><span class="nv"> </span><span class="s">skills&quot;</span>
+</code></pre></div>
 <h3 id="referencing-a-persona">Referencing a Persona<a class="headerlink" href="#referencing-a-persona" title="Permanent link">&para;</a></h3>
 <p>Agents reference a single persona by name:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">persona</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">base-assistant</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">persona</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">base-assistant</span>
 </code></pre></div>
-<h3 id="persona-inheritance">Persona Inheritance<a class="headerlink" href="#persona-inheritance" title="Permanent link">&para;</a></h3>
-<p>Create persona hierarchies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">technical-writer</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">parentPersona</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">base-assistant</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Focus</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">technical</span><span class="nv"> </span><span class="s">accuracy&quot;</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">precise</span><span class="nv"> </span><span class="s">terminology&quot;</span>
-</code></pre></div>
-<p>Inherits all settings from <code>base-assistant</code> and adds/overrides specific fields.</p>
-<h3 id="tool-preferences">Tool Preferences<a class="headerlink" href="#tool-preferences" title="Permanent link">&para;</a></h3>
-<p>Suggest which tools the agent should prefer:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">toolPreferences</span><span class="p">:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web-search</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">high</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-execution</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">      </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">medium</span>
-</code></pre></div>
-<p>The agent runtime can use these hints to prioritize tool usage.</p>
 <h2 id="common-persona-examples">Common Persona Examples<a class="headerlink" href="#common-persona-examples" title="Permanent link">&para;</a></h2>
 <h3 id="customer-support">Customer Support<a class="headerlink" href="#customer-support" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">support-agent</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;empathetic</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">patient&quot;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;calm,</span><span class="nv"> </span><span class="s">solution-focused,</span><span class="nv"> </span><span class="s">always</span><span class="nv"> </span><span class="s">acknowledges</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">customer&#39;s</span><span class="nv"> </span><span class="s">concern</span><span class="nv"> </span><span class="s">before</span><span class="nv"> </span><span class="s">responding&quot;</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;customer</span><span class="nv"> </span><span class="s">support</span><span class="nv"> </span><span class="s">specialist</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">knowledge</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">common</span><span class="nv"> </span><span class="s">product</span><span class="nv"> </span><span class="s">issues</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">escalation</span><span class="nv"> </span><span class="s">paths&quot;</span>
+</code></pre></div>
+<h3 id="code-reviewer">Code Reviewer<a class="headerlink" href="#code-reviewer" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">support-agent</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-reviewer</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">systemPrompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">customer</span><span class="nv"> </span><span class="s">support</span><span class="nv"> </span><span class="s">specialist.&quot;</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;empathetic</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">patient&quot;</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Always</span><span class="nv"> </span><span class="s">acknowledge</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">customer&#39;s</span><span class="nv"> </span><span class="s">concern&quot;</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Provide</span><span class="nv"> </span><span class="s">step-by-step</span><span class="nv"> </span><span class="s">solutions&quot;</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Escalate</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">human</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">unable</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">resolve&quot;</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="nt">constraints</span><span class="p">:</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Never</span><span class="nv"> </span><span class="s">make</span><span class="nv"> </span><span class="s">promises</span><span class="nv"> </span><span class="s">about</span><span class="nv"> </span><span class="s">timelines&quot;</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Never</span><span class="nv"> </span><span class="s">share</span><span class="nv"> </span><span class="s">internal</span><span class="nv"> </span><span class="s">system</span><span class="nv"> </span><span class="s">details&quot;</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;constructive</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">thorough&quot;</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;detail-oriented,</span><span class="nv"> </span><span class="s">focuses</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">correctness</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">readability,</span><span class="nv"> </span><span class="s">suggests</span><span class="nv"> </span><span class="s">improvements</span><span class="nv"> </span><span class="s">rather</span><span class="nv"> </span><span class="s">than</span><span class="nv"> </span><span class="s">criticising&quot;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;senior</span><span class="nv"> </span><span class="s">software</span><span class="nv"> </span><span class="s">engineer</span><span class="nv"> </span><span class="s">experienced</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">security,</span><span class="nv"> </span><span class="s">performance,</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">style</span><span class="nv"> </span><span class="s">consistency&quot;</span>
 </code></pre></div>
-<h3 id="code-reviewer">Code Reviewer<a class="headerlink" href="#code-reviewer" title="Permanent link">&para;</a></h3>
+<h3 id="data-analyst">Data Analyst<a class="headerlink" href="#data-analyst" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-reviewer</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data-analyst</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">systemPrompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">an</span><span class="nv"> </span><span class="s">expert</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">reviewer.&quot;</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;constructive</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">thorough&quot;</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Check</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">security</span><span class="nv"> </span><span class="s">vulnerabilities&quot;</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Suggest</span><span class="nv"> </span><span class="s">performance</span><span class="nv"> </span><span class="s">improvements&quot;</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Ensure</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">follows</span><span class="nv"> </span><span class="s">style</span><span class="nv"> </span><span class="s">guidelines&quot;</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="nt">capabilities</span><span class="p">:</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-execution</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">static-analysis</span>
-</code></pre></div>
-<h3 id="data-analyst">Data Analyst<a class="headerlink" href="#data-analyst" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data-analyst</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">systemPrompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">data</span><span class="nv"> </span><span class="s">analyst</span><span class="nv"> </span><span class="s">specializing</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">business</span><span class="nv"> </span><span class="s">intelligence.&quot;</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;analytical</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">objective&quot;</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Always</span><span class="nv"> </span><span class="s">validate</span><span class="nv"> </span><span class="s">data</span><span class="nv"> </span><span class="s">sources&quot;</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Provide</span><span class="nv"> </span><span class="s">statistical</span><span class="nv"> </span><span class="s">context&quot;</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Visualize</span><span class="nv"> </span><span class="s">insights</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">possible&quot;</span>
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span><span class="nt">toolPreferences</span><span class="p">:</span>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">database-query</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">      </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">high</span>
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data-visualization</span>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">      </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">high</span>
-</code></pre></div>
-<h2 id="persona-composition">Persona Composition<a class="headerlink" href="#persona-composition" title="Permanent link">&para;</a></h2>
-<p>Build complex personas from simpler ones:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Base persona</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">base-assistant</span>
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">systemPrompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">AI</span><span class="nv"> </span><span class="s">assistant.&quot;</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;professional&quot;</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nn">---</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># Brand voice overlay</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">brand-voice</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;friendly</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">approachable&quot;</span>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">simple</span><span class="nv"> </span><span class="s">language&quot;</span>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Avoid</span><span class="nv"> </span><span class="s">jargon&quot;</span>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="nn">---</span>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="c1"># Compliance rules</span>
-<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguagePersona</span>
-<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">compliance</span>
-<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="w">  </span><span class="nt">constraints</span><span class="p">:</span>
-<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Never</span><span class="nv"> </span><span class="s">share</span><span class="nv"> </span><span class="s">PII&quot;</span>
-<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Log</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">data</span><span class="nv"> </span><span class="s">access&quot;</span>
-<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a><span class="nn">---</span>
-<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a><span class="c1"># Combined agent</span>
-<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
-<a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">customer-agent</span>
-<a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-agent:latest</span>
-<a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a><span class="w">  </span><span class="nt">persona</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">base-assistant</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">tone</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;analytical</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">objective&quot;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;precise,</span><span class="nv"> </span><span class="s">always</span><span class="nv"> </span><span class="s">validates</span><span class="nv"> </span><span class="s">data</span><span class="nv"> </span><span class="s">before</span><span class="nv"> </span><span class="s">drawing</span><span class="nv"> </span><span class="s">conclusions,</span><span class="nv"> </span><span class="s">surfaces</span><span class="nv"> </span><span class="s">uncertainty</span><span class="nv"> </span><span class="s">explicitly&quot;</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;data</span><span class="nv"> </span><span class="s">analyst</span><span class="nv"> </span><span class="s">specialising</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">business</span><span class="nv"> </span><span class="s">intelligence</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">statistical</span><span class="nv"> </span><span class="s">reasoning&quot;</span>
 </code></pre></div>
 <h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1950,9 +1846,8 @@
 <ul>
 <li><strong>Consistent brand voice</strong> across multiple agents</li>
 <li><strong>A/B testing</strong> behavioral variants</li>
-<li><strong>Compliance enforcement</strong> via shared constraint personas</li>
 <li><strong>Role-based templates</strong> (analyst, writer, coder)</li>
-<li><strong>Organizational standards</strong> as base personas</li>
+<li><strong>Organisational standards</strong> as reusable base personas</li>
 </ul>
 
 
