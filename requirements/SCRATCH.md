@@ -92,6 +92,7 @@
 
 ### Technical Debt Tracking
 - **EventManager adoption**: ✅ **COMPLETED** - All controllers migrated to centralized events
+- **Gateway API removal**: ✅ **COMPLETED** (#298) - Dropped HTTPRoute/ReferenceGrant, renamed `ingressConfig→ingress`, `ingressClassName→className`
 - **Status Phase Constants**: Check for remaining hardcoded status strings
 - **Organization-scoped navigation**: Audit settings pages for hardcoded paths
 - **CI Optimization**: ✅ **COMPLETED** - Dashboard builds now use path filtering to reduce CI execution time

@@ -11,8 +11,7 @@ coverage.out
 # Go build artifacts
 # Note: Ruby bin/ directories with entrypoints are tracked
 /bin/
-src/bin/manager
-src/bin/synthesize
+src/bin/
 *.test
 
 # Test synthesis output
