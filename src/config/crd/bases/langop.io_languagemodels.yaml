@@ -76,24 +76,6 @@ spec:
                 description: Endpoint is the API endpoint URL (required for openai-compatible,
                   azure, custom)
                 type: string
-              fallbacks:
-                description: Fallbacks is an ordered list of fallback models to use
-                  if this model fails
-                items:
-                  description: ModelFallbackSpec defines a fallback model
-                  properties:
-                    conditions:
-                      description: Conditions specifies when to use this fallback
-                      items:
-                        type: string
-                      type: array
-                    modelRef:
-                      description: ModelRef is a reference to another LanguageModel
-                      type: string
-                  required:
-                  - modelRef
-                  type: object
-                type: array
               modelName:
                 description: ModelName is the specific model identifier (e.g., "gpt-4",
                   "claude-3-opus")

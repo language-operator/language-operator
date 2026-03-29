@@ -1007,12 +1007,6 @@ spec:
                                 type: array
                             type: object
                         type: object
-                      backoffLimit:
-                        description: BackoffLimit specifies the number of retries
-                          before marking as Failed.
-                        format: int32
-                        minimum: 0
-                        type: integer
                       env:
                         description: Env contains environment variables for the container.
                         items:
@@ -2944,13 +2938,6 @@ spec:
                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                             type: object
                         type: object
-                      restartPolicy:
-                        description: RestartPolicy defines when to restart the pod.
-                        enum:
-                        - Always
-                        - OnFailure
-                        - Never
-                        type: string
                       securityContext:
                         description: SecurityContext holds pod-level security attributes.
                         properties:

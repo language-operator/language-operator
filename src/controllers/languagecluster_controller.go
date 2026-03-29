@@ -1085,7 +1085,7 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 				},
 			},
 		}
-		if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
+		if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && (cluster.Spec.IngressConfig.TLS.Enabled == nil || *cluster.Spec.IngressConfig.TLS.Enabled) {
 			secretName := cluster.Spec.IngressConfig.TLS.SecretName
 			if secretName == "" {
 				if ingress.Annotations == nil {

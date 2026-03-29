@@ -170,16 +170,6 @@ type DeploymentSpec struct {
 	// +optional
 	PodLabels map[string]string `json:"podLabels,omitempty"`
 
-	// RestartPolicy defines when to restart the pod.
-	// +kubebuilder:validation:Enum=Always;OnFailure;Never
-	// +optional
-	RestartPolicy corev1.RestartPolicy `json:"restartPolicy,omitempty"`
-
-	// BackoffLimit specifies the number of retries before marking as Failed.
-	// +kubebuilder:validation:Minimum=0
-	// +optional
-	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
-
 	// InitContainers are additional init containers injected before the main container starts.
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
@@ -259,7 +249,7 @@ type IngressTLSConfig struct {
 	// Enabled controls whether TLS is enabled for webhooks
 	// +kubebuilder:default=true
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// SecretName is the name of the TLS secret (for manual cert management)
 	// If empty, cert-manager will be used if available

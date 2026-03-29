@@ -1887,7 +1887,11 @@ func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent 
 			if cluster.Spec.IngressConfig != nil {
 				// Extract TLS configuration
 				if cluster.Spec.IngressConfig.TLS != nil {
-					tlsEnabled = cluster.Spec.IngressConfig.TLS.Enabled
+					if cluster.Spec.IngressConfig.TLS.Enabled != nil {
+						tlsEnabled = *cluster.Spec.IngressConfig.TLS.Enabled
+					} else {
+						tlsEnabled = true // matches +kubebuilder:default=true
+					}
 				}
 
 				// Prefer new GatewayName field, fall back to deprecated GatewayClassName for backward compatibility
@@ -2047,7 +2051,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 		{
 			cluster := &langopv1alpha1.LanguageCluster{}
 			if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
-				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && cluster.Spec.IngressConfig.TLS.Enabled {
+				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && (cluster.Spec.IngressConfig.TLS.Enabled == nil || *cluster.Spec.IngressConfig.TLS.Enabled) {
 					secretName := cluster.Spec.IngressConfig.TLS.SecretName
 					if secretName == "" {
 						// Use cert-manager annotation for automatic certificate provisioning

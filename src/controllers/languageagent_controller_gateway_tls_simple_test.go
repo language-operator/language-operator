@@ -117,7 +117,8 @@ func TestReconcileHTTPRoute_TLSValidation(t *testing.T) {
 			gen.SetClusterGatewayName("http-only-gateway"),
 			gen.SetClusterGatewayNamespace("gateway-system"),
 		)
-		cluster.Spec.IngressConfig.TLS = &langopv1alpha1.IngressTLSConfig{Enabled: true}
+		tlsEnabled := true
+		cluster.Spec.IngressConfig.TLS = &langopv1alpha1.IngressTLSConfig{Enabled: &tlsEnabled}
 
 		// Create agent
 		agent := gen.LanguageAgent("test-agent", "test-namespace")
