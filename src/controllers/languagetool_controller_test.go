@@ -11,6 +11,7 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -818,4 +819,77 @@ func TestLanguageToolController_PhaseFailedOnConfigMapError(t *testing.T) {
 	if readyCond.Reason != "ConfigMapError" {
 		t.Errorf("Expected Ready reason ConfigMapError, got %q", readyCond.Reason)
 	}
+}
+
+func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("from-rule-tool", "default",
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolPort(8080),
+		gen.SetToolNetworkPolicies([]langopv1alpha1.NetworkRule{
+			{
+				From: &langopv1alpha1.NetworkPeer{
+					Group: "trusted-agents",
+				},
+				Ports: []langopv1alpha1.NetworkPort{
+					{Port: 8080},
+				},
+			},
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	if err := reconciler.reconcileNetworkPolicy(ctx, tool); err != nil {
+		t.Fatalf("reconcileNetworkPolicy failed: %v", err)
+	}
+
+	np := &networkingv1.NetworkPolicy{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, np); err != nil {
+		t.Fatalf("NetworkPolicy not found: %v", err)
+	}
+
+	t.Run("policy_type_ingress_added", func(t *testing.T) {
+		hasIngress := false
+		for _, pt := range np.Spec.PolicyTypes {
+			if pt == networkingv1.PolicyTypeIngress {
+				hasIngress = true
+			}
+		}
+		if !hasIngress {
+			t.Error("expected PolicyTypeIngress to be set when From rules are present")
+		}
+	})
+
+	t.Run("ingress_rule_created", func(t *testing.T) {
+		if len(np.Spec.Ingress) == 0 {
+			t.Fatal("expected at least one ingress rule")
+		}
+		rule := np.Spec.Ingress[0]
+		if len(rule.From) == 0 {
+			t.Fatal("expected From peers in ingress rule")
+		}
+		peer := rule.From[0]
+		if peer.PodSelector == nil {
+			t.Fatal("expected PodSelector for Group-based From rule")
+		}
+		if peer.PodSelector.MatchLabels["langop.io/group"] != "trusted-agents" {
+			t.Errorf("expected langop.io/group=trusted-agents, got %v", peer.PodSelector.MatchLabels)
+		}
+		if len(rule.Ports) == 0 || rule.Ports[0].Port.IntVal != 8080 {
+			t.Error("expected port 8080 in ingress rule")
+		}
+	})
 }

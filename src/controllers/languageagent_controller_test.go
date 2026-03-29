@@ -1406,6 +1406,71 @@ func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
 	})
 }
 
+func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("from-rule-agent", "default",
+		gen.SetAgentNetworkPolicies([]langopv1alpha1.NetworkRule{
+			{
+				From: &langopv1alpha1.NetworkPeer{
+					Group: "monitoring",
+				},
+				Ports: []langopv1alpha1.NetworkPort{
+					{Port: 9090},
+				},
+			},
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:               fakeClient,
+		Scheme:               scheme,
+		Log:                  logr.Discard(),
+		Recorder:             &record.FakeRecorder{},
+		RegistryManager:      &mockRegistryManager{},
+		NetworkPolicyTimeout: 30 * time.Second,
+		NetworkPolicyRetries: 3,
+	}
+
+	ctx := context.Background()
+	if err := reconciler.reconcileNetworkPolicy(ctx, agent); err != nil {
+		t.Fatalf("reconcileNetworkPolicy failed: %v", err)
+	}
+
+	np := &networkingv1.NetworkPolicy{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np); err != nil {
+		t.Fatalf("NetworkPolicy not found: %v", err)
+	}
+
+	t.Run("from_rule_appended_to_ingress", func(t *testing.T) {
+		// Hardcoded rules: trigger, dashboard, agent-to-agent = 3; user From rule = 1; total >= 4
+		if len(np.Spec.Ingress) < 4 {
+			t.Errorf("expected at least 4 ingress rules (3 default + 1 from spec), got %d", len(np.Spec.Ingress))
+		}
+		// Last rule should be the user-defined one
+		last := np.Spec.Ingress[len(np.Spec.Ingress)-1]
+		if len(last.From) == 0 {
+			t.Fatal("expected From peers in user-defined ingress rule")
+		}
+		peer := last.From[0]
+		if peer.PodSelector == nil {
+			t.Fatal("expected PodSelector for Group-based From rule")
+		}
+		if peer.PodSelector.MatchLabels["langop.io/group"] != "monitoring" {
+			t.Errorf("expected langop.io/group=monitoring, got %v", peer.PodSelector.MatchLabels)
+		}
+		if len(last.Ports) == 0 || last.Ports[0].Port.IntVal != 9090 {
+			t.Error("expected port 9090 in user-defined ingress rule")
+		}
+	})
+}
+
 // --- Group 3: Ingress ---
 
 func TestLanguageAgentController_IngressCreation(t *testing.T) {

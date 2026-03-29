@@ -711,6 +711,62 @@ func TestLanguageClusterController_NetworkPolicy(t *testing.T) {
 	assert.NotEmpty(t, np.Spec.Egress, "NetworkPolicy must have at least the default egress rules")
 }
 
+func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("from-cluster",
+		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
+			{
+				From: &langopv1alpha1.NetworkPeer{
+					Group: "external-readers",
+				},
+				Ports: []langopv1alpha1.NetworkPort{
+					{Port: 8000},
+				},
+			},
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name + "-agents", Namespace: cluster.Name}, np)
+	require.NoError(t, err, "NetworkPolicy must exist")
+
+	hasIngress := false
+	for _, pt := range np.Spec.PolicyTypes {
+		if pt == networkingv1.PolicyTypeIngress {
+			hasIngress = true
+		}
+	}
+	assert.True(t, hasIngress, "expected PolicyTypeIngress when From rules are present")
+	require.NotEmpty(t, np.Spec.Ingress, "expected at least one ingress rule")
+
+	peer := np.Spec.Ingress[0].From[0]
+	require.NotNil(t, peer.PodSelector, "expected PodSelector for Group-based From rule")
+	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels["langop.io/group"])
+	require.NotEmpty(t, np.Spec.Ingress[0].Ports)
+	assert.Equal(t, int32(8000), np.Spec.Ingress[0].Ports[0].Port.IntVal)
+}
+
 func TestLanguageClusterController_GatewayEndpoint(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

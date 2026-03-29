@@ -731,6 +731,36 @@ func BuildEgressNetworkPolicy(
 	}
 }
 
+// buildIngressPeerFromNetworkPeer converts a NetworkPeer to a k8s NetworkPolicyPeer for use in
+// ingress rules. DNS is not applicable for ingress sources and is ignored.
+func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace string) networkingv1.NetworkPolicyPeer {
+	p := networkingv1.NetworkPolicyPeer{}
+	if peer.CIDR != "" {
+		p.IPBlock = &networkingv1.IPBlock{CIDR: peer.CIDR}
+	}
+	if peer.Group != "" {
+		p.PodSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"langop.io/group": peer.Group},
+		}
+	}
+	if peer.Service != nil {
+		ns := peer.Service.Namespace
+		if ns == "" {
+			ns = namespace
+		}
+		p.NamespaceSelector = &metav1.LabelSelector{
+			MatchLabels: map[string]string{"kubernetes.io/metadata.name": ns},
+		}
+	}
+	if peer.PodSelector != nil {
+		p.PodSelector = peer.PodSelector
+	}
+	if peer.NamespaceSelector != nil {
+		p.NamespaceSelector = peer.NamespaceSelector
+	}
+	return p
+}
+
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
 	return &p
 }
