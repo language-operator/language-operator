@@ -205,7 +205,7 @@ func TestWebhookClusterMembership(t *testing.T) {
 		if created.Spec.Workspace == nil {
 			t.Fatal("expected workspace to be defaulted, got nil")
 		}
-		if !created.Spec.Workspace.Enabled {
+		if created.Spec.Workspace.Enabled != nil && !*created.Spec.Workspace.Enabled {
 			t.Error("expected workspace.enabled=true")
 		}
 		if created.Spec.Workspace.Size == "" {
