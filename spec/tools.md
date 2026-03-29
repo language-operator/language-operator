@@ -12,8 +12,8 @@ Agents connect to tools over MCP. The operator does not proxy or inspect tool tr
 
 When a `LanguageTool` resource is created, the operator:
 
-1. Watches the tool's Service for readiness
-2. Resolves the tool endpoint: `http://<service-name>.<namespace>.svc.cluster.local:<port>`
+1. Creates a Deployment and Service for the tool image
+2. Resolves the tool endpoint: `http://<tool-name>.<namespace>.svc.cluster.local:<port>`
 3. Syncs the MCP tool schema by calling `tools/list` on the endpoint
 4. Writes the resolved endpoint into the `tools.json` ConfigMap for each agent referencing this tool
 5. Reconciles NetworkPolicy to allow agent pods to reach the tool service
@@ -119,29 +119,37 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
   name: mem0-memory
-  namespace: tools
+  namespace: my-cluster
 spec:
-  # Display name shown in operator UI and logs
-  displayName: "Mem0 Memory"
-
-  # Description of what this tool does
-  description: "Long-term memory storage and retrieval via mem0"
-
-  # Kubernetes Service that exposes the MCP endpoint
-  serviceRef:
-    name: mem0-memory
-    namespace: tools
+  # Container image to run (required)
+  image: myregistry/mem0-mcp:latest
 
   # Port the MCP service listens on (default: 8080)
   port: 8080
 
-  # Whether this tool is available to agents (default: true)
-  enabled: true
+  # Deployment mode: "service" (default, shared) or "sidecar" (per-agent)
+  deploymentMode: service
 
-  # Optional: categories for filtering in UIs
-  categories:
-    - memory
-    - persistence
+  # Pod and container configuration
+  deployment:
+    env:
+      - name: MEM0_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: mem0-secret
+            key: api-key
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Network egress rules (default: full cluster access, no external egress)
+  networkPolicies:
+    - ports:
+        - port: 443
+      to:
+        - cidr: "0.0.0.0/0"
 ```
 
 ## Agent Connection
@@ -161,61 +169,27 @@ The agent reads this file on startup and uses the endpoint URL to make MCP JSON-
 
 ## Deployment Pattern
 
-Tools are typically deployed as standard Kubernetes Deployments in a dedicated namespace (e.g., `tools`). Example:
+The operator creates the Deployment and Service automatically from `spec.image`. A single manifest is all that's needed:
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mem0-memory
-  namespace: tools
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mem0-memory
-  template:
-    metadata:
-      labels:
-        app: mem0-memory
-    spec:
-      containers:
-        - name: mem0
-          image: myregistry/mem0-mcp:latest
-          ports:
-            - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mem0-memory
-  namespace: tools
-spec:
-  selector:
-    app: mem0-memory
-  ports:
-    - port: 8080
-      targetPort: 8080
----
 apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
   name: mem0-memory
-  namespace: tools
+  namespace: my-cluster
 spec:
-  displayName: "Mem0 Memory"
-  description: "Long-term memory storage and retrieval"
-  serviceRef:
-    name: mem0-memory
-    namespace: tools
+  image: myregistry/mem0-mcp:latest
   port: 8080
+  deployment:
+    env:
+      - name: MEM0_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: mem0-secret
+            key: api-key
 ```
+
+The operator reconciles a `Deployment` and a `Service` (both named after the `LanguageTool`) in the same namespace. There is no need to create these resources separately.
 
 ## Compliance Checklist
 
@@ -225,7 +199,7 @@ A compliant tool implementation must:
 - [ ] Respond to `tools/list` with a complete list of available tools and their input schemas
 - [ ] Respond to `tools/call` with the result of invoking the named tool
 - [ ] Expose `GET /health` returning `200 OK` with `{"status":"ok"}` when ready
-- [ ] Be reachable via a Kubernetes Service referenced in the `LanguageTool` CRD
+- [ ] Be packaged as a container image specified in `spec.image` (the operator creates the Service)
 - [ ] Handle errors gracefully with MCP error responses (not HTTP 5xx)
 
 ## Error Responses

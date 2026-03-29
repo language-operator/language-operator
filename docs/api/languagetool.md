@@ -20,12 +20,13 @@ metadata:
   namespace: my-cluster
 spec:
   image: mcp/brave-search:latest
-  env:
-    - name: BRAVE_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: brave-api-key
-          key: api-key
+  deployment:
+    env:
+      - name: BRAVE_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: brave-api-key
+            key: api-key
 ```
 
 ## Complete API Reference
@@ -74,15 +75,17 @@ The operator injects:
 - `MCP_SERVERS` environment variable with the tool's Service URL
 - Tool metadata in `/etc/agent/config.yaml`
 
-### Network Egress
+### Network Policies
 
 Control what external resources tools can access:
 
 ```yaml
 spec:
-  networkEgress:
-    - host: api.brave.com
-      port: 443
+  networkPolicies:
+    - ports:
+        - port: 443
+      to:
+        - cidr: "0.0.0.0/0"
 ```
 
 NetworkPolicy is generated to allow only specified destinations.
@@ -98,15 +101,18 @@ metadata:
   name: web-search
 spec:
   image: mcp/brave-search:latest
-  env:
-    - name: BRAVE_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: brave-api-key
-          key: api-key
-  networkEgress:
-    - host: api.brave.com
-      port: 443
+  deployment:
+    env:
+      - name: BRAVE_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: brave-api-key
+            key: api-key
+  networkPolicies:
+    - ports:
+        - port: 443
+      to:
+        - cidr: "0.0.0.0/0"
 ```
 
 ### Database Access
@@ -118,15 +124,20 @@ metadata:
   name: postgres-client
 spec:
   image: mcp/postgres:latest
-  env:
-    - name: DATABASE_URL
-      valueFrom:
-        secretKeyRef:
-          name: db-credentials
-          key: url
-  networkEgress:
-    - host: postgres.database.svc.cluster.local
-      port: 5432
+  deployment:
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: db-credentials
+            key: url
+  networkPolicies:
+    - ports:
+        - port: 5432
+      to:
+        - podSelector:
+            matchLabels:
+              app: postgres
 ```
 
 ### Custom Tool
@@ -139,11 +150,12 @@ metadata:
 spec:
   image: my-registry/custom-tool:v1.0.0
   port: 8080
-  replicas: 3
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
+  deployment:
+    replicas: 3
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
 ```
 
 ## Tool Discovery
