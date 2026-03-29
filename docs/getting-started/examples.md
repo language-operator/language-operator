@@ -80,12 +80,13 @@ metadata:
   name: web-search
 spec:
   image: mcp/brave-search:latest
-  env:
-    - name: BRAVE_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: brave-api-key
-          key: api-key
+  deployment:
+    env:
+      - name: BRAVE_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: brave-api-key
+            key: api-key
 ---
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent

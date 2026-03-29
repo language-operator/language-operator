@@ -155,11 +155,9 @@ kind: LanguageTool
 metadata:
   name: python-executor
 spec:
-  displayName: Python Executor
-  serviceRef:
-    name: python-executor
-    namespace: tools
+  image: my-registry/python-executor:latest
   port: 8080
+  deploymentMode: service
 ```
 
 Agents connect to tools directly over MCP. The operator does not proxy tool traffic. The full tool contract is defined in [Tool Protocol](tools.md).
