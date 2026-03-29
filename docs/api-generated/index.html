@@ -1385,17 +1385,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agentcontentfilterspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AgentContentFilterSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#agentcostmetrics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1422,17 +1411,6 @@
     <span class="md-ellipsis">
       
         AgentObservabilitySpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#agentratelimitspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AgentRateLimitSpec
       
     </span>
   </a>
@@ -1565,17 +1543,6 @@
     <span class="md-ellipsis">
       
         IngressTLSConfig
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#instructionssource" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        InstructionsSource
       
     </span>
   </a>
@@ -2023,17 +1990,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#safetyconfigspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SafetyConfigSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#secretreference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2188,40 +2144,6 @@
 <li><a href="#languagepersona">LanguagePersona</a></li>
 <li><a href="#languagetool">LanguageTool</a></li>
 </ul>
-<h4 id="agentcontentfilterspec">AgentContentFilterSpec<a class="headerlink" href="#agentcontentfilterspec" title="Permanent link">&para;</a></h4>
-<p>AgentContentFilterSpec defines a content filter</p>
-<p><em>Appears in:</em>
-- <a href="#safetyconfigspec">SafetyConfigSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>type</code> <em>string</em></td>
-<td>Type is the filter type (profanity, pii, toxic, custom)</td>
-<td></td>
-<td>Enum: [profanity pii toxic custom] <br /></td>
-</tr>
-<tr>
-<td><code>action</code> <em>string</em></td>
-<td>Action defines what to do when filter matches (block, warn, log)</td>
-<td>block</td>
-<td>Enum: [block warn log] <br /></td>
-</tr>
-<tr>
-<td><code>pattern</code> <em>string</em></td>
-<td>Pattern is a regex pattern for custom filters</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="agentcostmetrics">AgentCostMetrics<a class="headerlink" href="#agentcostmetrics" title="Permanent link">&para;</a></h4>
 <p>AgentCostMetrics contains agent cost tracking</p>
 <p><em>Appears in:</em>
@@ -2345,40 +2267,6 @@
 <td>LogConversations enables conversation logging</td>
 <td>true</td>
 <td></td>
-</tr>
-</tbody>
-</table>
-<h4 id="agentratelimitspec">AgentRateLimitSpec<a class="headerlink" href="#agentratelimitspec" title="Permanent link">&para;</a></h4>
-<p>AgentRateLimitSpec defines agent-level rate limiting</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>requestsPerMinute</code> <em>integer</em></td>
-<td>RequestsPerMinute limits requests per minute</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>tokensPerMinute</code> <em>integer</em></td>
-<td>TokensPerMinute limits tokens per minute</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>toolCallsPerMinute</code> <em>integer</em></td>
-<td>ToolCallsPerMinute limits tool invocations per minute</td>
-<td></td>
-<td>Optional: {} <br /></td>
 </tr>
 </tbody>
 </table>
@@ -2892,34 +2780,6 @@
 </tr>
 </tbody>
 </table>
-<h4 id="instructionssource">InstructionsSource<a class="headerlink" href="#instructionssource" title="Permanent link">&para;</a></h4>
-<p>InstructionsSource references instructions from a ConfigMap or Secret</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>configMapRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#configmapkeyselector-v1-core">ConfigMapKeySelector</a></em></td>
-<td>ConfigMapRef references a ConfigMap key containing instructions</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>secretRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#secretkeyselector-v1-core">SecretKeySelector</a></em></td>
-<td>SecretRef references a Secret key containing instructions</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="knowledgesourcespec">KnowledgeSourceSpec<a class="headerlink" href="#knowledgesourcespec" title="Permanent link">&para;</a></h4>
 <p>KnowledgeSourceSpec references an external knowledge base</p>
 <p><em>Appears in:</em>
@@ -3073,20 +2933,8 @@
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>goal</code> <em>string</em></td>
-<td>Goal defines the agent's objective (for autonomous agents)</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>instructions</code> <em>string</em></td>
 <td>Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>instructionsFrom</code> <em><a href="#instructionssource">InstructionsSource</a></em></td>
-<td>InstructionsFrom allows referencing instructions from a ConfigMap or Secret</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3107,12 +2955,6 @@
 <td>EventTriggers defines events that trigger the agent (for event-driven mode)</td>
 <td></td>
 <td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>maxIterations</code> <em>integer</em></td>
-<td>MaxIterations limits the number of reasoning/action loops</td>
-<td>50</td>
-<td>Maximum: 1000 <br />Minimum: 1 <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>timeout</code> <em>string</em></td>
@@ -3213,18 +3055,6 @@
 <tr>
 <td><code>observability</code> <em><a href="#agentobservabilityspec">AgentObservabilitySpec</a></em></td>
 <td>Observability defines monitoring and tracing configuration</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>rateLimits</code> <em><a href="#agentratelimitspec">AgentRateLimitSpec</a></em></td>
-<td>RateLimits defines rate limiting for this agent</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>safetyConfig</code> <em><a href="#safetyconfigspec">SafetyConfigSpec</a></em></td>
-<td>SafetyConfig defines safety constraints and guardrails</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -5289,52 +5119,6 @@
 <tr>
 <td><code>maxSurge</code> <em>integer</em></td>
 <td>MaxSurge is the maximum number of pods that can be created above desired replicas</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="safetyconfigspec">SafetyConfigSpec<a class="headerlink" href="#safetyconfigspec" title="Permanent link">&para;</a></h4>
-<p>SafetyConfigSpec defines safety constraints</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>maxToolCallsPerIteration</code> <em>integer</em></td>
-<td>MaxToolCallsPerIteration limits tool calls per reasoning loop</td>
-<td>10</td>
-<td>Minimum: 0 <br />Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>blockedTools</code> <em>string array</em></td>
-<td>BlockedTools lists tools that are explicitly blocked</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>requireApprovalFor</code> <em>string array</em></td>
-<td>RequireApprovalFor lists tools requiring human approval</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>contentFilters</code> <em><a href="#agentcontentfilterspec">AgentContentFilterSpec</a> array</em></td>
-<td>ContentFilters defines content filtering rules</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>maxCostPerExecution</code> <em>float</em></td>
-<td>MaxCostPerExecution limits cost per execution</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
