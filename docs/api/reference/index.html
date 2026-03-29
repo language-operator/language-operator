@@ -3084,9 +3084,9 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>phase</code> <em>string</em></td>
-<td>Phase represents the current phase of the model</td>
+<td>Phase represents the current phase of the model (Ready, Failed)</td>
 <td></td>
-<td>Enum: [Ready Error] <br />Optional: {} <br /></td>
+<td>Enum: [Ready Failed] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
@@ -3202,9 +3202,9 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>phase</code> <em>string</em></td>
-<td>Phase represents the current phase (Ready, NotReady)</td>
+<td>Phase represents the current phase (Ready, Failed)</td>
 <td></td>
-<td>Enum: [Ready NotReady] <br />Optional: {} <br /></td>
+<td>Enum: [Ready Failed] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
