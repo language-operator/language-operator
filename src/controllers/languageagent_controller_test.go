@@ -229,14 +229,18 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, err := reconciler.Reconcile(ctx, ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-		},
-	})
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile adds finalizer and requeues
+	_, err := reconciler.Reconcile(ctx, req)
 	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+
+	// Second reconcile creates resources and updates status
+	_, err = reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
 	// Fetch updated agent
@@ -249,9 +253,9 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 		t.Fatalf("Failed to fetch updated agent: %v", err)
 	}
 
-	// Verify status phase
-	if updatedAgent.Status.Phase != "Running" {
-		t.Errorf("Expected phase 'Running', got '%s'", updatedAgent.Status.Phase)
+	// After reconcile, deployment has 0 ready replicas in fake client → Pending
+	if updatedAgent.Status.Phase != "Pending" {
+		t.Errorf("Expected phase 'Pending', got '%s'", updatedAgent.Status.Phase)
 	}
 
 	// Verify Ready condition
@@ -2655,5 +2659,187 @@ func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
 	}
 	if containerSec.AllowPrivilegeEscalation == nil || *containerSec.AllowPrivilegeEscalation {
 		t.Error("Container SecurityContext.AllowPrivilegeEscalation should be false")
+	}
+}
+
+func TestLanguageAgentController_PhasePending(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "phase-pending-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile adds finalizer, no status written yet
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+
+	// Second reconcile creates Deployment (with 0 ready replicas) → Pending
+	_, err = reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusPending {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusPending, updatedAgent.Status.Phase)
+	}
+}
+
+func TestLanguageAgentController_PhaseRunning(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "phase-running-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// Two reconciles to get past finalizer and create resources
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Simulate the Deployment becoming available: update with ReadyReplicas=1
+	deploy := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	deploy.Status.Replicas = 1
+	deploy.Status.ReadyReplicas = 1
+	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
+		t.Fatalf("Failed to update deployment status: %v", err)
+	}
+
+	// Third reconcile reads the updated deployment status
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Third reconcile failed: %v", err)
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusRunning {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusRunning, updatedAgent.Status.Phase)
+	}
+}
+
+func TestLanguageAgentController_PhaseFailed(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "phase-failed-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Simulate pods crashing: Replicas>0 but ReadyReplicas=0 and DeploymentAvailable=False
+	deploy := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	deploy.Status.Replicas = 1
+	deploy.Status.ReadyReplicas = 0
+	deploy.Status.Conditions = []appsv1.DeploymentCondition{
+		{
+			Type:   appsv1.DeploymentAvailable,
+			Status: corev1.ConditionFalse,
+			Reason: "MinimumReplicasUnavailable",
+		},
+	}
+	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
+		t.Fatalf("Failed to update deployment status: %v", err)
+	}
+
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Third reconcile failed: %v", err)
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusFailed {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
 	}
 }

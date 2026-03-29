@@ -5580,7 +5580,9 @@ spec:
               phase:
                 description: Phase represents the current phase of the agent
                 enum:
+                - Pending
                 - Running
+                - Failed
                 type: string
               readyReplicas:
                 description: ReadyReplicas is the number of agent pods ready

@@ -158,11 +158,21 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Mark Pending on first real reconcile so kubectl get shows something meaningful
+	// before resources are fully provisioned.
+	if cluster.Status.Phase == "" {
+		cluster.Status.Phase = events.PhaseStatusPending
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update cluster phase to Pending")
+		}
+	}
+
 	// Ensure the namespace for this cluster exists
 	if err := r.reconcileNamespace(ctx, cluster); err != nil {
 		log.Error(err, "Failed to reconcile namespace")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile namespace")
+		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 			"NamespaceError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -185,6 +195,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if r.EventManager != nil {
 			r.EventManager.RecordRBACFailed(cluster, err)
 		}
+		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 			"RBACError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -203,6 +214,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			if r.EventManager != nil {
 				r.EventManager.RecordNetworkPolicyFailed(cluster, err)
 			}
+			cluster.Status.Phase = events.PhaseStatusFailed
 			SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
 				"NetworkPolicyError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -225,6 +237,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile gateway")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile gateway")
+		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
 			"GatewayError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -240,6 +253,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, "Failed to reconcile gateway ingress")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile gateway ingress")
+			cluster.Status.Phase = events.PhaseStatusFailed
 			SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
 				"GatewayIngressError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -267,6 +281,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile capacity quota")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile capacity quota")
+		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, "CapacityReady", metav1.ConditionFalse,
 			"CapacityError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -276,9 +291,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// LanguageCluster is now just a logical grouping - no namespace management
-	// Child resources reference the cluster and live in the same namespace
-	cluster.Status.Phase = "Ready"
+	cluster.Status.Phase = events.PhaseStatusReady
 	SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionTrue,
 		"ReconcileSuccess", "LanguageCluster is ready", cluster.Generation)
 

@@ -349,7 +349,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Update status only if something changed
 	statusChanged := false
 
-	// Sync replica counts from owned Deployment status
+	// Sync replica counts and derive phase from Deployment state.
 	existingDeploy := &appsv1.Deployment{}
 	if err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existingDeploy); err == nil {
 		if agent.Status.ActiveReplicas != existingDeploy.Status.Replicas ||
@@ -358,12 +358,33 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			agent.Status.ReadyReplicas = existingDeploy.Status.ReadyReplicas
 			statusChanged = true
 		}
+
+		newPhase := events.PhaseStatusPending
+		if existingDeploy.Status.ReadyReplicas > 0 {
+			newPhase = events.PhaseStatusRunning
+		} else if existingDeploy.Status.Replicas > 0 {
+			// Pods exist but none ready — check Deployment conditions to distinguish
+			// a transient rollout (Pending) from a crash/config error (Failed).
+			for _, c := range existingDeploy.Status.Conditions {
+				if c.Type == appsv1.DeploymentAvailable &&
+					c.Status == corev1.ConditionFalse &&
+					c.Reason == "MinimumReplicasUnavailable" {
+					newPhase = events.PhaseStatusFailed
+					break
+				}
+			}
+		}
+		if agent.Status.Phase != newPhase {
+			agent.Status.Phase = newPhase
+			statusChanged = true
+		}
+	} else if apierrors.IsNotFound(err) {
+		if agent.Status.Phase != events.PhaseStatusPending {
+			agent.Status.Phase = events.PhaseStatusPending
+			statusChanged = true
+		}
 	}
 
-	if agent.Status.Phase != events.PhaseStatusRunning {
-		agent.Status.Phase = events.PhaseStatusRunning
-		statusChanged = true
-	}
 	if SetCondition(&agent.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation) {
 		statusChanged = true
 	}

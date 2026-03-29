@@ -9,6 +9,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -67,8 +68,8 @@ func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
 	updatedCluster := &langopv1alpha1.LanguageCluster{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updatedCluster))
 
-	if updatedCluster.Status.Phase != "Ready" {
-		t.Errorf("Expected phase 'Ready', got '%s'", updatedCluster.Status.Phase)
+	if updatedCluster.Status.Phase != events.PhaseStatusReady {
+		t.Errorf("Expected phase %q, got '%s'", events.PhaseStatusReady, updatedCluster.Status.Phase)
 	}
 	if !controllerutil.ContainsFinalizer(updatedCluster, FinalizerName) {
 		t.Error("Expected finalizer to be added")

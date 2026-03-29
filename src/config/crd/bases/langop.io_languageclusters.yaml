@@ -5624,7 +5624,9 @@ spec:
               phase:
                 description: Phase of the cluster
                 enum:
+                - Pending
                 - Ready
+                - Failed
                 type: string
             type: object
         type: object
