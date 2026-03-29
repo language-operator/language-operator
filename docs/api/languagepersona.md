@@ -46,8 +46,7 @@ When an agent references a persona:
 
 ```yaml
 spec:
-  personaRefs:
-    - name: helpful-assistant
+  persona: helpful-assistant
 ```
 
 The operator:
@@ -55,19 +54,14 @@ The operator:
 2. Merges persona configuration into `/etc/agent/config.yaml`
 3. Makes it available to the agent at runtime
 
-### Multiple Personas
+### Referencing a Persona
 
-Agents can reference multiple personas:
+Agents reference a single persona by name:
 
 ```yaml
 spec:
-  personaRefs:
-    - name: base-assistant
-    - name: brand-voice
-    - name: compliance-rules
+  persona: base-assistant
 ```
-
-Personas are merged in order (later ones override earlier settings).
 
 ### Persona Inheritance
 
@@ -205,10 +199,7 @@ metadata:
   name: customer-agent
 spec:
   image: my-agent:latest
-  personaRefs:
-    - name: base-assistant
-    - name: brand-voice
-    - name: compliance
+  persona: base-assistant
 ```
 
 ## Related Resources

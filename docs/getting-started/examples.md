@@ -26,7 +26,7 @@ metadata:
   name: multi-model-agent
 spec:
   image: your-agent:latest
-  modelRefs:
+  models:
     - name: claude-sonnet  # Fast, balanced
     - name: claude-opus    # Highest quality
     - name: claude-haiku   # Fastest, cheapest
@@ -62,10 +62,9 @@ metadata:
   name: assistant-agent
 spec:
   image: your-agent:latest
-  modelRefs:
+  models:
     - name: claude-sonnet
-  personaRefs:
-    - name: helpful-assistant
+  persona: helpful-assistant
 ```
 
 The persona is injected into `/etc/agent/config.yaml` in the agent pod.
@@ -94,13 +93,13 @@ metadata:
   name: research-agent
 spec:
   image: your-agent:latest
-  modelRefs:
+  models:
     - name: claude-sonnet
-  toolRefs:
+  tools:
     - name: web-search
 ```
 
-The operator injects `TOOL_ENDPOINTS=http://web-search:8080` into the agent.
+The operator injects `MCP_SERVERS=http://web-search:8080` into the agent.
 
 ### Custom Model Provider
 
@@ -152,7 +151,7 @@ spec:
   image: your-report-agent:latest
   executionMode: scheduled
   schedule: "0 9 * * *"  # Daily at 9 AM
-  modelRefs:
+  models:
     - name: claude-sonnet
   instructions: |
     Generate a daily summary report and email it to the team.

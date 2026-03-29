@@ -64,6 +64,7 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINTS` | Comma-separated LiteLLM proxy URLs, one per `modelRef` (e.g. `http://claude-sonnet.mynamespace.svc.cluster.local:8000`) |
 | `LLM_MODEL` | Comma-separated model names corresponding to each proxy URL in `MODEL_ENDPOINTS` |
+| `MCP_SERVERS` | Comma-separated MCP tool server URLs for each referenced LanguageTool (only injected when at least one service-mode tool is resolved) |
 
 Additional environment variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged.
 

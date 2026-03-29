@@ -62,7 +62,7 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │  │  · LanguageTool      │    │  Env vars injected:          │   │
 │  │  · LanguageModel     │    │  · AGENT_NAME, AGENT_UUID    │   │
 │  │  · LanguageCluster   │    │  · MODEL_ENDPOINTS           │   │
-│  └──────────────────────┘    │  · TOOL_ENDPOINTS            │   │
+│  └──────────────────────┘    │  · MCP_SERVERS            │   │
 │                               └──────────────────────────────┘   │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 │  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
@@ -90,7 +90,7 @@ spec:
   image: myregistry/agent-runtime:v1.0.0
   port: 18789                               # defaults to 8080
 
-  modelRefs:
+  models:
     - name: claude-sonnet
 
   initContainers:
@@ -213,8 +213,8 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
 - `MODEL_ENDPOINTS` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
-- `LLM_MODEL` — comma-separated model names registered in the proxy (from all `modelRefs`)
-- `TOOL_ENDPOINTS` — resolved MCP tool server URLs
+- `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
+- `MCP_SERVERS` — resolved MCP tool server URLs
 - ClusterIP Service on `spec.port`
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic

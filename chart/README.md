@@ -218,10 +218,10 @@ metadata:
 spec:
   image: ghcr.io/language-operator/language-agent:latest
   goal: "Answer questions about Kubernetes"
-  modelRefs:
+  models:
   - name: claude-sonnet
     role: primary
-  toolRefs:
+  tools:
   - name: kubectl-tool
   executionMode: interactive
 ```

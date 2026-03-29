@@ -156,8 +156,8 @@ The operator automatically injects configuration into agent pods:
 | Instructions | `spec.instructions` or `spec.instructionsFrom` | `/etc/agent/instructions.txt` |
 | Config | Assembled from personas, models, tools | `/etc/agent/config.yaml` |
 | Model Endpoint | Shared proxy URL | `MODEL_ENDPOINTS` env var |
-| Model Names | All `modelRefs` | `LLM_MODEL` env var |
-| Tool Endpoints | All `toolRefs` | `TOOL_ENDPOINTS` env var |
+| Model Names | All `models` | `LLM_MODEL` env var |
+| Tool Endpoints | All `tools` | `MCP_SERVERS` env var |
 | Agent Identity | Metadata | `AGENT_NAME`, `AGENT_NAMESPACE`, etc. |
 
 See [Agent Runtime Contract](../architecture/agents.md) for complete injection spec.
@@ -177,7 +177,7 @@ Agents can reference models, tools, and personas in other namespaces:
 
 ```yaml
 spec:
-  modelRefs:
+  models:
     - name: claude-sonnet
       namespace: shared-models  # Cross-namespace reference
 ```
@@ -188,15 +188,13 @@ Agents can reference multiple models, tools, or personas:
 
 ```yaml
 spec:
-  modelRefs:
+  models:
     - name: claude-sonnet
     - name: claude-haiku
-  toolRefs:
+  tools:
     - name: web-search
     - name: email-client
-  personaRefs:
-    - name: base-assistant
-    - name: brand-voice
+  persona: base-assistant
 ```
 
 The operator merges all referenced configurations.

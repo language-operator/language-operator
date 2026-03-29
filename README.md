@@ -93,7 +93,7 @@ metadata:
 spec:
   image: ghcr.io/openclaw/openclaw:latest
   port: 18789
-  modelRefs:
+  models:
     - name: claude-sonnet
   initContainers:
     - name: openclaw-adapter

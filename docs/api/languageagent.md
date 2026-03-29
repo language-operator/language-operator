@@ -21,7 +21,7 @@ metadata:
   namespace: my-cluster
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  modelRefs:
+  models:
     - name: claude-sonnet
   instructions: |
     You are a helpful AI assistant.
@@ -57,7 +57,7 @@ Environment variables:
 
 - `MODEL_ENDPOINTS` - Shared proxy URL
 - `LLM_MODEL` - Comma-separated model names
-- `TOOL_ENDPOINTS` - MCP tool server URLs
+- `MCP_SERVERS` - MCP tool server URLs
 - `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID` - Identity
 
 ### Resource Management

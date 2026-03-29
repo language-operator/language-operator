@@ -66,12 +66,12 @@ When an agent references a tool:
 
 ```yaml
 spec:
-  toolRefs:
+  tools:
     - name: web-search
 ```
 
 The operator injects:
-- `TOOL_ENDPOINTS` environment variable with the tool's Service URL
+- `MCP_SERVERS` environment variable with the tool's Service URL
 - Tool metadata in `/etc/agent/config.yaml`
 
 ### Network Egress

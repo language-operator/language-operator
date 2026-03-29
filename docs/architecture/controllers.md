@@ -61,9 +61,9 @@ Located in `src/controllers/utils.go`:
 The controller assembles configuration from:
 
 - `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret ref)
-- Referenced `LanguagePersona` resources (via `personaRefs`)
-- Referenced `LanguageModel` endpoints (via `modelRefs`)
-- Referenced `LanguageTool` endpoints (via `toolRefs`)
+- Referenced `LanguagePersona` resource (via `persona`)
+- Referenced `LanguageModel` endpoints (via `models`)
+- Referenced `LanguageTool` endpoints (via `tools`)
 - Agent metadata (name, namespace, UUID)
 
 **Environment Variables Injected:**
@@ -72,8 +72,8 @@ The controller assembles configuration from:
 - `AGENT_MODE` - from `spec.executionMode`
 - `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
 - `MODEL_ENDPOINTS` - shared proxy URL (`http://proxy.<namespace>.svc.cluster.local:8000`)
-- `LLM_MODEL` - comma-separated list of model names from `modelRefs`
-- `TOOL_ENDPOINTS` - resolved MCP tool server URLs
+- `LLM_MODEL` - comma-separated list of model names from `models`
+- `MCP_SERVERS` - resolved MCP tool server URLs
 
 **Volume Mounts:**
 

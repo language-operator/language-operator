@@ -175,16 +175,15 @@ spec:
     You are a data analyst. Analyze CSV files and generate insights.
     Focus on trends, anomalies, and actionable recommendations.
 
-  personaRefs:
-    - name: analytical-persona
+  persona: analytical-persona
 
   executionMode: autonomous
 
-  toolRefs:
+  tools:
     - name: mem0-memory
     - name: python-executor
 
-  modelRefs:
+  models:
     - name: claude-sonnet
 
   workspace:
