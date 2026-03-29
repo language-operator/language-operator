@@ -119,22 +119,12 @@ agent:
   clusterUUID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 
 # Persona configuration — merged in order if multiple are specified.
-# Each entry is the full spec of the referenced LanguagePersona resource.
+# Each entry reflects the tone/personality/expertise fields of the referenced LanguagePersona.
 personas:
   - name: analytical-persona
-    displayName: Analytical Persona
-    description: Precise, data-driven, cites sources
-    systemPrompt: You are an analytical assistant. Be precise and always cite data.
     tone: professional
-    language: en
-    instructions:
-      - Always cite data sources
-      - Use structured output
-    capabilities:
-      - data analysis
-      - statistical reasoning
-    limitations:
-      - Do not speculate without data
+    personality: "precise, data-driven, always cites sources before drawing conclusions"
+    expertise: "data analyst specialising in statistical reasoning and business intelligence"
 
 # Tool endpoints — keyed by tool name, resolved to in-cluster MCP service URLs.
 tools:

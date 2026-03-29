@@ -130,7 +130,7 @@ If `initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `
 
 ### LanguagePersona
 
-Behavioral configuration for agents. Defines system prompt, tone, instructions, capabilities, and constraints. The operator assembles referenced personas into `/etc/agent/config.yaml` under the `personas:` key.
+Behavioral configuration for agents. Defines tone, personality, and expertise. The operator assembles referenced personas into `/etc/agent/config.yaml` under the `personas:` key.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -138,11 +138,9 @@ kind: LanguagePersona
 metadata:
   name: professional-tone
 spec:
-  systemPrompt: "You are a professional assistant. Be concise and precise."
   tone: professional
-  instructions:
-    - Always cite sources
-    - Use structured output
+  personality: "concise and precise, always uses structured output"
+  expertise: "general-purpose assistant"
 ```
 
 ### LanguageTool
