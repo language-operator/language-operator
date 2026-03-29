@@ -2109,7 +2109,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tbody>
 <tr>
 <td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled controls whether an Ingress/HTTPRoute is created for the gateway.<br />Defaults to true when cluster.spec.domain is set.</td>
+<td>Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2122,7 +2122,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tbody>
 </table>
 <h4 id="ingressconfig">IngressConfig<a class="headerlink" href="#ingressconfig" title="Permanent link">&para;</a></h4>
-<p>IngressConfig defines ingress/gateway configuration</p>
+<p>IngressConfig defines ingress configuration</p>
 <p><em>Appears in:</em>
 - <a href="#languageclusterspec">LanguageClusterSpec</a></p>
 <table>
@@ -2142,26 +2142,8 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>gatewayName</code> <em>string</em></td>
-<td>GatewayName specifies the Gateway resource name to use<br />If empty, will attempt auto-detection or fall back to Ingress</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>gatewayNamespace</code> <em>string</em></td>
-<td>GatewayNamespace specifies the namespace of the Gateway resource<br />If empty, defaults to the same namespace as the LanguageCluster</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>gatewayClassName</code> <em>string</em></td>
-<td>Deprecated: Use GatewayName instead. This field is treated as a Gateway resource name<br />(not a GatewayClass) for backward compatibility. The operator emits a warning when this<br />field is used without GatewayName set. Planned for removal in v1beta1.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>ingressClassName</code> <em>string</em></td>
-<td>IngressClassName specifies the Ingress class to use for fallback<br />Only used when Gateway API is not available</td>
+<td><code>className</code> <em>string</em></td>
+<td>ClassName specifies the IngressClass to use (maps to spec.ingressClassName on the Ingress object).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2438,8 +2420,8 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>ingressConfig</code> <em><a href="#ingressconfig">IngressConfig</a></em></td>
-<td>IngressConfig defines ingress/gateway configuration for the cluster</td>
+<td><code>ingress</code> <em><a href="#ingressconfig">IngressConfig</a></em></td>
+<td>Ingress defines ingress configuration for the cluster</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
