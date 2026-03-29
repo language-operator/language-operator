@@ -1627,17 +1627,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#modelfallbackspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ModelFallbackSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#modelreference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2659,12 +2648,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>5m</td>
 <td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
 </tr>
-<tr>
-<td><code>fallbacks</code> <em><a href="#modelfallbackspec">ModelFallbackSpec</a> array</em></td>
-<td>Fallbacks is an ordered list of fallback models to use if this model fails</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
 </tbody>
 </table>
 <h4 id="languagemodelstatus">LanguageModelStatus<a class="headerlink" href="#languagemodelstatus" title="Permanent link">&para;</a></h4>
@@ -2998,34 +2981,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tr>
 <td><code>unavailableReplicas</code> <em>integer</em></td>
 <td>UnavailableReplicas is the number of pods targeted by this LanguageTool that are unavailable</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="modelfallbackspec">ModelFallbackSpec<a class="headerlink" href="#modelfallbackspec" title="Permanent link">&para;</a></h4>
-<p>ModelFallbackSpec defines a fallback model</p>
-<p><em>Appears in:</em>
-- <a href="#languagemodelspec">LanguageModelSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>modelRef</code> <em>string</em></td>
-<td>ModelRef is a reference to another LanguageModel</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>conditions</code> <em>string array</em></td>
-<td>Conditions specifies when to use this fallback</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
