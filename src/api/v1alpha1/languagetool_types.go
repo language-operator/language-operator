@@ -77,11 +77,6 @@ type LanguageToolSpec struct {
 	// +kubebuilder:default=8080
 	Port int32 `json:"port,omitempty"`
 
-	// Replicas is the number of pod replicas to run
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=1
-	Replicas *int32 `json:"replicas,omitempty"`
-
 	// Deployment groups Kubernetes-specific pod and container configuration.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`

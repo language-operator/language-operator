@@ -676,8 +676,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		}
 
 		replicas := int32(1)
-		if agent.Spec.Replicas != nil {
-			replicas = *agent.Spec.Replicas
+		if agent.Spec.Deployment.Replicas != nil {
+			replicas = *agent.Spec.Deployment.Replicas
 		}
 
 		// Build container list starting with the agent

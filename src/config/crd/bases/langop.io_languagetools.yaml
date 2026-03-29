@@ -5505,12 +5505,6 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
-              replicas:
-                default: 1
-                description: Replicas is the number of pod replicas to run
-                format: int32
-                minimum: 0
-                type: integer
               type:
                 default: mcp
                 description: Type specifies the tool protocol type (e.g., "mcp", "openapi")

@@ -35,12 +35,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	Timeout string `json:"timeout,omitempty"`
 
-	// Replicas is the number of agent instances to run
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=1
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty"`
-
 	// Workspace defines persistent storage for the agent
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`

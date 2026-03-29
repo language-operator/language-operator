@@ -322,8 +322,8 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 
 		// Set deployment spec
 		replicas := int32(1)
-		if tool.Spec.Replicas != nil {
-			replicas = *tool.Spec.Replicas
+		if tool.Spec.Deployment.Replicas != nil {
+			replicas = *tool.Spec.Deployment.Replicas
 		}
 
 		deployment.Spec = appsv1.DeploymentSpec{
@@ -630,8 +630,8 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 	// Determine phase based on deployment status
 	desiredReplicas := int32(1)
-	if tool.Spec.Replicas != nil {
-		desiredReplicas = *tool.Spec.Replicas
+	if tool.Spec.Deployment.Replicas != nil {
+		desiredReplicas = *tool.Spec.Deployment.Replicas
 	}
 
 	// Check if deployment is updating

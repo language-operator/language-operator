@@ -5536,12 +5536,6 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
-              replicas:
-                default: 1
-                description: Replicas is the number of agent instances to run
-                format: int32
-                minimum: 0
-                type: integer
               timeout:
                 default: 10m
                 description: Timeout is the maximum execution time (e.g., "10m", "1h")
