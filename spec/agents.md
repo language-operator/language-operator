@@ -14,7 +14,7 @@ The operator mounts exactly two files into every agent container:
 
 | Path | Content | Source |
 |------|---------|--------|
-| `/etc/agent/instructions.txt` | Task instructions (plain text) | `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret reference) |
+| `/etc/agent/instructions.txt` | Task instructions (plain text) | `spec.instructions` (inline string) |
 | `/etc/agent/config.yaml` | Structured agent configuration (YAML) | Assembled by the operator from personas, tools, models, and agent metadata |
 
 Files are read-only. The operator reconciles them on every change to the LanguageAgent spec or referenced resources.
@@ -58,14 +58,14 @@ The operator injects the following environment variables into every agent contai
 |----------|-------|
 | `AGENT_NAME` | `metadata.name` of the LanguageAgent |
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
-| `AGENT_UUID` | Stable UUID assigned to this agent (from `spec.uuid` or generated) |
-| `AGENT_MODE` | Execution mode: `autonomous`, `interactive`, `scheduled`, or `event-driven` |
-| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to (empty if none) |
-| `AGENT_CLUSTER_UUID` | Stable UUID of the LanguageCluster (empty if none) |
+| `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
+| `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
+| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
+| `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINTS` | Comma-separated LiteLLM proxy URLs, one per `modelRef` (e.g. `http://claude-sonnet.mynamespace.svc.cluster.local:8000`) |
 | `LLM_MODEL` | Comma-separated model names corresponding to each proxy URL in `MODEL_ENDPOINTS` |
 
-Additional environment variables from `spec.env` and `spec.envFrom` are passed through unchanged.
+Additional environment variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged.
 
 ### Networking
 
@@ -158,48 +158,46 @@ metadata:
   namespace: default
 spec:
   image: myregistry/agent-runtime:python-v1.0.0
-  imagePullPolicy: Always
   port: 8080
 
   instructions: |
     You are a data analyst. Analyze CSV files and generate insights.
     Focus on trends, anomalies, and actionable recommendations.
 
-  personaRefs:
-    - name: analytical-persona
+  persona: analytical-persona
 
   executionMode: autonomous
 
-  toolRefs:
+  tools:
     - name: mem0-memory
     - name: python-executor
 
-  modelRefs:
+  models:
     - name: claude-sonnet
 
   workspace:
     size: 10Gi
     mountPath: /workspace   # agents can read/write freely; survives restarts
 
-  livenessProbe:
-    httpGet:
-      path: /health
-      port: 8080
-    initialDelaySeconds: 10
-    periodSeconds: 30
-
-  readinessProbe:
-    httpGet:
-      path: /health
-      port: 8080
-    initialDelaySeconds: 5
-    periodSeconds: 10
-
-  replicas: 1
-  resources:
-    limits:
-      memory: 1Gi
-      cpu: 500m
+  deployment:
+    imagePullPolicy: Always
+    replicas: 1
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
 ```
 
 ### Init Container Pattern (Config Adapters)

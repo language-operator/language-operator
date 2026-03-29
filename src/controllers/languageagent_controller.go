@@ -717,6 +717,11 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return err
 	}
 
+	cluster := &langopv1alpha1.LanguageCluster{}
+	if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err != nil {
+		return fmt.Errorf("failed to get cluster %s: %w", agent.Namespace, err)
+	}
+
 	labels["langop.io/cluster"] = agent.Namespace
 
 	deployment := &appsv1.Deployment{
@@ -743,7 +748,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				Name:            "agent",
 				Image:           agent.Spec.Image,
 				ImagePullPolicy: agent.Spec.Deployment.ImagePullPolicy,
-				Env:             r.buildAgentEnv(ctx, agent, modelURLs, modelNames, toolURLs),
+				Env:             r.buildAgentEnv(ctx, agent, cluster, modelURLs, modelNames, toolURLs),
 				EnvFrom:         agent.Spec.Deployment.EnvFrom,
 				Resources:       agent.Spec.Deployment.Resources,
 				LivenessProbe:   agent.Spec.Deployment.LivenessProbe,
@@ -752,14 +757,14 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			},
 		}
 
-		// Inject resolved model/tool env vars into user-specified init containers
-		// so adapters (e.g. openclaw-adapter) can configure the agent runtime
-		// to route through the operator-managed LiteLLM proxies.
+		// Inject operator-managed env vars into user-specified init containers.
+		// Per spec/agents.md, all contracted env vars must be present in every
+		// container including init containers.
 		userInitContainers := make([]corev1.Container, len(agent.Spec.Deployment.InitContainers))
 		copy(userInitContainers, agent.Spec.Deployment.InitContainers)
-		modelEnv := r.buildModelEnv(modelURLs, modelNames)
+		agentEnv := r.buildAgentEnv(ctx, agent, cluster, modelURLs, modelNames, toolURLs)
 		for i := range userInitContainers {
-			userInitContainers[i].Env = append(modelEnv, userInitContainers[i].Env...)
+			userInitContainers[i].Env = append(agentEnv, userInitContainers[i].Env...)
 		}
 
 		// User-specified init containers run before operator-managed sidecar containers
@@ -1079,27 +1084,7 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	return toolURLs, nil
 }
 
-// buildModelEnv returns the minimal env vars needed to reach operator-managed
-// LiteLLM proxies. Injected into user-specified init containers so adapters
-// can configure the agent runtime without connecting to model APIs directly.
-func (r *LanguageAgentReconciler) buildModelEnv(modelURLs []string, modelNames []string) []corev1.EnvVar {
-	var env []corev1.EnvVar
-	if len(modelURLs) > 0 {
-		env = append(env, corev1.EnvVar{
-			Name:  "MODEL_ENDPOINTS",
-			Value: strings.Join(modelURLs, ","),
-		})
-	}
-	if len(modelNames) > 0 {
-		env = append(env, corev1.EnvVar{
-			Name:  "LLM_MODEL",
-			Value: strings.Join(modelNames, ","),
-		})
-	}
-	return env
-}
-
-func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, modelURLs []string, modelNames []string, toolURLs []string) []corev1.EnvVar {
+func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, modelURLs []string, modelNames []string, toolURLs []string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "AGENT_NAME",
@@ -1109,6 +1094,25 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Name:  "AGENT_NAMESPACE",
 			Value: agent.Namespace,
 		},
+		{
+			Name:  "AGENT_UUID",
+			Value: agent.Status.UUID,
+		},
+		{
+			Name:  "AGENT_CLUSTER_NAME",
+			Value: cluster.Name,
+		},
+		{
+			Name:  "AGENT_CLUSTER_UUID",
+			Value: string(cluster.UID),
+		},
+	}
+
+	if agent.Spec.ExecutionMode != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AGENT_MODE",
+			Value: agent.Spec.ExecutionMode,
+		})
 	}
 
 	// Pass through OpenTelemetry collector endpoint from operator environment.

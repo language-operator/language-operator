@@ -29,6 +29,12 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
+	// ExecutionMode defines how the agent operates.
+	// Injected as AGENT_MODE into the agent container.
+	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
+	// +optional
+	ExecutionMode string `json:"executionMode,omitempty"`
+
 	// Timeout is the maximum execution time (e.g., "10m", "1h")
 	// +kubebuilder:validation:Pattern=`^[0-9]+(ns|us|µs|ms|s|m|h)$`
 	// +kubebuilder:default="10m"
