@@ -543,6 +543,34 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 		tool.Spec.NetworkPolicies,
 	)
 
+	// Wire user-defined ingress rules from spec.networkPolicies[].from
+	var ingressRules []networkingv1.NetworkPolicyIngressRule
+	for _, rule := range tool.Spec.NetworkPolicies {
+		if rule.From == nil {
+			continue
+		}
+		ingressRule := networkingv1.NetworkPolicyIngressRule{
+			From: []networkingv1.NetworkPolicyPeer{
+				buildIngressPeerFromNetworkPeer(rule.From, tool.Namespace),
+			},
+		}
+		for _, p := range rule.Ports {
+			protocol := corev1.Protocol(p.Protocol)
+			if protocol == "" {
+				protocol = corev1.ProtocolTCP
+			}
+			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: protocolPtr(protocol),
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
+			})
+		}
+		ingressRules = append(ingressRules, ingressRule)
+	}
+	if len(ingressRules) > 0 {
+		networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
+		networkPolicy.Spec.Ingress = ingressRules
+	}
+
 	// Create or update the NetworkPolicy with owner reference
 	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, tool, networkPolicy)
 }

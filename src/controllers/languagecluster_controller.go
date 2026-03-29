@@ -572,6 +572,35 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 		}
 	}
 
+	// Wire user-defined ingress rules from spec.networkPolicies[].from
+	var ingressRules []networkingv1.NetworkPolicyIngressRule
+	for _, rule := range cluster.Spec.NetworkPolicies {
+		if rule.From == nil {
+			continue
+		}
+		ingressRule := networkingv1.NetworkPolicyIngressRule{
+			From: []networkingv1.NetworkPolicyPeer{
+				buildIngressPeerFromNetworkPeer(rule.From, namespace),
+			},
+		}
+		for _, port := range rule.Ports {
+			protocol := corev1.ProtocolTCP
+			if port.Protocol != "" {
+				protocol = corev1.Protocol(port.Protocol)
+			}
+			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: &protocol,
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+			})
+		}
+		ingressRules = append(ingressRules, ingressRule)
+	}
+
+	policyTypes := []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
+	if len(ingressRules) > 0 {
+		policyTypes = append(policyTypes, networkingv1.PolicyTypeIngress)
+	}
+
 	// Create NetworkPolicy
 	networkPolicy := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -590,10 +619,9 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 					"langop.io/cluster": cluster.Name,
 				},
 			},
-			PolicyTypes: []networkingv1.PolicyType{
-				networkingv1.PolicyTypeEgress,
-			},
-			Egress: egressRules,
+			PolicyTypes: policyTypes,
+			Egress:      egressRules,
+			Ingress:     ingressRules,
 		},
 	}
 

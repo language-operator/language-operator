@@ -21,6 +21,7 @@ test/synthesis_results.json
 values.local.yaml
 
 # Development Environment
+.claude/worktrees/
 components/dashboard/docker-compose*.yml
 components/dashboard/.kube/
 .claude/hooks/node_modules/
@@ -32,3 +33,6 @@ node_modules/
 # MkDocs
 site/
 docs/api-generated.md
+
+# Python
+__pycache__
