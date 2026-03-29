@@ -36,18 +36,10 @@ type LanguageAgentSpec struct {
 	// +optional
 	Personas []PersonaReference `json:"personas,omitempty"`
 
-	// Goal defines the agent's objective (for autonomous agents)
-	// +optional
-	Goal string `json:"goal,omitempty"`
-
 	// Instructions provides system instructions for the agent.
 	// Mounted at /etc/agent/instructions.txt if set.
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
-
-	// InstructionsFrom allows referencing instructions from a ConfigMap or Secret
-	// +optional
-	InstructionsFrom *InstructionsSource `json:"instructionsFrom,omitempty"`
 
 	// ExecutionMode defines how the agent operates
 	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
@@ -64,13 +56,6 @@ type LanguageAgentSpec struct {
 	// EventTriggers defines events that trigger the agent (for event-driven mode)
 	// +optional
 	EventTriggers []EventTriggerSpec `json:"eventTriggers,omitempty"`
-
-	// MaxIterations limits the number of reasoning/action loops
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=1000
-	// +kubebuilder:default=50
-	// +optional
-	MaxIterations *int32 `json:"maxIterations,omitempty"`
 
 	// Timeout is the maximum execution time (e.g., "10m", "1h")
 	// +kubebuilder:validation:Pattern=`^[0-9]+(ns|us|µs|ms|s|m|h)$`
@@ -147,14 +132,6 @@ type LanguageAgentSpec struct {
 	// Observability defines monitoring and tracing configuration
 	// +optional
 	Observability *AgentObservabilitySpec `json:"observability,omitempty"`
-
-	// RateLimits defines rate limiting for this agent
-	// +optional
-	RateLimits *AgentRateLimitSpec `json:"rateLimits,omitempty"`
-
-	// SafetyConfig defines safety constraints and guardrails
-	// +optional
-	SafetyConfig *SafetyConfigSpec `json:"safetyConfig,omitempty"`
 
 	// Workspace defines persistent storage for the agent
 	// +optional
@@ -235,17 +212,6 @@ type PersonaReference struct {
 	Name string `json:"name"`
 }
 
-// InstructionsSource references instructions from a ConfigMap or Secret
-type InstructionsSource struct {
-	// ConfigMapRef references a ConfigMap key containing instructions
-	// +optional
-	ConfigMapRef *corev1.ConfigMapKeySelector `json:"configMapRef,omitempty"`
-
-	// SecretRef references a Secret key containing instructions
-	// +optional
-	SecretRef *corev1.SecretKeySelector `json:"secretRef,omitempty"`
-}
-
 // EventTriggerSpec defines an event trigger
 type EventTriggerSpec struct {
 	// Type is the event type (webhook, kubernetes-event, message-queue)
@@ -280,62 +246,6 @@ type AgentObservabilitySpec struct {
 	// LogConversations enables conversation logging
 	// +kubebuilder:default=true
 	LogConversations bool `json:"logConversations,omitempty"`
-}
-
-// AgentRateLimitSpec defines agent-level rate limiting
-type AgentRateLimitSpec struct {
-	// RequestsPerMinute limits requests per minute
-	// +optional
-	RequestsPerMinute *int32 `json:"requestsPerMinute,omitempty"`
-
-	// TokensPerMinute limits tokens per minute
-	// +optional
-	TokensPerMinute *int32 `json:"tokensPerMinute,omitempty"`
-
-	// ToolCallsPerMinute limits tool invocations per minute
-	// +optional
-	ToolCallsPerMinute *int32 `json:"toolCallsPerMinute,omitempty"`
-}
-
-// SafetyConfigSpec defines safety constraints
-type SafetyConfigSpec struct {
-	// MaxToolCallsPerIteration limits tool calls per reasoning loop
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=10
-	// +optional
-	MaxToolCallsPerIteration *int32 `json:"maxToolCallsPerIteration,omitempty"`
-
-	// BlockedTools lists tools that are explicitly blocked
-	// +optional
-	BlockedTools []string `json:"blockedTools,omitempty"`
-
-	// RequireApprovalFor lists tools requiring human approval
-	// +optional
-	RequireApprovalFor []string `json:"requireApprovalFor,omitempty"`
-
-	// ContentFilters defines content filtering rules
-	// +optional
-	ContentFilters []AgentContentFilterSpec `json:"contentFilters,omitempty"`
-
-	// MaxCostPerExecution limits cost per execution
-	// +optional
-	MaxCostPerExecution *float64 `json:"maxCostPerExecution,omitempty"`
-}
-
-// AgentContentFilterSpec defines a content filter
-type AgentContentFilterSpec struct {
-	// Type is the filter type (profanity, pii, toxic, custom)
-	// +kubebuilder:validation:Enum=profanity;pii;toxic;custom
-	Type string `json:"type"`
-
-	// Action defines what to do when filter matches (block, warn, log)
-	// +kubebuilder:validation:Enum=block;warn;log
-	// +kubebuilder:default=block
-	Action string `json:"action,omitempty"`
-
-	// Pattern is a regex pattern for custom filters
-	// +optional
-	Pattern string `json:"pattern,omitempty"`
 }
 
 // WorkspaceSpec defines persistent workspace storage for an agent

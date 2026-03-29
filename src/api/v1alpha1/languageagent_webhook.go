@@ -126,24 +126,6 @@ func (a *LanguageAgent) validateSpec() error {
 		return fmt.Errorf("spec.executionMode: %w", err)
 	}
 
-	if a.Spec.SafetyConfig != nil {
-		if a.Spec.SafetyConfig.MaxCostPerExecution != nil && *a.Spec.SafetyConfig.MaxCostPerExecution < 0 {
-			return fmt.Errorf("spec.safetyConfig.maxCostPerExecution must be non-negative")
-		}
-	}
-
-	if a.Spec.RateLimits != nil {
-		if a.Spec.RateLimits.RequestsPerMinute != nil && *a.Spec.RateLimits.RequestsPerMinute < 0 {
-			return fmt.Errorf("spec.rateLimits.requestsPerMinute must be non-negative")
-		}
-		if a.Spec.RateLimits.TokensPerMinute != nil && *a.Spec.RateLimits.TokensPerMinute < 0 {
-			return fmt.Errorf("spec.rateLimits.tokensPerMinute must be non-negative")
-		}
-		if a.Spec.RateLimits.ToolCallsPerMinute != nil && *a.Spec.RateLimits.ToolCallsPerMinute < 0 {
-			return fmt.Errorf("spec.rateLimits.toolCallsPerMinute must be non-negative")
-		}
-	}
-
 	if a.Spec.Workspace != nil && a.Spec.Workspace.Enabled {
 		if err := validateWorkspaceSize(a.Spec.Workspace.Size); err != nil {
 			return fmt.Errorf("spec.workspace.size: %w", err)

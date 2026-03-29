@@ -1192,7 +1192,6 @@ func TestServiceSelectorExcludesTriggerPods(t *testing.T) {
 			ExecutionMode: "scheduled",
 			Schedule:      "0 * * * *",
 			Image:         "test-image",
-			Goal:          "Test scheduled agent",
 		},
 	}
 

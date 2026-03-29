@@ -69,7 +69,7 @@ Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOr
 
 ### CRDs (`src/api/v1alpha1/`)
 
-- `LanguageAgent` — agent deployment spec (image, instructions, instructionsFrom, personaRefs, modelRefs, toolRefs, executionMode)
+- `LanguageAgent` — agent deployment spec (image, instructions, personas, models, tools, executionMode)
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
 - `LanguageModel` — LLM endpoint config
@@ -80,7 +80,7 @@ Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` 
 ### Agent Configuration Injection
 
 The operator mounts two files into every agent pod:
-- `/etc/agent/instructions.txt` — from `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret ref)
+- `/etc/agent/instructions.txt` — from `spec.instructions` (inline string)
 - `/etc/agent/config.yaml` — assembled from referenced personas, resolved tool endpoints, model configs, and agent identity
 
 Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.

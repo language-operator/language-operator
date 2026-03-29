@@ -1416,9 +1416,6 @@ spec:
                 - scheduled
                 - event-driven
                 type: string
-              goal:
-                description: Goal defines the agent's objective (for autonomous agents)
-                type: string
               image:
                 description: Image is the container image to run for this agent
                 minLength: 1
@@ -2791,53 +2788,6 @@ spec:
                   Instructions provides system instructions for the agent.
                   Mounted at /etc/agent/instructions.txt if set.
                 type: string
-              instructionsFrom:
-                description: InstructionsFrom allows referencing instructions from
-                  a ConfigMap or Secret
-                properties:
-                  configMapRef:
-                    description: ConfigMapRef references a ConfigMap key containing
-                      instructions
-                    properties:
-                      key:
-                        description: The key to select.
-                        type: string
-                      name:
-                        description: |-
-                          Name of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
-                        type: string
-                      optional:
-                        description: Specify whether the ConfigMap or its key must
-                          be defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  secretRef:
-                    description: SecretRef references a Secret key containing instructions
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        description: |-
-                          Name of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                    x-kubernetes-map-type: atomic
-                type: object
               livenessProbe:
                 description: |-
                   LivenessProbe defines the liveness probe for the agent container.
@@ -2989,13 +2939,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              maxIterations:
-                default: 50
-                description: MaxIterations limits the number of reasoning/action loops
-                format: int32
-                maximum: 1000
-                minimum: 1
-                type: integer
               models:
                 description: Models is a list of LanguageModel references this agent
                   can use
@@ -3092,22 +3035,6 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
-              rateLimits:
-                description: RateLimits defines rate limiting for this agent
-                properties:
-                  requestsPerMinute:
-                    description: RequestsPerMinute limits requests per minute
-                    format: int32
-                    type: integer
-                  tokensPerMinute:
-                    description: TokensPerMinute limits tokens per minute
-                    format: int32
-                    type: integer
-                  toolCallsPerMinute:
-                    description: ToolCallsPerMinute limits tool invocations per minute
-                    format: int32
-                    type: integer
-                type: object
               readinessProbe:
                 description: |-
                   ReadinessProbe defines the readiness probe for the agent container.
@@ -3328,60 +3255,6 @@ spec:
                 - OnFailure
                 - Never
                 type: string
-              safetyConfig:
-                description: SafetyConfig defines safety constraints and guardrails
-                properties:
-                  blockedTools:
-                    description: BlockedTools lists tools that are explicitly blocked
-                    items:
-                      type: string
-                    type: array
-                  contentFilters:
-                    description: ContentFilters defines content filtering rules
-                    items:
-                      description: AgentContentFilterSpec defines a content filter
-                      properties:
-                        action:
-                          default: block
-                          description: Action defines what to do when filter matches
-                            (block, warn, log)
-                          enum:
-                          - block
-                          - warn
-                          - log
-                          type: string
-                        pattern:
-                          description: Pattern is a regex pattern for custom filters
-                          type: string
-                        type:
-                          description: Type is the filter type (profanity, pii, toxic,
-                            custom)
-                          enum:
-                          - profanity
-                          - pii
-                          - toxic
-                          - custom
-                          type: string
-                      required:
-                      - type
-                      type: object
-                    type: array
-                  maxCostPerExecution:
-                    description: MaxCostPerExecution limits cost per execution
-                    type: number
-                  maxToolCallsPerIteration:
-                    default: 10
-                    description: MaxToolCallsPerIteration limits tool calls per reasoning
-                      loop
-                    format: int32
-                    minimum: 0
-                    type: integer
-                  requireApprovalFor:
-                    description: RequireApprovalFor lists tools requiring human approval
-                    items:
-                      type: string
-                    type: array
-                type: object
               schedule:
                 description: |-
                   Schedule defines when the agent runs (cron format, for scheduled mode)

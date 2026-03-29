@@ -182,26 +182,6 @@ func TestLanguageAgentValidateCreate(t *testing.T) {
 			},
 			expectErr: false,
 		},
-		{
-			name: "negative rate limit",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Image: "test:latest",
-					Models: []ModelReference{
-						{Name: "test-model"},
-					},
-					Instructions: "test instructions",
-					RateLimits: &AgentRateLimitSpec{
-						RequestsPerMinute: intPtr(-1),
-					},
-				},
-			},
-			expectErr: true,
-		},
 	}
 
 	for _, tt := range tests {

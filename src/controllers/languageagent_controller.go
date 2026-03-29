@@ -466,9 +466,6 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	data["name"] = agent.Name
 	data["namespace"] = agent.Namespace
 	data["mode"] = agent.Spec.ExecutionMode
-	if agent.Spec.Goal != "" {
-		data["goal"] = agent.Spec.Goal
-	}
 
 	// Add merged instructions
 	if instructions != "" {
@@ -692,7 +689,6 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 		MountPath: "/tmp",
 	})
 
-	// TODO: Add instructions mounting from InstructionsFrom ConfigMap/Secret
 	// TODO: Add persona mounting from Personas
 
 	// Add workspace volume if enabled
