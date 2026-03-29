@@ -40,43 +40,13 @@ func SetClusterDomain(domain string) LanguageClusterModifier {
 	}
 }
 
-// SetClusterIngressClassName sets spec.ingressConfig.ingressClassName.
+// SetClusterIngressClassName sets spec.ingress.className.
 func SetClusterIngressClassName(className string) LanguageClusterModifier {
 	return func(c *langopv1alpha1.LanguageCluster) {
-		if c.Spec.IngressConfig == nil {
-			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
+		if c.Spec.Ingress == nil {
+			c.Spec.Ingress = &langopv1alpha1.IngressConfig{}
 		}
-		c.Spec.IngressConfig.IngressClassName = className
-	}
-}
-
-// SetClusterGatewayName sets spec.ingressConfig.gatewayName.
-func SetClusterGatewayName(name string) LanguageClusterModifier {
-	return func(c *langopv1alpha1.LanguageCluster) {
-		if c.Spec.IngressConfig == nil {
-			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
-		}
-		c.Spec.IngressConfig.GatewayName = name
-	}
-}
-
-// SetClusterGatewayNamespace sets spec.ingressConfig.gatewayNamespace.
-func SetClusterGatewayNamespace(ns string) LanguageClusterModifier {
-	return func(c *langopv1alpha1.LanguageCluster) {
-		if c.Spec.IngressConfig == nil {
-			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
-		}
-		c.Spec.IngressConfig.GatewayNamespace = ns
-	}
-}
-
-// SetClusterGatewayClassName sets spec.ingressConfig.gatewayClassName (deprecated, kept for backward compat tests).
-func SetClusterGatewayClassName(className string) LanguageClusterModifier {
-	return func(c *langopv1alpha1.LanguageCluster) {
-		if c.Spec.IngressConfig == nil {
-			c.Spec.IngressConfig = &langopv1alpha1.IngressConfig{}
-		}
-		c.Spec.IngressConfig.GatewayClassName = className
+		c.Spec.Ingress.ClassName = className
 	}
 }
 

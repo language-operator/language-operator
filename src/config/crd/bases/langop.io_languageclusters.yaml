@@ -5237,34 +5237,16 @@ spec:
                     type: object
                   enabled:
                     description: |-
-                      Enabled controls whether an Ingress/HTTPRoute is created for the gateway.
+                      Enabled controls whether an Ingress is created for the gateway.
                       Defaults to true when cluster.spec.domain is set.
                     type: boolean
                 type: object
-              ingressConfig:
-                description: IngressConfig defines ingress/gateway configuration for
-                  the cluster
+              ingress:
+                description: Ingress defines ingress configuration for the cluster
                 properties:
-                  gatewayClassName:
-                    description: |-
-                      Deprecated: Use GatewayName instead. This field is treated as a Gateway resource name
-                      (not a GatewayClass) for backward compatibility. The operator emits a warning when this
-                      field is used without GatewayName set. Planned for removal in v1beta1.
-                    type: string
-                  gatewayName:
-                    description: |-
-                      GatewayName specifies the Gateway resource name to use
-                      If empty, will attempt auto-detection or fall back to Ingress
-                    type: string
-                  gatewayNamespace:
-                    description: |-
-                      GatewayNamespace specifies the namespace of the Gateway resource
-                      If empty, defaults to the same namespace as the LanguageCluster
-                    type: string
-                  ingressClassName:
-                    description: |-
-                      IngressClassName specifies the Ingress class to use for fallback
-                      Only used when Gateway API is not available
+                  className:
+                    description: ClassName specifies the IngressClass to use (maps
+                      to spec.ingressClassName on the Ingress object).
                     type: string
                   tls:
                     description: TLS configuration for agent webhooks

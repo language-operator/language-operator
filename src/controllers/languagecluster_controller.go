@@ -36,9 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
@@ -236,7 +234,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile proxy Ingress/HTTPRoute if domain is configured
+	// Reconcile proxy Ingress if domain is configured
 	if cluster.Spec.Domain != "" {
 		if err := r.reconcileProxyIngress(ctx, cluster); err != nil {
 			log.Error(err, "Failed to reconcile proxy ingress")
@@ -990,7 +988,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 	return nil
 }
 
-// reconcileProxyIngress creates an Ingress or HTTPRoute for proxy.<cluster.domain>.
+// reconcileProxyIngress creates an Ingress for proxy.<cluster.domain>.
 func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 
@@ -1003,79 +1001,9 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 	hostname := fmt.Sprintf("proxy.%s", cluster.Spec.Domain)
 	namespace := cluster.Name
 
-	// Decide Gateway API vs Ingress using the same logic as agent webhooks
-	useHTTPRoute := false
-	if cluster.Spec.IngressConfig != nil {
-		gatewayName := cluster.Spec.IngressConfig.GatewayName
-		if gatewayName == "" && cluster.Spec.IngressConfig.GatewayClassName != "" {
-			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
-			log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
-		}
-		if gatewayName != "" {
-			useHTTPRoute = true
-		}
-	}
-
-	if useHTTPRoute {
-		gatewayName := cluster.Spec.IngressConfig.GatewayName
-		if gatewayName == "" && cluster.Spec.IngressConfig.GatewayClassName != "" {
-			gatewayName = cluster.Spec.IngressConfig.GatewayClassName
-			log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
-		}
-		gatewayNamespace := cluster.Spec.IngressConfig.GatewayNamespace
-		if gatewayNamespace == "" {
-			gatewayNamespace = namespace
-		}
-
-		httpRoute := &unstructured.Unstructured{}
-		httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   "gateway.networking.k8s.io",
-			Version: "v1",
-			Kind:    "HTTPRoute",
-		})
-		httpRoute.SetName("proxy")
-		httpRoute.SetNamespace(namespace)
-
-		spec := map[string]interface{}{
-			"parentRefs": []map[string]interface{}{
-				{"name": gatewayName, "namespace": gatewayNamespace},
-			},
-			"hostnames": []string{hostname},
-			"rules": []map[string]interface{}{
-				{
-					"matches": []map[string]interface{}{
-						{"path": map[string]interface{}{"type": "PathPrefix", "value": "/"}},
-					},
-					"backendRefs": []map[string]interface{}{
-						{"name": "proxy", "port": int64(8000)},
-					},
-				},
-			},
-		}
-
-		existing := &unstructured.Unstructured{}
-		existing.SetGroupVersionKind(httpRoute.GroupVersionKind())
-		err := r.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: namespace}, existing)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				return err
-			}
-			httpRoute.Object["spec"] = spec
-			if err := controllerutil.SetControllerReference(cluster, httpRoute, r.Scheme); err != nil {
-				return err
-			}
-			log.Info("Creating proxy HTTPRoute", "hostname", hostname)
-			return r.Create(ctx, httpRoute)
-		}
-		existing.Object["spec"] = spec
-		log.Info("Updating proxy HTTPRoute", "hostname", hostname)
-		return r.Update(ctx, existing)
-	}
-
-	// Fallback: Ingress
 	ingressClass := ""
-	if cluster.Spec.IngressConfig != nil {
-		ingressClass = cluster.Spec.IngressConfig.IngressClassName
+	if cluster.Spec.Ingress != nil {
+		ingressClass = cluster.Spec.Ingress.ClassName
 	}
 
 	ingress := &networkingv1.Ingress{
@@ -1109,18 +1037,18 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 				},
 			},
 		}
-		if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && (cluster.Spec.IngressConfig.TLS.Enabled == nil || *cluster.Spec.IngressConfig.TLS.Enabled) {
-			secretName := cluster.Spec.IngressConfig.TLS.SecretName
+		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
+			secretName := cluster.Spec.Ingress.TLS.SecretName
 			if secretName == "" {
 				if ingress.Annotations == nil {
 					ingress.Annotations = make(map[string]string)
 				}
-				if cluster.Spec.IngressConfig.TLS.IssuerRef != nil {
-					kind := cluster.Spec.IngressConfig.TLS.IssuerRef.Kind
+				if cluster.Spec.Ingress.TLS.IssuerRef != nil {
+					kind := cluster.Spec.Ingress.TLS.IssuerRef.Kind
 					if kind == "" {
 						kind = "ClusterIssuer"
 					}
-					ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.IngressConfig.TLS.IssuerRef.Name
+					ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 				}
 				secretName = "proxy-tls"
 			}

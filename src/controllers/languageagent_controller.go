@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -21,12 +20,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,18 +35,6 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/validation"
-)
-
-// gatewayAPICache holds cached Gateway API availability information
-type gatewayAPICache struct {
-	available bool
-	lastCheck time.Time
-	mutex     sync.RWMutex
-}
-
-const (
-	// Gateway API cache TTL - how long to cache the availability result
-	gatewayAPICacheTTL = 5 * time.Minute
 )
 
 // RegistryManager interface for registry configuration management
@@ -70,7 +54,6 @@ type LanguageAgentReconciler struct {
 	NetworkPolicyRetries    int
 	NetworkIsolationEnabled bool
 	DefaultIngressClassName string
-	gatewayCache            *gatewayAPICache
 }
 
 // agentTracer is used by methods that haven't been refactored yet
@@ -115,11 +98,6 @@ type modelConfigYAML struct {
 	Endpoint string `yaml:"endpoint"`
 }
 
-// InitializeGatewayCache initializes the Gateway API cache
-func (r *LanguageAgentReconciler) InitializeGatewayCache() {
-	r.gatewayCache = &gatewayAPICache{}
-}
-
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/finalizers,verbs=update
@@ -135,8 +113,6 @@ func (r *LanguageAgentReconciler) InitializeGatewayCache() {
 //+kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -338,7 +314,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile webhooks (HTTPRoute/Ingress for webhook access)
+	// Reconcile webhooks (Ingress for webhook access)
 	if err := r.reconcileWebhooks(ctx, agent); err != nil {
 		// Log webhook errors but don't fail reconciliation if domain not configured
 		log.Info("Webhook reconciliation skipped or pending", "reason", err.Error())
@@ -1233,28 +1209,16 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 
 	var cleanupErrors []error
 
-	// 1. Cleanup HTTPRoutes
-	if err := r.cleanupHTTPRoutes(cleanupCtx, agent); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("HTTPRoute cleanup failed: %w", err))
-		log.Error(err, "Failed to cleanup HTTPRoutes", "agent", agent.Name)
-	}
-
-	// 2. Cleanup Ingresses
+	// 1. Cleanup Ingresses
 	if err := r.cleanupIngresses(cleanupCtx, agent); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("Ingress cleanup failed: %w", err))
 		log.Error(err, "Failed to cleanup Ingresses", "agent", agent.Name)
 	}
 
-	// 3. Cleanup Services
+	// 2. Cleanup Services
 	if err := r.cleanupServices(cleanupCtx, agent); err != nil {
 		cleanupErrors = append(cleanupErrors, fmt.Errorf("Service cleanup failed: %w", err))
 		log.Error(err, "Failed to cleanup Services", "agent", agent.Name)
-	}
-
-	// 4. Cleanup cross-namespace ReferenceGrants
-	if err := r.cleanupReferenceGrants(cleanupCtx, agent); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("ReferenceGrant cleanup failed: %w", err))
-		log.Error(err, "Failed to cleanup ReferenceGrants", "agent", agent.Name)
 	}
 
 	// Log summary
@@ -1270,40 +1234,6 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 	}
 
 	// Don't block agent deletion for cleanup failures - log and continue
-	return nil
-}
-
-// cleanupHTTPRoutes deletes HTTPRoutes owned by the agent and verifies deletion
-func (r *LanguageAgentReconciler) cleanupHTTPRoutes(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-
-	// List HTTPRoutes owned by this agent
-	httpRouteList := &unstructured.UnstructuredList{}
-	httpRouteList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1",
-		Kind:    "HTTPRouteList",
-	})
-
-	// Use label selector to find resources owned by this agent
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labelSelector := client.MatchingLabels(labels)
-
-	if err := r.List(ctx, httpRouteList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to list HTTPRoutes: %w", err)
-	}
-
-	// Delete each HTTPRoute and verify deletion
-	for _, route := range httpRouteList.Items {
-		if err := r.deleteAndVerifyResource(ctx, &route, "HTTPRoute"); err != nil {
-			return fmt.Errorf("failed to delete HTTPRoute %s: %w", route.GetName(), err)
-		}
-		log.Info("Successfully deleted HTTPRoute", "name", route.GetName(), "namespace", route.GetNamespace())
-	}
-
 	return nil
 }
 
@@ -1356,45 +1286,6 @@ func (r *LanguageAgentReconciler) cleanupServices(ctx context.Context, agent *la
 			return fmt.Errorf("failed to delete Service %s: %w", service.Name, err)
 		}
 		log.Info("Successfully deleted Service", "name", service.Name, "namespace", service.Namespace)
-	}
-
-	return nil
-}
-
-// cleanupReferenceGrants deletes ReferenceGrants created for cross-namespace Gateway access
-func (r *LanguageAgentReconciler) cleanupReferenceGrants(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-
-	// ReferenceGrants are created with specific naming pattern: {agent-name}-{agent-namespace}-referencegrant
-	// They could be in different namespaces (gateway namespaces), so we need to search across namespaces
-
-	referenceGrantList := &unstructured.UnstructuredList{}
-	referenceGrantList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1beta1",
-		Kind:    "ReferenceGrantList",
-	})
-
-	// List all ReferenceGrants across all namespaces to find ones created for this agent
-	if err := r.List(ctx, referenceGrantList); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to list ReferenceGrants: %w", err)
-	}
-
-	expectedName := fmt.Sprintf("%s-%s-referencegrant", agent.Name, agent.Namespace)
-
-	// Delete ReferenceGrants with matching name pattern
-	for _, refGrant := range referenceGrantList.Items {
-		if refGrant.GetName() == expectedName {
-			if err := r.deleteAndVerifyResource(ctx, &refGrant, "ReferenceGrant"); err != nil {
-				return fmt.Errorf("failed to delete ReferenceGrant %s in namespace %s: %w",
-					refGrant.GetName(), refGrant.GetNamespace(), err)
-			}
-			log.Info("Successfully deleted ReferenceGrant", "name", refGrant.GetName(),
-				"namespace", refGrant.GetNamespace())
-		}
 	}
 
 	return nil
@@ -1499,12 +1390,11 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 	return err
 }
 
-// reconcileWebhooks creates HTTPRoute or Ingress for webhook access
+// reconcileWebhooks creates an Ingress for webhook access
 func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
 
 	// Get the cluster to check for domain configuration
-	var domain string
 	cluster := &langopv1alpha1.LanguageCluster{}
 	if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1513,74 +1403,29 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		}
 		return err
 	}
-	domain = cluster.Spec.Domain
 
 	// Skip webhook reconciliation if no domain is configured
-	if domain == "" {
+	if cluster.Spec.Domain == "" {
 		log.Info("No domain configured, skipping webhook reconciliation")
 		return nil
 	}
 
 	// Build agent hostname: <agent-name>.<domain>
-	hostname := fmt.Sprintf("%s.%s", agent.Name, domain)
+	hostname := fmt.Sprintf("%s.%s", agent.Name, cluster.Spec.Domain)
 
-	// Use HTTPRoute only when Gateway API CRDs are present AND the cluster explicitly
-	// names a Gateway. Without a configured Gateway, fall through to Ingress even if
-	// the CRDs happen to be installed (e.g. via Cilium).
-	hasGateway, err := r.hasGatewayAPI(ctx)
-	if err != nil {
-		log.Error(err, "Failed to detect Gateway API availability")
-		hasGateway = false
+	log.Info("Creating Ingress for webhook", "hostname", hostname)
+	if err := r.reconcileIngress(ctx, agent, hostname); err != nil {
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "IngressCreationFailed", err.Error(), agent.Generation)
+		return fmt.Errorf("failed to reconcile Ingress: %w", err)
 	}
-
-	useHTTPRoute := false
-	if hasGateway {
-		if cluster.Spec.IngressConfig != nil &&
-			(cluster.Spec.IngressConfig.GatewayName != "" || cluster.Spec.IngressConfig.GatewayClassName != "") {
-			useHTTPRoute = true
-		}
-	}
+	SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionTrue, "IngressCreated", "Ingress created successfully", agent.Generation)
 
 	var routeReady bool
 	var routeReadyMsg string
-
-	if useHTTPRoute {
-		log.Info("Gateway API configured, creating HTTPRoute", "hostname", hostname)
-		if err := r.reconcileHTTPRoute(ctx, agent, hostname); err != nil {
-			// Set WebhookRouteCreated condition to false on failure
-			SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "HTTPRouteCreationFailed", err.Error(), agent.Generation)
-			return fmt.Errorf("failed to reconcile HTTPRoute: %w", err)
-		}
-
-		// Set WebhookRouteCreated condition to true on success
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionTrue, "HTTPRouteCreated", "HTTPRoute created successfully", agent.Generation)
-
-		// Check if HTTPRoute is ready
-		ready, msg, err := r.checkHTTPRouteReadiness(ctx, agent.Name, agent.Namespace)
-		if err != nil {
-			log.Error(err, "Failed to check HTTPRoute readiness")
-			routeReady = false
-			routeReadyMsg = fmt.Sprintf("Failed to check readiness: %v", err)
-		} else {
-			routeReady = ready
-			routeReadyMsg = msg
-		}
-	} else {
-		log.Info("Gateway API not available, creating Ingress fallback", "hostname", hostname)
-		if err := r.reconcileIngress(ctx, agent, hostname); err != nil {
-			// Set WebhookRouteCreated condition to false on failure
-			SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionFalse, "IngressCreationFailed", err.Error(), agent.Generation)
-			return fmt.Errorf("failed to reconcile Ingress: %w", err)
-		}
-
-		// Set WebhookRouteCreated condition to true on success
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.WebhookRouteCreatedCondition, metav1.ConditionTrue, "IngressCreated", "Ingress created successfully", agent.Generation)
-
-		// Check if Ingress is ready
+	{
 		ready, msg, err := r.checkIngressReadiness(ctx, agent.Name, agent.Namespace)
 		if err != nil {
 			log.Error(err, "Failed to check Ingress readiness")
-			routeReady = false
 			routeReadyMsg = fmt.Sprintf("Failed to check readiness: %v", err)
 		} else {
 			routeReady = ready
@@ -1656,389 +1501,7 @@ func (r *LanguageAgentReconciler) detectNetworkPolicySupport(ctx context.Context
 	return false, "unknown"
 }
 
-// hasGatewayAPI checks if Gateway API CRDs are available in the cluster with caching
-func (r *LanguageAgentReconciler) hasGatewayAPI(ctx context.Context) (bool, error) {
-	// Quick read lock check for cached result
-	r.gatewayCache.mutex.RLock()
-	if time.Since(r.gatewayCache.lastCheck) < gatewayAPICacheTTL {
-		available := r.gatewayCache.available
-		r.gatewayCache.mutex.RUnlock()
-		return available, nil
-	}
-	r.gatewayCache.mutex.RUnlock()
-
-	// Cache is stale, acquire write lock and refresh
-	r.gatewayCache.mutex.Lock()
-	defer r.gatewayCache.mutex.Unlock()
-
-	// Check again in case another goroutine already refreshed
-	if time.Since(r.gatewayCache.lastCheck) < gatewayAPICacheTTL {
-		return r.gatewayCache.available, nil
-	}
-
-	// Perform expensive discovery
-	available, err := r.discoverGatewayAPI(ctx)
-	if err != nil {
-		// Don't update cache on error, return stale data if available
-		if !r.gatewayCache.lastCheck.IsZero() {
-			return r.gatewayCache.available, nil
-		}
-		return false, err
-	}
-
-	// Update cache with fresh result
-	r.gatewayCache.available = available
-	r.gatewayCache.lastCheck = time.Now()
-	return available, nil
-}
-
-// discoverGatewayAPI performs the actual API discovery without caching
-func (r *LanguageAgentReconciler) discoverGatewayAPI(ctx context.Context) (bool, error) {
-	// Create a discovery client from the existing client
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return false, err
-	}
-
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return false, err
-	}
-
-	// Check if HTTPRoute CRD exists (gateway.networking.k8s.io/v1)
-	gvr := schema.GroupVersionResource{
-		Group:    "gateway.networking.k8s.io",
-		Version:  "v1",
-		Resource: "httproutes",
-	}
-
-	_, apiResourcesList, err := discoveryClient.ServerGroupsAndResources()
-	if err != nil {
-		// Partial errors are acceptable - some API groups might be unavailable
-		if discovery.IsGroupDiscoveryFailedError(err) {
-			// Continue with partial results
-		} else {
-			return false, err
-		}
-	}
-
-	for _, apiResources := range apiResourcesList {
-		if apiResources.GroupVersion == gvr.Group+"/"+gvr.Version {
-			for _, resource := range apiResources.APIResources {
-				if resource.Name == gvr.Resource {
-					return true, nil
-				}
-			}
-		}
-	}
-
-	return false, nil
-}
-
-// reconcileReferenceGrant creates or updates a Gateway API ReferenceGrant for cross-namespace access
-func (r *LanguageAgentReconciler) reconcileReferenceGrant(ctx context.Context, agent *langopv1alpha1.LanguageAgent, gatewayName, gatewayNamespace string) error {
-	log := log.FromContext(ctx)
-
-	// Only create ReferenceGrant if gateway is in a different namespace
-	if agent.Namespace == gatewayNamespace {
-		return nil
-	}
-
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	referenceGrantName := fmt.Sprintf("%s-%s-referencegrant", agent.Name, agent.Namespace)
-
-	// Create ReferenceGrant using unstructured to avoid Gateway API dependency
-	referenceGrant := &unstructured.Unstructured{}
-	referenceGrant.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1beta1", // ReferenceGrant is in beta
-		Kind:    "ReferenceGrant",
-	})
-	referenceGrant.SetName(referenceGrantName)
-	referenceGrant.SetNamespace(gatewayNamespace) // Must be created in gateway namespace
-	referenceGrant.SetLabels(labels)
-
-	// Build ReferenceGrant spec
-	spec := map[string]interface{}{
-		"from": []interface{}{
-			map[string]interface{}{
-				"group":     "gateway.networking.k8s.io",
-				"kind":      "HTTPRoute",
-				"namespace": agent.Namespace,
-			},
-		},
-		"to": []interface{}{
-			map[string]interface{}{
-				"group": "gateway.networking.k8s.io",
-				"kind":  "Gateway",
-				"name":  gatewayName,
-			},
-		},
-	}
-
-	// Check if ReferenceGrant already exists
-	existing := &unstructured.Unstructured{}
-	existing.SetGroupVersionKind(referenceGrant.GroupVersionKind())
-	err := r.Get(ctx, types.NamespacedName{Name: referenceGrantName, Namespace: gatewayNamespace}, existing)
-
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		// Create new ReferenceGrant
-		referenceGrant.Object["spec"] = spec
-		log.Info("Creating ReferenceGrant", "name", referenceGrantName, "namespace", gatewayNamespace, "gateway", gatewayName)
-		if err := r.Create(ctx, referenceGrant); err != nil {
-			return fmt.Errorf("failed to create ReferenceGrant: %w", err)
-		}
-	} else {
-		// Update existing ReferenceGrant
-		existing.Object["spec"] = spec
-		existing.SetLabels(labels)
-		log.Info("Updating ReferenceGrant", "name", referenceGrantName, "namespace", gatewayNamespace, "gateway", gatewayName)
-		if err := r.Update(ctx, existing); err != nil {
-			return fmt.Errorf("failed to update ReferenceGrant: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// validateGatewayTLS validates that the Gateway has appropriate TLS configuration
-// Returns the protocol that should be used for webhook URLs (http or https)
-func (r *LanguageAgentReconciler) validateGatewayTLS(ctx context.Context, gatewayName, gatewayNamespace string, tlsEnabled bool) (string, error) {
-	log := log.FromContext(ctx)
-
-	// Query the Gateway to check its listeners
-	gateway := &unstructured.Unstructured{}
-	gateway.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1",
-		Kind:    "Gateway",
-	})
-
-	err := r.Get(ctx, types.NamespacedName{Name: gatewayName, Namespace: gatewayNamespace}, gateway)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			if tlsEnabled {
-				return "", fmt.Errorf("Gateway %s/%s not found, but TLS is enabled in cluster config", gatewayNamespace, gatewayName)
-			}
-			// Gateway doesn't exist, but TLS not required - assume HTTP
-			log.Info("Gateway not found, assuming HTTP protocol", "gateway", gatewayName+"/"+gatewayNamespace)
-			return "http", nil
-		}
-		return "", fmt.Errorf("failed to get Gateway %s/%s: %w", gatewayNamespace, gatewayName, err)
-	}
-
-	// Extract listeners from Gateway spec
-	spec, exists := gateway.Object["spec"].(map[string]interface{})
-	if !exists {
-		return "", fmt.Errorf("Gateway %s/%s has invalid spec", gatewayNamespace, gatewayName)
-	}
-
-	listeners, exists := spec["listeners"].([]interface{})
-	if !exists || len(listeners) == 0 {
-		if tlsEnabled {
-			return "", fmt.Errorf("Gateway %s/%s has no listeners, but TLS is enabled in cluster config", gatewayNamespace, gatewayName)
-		}
-		return "http", nil
-	}
-
-	// Check listeners for TLS configuration
-	hasHTTPS := false
-	hasHTTP := false
-
-	for _, listenerInterface := range listeners {
-		listener, ok := listenerInterface.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		// Check port and protocol
-		port, portExists := listener["port"]
-		protocol, protocolExists := listener["protocol"]
-
-		if portExists && protocolExists {
-			portNum := int64(0)
-			switch p := port.(type) {
-			case int64:
-				portNum = p
-			case float64:
-				portNum = int64(p)
-			case int:
-				portNum = int64(p)
-			}
-
-			protocolStr, _ := protocol.(string)
-
-			// Check for HTTPS (port 443 or TLS in protocol/listener config)
-			if portNum == 443 || protocolStr == "HTTPS" {
-				hasHTTPS = true
-			}
-			// Check for TLS configuration in listener
-			if tls, tlsExists := listener["tls"]; tlsExists && tls != nil {
-				hasHTTPS = true
-			}
-
-			// Check for HTTP
-			if portNum == 80 || protocolStr == "HTTP" {
-				hasHTTP = true
-			}
-		}
-	}
-
-	// Determine protocol and validate against TLS requirements
-	if tlsEnabled {
-		if !hasHTTPS {
-			return "", fmt.Errorf("TLS is enabled in cluster config, but Gateway %s/%s has no HTTPS listeners (port 443 or TLS configuration)", gatewayNamespace, gatewayName)
-		}
-		log.Info("Gateway has HTTPS listeners, using HTTPS protocol", "gateway", gatewayName+"/"+gatewayNamespace)
-		return "https", nil
-	} else {
-		// TLS not required, prefer HTTPS if available, otherwise HTTP
-		if hasHTTPS {
-			log.Info("Gateway has HTTPS listeners, using HTTPS protocol", "gateway", gatewayName+"/"+gatewayNamespace)
-			return "https", nil
-		} else if hasHTTP {
-			log.Info("Gateway has HTTP listeners, using HTTP protocol", "gateway", gatewayName+"/"+gatewayNamespace)
-			return "http", nil
-		} else {
-			log.Info("Gateway has no recognized HTTP/HTTPS listeners, defaulting to HTTP", "gateway", gatewayName+"/"+gatewayNamespace)
-			return "http", nil
-		}
-	}
-}
-
-// reconcileHTTPRoute creates or updates a Gateway API HTTPRoute for the agent
-func (r *LanguageAgentReconciler) reconcileHTTPRoute(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
-	log := log.FromContext(ctx)
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-
-	// Get cluster config for Gateway configuration and TLS settings
-	var gatewayName, gatewayNamespace string
-	var tlsEnabled bool
-	{
-		cluster := &langopv1alpha1.LanguageCluster{}
-		if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
-			if cluster.Spec.IngressConfig != nil {
-				// Extract TLS configuration
-				if cluster.Spec.IngressConfig.TLS != nil {
-					if cluster.Spec.IngressConfig.TLS.Enabled != nil {
-						tlsEnabled = *cluster.Spec.IngressConfig.TLS.Enabled
-					} else {
-						tlsEnabled = true // matches +kubebuilder:default=true
-					}
-				}
-
-				// Prefer new GatewayName field, fall back to deprecated GatewayClassName for backward compatibility
-				if cluster.Spec.IngressConfig.GatewayName != "" {
-					gatewayName = cluster.Spec.IngressConfig.GatewayName
-					// Use specified namespace or default to cluster namespace
-					if cluster.Spec.IngressConfig.GatewayNamespace != "" {
-						gatewayNamespace = cluster.Spec.IngressConfig.GatewayNamespace
-					} else {
-						gatewayNamespace = agent.Namespace
-					}
-				} else if cluster.Spec.IngressConfig.GatewayClassName != "" {
-					// Backward compatibility: treat GatewayClassName as Gateway resource name
-					gatewayName = cluster.Spec.IngressConfig.GatewayClassName
-					gatewayNamespace = agent.Namespace
-					log.Info("spec.ingressConfig.gatewayClassName is deprecated; set spec.ingressConfig.gatewayName instead (planned removal: v1beta1)")
-				}
-			}
-		}
-	}
-
-	// Skip Gateway API if no gateway is configured
-	if gatewayName == "" {
-		log.Info("No Gateway configured, skipping HTTPRoute creation")
-		return nil
-	}
-
-	// Validate Gateway TLS configuration and determine protocol
-	_, err := r.validateGatewayTLS(ctx, gatewayName, gatewayNamespace, tlsEnabled)
-	if err != nil {
-		return fmt.Errorf("Gateway TLS validation failed: %w", err)
-	}
-
-	// Create ReferenceGrant if cross-namespace Gateway reference is needed
-	if err := r.reconcileReferenceGrant(ctx, agent, gatewayName, gatewayNamespace); err != nil {
-		return fmt.Errorf("failed to reconcile ReferenceGrant: %w", err)
-	}
-
-	// Create HTTPRoute using unstructured to avoid Gateway API dependency
-	httpRoute := &unstructured.Unstructured{}
-	httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1",
-		Kind:    "HTTPRoute",
-	})
-	httpRoute.SetName(agent.Name)
-	httpRoute.SetNamespace(agent.Namespace)
-	httpRoute.SetLabels(labels)
-
-	// Build HTTPRoute spec
-	spec := map[string]interface{}{
-		"parentRefs": []map[string]interface{}{
-			{
-				"name":      gatewayName,
-				"namespace": gatewayNamespace,
-			},
-		},
-		"hostnames": []string{hostname},
-		"rules": []map[string]interface{}{
-			{
-				"matches": []map[string]interface{}{
-					{
-						"path": map[string]interface{}{
-							"type":  "PathPrefix",
-							"value": "/",
-						},
-					},
-				},
-				"backendRefs": []map[string]interface{}{
-					{
-						"name": agent.Name,
-						"port": int64(agentPort(agent)),
-					},
-				},
-			},
-		},
-	}
-
-	// Check if HTTPRoute already exists
-	existing := &unstructured.Unstructured{}
-	existing.SetGroupVersionKind(httpRoute.GroupVersionKind())
-	err = r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existing)
-
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		// Create new HTTPRoute
-		httpRoute.Object["spec"] = spec
-		// Set owner reference for automatic cleanup
-		if err := controllerutil.SetControllerReference(agent, httpRoute, r.Scheme); err != nil {
-			return err
-		}
-		log.Info("Creating HTTPRoute", "hostname", hostname, "gateway", gatewayName+"/"+gatewayNamespace)
-		if err := r.Create(ctx, httpRoute); err != nil {
-			return err
-		}
-	} else {
-		// Update existing HTTPRoute
-		existing.Object["spec"] = spec
-		existing.SetLabels(labels)
-		log.Info("Updating HTTPRoute", "hostname", hostname, "gateway", gatewayName+"/"+gatewayNamespace)
-		if err := r.Update(ctx, existing); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// reconcileIngress creates or updates an Ingress for the agent (fallback when Gateway API unavailable)
+// reconcileIngress creates or updates an Ingress for the agent
 func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *langopv1alpha1.LanguageAgent, hostname string) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
@@ -2082,24 +1545,24 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 			},
 		}
 
-		// Add TLS and IngressClassName from cluster config (with operator-level defaults)
+		// Add TLS and ClassName from cluster config (with operator-level defaults)
 		ingressClass := r.DefaultIngressClassName
 		{
 			cluster := &langopv1alpha1.LanguageCluster{}
 			if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
-				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.TLS != nil && (cluster.Spec.IngressConfig.TLS.Enabled == nil || *cluster.Spec.IngressConfig.TLS.Enabled) {
-					secretName := cluster.Spec.IngressConfig.TLS.SecretName
+				if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
+					secretName := cluster.Spec.Ingress.TLS.SecretName
 					if secretName == "" {
 						// Use cert-manager annotation for automatic certificate provisioning
 						if ingress.Annotations == nil {
 							ingress.Annotations = make(map[string]string)
 						}
-						if cluster.Spec.IngressConfig.TLS.IssuerRef != nil {
-							kind := cluster.Spec.IngressConfig.TLS.IssuerRef.Kind
+						if cluster.Spec.Ingress.TLS.IssuerRef != nil {
+							kind := cluster.Spec.Ingress.TLS.IssuerRef.Kind
 							if kind == "" {
 								kind = "ClusterIssuer"
 							}
-							ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.IngressConfig.TLS.IssuerRef.Name
+							ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 						}
 						secretName = agent.Name + "-tls"
 					}
@@ -2112,9 +1575,9 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 					}
 				}
 
-				// Cluster-level IngressClassName overrides operator default
-				if cluster.Spec.IngressConfig != nil && cluster.Spec.IngressConfig.IngressClassName != "" {
-					ingressClass = cluster.Spec.IngressConfig.IngressClassName
+				// Cluster-level ClassName overrides operator default
+				if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.ClassName != "" {
+					ingressClass = cluster.Spec.Ingress.ClassName
 				}
 			}
 		}
@@ -2139,81 +1602,6 @@ func (r *LanguageAgentReconciler) validateImageRegistry(agent *langopv1alpha1.La
 	}
 
 	return validation.ValidateImageRegistry(agent.Spec.Image, allowedRegistries)
-}
-
-// checkHTTPRouteReadiness checks if an HTTPRoute is ready to serve traffic
-// Returns (isReady, statusMessage, error)
-func (r *LanguageAgentReconciler) checkHTTPRouteReadiness(ctx context.Context, name, namespace string) (bool, string, error) {
-	// Get HTTPRoute using unstructured to avoid Gateway API dependency
-	httpRoute := &unstructured.Unstructured{}
-	httpRoute.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
-		Version: "v1",
-		Kind:    "HTTPRoute",
-	})
-
-	err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, httpRoute)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, "HTTPRoute not found", nil
-		}
-		return false, "", fmt.Errorf("failed to get HTTPRoute: %w", err)
-	}
-
-	// Check status conditions
-	status, found, err := unstructured.NestedMap(httpRoute.Object, "status")
-	if err != nil {
-		return false, "", fmt.Errorf("failed to get HTTPRoute status: %w", err)
-	}
-	if !found {
-		return false, "HTTPRoute status not available", nil
-	}
-
-	// Check parents (Gateway references)
-	parents, found, err := unstructured.NestedSlice(status, "parents")
-	if err != nil {
-		return false, "", fmt.Errorf("failed to get HTTPRoute parents status: %w", err)
-	}
-	if !found || len(parents) == 0 {
-		return false, "HTTPRoute has no parent Gateway status", nil
-	}
-
-	// Check if any parent is ready (Accepted and Programmed)
-	for _, parentInterface := range parents {
-		parent, ok := parentInterface.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		conditions, found, err := unstructured.NestedSlice(parent, "conditions")
-		if err != nil || !found {
-			continue
-		}
-
-		var accepted, programmed bool
-		for _, condInterface := range conditions {
-			cond, ok := condInterface.(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			condType, _, _ := unstructured.NestedString(cond, "type")
-			condStatus, _, _ := unstructured.NestedString(cond, "status")
-
-			if condType == "Accepted" && condStatus == "True" {
-				accepted = true
-			}
-			if condType == "Programmed" && condStatus == "True" {
-				programmed = true
-			}
-		}
-
-		if accepted && programmed {
-			return true, "HTTPRoute is ready and programmed", nil
-		}
-	}
-
-	return false, "HTTPRoute is not ready - waiting for Gateway to accept and program route", nil
 }
 
 // checkIngressReadiness checks if an Ingress is ready to serve traffic

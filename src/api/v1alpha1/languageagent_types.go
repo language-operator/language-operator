@@ -164,7 +164,7 @@ type LanguageAgentStatus struct {
 // +kubebuilder:subresource:status
 // Condition types for LanguageAgent
 const (
-	// WebhookRouteCreatedCondition indicates that the webhook route (HTTPRoute/Ingress) has been created
+	// WebhookRouteCreatedCondition indicates that the webhook Ingress has been created
 	WebhookRouteCreatedCondition = "WebhookRouteCreated"
 	// WebhookRouteReadyCondition indicates that the webhook route is ready and serving traffic
 	WebhookRouteReadyCondition = "WebhookRouteReady"

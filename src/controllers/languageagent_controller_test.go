@@ -55,7 +55,6 @@ func TestLanguageAgentController_NoSynthesisWithoutModels(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -110,7 +109,6 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -172,7 +170,6 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -230,7 +227,6 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -303,7 +299,6 @@ func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
@@ -356,7 +351,6 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	result, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -403,7 +397,6 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -475,7 +468,6 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -559,7 +551,6 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -674,7 +665,6 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 
@@ -748,7 +738,6 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 
@@ -839,7 +828,6 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 
@@ -930,7 +918,6 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 
@@ -952,15 +939,6 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		}
 	})
 
-	t.Run("cleanupHTTPRoutes_no_gateway_api", func(t *testing.T) {
-		// Test HTTPRoute cleanup when Gateway API is not available
-		// This should not error even if Gateway API CRDs don't exist
-		err := reconciler.cleanupHTTPRoutes(ctx, agent)
-		if err != nil {
-			t.Errorf("cleanupHTTPRoutes should handle missing Gateway API gracefully, got error: %v", err)
-		}
-	})
-
 	t.Run("cleanupIngresses_empty_list", func(t *testing.T) {
 		// Test Ingress cleanup with no ingresses present
 		err := reconciler.cleanupIngresses(ctx, agent)
@@ -969,13 +947,6 @@ func TestLanguageAgentController_CleanupMethods(t *testing.T) {
 		}
 	})
 
-	t.Run("cleanupReferenceGrants_no_gateway_api", func(t *testing.T) {
-		// Test ReferenceGrant cleanup when Gateway API is not available
-		err := reconciler.cleanupReferenceGrants(ctx, agent)
-		if err != nil {
-			t.Errorf("cleanupReferenceGrants should handle missing Gateway API gracefully, got error: %v", err)
-		}
-	})
 }
 
 func TestLanguageAgentController_BasicReconcile(t *testing.T) {
@@ -1004,7 +975,6 @@ func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -1060,7 +1030,6 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -1130,7 +1099,6 @@ func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -1190,7 +1158,6 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -1323,7 +1290,6 @@ func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
 		NetworkPolicyTimeout: 30 * time.Second,
 		NetworkPolicyRetries: 3,
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	if err := reconciler.reconcileNetworkPolicy(ctx, agent); err != nil {
@@ -1387,7 +1353,6 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 			RegistryManager:         &mockRegistryManager{},
 			DefaultIngressClassName: "nginx",
 		}
-		reconciler.InitializeGatewayCache()
 
 		ctx := context.Background()
 		if err := reconciler.reconcileIngress(ctx, agent, "agent.example.com"); err != nil {
@@ -1417,7 +1382,6 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 			Recorder:        &record.FakeRecorder{},
 			RegistryManager: &mockRegistryManager{},
 		}
-		reconciler.InitializeGatewayCache()
 
 		ctx := context.Background()
 		if err := reconciler.reconcileIngress(ctx, agent, "agent.example.com"); err != nil {
@@ -1447,7 +1411,6 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 			Recorder:        &record.FakeRecorder{},
 			RegistryManager: &mockRegistryManager{},
 		}
-		reconciler.InitializeGatewayCache()
 
 		ctx := context.Background()
 		hostname := "my-agent.example.com"
@@ -2045,7 +2008,6 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2128,7 +2090,6 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2214,7 +2175,6 @@ func TestLanguageAgentController_ServiceTypeAndAnnotations(t *testing.T) {
 				Recorder:        &record.FakeRecorder{},
 				RegistryManager: &mockRegistryManager{},
 			}
-			reconciler.InitializeGatewayCache()
 
 			ctx := context.Background()
 			_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2284,7 +2244,6 @@ func TestLanguageAgentController_SchedulingFields(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2358,7 +2317,6 @@ func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2439,7 +2397,6 @@ func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2524,7 +2481,6 @@ func TestLanguageAgentController_StartupProbe(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
@@ -2588,7 +2544,6 @@ func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
 		Recorder:        &record.FakeRecorder{},
 		RegistryManager: &mockRegistryManager{},
 	}
-	reconciler.InitializeGatewayCache()
 
 	ctx := context.Background()
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{

@@ -81,9 +81,9 @@ type LanguageClusterSpec struct {
 	// +optional
 	Domain string `json:"domain,omitempty"`
 
-	// IngressConfig defines ingress/gateway configuration for the cluster
+	// Ingress defines ingress configuration for the cluster
 	// +optional
-	IngressConfig *IngressConfig `json:"ingressConfig,omitempty"`
+	Ingress *IngressConfig `json:"ingress,omitempty"`
 
 	// NetworkPolicies defines egress network policies for agents in this cluster
 	// +optional
@@ -198,7 +198,7 @@ type DeploymentSpec struct {
 
 // GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.
 type GatewaySpec struct {
-	// Enabled controls whether an Ingress/HTTPRoute is created for the gateway.
+	// Enabled controls whether an Ingress is created for the gateway.
 	// Defaults to true when cluster.spec.domain is set.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
@@ -208,32 +208,15 @@ type GatewaySpec struct {
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 }
 
-// IngressConfig defines ingress/gateway configuration
+// IngressConfig defines ingress configuration
 type IngressConfig struct {
 	// TLS configuration for agent webhooks
 	// +optional
 	TLS *IngressTLSConfig `json:"tls,omitempty"`
 
-	// GatewayName specifies the Gateway resource name to use
-	// If empty, will attempt auto-detection or fall back to Ingress
+	// ClassName specifies the IngressClass to use (maps to spec.ingressClassName on the Ingress object).
 	// +optional
-	GatewayName string `json:"gatewayName,omitempty"`
-
-	// GatewayNamespace specifies the namespace of the Gateway resource
-	// If empty, defaults to the same namespace as the LanguageCluster
-	// +optional
-	GatewayNamespace string `json:"gatewayNamespace,omitempty"`
-
-	// Deprecated: Use GatewayName instead. This field is treated as a Gateway resource name
-	// (not a GatewayClass) for backward compatibility. The operator emits a warning when this
-	// field is used without GatewayName set. Planned for removal in v1beta1.
-	// +optional
-	GatewayClassName string `json:"gatewayClassName,omitempty"`
-
-	// IngressClassName specifies the Ingress class to use for fallback
-	// Only used when Gateway API is not available
-	// +optional
-	IngressClassName string `json:"ingressClassName,omitempty"`
+	ClassName string `json:"className,omitempty"`
 }
 
 // IngressTLSConfig defines TLS configuration

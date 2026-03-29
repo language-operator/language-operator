@@ -303,9 +303,6 @@ func main() {
 		DefaultIngressClassName: agentIngressClassName,
 	}
 
-	// Initialize Gateway API cache
-	agentReconciler.InitializeGatewayCache()
-
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgent")
 		os.Exit(1)
