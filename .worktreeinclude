@@ -1,0 +1,4 @@
+# Files to copy into each new worktree created by `claude --worktree` or git worktree add.
+# Useful for gitignored secrets and local config that agents need to function.
+.env
+values.local.yaml
