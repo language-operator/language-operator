@@ -1550,17 +1550,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#knowledgesourcespec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        KnowledgeSourceSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#languageagent" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1847,50 +1836,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#personaconstraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PersonaConstraints
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#personaexample" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PersonaExample
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#personareference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PersonaReference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#personarule" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PersonaRule
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#poddisruptionbudgetspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1946,17 +1891,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#responseformatspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ResponseFormatSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#retrypolicyspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1994,17 +1928,6 @@
     <span class="md-ellipsis">
       
         ServiceReference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#toolpreferencesspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ToolPreferencesSpec
       
     </span>
   </a>
@@ -2899,64 +2822,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 </tbody>
 </table>
-<h4 id="knowledgesourcespec">KnowledgeSourceSpec<a class="headerlink" href="#knowledgesourcespec" title="Permanent link">&para;</a></h4>
-<p>KnowledgeSourceSpec references an external knowledge base</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>name</code> <em>string</em></td>
-<td>Name is the knowledge source identifier</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>type</code> <em>string</em></td>
-<td>Type specifies the knowledge source type</td>
-<td></td>
-<td>Enum: [url document database api vector-store] <br />Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>url</code> <em>string</em></td>
-<td>URL is the knowledge source URL (for url, api types)</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>secretRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
-<td>SecretRef references credentials for accessing the knowledge source</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>query</code> <em>string</em></td>
-<td>Query defines how to query this knowledge source</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>priority</code> <em>integer</em></td>
-<td>Priority determines knowledge source precedence</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled indicates if this knowledge source is active</td>
-<td>true</td>
-<td></td>
-</tr>
-</tbody>
-</table>
 <h4 id="languageagent">LanguageAgent<a class="headerlink" href="#languageagent" title="Permanent link">&para;</a></h4>
 <p>LanguageAgent is the Schema for the languageagents API</p>
 <table>
@@ -3664,104 +3529,20 @@ All fields are optional; controllers only read the fields relevant to their reso
 </thead>
 <tbody>
 <tr>
-<td><code>displayName</code> <em>string</em></td>
-<td>DisplayName is the human-readable name for this persona</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>description</code> <em>string</em></td>
-<td>Description describes the persona's role and behavior</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>systemPrompt</code> <em>string</em></td>
-<td>SystemPrompt is the base system instruction for this persona</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>instructions</code> <em>string array</em></td>
-<td>Instructions provides additional behavioral guidelines</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>rules</code> <em><a href="#personarule">PersonaRule</a> array</em></td>
-<td>Rules define conditional behaviors and policies</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>examples</code> <em><a href="#personaexample">PersonaExample</a> array</em></td>
-<td>Examples provide few-shot learning examples</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>capabilities</code> <em>string array</em></td>
-<td>Capabilities lists what this persona can do</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>limitations</code> <em>string array</em></td>
-<td>Limitations lists what this persona should not do</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>tone</code> <em>string</em></td>
-<td>Tone defines the communication style</td>
-<td>professional</td>
-<td>Enum: [professional casual friendly formal technical empathetic concise detailed] <br />Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>language</code> <em>string</em></td>
-<td>Language specifies the primary language for responses</td>
-<td>en</td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>responseFormat</code> <em><a href="#responseformatspec">ResponseFormatSpec</a></em></td>
-<td>ResponseFormat defines preferred response structure</td>
+<td>Tone describes the agent's communication style<br />e.g. "professional", "concise and direct", "warm and encouraging"</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>toolPreferences</code> <em><a href="#toolpreferencesspec">ToolPreferencesSpec</a></em></td>
-<td>ToolPreferences defines how this persona uses tools</td>
+<td><code>personality</code> <em>string</em></td>
+<td>Personality describes the agent's character and behavioural traits<br />e.g. "curious and methodical, always explains reasoning step by step"</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>knowledgeSources</code> <em><a href="#knowledgesourcespec">KnowledgeSourceSpec</a> array</em></td>
-<td>KnowledgeSources references external knowledge bases</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>constraints</code> <em><a href="#personaconstraints">PersonaConstraints</a></em></td>
-<td>Constraints define operational constraints</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>metadata</code> <em>object (keys:string, values:string)</em></td>
-<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>version</code> <em>string</em></td>
-<td>Version tracks the persona version</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>parentPersona</code> <em><a href="#personareference">PersonaReference</a></em></td>
-<td>ParentPersona references a parent persona to inherit from</td>
+<td><code>expertise</code> <em>string</em></td>
+<td>Expertise describes the agent's domain knowledge and skills<br />e.g. "senior software engineer specialising in distributed systems and Go"</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -4440,178 +4221,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 </tbody>
 </table>
-<h4 id="personaconstraints">PersonaConstraints<a class="headerlink" href="#personaconstraints" title="Permanent link">&para;</a></h4>
-<p>PersonaConstraints defines operational constraints</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>maxResponseTokens</code> <em>integer</em></td>
-<td>MaxResponseTokens limits response length in tokens</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>maxToolCalls</code> <em>integer</em></td>
-<td>MaxToolCalls limits tool invocations per interaction</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>maxKnowledgeQueries</code> <em>integer</em></td>
-<td>MaxKnowledgeQueries limits knowledge base queries per interaction</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>responseTimeout</code> <em>string</em></td>
-<td>ResponseTimeout limits response generation time</td>
-<td></td>
-<td>Pattern: <code>^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$</code> <br />Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>requireDocumentation</code> <em>boolean</em></td>
-<td>RequireDocumentation requires citing sources for claims</td>
-<td>false</td>
-<td></td>
-</tr>
-<tr>
-<td><code>blockedTopics</code> <em>string array</em></td>
-<td>BlockedTopics lists topics this persona should refuse to discuss</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>allowedDomains</code> <em>string array</em></td>
-<td>AllowedDomains restricts knowledge sources to specific domains</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="personaexample">PersonaExample<a class="headerlink" href="#personaexample" title="Permanent link">&para;</a></h4>
-<p>PersonaExample provides a few-shot learning example</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>input</code> <em>string</em></td>
-<td>Input is the example user input</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>output</code> <em>string</em></td>
-<td>Output is the expected persona response</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>context</code> <em>string</em></td>
-<td>Context provides additional context for this example</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>tags</code> <em>string array</em></td>
-<td>Tags categorize this example</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="personareference">PersonaReference<a class="headerlink" href="#personareference" title="Permanent link">&para;</a></h4>
-<p>PersonaReference references a LanguagePersona</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>name</code> <em>string</em></td>
-<td>Name is the name of the LanguagePersona</td>
-<td></td>
-<td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="personarule">PersonaRule<a class="headerlink" href="#personarule" title="Permanent link">&para;</a></h4>
-<p>PersonaRule defines a conditional behavior rule</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>name</code> <em>string</em></td>
-<td>Name is a unique identifier for this rule</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>description</code> <em>string</em></td>
-<td>Description explains what this rule does</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>condition</code> <em>string</em></td>
-<td>Condition defines when this rule applies (e.g., "when asked about X")</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>action</code> <em>string</em></td>
-<td>Action defines what to do when condition matches</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>priority</code> <em>integer</em></td>
-<td>Priority determines rule evaluation order (lower is higher priority)</td>
-<td>100</td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled indicates if this rule is active</td>
-<td>true</td>
-<td></td>
-</tr>
-</tbody>
-</table>
 <h4 id="poddisruptionbudgetspec">PodDisruptionBudgetSpec<a class="headerlink" href="#poddisruptionbudgetspec" title="Permanent link">&para;</a></h4>
 <p>PodDisruptionBudgetSpec defines PDB configuration</p>
 <p><em>Appears in:</em>
@@ -4812,58 +4421,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 </tbody>
 </table>
-<h4 id="responseformatspec">ResponseFormatSpec<a class="headerlink" href="#responseformatspec" title="Permanent link">&para;</a></h4>
-<p>ResponseFormatSpec defines response structure preferences</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>type</code> <em>string</em></td>
-<td>Type specifies the response format</td>
-<td>text</td>
-<td>Enum: [text markdown json structured list table] <br /></td>
-</tr>
-<tr>
-<td><code>template</code> <em>string</em></td>
-<td>Template defines a response template</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>schema</code> <em>string</em></td>
-<td>Schema defines JSON schema for structured responses</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>maxLength</code> <em>integer</em></td>
-<td>MaxLength limits response length in characters</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>includeSources</code> <em>boolean</em></td>
-<td>IncludeSources indicates whether to cite sources</td>
-<td>false</td>
-<td></td>
-</tr>
-<tr>
-<td><code>includeConfidence</code> <em>boolean</em></td>
-<td>IncludeConfidence indicates whether to include confidence scores</td>
-<td>false</td>
-<td></td>
-</tr>
-</tbody>
-</table>
 <h4 id="retrypolicyspec">RetryPolicySpec<a class="headerlink" href="#retrypolicyspec" title="Permanent link">&para;</a></h4>
 <p>RetryPolicySpec defines retry behavior</p>
 <p><em>Appears in:</em>
@@ -4941,7 +4498,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <h4 id="secretreference">SecretReference<a class="headerlink" href="#secretreference" title="Permanent link">&para;</a></h4>
 <p>SecretReference references a Kubernetes Secret</p>
 <p><em>Appears in:</em>
-- <a href="#knowledgesourcespec">KnowledgeSourceSpec</a>
 - <a href="#languagemodelspec">LanguageModelSpec</a></p>
 <table>
 <thead>
@@ -4998,52 +4554,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Service namespace (defaults to same namespace if omitted)</td>
 <td></td>
 <td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="toolpreferencesspec">ToolPreferencesSpec<a class="headerlink" href="#toolpreferencesspec" title="Permanent link">&para;</a></h4>
-<p>ToolPreferencesSpec defines tool usage preferences</p>
-<p><em>Appears in:</em>
-- <a href="#languagepersonaspec">LanguagePersonaSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>preferredTools</code> <em>string array</em></td>
-<td>PreferredTools lists tools to prefer using</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>avoidTools</code> <em>string array</em></td>
-<td>AvoidTools lists tools to avoid using</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>strategy</code> <em>string</em></td>
-<td>ToolUsageStrategy defines how aggressively to use tools</td>
-<td>balanced</td>
-<td>Enum: [conservative balanced aggressive minimal] <br /></td>
-</tr>
-<tr>
-<td><code>alwaysConfirm</code> <em>boolean</em></td>
-<td>AlwaysConfirm requires confirmation before tool use</td>
-<td>false</td>
-<td></td>
-</tr>
-<tr>
-<td><code>explainToolUse</code> <em>boolean</em></td>
-<td>ExplainToolUse explains tool usage to users</td>
-<td>true</td>
-<td></td>
 </tr>
 </tbody>
 </table>
