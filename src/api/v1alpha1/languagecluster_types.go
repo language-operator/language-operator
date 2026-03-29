@@ -336,9 +336,10 @@ type LanguageClusterStatus struct {
 	// +optional
 	GatewayEndpoint string `json:"gatewayEndpoint,omitempty"`
 
-	// GatewayReady indicates whether the shared gateway Deployment is available
+	// GatewayReady indicates whether the shared gateway Deployment is available.
+	// Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false).
 	// +optional
-	GatewayReady bool `json:"gatewayReady,omitempty"`
+	GatewayReady *bool `json:"gatewayReady,omitempty"`
 
 	// Capacity reports observed resource usage in this cluster's namespace.
 	// +optional

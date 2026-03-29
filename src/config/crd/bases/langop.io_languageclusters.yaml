@@ -5618,8 +5618,9 @@ spec:
                   LiteLLM gateway
                 type: string
               gatewayReady:
-                description: GatewayReady indicates whether the shared gateway Deployment
-                  is available
+                description: |-
+                  GatewayReady indicates whether the shared gateway Deployment is available.
+                  Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false).
                 type: boolean
               phase:
                 description: Phase of the cluster

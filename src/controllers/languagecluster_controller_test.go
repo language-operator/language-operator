@@ -74,6 +74,11 @@ func TestLanguageClusterController_BasicReconciliation(t *testing.T) {
 	if !controllerutil.ContainsFinalizer(updatedCluster, FinalizerName) {
 		t.Error("Expected finalizer to be added")
 	}
+	if updatedCluster.Status.GatewayReady == nil {
+		t.Error("Expected GatewayReady to be set (non-nil) after successful reconcile")
+	} else if !*updatedCluster.Status.GatewayReady {
+		t.Error("Expected GatewayReady=true after successful reconcile")
+	}
 
 	// Namespace should be created
 	ns := &corev1.Namespace{}

@@ -536,6 +536,11 @@ func (in *LanguageClusterStatus) DeepCopyInto(out *LanguageClusterStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.GatewayReady != nil {
+		in, out := &in.GatewayReady, &out.GatewayReady
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Capacity != nil {
 		in, out := &in.Capacity, &out.Capacity
 		*out = new(ClusterCapacityStatus)

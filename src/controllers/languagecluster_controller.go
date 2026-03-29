@@ -51,6 +51,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
+	"k8s.io/utils/ptr"
 )
 
 // LanguageClusterReconciler reconciles a LanguageCluster object
@@ -238,6 +239,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile gateway")
 		cluster.Status.Phase = events.PhaseStatusFailed
+		cluster.Status.GatewayReady = ptr.To(false)
 		SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
 			"GatewayError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -254,6 +256,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile gateway ingress")
 			cluster.Status.Phase = events.PhaseStatusFailed
+			cluster.Status.GatewayReady = ptr.To(false)
 			SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
 				"GatewayIngressError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -267,7 +270,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionTrue,
 		"GatewayReady", "Shared LiteLLM gateway is ready", cluster.Generation)
 	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", cluster.Name)
-	cluster.Status.GatewayReady = true
+	cluster.Status.GatewayReady = ptr.To(true)
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
 	// field is always written even if ResourceQuota management fails (e.g. RBAC not yet applied).
