@@ -1024,17 +1024,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#eventtriggerspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        EventTriggerSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#healthcheckspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2300,17 +2289,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#eventtriggerspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        EventTriggerSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#healthcheckspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3374,40 +3352,6 @@
 </tr>
 </tbody>
 </table>
-<h4 id="eventtriggerspec">EventTriggerSpec<a class="headerlink" href="#eventtriggerspec" title="Permanent link">&para;</a></h4>
-<p>EventTriggerSpec defines an event trigger</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>type</code> <em>string</em></td>
-<td>Type is the event type (webhook, kubernetes-event, message-queue)</td>
-<td></td>
-<td>Enum: [webhook kubernetes-event message-queue] <br />Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>source</code> <em>string</em></td>
-<td>Source identifies the event source</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>filter</code> <em>object (keys:string, values:string)</em></td>
-<td>Filter defines filtering criteria for events</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="healthcheckspec">HealthCheckSpec<a class="headerlink" href="#healthcheckspec" title="Permanent link">&para;</a></h4>
 <p>HealthCheckSpec defines health checking configuration</p>
 <p><em>Appears in:</em>
@@ -3689,18 +3633,6 @@
 <tr>
 <td><code>instructions</code> <em>string</em></td>
 <td>Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>executionMode</code> <em>string</em></td>
-<td>ExecutionMode defines how the agent operates</td>
-<td>autonomous</td>
-<td>Enum: [autonomous interactive event-driven] <br /></td>
-</tr>
-<tr>
-<td><code>eventTriggers</code> <em><a href="#eventtriggerspec">EventTriggerSpec</a> array</em></td>
-<td>EventTriggers defines events that trigger the agent (for event-driven mode)</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
