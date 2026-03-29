@@ -31,10 +31,9 @@ type LanguageAgentSpec struct {
 	// +optional
 	Tools []ToolReference `json:"tools,omitempty"`
 
-	// Personas is a list of LanguagePersona references that compose in order of importance
-	// Personas are merged with later personas taking precedence over earlier ones
+	// Persona is the name of a LanguagePersona this agent uses
 	// +optional
-	Personas []PersonaReference `json:"personas,omitempty"`
+	Persona string `json:"persona,omitempty"`
 
 	// Instructions provides system instructions for the agent.
 	// Mounted at /etc/agent/instructions.txt if set.

@@ -2935,22 +2935,9 @@ spec:
                 description: NodeSelector is a selector which must match a node's
                   labels
                 type: object
-              personas:
-                description: |-
-                  Personas is a list of LanguagePersona references that compose in order of importance
-                  Personas are merged with later personas taking precedence over earlier ones
-                items:
-                  description: PersonaReference references a LanguagePersona
-                  properties:
-                    name:
-                      description: Name is the name of the LanguagePersona
-                      maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
+              persona:
+                description: Persona is the name of a LanguagePersona this agent uses
+                type: string
               podAnnotations:
                 additionalProperties:
                   type: string

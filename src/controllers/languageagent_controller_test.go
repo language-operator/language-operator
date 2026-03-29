@@ -1204,14 +1204,11 @@ func TestLanguageAgentController_GetNames(t *testing.T) {
 	t.Run("get_persona_names", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				Personas: []langopv1alpha1.PersonaReference{
-					{Name: "persona-1"},
-					{Name: "persona-2"},
-				},
+				Persona: "persona-1",
 			},
 		}
 		names := r.getPersonaNames(agent)
-		if len(names) != 2 || names[0] != "persona-1" || names[1] != "persona-2" {
+		if len(names) != 1 || names[0] != "persona-1" {
 			t.Errorf("getPersonaNames: got %v", names)
 		}
 	})
@@ -1775,7 +1772,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				Personas: []langopv1alpha1.PersonaReference{{Name: "my-persona"}},
+				Persona: "my-persona",
 			},
 		}
 
@@ -1798,7 +1795,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				Personas: []langopv1alpha1.PersonaReference{{Name: "pending-persona"}},
+				Persona: "pending-persona",
 			},
 		}
 
@@ -1815,7 +1812,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				Personas: []langopv1alpha1.PersonaReference{{Name: "missing"}},
+				Persona: "missing",
 			},
 		}
 
@@ -1825,52 +1822,6 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		_, err := r.fetchPersona(context.Background(), agent)
 		if err == nil {
 			t.Error("expected error when persona not found")
-		}
-	})
-}
-
-func TestLanguageAgentController_ComposePersonas(t *testing.T) {
-	r := &LanguageAgentReconciler{}
-
-	t.Run("single_persona", func(t *testing.T) {
-		p := gen.LanguagePersona("p1", "default",
-			gen.SetPersonaSystemPrompt("be helpful"),
-		)
-		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p})
-		if result == nil || result.Spec.SystemPrompt != "be helpful" {
-			t.Errorf("expected single persona returned as-is, got %v", result)
-		}
-	})
-
-	t.Run("later_overrides_scalar", func(t *testing.T) {
-		p1 := gen.LanguagePersona("p1", "default",
-			gen.SetPersonaSystemPrompt("first"),
-		)
-		p2 := gen.LanguagePersona("p2", "default",
-			gen.SetPersonaSystemPrompt("second"),
-		)
-		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p1, p2})
-		if result == nil || result.Spec.SystemPrompt != "second" {
-			t.Errorf("expected second persona to override, got %q", result.Spec.SystemPrompt)
-		}
-	})
-
-	t.Run("array_fields_appended", func(t *testing.T) {
-		p1 := &langopv1alpha1.LanguagePersona{
-			ObjectMeta: metav1.ObjectMeta{Name: "p1"},
-			Spec: langopv1alpha1.LanguagePersonaSpec{
-				Capabilities: []string{"read"},
-			},
-		}
-		p2 := &langopv1alpha1.LanguagePersona{
-			ObjectMeta: metav1.ObjectMeta{Name: "p2"},
-			Spec: langopv1alpha1.LanguagePersonaSpec{
-				Capabilities: []string{"write"},
-			},
-		}
-		result := r.composePersonas([]*langopv1alpha1.LanguagePersona{p1, p2})
-		if len(result.Spec.Capabilities) != 2 {
-			t.Errorf("expected 2 capabilities, got %d: %v", len(result.Spec.Capabilities), result.Spec.Capabilities)
 		}
 	})
 }

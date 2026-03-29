@@ -459,11 +459,6 @@ func (in *LanguageAgentSpec) DeepCopyInto(out *LanguageAgentSpec) {
 		*out = make([]ToolReference, len(*in))
 		copy(*out, *in)
 	}
-	if in.Personas != nil {
-		in, out := &in.Personas, &out.Personas
-		*out = make([]PersonaReference, len(*in))
-		copy(*out, *in)
-	}
 	if in.Replicas != nil {
 		in, out := &in.Replicas, &out.Replicas
 		*out = new(int32)
