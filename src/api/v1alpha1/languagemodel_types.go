@@ -33,10 +33,6 @@ type LanguageModelSpec struct {
 	// +kubebuilder:default="5m"
 	// +optional
 	Timeout string `json:"timeout,omitempty"`
-
-	// Fallbacks is an ordered list of fallback models to use if this model fails
-	// +optional
-	Fallbacks []ModelFallbackSpec `json:"fallbacks,omitempty"`
 }
 
 // SecretReference references a Kubernetes Secret
@@ -68,17 +64,6 @@ type RateLimitSpec struct {
 	// ConcurrentRequests limits concurrent requests
 	// +optional
 	ConcurrentRequests *int32 `json:"concurrentRequests,omitempty"`
-}
-
-// ModelFallbackSpec defines a fallback model
-type ModelFallbackSpec struct {
-	// ModelRef is a reference to another LanguageModel
-	// +kubebuilder:validation:Required
-	ModelRef string `json:"modelRef"`
-
-	// Conditions specifies when to use this fallback
-	// +optional
-	Conditions []string `json:"conditions,omitempty"`
 }
 
 // LanguageModelStatus defines the observed state of LanguageModel

@@ -193,15 +193,6 @@ func (r *LanguageModelReconciler) reconcileConfigMap(ctx context.Context, model 
 		data["rateLimits.json"] = string(rateLimitsJSON)
 	}
 
-	// Add fallbacks if specified
-	if len(model.Spec.Fallbacks) > 0 {
-		fallbacksJSON, err := json.Marshal(model.Spec.Fallbacks)
-		if err != nil {
-			return err
-		}
-		data["fallbacks.json"] = string(fallbacksJSON)
-	}
-
 	// Create or update the ConfigMap
 	configMapName := GenerateConfigMapName(model.Name, "model")
 	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, model, configMapName, model.Namespace, data)
