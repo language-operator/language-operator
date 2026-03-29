@@ -2479,7 +2479,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>gatewayReady</code> <em>boolean</em></td>
-<td>GatewayReady indicates whether the shared gateway Deployment is available</td>
+<td>GatewayReady indicates whether the shared gateway Deployment is available.<br />Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
