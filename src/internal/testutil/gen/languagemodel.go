@@ -66,10 +66,3 @@ func SetModelEndpoint(endpoint string) LanguageModelModifier {
 		m.Spec.Endpoint = endpoint
 	}
 }
-
-// SetModelNetworkPolicies sets spec.networkPolicies network rules.
-func SetModelNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageModelModifier {
-	return func(m *langopv1alpha1.LanguageModel) {
-		m.Spec.NetworkPolicies = rules
-	}
-}

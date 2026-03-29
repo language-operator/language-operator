@@ -63,8 +63,9 @@ func SetAgentPort(port int32) LanguageAgentModifier {
 // SetAgentWorkspace sets spec.workspace.
 func SetAgentWorkspace(size string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
+		enabled := true
 		a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{
-			Enabled: true,
+			Enabled: &enabled,
 			Size:    size,
 		}
 	}

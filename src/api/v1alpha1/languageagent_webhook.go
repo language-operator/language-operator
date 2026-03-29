@@ -50,8 +50,9 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) 
 
 	// Default workspace
 	if a.Spec.Workspace == nil {
+		enabled := true
 		a.Spec.Workspace = &WorkspaceSpec{
-			Enabled:    true,
+			Enabled:    &enabled,
 			Size:       "10Gi",
 			AccessMode: "ReadWriteOnce",
 			MountPath:  "/workspace",
@@ -121,7 +122,7 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
-	if a.Spec.Workspace != nil && a.Spec.Workspace.Enabled {
+	if a.Spec.Workspace != nil && (a.Spec.Workspace.Enabled == nil || *a.Spec.Workspace.Enabled) {
 		if err := validateWorkspaceSize(a.Spec.Workspace.Size); err != nil {
 			return fmt.Errorf("spec.workspace.size: %w", err)
 		}

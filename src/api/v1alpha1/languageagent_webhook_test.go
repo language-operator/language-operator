@@ -23,6 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func boolPtr(b bool) *bool { return &b }
+
 func TestLanguageAgentDefault(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -46,7 +48,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 			},
 			expected: &WorkspaceSpec{
-				Enabled:    true,
+				Enabled:    boolPtr(true),
 				Size:       "10Gi",
 				AccessMode: "ReadWriteOnce",
 				MountPath:  "/workspace",
@@ -66,7 +68,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 					},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled:    false,
+						Enabled:    boolPtr(false),
 						Size:       "5Gi",
 						AccessMode: "ReadWriteMany",
 						MountPath:  "/custom",
@@ -74,7 +76,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 			},
 			expected: &WorkspaceSpec{
-				Enabled:    false,
+				Enabled:    boolPtr(false),
 				Size:       "5Gi",
 				AccessMode: "ReadWriteMany",
 				MountPath:  "/custom",
@@ -119,8 +121,10 @@ func TestLanguageAgentDefault(t *testing.T) {
 
 			// For the first test case, verify all fields
 			if tt.name == "workspace defaults to enabled when nil" {
-				if tt.agent.Spec.Workspace.Enabled != tt.expected.Enabled {
-					t.Errorf("Expected Enabled=%v, got %v", tt.expected.Enabled, tt.agent.Spec.Workspace.Enabled)
+				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
+				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
+				if gotEnabled != wantEnabled {
+					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
 				}
 				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
 					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
@@ -135,8 +139,10 @@ func TestLanguageAgentDefault(t *testing.T) {
 
 			// For the second test case, verify values weren't overridden
 			if tt.name == "workspace not overridden when explicitly set" {
-				if tt.agent.Spec.Workspace.Enabled != tt.expected.Enabled {
-					t.Errorf("Expected Enabled=%v, got %v", tt.expected.Enabled, tt.agent.Spec.Workspace.Enabled)
+				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
+				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
+				if gotEnabled != wantEnabled {
+					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
 				}
 				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
 					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
@@ -337,7 +343,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: true,
+						Enabled: boolPtr(true),
 						Size:    "0Gi",
 					},
 				},
@@ -357,7 +363,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: true,
+						Enabled: boolPtr(true),
 						Size:    "invalid",
 					},
 				},
@@ -377,7 +383,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: true,
+						Enabled: boolPtr(true),
 						Size:    "",
 					},
 				},
@@ -397,7 +403,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: false,
+						Enabled: boolPtr(false),
 						Size:    "", // Empty size should be fine when workspace is disabled
 					},
 				},

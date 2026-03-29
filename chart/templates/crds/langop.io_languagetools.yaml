@@ -5606,18 +5606,6 @@ spec:
               endpoint:
                 description: Endpoint is the service endpoint where the tool is accessible
                 type: string
-              lastTransitionTime:
-                description: LastTransitionTime is the last time the phase transitioned
-                format: date-time
-                type: string
-              lastUpdateTime:
-                description: LastUpdateTime is the last time the status was updated
-                format: date-time
-                type: string
-              message:
-                description: Message provides human-readable details about the current
-                  state
-                type: string
               observedGeneration:
                 description: ObservedGeneration reflects the generation of the most
                   recently observed LanguageTool
@@ -5638,10 +5626,6 @@ spec:
                   health checks
                 format: int32
                 type: integer
-              reason:
-                description: Reason provides a machine-readable reason for the current
-                  state
-                type: string
               toolSchemas:
                 description: ToolSchemas contains the complete MCP tool schemas discovered
                   from this service

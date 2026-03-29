@@ -644,6 +644,8 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	// Check if any pods are ready
 	if deployment.Status.ReadyReplicas > 0 {
 		tool.Status.Phase = events.PhaseStatusRunning
+		tool.Status.Endpoint = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
+		tool.Status.ObservedGeneration = tool.Generation
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
 		// Discover MCP tool schemas for service mode tools

@@ -152,7 +152,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image: "ghcr.io/language-operator/agent:latest",
 			Workspace: &langopv1alpha1.WorkspaceSpec{
-				Enabled: true,
+				Enabled: func() *bool { b := true; return &b }(),
 				Size:    "10Gi",
 			},
 		},
@@ -821,9 +821,7 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image: "ghcr.io/language-operator/agent:latest",
 		},
-		Status: langopv1alpha1.LanguageAgentStatus{
-			ObservedGeneration: 0, // Outdated to simulate conflict scenario
-		},
+		Status: langopv1alpha1.LanguageAgentStatus{},
 	}
 
 	// Create a client that will simulate version conflicts on status updates

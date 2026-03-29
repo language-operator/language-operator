@@ -5752,7 +5752,9 @@ spec:
                   type: object
                 type: array
               phase:
-                description: Phase of the cluster (Pending, Ready, Failed)
+                description: Phase of the cluster
+                enum:
+                - Ready
                 type: string
               proxyEndpoint:
                 description: ProxyEndpoint is the in-cluster URL for the shared LiteLLM

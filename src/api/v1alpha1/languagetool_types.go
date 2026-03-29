@@ -167,22 +167,6 @@ type LanguageToolStatus struct {
 	// UnavailableReplicas is the number of pods targeted by this LanguageTool that are unavailable
 	// +optional
 	UnavailableReplicas int32 `json:"unavailableReplicas,omitempty"`
-
-	// LastUpdateTime is the last time the status was updated
-	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
-
-	// LastTransitionTime is the last time the phase transitioned
-	// +optional
-	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
-
-	// Message provides human-readable details about the current state
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Reason provides a machine-readable reason for the current state
-	// +optional
-	Reason string `json:"reason,omitempty"`
 }
 
 // +kubebuilder:object:root=true

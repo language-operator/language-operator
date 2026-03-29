@@ -96,10 +96,11 @@ type ToolReference struct {
 
 // WorkspaceSpec defines persistent workspace storage for an agent
 type WorkspaceSpec struct {
-	// Enabled controls whether to create a workspace volume
+	// Enabled controls whether to create a workspace volume.
+	// Defaults to true. Set to false to explicitly disable without removing the workspace config.
 	// +kubebuilder:default=true
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// Size is the requested storage size (e.g., "10Gi", "1.5Ti", "500Mi")
 	// Supports integer and decimal quantities with standard Kubernetes suffixes
@@ -128,12 +129,8 @@ type WorkspaceSpec struct {
 
 // LanguageAgentStatus defines the observed state of LanguageAgent
 type LanguageAgentStatus struct {
-	// ObservedGeneration reflects the generation of the most recently observed LanguageAgent
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Phase represents the current phase (Pending, Running, Succeeded, Failed, Unknown)
-	// +kubebuilder:validation:Enum=Pending;Running;Succeeded;Failed;Unknown;Suspended
+	// Phase represents the current phase of the agent
+	// +kubebuilder:validation:Enum=Running
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
@@ -153,66 +150,6 @@ type LanguageAgentStatus struct {
 	// +optional
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 
-	// ExecutionCount is the total number of executions
-	// +optional
-	ExecutionCount int64 `json:"executionCount,omitempty"`
-
-	// SuccessfulExecutions is the number of successful executions
-	// +optional
-	SuccessfulExecutions int64 `json:"successfulExecutions,omitempty"`
-
-	// FailedExecutions is the number of failed executions
-	// +optional
-	FailedExecutions int64 `json:"failedExecutions,omitempty"`
-
-	// LastExecutionTime is the timestamp of the last execution
-	// +optional
-	LastExecutionTime *metav1.Time `json:"lastExecutionTime,omitempty"`
-
-	// LastExecutionResult describes the result of the last execution
-	// +optional
-	LastExecutionResult string `json:"lastExecutionResult,omitempty"`
-
-	// CurrentGoal is the current goal being pursued (for autonomous agents)
-	// +optional
-	CurrentGoal string `json:"currentGoal,omitempty"`
-
-	// IterationCount is the current iteration in the reasoning loop
-	// +optional
-	IterationCount int32 `json:"iterationCount,omitempty"`
-
-	// Metrics contains execution metrics
-	// +optional
-	Metrics *AgentMetrics `json:"metrics,omitempty"`
-
-	// ActiveConversations is the number of active conversations
-	// +optional
-	ActiveConversations int32 `json:"activeConversations,omitempty"`
-
-	// ToolUsage tracks tool invocation statistics
-	// +optional
-	ToolUsage []ToolUsageSpec `json:"toolUsage,omitempty"`
-
-	// ModelUsage tracks model usage statistics
-	// +optional
-	ModelUsage []ModelUsageSpec `json:"modelUsage,omitempty"`
-
-	// CostMetrics contains cost tracking data
-	// +optional
-	CostMetrics *AgentCostMetrics `json:"costMetrics,omitempty"`
-
-	// LastUpdateTime is the last time the status was updated
-	// +optional
-	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
-
-	// Message provides human-readable details about the current state
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Reason provides a machine-readable reason for the current state
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
 	// UUID is a unique identifier for this agent instance
 	// Used for webhook routing (e.g., <uuid>.domain.com)
 	// +optional
@@ -221,96 +158,6 @@ type LanguageAgentStatus struct {
 	// WebhookURLs contains the URLs where this agent can receive webhooks
 	// +optional
 	WebhookURLs []string `json:"webhookURLs,omitempty"`
-}
-
-// AgentMetrics contains agent execution metrics
-type AgentMetrics struct {
-	// AverageIterations is the average number of iterations per execution
-	// +optional
-	AverageIterations *float64 `json:"averageIterations,omitempty"`
-
-	// AverageExecutionTime is the average execution time in seconds
-	// +optional
-	AverageExecutionTime *float64 `json:"averageExecutionTime,omitempty"`
-
-	// TotalTokens is the total number of tokens consumed
-	// +optional
-	TotalTokens int64 `json:"totalTokens,omitempty"`
-
-	// TotalToolCalls is the total number of tool invocations
-	// +optional
-	TotalToolCalls int64 `json:"totalToolCalls,omitempty"`
-
-	// SuccessRate is the percentage of successful executions
-	// +optional
-	SuccessRate *float64 `json:"successRate,omitempty"`
-}
-
-// ToolUsageSpec tracks tool usage
-type ToolUsageSpec struct {
-	// ToolName is the name of the tool
-	ToolName string `json:"toolName"`
-
-	// InvocationCount is the number of times this tool was invoked
-	InvocationCount int64 `json:"invocationCount,omitempty"`
-
-	// SuccessCount is the number of successful invocations
-	SuccessCount int64 `json:"successCount,omitempty"`
-
-	// FailureCount is the number of failed invocations
-	FailureCount int64 `json:"failureCount,omitempty"`
-
-	// AverageLatency is the average latency in milliseconds
-	// +optional
-	AverageLatency *int32 `json:"averageLatency,omitempty"`
-}
-
-// ModelUsageSpec tracks model usage
-type ModelUsageSpec struct {
-	// ModelName is the name of the model
-	ModelName string `json:"modelName"`
-
-	// RequestCount is the number of requests to this model
-	RequestCount int64 `json:"requestCount"`
-
-	// TotalTokens is the total tokens consumed by this model
-	TotalTokens int64 `json:"totalTokens"`
-
-	// InputTokens is the total input tokens
-	// +optional
-	InputTokens int64 `json:"inputTokens,omitempty"`
-
-	// OutputTokens is the total output tokens
-	// +optional
-	OutputTokens int64 `json:"outputTokens,omitempty"`
-}
-
-// AgentCostMetrics contains agent cost tracking
-type AgentCostMetrics struct {
-	// TotalCost is the total cost incurred by this agent
-	// +optional
-	TotalCost *float64 `json:"totalCost,omitempty"`
-
-	// ModelCosts breaks down cost by model
-	// +optional
-	ModelCosts []ModelCostSpec `json:"modelCosts,omitempty"`
-
-	// Currency is the currency for cost metrics
-	// +optional
-	Currency string `json:"currency,omitempty"`
-
-	// LastReset is when cost metrics were last reset
-	// +optional
-	LastReset *metav1.Time `json:"lastReset,omitempty"`
-}
-
-// ModelCostSpec tracks cost per model
-type ModelCostSpec struct {
-	// ModelName is the name of the model
-	ModelName string `json:"modelName"`
-
-	// Cost is the total cost for this model
-	Cost float64 `json:"cost"`
 }
 
 // +kubebuilder:object:root=true

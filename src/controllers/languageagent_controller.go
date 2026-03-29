@@ -494,7 +494,7 @@ func hashString(s string) string {
 
 func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	// Skip if workspace is not enabled
-	if agent.Spec.Workspace == nil || !agent.Spec.Workspace.Enabled {
+	if agent.Spec.Workspace == nil || (agent.Spec.Workspace.Enabled != nil && !*agent.Spec.Workspace.Enabled) {
 		return nil
 	}
 
@@ -609,7 +609,7 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 	// TODO: Add persona mounting from Persona
 
 	// Add workspace volume if enabled
-	if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
+	if agent.Spec.Workspace != nil && (agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) {
 		mountPath := agent.Spec.Workspace.MountPath
 		if mountPath == "" {
 			mountPath = "/workspace"
@@ -942,7 +942,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 		}
 
 		// Mount workspace if agent has workspace enabled
-		if agent.Spec.Workspace != nil && agent.Spec.Workspace.Enabled {
+		if agent.Spec.Workspace != nil && (agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) {
 			mountPath := agent.Spec.Workspace.MountPath
 			if mountPath == "" {
 				mountPath = "/workspace"

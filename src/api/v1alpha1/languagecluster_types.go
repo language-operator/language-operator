@@ -364,7 +364,8 @@ type NetworkPort struct {
 
 // LanguageClusterStatus defines the observed state
 type LanguageClusterStatus struct {
-	// Phase of the cluster (Pending, Ready, Failed)
+	// Phase of the cluster
+	// +kubebuilder:validation:Enum=Ready
 	Phase string `json:"phase,omitempty"`
 
 	// Conditions
