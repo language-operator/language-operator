@@ -327,7 +327,7 @@ func TestWebhookClusterMembershipPersona(t *testing.T) {
 
 	t.Run("persona in cluster namespace is accepted", func(t *testing.T) {
 		persona := gen.LanguagePersona("accepted-persona", "webhook-persona-cluster",
-			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+			gen.SetPersonaPersonality("You are a helpful assistant."),
 		)
 		if err := k8sClient.Create(ctx, persona); err != nil {
 			t.Errorf("expected success, got: %v", err)
@@ -338,7 +338,7 @@ func TestWebhookClusterMembershipPersona(t *testing.T) {
 
 	t.Run("persona in non-cluster namespace is rejected", func(t *testing.T) {
 		persona := gen.LanguagePersona("rejected-persona", "webhook-persona-plain",
-			gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+			gen.SetPersonaPersonality("You are a helpful assistant."),
 		)
 		err := k8sClient.Create(ctx, persona)
 		if err == nil {
