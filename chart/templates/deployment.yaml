@@ -71,11 +71,11 @@ spec:
         {{- if .Values.config.agentIngress.className }}
         - --agent-ingress-class-name={{ .Values.config.agentIngress.className }}
         {{- end }}
-        {{- if .Values.config.proxy.image }}
-        - --proxy-image={{ .Values.config.proxy.image }}
+        {{- if .Values.config.gateway.image }}
+        - --gateway-image={{ .Values.config.gateway.image }}
         {{- end }}
-        {{- if .Values.config.proxy.imagePullPolicy }}
-        - --proxy-image-pull-policy={{ .Values.config.proxy.imagePullPolicy }}
+        {{- if .Values.config.gateway.imagePullPolicy }}
+        - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}
         {{- with .Values.securityContext }}
         securityContext:

@@ -1,10 +1,10 @@
 ---
 # Example: deploying openclaw via language-operator
 #
-# The LanguageModel CR registers a LiteLLM proxy. The operator resolves the
-# proxy endpoint and injects MODEL_ENDPOINTS into all containers (including
+# The LanguageModel CR registers a model with the LiteLLM gateway. The operator resolves the
+# gateway endpoint and injects MODEL_ENDPOINTS into all containers (including
 # init containers). The openclaw-adapter reads MODEL_ENDPOINTS and seeds
-# openclaw.json so openclaw routes LLM traffic through the proxy rather than
+# openclaw.json so openclaw routes LLM traffic through the gateway rather than
 # connecting to model APIs directly.
 #
 # Prerequisites:

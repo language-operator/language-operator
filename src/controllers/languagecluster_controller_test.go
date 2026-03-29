@@ -536,8 +536,8 @@ func TestLanguageClusterController_GatewayServiceTypeAndAnnotations(t *testing.T
 			require.NoError(t, err)
 
 			svc := &corev1.Service{}
-			if err := fakeClient.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: cluster.Name}, svc); err != nil {
-				t.Fatalf("expected proxy service to exist: %v", err)
+			if err := fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, svc); err != nil {
+				t.Fatalf("expected gateway service to exist: %v", err)
 			}
 			if svc.Spec.Type != tt.wantServiceType {
 				t.Errorf("service type = %q, want %q", svc.Spec.Type, tt.wantServiceType)
@@ -551,7 +551,7 @@ func TestLanguageClusterController_GatewayServiceTypeAndAnnotations(t *testing.T
 	}
 }
 
-func TestLanguageClusterController_ProxySchedulingFields(t *testing.T) {
+func TestLanguageClusterController_GatewaySchedulingFields(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	cluster := gen.LanguageCluster("test-cluster")
@@ -603,8 +603,8 @@ func TestLanguageClusterController_ProxySchedulingFields(t *testing.T) {
 	require.NoError(t, err)
 
 	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "proxy", Namespace: cluster.Name}, deployment); err != nil {
-		t.Fatalf("expected proxy deployment to exist: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, deployment); err != nil {
+		t.Fatalf("expected gateway deployment to exist: %v", err)
 	}
 
 	podSpec := deployment.Spec.Template.Spec

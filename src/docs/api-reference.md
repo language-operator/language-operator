@@ -470,8 +470,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `phase` _string_ | Phase of the cluster (Pending, Ready, Failed) |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
-| `proxyEndpoint` _string_ | ProxyEndpoint is the in-cluster URL for the shared LiteLLM proxy |  |  |
-| `proxyReady` _boolean_ | ProxyReady indicates whether the shared proxy Deployment is available |  |  |
+| `gatewayEndpoint` _string_ | GatewayEndpoint is the in-cluster URL for the shared LiteLLM gateway |  |  |
+| `gatewayReady` _boolean_ | GatewayReady indicates whether the shared gateway Deployment is available |  |  |
 | `capacity` _[ClusterCapacityStatus](#clustercapacitystatus)_ | Capacity reports observed resource usage in this cluster's namespace. |  |  |
 
 

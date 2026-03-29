@@ -61,13 +61,13 @@ type LanguageClusterReconciler struct {
 	Recorder                record.EventRecorder
 	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
-	ProxyImage              string
-	ProxyImagePullPolicy    corev1.PullPolicy
+	GatewayImage            string
+	GatewayImagePullPolicy  corev1.PullPolicy
 }
 
-func (r *LanguageClusterReconciler) proxyImage() string {
-	if r.ProxyImage != "" {
-		return r.ProxyImage
+func (r *LanguageClusterReconciler) gatewayImage() string {
+	if r.GatewayImage != "" {
+		return r.GatewayImage
 	}
 	return "ghcr.io/language-operator/model:latest"
 }
@@ -220,40 +220,40 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
-	// Reconcile shared LiteLLM proxy Deployment + Service + ConfigMap
-	if err := r.reconcileProxy(ctx, cluster); err != nil {
-		log.Error(err, "Failed to reconcile proxy")
+	// Reconcile shared LiteLLM gateway Deployment + Service + ConfigMap
+	if err := r.reconcileGateway(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile gateway")
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile proxy")
-		SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionFalse,
-			"ProxyError", err.Error(), cluster.Generation)
+		span.SetStatus(codes.Error, "Failed to reconcile gateway")
+		SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
+			"GatewayError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after proxy error")
+			log.Error(updateErr, "Failed to update status after gateway error")
 		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile proxy Ingress if domain is configured
+	// Reconcile gateway Ingress if domain is configured
 	if cluster.Spec.Domain != "" {
-		if err := r.reconcileProxyIngress(ctx, cluster); err != nil {
-			log.Error(err, "Failed to reconcile proxy ingress")
+		if err := r.reconcileGatewayIngress(ctx, cluster); err != nil {
+			log.Error(err, "Failed to reconcile gateway ingress")
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to reconcile proxy ingress")
-			SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionFalse,
-				"ProxyIngressError", err.Error(), cluster.Generation)
+			span.SetStatus(codes.Error, "Failed to reconcile gateway ingress")
+			SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
+				"GatewayIngressError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after proxy ingress error")
+				log.Error(updateErr, "Failed to update status after gateway ingress error")
 			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
 	}
 
-	SetCondition(&cluster.Status.Conditions, "ProxyReady", metav1.ConditionTrue,
-		"ProxyReady", "Shared LiteLLM proxy is ready", cluster.Generation)
-	cluster.Status.ProxyEndpoint = fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", cluster.Name)
-	cluster.Status.ProxyReady = true
+	SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionTrue,
+		"GatewayReady", "Shared LiteLLM gateway is ready", cluster.Generation)
+	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", cluster.Name)
+	cluster.Status.GatewayReady = true
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
 	// field is always written even if ResourceQuota management fails (e.g. RBAC not yet applied).
@@ -747,8 +747,8 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 	}
 }
 
-// reconcileProxy creates/updates the shared LiteLLM proxy Deployment, Service, and ConfigMap.
-func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+// reconcileGateway creates/updates the shared LiteLLM gateway Deployment, Service, and ConfigMap.
+func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 	namespace := cluster.Name
 
@@ -781,15 +781,15 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 	configHash := hex.EncodeToString(h.Sum(nil))[:16]
 
 	// Reconcile ConfigMap
-	proxyLabels := map[string]string{
+	gatewayLabels := map[string]string{
 		"app.kubernetes.io/name":       "language-operator",
 		"app.kubernetes.io/managed-by": "language-operator",
-		"app.kubernetes.io/component":  "proxy",
+		"app.kubernetes.io/component":  "gateway",
 		"langop.io/cluster":            cluster.Name,
-		"langop.io/kind":               "proxy",
+		"langop.io/kind":               "gateway",
 	}
-	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "proxy-config", namespace, cmData); err != nil {
-		return fmt.Errorf("failed to reconcile proxy ConfigMap: %w", err)
+	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
+		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
 	}
 
 	// Build volumes and mounts: ConfigMap at /etc/langop/models/ + one Secret per model API key
@@ -798,7 +798,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			Name: "models-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: "proxy-config"},
+					LocalObjectReference: corev1.LocalObjectReference{Name: "gateway-config"},
 				},
 			},
 		},
@@ -851,8 +851,8 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			corev1.ResourceMemory: resource.MustParse("512Mi"),
 		},
 	}
-	proxySvcType := corev1.ServiceTypeClusterIP
-	var proxySvcAnnotations map[string]string
+	gatewaySvcType := corev1.ServiceTypeClusterIP
+	var gatewaySvcAnnotations map[string]string
 	if cluster.Spec.Gateway != nil {
 		if cluster.Spec.Gateway.Deployment.Replicas != nil {
 			replicas = *cluster.Spec.Gateway.Deployment.Replicas
@@ -861,25 +861,25 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			resources = cluster.Spec.Gateway.Deployment.Resources
 		}
 		if cluster.Spec.Gateway.Deployment.ServiceType != "" {
-			proxySvcType = cluster.Spec.Gateway.Deployment.ServiceType
+			gatewaySvcType = cluster.Spec.Gateway.Deployment.ServiceType
 		}
-		proxySvcAnnotations = cluster.Spec.Gateway.Deployment.ServiceAnnotations
+		gatewaySvcAnnotations = cluster.Spec.Gateway.Deployment.ServiceAnnotations
 	}
 
 	// Reconcile Deployment
 	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		if err := controllerutil.SetControllerReference(cluster, deployment, r.Scheme); err != nil {
 			return err
 		}
-		deployment.Labels = proxyLabels
+		deployment.Labels = gatewayLabels
 		maxUnavailable := intstr.FromInt(0)
 		maxSurge := intstr.FromInt(1)
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{MatchLabels: proxyLabels},
+			Selector: &metav1.LabelSelector{MatchLabels: gatewayLabels},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -889,7 +889,7 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: proxyLabels,
+					Labels: gatewayLabels,
 					Annotations: map[string]string{
 						"langop.io/config-hash": configHash,
 					},
@@ -897,9 +897,9 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            "proxy",
-							Image:           r.proxyImage(),
-							ImagePullPolicy: r.ProxyImagePullPolicy,
+							Name:            "gateway",
+							Image:           r.gatewayImage(),
+							ImagePullPolicy: r.GatewayImagePullPolicy,
 							Resources:       resources,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
@@ -946,21 +946,21 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to reconcile proxy Deployment: %w", err)
+		return fmt.Errorf("failed to reconcile gateway Deployment: %w", err)
 	}
 
 	// Reconcile Service
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
 	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
 		if err := controllerutil.SetControllerReference(cluster, svc, r.Scheme); err != nil {
 			return err
 		}
-		svc.Labels = proxyLabels
+		svc.Labels = gatewayLabels
 		svc.Spec = corev1.ServiceSpec{
-			Selector: proxyLabels,
-			Type:     proxySvcType,
+			Selector: gatewayLabels,
+			Type:     gatewaySvcType,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "http",
@@ -970,26 +970,26 @@ func (r *LanguageClusterReconciler) reconcileProxy(ctx context.Context, cluster 
 				},
 			},
 		}
-		if len(proxySvcAnnotations) > 0 {
+		if len(gatewaySvcAnnotations) > 0 {
 			if svc.Annotations == nil {
 				svc.Annotations = make(map[string]string)
 			}
-			for k, v := range proxySvcAnnotations {
+			for k, v := range gatewaySvcAnnotations {
 				svc.Annotations[k] = v
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to reconcile proxy Service: %w", err)
+		return fmt.Errorf("failed to reconcile gateway Service: %w", err)
 	}
 
-	log.Info("Reconciled shared proxy", "namespace", namespace, "models", len(modelList.Items))
+	log.Info("Reconciled shared gateway", "namespace", namespace, "models", len(modelList.Items))
 	return nil
 }
 
-// reconcileProxyIngress creates an Ingress for proxy.<cluster.domain>.
-func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+// reconcileGatewayIngress creates an Ingress for gateway.<cluster.domain>.
+func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 
 	// Skip if gateway ingress explicitly disabled
@@ -998,7 +998,7 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 		return nil
 	}
 
-	hostname := fmt.Sprintf("proxy.%s", cluster.Spec.Domain)
+	hostname := fmt.Sprintf("gateway.%s", cluster.Spec.Domain)
 	namespace := cluster.Name
 
 	ingressClass := ""
@@ -1007,7 +1007,7 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 	}
 
 	ingress := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{Name: "proxy", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
 		if err := controllerutil.SetControllerReference(cluster, ingress, r.Scheme); err != nil {
@@ -1026,7 +1026,7 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 									PathType: &pathType,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: "proxy",
+											Name: "gateway",
 											Port: networkingv1.ServiceBackendPort{Number: 8000},
 										},
 									},
@@ -1050,7 +1050,7 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 					}
 					ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 				}
-				secretName = "proxy-tls"
+				secretName = "gateway-tls"
 			}
 			ingress.Spec.TLS = []networkingv1.IngressTLS{
 				{Hosts: []string{hostname}, SecretName: secretName},
@@ -1062,9 +1062,9 @@ func (r *LanguageClusterReconciler) reconcileProxyIngress(ctx context.Context, c
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("failed to reconcile proxy Ingress: %w", err)
+		return fmt.Errorf("failed to reconcile gateway Ingress: %w", err)
 	}
-	log.Info("Reconciled proxy Ingress", "hostname", hostname)
+	log.Info("Reconciled gateway Ingress", "hostname", hostname)
 	return nil
 }
 

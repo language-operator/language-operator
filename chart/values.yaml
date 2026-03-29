@@ -182,11 +182,11 @@ config:
     # Example: "traefik", "nginx", "alb"
     className: ""
 
-  proxy:
-    # Image for the shared LiteLLM proxy deployed per LanguageCluster.
+  gateway:
+    # Image for the shared LiteLLM gateway deployed per LanguageCluster.
     # Defaults to ghcr.io/language-operator/model:latest when empty.
     image: ""
-    # ImagePullPolicy for the proxy (Always, IfNotPresent, Never).
+    # ImagePullPolicy for the gateway (Always, IfNotPresent, Never).
     # Defaults to Kubernetes default (IfNotPresent, or Always for :latest).
     imagePullPolicy: ""
 

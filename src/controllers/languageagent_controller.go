@@ -434,8 +434,8 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		cfg.Tools[tool.Name] = toolConfigYAML{Endpoint: endpoint, Protocol: "mcp"}
 	}
 
-	// Models — all served via the shared namespace proxy
-	proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", agent.Namespace)
+	// Models — all served via the shared namespace gateway
+	gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", agent.Namespace)
 	for _, modelRef := range agent.Spec.Models {
 		model := &langopv1alpha1.LanguageModel{}
 		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
@@ -449,7 +449,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 			Role:     modelRef.Role,
 			Provider: model.Spec.Provider,
 			Model:    model.Spec.ModelName,
-			Endpoint: proxyURL,
+			Endpoint: gatewayURL,
 		}
 	}
 
@@ -926,18 +926,18 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 			return nil, nil, fmt.Errorf("failed to get model %s/%s: %w", agent.Namespace, modelRef.Name, err)
 		}
 
-		// All models in a cluster are served by the shared proxy named "proxy"
-		// in the cluster namespace. Deduplicate: only add the proxy URL once.
-		proxyURL := fmt.Sprintf("http://proxy.%s.svc.cluster.local:8000", agent.Namespace)
+		// All models in a cluster are served by the shared gateway
+		// in the cluster namespace. Deduplicate: only add the gateway URL once.
+		gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", agent.Namespace)
 		alreadyAdded := false
 		for _, u := range modelURLs {
-			if u == proxyURL {
+			if u == gatewayURL {
 				alreadyAdded = true
 				break
 			}
 		}
 		if !alreadyAdded {
-			modelURLs = append(modelURLs, proxyURL)
+			modelURLs = append(modelURLs, gatewayURL)
 		}
 
 		// Collect model name from spec
@@ -1150,7 +1150,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		})
 	}
 
-	// Model proxy URLs and names (comma-separated)
+	// Model gateway URLs and names (comma-separated)
 	if len(modelURLs) > 0 {
 		env = append(env, corev1.EnvVar{
 			Name:  "MODEL_ENDPOINTS",

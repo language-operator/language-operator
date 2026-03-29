@@ -53,8 +53,8 @@ const (
 	ReasonExecutionModeDetected = "ExecutionModeDetected"
 
 	// Runtime and operational events
-	ReasonRuntimeError          = "RuntimeError"
-	ReasonProxyDeploymentFailed = "ProxyDeploymentFailed"
+	ReasonRuntimeError            = "RuntimeError"
+	ReasonGatewayDeploymentFailed = "GatewayDeploymentFailed"
 )
 
 // Resource status phase constants - standardized across all controllers
@@ -134,9 +134,9 @@ func (e *EventManager) RecordRBACFailed(obj runtime.Object, err error) {
 		"Failed to configure permissions: %v", err)
 }
 
-func (e *EventManager) RecordProxyDeploymentFailed(obj runtime.Object, err error) {
-	e.recorder.Eventf(obj, corev1.EventTypeWarning, ReasonProxyDeploymentFailed,
-		"Failed to create or update proxy deployment: %v", err)
+func (e *EventManager) RecordGatewayDeploymentFailed(obj runtime.Object, err error) {
+	e.recorder.Eventf(obj, corev1.EventTypeWarning, ReasonGatewayDeploymentFailed,
+		"Failed to create or update gateway deployment: %v", err)
 }
 
 // Network-related events
@@ -170,7 +170,7 @@ func (e *EventManager) RecordModelCreated(obj runtime.Object) {
 
 func (e *EventManager) RecordModelReady(obj runtime.Object, provider string) {
 	e.recorder.Eventf(obj, corev1.EventTypeNormal, ReasonResourceReady,
-		"Model proxy is ready for provider %s", provider)
+		"Model gateway is ready for provider %s", provider)
 }
 
 func (e *EventManager) RecordPersonaCreated(obj runtime.Object, displayName string) {

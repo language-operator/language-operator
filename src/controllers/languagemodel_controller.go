@@ -113,7 +113,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Reconcile the ConfigMap (read by the cluster's shared proxy)
+	// Reconcile the ConfigMap (read by the cluster's shared gateway)
 	if err := r.reconcileConfigMap(ctx, model); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
@@ -130,11 +130,11 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Update status — model is managed by the cluster's shared proxy
+	// Update status — model is managed by the cluster's shared gateway
 	model.Status.ObservedGeneration = model.Generation
 	model.Status.Phase = "Ready"
-	model.Status.Message = "Model is managed by the cluster shared proxy"
-	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster proxy", model.Generation)
+	model.Status.Message = "Model is managed by the cluster shared gateway"
+	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster gateway", model.Generation)
 
 	if r.EventManager != nil {
 		r.EventManager.RecordModelReady(model, model.Spec.Provider)

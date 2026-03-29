@@ -129,9 +129,9 @@ func TestEventManager_WarningEvents(t *testing.T) {
 			reason: ReasonRBACFailed,
 		},
 		{
-			name:   "RecordProxyDeploymentFailed",
-			call:   func(m *EventManager, o runtime.Object) { m.RecordProxyDeploymentFailed(o, testErr) },
-			reason: ReasonProxyDeploymentFailed,
+			name:   "RecordGatewayDeploymentFailed",
+			call:   func(m *EventManager, o runtime.Object) { m.RecordGatewayDeploymentFailed(o, testErr) },
+			reason: ReasonGatewayDeploymentFailed,
 		},
 	}
 

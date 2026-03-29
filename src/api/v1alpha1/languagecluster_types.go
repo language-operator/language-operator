@@ -336,13 +336,13 @@ type LanguageClusterStatus struct {
 	// Conditions
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// ProxyEndpoint is the in-cluster URL for the shared LiteLLM proxy
+	// GatewayEndpoint is the in-cluster URL for the shared LiteLLM gateway
 	// +optional
-	ProxyEndpoint string `json:"proxyEndpoint,omitempty"`
+	GatewayEndpoint string `json:"gatewayEndpoint,omitempty"`
 
-	// ProxyReady indicates whether the shared proxy Deployment is available
+	// GatewayReady indicates whether the shared gateway Deployment is available
 	// +optional
-	ProxyReady bool `json:"proxyReady,omitempty"`
+	GatewayReady bool `json:"gatewayReady,omitempty"`
 
 	// Capacity reports observed resource usage in this cluster's namespace.
 	// +optional

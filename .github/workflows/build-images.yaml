@@ -68,7 +68,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build the model proxy image (LiteLLM wrapper)
+  # Build the gateway image (LiteLLM wrapper)
   build-model:
     runs-on: ubuntu-latest
     permissions:
