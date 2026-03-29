@@ -1407,17 +1407,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#agentobservabilityspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AgentObservabilitySpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#cachingspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2230,46 +2219,6 @@
 </tr>
 </tbody>
 </table>
-<h4 id="agentobservabilityspec">AgentObservabilitySpec<a class="headerlink" href="#agentobservabilityspec" title="Permanent link">&para;</a></h4>
-<p>AgentObservabilitySpec defines agent monitoring</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>metrics</code> <em>boolean</em></td>
-<td>Metrics enables metrics collection</td>
-<td>true</td>
-<td></td>
-</tr>
-<tr>
-<td><code>tracing</code> <em>boolean</em></td>
-<td>Tracing enables distributed tracing</td>
-<td>false</td>
-<td></td>
-</tr>
-<tr>
-<td><code>logLevel</code> <em>string</em></td>
-<td>LogLevel defines the logging level</td>
-<td>info</td>
-<td>Enum: [debug info warn error] <br /></td>
-</tr>
-<tr>
-<td><code>logConversations</code> <em>boolean</em></td>
-<td>LogConversations enables conversation logging</td>
-<td>true</td>
-<td></td>
-</tr>
-</tbody>
-</table>
 <h4 id="cachingspec">CachingSpec<a class="headerlink" href="#cachingspec" title="Permanent link">&para;</a></h4>
 <p>CachingSpec defines response caching configuration</p>
 <p><em>Appears in:</em>
@@ -3051,12 +3000,6 @@
 <td>BackoffLimit specifies the number of retries before marking as Failed</td>
 <td>3</td>
 <td>Minimum: 0 <br />Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>observability</code> <em><a href="#agentobservabilityspec">AgentObservabilitySpec</a></em></td>
-<td>Observability defines monitoring and tracing configuration</td>
-<td></td>
-<td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
