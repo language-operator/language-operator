@@ -3212,18 +3212,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
-<tr>
-<td><code>lastUpdateTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
-<td>LastUpdateTime is the last time the status was updated</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>message</code> <em>string</em></td>
-<td>Message provides human-readable details about the current state</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
 </tbody>
 </table>
 <h4 id="languagetool">LanguageTool<a class="headerlink" href="#languagetool" title="Permanent link">&para;</a></h4>
@@ -3344,9 +3332,9 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>phase</code> <em>string</em></td>
-<td>Phase represents the current phase of the tool (Pending, Running, Failed, Unknown)</td>
+<td>Phase represents the current phase of the tool (Pending, Running, Failed, Updating)</td>
 <td></td>
-<td>Enum: [Pending Running Failed Unknown Updating] <br />Optional: {} <br /></td>
+<td>Enum: [Pending Running Failed Updating] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
@@ -3577,12 +3565,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tr>
 <td><code>tokensPerMinute</code> <em>integer</em></td>
 <td>TokensPerMinute limits tokens per minute</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>concurrentRequests</code> <em>integer</em></td>
-<td>ConcurrentRequests limits concurrent requests</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
