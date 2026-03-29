@@ -66,3 +66,20 @@ func SetModelEndpoint(endpoint string) LanguageModelModifier {
 		m.Spec.Endpoint = endpoint
 	}
 }
+
+// SetModelRateLimits sets spec.rateLimits with the given requests-per-minute and tokens-per-minute.
+func SetModelRateLimits(rpm, tpm int32) LanguageModelModifier {
+	return func(m *langopv1alpha1.LanguageModel) {
+		m.Spec.RateLimits = &langopv1alpha1.RateLimitSpec{
+			RequestsPerMinute: &rpm,
+			TokensPerMinute:   &tpm,
+		}
+	}
+}
+
+// SetModelTimeout sets spec.timeout (e.g. "30s", "5m").
+func SetModelTimeout(timeout string) LanguageModelModifier {
+	return func(m *langopv1alpha1.LanguageModel) {
+		m.Spec.Timeout = timeout
+	}
+}

@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -630,4 +632,113 @@ func TestLanguageClusterController_GatewaySchedulingFields(t *testing.T) {
 	if len(podSpec.ImagePullSecrets) == 0 || podSpec.ImagePullSecrets[0].Name != "proxy-registry-secret" {
 		t.Errorf("Expected ImagePullSecret proxy-registry-secret, got %v", podSpec.ImagePullSecrets)
 	}
+}
+
+func TestLanguageClusterController_AgentRBAC(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("rbac-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	// First reconcile adds finalizer
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	// Second reconcile creates resources
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	role := &rbacv1.Role{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "agents", Namespace: cluster.Name}, role)
+	require.NoError(t, err, "agents Role must exist in cluster namespace")
+	require.Len(t, role.Rules, 1)
+	assert.Equal(t, []string{""}, role.Rules[0].APIGroups)
+	assert.Equal(t, []string{"events"}, role.Rules[0].Resources)
+	assert.Equal(t, []string{"create"}, role.Rules[0].Verbs)
+
+	rb := &rbacv1.RoleBinding{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "agents", Namespace: cluster.Name}, rb)
+	require.NoError(t, err, "agents RoleBinding must exist in cluster namespace")
+	assert.Equal(t, "agents", rb.RoleRef.Name)
+	assert.Equal(t, "Role", rb.RoleRef.Kind)
+	require.Len(t, rb.Subjects, 1)
+	assert.Equal(t, "ServiceAccount", rb.Subjects[0].Kind)
+	assert.Equal(t, "default", rb.Subjects[0].Name)
+}
+
+func TestLanguageClusterController_NetworkPolicy(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("np-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name + "-agents", Namespace: cluster.Name}, np)
+	require.NoError(t, err, "NetworkPolicy must exist in cluster namespace")
+	assert.NotEmpty(t, np.Spec.Egress, "NetworkPolicy must have at least the default egress rules")
+}
+
+func TestLanguageClusterController_GatewayEndpoint(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("gw-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+	assert.Equal(t, "http://gateway.gw-cluster.svc.cluster.local:8000", updated.Status.GatewayEndpoint)
+	require.NotNil(t, updated.Status.GatewayReady)
+	assert.True(t, *updated.Status.GatewayReady)
 }

@@ -124,3 +124,31 @@ func SetAgentLabel(key, value string) LanguageAgentModifier {
 		a.Labels[key] = value
 	}
 }
+
+// SetAgentExecutionMode sets spec.executionMode.
+func SetAgentExecutionMode(mode string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.ExecutionMode = mode
+	}
+}
+
+// SetAgentPersona sets spec.persona.
+func SetAgentPersona(name string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Persona = name
+	}
+}
+
+// SetAgentTool appends a ToolReference to spec.tools.
+func SetAgentTool(name string, enabled *bool) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Tools = append(a.Spec.Tools, langopv1alpha1.ToolReference{Name: name, Enabled: enabled})
+	}
+}
+
+// SetAgentNetworkPolicies sets spec.networkPolicies.
+func SetAgentNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.NetworkPolicies = rules
+	}
+}

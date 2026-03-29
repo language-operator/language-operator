@@ -84,3 +84,10 @@ func SetClusterGatewayServiceAnnotations(annotations map[string]string) Language
 		c.Spec.Gateway.Deployment.ServiceAnnotations = annotations
 	}
 }
+
+// SetClusterNetworkPolicies sets spec.networkPolicies (user-defined egress rules for agents).
+func SetClusterNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		c.Spec.NetworkPolicies = rules
+	}
+}
