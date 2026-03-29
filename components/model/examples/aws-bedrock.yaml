@@ -4,74 +4,13 @@ metadata:
   name: bedrock-claude
   namespace: langop-system
 spec:
-  # Provider type
   provider: bedrock
-
-  # Model identifier (Bedrock model ARN or ID)
   modelName: anthropic.claude-3-5-sonnet-20241022-v2:0
-
-  # AWS endpoint (region-specific)
   endpoint: https://bedrock-runtime.us-east-1.amazonaws.com
-
-  # AWS credentials from Kubernetes secret
   apiKeySecretRef:
     name: aws-bedrock-credentials
     key: aws-secret-access-key
-
-  # Request timeout
   timeout: "10m"
-
-  # Rate limiting (based on Bedrock quotas)
   rateLimits:
     requestsPerMinute: 40
     tokensPerMinute: 100000
-    concurrentRequests: 4
-
-  # Retry policy
-  retryPolicy:
-    maxAttempts: 3
-    initialBackoff: "2s"
-    maxBackoff: "60s"
-    retryableStatusCodes:
-      - 429  # Throttling
-      - 500  # Internal error
-      - 503  # Service unavailable
-
-  # Model configuration
-  configuration:
-    temperature: 0.8
-    maxTokens: 4096
-    additionalParameters:
-      aws_region: "us-east-1"
-      aws_access_key_id_secret: "aws-bedrock-credentials"
-      aws_access_key_id_key: "aws-access-key-id"
-
-  # Observability
-  observability:
-    metrics: true
-    tracing: true
-    logging:
-      level: info
-      logRequests: true
-
-  # Cost tracking
-  costTracking:
-    enabled: true
-    currency: "USD"
-    inputTokenCost: 0.003   # Bedrock Claude Sonnet pricing
-    outputTokenCost: 0.015
-
-  # Network egress rules for AWS Bedrock
-  networkPolicies:
-  - description: "Allow AWS Bedrock API access"
-    to:
-      dns: ["bedrock-runtime.*.amazonaws.com"]
-    ports:
-    - port: 443
-      protocol: TCP
-  - description: "Allow AWS STS for credential refresh"
-    to:
-      dns: ["sts.*.amazonaws.com"]
-    ports:
-    - port: 443
-      protocol: TCP

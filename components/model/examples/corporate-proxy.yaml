@@ -4,68 +4,12 @@ metadata:
   name: openai-via-proxy
   namespace: langop-system
 spec:
-  # Provider type
   provider: openai
-
-  # Model identifier
   modelName: gpt-4
-
-  # API key from Kubernetes secret
   apiKeySecretRef:
     name: openai-credentials
     key: api-key
-
-  # Request timeout (longer due to proxy)
   timeout: "8m"
-
-  # Rate limiting
   rateLimits:
     requestsPerMinute: 60
     tokensPerMinute: 80000
-    concurrentRequests: 8
-
-  # Retry policy
-  retryPolicy:
-    maxAttempts: 3
-    initialBackoff: "3s"
-    maxBackoff: "60s"
-
-  # Model configuration
-  configuration:
-    temperature: 0.7
-    maxTokens: 4096
-    additionalParameters:
-      # Corporate proxy configuration
-      http_proxy: "http://proxy.corp.example.com:8080"
-      https_proxy: "http://proxy.corp.example.com:8080"
-
-  # Observability
-  observability:
-    metrics: true
-    logging:
-      level: info
-      logRequests: true
-
-  # Cost tracking
-  costTracking:
-    enabled: true
-    currency: "USD"
-    inputTokenCost: 0.01
-    outputTokenCost: 0.03
-
-  # Network egress rules for corporate proxy
-  networkPolicies:
-  - description: "Allow corporate proxy access"
-    to:
-      cidr: "10.0.0.0/8"  # Corporate network range
-    ports:
-    - port: 8080
-      protocol: TCP
-  - description: "Allow corporate DNS"
-    to:
-      cidr: "10.0.1.10/32"  # Corporate DNS server
-    ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP

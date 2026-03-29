@@ -121,22 +121,6 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[s
         # Local LLM servers (LM Studio, Ollama, etc.) don't need auth but litellm requires the field
         params["api_key"] = "sk-local-dummy-key"
 
-    # Add provider-specific configuration
-    config = spec.get("configuration", {})
-    if config:
-        if config.get("maxTokens"):
-            params["max_tokens"] = config["maxTokens"]
-        if config.get("temperature") is not None:
-            params["temperature"] = config["temperature"]
-        if config.get("topP") is not None:
-            params["top_p"] = config["topP"]
-        if config.get("frequencyPenalty") is not None:
-            params["frequency_penalty"] = config["frequencyPenalty"]
-        if config.get("presencePenalty") is not None:
-            params["presence_penalty"] = config["presencePenalty"]
-        if config.get("stopSequences"):
-            params["stop"] = config["stopSequences"]
-
     # Add timeout
     if spec.get("timeout"):
         # Parse duration like "5m" or "30s" to seconds
@@ -172,53 +156,7 @@ def build_model_list(spec: Dict[str, Any], api_key: Optional[str]) -> List[Dict[
         if rate_limits.get("tokensPerMinute"):
             model_entry["tpm"] = rate_limits["tokensPerMinute"]
 
-    # Handle load balancing with multiple endpoints
-    endpoints = spec.get("loadBalancing", {}).get("endpoints", [])
-    if endpoints:
-        models = []
-        for i, ep in enumerate(endpoints):
-            ep_params = litellm_params.copy()
-            ep_params["api_base"] = ep["url"]
-
-            ep_entry = {
-                "model_name": model_name,
-                "litellm_params": ep_params,
-            }
-
-            # Add endpoint-specific rate limits or weight
-            if rate_limits:
-                if rate_limits.get("requestsPerMinute"):
-                    ep_entry["rpm"] = rate_limits["requestsPerMinute"]
-                if rate_limits.get("tokensPerMinute"):
-                    ep_entry["tpm"] = rate_limits["tokensPerMinute"]
-
-            models.append(ep_entry)
-
-        return models
-
     return [model_entry]
-
-
-def build_router_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
-    """Build router_settings for load balancing."""
-    settings: Dict[str, Any] = {}
-
-    load_balancing = spec.get("loadBalancing", {})
-    if load_balancing:
-        strategy = load_balancing.get("strategy", "round-robin")
-
-        # Map strategy names
-        strategy_map = {
-            "round-robin": "simple-shuffle",
-            "least-connections": "least-busy",
-            "random": "simple-shuffle",
-            "weighted": "simple-shuffle",
-            "latency-based": "latency-based-routing",
-        }
-
-        settings["routing_strategy"] = strategy_map.get(strategy, "simple-shuffle")
-
-    return settings if settings else None
 
 
 def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
@@ -239,40 +177,6 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
         # Disable internal health checks for local models to prevent request buildup
         settings["health_check_interval"] = 0
 
-    # Retry policy
-    retry_policy = spec.get("retryPolicy", {})
-    if retry_policy:
-        max_attempts = retry_policy.get("maxAttempts", 3)
-        settings["num_retries"] = max_attempts
-
-    # Fallbacks
-    fallbacks = spec.get("fallbacks", [])
-    if fallbacks:
-        # Build fallback mapping
-        fallback_list = []
-        model_name = spec.get("modelName")
-        fallback_models = [fb.get("modelRef") for fb in fallbacks]
-
-        if fallback_models:
-            settings["fallbacks"] = [{model_name: fallback_models}]
-
-    # Caching
-    caching = spec.get("caching", {})
-    if caching and caching.get("enabled"):
-        settings["cache"] = True
-        if caching.get("ttl"):
-            # Parse TTL duration
-            ttl_str = caching["ttl"]
-            if ttl_str.endswith("m"):
-                ttl = int(ttl_str[:-1]) * 60
-            elif ttl_str.endswith("s"):
-                ttl = int(ttl_str[:-1])
-            elif ttl_str.endswith("h"):
-                ttl = int(ttl_str[:-1]) * 3600
-            else:
-                ttl = 300
-            settings["cache_kwargs"] = {"ttl": ttl}
-
     # Always return settings dict (even if mostly empty) for openai-compatible providers
     return settings
 
@@ -288,13 +192,6 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
         all_models.extend(build_model_list(spec, api_key))
     config["model_list"] = all_models
 
-    # Router settings from the first spec that defines load balancing
-    for spec in specs:
-        router_settings = build_router_settings(spec)
-        if router_settings:
-            config["router_settings"] = router_settings
-            break
-
     # litellm_settings: merge across all specs (first writer wins per key)
     merged_settings: Dict[str, Any] = {}
     for spec in specs:
@@ -304,12 +201,6 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
         config["litellm_settings"] = merged_settings
 
     config["general_settings"] = {"background_health_checks": False}
-
-    # Enable prometheus if any spec requests metrics
-    for spec in specs:
-        if spec.get("observability", {}).get("metrics", True):
-            config["success_callback"] = ["prometheus"]
-            break
 
     return config
 
