@@ -1970,7 +1970,7 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 
 	t.Run("persona_not_ready", func(t *testing.T) {
 		p := gen.LanguagePersona("pending-persona", "default")
-		p.Status.Phase = "Pending"
+		p.Status.Phase = events.PhaseStatusPending
 
 		agent := &langopv1alpha1.LanguageAgent{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},

@@ -118,7 +118,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.EventManager.RecordConfigMapFailed(model, err)
 		}
 		SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), model.Generation)
-		model.Status.Phase = "Error"
+		model.Status.Phase = events.PhaseStatusFailed
 		if statusErr := r.Status().Update(ctx, model); statusErr != nil {
 			log.Error(statusErr, "Failed to update status")
 		}
@@ -128,7 +128,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Update status — model is managed by the cluster's shared gateway
 	model.Status.ObservedGeneration = model.Generation
-	model.Status.Phase = "Ready"
+	model.Status.Phase = events.PhaseStatusReady
 	model.Status.Message = "Model is managed by the cluster shared gateway"
 	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster gateway", model.Generation)
 

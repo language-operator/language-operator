@@ -28,8 +28,8 @@ type LanguagePersonaStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase represents the current phase (Ready, NotReady)
-	// +kubebuilder:validation:Enum=Ready;NotReady
+	// Phase represents the current phase (Ready, Failed)
+	// +kubebuilder:validation:Enum=Ready;Failed
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
