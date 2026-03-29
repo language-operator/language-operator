@@ -122,19 +122,9 @@ agent:
 # Each entry is the full spec of the referenced LanguagePersona resource.
 personas:
   - name: analytical-persona
-    displayName: Analytical Persona
-    description: Precise, data-driven, cites sources
-    systemPrompt: You are an analytical assistant. Be precise and always cite data.
     tone: professional
-    language: en
-    instructions:
-      - Always cite data sources
-      - Use structured output
-    capabilities:
-      - data analysis
-      - statistical reasoning
-    limitations:
-      - Do not speculate without data
+    personality: Analytical and precise, always cites data sources and uses structured output
+    expertise: Data analysis, statistical reasoning, and visualization
 
 # Tool endpoints — keyed by tool name, resolved to in-cluster MCP service URLs.
 tools:

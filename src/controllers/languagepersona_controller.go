@@ -92,7 +92,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 		if r.EventManager != nil {
-			r.EventManager.RecordPersonaCreated(persona, persona.Spec.DisplayName)
+			r.EventManager.RecordPersonaCreated(persona, persona.Name)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -121,7 +121,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Persona configuration is ready", persona.Generation)
 
 	if r.EventManager != nil {
-		r.EventManager.RecordPersonaReady(persona, persona.Spec.DisplayName)
+		r.EventManager.RecordPersonaReady(persona, persona.Name)
 	}
 
 	if err := r.Status().Update(ctx, persona); err != nil {
@@ -142,7 +142,7 @@ func (r *LanguagePersonaReconciler) reconcileConfigMap(ctx context.Context, pers
 	// Create ConfigMap data from persona spec
 	data := make(map[string]string)
 
-	// Serialize the spec as JSON
+	// Serialize the spec as JSON for agents that prefer a single document
 	specJSON, err := json.Marshal(persona.Spec)
 	if err != nil {
 		return err
@@ -150,24 +150,9 @@ func (r *LanguagePersonaReconciler) reconcileConfigMap(ctx context.Context, pers
 	data["persona.json"] = string(specJSON)
 
 	// Add individual fields for easy access
-	data["displayName"] = persona.Spec.DisplayName
-	data["description"] = persona.Spec.Description
-	data["systemPrompt"] = persona.Spec.SystemPrompt
-	if persona.Spec.Tone != "" {
-		data["tone"] = persona.Spec.Tone
-	}
-	if persona.Spec.Language != "" {
-		data["language"] = persona.Spec.Language
-	}
-
-	// Serialize instructions
-	if len(persona.Spec.Instructions) > 0 {
-		instructionsJSON, err := json.Marshal(persona.Spec.Instructions)
-		if err != nil {
-			return err
-		}
-		data["instructions.json"] = string(instructionsJSON)
-	}
+	data["tone"] = persona.Spec.Tone
+	data["personality"] = persona.Spec.Personality
+	data["expertise"] = persona.Spec.Expertise
 
 	// Create or update the ConfigMap
 	configMapName := GenerateConfigMapName(persona.Name, "persona")

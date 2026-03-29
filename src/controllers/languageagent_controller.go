@@ -377,26 +377,6 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		log.Error(err, "Failed to fetch persona, continuing without it")
 	}
 
-	// Merge instructions with persona systemPrompt if persona is available
-	instructions := agent.Spec.Instructions
-	if persona != nil {
-		if persona.Spec.SystemPrompt != "" {
-			if instructions != "" {
-				instructions = persona.Spec.SystemPrompt + "\n\n" + instructions
-			} else {
-				instructions = persona.Spec.SystemPrompt
-			}
-		}
-
-		// Add persona instructions if available
-		if len(persona.Spec.Instructions) > 0 {
-			instructions = instructions + "\n\nAdditional Guidelines:\n"
-			for _, inst := range persona.Spec.Instructions {
-				instructions = instructions + "- " + inst + "\n"
-			}
-		}
-	}
-
 	// Add agent spec as JSON
 	specJSON, err := json.Marshal(agent.Spec)
 	if err != nil {
@@ -404,7 +384,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 	data["agent.json"] = string(specJSON)
 
-	// Add persona data as JSON if available
+	// Add persona fields if a persona is referenced
 	if persona != nil {
 		personaJSON, err := json.Marshal(persona.Spec)
 		if err != nil {
@@ -412,12 +392,21 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		}
 		data["persona.json"] = string(personaJSON)
 		data["persona_name"] = persona.Name
+		if persona.Spec.Tone != "" {
+			data["persona_tone"] = persona.Spec.Tone
+		}
+		if persona.Spec.Personality != "" {
+			data["persona_personality"] = persona.Spec.Personality
+		}
+		if persona.Spec.Expertise != "" {
+			data["persona_expertise"] = persona.Spec.Expertise
+		}
 	}
 
 	// Add other useful data
 	data["name"] = agent.Name
 	data["namespace"] = agent.Namespace
-	// Add merged instructions
+	instructions := agent.Spec.Instructions
 	if instructions != "" {
 		data["instructions"] = instructions
 	}

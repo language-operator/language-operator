@@ -18,7 +18,7 @@ func LanguagePersona(name, namespace string, mods ...LanguagePersonaModifier) *l
 			Namespace: namespace,
 		},
 		Spec: langopv1alpha1.LanguagePersonaSpec{
-			SystemPrompt: "You are a test assistant.",
+			Personality: "You are a helpful test assistant.",
 		},
 	}
 	for _, mod := range mods {
@@ -36,9 +36,23 @@ func LanguagePersonaFrom(p *langopv1alpha1.LanguagePersona, mods ...LanguagePers
 	return clone
 }
 
-// SetPersonaSystemPrompt sets spec.systemPrompt.
-func SetPersonaSystemPrompt(prompt string) LanguagePersonaModifier {
+// SetPersonaTone sets spec.tone.
+func SetPersonaTone(tone string) LanguagePersonaModifier {
 	return func(p *langopv1alpha1.LanguagePersona) {
-		p.Spec.SystemPrompt = prompt
+		p.Spec.Tone = tone
+	}
+}
+
+// SetPersonaPersonality sets spec.personality.
+func SetPersonaPersonality(personality string) LanguagePersonaModifier {
+	return func(p *langopv1alpha1.LanguagePersona) {
+		p.Spec.Personality = personality
+	}
+}
+
+// SetPersonaExpertise sets spec.expertise.
+func SetPersonaExpertise(expertise string) LanguagePersonaModifier {
+	return func(p *langopv1alpha1.LanguagePersona) {
+		p.Spec.Expertise = expertise
 	}
 }

@@ -19,7 +19,8 @@ func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	persona := gen.LanguagePersona("test-persona", "default",
-		gen.SetPersonaSystemPrompt("You are a helpful assistant specializing in Ruby programming."),
+		gen.SetPersonaPersonality("You are a helpful assistant specialising in Ruby programming."),
+		gen.SetPersonaTone("technical"),
 	)
 
 	fakeClient := fake.NewClientBuilder().
@@ -64,9 +65,15 @@ func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
 		t.Fatalf("Expected ConfigMap to exist, but got error: %v", err)
 	}
 
-	// Verify ConfigMap contains persona data
-	if cm.Data["systemPrompt"] != persona.Spec.SystemPrompt {
-		t.Errorf("Expected systemPrompt '%s', got '%s'", persona.Spec.SystemPrompt, cm.Data["systemPrompt"])
+	// Verify ConfigMap contains the three persona fields
+	if cm.Data["personality"] != persona.Spec.Personality {
+		t.Errorf("Expected personality %q, got %q", persona.Spec.Personality, cm.Data["personality"])
+	}
+	if cm.Data["tone"] != persona.Spec.Tone {
+		t.Errorf("Expected tone %q, got %q", persona.Spec.Tone, cm.Data["tone"])
+	}
+	if cm.Data["persona.json"] == "" {
+		t.Error("Expected persona.json to contain serialised spec")
 	}
 }
 
@@ -74,7 +81,7 @@ func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	persona := gen.LanguagePersona("test-persona-status", "default",
-		gen.SetPersonaSystemPrompt("You are a helpful assistant."),
+		gen.SetPersonaPersonality("You are a helpful assistant."),
 	)
 	persona.Generation = 1
 
@@ -176,5 +183,51 @@ func TestLanguagePersonaController_NotFoundHandling(t *testing.T) {
 	// Should not requeue
 	if result.Requeue {
 		t.Error("Expected no requeue for not found persona")
+	}
+}
+
+func TestLanguagePersonaController_AllThreeFields(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	persona := gen.LanguagePersona("full-persona", "default",
+		gen.SetPersonaTone("concise and direct"),
+		gen.SetPersonaPersonality("Curious and methodical, always explains reasoning step by step"),
+		gen.SetPersonaExpertise("Senior software engineer specialising in distributed systems and Go"),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(persona).
+		WithStatusSubresource(persona).
+		Build()
+
+	reconciler := &LanguagePersonaReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: persona.Name, Namespace: persona.Namespace}}
+
+	_, _ = reconciler.Reconcile(ctx, req)
+	_, _ = reconciler.Reconcile(ctx, req)
+
+	cm := &corev1.ConfigMap{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: GenerateConfigMapName(persona.Name, "persona"), Namespace: persona.Namespace}, cm); err != nil {
+		t.Fatalf("Expected ConfigMap to exist: %v", err)
+	}
+
+	if cm.Data["tone"] != persona.Spec.Tone {
+		t.Errorf("tone: want %q, got %q", persona.Spec.Tone, cm.Data["tone"])
+	}
+	if cm.Data["personality"] != persona.Spec.Personality {
+		t.Errorf("personality: want %q, got %q", persona.Spec.Personality, cm.Data["personality"])
+	}
+	if cm.Data["expertise"] != persona.Spec.Expertise {
+		t.Errorf("expertise: want %q, got %q", persona.Spec.Expertise, cm.Data["expertise"])
+	}
+	if cm.Data["persona.json"] == "" {
+		t.Error("Expected persona.json key in ConfigMap")
 	}
 }
