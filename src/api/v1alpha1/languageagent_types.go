@@ -84,9 +84,11 @@ type ToolReference struct {
 	// +kubebuilder:validation:MaxLength=63
 	Name string `json:"name"`
 
-	// Enabled indicates if this tool is available to the agent
+	// Enabled indicates if this tool is available to the agent.
+	// Defaults to true. Set to false to explicitly disable the tool without removing it.
 	// +kubebuilder:default=true
-	Enabled bool `json:"enabled,omitempty"`
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// RequireApproval requires human approval before tool execution
 	// +kubebuilder:default=false

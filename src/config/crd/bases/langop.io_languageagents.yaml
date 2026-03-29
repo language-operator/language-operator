@@ -5549,8 +5549,9 @@ spec:
                   properties:
                     enabled:
                       default: true
-                      description: Enabled indicates if this tool is available to
-                        the agent
+                      description: |-
+                        Enabled indicates if this tool is available to the agent.
+                        Defaults to true. Set to false to explicitly disable the tool without removing it.
                       type: boolean
                     name:
                       description: Name is the name of the LanguageTool

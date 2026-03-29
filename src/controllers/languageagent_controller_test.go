@@ -1589,6 +1589,54 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 			t.Errorf("expected %q, got %v", expected, urls)
 		}
 	})
+
+	t.Run("disabled_tool_skipped", func(t *testing.T) {
+		tool := gen.LanguageTool("disabled-tool", "default",
+			gen.SetToolDeploymentMode("service"),
+		)
+		disabled := false
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Tools: []langopv1alpha1.ToolReference{{Name: "disabled-tool", Enabled: &disabled}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 0 {
+			t.Errorf("expected 0 URLs for disabled tool, got %d: %v", len(urls), urls)
+		}
+	})
+
+	t.Run("explicitly_enabled_tool_included", func(t *testing.T) {
+		tool := gen.LanguageTool("enabled-tool", "default",
+			gen.SetToolDeploymentMode("service"),
+		)
+		enabled := true
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Tools: []langopv1alpha1.ToolReference{{Name: "enabled-tool", Enabled: &enabled}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 1 {
+			t.Errorf("expected 1 URL for explicitly enabled tool, got %d", len(urls))
+		}
+	})
 }
 
 func TestLanguageAgentController_ResolveModels(t *testing.T) {
@@ -1744,6 +1792,31 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 		if containers[0].Resources.Requests.Cpu().IsZero() {
 			t.Error("expected default CPU request to be set on sidecar container")
+		}
+	})
+
+	t.Run("disabled_sidecar_tool_skipped", func(t *testing.T) {
+		tool := gen.LanguageTool("disabled-sidecar", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+			gen.SetToolImage("my-tool:v1"),
+		)
+		disabled := false
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Tools: []langopv1alpha1.ToolReference{{Name: "disabled-sidecar", Enabled: &disabled}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 0 {
+			t.Errorf("expected 0 containers for disabled sidecar tool, got %d", len(containers))
 		}
 	})
 }

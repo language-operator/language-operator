@@ -861,6 +861,11 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 	var sidecarContainers []corev1.Container
 
 	for _, toolRef := range agent.Spec.Tools {
+		// Skip tools explicitly disabled by the user
+		if toolRef.Enabled != nil && !*toolRef.Enabled {
+			continue
+		}
+
 		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
 		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
@@ -949,6 +954,11 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 	var toolURLs []string
 
 	for _, toolRef := range agent.Spec.Tools {
+		// Skip tools explicitly disabled by the user
+		if toolRef.Enabled != nil && !*toolRef.Enabled {
+			continue
+		}
+
 		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
 		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
