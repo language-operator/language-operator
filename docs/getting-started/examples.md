@@ -47,14 +47,9 @@ kind: LanguagePersona
 metadata:
   name: helpful-assistant
 spec:
-  systemPrompt: "You are a helpful AI assistant focused on clarity and accuracy."
   tone: "professional and friendly"
-  instructions:
-    - "Always cite sources for factual claims"
-    - "Ask clarifying questions when ambiguous"
-  capabilities:
-    - "web-search"
-    - "code-execution"
+  personality: "curious, patient, always cites sources and asks clarifying questions when ambiguous"
+  expertise: "general-purpose assistant with strong research and writing skills"
 ---
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
