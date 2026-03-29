@@ -1,4 +1,4 @@
-# Task
+# Action: do the next logical piece of work
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ Please read the following context files:
 
 Follow these directions closely:
 
-1. Use the `gh` tool to find the top issue for this repository (language-operator/language-operator) with the "ready" label.
+1. Use the `gh` tool to find issues for this repository (language-operator/language-operator) labelled "ready" or that make the most logical sense.
 2. Investigate if it's valid, or a mis-use of the intended feature.
 3. **CRITICAL:** Switch to plan mode, and propose an implementation plan.  Await my feedback.
 5. Implement your plan.
