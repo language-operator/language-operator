@@ -3392,7 +3392,7 @@
 <td><code>type</code> <em>string</em></td>
 <td>Type is the event type (webhook, kubernetes-event, message-queue)</td>
 <td></td>
-<td>Enum: [webhook kubernetes-event message-queue schedule] <br />Required: {} <br /></td>
+<td>Enum: [webhook kubernetes-event message-queue] <br />Required: {} <br /></td>
 </tr>
 <tr>
 <td><code>source</code> <em>string</em></td>
@@ -3696,13 +3696,7 @@
 <td><code>executionMode</code> <em>string</em></td>
 <td>ExecutionMode defines how the agent operates</td>
 <td>autonomous</td>
-<td>Enum: [autonomous interactive scheduled event-driven] <br /></td>
-</tr>
-<tr>
-<td><code>schedule</code> <em>string</em></td>
-<td>Schedule defines when the agent runs (cron format, for scheduled mode)<br />Must be a valid cron expression (5 fields: minute hour day month weekday) or special syntax (@hourly, @daily, etc.)</td>
-<td></td>
-<td>MaxLength: 100 <br />Pattern: <code>^(@(annually\|yearly\|monthly\|weekly\|daily\|hourly\|every_minute))\|(@every\s+((\d+(\.\d+)?)(ns\|us\|µs\|ms\|s\|m\|h))+)\|(((\*\|[0-9]\|[1-5][0-9]\|\*\/[0-9]+)\s+)\{4\}(\*\|[0-7]\|[1-7]\|\*\/[0-9]+))$</code> <br />Optional: {} <br /></td>
+<td>Enum: [autonomous interactive event-driven] <br /></td>
 </tr>
 <tr>
 <td><code>eventTriggers</code> <em><a href="#eventtriggerspec">EventTriggerSpec</a> array</em></td>
