@@ -90,6 +90,7 @@ type modelConfigYAML struct {
 	Provider string `yaml:"provider"`
 	Model    string `yaml:"model"`
 	Endpoint string `yaml:"endpoint"`
+	Priority *int32 `yaml:"priority,omitempty"`
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
@@ -471,6 +472,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 			Provider: model.Spec.Provider,
 			Model:    model.Spec.ModelName,
 			Endpoint: gatewayURL,
+			Priority: modelRef.Priority,
 		}
 	}
 
