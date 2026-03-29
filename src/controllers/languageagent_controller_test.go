@@ -276,6 +276,71 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "replica-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	reconciler.InitializeGatewayCache()
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile: adds finalizer
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("first Reconcile failed: %v", err)
+	}
+
+	// Seed the Deployment status to simulate the real Deployment controller
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist after first reconcile: %v", err)
+	}
+	deployment.Status.Replicas = 2
+	deployment.Status.ReadyReplicas = 1
+	if err := fakeClient.Status().Update(ctx, deployment); err != nil {
+		t.Fatalf("Failed to seed Deployment status: %v", err)
+	}
+
+	// Second reconcile: should pick up replica counts
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("second Reconcile failed: %v", err)
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, req.NamespacedName, updatedAgent); err != nil {
+		t.Fatalf("Failed to fetch updated agent: %v", err)
+	}
+
+	if updatedAgent.Status.ActiveReplicas != 2 {
+		t.Errorf("expected ActiveReplicas=2, got %d", updatedAgent.Status.ActiveReplicas)
+	}
+	if updatedAgent.Status.ReadyReplicas != 1 {
+		t.Errorf("expected ReadyReplicas=1, got %d", updatedAgent.Status.ReadyReplicas)
+	}
+}
+
 func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

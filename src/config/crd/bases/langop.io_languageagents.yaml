@@ -5558,11 +5558,6 @@ spec:
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
-                    requireApproval:
-                      default: false
-                      description: RequireApproval requires human approval before
-                        tool execution
-                      type: boolean
                   required:
                   - name
                   type: object

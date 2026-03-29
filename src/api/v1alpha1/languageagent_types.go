@@ -89,11 +89,6 @@ type ToolReference struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
-
-	// RequireApproval requires human approval before tool execution
-	// +kubebuilder:default=false
-	// +optional
-	RequireApproval bool `json:"requireApproval,omitempty"`
 }
 
 // WorkspaceSpec defines persistent workspace storage for an agent

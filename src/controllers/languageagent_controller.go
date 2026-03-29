@@ -341,6 +341,18 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Update status only if something changed
 	statusChanged := false
+
+	// Sync replica counts from owned Deployment status
+	existingDeploy := &appsv1.Deployment{}
+	if err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existingDeploy); err == nil {
+		if agent.Status.ActiveReplicas != existingDeploy.Status.Replicas ||
+			agent.Status.ReadyReplicas != existingDeploy.Status.ReadyReplicas {
+			agent.Status.ActiveReplicas = existingDeploy.Status.Replicas
+			agent.Status.ReadyReplicas = existingDeploy.Status.ReadyReplicas
+			statusChanged = true
+		}
+	}
+
 	if agent.Status.Phase != events.PhaseStatusRunning {
 		agent.Status.Phase = events.PhaseStatusRunning
 		statusChanged = true
