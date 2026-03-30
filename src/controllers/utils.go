@@ -23,7 +23,6 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -830,30 +829,4 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
 	return &p
-}
-
-// getAPIServerCIDRs retrieves the configured API server CIDR ranges from environment variables
-// Returns the combined list of default and custom CIDRs for Kubernetes API server access
-func getAPIServerCIDRs() []string {
-	var cidrs []string
-
-	// Get API server CIDRs from Helm configuration
-	if apiServerCIDRsEnv := os.Getenv("NETWORKPOLICY_API_SERVER_CIDRS"); apiServerCIDRsEnv != "" {
-		cidrs = append(cidrs, strings.Split(apiServerCIDRsEnv, ",")...)
-	}
-
-	// Get custom CIDRs from Helm configuration
-	if customCIDRsEnv := os.Getenv("NETWORKPOLICY_CUSTOM_CIDRS"); customCIDRsEnv != "" {
-		cidrs = append(cidrs, strings.Split(customCIDRsEnv, ",")...)
-	}
-
-	// Clean up any whitespace and filter empty strings
-	var cleanCIDRs []string
-	for _, cidr := range cidrs {
-		if trimmed := strings.TrimSpace(cidr); trimmed != "" {
-			cleanCIDRs = append(cleanCIDRs, trimmed)
-		}
-	}
-
-	return cleanCIDRs
 }
