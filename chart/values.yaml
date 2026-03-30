@@ -175,6 +175,14 @@ config:
     #   - "198.51.100.0/24" # Load balancer network
     customCIDRs: []
 
+    # Fail operator startup if CNI does not support NetworkPolicy enforcement.
+    # Set to true in production clusters where NetworkPolicy enforcement is required.
+    requireNetworkPolicy: false
+    # Timeout for CNI detection and NetworkPolicy operations.
+    timeout: 30s
+    # Number of retry attempts for NetworkPolicy operations.
+    retries: 3
+
   # Agent Ingress configuration
   agentIngress:
     # Default IngressClass for agent Ingress resources.
