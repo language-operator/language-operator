@@ -46,7 +46,7 @@ All agents in the cluster connect to this shared proxy via the `MODEL_ENDPOINTS`
 
 ### Network Isolation
 
-When NetworkPolicy is enabled:
+NetworkPolicy rules are defined via `spec.networkPolicies` (a list of `NetworkRule` objects). By default:
 
 - Agents can communicate with each other on port 8080
 - Agents can reach the shared proxy
