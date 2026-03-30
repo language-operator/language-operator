@@ -5208,10 +5208,6 @@ spec:
                         description: IssuerRef references a cert-manager Issuer or
                           ClusterIssuer
                         properties:
-                          group:
-                            default: cert-manager.io
-                            description: Group is the API group of the issuer
-                            type: string
                           kind:
                             default: ClusterIssuer
                             description: Kind is either "Issuer" or "ClusterIssuer"

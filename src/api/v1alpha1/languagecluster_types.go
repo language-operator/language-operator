@@ -243,11 +243,6 @@ type CertIssuerReference struct {
 	// +kubebuilder:default=ClusterIssuer
 	// +optional
 	Kind string `json:"kind,omitempty"`
-
-	// Group is the API group of the issuer
-	// +kubebuilder:default=cert-manager.io
-	// +optional
-	Group string `json:"group,omitempty"`
 }
 
 // NetworkRule defines a single network policy rule

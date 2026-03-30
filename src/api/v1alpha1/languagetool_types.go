@@ -16,10 +16,6 @@ type ToolSchema struct {
 	// InputSchema defines the parameters this tool accepts
 	// +optional
 	InputSchema *ToolSchemaDefinition `json:"inputSchema,omitempty"`
-
-	// OutputSchema defines the structure this tool returns
-	// +optional
-	OutputSchema *ToolSchemaDefinition `json:"outputSchema,omitempty"`
 }
 
 // ToolSchemaDefinition defines parameter or return value structure
