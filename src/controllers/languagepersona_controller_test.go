@@ -3,16 +3,19 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func TestLanguagePersonaController_BasicReconciliation(t *testing.T) {
@@ -229,5 +232,52 @@ func TestLanguagePersonaController_AllThreeFields(t *testing.T) {
 	}
 	if cm.Data["persona.json"] == "" {
 		t.Error("Expected persona.json key in ConfigMap")
+	}
+}
+
+func TestLanguagePersonaController_Deletion(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	persona := gen.LanguagePersona("del-persona", "default")
+	persona.Finalizers = []string{FinalizerName}
+	persona.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	cmName := GenerateConfigMapName(persona.Name, "persona")
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: persona.Namespace},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(persona, cm).
+		WithStatusSubresource(persona).
+		Build()
+
+	reconciler := &LanguagePersonaReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: persona.Name, Namespace: persona.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	// ConfigMap should be deleted
+	deletedCM := &corev1.ConfigMap{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: persona.Namespace}, deletedCM)
+	if !k8serrors.IsNotFound(err) {
+		t.Errorf("Expected ConfigMap to be deleted, got: %v", err)
+	}
+
+	// Finalizer should be removed
+	updated := &langopv1alpha1.LanguagePersona{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: persona.Name, Namespace: persona.Namespace}, updated); err == nil {
+		if controllerutil.ContainsFinalizer(updated, FinalizerName) {
+			t.Error("Expected finalizer to be removed after deletion")
+		}
 	}
 }

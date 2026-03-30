@@ -3,12 +3,14 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -318,5 +320,52 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 	}
 	if !controllerutil.ContainsFinalizer(updatedModel, FinalizerName) {
 		t.Error("Expected finalizer to be added after first reconcile")
+	}
+}
+
+func TestLanguageModelController_Deletion(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	model := gen.LanguageModel("del-model", "default")
+	model.Finalizers = []string{FinalizerName}
+	model.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	cmName := GenerateConfigMapName(model.Name, "model")
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: cmName, Namespace: model.Namespace},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(model, cm).
+		WithStatusSubresource(model).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	// ConfigMap should be deleted
+	deletedCM := &corev1.ConfigMap{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cmName, Namespace: model.Namespace}, deletedCM)
+	if !k8serrors.IsNotFound(err) {
+		t.Errorf("Expected ConfigMap to be deleted, got: %v", err)
+	}
+
+	// Finalizer should be removed
+	updated := &langopv1alpha1.LanguageModel{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, updated); err == nil {
+		if controllerutil.ContainsFinalizer(updated, FinalizerName) {
+			t.Error("Expected finalizer to be removed after deletion")
+		}
 	}
 }
