@@ -1940,15 +1940,15 @@
 </tr>
 <tr>
 <td><code>AGENT_MODE</code></td>
-<td>Execution mode: <code>autonomous</code>, <code>interactive</code>, <code>scheduled</code>, or <code>event-driven</code></td>
+<td>Execution mode from <code>spec.executionMode</code> (omitted if not set)</td>
 </tr>
 <tr>
 <td><code>AGENT_CLUSTER_NAME</code></td>
-<td>Name of the LanguageCluster this agent belongs to (empty if none)</td>
+<td>Name of the LanguageCluster this agent belongs to</td>
 </tr>
 <tr>
 <td><code>AGENT_CLUSTER_UUID</code></td>
-<td>Stable UUID of the LanguageCluster (empty if none)</td>
+<td>Kubernetes UID of the LanguageCluster</td>
 </tr>
 <tr>
 <td><code>MODEL_ENDPOINTS</code></td>
@@ -1958,9 +1958,37 @@
 <td><code>LLM_MODEL</code></td>
 <td>Comma-separated list of model names for all referenced models</td>
 </tr>
+<tr>
+<td><code>MCP_SERVERS</code></td>
+<td>Comma-separated MCP tool server URLs for each referenced LanguageTool (only injected when at least one service-mode tool is resolved)</td>
+</tr>
+<tr>
+<td><code>AGENT_INSTRUCTIONS</code></td>
+<td>Content of <code>spec.instructions</code>; only set when instructions are non-empty. Identical to the content of <code>/etc/agent/instructions.txt</code>.</td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
+<td>Propagated from the operator environment when configured; enables agent-side OTEL tracing</td>
+</tr>
+<tr>
+<td><code>OTEL_SERVICE_NAME</code></td>
+<td>Set to <code>agent-&lt;name&gt;</code> when <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is configured</td>
+</tr>
+<tr>
+<td><code>OTEL_RESOURCE_ATTRIBUTES</code></td>
+<td>Propagated from the operator environment when set (conditional on <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>)</td>
+</tr>
+<tr>
+<td><code>OTEL_TRACES_SAMPLER</code></td>
+<td>Propagated from the operator environment when set (conditional on <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>)</td>
+</tr>
+<tr>
+<td><code>OTEL_TRACES_SAMPLER_ARG</code></td>
+<td>Propagated from the operator environment when set (conditional on <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>)</td>
+</tr>
 </tbody>
 </table>
-<p>Additional environment variables from <code>spec.env</code> and <code>spec.envFrom</code> are passed through unchanged.</p>
+<p>Additional environment variables from <code>spec.deployment.env</code> and <code>spec.deployment.envFrom</code> are passed through unchanged.</p>
 <h3 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h3>
 <p>Every agent gets:
 - A <strong>ClusterIP Service</strong> on <code>spec.port</code> (default <code>8080</code>) named <code>&lt;agent-name&gt;</code> in the agent's namespace
