@@ -86,6 +86,31 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 	if !errors.IsNotFound(err) {
 		t.Errorf("Expected service to not exist for sidecar mode, but got: %v", err)
 	}
+
+	// Verify status phase and Ready condition are set correctly for sidecar mode
+	updatedTool := &langopv1alpha1.LanguageTool{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updatedTool); err != nil {
+		t.Fatalf("Failed to get updated tool: %v", err)
+	}
+	if updatedTool.Status.Phase != events.PhaseStatusRunning {
+		t.Errorf("Expected status.phase %q, got %q", events.PhaseStatusRunning, updatedTool.Status.Phase)
+	}
+	var readyCond *metav1.Condition
+	for i := range updatedTool.Status.Conditions {
+		if updatedTool.Status.Conditions[i].Type == "Ready" {
+			readyCond = &updatedTool.Status.Conditions[i]
+			break
+		}
+	}
+	if readyCond == nil {
+		t.Fatal("Expected Ready condition to be set, but it was not found")
+	}
+	if readyCond.Status != metav1.ConditionTrue {
+		t.Errorf("Expected Ready condition Status %q, got %q", metav1.ConditionTrue, readyCond.Status)
+	}
+	if readyCond.Reason != "ReconcileSuccess" {
+		t.Errorf("Expected Ready condition Reason %q, got %q", "ReconcileSuccess", readyCond.Reason)
+	}
 }
 
 func TestLanguageToolController_ServiceMode(t *testing.T) {
