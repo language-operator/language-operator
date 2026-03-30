@@ -9,7 +9,6 @@ A LanguageModel defines:
 - Model name and version
 - API credentials (via Secret reference)
 - Rate limits and retry policies
-- Cost tracking configuration
 
 ## Quick Example
 
@@ -91,23 +90,6 @@ spec:
 
 The shared proxy enforces these limits across all agents.
 
-### Cost Tracking
-
-Enable cost metrics:
-
-```yaml
-spec:
-  costTracking:
-    enabled: true
-    budgetLimit: "100.00"
-```
-
-View costs in the model status:
-
-```bash
-kubectl get languagemodel claude-sonnet -o jsonpath='{.status.costMetrics}'
-```
-
 ## Provider-Specific Examples
 
 ### Azure OpenAI
@@ -120,10 +102,9 @@ spec:
   apiKeySecretRef:
     name: azure-credentials
     key: api-key
-  config:
-    apiVersion: "2024-02-01"
-    deploymentName: gpt-4-deployment
 ```
+
+> Azure-specific configuration (deployment name, API version) is passed via the LiteLLM proxy configuration in the `LanguageCluster` spec, not through CRD fields.
 
 ### Self-Hosted (Ollama)
 
