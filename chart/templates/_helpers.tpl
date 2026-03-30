@@ -135,10 +135,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "dashboard.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
-{{- default (include "dashboard.fullname" .) .Values.serviceAccount.name }}
+{{- if .Values.dashboard.serviceAccount.create }}
+{{- default (include "dashboard.fullname" .) .Values.dashboard.serviceAccount.name }}
 {{- else }}
-{{- default "default" .Values.serviceAccount.name }}
+{{- default "default" .Values.dashboard.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
