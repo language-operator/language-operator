@@ -1645,6 +1645,10 @@
 </code></pre></div>
 <h3 id="telemetry">Telemetry<a class="headerlink" href="#telemetry" title="Permanent link">&para;</a></h3>
 <p>OpenTelemetry tracing is configured via environment variables on the operator pod, not Helm values. Set <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> in the operator deployment environment to enable tracing — the operator will propagate it to all agent pods automatically.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OTEL_EXPORTER_OTLP_ENDPOINT</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://otel-collector:4317&quot;</span>
+</code></pre></div>
 <h2 id="full-reference">Full Reference<a class="headerlink" href="#full-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
