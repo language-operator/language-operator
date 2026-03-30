@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -227,11 +228,11 @@ func main() {
 	}
 
 	// Parse watch namespaces
-	var namespaces map[string]struct{}
+	var namespaces map[string]cache.Config
 	if watchNamespaces != "" {
-		namespaces = make(map[string]struct{})
+		namespaces = make(map[string]cache.Config)
 		for _, ns := range parseNamespaces(watchNamespaces) {
-			namespaces[ns] = struct{}{}
+			namespaces[ns] = cache.Config{}
 		}
 		setupLog.Info("Watching specific namespaces", "namespaces", namespaces)
 	} else {
@@ -252,10 +253,10 @@ func main() {
 		LeaseDuration:          &leaseDuration,
 		RenewDeadline:          &renewDeadline,
 		RetryPeriod:            &retryPeriod,
-		//Cache: cache.Options{
-		//	DefaultNamespaces: namespaces,
-		//	SyncPeriod:        &syncPeriod,
-		//},
+		Cache: cache.Options{
+			DefaultNamespaces: namespaces,
+			SyncPeriod:        &syncPeriod,
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
