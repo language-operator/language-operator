@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1233,4 +1234,223 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			assert.Equal(t, tc.condReason, cond.Reason)
 		})
 	}
+}
+
+// reconcileGatewayCluster is a test helper that creates a LanguageCluster with the given
+// gateway spec, runs two reconcile passes, and returns the resulting gateway Deployment.
+func reconcileGatewayCluster(t *testing.T, name string, gateway *langopv1alpha1.GatewaySpec, reconcilerOpts ...func(*LanguageClusterReconciler)) *appsv1.Deployment {
+	t.Helper()
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster(name)
+	cluster.Spec.Gateway = gateway
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	r := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+	for _, opt := range reconcilerOpts {
+		opt(r)
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(name)
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: name}, deployment))
+	require.NotEmpty(t, deployment.Spec.Template.Spec.Containers)
+	return deployment
+}
+
+func TestLanguageClusterController_GatewayImagePullPolicy(t *testing.T) {
+	tests := []struct {
+		name            string
+		specPolicy      corev1.PullPolicy
+		operatorDefault corev1.PullPolicy
+		wantPolicy      corev1.PullPolicy
+	}{
+		{
+			name:            "spec policy takes precedence",
+			specPolicy:      corev1.PullAlways,
+			operatorDefault: corev1.PullIfNotPresent,
+			wantPolicy:      corev1.PullAlways,
+		},
+		{
+			name:            "falls back to operator default when spec unset",
+			specPolicy:      "",
+			operatorDefault: corev1.PullNever,
+			wantPolicy:      corev1.PullNever,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dep := reconcileGatewayCluster(t, "ipp-cluster", &langopv1alpha1.GatewaySpec{
+				Deployment: langopv1alpha1.DeploymentSpec{
+					ImagePullPolicy: tt.specPolicy,
+				},
+			}, func(r *LanguageClusterReconciler) {
+				r.GatewayImagePullPolicy = tt.operatorDefault
+			})
+			assert.Equal(t, tt.wantPolicy, dep.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+		})
+	}
+}
+
+func TestLanguageClusterController_GatewayEnvAndEnvFrom(t *testing.T) {
+	envVar := corev1.EnvVar{Name: "LOG_LEVEL", Value: "debug"}
+	envFrom := corev1.EnvFromSource{
+		ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: "extra-config"},
+		},
+	}
+
+	dep := reconcileGatewayCluster(t, "env-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			Env:     []corev1.EnvVar{envVar},
+			EnvFrom: []corev1.EnvFromSource{envFrom},
+		},
+	})
+	container := dep.Spec.Template.Spec.Containers[0]
+	assert.Contains(t, container.Env, envVar)
+	require.Len(t, container.EnvFrom, 1)
+	assert.Equal(t, envFrom, container.EnvFrom[0])
+}
+
+func TestLanguageClusterController_GatewayPodAnnotationsAndLabels(t *testing.T) {
+	dep := reconcileGatewayCluster(t, "annot-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			PodAnnotations: map[string]string{"vault.hashicorp.com/agent-inject": "true"},
+			PodLabels:      map[string]string{"sidecar.istio.io/inject": "true"},
+		},
+	})
+	// User annotation present alongside operator-managed config-hash.
+	assert.Equal(t, "true", dep.Spec.Template.Annotations["vault.hashicorp.com/agent-inject"])
+	assert.NotEmpty(t, dep.Spec.Template.Annotations[LabelKeyLangopConfigHash])
+	// User label present alongside operator-managed gateway labels.
+	assert.Equal(t, "true", dep.Spec.Template.Labels["sidecar.istio.io/inject"])
+	assert.Equal(t, "gateway", dep.Spec.Template.Labels["app.kubernetes.io/component"])
+}
+
+func TestLanguageClusterController_GatewayInitContainers(t *testing.T) {
+	initContainer := corev1.Container{
+		Name:  "wait-for-db",
+		Image: "busybox:latest",
+	}
+	dep := reconcileGatewayCluster(t, "init-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			InitContainers: []corev1.Container{initContainer},
+		},
+	})
+	require.Len(t, dep.Spec.Template.Spec.InitContainers, 1)
+	assert.Equal(t, "wait-for-db", dep.Spec.Template.Spec.InitContainers[0].Name)
+}
+
+func TestLanguageClusterController_GatewayProbes(t *testing.T) {
+	t.Run("default probes used when spec probes are nil", func(t *testing.T) {
+		dep := reconcileGatewayCluster(t, "probe-default", &langopv1alpha1.GatewaySpec{})
+		c := dep.Spec.Template.Spec.Containers[0]
+		require.NotNil(t, c.LivenessProbe)
+		assert.Equal(t, "/health/liveliness", c.LivenessProbe.HTTPGet.Path)
+		require.NotNil(t, c.ReadinessProbe)
+		assert.Equal(t, "/health/readiness", c.ReadinessProbe.HTTPGet.Path)
+		assert.Nil(t, c.StartupProbe)
+	})
+
+	t.Run("spec probes override defaults", func(t *testing.T) {
+		customLiveness := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{Path: "/custom-live", Port: intstr.FromInt(4000)},
+			},
+		}
+		customReadiness := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{Path: "/custom-ready", Port: intstr.FromInt(4000)},
+			},
+		}
+		customStartup := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{Path: "/startup", Port: intstr.FromInt(4000)},
+			},
+		}
+		dep := reconcileGatewayCluster(t, "probe-custom", &langopv1alpha1.GatewaySpec{
+			Deployment: langopv1alpha1.DeploymentSpec{
+				LivenessProbe:  customLiveness,
+				ReadinessProbe: customReadiness,
+				StartupProbe:   customStartup,
+			},
+		})
+		c := dep.Spec.Template.Spec.Containers[0]
+		require.NotNil(t, c.LivenessProbe)
+		assert.Equal(t, "/custom-live", c.LivenessProbe.HTTPGet.Path)
+		require.NotNil(t, c.ReadinessProbe)
+		assert.Equal(t, "/custom-ready", c.ReadinessProbe.HTTPGet.Path)
+		require.NotNil(t, c.StartupProbe)
+		assert.Equal(t, "/startup", c.StartupProbe.HTTPGet.Path)
+	})
+}
+
+func TestLanguageClusterController_GatewaySecurityContext(t *testing.T) {
+	runAsNonRoot := true
+	sc := &corev1.PodSecurityContext{RunAsNonRoot: &runAsNonRoot}
+
+	dep := reconcileGatewayCluster(t, "sc-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			SecurityContext: sc,
+		},
+	})
+	require.NotNil(t, dep.Spec.Template.Spec.SecurityContext)
+	assert.Equal(t, &runAsNonRoot, dep.Spec.Template.Spec.SecurityContext.RunAsNonRoot)
+}
+
+func TestLanguageClusterController_GatewayServiceAccountName(t *testing.T) {
+	dep := reconcileGatewayCluster(t, "sa-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			ServiceAccountName: "litellm-sa",
+		},
+	})
+	assert.Equal(t, "litellm-sa", dep.Spec.Template.Spec.ServiceAccountName)
+}
+
+func TestLanguageClusterController_GatewayVolumesAndMounts(t *testing.T) {
+	userVol := corev1.Volume{
+		Name: "custom-certs",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{SecretName: "my-certs"},
+		},
+	}
+	userMount := corev1.VolumeMount{Name: "custom-certs", MountPath: "/etc/ssl/custom"}
+
+	dep := reconcileGatewayCluster(t, "vol-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			Volumes:      []corev1.Volume{userVol},
+			VolumeMounts: []corev1.VolumeMount{userMount},
+		},
+	})
+
+	// Operator-managed models-config volume must still be present.
+	var volNames []string
+	for _, v := range dep.Spec.Template.Spec.Volumes {
+		volNames = append(volNames, v.Name)
+	}
+	assert.Contains(t, volNames, "models-config", "operator-managed volume must be retained")
+	assert.Contains(t, volNames, "custom-certs", "user volume must be appended")
+
+	// Operator-managed mount must still be present.
+	var mountPaths []string
+	for _, m := range dep.Spec.Template.Spec.Containers[0].VolumeMounts {
+		mountPaths = append(mountPaths, m.MountPath)
+	}
+	assert.Contains(t, mountPaths, "/etc/langop/models", "operator-managed mount must be retained")
+	assert.Contains(t, mountPaths, "/etc/ssl/custom", "user mount must be appended")
 }
