@@ -133,9 +133,6 @@ spec:
   apiKeySecretRef:
     name: azure-credentials
     key: api-key
-  config:
-    apiVersion: "2024-02-01"
-    deploymentName: gpt-4-deployment
 ```
 
 ### Scheduled Agent
