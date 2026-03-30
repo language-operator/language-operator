@@ -2108,12 +2108,6 @@ All fields are optional; controllers only read the fields relevant to their reso
 </thead>
 <tbody>
 <tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
 <td>Deployment configures the Kubernetes deployment for the gateway pod.</td>
 <td></td>
@@ -2135,6 +2129,12 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 <tr>
 <td><code>tls</code> <em><a href="#ingresstlsconfig">IngressTLSConfig</a></em></td>
 <td>TLS configuration for agent webhooks</td>
