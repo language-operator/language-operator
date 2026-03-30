@@ -2812,7 +2812,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 </tr>
 <tr>
 <td><code>uuid</code> <em>string</em></td>
-<td>UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.domain.com)</td>
+<td>UUID is a unique identifier for this agent instance<br />Not used for webhook routing; webhooks are routed via agent name (e.g., <agent-name>.domain.com)</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2884,7 +2884,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tbody>
 <tr>
 <td><code>domain</code> <em>string</em></td>
-<td>Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <uuid>.<domain><br />Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io"</td>
+<td>Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <agent-name>.<domain><br />Example: "ai.theryans.io" results in webhooks like "my-agent.ai.theryans.io"</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
