@@ -1716,7 +1716,7 @@
 <h1 id="languagetool-implementation-specification">LanguageTool Implementation Specification<a class="headerlink" href="#languagetool-implementation-specification" title="Permanent link">&para;</a></h1>
 <p>This document defines the contract for implementing a <code>LanguageTool</code> — an MCP-compatible service that agents use for memory, knowledge retrieval, code execution, and other capabilities.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>A <strong>LanguageTool</strong> is a Kubernetes-managed service that exposes the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. The operator discovers tools via <code>LanguageTool</code> CRDs, resolves their endpoints, and injects connection details into agent containers via <code>/etc/agent/tools/config.json</code>.</p>
+<p>A <strong>LanguageTool</strong> is a Kubernetes-managed service that exposes the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. The operator discovers tools via <code>LanguageTool</code> CRDs, resolves their endpoints, and injects connection details into agent containers via the <code>MCP_SERVERS</code> environment variable and the <code>tools:</code> section of <code>/etc/agent/config.yaml</code>.</p>
 <p>Agents connect to tools over MCP. The operator does not proxy or inspect tool traffic — it only handles discovery and configuration injection.</p>
 <h2 id="what-the-operator-provides">What the Operator Provides<a class="headerlink" href="#what-the-operator-provides" title="Permanent link">&para;</a></h2>
 <p>When a <code>LanguageTool</code> resource is created, the operator:</p>
@@ -1724,7 +1724,7 @@
 <li>Creates and manages the tool's Deployment and Service</li>
 <li>Resolves the tool endpoint: <code>http://&lt;service-name&gt;.&lt;namespace&gt;.svc.cluster.local:&lt;port&gt;</code></li>
 <li>Syncs the MCP tool schema by calling <code>tools/list</code> on the endpoint</li>
-<li>Writes the resolved endpoint into the <code>tools.json</code> ConfigMap for each agent referencing this tool</li>
+<li>Injects the resolved endpoint into each referencing agent via the <code>MCP_SERVERS</code> env var and the <code>tools:</code> section of <code>/etc/agent/config.yaml</code></li>
 <li>Reconciles NetworkPolicy to allow agent pods to reach the tool service</li>
 </ol>
 <h2 id="what-the-tool-must-implement">What the Tool Must Implement<a class="headerlink" href="#what-the-tool-must-implement" title="Permanent link">&para;</a></h2>
@@ -1820,15 +1820,17 @@
 <a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
 </code></pre></div>
 <h2 id="agent-connection">Agent Connection<a class="headerlink" href="#agent-connection" title="Permanent link">&para;</a></h2>
-<p>The operator resolves the tool endpoint and writes it to each agent's <code>/etc/agent/tools/config.json</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;mem0-memory&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">&quot;endpoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://mem0-memory.language-operator-myapp.svc.cluster.local:8080&quot;</span><span class="p">,</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">&quot;protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mcp&quot;</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
+<p>The operator injects tool endpoints into each referencing agent two ways:</p>
+<ol>
+<li><strong><code>MCP_SERVERS</code> env var</strong> — a comma-separated list of tool endpoint URLs (e.g. <code>http://mem0-memory.language-operator-myapp.svc.cluster.local:8080</code>)</li>
+<li><strong><code>/etc/agent/config.yaml</code></strong> — a <code>tools:</code> map keyed by tool name:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">mem0-memory</span><span class="p">:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://mem0-memory.language-operator-myapp.svc.cluster.local:8080</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mcp</span>
 </code></pre></div>
-<p>The agent reads this file on startup and uses the endpoint URL to make MCP JSON-RPC calls.</p>
+<p>Agents can use either source; <code>MCP_SERVERS</code> is convenient for simple single-tool lookup, while <code>config.yaml</code> provides structured access to all tools by name.</p>
 <h2 id="deployment-pattern">Deployment Pattern<a class="headerlink" href="#deployment-pattern" title="Permanent link">&para;</a></h2>
 <p>A <code>LanguageTool</code> is a self-contained resource — the operator creates the Deployment and Service automatically from <code>spec.image</code>. No separate Deployment or Service manifest is needed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
