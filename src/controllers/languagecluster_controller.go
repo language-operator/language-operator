@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"strings"
@@ -71,6 +72,41 @@ func (r *LanguageClusterReconciler) gatewayImage() string {
 		return r.GatewayImage
 	}
 	return "ghcr.io/language-operator/model:latest"
+}
+
+func (r *LanguageClusterReconciler) gatewayImagePullPolicy(cluster *langopv1alpha1.LanguageCluster) corev1.PullPolicy {
+	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Deployment.ImagePullPolicy != "" {
+		return cluster.Spec.Gateway.Deployment.ImagePullPolicy
+	}
+	return r.GatewayImagePullPolicy
+}
+
+func defaultGatewayLivenessProbe() *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/health/liveliness",
+				Port: intstr.FromInt(4000),
+			},
+		},
+		InitialDelaySeconds: 30,
+		PeriodSeconds:       300,
+		TimeoutSeconds:      30,
+	}
+}
+
+func defaultGatewayReadinessProbe() *corev1.Probe {
+	return &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/health/readiness",
+				Port: intstr.FromInt(4000),
+			},
+		},
+		InitialDelaySeconds: 30,
+		PeriodSeconds:       300,
+		TimeoutSeconds:      30,
+	}
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch;create;update;patch;delete
@@ -891,6 +927,16 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		})
 	}
 
+	// Extract the gateway DeploymentSpec once to avoid repeated nil checks below.
+	var gatewayDeploy langopv1alpha1.DeploymentSpec
+	if cluster.Spec.Gateway != nil {
+		gatewayDeploy = cluster.Spec.Gateway.Deployment
+	}
+
+	// Append user-supplied volumes/mounts after the operator-managed ones.
+	mounts = append(mounts, gatewayDeploy.VolumeMounts...)
+	volumes = append(volumes, gatewayDeploy.Volumes...)
+
 	// Determine replicas and resources from GatewaySpec
 	replicas := int32(1)
 	resources := corev1.ResourceRequirements{
@@ -905,17 +951,34 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	}
 	gatewaySvcType := corev1.ServiceTypeClusterIP
 	var gatewaySvcAnnotations map[string]string
-	if cluster.Spec.Gateway != nil {
-		if cluster.Spec.Gateway.Deployment.Replicas != nil {
-			replicas = *cluster.Spec.Gateway.Deployment.Replicas
-		}
-		if cluster.Spec.Gateway.Deployment.Resources.Requests != nil || cluster.Spec.Gateway.Deployment.Resources.Limits != nil {
-			resources = cluster.Spec.Gateway.Deployment.Resources
-		}
-		if cluster.Spec.Gateway.Deployment.ServiceType != "" {
-			gatewaySvcType = cluster.Spec.Gateway.Deployment.ServiceType
-		}
-		gatewaySvcAnnotations = cluster.Spec.Gateway.Deployment.ServiceAnnotations
+	if gatewayDeploy.Replicas != nil {
+		replicas = *gatewayDeploy.Replicas
+	}
+	if gatewayDeploy.Resources.Requests != nil || gatewayDeploy.Resources.Limits != nil {
+		resources = gatewayDeploy.Resources
+	}
+	if gatewayDeploy.ServiceType != "" {
+		gatewaySvcType = gatewayDeploy.ServiceType
+	}
+	gatewaySvcAnnotations = gatewayDeploy.ServiceAnnotations
+
+	// Merge user pod annotations with the operator-managed config-hash annotation.
+	podAnnotations := map[string]string{LabelKeyLangopConfigHash: configHash}
+	maps.Copy(podAnnotations, gatewayDeploy.PodAnnotations)
+
+	// Merge user pod labels with the operator-managed gateway labels.
+	podLabels := make(map[string]string, len(gatewayLabels)+len(gatewayDeploy.PodLabels))
+	maps.Copy(podLabels, gatewayLabels)
+	maps.Copy(podLabels, gatewayDeploy.PodLabels)
+
+	// Probe defaults; overridden by spec when non-nil.
+	livenessProbe := defaultGatewayLivenessProbe()
+	readinessProbe := defaultGatewayReadinessProbe()
+	if gatewayDeploy.LivenessProbe != nil {
+		livenessProbe = gatewayDeploy.LivenessProbe
+	}
+	if gatewayDeploy.ReadinessProbe != nil {
+		readinessProbe = gatewayDeploy.ReadinessProbe
 	}
 
 	// Reconcile Deployment
@@ -941,59 +1004,45 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: gatewayLabels,
-					Annotations: map[string]string{
-						LabelKeyLangopConfigHash: configHash,
-					},
+					Labels:      podLabels,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					InitContainers: gatewayDeploy.InitContainers,
 					Containers: []corev1.Container{
 						{
 							Name:            "gateway",
 							Image:           r.gatewayImage(),
-							ImagePullPolicy: r.GatewayImagePullPolicy,
+							ImagePullPolicy: r.gatewayImagePullPolicy(cluster),
 							Resources:       resources,
+							Env:             gatewayDeploy.Env,
+							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
 								{Name: "http", ContainerPort: 4000, Protocol: corev1.ProtocolTCP},
 							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health/liveliness",
-										Port: intstr.FromInt(4000),
-									},
-								},
-								InitialDelaySeconds: 30,
-								PeriodSeconds:       300,
-								TimeoutSeconds:      30,
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/health/readiness",
-										Port: intstr.FromInt(4000),
-									},
-								},
-								InitialDelaySeconds: 30,
-								PeriodSeconds:       300,
-								TimeoutSeconds:      30,
-							},
+							LivenessProbe:  livenessProbe,
+							ReadinessProbe: readinessProbe,
+							StartupProbe:   gatewayDeploy.StartupProbe,
 						},
 					},
-					Volumes: volumes,
+					Volumes:                   volumes,
+					NodeSelector:              gatewayDeploy.NodeSelector,
+					Tolerations:               gatewayDeploy.Tolerations,
+					TopologySpreadConstraints: gatewayDeploy.TopologySpreadConstraints,
+					ImagePullSecrets:          gatewayDeploy.ImagePullSecrets,
 				},
 			},
 		}
-		if cluster.Spec.Gateway != nil {
-			podSpec := &deployment.Spec.Template.Spec
-			podSpec.NodeSelector = cluster.Spec.Gateway.Deployment.NodeSelector
-			podSpec.Tolerations = cluster.Spec.Gateway.Deployment.Tolerations
-			podSpec.TopologySpreadConstraints = cluster.Spec.Gateway.Deployment.TopologySpreadConstraints
-			if cluster.Spec.Gateway.Deployment.Affinity != nil {
-				podSpec.Affinity = cluster.Spec.Gateway.Deployment.Affinity
-			}
-			podSpec.ImagePullSecrets = cluster.Spec.Gateway.Deployment.ImagePullSecrets
+		podSpec := &deployment.Spec.Template.Spec
+		if gatewayDeploy.Affinity != nil {
+			podSpec.Affinity = gatewayDeploy.Affinity
+		}
+		if gatewayDeploy.SecurityContext != nil {
+			podSpec.SecurityContext = gatewayDeploy.SecurityContext
+		}
+		if gatewayDeploy.ServiceAccountName != "" {
+			podSpec.ServiceAccountName = gatewayDeploy.ServiceAccountName
 		}
 		return nil
 	})
