@@ -10,12 +10,11 @@ A **LanguageAgent** runs as a standard Kubernetes Deployment (or CronJob for sch
 
 ### Mounted Files
 
-The operator mounts exactly two files into every agent container:
+The operator mounts exactly one file into every agent container:
 
 | Path | Content | Source |
 |------|---------|--------|
-| `/etc/agent/instructions.txt` | Task instructions (plain text) | `spec.instructions` (inline string) |
-| `/etc/agent/config.yaml` | Structured agent configuration (YAML) | Assembled by the operator from personas, tools, models, and agent metadata |
+| `/etc/agent/config.yaml` | Structured agent configuration (YAML) | Assembled by the operator from `spec.instructions`, personas, tools, models, and agent metadata |
 
 Files are read-only. The operator reconciles them on every change to the LanguageAgent spec or referenced resources.
 
@@ -65,7 +64,7 @@ The operator injects the following environment variables into every agent contai
 | `MODEL_ENDPOINTS` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs for each referenced LanguageTool (only injected when at least one service-mode tool is resolved) |
-| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the content of `/etc/agent/instructions.txt`. |
+| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured; enables agent-side OTEL tracing |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
 | `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment when set (conditional on `OTEL_EXPORTER_OTLP_ENDPOINT`) |
@@ -95,25 +94,14 @@ Liveness and readiness probes are configured via `spec.livenessProbe` and `spec.
 
 On startup, the agent should:
 
-1. Read `/etc/agent/instructions.txt` for task definition (if present)
-2. Read `/etc/agent/config.yaml` for all other configuration (personas, tools, models)
-3. Start listening on `spec.port`
+1. Read `/etc/agent/config.yaml` for all configuration (instructions, personas, tools, models)
+2. Start listening on `spec.port`
 
 ## File Formats
 
-### Instructions (`/etc/agent/instructions.txt`)
-
-Plain text. The task definition for this agent — what it should do, its role, and any behavioural directives.
-
-```
-You are a data analyst. Analyze CSV files and generate insights.
-Focus on trends, anomalies, and actionable recommendations.
-Always cite data sources and use structured output.
-```
-
 ### Agent Config (`/etc/agent/config.yaml`)
 
-A single YAML document assembled by the operator. Contains everything the agent needs to configure its runtime: persona(s), tool endpoints, and model configuration.
+A single YAML document assembled by the operator. Contains everything the agent needs to configure its runtime: task instructions, persona(s), tool endpoints, and model configuration.
 
 ```yaml
 # Agent identity (mirrors AGENT_* env vars for convenience)
@@ -124,6 +112,13 @@ agent:
   mode: autonomous
   clusterName: production-cluster
   clusterUUID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+
+# Task instructions from spec.instructions — what this agent should do.
+# Omitted if spec.instructions is empty.
+instructions: |
+  You are a data analyst. Analyze CSV files and generate insights.
+  Focus on trends, anomalies, and actionable recommendations.
+  Always cite data sources and use structured output.
 
 # Persona configuration — merged in order if multiple are specified.
 # Each entry is the full spec of the referenced LanguagePersona resource.
@@ -241,8 +236,7 @@ The init container runs to completion before the agent container starts. On subs
 A well-behaved agent image should:
 
 - [ ] Listen on the port specified by `spec.port` (default `8080`)
-- [ ] Read task instructions from `/etc/agent/instructions.txt` on startup (if present)
-- [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present)
+- [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
 - [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
 - [ ] Route LLM traffic through `MODEL_ENDPOINTS` proxy URLs rather than connecting to model APIs directly
 - [ ] Use `spec.workspace.mountPath` (default `/workspace`) for persistent state — do not assume local container storage survives restarts
