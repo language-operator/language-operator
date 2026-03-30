@@ -491,10 +491,6 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, configMapName, agent.Namespace, data)
 }
 
-// reconcileCodeConfigMap synthesizes agent DSL code and stores it in a ConfigMap
-
-// distillPersona calls the synthesizer to distill a persona into a system message
-
 // getToolNames extracts tool names from agent's tools
 func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
