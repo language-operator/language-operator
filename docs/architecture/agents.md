@@ -58,7 +58,7 @@ The operator injects the following environment variables into every agent contai
 |----------|-------|
 | `AGENT_NAME` | `metadata.name` of the LanguageAgent |
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
-| `AGENT_UUID` | Stable UUID assigned to this agent (from `spec.uuid` or generated) |
+| `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
 | `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
@@ -89,7 +89,7 @@ The agent listens on `spec.port` (default `8080`). The operator creates a Cluste
 
 ### Probes
 
-Liveness and readiness probes are configured via `spec.livenessProbe` and `spec.readinessProbe`. If not set, no probes are configured. The operator does not require any specific health endpoint — probe configuration is entirely up to the agent author.
+Liveness and readiness probes are configured via `spec.deployment.livenessProbe` and `spec.deployment.readinessProbe`. If not set, no probes are configured. The operator does not require any specific health endpoint — probe configuration is entirely up to the agent author.
 
 ### Startup Behaviour
 
@@ -165,7 +165,6 @@ metadata:
   namespace: default
 spec:
   image: myregistry/agent-runtime:python-v1.0.0
-  imagePullPolicy: Always
   port: 8080
 
   instructions: |
@@ -187,25 +186,25 @@ spec:
     size: 10Gi
     mountPath: /workspace   # agents can read/write freely; survives restarts
 
-  livenessProbe:
-    httpGet:
-      path: /health
-      port: 8080
-    initialDelaySeconds: 10
-    periodSeconds: 30
-
-  readinessProbe:
-    httpGet:
-      path: /health
-      port: 8080
-    initialDelaySeconds: 5
-    periodSeconds: 10
-
-  replicas: 1
-  resources:
-    limits:
-      memory: 1Gi
-      cpu: 500m
+  deployment:
+    imagePullPolicy: Always
+    replicas: 1
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 10
+      periodSeconds: 30
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
 ```
 
 ### Init Container Pattern (Config Adapters)
