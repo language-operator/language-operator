@@ -330,7 +330,7 @@ func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, clus
 			Name: cluster.Name,
 			Labels: map[string]string{
 				"app.kubernetes.io/managed-by": "language-operator",
-				"langop.io/cluster":            cluster.Name,
+				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
 	}
@@ -357,7 +357,7 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 				"app.kubernetes.io/name":       "language-operator",
 				"app.kubernetes.io/managed-by": "language-operator",
 				"app.kubernetes.io/component":  "agent-rbac",
-				"langop.io/cluster":            cluster.Name,
+				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -402,7 +402,7 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 				"app.kubernetes.io/name":       "language-operator",
 				"app.kubernetes.io/managed-by": "language-operator",
 				"app.kubernetes.io/component":  "agent-rbac",
-				"langop.io/cluster":            cluster.Name,
+				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
 		Subjects: []rbacv1.Subject{
@@ -466,7 +466,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 					// Target the default namespace where the kubernetes service exists
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "default",
+							LabelKeyMetadataName: "default",
 						},
 					},
 				},
@@ -484,7 +484,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "kube-system",
+							LabelKeyMetadataName: "kube-system",
 						},
 					},
 				},
@@ -531,7 +531,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				}
 				peer.NamespaceSelector = &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"kubernetes.io/metadata.name": serviceNamespace,
+						LabelKeyMetadataName: serviceNamespace,
 					},
 				}
 			}
@@ -539,7 +539,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 			if rule.To.Group != "" {
 				peer.PodSelector = &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"langop.io/group": rule.To.Group,
+						LabelKeyLangopGroup: rule.To.Group,
 					},
 				}
 			}
@@ -610,13 +610,13 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				"app.kubernetes.io/name":       "language-operator",
 				"app.kubernetes.io/managed-by": "language-operator",
 				"app.kubernetes.io/component":  "agent-network-policy",
-				"langop.io/cluster":            cluster.Name,
+				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"langop.io/cluster": cluster.Name,
+					LabelKeyLangopCluster: cluster.Name,
 				},
 			},
 			PolicyTypes: policyTypes,
@@ -829,8 +829,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		"app.kubernetes.io/name":       "language-operator",
 		"app.kubernetes.io/managed-by": "language-operator",
 		"app.kubernetes.io/component":  "gateway",
-		"langop.io/cluster":            cluster.Name,
-		"langop.io/kind":               "gateway",
+		LabelKeyLangopCluster:          cluster.Name,
+		LabelKeyLangopKind:             "gateway",
 	}
 	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
 		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
@@ -935,7 +935,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: gatewayLabels,
 					Annotations: map[string]string{
-						"langop.io/config-hash": configHash,
+						LabelKeyLangopConfigHash: configHash,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -1183,7 +1183,7 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 				"app.kubernetes.io/name":       "language-operator",
 				"app.kubernetes.io/managed-by": "language-operator",
 				"app.kubernetes.io/component":  "capacity",
-				"langop.io/cluster":            cluster.Name,
+				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
 	}

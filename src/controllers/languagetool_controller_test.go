@@ -911,7 +911,7 @@ func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
 		if peer.PodSelector == nil {
 			t.Fatal("expected PodSelector for Group-based From rule")
 		}
-		if peer.PodSelector.MatchLabels["langop.io/group"] != "trusted-agents" {
+		if peer.PodSelector.MatchLabels[LabelKeyLangopGroup] != "trusted-agents" {
 			t.Errorf("expected langop.io/group=trusted-agents, got %v", peer.PodSelector.MatchLabels)
 		}
 		if len(rule.Ports) == 0 || rule.Ports[0].Port.IntVal != 8080 {

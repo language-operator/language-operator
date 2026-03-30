@@ -309,7 +309,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		return err
 	}
 
-	labels["langop.io/cluster"] = tool.Namespace
+	labels[LabelKeyLangopCluster] = tool.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -475,7 +475,7 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		return err
 	}
 
-	labels["langop.io/cluster"] = tool.Namespace
+	labels[LabelKeyLangopCluster] = tool.Namespace
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
