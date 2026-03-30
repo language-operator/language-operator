@@ -89,7 +89,7 @@ Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, 
 
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
 
-The shared proxy image (`ghcr.io/language-operator/model:latest`) is configured via `config.proxy.image` and `config.proxy.imagePullPolicy` in the Helm chart. For local development, `make dev` in `components/model/` builds and imports the image into k3s.
+The shared gateway image (`ghcr.io/language-operator/model:latest`) is configured via `config.gateway.image` and `config.gateway.imagePullPolicy` in the Helm chart. For local development, `make dev` in `components/model/` builds and imports the image into k3s.
 
 ### Telemetry (`src/pkg/telemetry/`)
 
