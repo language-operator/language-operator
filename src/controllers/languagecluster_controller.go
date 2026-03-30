@@ -1037,7 +1037,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 	log := log.FromContext(ctx)
 
 	// Skip if gateway ingress explicitly disabled
-	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Enabled != nil && !*cluster.Spec.Gateway.Enabled {
+	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil && !*cluster.Spec.Ingress.Enabled {
 		log.V(1).Info("Gateway ingress disabled, skipping")
 		return nil
 	}
