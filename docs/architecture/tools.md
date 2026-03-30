@@ -12,8 +12,8 @@ Agents connect to tools over MCP. The operator does not proxy or inspect tool tr
 
 When a `LanguageTool` resource is created, the operator:
 
-1. Creates a Deployment and Service for the tool image
-2. Resolves the tool endpoint: `http://<tool-name>.<namespace>.svc.cluster.local:<port>`
+1. Creates and manages the tool's Deployment and Service
+2. Resolves the tool endpoint: `http://<service-name>.<namespace>.svc.cluster.local:<port>`
 3. Syncs the MCP tool schema by calling `tools/list` on the endpoint
 4. Writes the resolved endpoint into the `tools.json` ConfigMap for each agent referencing this tool
 5. Reconciles NetworkPolicy to allow agent pods to reach the tool service
@@ -119,37 +119,20 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
   name: mem0-memory
-  namespace: my-cluster
+  namespace: language-operator-myapp
 spec:
-  # Container image to run (required)
   image: myregistry/mem0-mcp:latest
 
-  # Port the MCP service listens on (default: 8080)
-  port: 8080
+  # Protocol type — only "mcp" is currently supported (default)
+  type: mcp
 
-  # Deployment mode: "service" (default, shared) or "sidecar" (per-agent)
+  # Deployment mode:
+  # - "service": standalone Deployment+Service shared across agents (default)
+  # - "sidecar": injected as a sidecar into each agent pod (dedicated, with workspace access)
   deploymentMode: service
 
-  # Pod and container configuration
-  deployment:
-    env:
-      - name: MEM0_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: mem0-secret
-            key: api-key
-    replicas: 1
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-
-  # Network egress rules (default: full cluster access, no external egress)
-  networkPolicies:
-    - ports:
-        - port: 443
-      to:
-        - cidr: "0.0.0.0/0"
+  # Port the tool listens on (default: 8080)
+  port: 8080
 ```
 
 ## Agent Connection
@@ -159,7 +142,7 @@ The operator resolves the tool endpoint and writes it to each agent's `/etc/agen
 ```json
 {
   "mem0-memory": {
-    "endpoint": "http://mem0-memory.tools.svc.cluster.local:8080",
+    "endpoint": "http://mem0-memory.language-operator-myapp.svc.cluster.local:8080",
     "protocol": "mcp"
   }
 }
@@ -169,27 +152,20 @@ The agent reads this file on startup and uses the endpoint URL to make MCP JSON-
 
 ## Deployment Pattern
 
-The operator creates the Deployment and Service automatically from `spec.image`. A single manifest is all that's needed:
+A `LanguageTool` is a self-contained resource — the operator creates the Deployment and Service automatically from `spec.image`. No separate Deployment or Service manifest is needed:
 
 ```yaml
 apiVersion: langop.io/v1alpha1
 kind: LanguageTool
 metadata:
   name: mem0-memory
-  namespace: my-cluster
+  namespace: language-operator-myapp
 spec:
   image: myregistry/mem0-mcp:latest
   port: 8080
-  deployment:
-    env:
-      - name: MEM0_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: mem0-secret
-            key: api-key
 ```
 
-The operator reconciles a `Deployment` and a `Service` (both named after the `LanguageTool`) in the same namespace. There is no need to create these resources separately.
+The operator creates a `Deployment` named `mem0-memory` and a `ClusterIP` Service named `mem0-memory` in the same namespace. The tool endpoint `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080` is injected into every agent that references this tool.
 
 ## Compliance Checklist
 
@@ -199,7 +175,7 @@ A compliant tool implementation must:
 - [ ] Respond to `tools/list` with a complete list of available tools and their input schemas
 - [ ] Respond to `tools/call` with the result of invoking the named tool
 - [ ] Expose `GET /health` returning `200 OK` with `{"status":"ok"}` when ready
-- [ ] Be packaged as a container image specified in `spec.image` (the operator creates the Service)
+- [ ] Expose an MCP-compliant HTTP endpoint on `spec.port` (the operator creates the Kubernetes Service automatically)
 - [ ] Handle errors gracefully with MCP error responses (not HTTP 5xx)
 
 ## Error Responses
