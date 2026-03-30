@@ -767,6 +767,124 @@ func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
 	assert.Equal(t, int32(8000), np.Spec.Ingress[0].Ports[0].Port.IntVal)
 }
 
+func TestLanguageClusterController_GatewayDeploymentImage(t *testing.T) {
+	tests := []struct {
+		name         string
+		gatewayImage string
+		wantImage    string
+	}{
+		{
+			name:         "custom image propagated to Deployment",
+			gatewayImage: "my-registry/litellm:v1",
+			wantImage:    "my-registry/litellm:v1",
+		},
+		{
+			name:         "default image when GatewayImage unset",
+			gatewayImage: "",
+			wantImage:    "ghcr.io/language-operator/model:latest",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			cluster := gen.LanguageCluster("img-cluster")
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(cluster).
+				WithStatusSubresource(cluster).
+				Build()
+
+			reconciler := &LanguageClusterReconciler{
+				Client:       fakeClient,
+				Scheme:       scheme,
+				Log:          logr.Discard(),
+				GatewayImage: tt.gatewayImage,
+			}
+
+			ctx := context.Background()
+			req := clusterRequest(cluster.Name)
+
+			_, err := reconciler.Reconcile(ctx, req)
+			require.NoError(t, err)
+			_, err = reconciler.Reconcile(ctx, req)
+			require.NoError(t, err)
+
+			deployment := &appsv1.Deployment{}
+			require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, deployment))
+			require.NotEmpty(t, deployment.Spec.Template.Spec.Containers, "gateway Deployment must have at least one container")
+			assert.Equal(t, tt.wantImage, deployment.Spec.Template.Spec.Containers[0].Image)
+		})
+	}
+}
+
+func TestLanguageClusterController_GatewayConfigMapContainsModel(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("model-cluster")
+	model := gen.LanguageModel("gpt-4", cluster.Name)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, model).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	cm := &corev1.ConfigMap{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway-config", Namespace: cluster.Name}, cm))
+
+	key := "model__gpt-4.json"
+	val, ok := cm.Data[key]
+	require.True(t, ok, "gateway-config ConfigMap must contain key %q for LanguageModel gpt-4", key)
+	assert.NotEmpty(t, val, "model config JSON must not be empty")
+	assert.Contains(t, val, "anthropic", "model config JSON must include provider field")
+}
+
+func TestLanguageClusterController_GatewayServicePort(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("port-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	svc := &corev1.Service{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, svc))
+	require.NotEmpty(t, svc.Spec.Ports, "gateway Service must expose at least one port")
+	assert.Equal(t, int32(8000), svc.Spec.Ports[0].Port)
+	assert.Equal(t, int32(4000), svc.Spec.Ports[0].TargetPort.IntVal)
+}
+
 func TestLanguageClusterController_GatewayEndpoint(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
