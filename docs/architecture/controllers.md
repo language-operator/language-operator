@@ -60,7 +60,7 @@ Located in `src/controllers/utils.go`:
 
 The controller assembles configuration from:
 
-- `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret ref)
+- `spec.instructions` (inline string)
 - Referenced `LanguagePersona` resource (via `persona`)
 - Referenced `LanguageModel` endpoints (via `models`)
 - Referenced `LanguageTool` endpoints (via `tools`)

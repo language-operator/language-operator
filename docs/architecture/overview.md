@@ -93,40 +93,41 @@ spec:
   models:
     - name: claude-sonnet
 
-  initContainers:
-    - name: config-adapter
-      image: myregistry/adapter:latest
-      # MODEL_ENDPOINTS is injected into all init containers automatically
-
-  livenessProbe:
-    httpGet:
-      path: /healthz
-      port: 18789
-    initialDelaySeconds: 15
-    periodSeconds: 30
-
-  readinessProbe:
-    httpGet:
-      path: /readyz
-      port: 18789
-    initialDelaySeconds: 5
-    periodSeconds: 10
-
-  envFrom:
-    - secretRef:
-        name: my-api-keys
-
   workspace:
     size: 10Gi
     mountPath: /home/node/.myapp
 
   executionMode: autonomous     # autonomous|interactive|scheduled|event-driven
-  replicas: 1
+
+  deployment:
+    replicas: 1
+    envFrom:
+      - secretRef:
+          name: my-api-keys
+
+    initContainers:
+      - name: config-adapter
+        image: myregistry/adapter:latest
+        # MODEL_ENDPOINTS is injected into all init containers automatically
+
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 18789
+      initialDelaySeconds: 15
+      periodSeconds: 30
+
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 18789
+      initialDelaySeconds: 5
+      periodSeconds: 10
 ```
 
 The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and two ConfigMaps (instructions, config).
 
-If `initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
+If `spec.deployment.initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 
 ### LanguagePersona
 
