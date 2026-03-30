@@ -19,8 +19,6 @@ metadata:
   name: production-agents
 spec:
   domain: agents.example.com
-  networkPolicies:
-    enabled: true
 ```
 
 This creates a `production-agents` namespace with the shared proxy accessible at `http://proxy.production-agents.svc.cluster.local:8000`.

@@ -191,12 +191,13 @@ metadata:
   name: language-operator-myapp
 spec:
   domain: agents.example.com
-  proxy:
-    ingressEnabled: true    # expose proxy at proxy.agents.example.com (default when domain is set)
-    replicas: 1
+  gateway:
+    enabled: true    # expose gateway at gateway.agents.example.com (default when domain is set)
+    deployment:
+      replicas: 1
 ```
 
-The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM proxy. The proxy is exposed externally at `proxy.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
+The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM gateway. The gateway is exposed externally at `gateway.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
 
 ---
 
