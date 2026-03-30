@@ -3091,3 +3091,94 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		assert.Equal(t, "concise and precise", p.Personality)
 	})
 }
+
+func TestLanguageAgentController_WorkspaceStorageClass(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("sc-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceStorageClass("fast-ssd"),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: agent.Namespace}, pvc))
+	require.NotNil(t, pvc.Spec.StorageClassName)
+	assert.Equal(t, "fast-ssd", *pvc.Spec.StorageClassName)
+}
+
+func TestLanguageAgentController_WorkspaceMountPath(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("mp-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceMountPath("/data"),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	require.NotEmpty(t, deployment.Spec.Template.Spec.Containers)
+	var found bool
+	for _, vm := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if vm.Name == "workspace" {
+			assert.Equal(t, "/data", vm.MountPath)
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected workspace volume mount in container")
+}
+
+func TestLanguageAgentController_WorkspaceAccessMode(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("am-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceAccessMode(corev1.ReadWriteMany),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: agent.Namespace}, pvc))
+	require.NotEmpty(t, pvc.Spec.AccessModes)
+	assert.Equal(t, corev1.ReadWriteMany, pvc.Spec.AccessModes[0])
+}
