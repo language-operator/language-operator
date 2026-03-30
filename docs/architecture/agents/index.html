@@ -1952,11 +1952,11 @@
 </tr>
 <tr>
 <td><code>MODEL_ENDPOINTS</code></td>
-<td>Comma-separated LiteLLM proxy URLs, one per <code>modelRef</code> (e.g. <code>http://claude-sonnet.mynamespace.svc.cluster.local:8000</code>)</td>
+<td>Single shared LiteLLM gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>). The same URL is used regardless of how many models are referenced.</td>
 </tr>
 <tr>
 <td><code>LLM_MODEL</code></td>
-<td>Comma-separated model names corresponding to each proxy URL in <code>MODEL_ENDPOINTS</code></td>
+<td>Comma-separated list of model names for all referenced models</td>
 </tr>
 </tbody>
 </table>
@@ -2014,16 +2014,16 @@
 <a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mcp</span>
 <a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>
 <a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="c1"># Model configuration — keyed by model name.</span>
-<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="c1"># Agents route all LLM traffic through per-model LiteLLM proxies.</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="c1"># All LLM traffic routes through the shared namespace gateway.</span>
 <a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="c1"># Agents never hold real API credentials.</span>
 <a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="nt">models</span><span class="p">:</span>
 <a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">  </span><span class="nt">claude-sonnet</span><span class="p">:</span>
 <a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">primary</span>
 <a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic</span>
 <a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet-4-5</span>
-<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://claude-sonnet.default.svc.cluster.local:8000</span>
+<a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://gateway.default.svc.cluster.local:8000</span>
 </code></pre></div>
-<p>The <code>MODEL_ENDPOINTS</code> env var also carries the proxy URL(s) as a comma-separated list for runtimes that prefer environment-variable-based configuration.</p>
+<p>The <code>MODEL_ENDPOINTS</code> env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.</p>
 <h2 id="example-languageagent-yaml">Example LanguageAgent YAML<a class="headerlink" href="#example-languageagent-yaml" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
