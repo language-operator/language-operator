@@ -24,6 +24,7 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -218,4 +219,59 @@ func TestBuildEgressNetworkPolicy_NamespaceAndPodSelectorCombined(t *testing.T) 
 		}
 	}
 	assert.True(t, found, "expected a single egress peer combining NamespaceSelector and PodSelector")
+}
+
+func TestBuildEgressNetworkPolicy_FromRule_AddsIngressAndPolicyType(t *testing.T) {
+	c := newFakeClient(t).Build()
+	policy := BuildEgressNetworkPolicy(
+		context.Background(), c,
+		"test-policy", "default",
+		map[string]string{"app": "test"},
+		"", "", "",
+		[]langopv1alpha1.NetworkRule{
+			{
+				From: &langopv1alpha1.NetworkPeer{
+					Group: "external-readers",
+				},
+				Ports: []langopv1alpha1.NetworkPort{{Port: 8080}},
+			},
+		},
+	)
+	require.NotNil(t, policy)
+
+	// PolicyTypeIngress must be present
+	hasIngress := false
+	for _, pt := range policy.Spec.PolicyTypes {
+		if pt == networkingv1.PolicyTypeIngress {
+			hasIngress = true
+		}
+	}
+	assert.True(t, hasIngress, "expected PolicyTypeIngress when From rules are present")
+
+	require.NotEmpty(t, policy.Spec.Ingress, "expected at least one ingress rule")
+	peer := policy.Spec.Ingress[0].From[0]
+	require.NotNil(t, peer.PodSelector)
+	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels["langop.io/group"])
+
+	require.NotEmpty(t, policy.Spec.Ingress[0].Ports)
+	assert.Equal(t, int32(8080), policy.Spec.Ingress[0].Ports[0].Port.IntVal)
+}
+
+func TestBuildEgressNetworkPolicy_NoFromRule_NoPolicyTypeIngress(t *testing.T) {
+	c := newFakeClient(t).Build()
+	policy := BuildEgressNetworkPolicy(
+		context.Background(), c,
+		"test-policy", "default",
+		map[string]string{"app": "test"},
+		"", "", "",
+		[]langopv1alpha1.NetworkRule{
+			{To: &langopv1alpha1.NetworkPeer{CIDR: "10.0.0.0/8"}},
+		},
+	)
+	require.NotNil(t, policy)
+
+	for _, pt := range policy.Spec.PolicyTypes {
+		assert.NotEqual(t, networkingv1.PolicyTypeIngress, pt, "PolicyTypeIngress must not appear when no From rules present")
+	}
+	assert.Empty(t, policy.Spec.Ingress)
 }

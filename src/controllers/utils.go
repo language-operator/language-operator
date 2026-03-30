@@ -747,6 +747,33 @@ func BuildEgressNetworkPolicy(
 		}
 	}
 
+	// Process From rules into Ingress entries
+	var ingress []networkingv1.NetworkPolicyIngressRule
+	for _, rule := range egressRules {
+		if rule.From == nil {
+			continue
+		}
+		ingressRule := networkingv1.NetworkPolicyIngressRule{
+			From: []networkingv1.NetworkPolicyPeer{
+				buildIngressPeerFromNetworkPeer(rule.From, namespace),
+			},
+		}
+		for _, port := range rule.Ports {
+			protocol := corev1.Protocol(port.Protocol)
+			if protocol == "" {
+				protocol = corev1.ProtocolTCP
+			}
+			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: &protocol,
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+			})
+		}
+		ingress = append(ingress, ingressRule)
+	}
+	if len(ingress) > 0 {
+		policyTypes = append(policyTypes, networkingv1.PolicyTypeIngress)
+	}
+
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -759,6 +786,7 @@ func BuildEgressNetworkPolicy(
 			},
 			PolicyTypes: policyTypes,
 			Egress:      egress,
+			Ingress:     ingress,
 		},
 	}
 }
