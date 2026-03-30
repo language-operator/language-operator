@@ -56,9 +56,10 @@ See [Tool Protocol](../architecture/tools.md) for the full specification.
 - More efficient for stateless tools
 - Scales independently
 
-**Sidecar Mode** (future):
-- Tool container injected into each agent pod
-- Better for stateful or agent-specific tools
+**Sidecar Mode**:
+- Tool container injected as a sidecar into each agent pod
+- Endpoint injected as `http://localhost:<port>` (not a Service URL)
+- Better for stateful or agent-specific tools that need workspace access
 - Shares agent lifecycle
 
 ### Endpoint Injection
