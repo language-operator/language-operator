@@ -62,8 +62,8 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_MODE` | Execution mode: `autonomous`, `interactive`, `scheduled`, or `event-driven` |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to (empty if none) |
 | `AGENT_CLUSTER_UUID` | Stable UUID of the LanguageCluster (empty if none) |
-| `MODEL_ENDPOINTS` | Comma-separated LiteLLM proxy URLs, one per `modelRef` (e.g. `http://claude-sonnet.mynamespace.svc.cluster.local:8000`) |
-| `LLM_MODEL` | Comma-separated model names corresponding to each proxy URL in `MODEL_ENDPOINTS` |
+| `MODEL_ENDPOINTS` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
+| `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 
 Additional environment variables from `spec.env` and `spec.envFrom` are passed through unchanged.
 
@@ -136,17 +136,17 @@ tools:
     protocol: mcp
 
 # Model configuration — keyed by model name.
-# Agents route all LLM traffic through per-model LiteLLM proxies.
+# All LLM traffic routes through the shared namespace gateway.
 # Agents never hold real API credentials.
 models:
   claude-sonnet:
     role: primary
     provider: anthropic
     model: claude-sonnet-4-5
-    endpoint: http://claude-sonnet.default.svc.cluster.local:8000
+    endpoint: http://gateway.default.svc.cluster.local:8000
 ```
 
-The `MODEL_ENDPOINTS` env var also carries the proxy URL(s) as a comma-separated list for runtimes that prefer environment-variable-based configuration.
+The `MODEL_ENDPOINTS` env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.
 
 ## Example LanguageAgent YAML
 
