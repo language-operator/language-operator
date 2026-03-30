@@ -1670,7 +1670,7 @@
 </ul>
 <p>All agents in the cluster connect to this shared proxy via the <code>MODEL_ENDPOINTS</code> environment variable.</p>
 <h3 id="network-isolation">Network Isolation<a class="headerlink" href="#network-isolation" title="Permanent link">&para;</a></h3>
-<p>When NetworkPolicy is enabled:</p>
+<p>NetworkPolicy rules are defined via <code>spec.networkPolicies</code> (a list of <code>NetworkRule</code> objects). By default:</p>
 <ul>
 <li>Agents can communicate with each other on port 8080</li>
 <li>Agents can reach the shared proxy</li>
