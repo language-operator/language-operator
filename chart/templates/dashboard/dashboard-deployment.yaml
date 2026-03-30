@@ -7,7 +7,7 @@ metadata:
     {{- include "dashboard.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.dashboard.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.dashboard.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
@@ -29,7 +29,7 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "dashboard.serviceAccountName" . }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.dashboard.podSecurityContext | nindent 8 }}
       initContainers:
       - name: wait-for-postgres
         image: postgres:15-alpine
@@ -92,7 +92,7 @@ spec:
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
-          {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
         image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
         ports:
@@ -181,16 +181,16 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
         resources:
-          {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+          {{- toYaml .Values.dashboard.resources | nindent 12 }}
+      {{- with .Values.dashboard.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.dashboard.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.dashboard.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
