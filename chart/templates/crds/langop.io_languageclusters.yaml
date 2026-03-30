@@ -5185,11 +5185,6 @@ spec:
                           type: object
                         type: array
                     type: object
-                  enabled:
-                    description: |-
-                      Enabled controls whether an Ingress is created for the gateway.
-                      Defaults to true when cluster.spec.domain is set.
-                    type: boolean
                 type: object
               ingress:
                 description: Ingress defines ingress configuration for the cluster
@@ -5198,6 +5193,11 @@ spec:
                     description: ClassName specifies the IngressClass to use (maps
                       to spec.ingressClassName on the Ingress object).
                     type: string
+                  enabled:
+                    description: |-
+                      Enabled controls whether an Ingress is created for the gateway.
+                      Defaults to true when cluster.spec.domain is set.
+                    type: boolean
                   tls:
                     description: TLS configuration for agent webhooks
                     properties:

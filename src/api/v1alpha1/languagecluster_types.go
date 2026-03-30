@@ -194,11 +194,6 @@ type DeploymentSpec struct {
 
 // GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.
 type GatewaySpec struct {
-	// Enabled controls whether an Ingress is created for the gateway.
-	// Defaults to true when cluster.spec.domain is set.
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
-
 	// Deployment configures the Kubernetes deployment for the gateway pod.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
@@ -206,6 +201,11 @@ type GatewaySpec struct {
 
 // IngressConfig defines ingress configuration
 type IngressConfig struct {
+	// Enabled controls whether an Ingress is created for the gateway.
+	// Defaults to true when cluster.spec.domain is set.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
 	// TLS configuration for agent webhooks
 	// +optional
 	TLS *IngressTLSConfig `json:"tls,omitempty"`
