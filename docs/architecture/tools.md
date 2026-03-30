@@ -4,7 +4,7 @@ This document defines the contract for implementing a `LanguageTool` — an MCP-
 
 ## Overview
 
-A **LanguageTool** is a Kubernetes-managed service that exposes the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). The operator discovers tools via `LanguageTool` CRDs, resolves their endpoints, and injects connection details into agent containers via `/etc/agent/tools/config.json`.
+A **LanguageTool** is a Kubernetes-managed service that exposes the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). The operator discovers tools via `LanguageTool` CRDs, resolves their endpoints, and injects connection details into agent containers via the `MCP_SERVERS` environment variable and the `tools:` section of `/etc/agent/config.yaml`.
 
 Agents connect to tools over MCP. The operator does not proxy or inspect tool traffic — it only handles discovery and configuration injection.
 
@@ -15,7 +15,7 @@ When a `LanguageTool` resource is created, the operator:
 1. Creates and manages the tool's Deployment and Service
 2. Resolves the tool endpoint: `http://<service-name>.<namespace>.svc.cluster.local:<port>`
 3. Syncs the MCP tool schema by calling `tools/list` on the endpoint
-4. Writes the resolved endpoint into the `tools.json` ConfigMap for each agent referencing this tool
+4. Injects the resolved endpoint into each referencing agent via the `MCP_SERVERS` env var and the `tools:` section of `/etc/agent/config.yaml`
 5. Reconciles NetworkPolicy to allow agent pods to reach the tool service
 
 ## What the Tool Must Implement
@@ -137,18 +137,19 @@ spec:
 
 ## Agent Connection
 
-The operator resolves the tool endpoint and writes it to each agent's `/etc/agent/tools/config.json`:
+The operator injects tool endpoints into each referencing agent two ways:
 
-```json
-{
-  "mem0-memory": {
-    "endpoint": "http://mem0-memory.language-operator-myapp.svc.cluster.local:8080",
-    "protocol": "mcp"
-  }
-}
+1. **`MCP_SERVERS` env var** — a comma-separated list of tool endpoint URLs (e.g. `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080`)
+2. **`/etc/agent/config.yaml`** — a `tools:` map keyed by tool name:
+
+```yaml
+tools:
+  mem0-memory:
+    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080
+    protocol: mcp
 ```
 
-The agent reads this file on startup and uses the endpoint URL to make MCP JSON-RPC calls.
+Agents can use either source; `MCP_SERVERS` is convenient for simple single-tool lookup, while `config.yaml` provides structured access to all tools by name.
 
 ## Deployment Pattern
 
