@@ -516,14 +516,6 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				}
 			}
 
-			if rule.To.DNS != nil && len(rule.To.DNS) > 0 {
-				// For DNS rules, we need to resolve to CIDR blocks or use FQDN policies
-				// For now, we'll add a permissive rule for DNS traffic
-				peer.IPBlock = &networkingv1.IPBlock{
-					CIDR: "0.0.0.0/0",
-				}
-			}
-
 			if rule.To.Service != nil {
 				serviceNamespace := rule.To.Service.Namespace
 				if serviceNamespace == "" {
@@ -552,7 +544,23 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				peer.NamespaceSelector = rule.To.NamespaceSelector
 			}
 
-			egressRule.To = []networkingv1.NetworkPolicyPeer{peer}
+			// Only include the peer if it has actual selectors
+			if peer.IPBlock != nil || peer.PodSelector != nil || peer.NamespaceSelector != nil {
+				egressRule.To = append(egressRule.To, peer)
+			}
+
+			// Resolve DNS hostnames to CIDR blocks at policy creation time (fail-closed)
+			if len(rule.To.DNS) > 0 {
+				resolvedCIDRs, err := resolveDNSToCIDRs(rule.To.DNS)
+				if err == nil && len(resolvedCIDRs) > 0 {
+					for _, cidr := range resolvedCIDRs {
+						egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
+							IPBlock: &networkingv1.IPBlock{CIDR: cidr},
+						})
+					}
+				}
+				// DNS resolution failure = fail-closed: no destinations added
+			}
 
 			// Convert ports
 			if len(rule.Ports) > 0 {
