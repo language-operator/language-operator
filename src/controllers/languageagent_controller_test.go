@@ -1464,7 +1464,7 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 		if peer.PodSelector == nil {
 			t.Fatal("expected PodSelector for Group-based From rule")
 		}
-		if peer.PodSelector.MatchLabels["langop.io/group"] != "monitoring" {
+		if peer.PodSelector.MatchLabels[LabelKeyLangopGroup] != "monitoring" {
 			t.Errorf("expected langop.io/group=monitoring, got %v", peer.PodSelector.MatchLabels)
 		}
 		if len(last.Ports) == 0 || last.Ports[0].Port.IntVal != 9090 {

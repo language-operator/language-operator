@@ -710,7 +710,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labels["langop.io/component"] = "agent" // Distinguish from trigger pods
+	labels[LabelKeyLangopComponent] = "agent" // Distinguish from trigger pods
 
 	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
@@ -721,7 +721,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return fmt.Errorf("failed to get cluster %s: %w", agent.Namespace, err)
 	}
 
-	labels["langop.io/cluster"] = agent.Namespace
+	labels[LabelKeyLangopCluster] = agent.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -860,7 +860,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"langop.io/component": "trigger",
+							LabelKeyLangopComponent: "trigger",
 						},
 					},
 				},
@@ -878,7 +878,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "language-operator",
+							LabelKeyMetadataName: "language-operator",
 						},
 					},
 					PodSelector: &metav1.LabelSelector{
@@ -901,7 +901,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"langop.io/kind": "LanguageAgent",
+							LabelKeyLangopKind: "LanguageAgent",
 						},
 					},
 				},
@@ -1369,7 +1369,7 @@ func agentPort(agent *langopv1alpha1.LanguageAgent) int32 {
 // reconcileService creates a Service for the agent
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labels["langop.io/component"] = "agent" // Only route to agent pods, not trigger pods
+	labels[LabelKeyLangopComponent] = "agent" // Only route to agent pods, not trigger pods
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

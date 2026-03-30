@@ -765,7 +765,7 @@ func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
 
 	peer := np.Spec.Ingress[0].From[0]
 	require.NotNil(t, peer.PodSelector, "expected PodSelector for Group-based From rule")
-	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels["langop.io/group"])
+	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels[LabelKeyLangopGroup])
 	require.NotEmpty(t, np.Spec.Ingress[0].Ports)
 	assert.Equal(t, int32(8000), np.Spec.Ingress[0].Ports[0].Port.IntVal)
 }
@@ -817,7 +817,7 @@ func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
 		rule := &np.Spec.Egress[i]
 		for _, peer := range rule.To {
 			if peer.NamespaceSelector != nil {
-				if v, ok := peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"]; ok && v == "other-ns" {
+				if v, ok := peer.NamespaceSelector.MatchLabels[LabelKeyMetadataName]; ok && v == "other-ns" {
 					userRule = rule
 					break
 				}

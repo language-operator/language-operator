@@ -47,6 +47,13 @@ import (
 
 const (
 	FinalizerName = "langop.io/finalizer"
+
+	LabelKeyLangopKind       = "langop.io/kind"
+	LabelKeyLangopGroup      = "langop.io/group"
+	LabelKeyLangopCluster    = "langop.io/cluster"
+	LabelKeyLangopComponent  = "langop.io/component"
+	LabelKeyLangopConfigHash = "langop.io/config-hash"
+	LabelKeyMetadataName     = "kubernetes.io/metadata.name"
 )
 
 // buildPodSecurityContext returns the operator-default pod-level security context.
@@ -355,7 +362,7 @@ func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 		"app.kubernetes.io/name":       resourceName,
 		"app.kubernetes.io/managed-by": "language-operator",
 		"app.kubernetes.io/part-of":    "langop",
-		"langop.io/kind":               resourceKind,
+		LabelKeyLangopKind:             resourceKind,
 	}
 }
 
@@ -555,7 +562,7 @@ func BuildEgressNetworkPolicy(
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "kube-system",
+							LabelKeyMetadataName: "kube-system",
 						},
 					},
 					PodSelector: &metav1.LabelSelector{
@@ -625,7 +632,7 @@ func BuildEgressNetworkPolicy(
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"kubernetes.io/metadata.name": otelNamespace,
+										LabelKeyMetadataName: otelNamespace,
 									},
 								},
 							},
@@ -700,7 +707,7 @@ func BuildEgressNetworkPolicy(
 		if rule.To.Group != "" {
 			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
 				PodSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"langop.io/group": rule.To.Group},
+					MatchLabels: map[string]string{LabelKeyLangopGroup: rule.To.Group},
 				},
 			})
 		}
@@ -713,7 +720,7 @@ func BuildEgressNetworkPolicy(
 			}
 			policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
 				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"kubernetes.io/metadata.name": ns},
+					MatchLabels: map[string]string{LabelKeyMetadataName: ns},
 				},
 			})
 		}
@@ -800,7 +807,7 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 	}
 	if peer.Group != "" {
 		p.PodSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"langop.io/group": peer.Group},
+			MatchLabels: map[string]string{LabelKeyLangopGroup: peer.Group},
 		}
 	}
 	if peer.Service != nil {
@@ -809,7 +816,7 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 			ns = namespace
 		}
 		p.NamespaceSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{"kubernetes.io/metadata.name": ns},
+			MatchLabels: map[string]string{LabelKeyMetadataName: ns},
 		}
 	}
 	if peer.PodSelector != nil {

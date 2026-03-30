@@ -54,7 +54,7 @@ func TestBuildEgressNetworkPolicy_GroupSelector(t *testing.T) {
 	for _, rule := range policy.Spec.Egress {
 		for _, peer := range rule.To {
 			if peer.PodSelector != nil {
-				v, ok := peer.PodSelector.MatchLabels["langop.io/group"]
+				v, ok := peer.PodSelector.MatchLabels[LabelKeyLangopGroup]
 				if ok && v == "my-group" {
 					found = true
 				}
@@ -84,7 +84,7 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_ExplicitNamespace(t *testing.T
 	for _, rule := range policy.Spec.Egress {
 		for _, peer := range rule.To {
 			if peer.NamespaceSelector != nil {
-				v, ok := peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"]
+				v, ok := peer.NamespaceSelector.MatchLabels[LabelKeyMetadataName]
 				if ok && v == "other-ns" {
 					found = true
 				}
@@ -114,7 +114,7 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_DefaultsToCurrentNamespace(t *
 	for _, rule := range policy.Spec.Egress {
 		for _, peer := range rule.To {
 			if peer.NamespaceSelector != nil {
-				v, ok := peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"]
+				v, ok := peer.NamespaceSelector.MatchLabels[LabelKeyMetadataName]
 				if ok && v == "my-namespace" {
 					found = true
 				}
@@ -251,7 +251,7 @@ func TestBuildEgressNetworkPolicy_FromRule_AddsIngressAndPolicyType(t *testing.T
 	require.NotEmpty(t, policy.Spec.Ingress, "expected at least one ingress rule")
 	peer := policy.Spec.Ingress[0].From[0]
 	require.NotNil(t, peer.PodSelector)
-	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels["langop.io/group"])
+	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels[LabelKeyLangopGroup])
 
 	require.NotEmpty(t, policy.Spec.Ingress[0].Ports)
 	assert.Equal(t, int32(8080), policy.Spec.Ingress[0].Ports[0].Port.IntVal)
