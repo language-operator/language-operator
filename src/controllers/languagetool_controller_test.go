@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	"fmt"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -917,4 +918,45 @@ func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
 			t.Error("expected port 8080 in ingress rule")
 		}
 	})
+}
+
+func TestLanguageToolController_Deletion(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("del-tool", "default",
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+	)
+	tool.Finalizers = []string{FinalizerName}
+	tool.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("Reconcile returned unexpected error: %v", err)
+	}
+
+	// Finalizer should be removed
+	updated := &langopv1alpha1.LanguageTool{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updated); err == nil {
+		for _, f := range updated.Finalizers {
+			if f == FinalizerName {
+				t.Error("Expected finalizer to be removed after deletion")
+			}
+		}
+	}
 }
