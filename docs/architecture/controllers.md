@@ -71,7 +71,7 @@ The controller assembles configuration from:
 - `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`
 - `AGENT_MODE` - from `spec.executionMode`
 - `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
-- `MODEL_ENDPOINTS` - shared proxy URL (`http://proxy.<namespace>.svc.cluster.local:8000`)
+- `MODEL_ENDPOINTS` - shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`)
 - `LLM_MODEL` - comma-separated list of model names from `models`
 - `MCP_SERVERS` - resolved MCP tool server URLs
 
@@ -90,10 +90,10 @@ The controller assembles configuration from:
 **Creates:**
 
 - Managed namespace for the cluster
-- Shared LiteLLM proxy Deployment (`proxy`)
-- Shared LiteLLM proxy Service (`proxy`)
-- Shared LiteLLM proxy ConfigMap (`proxy-config`)
-- Optional Ingress or HTTPRoute at `proxy.<spec.domain>`
+- Shared LiteLLM gateway Deployment (`gateway`)
+- Shared LiteLLM gateway Service (`gateway`)
+- Shared LiteLLM gateway ConfigMap (`gateway-config`)
+- Optional Ingress or HTTPRoute at `gateway.<spec.domain>`
 
 **Watches:**
 
@@ -105,7 +105,7 @@ The shared proxy is dynamically configured with all `LanguageModel` resources in
 
 **External Access:**
 
-If `spec.domain` is set, the controller creates an Ingress or HTTPRoute (depending on available APIs) to expose the shared proxy externally at `proxy.<domain>`.
+If `spec.domain` is set, the controller creates an Ingress or HTTPRoute (depending on available APIs) to expose the shared gateway externally at `gateway.<domain>`.
 
 ---
 

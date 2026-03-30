@@ -21,7 +21,7 @@ spec:
   domain: agents.example.com
 ```
 
-This creates a `production-agents` namespace with the shared proxy accessible at `http://proxy.production-agents.svc.cluster.local:8000`.
+This creates a `production-agents` namespace with the shared gateway accessible at `http://gateway.production-agents.svc.cluster.local:8000`.
 
 ## Complete API Reference
 

@@ -66,7 +66,7 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │                               └──────────────────────────────┘   │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 │  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
-│  │  (LanguageTool CRDs) │    │  proxy.<namespace>.svc:8000  │   │
+│  │  (LanguageTool CRDs) │    │  gateway.<namespace>.svc:8000│   │
 │  └──────────────────────┘    │  (one per LanguageCluster)   │   │
 │                               └──────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -209,7 +209,7 @@ The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 - `/etc/agent/instructions.txt` — plain text task instructions (optional)
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
-- `MODEL_ENDPOINTS` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
+- `MODEL_ENDPOINTS` — URL of the shared LiteLLM gateway (`http://gateway.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs
 - ClusterIP Service on `spec.port`
@@ -233,7 +233,7 @@ Each `LanguageAgent` gets:
 
 Tool servers (`LanguageTool`) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.
 
-The shared LiteLLM proxy (`proxy.<namespace>.svc.cluster.local:8000`) is deployed per `LanguageCluster`. NetworkPolicy allows agent pods to reach the proxy, and the proxy has outbound HTTPS egress to upstream model providers.
+The shared LiteLLM gateway (`gateway.<namespace>.svc.cluster.local:8000`) is deployed per `LanguageCluster`. NetworkPolicy allows agent pods to reach the gateway, and the gateway has outbound HTTPS egress to upstream model providers.
 
 ---
 
