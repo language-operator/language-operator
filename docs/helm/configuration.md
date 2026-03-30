@@ -47,12 +47,7 @@ config:
 
 ### Telemetry
 
-```yaml
-config:
-  telemetry:
-    enabled: true
-    endpoint: "http://otel-collector:4317"
-```
+OpenTelemetry tracing is configured via environment variables on the operator pod, not Helm values. Set `OTEL_EXPORTER_OTLP_ENDPOINT` in the operator deployment environment to enable tracing — the operator will propagate it to all agent pods automatically.
 
 ## Full Reference
 
