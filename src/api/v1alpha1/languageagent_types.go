@@ -151,7 +151,7 @@ type LanguageAgentStatus struct {
 	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
 
 	// UUID is a unique identifier for this agent instance
-	// Used for webhook routing (e.g., <uuid>.domain.com)
+	// Not used for webhook routing; webhooks are routed via agent name (e.g., <agent-name>.domain.com)
 	// +optional
 	UUID string `json:"uuid,omitempty"`
 
