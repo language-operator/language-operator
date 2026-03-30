@@ -86,7 +86,7 @@ spec:
     - ports:
         - port: 443
       to:
-        - cidr: "0.0.0.0/0"
+        cidr: "0.0.0.0/0"
 ```
 
 NetworkPolicy is generated to allow only specified destinations.
@@ -113,7 +113,7 @@ spec:
     - ports:
         - port: 443
       to:
-        - cidr: "0.0.0.0/0"
+        cidr: "0.0.0.0/0"
 ```
 
 ### Database Access
@@ -136,9 +136,9 @@ spec:
     - ports:
         - port: 5432
       to:
-        - podSelector:
-            matchLabels:
-              app: postgres
+        podSelector:
+          matchLabels:
+            app: postgres
 ```
 
 ### Custom Tool
