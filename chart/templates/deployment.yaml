@@ -77,6 +77,15 @@ spec:
         {{- if .Values.config.gateway.imagePullPolicy }}
         - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}
+        {{- if .Values.config.networkPolicy.requireNetworkPolicy }}
+        - --require-network-policy={{ .Values.config.networkPolicy.requireNetworkPolicy }}
+        {{- end }}
+        {{- if .Values.config.networkPolicy.timeout }}
+        - --network-policy-timeout={{ .Values.config.networkPolicy.timeout }}
+        {{- end }}
+        {{- if .Values.config.networkPolicy.retries }}
+        - --network-policy-retries={{ .Values.config.networkPolicy.retries }}
+        {{- end }}
         {{- with .Values.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
