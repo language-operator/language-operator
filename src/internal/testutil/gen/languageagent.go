@@ -152,3 +152,36 @@ func SetAgentNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageAgentMo
 		a.Spec.NetworkPolicies = rules
 	}
 }
+
+// SetAgentWorkspaceStorageClass sets spec.workspace.storageClassName, initialising the workspace if needed.
+func SetAgentWorkspaceStorageClass(className string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.StorageClassName = &className
+	}
+}
+
+// SetAgentWorkspaceMountPath sets spec.workspace.mountPath, initialising the workspace if needed.
+func SetAgentWorkspaceMountPath(path string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.MountPath = path
+	}
+}
+
+// SetAgentWorkspaceAccessMode sets spec.workspace.accessMode, initialising the workspace if needed.
+func SetAgentWorkspaceAccessMode(mode corev1.PersistentVolumeAccessMode) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.AccessMode = string(mode)
+	}
+}
