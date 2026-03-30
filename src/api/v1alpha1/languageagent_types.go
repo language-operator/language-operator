@@ -25,7 +25,7 @@ type LanguageAgentSpec struct {
 	Persona string `json:"persona,omitempty"`
 
 	// Instructions provides system instructions for the agent.
-	// Mounted at /etc/agent/instructions.txt if set.
+	// Delivered as the top-level "instructions" field in /etc/agent/config.yaml.
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
