@@ -1864,7 +1864,7 @@
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│                               └──────────────────────────────┘   │
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  │  (LanguageTool CRDs) │    │  proxy.&lt;namespace&gt;.svc:8000  │   │
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  │  (LanguageTool CRDs) │    │  gateway.&lt;namespace&gt;.svc:8000│   │
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│  └──────────────────────┘    │  (one per LanguageCluster)   │   │
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│                               └──────────────────────────────┘   │
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└─────────────────────────────────────────────────────────────────┘
@@ -1976,7 +1976,7 @@
 - <code>/etc/agent/instructions.txt</code> — plain text task instructions (optional)
 - <code>/etc/agent/config.yaml</code> — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: <code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code>, <code>AGENT_MODE</code>, <code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code>
-- <code>MODEL_ENDPOINTS</code> — URL of the shared LiteLLM proxy (<code>http://proxy.&lt;namespace&gt;.svc.cluster.local:8000</code>), injected into main container and all init containers
+- <code>MODEL_ENDPOINTS</code> — URL of the shared LiteLLM gateway (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>), injected into main container and all init containers
 - <code>LLM_MODEL</code> — comma-separated model names registered in the proxy (from all <code>models</code>)
 - <code>MCP_SERVERS</code> — resolved MCP tool server URLs
 - ClusterIP Service on <code>spec.port</code>
@@ -1995,7 +1995,7 @@
 <li>Configured trigger pods</li>
 </ul>
 <p>Tool servers (<code>LanguageTool</code>) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.</p>
-<p>The shared LiteLLM proxy (<code>proxy.&lt;namespace&gt;.svc.cluster.local:8000</code>) is deployed per <code>LanguageCluster</code>. NetworkPolicy allows agent pods to reach the proxy, and the proxy has outbound HTTPS egress to upstream model providers.</p>
+<p>The shared LiteLLM gateway (<code>gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>) is deployed per <code>LanguageCluster</code>. NetworkPolicy allows agent pods to reach the gateway, and the gateway has outbound HTTPS egress to upstream model providers.</p>
 <hr />
 <h2 id="observability">Observability<a class="headerlink" href="#observability" title="Permanent link">&para;</a></h2>
 <p>All operator reconciliation loops emit OpenTelemetry spans. Configure an external OTel collector endpoint via <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> if you want to collect traces.</p>

@@ -1921,7 +1921,7 @@
 <li><code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code></li>
 <li><code>AGENT_MODE</code> - from <code>spec.executionMode</code></li>
 <li><code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code></li>
-<li><code>MODEL_ENDPOINTS</code> - shared proxy URL (<code>http://proxy.&lt;namespace&gt;.svc.cluster.local:8000</code>)</li>
+<li><code>MODEL_ENDPOINTS</code> - shared gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>)</li>
 <li><code>LLM_MODEL</code> - comma-separated list of model names from <code>models</code></li>
 <li><code>MCP_SERVERS</code> - resolved MCP tool server URLs</li>
 </ul>
@@ -1937,17 +1937,17 @@
 <p><strong>Creates:</strong></p>
 <ul>
 <li>Managed namespace for the cluster</li>
-<li>Shared LiteLLM proxy Deployment (<code>proxy</code>)</li>
-<li>Shared LiteLLM proxy Service (<code>proxy</code>)</li>
-<li>Shared LiteLLM proxy ConfigMap (<code>proxy-config</code>)</li>
-<li>Optional Ingress or HTTPRoute at <code>proxy.&lt;spec.domain&gt;</code></li>
+<li>Shared LiteLLM gateway Deployment (<code>gateway</code>)</li>
+<li>Shared LiteLLM gateway Service (<code>gateway</code>)</li>
+<li>Shared LiteLLM gateway ConfigMap (<code>gateway-config</code>)</li>
+<li>Optional Ingress or HTTPRoute at <code>gateway.&lt;spec.domain&gt;</code></li>
 </ul>
 <p><strong>Watches:</strong></p>
 <p>The LanguageCluster controller watches <code>LanguageModel</code> resources to trigger re-reconciliation when models are added or removed, ensuring the shared proxy configuration stays up to date.</p>
 <p><strong>Proxy Configuration:</strong></p>
 <p>The shared proxy is dynamically configured with all <code>LanguageModel</code> resources in the cluster's namespace. When models change, the proxy config is regenerated and the proxy pod is restarted.</p>
 <p><strong>External Access:</strong></p>
-<p>If <code>spec.domain</code> is set, the controller creates an Ingress or HTTPRoute (depending on available APIs) to expose the shared proxy externally at <code>proxy.&lt;domain&gt;</code>.</p>
+<p>If <code>spec.domain</code> is set, the controller creates an Ingress or HTTPRoute (depending on available APIs) to expose the shared gateway externally at <code>gateway.&lt;domain&gt;</code>.</p>
 <hr />
 <h3 id="languagemodelcontroller">LanguageModelController<a class="headerlink" href="#languagemodelcontroller" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/controllers/languagemodel_controller.go</code></p>
