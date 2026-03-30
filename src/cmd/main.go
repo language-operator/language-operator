@@ -88,6 +88,7 @@ func main() {
 	var agentIngressClassName string
 	var gatewayImage string
 	var gatewayImagePullPolicy string
+	var webhookPort int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -119,6 +120,8 @@ func main() {
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
+	flag.IntVar(&webhookPort, "webhook-port", 9443,
+		"Port the webhook server listens on.")
 
 	opts := zap.Options{
 		Development: true,
@@ -245,7 +248,7 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
-			Port: 9443,
+			Port: webhookPort,
 		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
