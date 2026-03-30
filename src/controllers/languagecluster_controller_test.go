@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,7 +22,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -974,4 +977,77 @@ func TestLanguageClusterController_GatewayEndpoint(t *testing.T) {
 	assert.Equal(t, "http://gateway.gw-cluster.svc.cluster.local:8000", updated.Status.GatewayEndpoint)
 	require.NotNil(t, updated.Status.GatewayReady)
 	assert.True(t, *updated.Status.GatewayReady)
+}
+
+func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("ingress-cluster", gen.SetClusterDomain("example.com"))
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	reconciler := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	ingress := &networkingv1.Ingress{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ingress))
+	require.NotEmpty(t, ingress.Spec.Rules)
+	assert.Equal(t, "gateway.example.com", ingress.Spec.Rules[0].Host)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+	require.NotNil(t, updated.Status.GatewayReady)
+	assert.True(t, *updated.Status.GatewayReady)
+}
+
+func TestLanguageClusterController_GatewayIngressError(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("ingress-err-cluster", gen.SetClusterDomain("example.com"))
+
+	// Use a stateful interceptor: allow first Create (finalizer Update), fail Ingress Creates.
+	failIngress := false
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(cluster).WithStatusSubresource(cluster).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if failIngress {
+					if _, ok := obj.(*networkingv1.Ingress); ok {
+						return fmt.Errorf("injected ingress create error")
+					}
+				}
+				return c.Create(ctx, obj, opts...)
+			},
+		}).Build()
+	reconciler := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	// First reconcile: adds finalizer, allow all creates.
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Second reconcile: fail Ingress creation.
+	failIngress = true
+	_, err = reconciler.Reconcile(ctx, req)
+	require.Error(t, err)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+	assert.Equal(t, events.PhaseStatusFailed, updated.Status.Phase)
+	require.NotNil(t, updated.Status.GatewayReady)
+	assert.False(t, *updated.Status.GatewayReady)
+	var gatewayReadyCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == "GatewayReady" {
+			gatewayReadyCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, gatewayReadyCond, "expected GatewayReady condition")
+	assert.Equal(t, metav1.ConditionFalse, gatewayReadyCond.Status)
+	assert.Equal(t, "GatewayIngressError", gatewayReadyCond.Reason)
 }
