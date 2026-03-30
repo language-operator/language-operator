@@ -531,7 +531,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				}
 				peer.NamespaceSelector = &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"name": serviceNamespace,
+						"kubernetes.io/metadata.name": serviceNamespace,
 					},
 				}
 			}

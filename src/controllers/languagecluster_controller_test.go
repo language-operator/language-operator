@@ -767,6 +767,65 @@ func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
 	assert.Equal(t, int32(8000), np.Spec.Ingress[0].Ports[0].Port.IntVal)
 }
 
+func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("svc-cluster",
+		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
+			{
+				To: &langopv1alpha1.NetworkPeer{
+					Service: &langopv1alpha1.ServiceReference{
+						Name:      "my-service",
+						Namespace: "other-ns",
+					},
+				},
+				Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
+			},
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name + "-agents", Namespace: cluster.Name}, np)
+	require.NoError(t, err)
+
+	// Find the user-defined egress rule (beyond the default API server rules)
+	var userRule *networkingv1.NetworkPolicyEgressRule
+	for i := range np.Spec.Egress {
+		rule := &np.Spec.Egress[i]
+		for _, peer := range rule.To {
+			if peer.NamespaceSelector != nil {
+				if v, ok := peer.NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"]; ok && v == "other-ns" {
+					userRule = rule
+					break
+				}
+			}
+		}
+	}
+	require.NotNil(t, userRule, "expected egress rule with kubernetes.io/metadata.name selector")
+	require.NotEmpty(t, userRule.Ports)
+	assert.Equal(t, int32(443), userRule.Ports[0].Port.IntVal)
+}
+
 func TestLanguageClusterController_GatewayDeploymentImage(t *testing.T) {
 	tests := []struct {
 		name         string
