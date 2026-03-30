@@ -504,34 +504,6 @@ func (r *LanguageAgentReconciler) getToolNames(agent *langopv1alpha1.LanguageAge
 	return names
 }
 
-// getToolSchemas extracts complete tool schemas from agent's tools
-func (r *LanguageAgentReconciler) getToolSchemas(ctx context.Context, agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.ToolSchema {
-	var allSchemas []langopv1alpha1.ToolSchema
-
-	for _, ref := range agent.Spec.Tools {
-		// Get the LanguageTool CR
-		tool := &langopv1alpha1.LanguageTool{}
-		err := r.Get(ctx, types.NamespacedName{
-			Name:      ref.Name,
-			Namespace: agent.Namespace,
-		}, tool)
-
-		if err != nil {
-			// Log error but continue - don't fail for missing tools
-			log := log.FromContext(ctx)
-			log.Error(err, "Failed to get LanguageTool for schema", "tool", ref.Name, "agent", agent.Name)
-			continue
-		}
-
-		// Add schemas from this tool to the collection
-		if len(tool.Status.ToolSchemas) > 0 {
-			allSchemas = append(allSchemas, tool.Status.ToolSchemas...)
-		}
-	}
-
-	return allSchemas
-}
-
 // getModelNames extracts model names from agent's models
 func (r *LanguageAgentReconciler) getModelNames(agent *langopv1alpha1.LanguageAgent) []string {
 	var names []string
