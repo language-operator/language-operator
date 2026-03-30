@@ -14,7 +14,7 @@ The complete `values.yaml` is available in the [chart repository](https://github
 image:
   repository: ghcr.io/language-operator/language-operator
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 ```
 
 ### Resource Limits
@@ -32,15 +32,15 @@ resources:
 ### Network Isolation
 
 ```yaml
-config:
-  networkIsolationEnabled: true
+networkIsolation:
+  enabled: true
 ```
 
-### Proxy Configuration
+### Gateway Configuration
 
 ```yaml
 config:
-  proxy:
+  gateway:
     image: ghcr.io/language-operator/model:latest
     imagePullPolicy: IfNotPresent
 ```
@@ -60,10 +60,10 @@ config:
 |-----------|-------------|---------|
 | `image.repository` | Operator container image | `ghcr.io/language-operator/language-operator` |
 | `image.tag` | Image tag | `latest` |
-| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `image.pullPolicy` | Image pull policy | `Always` |
 | `resources.limits.cpu` | CPU limit | `500m` |
 | `resources.limits.memory` | Memory limit | `512Mi` |
-| `config.networkIsolationEnabled` | Enable NetworkPolicy | `true` |
-| `config.proxy.image` | LiteLLM proxy image | `ghcr.io/language-operator/model:latest` |
+| `networkIsolation.enabled` | Enable NetworkPolicy | `true` |
+| `config.gateway.image` | LiteLLM gateway image | `ghcr.io/language-operator/model:latest` |
 
 For the complete list, see the [values.yaml](https://github.com/language-operator/language-operator/blob/main/chart/values.yaml) file.
