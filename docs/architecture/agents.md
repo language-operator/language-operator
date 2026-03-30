@@ -14,7 +14,7 @@ The operator mounts exactly two files into every agent container:
 
 | Path | Content | Source |
 |------|---------|--------|
-| `/etc/agent/instructions.txt` | Task instructions (plain text) | `spec.instructions` (inline) or `spec.instructionsFrom` (ConfigMap/Secret reference) |
+| `/etc/agent/instructions.txt` | Task instructions (plain text) | `spec.instructions` (inline string) |
 | `/etc/agent/config.yaml` | Structured agent configuration (YAML) | Assembled by the operator from personas, tools, models, and agent metadata |
 
 Files are read-only. The operator reconciles them on every change to the LanguageAgent spec or referenced resources.
@@ -216,22 +216,23 @@ spec:
   image: ghcr.io/myorg/my-agent:latest
   port: 18789
 
-  initContainers:
-    - name: seed-config
-      image: myregistry/config-adapter:latest
-      env:
-        - name: STATE_DIR
-          value: /workspace/.config
-      volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-        - name: agent-config
-          mountPath: /etc/agent
-          readOnly: true
-
   workspace:
     size: 10Gi
     mountPath: /workspace
+
+  deployment:
+    initContainers:
+      - name: seed-config
+        image: myregistry/config-adapter:latest
+        env:
+          - name: STATE_DIR
+            value: /workspace/.config
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: agent-config
+            mountPath: /etc/agent
+            readOnly: true
 ```
 
 The init container runs to completion before the agent container starts. On subsequent pod restarts, it can check for existing state and skip re-seeding.
