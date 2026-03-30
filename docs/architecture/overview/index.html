@@ -1963,11 +1963,12 @@
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">language-operator-myapp</span>
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">proxy</span><span class="p">:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">ingressEnabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">    </span><span class="c1"># expose proxy at proxy.agents.example.com (default when domain is set)</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">gateway</span><span class="p">:</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">    </span><span class="c1"># expose gateway at gateway.agents.example.com (default when domain is set)</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nt">deployment</span><span class="p">:</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </code></pre></div>
-<p>The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM proxy. The proxy is exposed externally at <code>proxy.&lt;spec.domain&gt;</code> when a domain is configured. Model configuration is dynamically updated as <code>LanguageModel</code> CRs are created or deleted.</p>
+<p>The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM gateway. The gateway is exposed externally at <code>gateway.&lt;spec.domain&gt;</code> when a domain is configured. Model configuration is dynamically updated as <code>LanguageModel</code> CRs are created or deleted.</p>
 <hr />
 <h2 id="agent-runtime-contract">Agent Runtime Contract<a class="headerlink" href="#agent-runtime-contract" title="Permanent link">&para;</a></h2>
 <p>The full contract is defined in <a href="../agents/">Agent Runtime Contract</a>. Summary:</p>
