@@ -59,13 +59,20 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_NAME` | `metadata.name` of the LanguageAgent |
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `spec.uuid` or generated) |
-| `AGENT_MODE` | Execution mode: `autonomous`, `interactive`, `scheduled`, or `event-driven` |
-| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to (empty if none) |
-| `AGENT_CLUSTER_UUID` | Stable UUID of the LanguageCluster (empty if none) |
+| `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
+| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
+| `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINTS` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
+| `MCP_SERVERS` | Comma-separated MCP tool server URLs for each referenced LanguageTool (only injected when at least one service-mode tool is resolved) |
+| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the content of `/etc/agent/instructions.txt`. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured; enables agent-side OTEL tracing |
+| `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
+| `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment when set (conditional on `OTEL_EXPORTER_OTLP_ENDPOINT`) |
+| `OTEL_TRACES_SAMPLER` | Propagated from the operator environment when set (conditional on `OTEL_EXPORTER_OTLP_ENDPOINT`) |
+| `OTEL_TRACES_SAMPLER_ARG` | Propagated from the operator environment when set (conditional on `OTEL_EXPORTER_OTLP_ENDPOINT`) |
 
-Additional environment variables from `spec.env` and `spec.envFrom` are passed through unchanged.
+Additional environment variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged.
 
 ### Networking
 
