@@ -5121,7 +5121,7 @@ spec:
               instructions:
                 description: |-
                   Instructions provides system instructions for the agent.
-                  Mounted at /etc/agent/instructions.txt if set.
+                  Delivered as the top-level "instructions" field in /etc/agent/config.yaml.
                 type: string
               models:
                 description: Models is a list of LanguageModel references this agent

@@ -2260,12 +2260,8 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 	if _, ok := cm.Data["config.yaml"]; !ok {
 		t.Error("ConfigMap missing config.yaml key")
 	}
-	if _, ok := cm.Data["instructions.txt"]; !ok {
-		t.Error("ConfigMap missing instructions.txt key")
-	}
-
-	if cm.Data["instructions.txt"] != agent.Spec.Instructions {
-		t.Errorf("instructions.txt = %q, want %q", cm.Data["instructions.txt"], agent.Spec.Instructions)
+	if _, ok := cm.Data["instructions.txt"]; ok {
+		t.Error("ConfigMap must not contain instructions.txt key")
 	}
 
 	configYAML := cm.Data["config.yaml"]
@@ -2274,6 +2270,9 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 	}
 	if !strings.Contains(configYAML, agent.Namespace) {
 		t.Errorf("config.yaml does not contain agent namespace %q: %s", agent.Namespace, configYAML)
+	}
+	if !strings.Contains(configYAML, agent.Spec.Instructions) {
+		t.Errorf("config.yaml does not contain instructions %q: %s", agent.Spec.Instructions, configYAML)
 	}
 }
 
@@ -2980,9 +2979,8 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 	}
 }
 
-// parseAgentConfigMap reconciles the agent once and returns the parsed config.yaml and the raw
-// instructions.txt from the agent ConfigMap.
-func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client.Object) (agentConfigYAML, string) {
+// parseAgentConfigMap reconciles the agent once and returns the parsed config.yaml from the agent ConfigMap.
+func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client.Object) agentConfigYAML {
 	t.Helper()
 
 	// The agent must be the last object passed so we can extract its name/namespace.
@@ -3018,7 +3016,7 @@ func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client
 	var cfg agentConfigYAML
 	require.NoError(t, yaml.Unmarshal([]byte(cm.Data["config.yaml"]), &cfg), "failed to parse config.yaml")
 
-	return cfg, cm.Data["instructions.txt"]
+	return cfg
 }
 
 func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
@@ -3036,9 +3034,9 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 			{Name: "claude-model", Role: "primary"},
 		}
 
-		cfg, instructions := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), model, agent)
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), model, agent)
 
-		assert.Equal(t, "do the thing", instructions)
+		assert.Equal(t, "do the thing", cfg.Instructions)
 		require.Contains(t, cfg.Models, "claude-model", "config.yaml missing model entry")
 		m := cfg.Models["claude-model"]
 		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", m.Endpoint)
@@ -3052,7 +3050,7 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		agent := gen.LanguageAgent("tool-agent", "default")
 		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "search-tool"}}
 
-		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
 
 		require.Contains(t, cfg.Tools, "search-tool", "config.yaml missing tool entry")
 		tool_cfg := cfg.Tools["search-tool"]
@@ -3067,7 +3065,7 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		agent := gen.LanguageAgent("sidecar-agent", "default")
 		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "sidecar-tool"}}
 
-		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
 
 		require.Contains(t, cfg.Tools, "sidecar-tool", "config.yaml missing sidecar tool entry")
 		assert.Equal(t, "http://localhost:8080", cfg.Tools["sidecar-tool"].Endpoint)
@@ -3084,7 +3082,7 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		agent := gen.LanguageAgent("persona-agent", "default")
 		agent.Spec.Persona = "my-persona"
 
-		cfg, _ := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), persona, agent)
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), persona, agent)
 
 		require.Len(t, cfg.Personas, 1, "config.yaml should contain exactly one persona")
 		p := cfg.Personas[0]

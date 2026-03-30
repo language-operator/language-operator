@@ -62,10 +62,11 @@ const (
 
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
 type agentConfigYAML struct {
-	Agent    agentIdentityYAML          `yaml:"agent"`
-	Personas []personaConfigYAML        `yaml:"personas,omitempty"`
-	Tools    map[string]toolConfigYAML  `yaml:"tools,omitempty"`
-	Models   map[string]modelConfigYAML `yaml:"models,omitempty"`
+	Agent        agentIdentityYAML          `yaml:"agent"`
+	Instructions string                     `yaml:"instructions,omitempty"`
+	Personas     []personaConfigYAML        `yaml:"personas,omitempty"`
+	Tools        map[string]toolConfigYAML  `yaml:"tools,omitempty"`
+	Models       map[string]modelConfigYAML `yaml:"models,omitempty"`
 }
 
 type agentIdentityYAML struct {
@@ -416,6 +417,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 			Name:      agent.Name,
 			Namespace: agent.Namespace,
 		},
+		Instructions: agent.Spec.Instructions,
 	}
 
 	// Persona
@@ -482,8 +484,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 
 	data := map[string]string{
-		"config.yaml":      string(configYAMLBytes),
-		"instructions.txt": agent.Spec.Instructions,
+		"config.yaml": string(configYAMLBytes),
 	}
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
@@ -644,7 +645,7 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 		MountPath: "/tmp",
 	})
 
-	// Mount agent config ConfigMap at /etc/agent/ (provides config.yaml and instructions.txt)
+	// Mount agent config ConfigMap at /etc/agent/ (provides config.yaml)
 	agentConfigMapName := GenerateConfigMapName(agent.Name, "agent")
 	volumes = append(volumes, corev1.Volume{
 		Name: "agent-config",
