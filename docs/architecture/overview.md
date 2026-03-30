@@ -155,10 +155,7 @@ kind: LanguageTool
 metadata:
   name: python-executor
 spec:
-  displayName: Python Executor
-  serviceRef:
-    name: python-executor
-    namespace: tools
+  image: myregistry/python-executor:latest
   port: 8080
 ```
 
