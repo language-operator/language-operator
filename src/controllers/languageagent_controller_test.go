@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/yaml"
 )
 
@@ -3181,4 +3183,179 @@ func TestLanguageAgentController_WorkspaceAccessMode(t *testing.T) {
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: agent.Namespace}, pvc))
 	require.NotEmpty(t, pvc.Spec.AccessModes)
 	assert.Equal(t, corev1.ReadWriteMany, pvc.Spec.AccessModes[0])
+}
+
+func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
+	type errorPathCase struct {
+		name             string
+		buildAgent       func() *langopv1alpha1.LanguageAgent
+		failCreate       func(obj client.Object) bool
+		failErrMsg       string
+		networkIsolation bool
+		expectError      bool
+		condType         string
+		condStatus       metav1.ConditionStatus
+		condReason       string
+	}
+
+	cases := []errorPathCase{
+		{
+			name: "ConfigMapError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("cm-err-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.ConfigMap); return ok },
+			failErrMsg:  "injected configmap error",
+			expectError: true,
+			condType:    "Ready",
+			condStatus:  metav1.ConditionFalse,
+			condReason:  "ConfigMapError",
+		},
+		{
+			name: "PVCError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("pvc-err-agent", "default", gen.SetAgentWorkspace("5Gi"))
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.PersistentVolumeClaim); return ok },
+			failErrMsg:  "injected pvc error",
+			expectError: true,
+			condType:    "Ready",
+			condStatus:  metav1.ConditionFalse,
+			condReason:  "PVCError",
+		},
+		{
+			name: "ServiceError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("svc-err-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.Service); return ok },
+			failErrMsg:  "injected service error",
+			expectError: true,
+			condType:    "Ready",
+			condStatus:  metav1.ConditionFalse,
+			condReason:  "ServiceError",
+		},
+		{
+			name: "ServiceAccountError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("sa-err-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.ServiceAccount); return ok },
+			failErrMsg:  "injected serviceaccount error",
+			expectError: true,
+			condType:    "Ready",
+			condStatus:  metav1.ConditionFalse,
+			condReason:  "ServiceAccountError",
+		},
+		{
+			name: "DeploymentError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("dep-err-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*appsv1.Deployment); return ok },
+			failErrMsg:  "injected deployment error",
+			expectError: true,
+			condType:    "Ready",
+			condStatus:  metav1.ConditionFalse,
+			condReason:  "DeploymentError",
+		},
+		{
+			name: "NetworkPolicyError",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("np-err-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:       func(obj client.Object) bool { _, ok := obj.(*networkingv1.NetworkPolicy); return ok },
+			failErrMsg:       "injected networkpolicy error",
+			networkIsolation: true,
+			expectError:      true,
+			condType:         "Ready",
+			condStatus:       metav1.ConditionFalse,
+			condReason:       "NetworkPolicyError",
+		},
+		{
+			name: "NetworkPolicyTimeout",
+			buildAgent: func() *langopv1alpha1.LanguageAgent {
+				a := gen.LanguageAgent("np-timeout-agent", "default")
+				a.Finalizers = []string{FinalizerName}
+				return a
+			},
+			failCreate:       func(obj client.Object) bool { _, ok := obj.(*networkingv1.NetworkPolicy); return ok },
+			failErrMsg:       "context deadline exceeded: timeout waiting for network policy",
+			networkIsolation: true,
+			expectError:      false, // degraded mode — reconcile continues without error
+			condType:         "NetworkPolicyReady",
+			condStatus:       metav1.ConditionFalse,
+			condReason:       "NetworkPolicyTimeout",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			agent := tc.buildAgent()
+			recorder := record.NewFakeRecorder(10)
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(gen.ReadyCluster("default"), agent).
+				WithStatusSubresource(agent).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if tc.failCreate(obj) {
+							return fmt.Errorf("%s", tc.failErrMsg)
+						}
+						return c.Create(ctx, obj, opts...)
+					},
+				}).Build()
+
+			reconciler := &LanguageAgentReconciler{
+				Client:                  fakeClient,
+				Scheme:                  scheme,
+				Log:                     logr.Discard(),
+				Recorder:                recorder,
+				EventManager:            events.NewEventManager(recorder),
+				RegistryManager:         &mockRegistryManager{},
+				NetworkIsolationEnabled: tc.networkIsolation,
+			}
+
+			ctx := context.Background()
+			req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+			// Agent already has finalizer — single reconcile hits resource creation.
+			_, err := reconciler.Reconcile(ctx, req)
+			if tc.expectError {
+				require.Error(t, err, "expected reconcile to return error")
+			} else {
+				require.NoError(t, err, "expected reconcile to succeed in degraded mode")
+			}
+
+			updated := &langopv1alpha1.LanguageAgent{}
+			require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+
+			if tc.expectError {
+				assert.Equal(t, events.PhaseStatusFailed, updated.Status.Phase)
+			}
+
+			var cond *metav1.Condition
+			for i := range updated.Status.Conditions {
+				if updated.Status.Conditions[i].Type == tc.condType {
+					cond = &updated.Status.Conditions[i]
+					break
+				}
+			}
+			require.NotNil(t, cond, "expected condition %q to be set", tc.condType)
+			assert.Equal(t, tc.condStatus, cond.Status)
+			assert.Equal(t, tc.condReason, cond.Reason)
+		})
+	}
 }
