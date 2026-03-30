@@ -829,6 +829,77 @@ func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
 	assert.Equal(t, int32(443), userRule.Ports[0].Port.IntVal)
 }
 
+func TestLanguageClusterController_NetworkPolicy_DNSRule(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("dns-cluster",
+		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
+			{
+				To: &langopv1alpha1.NetworkPeer{
+					DNS: []string{"api.example.com"},
+				},
+				Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
+			},
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name + "-agents", Namespace: cluster.Name}, np)
+	require.NoError(t, err)
+
+	// Find egress rules with IPBlock peers — those come from DNS resolution
+	var dnsRule *networkingv1.NetworkPolicyEgressRule
+	for i := range np.Spec.Egress {
+		rule := &np.Spec.Egress[i]
+		for _, peer := range rule.To {
+			if peer.IPBlock != nil && peer.IPBlock.CIDR != "0.0.0.0/0" {
+				dnsRule = rule
+				break
+			}
+		}
+	}
+
+	// DNS resolution may fail in test environments; what matters is that
+	// 0.0.0.0/0 was NOT inserted as a permissive fallback.
+	for _, egressRule := range np.Spec.Egress {
+		for _, peer := range egressRule.To {
+			if peer.IPBlock != nil {
+				assert.NotEqual(t, "0.0.0.0/0", peer.IPBlock.CIDR,
+					"DNS egress rule must not fall back to 0.0.0.0/0")
+			}
+		}
+	}
+
+	// If DNS resolved successfully, assert IPBlock CIDRs are present and port is 443
+	if dnsRule != nil {
+		require.NotEmpty(t, dnsRule.Ports)
+		assert.Equal(t, int32(443), dnsRule.Ports[0].Port.IntVal)
+		for _, peer := range dnsRule.To {
+			require.NotNil(t, peer.IPBlock, "DNS-resolved peer must use IPBlock")
+			assert.NotEqual(t, "0.0.0.0/0", peer.IPBlock.CIDR)
+		}
+	}
+}
+
 func TestLanguageClusterController_GatewayDeploymentImage(t *testing.T) {
 	tests := []struct {
 		name         string
