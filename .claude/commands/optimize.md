@@ -28,4 +28,9 @@ This code has been written by different agents with different contexts, unaware 
 
 ## Output
 
-Propose ONE high-impact optimization or refactor. Update `.claude/MEMORY.md` if anything is worth remembering for the future.
+Enter plan mode. Present ONE finding concisely — what to change, why it matters,
+and which files are affected. Ask the user if they want a GitHub issue filed.
+
+Do NOT implement. Do NOT file an issue until the user confirms.
+
+Update `.claude/MEMORY.md` if anything is worth remembering for the future.
