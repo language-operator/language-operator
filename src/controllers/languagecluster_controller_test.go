@@ -1051,3 +1051,115 @@ func TestLanguageClusterController_GatewayIngressError(t *testing.T) {
 	assert.Equal(t, metav1.ConditionFalse, gatewayReadyCond.Status)
 	assert.Equal(t, "GatewayIngressError", gatewayReadyCond.Reason)
 }
+
+func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
+	type errorPathCase struct {
+		name             string
+		buildCluster     func() *langopv1alpha1.LanguageCluster
+		failCreate       func(obj client.Object) bool
+		networkIsolation bool
+		condType         string
+		condStatus       metav1.ConditionStatus
+		condReason       string
+	}
+
+	maxAgents := int32(5)
+	cases := []errorPathCase{
+		{
+			name:         "NamespaceError",
+			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("ns-err-cluster") },
+			failCreate:   func(obj client.Object) bool { _, ok := obj.(*corev1.Namespace); return ok },
+			condType:     "Ready",
+			condStatus:   metav1.ConditionFalse,
+			condReason:   "NamespaceError",
+		},
+		{
+			name:         "RBACError",
+			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("rbac-err-cluster") },
+			failCreate:   func(obj client.Object) bool { _, ok := obj.(*rbacv1.Role); return ok },
+			condType:     "Ready",
+			condStatus:   metav1.ConditionFalse,
+			condReason:   "RBACError",
+		},
+		{
+			name:             "NetworkPolicyError",
+			buildCluster:     func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("netpol-err-cluster") },
+			failCreate:       func(obj client.Object) bool { _, ok := obj.(*networkingv1.NetworkPolicy); return ok },
+			networkIsolation: true,
+			condType:         "Ready",
+			condStatus:       metav1.ConditionFalse,
+			condReason:       "NetworkPolicyError",
+		},
+		{
+			name:         "GatewayError",
+			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("gw-err-cluster") },
+			failCreate:   func(obj client.Object) bool { _, ok := obj.(*corev1.ConfigMap); return ok },
+			condType:     "GatewayReady",
+			condStatus:   metav1.ConditionFalse,
+			condReason:   "GatewayError",
+		},
+		{
+			name: "CapacityError",
+			buildCluster: func() *langopv1alpha1.LanguageCluster {
+				return gen.LanguageCluster("cap-err-cluster", gen.SetClusterCapacity(&langopv1alpha1.ClusterCapacitySpec{MaxAgents: &maxAgents}))
+			},
+			failCreate: func(obj client.Object) bool { _, ok := obj.(*corev1.ResourceQuota); return ok },
+			condType:   "CapacityReady",
+			condStatus: metav1.ConditionFalse,
+			condReason: "CapacityError",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			cluster := tc.buildCluster()
+
+			failCreate := false
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(cluster).WithStatusSubresource(cluster).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+						if failCreate && tc.failCreate(obj) {
+							return fmt.Errorf("injected create error")
+						}
+						return c.Create(ctx, obj, opts...)
+					},
+				}).Build()
+
+			reconciler := &LanguageClusterReconciler{
+				Client:                  fakeClient,
+				Scheme:                  scheme,
+				Log:                     logr.Discard(),
+				NetworkIsolationEnabled: tc.networkIsolation,
+			}
+
+			ctx := context.Background()
+			req := clusterRequest(cluster.Name)
+
+			// First reconcile: adds finalizer, allow all creates.
+			_, err := reconciler.Reconcile(ctx, req)
+			require.NoError(t, err)
+
+			// Second reconcile: inject error.
+			failCreate = true
+			_, err = reconciler.Reconcile(ctx, req)
+			require.Error(t, err)
+
+			updated := &langopv1alpha1.LanguageCluster{}
+			require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+			assert.Equal(t, events.PhaseStatusFailed, updated.Status.Phase)
+
+			var cond *metav1.Condition
+			for i := range updated.Status.Conditions {
+				if updated.Status.Conditions[i].Type == tc.condType {
+					cond = &updated.Status.Conditions[i]
+					break
+				}
+			}
+			require.NotNilf(t, cond, "expected condition %q", tc.condType)
+			assert.Equal(t, tc.condStatus, cond.Status)
+			assert.Equal(t, tc.condReason, cond.Reason)
+		})
+	}
+}
