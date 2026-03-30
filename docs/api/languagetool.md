@@ -20,12 +20,13 @@ metadata:
   namespace: my-cluster
 spec:
   image: mcp/brave-search:latest
-  env:
-    - name: BRAVE_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: brave-api-key
-          key: api-key
+  deployment:
+    env:
+      - name: BRAVE_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: brave-api-key
+            key: api-key
 ```
 
 ## Complete API Reference
@@ -98,12 +99,13 @@ metadata:
   name: web-search
 spec:
   image: mcp/brave-search:latest
-  env:
-    - name: BRAVE_API_KEY
-      valueFrom:
-        secretKeyRef:
-          name: brave-api-key
-          key: api-key
+  deployment:
+    env:
+      - name: BRAVE_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: brave-api-key
+            key: api-key
   networkEgress:
     - host: api.brave.com
       port: 443
@@ -118,12 +120,13 @@ metadata:
   name: postgres-client
 spec:
   image: mcp/postgres:latest
-  env:
-    - name: DATABASE_URL
-      valueFrom:
-        secretKeyRef:
-          name: db-credentials
-          key: url
+  deployment:
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: db-credentials
+            key: url
   networkEgress:
     - host: postgres.database.svc.cluster.local
       port: 5432
@@ -139,11 +142,12 @@ metadata:
 spec:
   image: my-registry/custom-tool:v1.0.0
   port: 8080
-  replicas: 3
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
+  deployment:
+    replicas: 3
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
 ```
 
 ## Tool Discovery
