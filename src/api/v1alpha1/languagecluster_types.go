@@ -72,8 +72,8 @@ type ClusterCapacityStatus struct {
 type LanguageClusterSpec struct {
 	// Domain is the base domain for the cluster and agent webhook routing
 	// The domain itself serves as the cluster dashboard/UI endpoint
-	// Agent webhooks will be accessible at <uuid>.<domain>
-	// Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io"
+	// Agent webhooks will be accessible at <agent-name>.<domain>
+	// Example: "ai.theryans.io" results in webhooks like "my-agent.ai.theryans.io"
 	// +optional
 	Domain string `json:"domain,omitempty"`
 
