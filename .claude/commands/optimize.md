@@ -10,7 +10,7 @@ description: Find and propose one high-impact tech debt reduction — dead code,
 
 Read:
 - `requirements/personas/$PERSONA.md`
-- `requirements/SCRATCH.md`
+- `.claude/MEMORY.md`
 
 ## Directions
 
@@ -28,4 +28,4 @@ This code has been written by different agents with different contexts, unaware 
 
 ## Output
 
-Propose ONE high-impact optimization or refactor. Update `requirements/SCRATCH.md` if anything is worth remembering for the future.
+Propose ONE high-impact optimization or refactor. Update `.claude/MEMORY.md` if anything is worth remembering for the future.
