@@ -18,15 +18,20 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 // newFakeClient returns a minimal fake client sufficient for BuildEgressNetworkPolicy
@@ -274,6 +279,49 @@ func TestBuildEgressNetworkPolicy_NoFromRule_NoPolicyTypeIngress(t *testing.T) {
 		assert.NotEqual(t, networkingv1.PolicyTypeIngress, pt, "PolicyTypeIngress must not appear when no From rules present")
 	}
 	assert.Empty(t, policy.Spec.Ingress)
+}
+
+// TestCreateOrUpdateNetworkPolicyWithTimeout_CancelPerIteration verifies that
+// context cancel functions are called after each iteration rather than deferred
+// to function return, so leaked timer goroutines don't accumulate across retries.
+// It exercises the retry path by injecting a client that always returns errors,
+// then cancelling the outer context to verify the wait-for-retry select exits promptly.
+func TestCreateOrUpdateNetworkPolicyWithTimeout_CancelPerIteration(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	np := &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-np", Namespace: "default"},
+	}
+	owner := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+	}
+
+	// Use a short outer context to exercise the ctx.Done() branch in the retry wait.
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	// Inject errors on every Create/Update so every attempt fails and triggers a retry.
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.CreateOption) error {
+				return fmt.Errorf("injected create error")
+			},
+			Update: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.UpdateOption) error {
+				return fmt.Errorf("injected update error")
+			},
+		}).
+		Build()
+
+	start := time.Now()
+	err := CreateOrUpdateNetworkPolicyWithTimeout(ctx, fakeClient, scheme, owner, np, 50*time.Millisecond, 5)
+	elapsed := time.Since(start)
+
+	// Must return an error (context deadline or retry exhaustion) within a short
+	// wall-clock window — verifies we don't block waiting for stale timer goroutines.
+	require.Error(t, err)
+	assert.Less(t, elapsed, 2*time.Second,
+		"function must return promptly after context cancellation, not block on leaked timers")
 }
 
 // TestResolveDNSToCIDRs_ContextTimeout verifies that a cancelled context causes
