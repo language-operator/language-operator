@@ -29,10 +29,9 @@ const (
 	// Resource creation/lifecycle events
 	ReasonResourceCreated = "ResourceCreated"
 	ReasonResourceReady   = "ResourceReady"
-	ReasonResourceUpdated = "ResourceUpdated"
-	ReasonResourceDeleted = "ResourceDeleted"
 
 	// Configuration and validation failures
+	ReasonRegistryValidated        = "RegistryValidated"
 	ReasonRegistryValidationFailed = "RegistryValidationFailed"
 	ReasonConfigurationFailed      = "ConfigurationFailed"
 	ReasonValidationFailed         = "ValidationFailed"
@@ -45,12 +44,8 @@ const (
 	ReasonRBACFailed          = "RBACFailed"
 
 	// Network-related events
-	ReasonNetworkPolicyTimeout       = "NetworkPolicyTimeout"
-	ReasonNetworkPolicyUnsupported   = "NetworkPolicyUnsupported"
-	ReasonNetworkIsolationConfigured = "NetworkIsolationConfigured"
-
-	// Execution mode detection
-	ReasonExecutionModeDetected = "ExecutionModeDetected"
+	ReasonNetworkPolicyTimeout     = "NetworkPolicyTimeout"
+	ReasonNetworkPolicyUnsupported = "NetworkPolicyUnsupported"
 
 	// Runtime and operational events
 	ReasonRuntimeError            = "RuntimeError"
@@ -201,6 +196,6 @@ func (e *EventManager) RecordVersionError(obj runtime.Object, reason string, err
 
 // Registry validation convenience method
 func (e *EventManager) RecordRegistryValidated(obj runtime.Object) {
-	e.recorder.Event(obj, corev1.EventTypeNormal, "RegistryValidated",
+	e.recorder.Event(obj, corev1.EventTypeNormal, ReasonRegistryValidated,
 		"Container image registry validated against whitelist")
 }
