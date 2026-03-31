@@ -52,6 +52,11 @@ const (
 	LabelKeyLangopComponent  = "langop.io/component"
 	LabelKeyLangopConfigHash = "langop.io/config-hash"
 	LabelKeyMetadataName     = "kubernetes.io/metadata.name"
+
+	// LangopUserID is the user ID for the langop user (matches Dockerfile)
+	LangopUserID = 1000
+	// LangopGroupID is the group ID for the langop group
+	LangopGroupID = 101
 )
 
 // buildPodSecurityContext returns the operator-default pod-level security context.

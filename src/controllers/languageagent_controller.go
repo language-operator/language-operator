@@ -58,13 +58,6 @@ type LanguageAgentReconciler struct {
 	CNICapabilities         *cni.CNICapabilities
 }
 
-const (
-	// LangopUserID is the user ID for the langop user (matches Dockerfile)
-	LangopUserID = 1000
-	// LangopGroupID is the group ID for the langop group
-	LangopGroupID = 101
-)
-
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
 type agentConfigYAML struct {
 	Agent        agentIdentityYAML          `yaml:"agent"`
