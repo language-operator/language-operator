@@ -79,9 +79,6 @@ func TestMain(m *testing.M) {
 	}
 
 	// Register all webhooks against the manager's client (which has cluster membership access)
-	if err := langopv1alpha1.SetupLanguageClusterWebhookWithManager(mgr); err != nil {
-		panic("failed to setup LanguageCluster webhook: " + err.Error())
-	}
 	if err := langopv1alpha1.SetupLanguageAgentWebhookWithManager(mgr); err != nil {
 		panic("failed to setup LanguageAgent webhook: " + err.Error())
 	}

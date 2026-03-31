@@ -104,27 +104,6 @@ webhooks:
     service:
       name: {{ include "language-operator.fullname" . }}-webhook
       namespace: {{ .Release.Namespace }}
-      path: /validate-langop-io-v1alpha1-languagecluster
-  failurePolicy: Fail
-  name: vlanguagecluster.kb.io
-  rules:
-  - apiGroups:
-    - langop.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    - DELETE
-    resources:
-    - languageclusters
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: {{ include "language-operator.fullname" . }}-webhook
-      namespace: {{ .Release.Namespace }}
       path: /validate-langop-io-v1alpha1-languagetool
   failurePolicy: Fail
   name: vlanguagetool.kb.io
