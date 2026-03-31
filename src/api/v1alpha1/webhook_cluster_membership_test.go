@@ -61,7 +61,7 @@ func makeErrorClient(t *testing.T, injectedErr error) client.Client {
 	}).Build()
 }
 
-func TestLanguageAgentWebhookValidateClusterMembership(t *testing.T) {
+func TestValidateClusterMembership(t *testing.T) {
 	const ns = "test-ns"
 	transientErr := fmt.Errorf("internal server error")
 
@@ -92,140 +92,7 @@ func TestLanguageAgentWebhookValidateClusterMembership(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := &LanguageAgentWebhook{Client: tt.client}
-			err := h.validateClusterMembership(context.Background(), ns)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateClusterMembership() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr && !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("validateClusterMembership() error = %q, want to contain %q", err.Error(), tt.errMsg)
-			}
-		})
-	}
-}
-
-func TestLanguageToolWebhookValidateClusterMembership(t *testing.T) {
-	const ns = "test-ns"
-	transientErr := fmt.Errorf("internal server error")
-
-	tests := []struct {
-		name    string
-		client  client.Client
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name:    "cluster exists",
-			client:  makeClusterClient(t, ns),
-			wantErr: false,
-		},
-		{
-			name:    "cluster not found",
-			client:  makeEmptyClient(t),
-			wantErr: true,
-			errMsg:  "no cluster",
-		},
-		{
-			name:    "transient API error",
-			client:  makeErrorClient(t, transientErr),
-			wantErr: true,
-			errMsg:  "failed to check LanguageCluster",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &LanguageToolWebhook{Client: tt.client}
-			err := h.validateClusterMembership(context.Background(), ns)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateClusterMembership() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr && !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("validateClusterMembership() error = %q, want to contain %q", err.Error(), tt.errMsg)
-			}
-		})
-	}
-}
-
-func TestLanguageModelWebhookValidateClusterMembership(t *testing.T) {
-	const ns = "test-ns"
-	transientErr := fmt.Errorf("internal server error")
-
-	tests := []struct {
-		name    string
-		client  client.Client
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name:    "cluster exists",
-			client:  makeClusterClient(t, ns),
-			wantErr: false,
-		},
-		{
-			name:    "cluster not found",
-			client:  makeEmptyClient(t),
-			wantErr: true,
-			errMsg:  "no cluster",
-		},
-		{
-			name:    "transient API error",
-			client:  makeErrorClient(t, transientErr),
-			wantErr: true,
-			errMsg:  "failed to check LanguageCluster",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &LanguageModelWebhook{Client: tt.client}
-			err := h.validateClusterMembership(context.Background(), ns)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateClusterMembership() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr && !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("validateClusterMembership() error = %q, want to contain %q", err.Error(), tt.errMsg)
-			}
-		})
-	}
-}
-
-func TestLanguagePersonaWebhookValidateClusterMembership(t *testing.T) {
-	const ns = "test-ns"
-	transientErr := fmt.Errorf("internal server error")
-
-	tests := []struct {
-		name    string
-		client  client.Client
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name:    "cluster exists",
-			client:  makeClusterClient(t, ns),
-			wantErr: false,
-		},
-		{
-			name:    "cluster not found",
-			client:  makeEmptyClient(t),
-			wantErr: true,
-			errMsg:  "no cluster",
-		},
-		{
-			name:    "transient API error",
-			client:  makeErrorClient(t, transientErr),
-			wantErr: true,
-			errMsg:  "failed to check LanguageCluster",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &LanguagePersonaWebhook{Client: tt.client}
-			err := h.validateClusterMembership(context.Background(), ns)
+			err := validateClusterMembership(context.Background(), tt.client, ns)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateClusterMembership() error = %v, wantErr %v", err, tt.wantErr)
 				return
