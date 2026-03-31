@@ -93,13 +93,13 @@ The shared gateway image (`ghcr.io/language-operator/model:latest`) is configure
 
 ### Telemetry (`src/pkg/telemetry/`)
 
-All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelper`. The ClickHouse adapter (`adapters/clickhouse.go`) queries `otel_traces` and `otel_metrics` tables. No mock data — features must work with real ClickHouse data.
+All reconciliation loops emit OpenTelemetry spans via `reconciler.ReconcileHelper`. `otel.go` bootstraps the global OTel tracer provider (`InitTracer`/`Shutdown`) called from `cmd/main.go`.
 
 ### Package Layout
 
 - `pkg/events/` — Kubernetes event recording via `EventManager`; use its constants (`ReasonResourceCreated`, etc.) rather than raw strings
 - `pkg/reconciler/` — shared `ReconcileHelper` used by all controllers
-- `pkg/telemetry/` — OTel adapter interface + ClickHouse implementation
+- `pkg/telemetry/` — OTel tracer bootstrap (`InitTracer`, `Shutdown`)
 - `pkg/validation/` — image registry validation (`ValidateImageRegistry`)
 - `pkg/network/` — NetworkPolicy helpers
 - `internal/testutil/gen/` — fluent fixture builders for tests (`gen.LanguageAgent(name, ns, mods...)`)
@@ -128,7 +128,7 @@ Dashboard is at http://localhost:3000. All API routes are cluster-scoped: `/api/
 
 ## Critical Rules
 
-**No mock data.** Features must work with real ClickHouse telemetry and real Kubernetes APIs before commit.
+**No mock data.** Features must work with real Kubernetes APIs before commit.
 
 **Generated files must be staged.** Any change to `src/api/v1alpha1/` requires running `make generate && make helm-crds` and staging the output before committing.
 
