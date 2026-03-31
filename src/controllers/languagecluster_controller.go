@@ -385,101 +385,59 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 
 	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 
-	// Create the agents Role
+	rbacLabels := map[string]string{
+		"app.kubernetes.io/name":       "language-operator",
+		"app.kubernetes.io/managed-by": "language-operator",
+		"app.kubernetes.io/component":  "agent-rbac",
+		LabelKeyLangopCluster:          cluster.Name,
+	}
+
 	agentsRole := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "agents",
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":       "language-operator",
-				"app.kubernetes.io/managed-by": "language-operator",
-				"app.kubernetes.io/component":  "agent-rbac",
-				LabelKeyLangopCluster:          cluster.Name,
-			},
-		},
-		Rules: []rbacv1.PolicyRule{
+		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, agentsRole, func() error {
+		if err := controllerutil.SetControllerReference(cluster, agentsRole, r.Scheme); err != nil {
+			return err
+		}
+		agentsRole.Labels = rbacLabels
+		agentsRole.Rules = []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
 				Resources: []string{"events"},
 				Verbs:     []string{"create"},
 			},
-		},
-	}
-
-	// Set cluster as owner so RBAC gets cleaned up when cluster is deleted
-	if err := controllerutil.SetControllerReference(cluster, agentsRole, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set controller reference for agents Role: %w", err)
-	}
-
-	// Create or update the Role
-	if err := r.Create(ctx, agentsRole); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create agents Role: %w", err)
 		}
-		// Role already exists, update it if needed
-		existingRole := &rbacv1.Role{}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(agentsRole), existingRole); err != nil {
-			return fmt.Errorf("failed to get existing agents Role: %w", err)
-		}
-		existingRole.Rules = agentsRole.Rules
-		if err := r.Update(ctx, existingRole); err != nil {
-			return fmt.Errorf("failed to update agents Role: %w", err)
-		}
-		log.V(1).Info("Updated existing agents Role", "namespace", namespace)
-	} else {
-		log.Info("Created agents Role", "namespace", namespace)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to reconcile agents Role: %w", err)
 	}
+	log.V(1).Info("Reconciled agents Role", "namespace", namespace)
 
-	// Create the agents RoleBinding
 	agentsRoleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "agents",
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":       "language-operator",
-				"app.kubernetes.io/managed-by": "language-operator",
-				"app.kubernetes.io/component":  "agent-rbac",
-				LabelKeyLangopCluster:          cluster.Name,
-			},
-		},
-		Subjects: []rbacv1.Subject{
+		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, agentsRoleBinding, func() error {
+		if err := controllerutil.SetControllerReference(cluster, agentsRoleBinding, r.Scheme); err != nil {
+			return err
+		}
+		agentsRoleBinding.Labels = rbacLabels
+		agentsRoleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      "default",
 				Namespace: namespace,
 			},
-		},
-		RoleRef: rbacv1.RoleRef{
+		}
+		agentsRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
 			Name:     "agents",
-		},
-	}
-
-	// Set cluster as owner so RBAC gets cleaned up when cluster is deleted
-	if err := controllerutil.SetControllerReference(cluster, agentsRoleBinding, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set controller reference for agents RoleBinding: %w", err)
-	}
-
-	// Create or update the RoleBinding
-	if err := r.Create(ctx, agentsRoleBinding); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create agents RoleBinding: %w", err)
 		}
-		// RoleBinding already exists, update it if needed
-		existingRoleBinding := &rbacv1.RoleBinding{}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(agentsRoleBinding), existingRoleBinding); err != nil {
-			return fmt.Errorf("failed to get existing agents RoleBinding: %w", err)
-		}
-		existingRoleBinding.Subjects = agentsRoleBinding.Subjects
-		existingRoleBinding.RoleRef = agentsRoleBinding.RoleRef
-		if err := r.Update(ctx, existingRoleBinding); err != nil {
-			return fmt.Errorf("failed to update agents RoleBinding: %w", err)
-		}
-		log.V(1).Info("Updated existing agents RoleBinding", "namespace", namespace)
-	} else {
-		log.Info("Created agents RoleBinding", "namespace", namespace)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to reconcile agents RoleBinding: %w", err)
 	}
+	log.V(1).Info("Reconciled agents RoleBinding", "namespace", namespace)
 
 	log.V(1).Info("Successfully reconciled agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 	return nil
