@@ -17,40 +17,46 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languageclusters,verbs=create;update,versions=v1alpha1,name=vlanguagecluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &LanguageCluster{}
-
-// ValidateCreate implements webhook.Validator
-func (c *LanguageCluster) ValidateCreate() (admission.Warnings, error) {
-	return nil, c.validate()
+// LanguageClusterWebhook handles validation for LanguageCluster.
+//
+// +kubebuilder:object:generate=false
+type LanguageClusterWebhook struct {
+	client.Client
 }
 
-// ValidateUpdate implements webhook.Validator
-func (c *LanguageCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	return nil, c.validate()
-}
+var _ webhook.CustomValidator = &LanguageClusterWebhook{}
 
-// ValidateDelete implements webhook.Validator
-func (c *LanguageCluster) ValidateDelete() (admission.Warnings, error) {
+// ValidateCreate implements webhook.CustomValidator
+func (h *LanguageClusterWebhook) ValidateCreate(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (c *LanguageCluster) validate() error {
-	// No validation needed for LanguageCluster
-	// (LanguageCluster now only manages namespace creation)
-	return nil
+// ValidateUpdate implements webhook.CustomValidator
+func (h *LanguageClusterWebhook) ValidateUpdate(_ context.Context, _ runtime.Object, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-// SetupWebhookWithManager sets up the webhook with the Manager
-func (c *LanguageCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// ValidateDelete implements webhook.CustomValidator
+func (h *LanguageClusterWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
+}
+
+// SetupLanguageClusterWebhookWithManager registers the LanguageCluster validating webhook.
+func SetupLanguageClusterWebhookWithManager(mgr ctrl.Manager) error {
+	h := &LanguageClusterWebhook{Client: mgr.GetClient()}
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(c).
+		For(&LanguageCluster{}).
+		WithValidator(h).
 		Complete()
 }
