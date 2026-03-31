@@ -189,11 +189,9 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase of the model (Ready,
-                  Failed)
+                description: Phase represents the current phase of the model
                 enum:
                 - Ready
-                - Failed
                 type: string
             type: object
         type: object
