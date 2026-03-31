@@ -24,8 +24,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -1625,9 +1628,30 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	return false, "Ingress load balancer assigned but no IP or hostname available", nil
 }
 
+// enqueueAgentsInNamespace returns a handler that lists all LanguageAgents in the
+// same namespace as the changed object and enqueues a reconcile request for each.
+func (r *LanguageAgentReconciler) enqueueAgentsInNamespace() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		agentList := &langopv1alpha1.LanguageAgentList{}
+		if err := r.List(ctx, agentList, client.InNamespace(obj.GetNamespace())); err != nil {
+			return nil
+		}
+		reqs := make([]reconcile.Request, len(agentList.Items))
+		for i, agent := range agentList.Items {
+			reqs[i] = reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      agent.Name,
+					Namespace: agent.Namespace,
+				},
+			}
+		}
+		return reqs
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency int) error {
-
+	enqueue := r.enqueueAgentsInNamespace()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&appsv1.Deployment{}).
@@ -1637,6 +1661,10 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
+		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
+		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
+		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
+		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Complete(r)
 }
 

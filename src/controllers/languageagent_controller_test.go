@@ -3357,3 +3357,32 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguageAgentController_EnqueueAgentsInNamespace(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent1 := gen.LanguageAgent("agent-1", "ns-a")
+	agent2 := gen.LanguageAgent("agent-2", "ns-a")
+	agentOther := gen.LanguageAgent("agent-other", "ns-b")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent1, agent2, agentOther).
+		Build()
+
+	r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+	// A LanguageTool in ns-a should enqueue agent-1 and agent-2 only.
+	tool := &langopv1alpha1.LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-tool", Namespace: "ns-a"},
+	}
+
+	reqs := r.enqueueAgentsInNamespace()(context.Background(), tool)
+	require.Len(t, reqs, 2)
+	names := make([]string, len(reqs))
+	for i, req := range reqs {
+		assert.Equal(t, "ns-a", req.Namespace)
+		names[i] = req.Name
+	}
+	assert.ElementsMatch(t, []string{"agent-1", "agent-2"}, names)
+}
