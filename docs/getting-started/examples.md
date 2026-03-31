@@ -35,7 +35,7 @@ spec:
     Use haiku for simple tasks, sonnet for most work, opus for complex reasoning.
 ```
 
-The operator sets `LLM_MODEL=claude-sonnet,claude-opus,claude-haiku` and `MODEL_ENDPOINTS=http://proxy...` so your agent can choose.
+The operator sets `LLM_MODEL=claude-sonnet,claude-opus,claude-haiku` and `MODEL_ENDPOINTS=http://gateway.<namespace>.svc.cluster.local:8000` so your agent can choose.
 
 ### Agent with Persona
 

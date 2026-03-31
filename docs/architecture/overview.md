@@ -43,7 +43,7 @@ Instructions are what the agent does. The image is how it does it. Changing inst
 
 Memory, knowledge retrieval, and code execution are handled by MCP tool servers (`LanguageTool` CRDs), not by the operator. The operator resolves tool endpoints and injects them into agent config — it does not proxy or inspect tool traffic.
 
-LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a single shared LiteLLM proxy (`proxy` Deployment + Service) that is dynamically configured as models are added or removed. Agents route all LLM traffic through this shared proxy rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally, and enables cross-model reporting through LiteLLM's unified dashboard.
+LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a single shared LiteLLM proxy (`gateway` Deployment + Service) that is dynamically configured as models are added or removed. Agents route all LLM traffic through this shared proxy rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally, and enables cross-model reporting through LiteLLM's unified dashboard.
 
 ---
 
