@@ -510,8 +510,6 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 		tool.Name,
 		tool.Namespace,
 		labels,
-		"", // provider - not applicable for tools
-		"", // endpoint - not applicable for tools
 		otelEndpoint,
 		tool.Spec.NetworkPolicies,
 	)

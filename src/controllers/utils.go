@@ -23,7 +23,6 @@ import (
 	"math/rand"
 	"net"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -293,46 +292,6 @@ func CreateOrUpdateConfigMap(
 	return err
 }
 
-// CreateOrUpdateConfigMapWithAnnotations creates or updates a ConfigMap with custom annotations
-func CreateOrUpdateConfigMapWithAnnotations(
-	ctx context.Context,
-	c client.Client,
-	scheme *runtime.Scheme,
-	owner client.Object,
-	name, namespace string,
-	data map[string]string,
-	annotations map[string]string,
-) error {
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
-		// Set owner reference
-		if err := controllerutil.SetControllerReference(owner, configMap, scheme); err != nil {
-			return err
-		}
-
-		// Update data
-		configMap.Data = data
-
-		// Update annotations
-		if configMap.Annotations == nil {
-			configMap.Annotations = make(map[string]string)
-		}
-		for k, v := range annotations {
-			configMap.Annotations[k] = v
-		}
-
-		return nil
-	})
-
-	return err
-}
-
 // DeleteConfigMap deletes a ConfigMap if it exists
 func DeleteConfigMap(ctx context.Context, c client.Client, name, namespace string) error {
 	configMap := &corev1.ConfigMap{
@@ -414,130 +373,15 @@ func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 	return cidrs, nil
 }
 
-// providerDefaultEndpoints maps well-known provider types to their default API endpoints
-// These endpoints are automatically added to NetworkPolicy egress rules so users don't need
-// to manually configure network access for standard provider APIs
-var providerDefaultEndpoints = map[string][]string{
-	"openai":     {"https://api.openai.com"},
-	"anthropic":  {"https://api.anthropic.com"},
-	"google":     {"https://generativelanguage.googleapis.com"},
-	"groq":       {"https://api.groq.com"},
-	"together":   {"https://api.together.xyz"},
-	"cohere":     {"https://api.cohere.ai"},
-	"mistral":    {"https://api.mistral.ai"},
-	"perplexity": {"https://api.perplexity.ai"},
-	"fireworks":  {"https://api.fireworks.ai"},
-
-	// Azure OpenAI uses customer-specific endpoints, so no default
-	// "azure": varies by customer deployment region and resource name
-
-	// AWS Bedrock uses region-specific endpoints, typically accessible via VPC
-	// "bedrock": varies by AWS region (bedrock-runtime.{region}.amazonaws.com)
-
-	// Vertex AI uses region-specific endpoints, typically accessible via Google Cloud VPC
-	// "vertex": varies by Google Cloud region
-
-	// Local providers typically don't need external egress
-	"ollama": {}, // Local inference, no external endpoints
-	"vllm":   {}, // Local inference, no external endpoints
-	"tgi":    {}, // Text Generation Inference, typically local
-}
-
-// generateEgressFromEndpoint parses an endpoint URL and generates a NetworkPolicy egress rule
-// Returns nil if the URL cannot be parsed or is invalid
-func generateEgressFromEndpoint(endpoint string) *networkingv1.NetworkPolicyEgressRule {
-	// Parse the endpoint URL
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		// Invalid URL, skip auto-generation
-		return nil
-	}
-
-	// Extract host and port
-	host := parsedURL.Hostname()
-	if host == "" {
-		// No host in URL, skip auto-generation
-		return nil
-	}
-
-	port := parsedURL.Port()
-	if port == "" {
-		// Use default ports based on scheme
-		switch parsedURL.Scheme {
-		case "https":
-			port = "443"
-		case "http":
-			port = "80"
-		default:
-			// Unknown scheme, skip port specification
-			port = ""
-		}
-	}
-
-	rule := &networkingv1.NetworkPolicyEgressRule{}
-
-	// Determine if host is an IP address or hostname
-	if ip := net.ParseIP(host); ip != nil {
-		// Host is an IP address - create CIDR-based rule
-		cidr := host + "/32"
-		if ip.To4() == nil {
-			// IPv6 address
-			cidr = host + "/128"
-		}
-		rule.To = append(rule.To, networkingv1.NetworkPolicyPeer{
-			IPBlock: &networkingv1.IPBlock{
-				CIDR: cidr,
-			},
-		})
-	} else {
-		// Host is a hostname - resolve to IPs using existing DNS resolution
-		resolvedCIDRs, err := resolveDNSToCIDRs([]string{host})
-		if err == nil && len(resolvedCIDRs) > 0 {
-			for _, cidr := range resolvedCIDRs {
-				rule.To = append(rule.To, networkingv1.NetworkPolicyPeer{
-					IPBlock: &networkingv1.IPBlock{
-						CIDR: cidr,
-					},
-				})
-			}
-		} else {
-			// DNS resolution failed, skip auto-generation
-			return nil
-		}
-	}
-
-	// Add port if specified
-	if port != "" {
-		portInt, err := strconv.Atoi(port)
-		if err == nil {
-			protocol := corev1.ProtocolTCP
-			rule.Ports = append(rule.Ports, networkingv1.NetworkPolicyPort{
-				Protocol: &protocol,
-				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: int32(portInt)},
-			})
-		}
-	}
-
-	// Only return rule if it has destinations
-	if len(rule.To) == 0 {
-		return nil
-	}
-
-	return rule
-}
-
 // BuildEgressNetworkPolicy creates a NetworkPolicy for egress rules
 // Default policy: deny all external egress, allow internal cluster + DNS
 // DNS-based rules are resolved to IP addresses at policy creation time
-// If provider uses custom endpoints (openai-compatible, azure, custom) and endpoint is set,
-// an egress rule is automatically generated for that endpoint
 // If otelEndpoint is set, an egress rule is automatically generated for the OpenTelemetry collector
 func BuildEgressNetworkPolicy(
 	ctx context.Context,
 	client client.Client,
 	name, namespace string,
 	labels map[string]string,
-	provider, endpoint string,
 	otelEndpoint string,
 	egressRules []langopv1alpha1.NetworkRule,
 ) *networkingv1.NetworkPolicy {
@@ -582,24 +426,6 @@ func BuildEgressNetworkPolicy(
 				},
 			},
 		},
-	}
-
-	// Auto-generate egress rules for well-known providers
-	if defaultEndpoints, ok := providerDefaultEndpoints[provider]; ok {
-		for _, defaultEndpoint := range defaultEndpoints {
-			if autoRule := generateEgressFromEndpoint(defaultEndpoint); autoRule != nil {
-				egress = append(egress, *autoRule)
-			}
-		}
-	}
-
-	// Auto-generate egress rule from custom endpoint (if specified)
-	// This handles custom endpoints for openai-compatible/azure/custom providers,
-	// as well as proxy scenarios where users override default provider endpoints
-	if endpoint != "" {
-		if autoRule := generateEgressFromEndpoint(endpoint); autoRule != nil {
-			egress = append(egress, *autoRule)
-		}
 	}
 
 	// Auto-generate egress rule for OpenTelemetry collector (if specified)

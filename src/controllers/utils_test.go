@@ -42,7 +42,7 @@ func TestBuildEgressNetworkPolicy_GroupSelector(t *testing.T) {
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{Group: "my-group"}},
 		},
@@ -70,7 +70,7 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_ExplicitNamespace(t *testing.T
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{Service: &langopv1alpha1.ServiceReference{
 				Name:      "my-svc",
@@ -100,7 +100,7 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_DefaultsToCurrentNamespace(t *
 		context.Background(), c,
 		"test-policy", "my-namespace",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{Service: &langopv1alpha1.ServiceReference{
 				Name: "my-svc",
@@ -130,7 +130,7 @@ func TestBuildEgressNetworkPolicy_NamespaceSelector(t *testing.T) {
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{
 				NamespaceSelector: &metav1.LabelSelector{
@@ -161,7 +161,7 @@ func TestBuildEgressNetworkPolicy_PodSelector(t *testing.T) {
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{
 				PodSelector: &metav1.LabelSelector{
@@ -195,7 +195,7 @@ func TestBuildEgressNetworkPolicy_NamespaceAndPodSelectorCombined(t *testing.T) 
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{
 				NamespaceSelector: nsSel,
@@ -227,7 +227,7 @@ func TestBuildEgressNetworkPolicy_FromRule_AddsIngressAndPolicyType(t *testing.T
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{
 				From: &langopv1alpha1.NetworkPeer{
@@ -263,7 +263,7 @@ func TestBuildEgressNetworkPolicy_NoFromRule_NoPolicyTypeIngress(t *testing.T) {
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
-		"", "", "",
+		"",
 		[]langopv1alpha1.NetworkRule{
 			{To: &langopv1alpha1.NetworkPeer{CIDR: "10.0.0.0/8"}},
 		},
