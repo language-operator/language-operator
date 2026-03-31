@@ -327,7 +327,9 @@ func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 // resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
 // Supports wildcards: *.example.com will resolve example.com and cache the result
 // Special case: "*" means allow all destinations (0.0.0.0/0)
-func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
+// Each lookup is bounded by a 3-second per-host timeout derived from ctx to avoid stalling
+// the reconcile worker goroutine.
+func resolveDNSToCIDRs(ctx context.Context, dnsNames []string) ([]string, error) {
 	var cidrs []string
 	seenIPs := make(map[string]bool)
 
@@ -345,8 +347,11 @@ func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 			resolveHostname = hostname[2:] // Remove *.
 		}
 
-		// Resolve the hostname to IP addresses
-		ips, err := net.LookupIP(resolveHostname)
+		// Resolve the hostname to IP addresses with a per-lookup timeout so a
+		// slow or unreachable DNS server cannot stall the reconcile worker.
+		lookupCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		addrs, err := (&net.Resolver{}).LookupIPAddr(lookupCtx, resolveHostname)
+		cancel()
 		if err != nil {
 			// Don't fail the entire policy if one DNS lookup fails
 			// Log and continue
@@ -354,7 +359,8 @@ func resolveDNSToCIDRs(dnsNames []string) ([]string, error) {
 		}
 
 		// Convert IPs to /32 (IPv4) or /128 (IPv6) CIDR blocks
-		for _, ip := range ips {
+		for _, addr := range addrs {
+			ip := addr.IP
 			var cidr string
 			if ip.To4() != nil {
 				cidr = ip.String() + "/32"
@@ -514,7 +520,7 @@ func BuildEgressNetworkPolicy(
 		// Note: DNS records can change, so this is a point-in-time resolution
 		// Policies will be updated on the next reconciliation loop
 		if len(rule.To.DNS) > 0 {
-			resolvedCIDRs, err := resolveDNSToCIDRs(rule.To.DNS)
+			resolvedCIDRs, err := resolveDNSToCIDRs(ctx, rule.To.DNS)
 			if err == nil && len(resolvedCIDRs) > 0 {
 				for _, cidr := range resolvedCIDRs {
 					policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
