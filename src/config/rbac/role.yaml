@@ -8,8 +8,10 @@ rules:
   - ""
   resources:
   - configmaps
+  - namespaces
   - persistentvolumeclaims
   - resourcequotas
+  - serviceaccounts
   - services
   verbs:
   - create
@@ -108,6 +110,7 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
+  - clusterrolebindings
   - rolebindings
   - roles
   verbs:
