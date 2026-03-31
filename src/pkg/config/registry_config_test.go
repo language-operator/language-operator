@@ -283,6 +283,129 @@ func TestValidateConfigMapSchema(t *testing.T) {
 	}
 }
 
+func TestHandleConfigMapUpdate(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("valid ConfigMap updates registries", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "language-operator-config", Namespace: "kube-system"},
+			Data:       map[string]string{"allowed-registries": "custom.io\nmy-registry.example.com"},
+		}
+		manager.handleConfigMapUpdate(ctx, cm)
+
+		registries := manager.GetRegistries()
+		if len(registries) != 2 {
+			t.Fatalf("expected 2 registries, got %d", len(registries))
+		}
+		if registries[0] != "custom.io" || registries[1] != "my-registry.example.com" {
+			t.Errorf("unexpected registries: %v", registries)
+		}
+	})
+
+	t.Run("invalid schema leaves registries unchanged", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+		original := manager.GetRegistries()
+
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "language-operator-config", Namespace: "kube-system"},
+			Data: map[string]string{
+				"allowed-registries": "custom.io",
+				"unknown-field":      "bad",
+			},
+		}
+		manager.handleConfigMapUpdate(ctx, cm)
+
+		registries := manager.GetRegistries()
+		if len(registries) != len(original) {
+			t.Errorf("expected registries to be unchanged, got %v", registries)
+		}
+	})
+
+	t.Run("missing allowed-registries key leaves registries unchanged", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+		original := manager.GetRegistries()
+
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "language-operator-config", Namespace: "kube-system"},
+			Data:       map[string]string{},
+		}
+		manager.handleConfigMapUpdate(ctx, cm)
+
+		registries := manager.GetRegistries()
+		if len(registries) != len(original) {
+			t.Errorf("expected registries to be unchanged, got %v", registries)
+		}
+	})
+
+	t.Run("only comments in registry data leaves registries unchanged", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+		original := manager.GetRegistries()
+
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "language-operator-config", Namespace: "kube-system"},
+			Data:       map[string]string{"allowed-registries": "# only a comment\n\n"},
+		}
+		manager.handleConfigMapUpdate(ctx, cm)
+
+		registries := manager.GetRegistries()
+		if len(registries) != len(original) {
+			t.Errorf("expected registries to be unchanged, got %v", registries)
+		}
+	})
+}
+
+func TestHandleConfigMapDelete(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("resets to defaults after custom registries", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+
+		// Set non-default registries first
+		cm := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "language-operator-config", Namespace: "kube-system"},
+			Data:       map[string]string{"allowed-registries": "custom.io"},
+		}
+		manager.handleConfigMapUpdate(ctx, cm)
+		if regs := manager.GetRegistries(); len(regs) != 1 || regs[0] != "custom.io" {
+			t.Fatalf("setup failed: expected [custom.io], got %v", regs)
+		}
+
+		manager.handleConfigMapDelete(ctx)
+
+		defaults := getDefaultRegistries()
+		registries := manager.GetRegistries()
+		if len(registries) != len(defaults) {
+			t.Errorf("expected %d default registries, got %d: %v", len(defaults), len(registries), registries)
+		}
+		for i, def := range defaults {
+			if registries[i] != def {
+				t.Errorf("registry[%d]: expected %s, got %s", i, def, registries[i])
+			}
+		}
+	})
+
+	t.Run("no panic when called with no prior custom registries", func(t *testing.T) {
+		clientset := fake.NewSimpleClientset()
+		manager := NewRegistryConfigManager(clientset)
+
+		// Should not panic
+		manager.handleConfigMapDelete(ctx)
+
+		defaults := getDefaultRegistries()
+		registries := manager.GetRegistries()
+		if len(registries) != len(defaults) {
+			t.Errorf("expected %d defaults, got %d", len(defaults), len(registries))
+		}
+	})
+}
+
 func TestStop_DoubleClose(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	manager := NewRegistryConfigManager(clientset)
