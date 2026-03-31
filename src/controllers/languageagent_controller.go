@@ -811,8 +811,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Name,
 		agent.Namespace,
 		labels,
-		"", // provider - not applicable for agents
-		"", // endpoint - not applicable for agents
 		otelEndpoint,
 		agent.Spec.NetworkPolicies,
 	)
