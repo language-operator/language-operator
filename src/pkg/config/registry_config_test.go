@@ -283,6 +283,16 @@ func TestValidateConfigMapSchema(t *testing.T) {
 	}
 }
 
+func TestStop_DoubleClose(t *testing.T) {
+	clientset := fake.NewSimpleClientset()
+	manager := NewRegistryConfigManager(clientset)
+
+	// First call closes the channel — should not panic
+	manager.Stop()
+	// Second call must also not panic (double-close would panic without sync.Once)
+	manager.Stop()
+}
+
 func TestConcurrentAccess(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 	manager := NewRegistryConfigManager(clientset)

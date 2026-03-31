@@ -26,6 +26,7 @@ type RegistryConfigManager struct {
 	mu                sync.RWMutex
 	informer          cache.Controller
 	stopCh            chan struct{}
+	stopOnce          sync.Once
 }
 
 // NewRegistryConfigManager creates a new registry configuration manager
@@ -108,23 +109,23 @@ func (r *RegistryConfigManager) StartWatcher(ctx context.Context) error {
 		logger.Info("ConfigMap watcher stopped")
 	}()
 
-	// Wait for cache sync
-	go func() {
-		if !cache.WaitForCacheSync(r.stopCh, r.informer.HasSynced) {
-			logger.Error(fmt.Errorf("cache sync failed"), "Failed to sync ConfigMap cache")
-			return
-		}
-		logger.Info("ConfigMap cache synced successfully")
-	}()
-
+	// Wait for cache sync with a bounded timeout so failures are surfaced to the caller.
+	syncCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	if !cache.WaitForCacheSync(syncCtx.Done(), r.informer.HasSynced) {
+		return fmt.Errorf("timed out waiting for ConfigMap cache to sync")
+	}
+	logger.Info("ConfigMap cache synced successfully")
 	return nil
 }
 
-// Stop stops the ConfigMap watcher
+// Stop stops the ConfigMap watcher. Safe to call multiple times.
 func (r *RegistryConfigManager) Stop() {
-	if r.stopCh != nil {
-		close(r.stopCh)
-	}
+	r.stopOnce.Do(func() {
+		if r.stopCh != nil {
+			close(r.stopCh)
+		}
+	})
 }
 
 // loadRegistries loads registries from the ConfigMap
