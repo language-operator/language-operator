@@ -88,7 +88,7 @@ The agent listens on `spec.port` (default `8080`). The operator creates a Cluste
 
 ### Probes
 
-Liveness and readiness probes are configured via `spec.livenessProbe` and `spec.readinessProbe`. If not set, no probes are configured. The operator does not require any specific health endpoint — probe configuration is entirely up to the agent author.
+Liveness and readiness probes are configured via `spec.deployment.livenessProbe` and `spec.deployment.readinessProbe`. If not set, no probes are configured. The operator does not require any specific health endpoint — probe configuration is entirely up to the agent author.
 
 ### Startup Behaviour
 
