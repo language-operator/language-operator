@@ -1218,6 +1218,12 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 		log.Error(err, "Failed to cleanup Services", "agent", agent.Name)
 	}
 
+	// 3. Cleanup shared RBAC resources if this is the last agent in the namespace
+	if err := r.cleanupSharedRBAC(cleanupCtx, agent); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("RBAC cleanup failed: %w", err))
+		log.Error(err, "Failed to cleanup RBAC resources", "agent", agent.Name)
+	}
+
 	// Log summary
 	if len(cleanupErrors) == 0 {
 		log.Info("Resource cleanup completed successfully", "agent", agent.Name)
@@ -1285,6 +1291,39 @@ func (r *LanguageAgentReconciler) cleanupServices(ctx context.Context, agent *la
 		log.Info("Successfully deleted Service", "name", service.Name, "namespace", service.Namespace)
 	}
 
+	return nil
+}
+
+// cleanupSharedRBAC deletes the shared ServiceAccount, Role, and RoleBinding for agent pods
+// in the given namespace, but only when no other LanguageAgents remain in that namespace.
+func (r *LanguageAgentReconciler) cleanupSharedRBAC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	log := log.FromContext(ctx)
+	ns := agent.Namespace
+
+	// Check whether any other agents remain in this namespace
+	agentList := &langopv1alpha1.LanguageAgentList{}
+	if err := r.List(ctx, agentList, client.InNamespace(ns)); err != nil {
+		return fmt.Errorf("failed to list LanguageAgents: %w", err)
+	}
+	for _, a := range agentList.Items {
+		if a.Name != agent.Name {
+			// Another agent still exists; leave shared resources intact
+			return nil
+		}
+	}
+
+	// Last agent in namespace — delete shared RBAC resources
+	toDelete := []client.Object{
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
+	}
+	for _, obj := range toDelete {
+		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete %T %s: %w", obj, "language-agent", err)
+		}
+		log.Info("Deleted shared RBAC resource", "kind", fmt.Sprintf("%T", obj), "namespace", ns)
+	}
 	return nil
 }
 
@@ -1657,8 +1696,6 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
-		Owns(&corev1.ServiceAccount{}).
-		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
@@ -1704,49 +1741,88 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		return fmt.Errorf("failed to create/update ServiceAccount: %w", err)
 	}
 
-	// Create ClusterRoleBinding to give the ServiceAccount permissions
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+	// Delete legacy ClusterRoleBinding if present (migration cleanup)
+	legacyCRBName := fmt.Sprintf("language-agent-%s-language-agent", targetNamespace)
+	legacyCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.Get(ctx, types.NamespacedName{Name: legacyCRBName}, legacyCRB); err == nil {
+		if err := r.Delete(ctx, legacyCRB); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete legacy ClusterRoleBinding: %w", err)
+		}
+	}
+
+	// Create namespace-scoped Role with minimal permissions for agent pods
+	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("language-agent-%s-%s", targetNamespace, "language-agent"),
+			Name:      "language-agent",
+			Namespace: targetNamespace,
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, clusterRoleBinding, func() error {
-		// Set labels
-		if clusterRoleBinding.Labels == nil {
-			clusterRoleBinding.Labels = make(map[string]string)
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, role, func() error {
+		if role.Labels == nil {
+			role.Labels = make(map[string]string)
 		}
-		clusterRoleBinding.Labels["app.kubernetes.io/name"] = "language-agent"
-		clusterRoleBinding.Labels["app.kubernetes.io/component"] = "clusterrolebinding"
-		clusterRoleBinding.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		role.Labels["app.kubernetes.io/name"] = "language-agent"
+		role.Labels["app.kubernetes.io/component"] = "role"
+		role.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		role.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		}
+		return nil
+	})
 
-		// Bind to the language-operator ClusterRole which has the necessary permissions
-		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+	if err != nil {
+		return fmt.Errorf("failed to create/update Role: %w", err)
+	}
+
+	// Create namespace-scoped RoleBinding binding the ServiceAccount to the Role
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "language-agent",
+			Namespace: targetNamespace,
+		},
+	}
+
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, roleBinding, func() error {
+		if roleBinding.Labels == nil {
+			roleBinding.Labels = make(map[string]string)
+		}
+		roleBinding.Labels["app.kubernetes.io/name"] = "language-agent"
+		roleBinding.Labels["app.kubernetes.io/component"] = "rolebinding"
+		roleBinding.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     "language-operator",
+			Kind:     "Role",
+			Name:     "language-agent",
 		}
-
-		// Subject is the ServiceAccount in the target namespace
-		clusterRoleBinding.Subjects = []rbacv1.Subject{
+		roleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      "language-agent",
 				Namespace: targetNamespace,
 			},
 		}
-
 		return nil
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to create/update ClusterRoleBinding: %w", err)
+		return fmt.Errorf("failed to create/update RoleBinding: %w", err)
 	}
 
 	log.Info("Reconciled agent ServiceAccount and permissions",
 		"serviceAccount", "language-agent",
 		"namespace", targetNamespace,
-		"clusterRoleBinding", clusterRoleBinding.Name)
+		"role", role.Name,
+		"roleBinding", roleBinding.Name)
 
 	return nil
 }

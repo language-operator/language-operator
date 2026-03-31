@@ -1258,14 +1258,25 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 		t.Fatalf("Expected ServiceAccount 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
 	}
 
-	// Verify ClusterRoleBinding created
-	crb := &rbacv1.ClusterRoleBinding{}
-	crbName := "language-agent-" + agent.Namespace + "-language-agent"
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: crbName}, crb); err != nil {
-		t.Fatalf("Expected ClusterRoleBinding %q to exist: %v", crbName, err)
+	// Verify namespace-scoped Role created
+	role := &rbacv1.Role{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, role); err != nil {
+		t.Fatalf("Expected Role 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
 	}
-	if crb.RoleRef.Name != "language-operator" {
-		t.Errorf("Expected ClusterRoleBinding to reference 'language-operator' ClusterRole, got %q", crb.RoleRef.Name)
+	if len(role.Rules) == 0 {
+		t.Errorf("Expected Role to have at least one rule")
+	}
+
+	// Verify namespace-scoped RoleBinding created and points to the Role (not the operator ClusterRole)
+	rb := &rbacv1.RoleBinding{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, rb); err != nil {
+		t.Fatalf("Expected RoleBinding 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
+	}
+	if rb.RoleRef.Kind != "Role" {
+		t.Errorf("Expected RoleBinding RoleRef.Kind 'Role', got %q", rb.RoleRef.Kind)
+	}
+	if rb.RoleRef.Name != "language-agent" {
+		t.Errorf("Expected RoleBinding RoleRef.Name 'language-agent', got %q", rb.RoleRef.Name)
 	}
 }
 
