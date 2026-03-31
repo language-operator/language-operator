@@ -1201,3 +1201,406 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing
 	assert.Equal(t, metav1.ConditionFalse, npCond.Status)
 	assert.NotEmpty(t, npCond.Reason)
 }
+
+// findEnvVar returns the EnvVar with the given name from the slice, and false if not found.
+func findEnvVar(vars []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
+	for _, v := range vars {
+		if v.Name == name {
+			return v, true
+		}
+	}
+	return corev1.EnvVar{}, false
+}
+
+func TestBuildToolEnv(t *testing.T) {
+	tests := []struct {
+		name        string
+		envSetup    map[string]string
+		userEnv     []corev1.EnvVar
+		wantPresent map[string]string // name → expected value
+		wantAbsent  []string
+	}{
+		{
+			name:     "no_otel_endpoint",
+			envSetup: map[string]string{},
+			wantPresent: map[string]string{
+				"OTEL_SERVICE_NAME": "language-operator-tool-my-tool",
+			},
+			wantAbsent: []string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT",
+				"OTEL_TRACES_EXPORTER",
+				"OTEL_EXPORTER_OTLP_PROTOCOL",
+				"OTEL_LOGS_EXPORTER",
+			},
+		},
+		{
+			name: "endpoint_without_scheme",
+			envSetup: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4317",
+			},
+			wantPresent: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4317",
+				"OTEL_TRACES_EXPORTER":        "otlp",
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+				"OTEL_LOGS_EXPORTER":          "otlp",
+				"OTEL_SERVICE_NAME":           "language-operator-tool-my-tool",
+			},
+			wantAbsent: []string{
+				"OTEL_RESOURCE_ATTRIBUTES",
+				"OTEL_TRACES_SAMPLER",
+				"OTEL_TRACES_SAMPLER_ARG",
+			},
+		},
+		{
+			name: "endpoint_http_preserved",
+			envSetup: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4317",
+			},
+			wantPresent: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4317",
+			},
+		},
+		{
+			name: "endpoint_https_preserved",
+			envSetup: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://collector:4317",
+			},
+			wantPresent: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://collector:4317",
+			},
+		},
+		{
+			name: "optional_vars_injected",
+			envSetup: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4317",
+				"OTEL_RESOURCE_ATTRIBUTES":    "k8s.namespace=default",
+				"OTEL_TRACES_SAMPLER":         "parentbased_traceidratio",
+				"OTEL_TRACES_SAMPLER_ARG":     "0.5",
+			},
+			wantPresent: map[string]string{
+				"OTEL_RESOURCE_ATTRIBUTES": "k8s.namespace=default",
+				"OTEL_TRACES_SAMPLER":      "parentbased_traceidratio",
+				"OTEL_TRACES_SAMPLER_ARG":  "0.5",
+			},
+		},
+		{
+			name: "user_env_preserved",
+			envSetup: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "collector:4317",
+			},
+			userEnv: []corev1.EnvVar{{Name: "MY_APP_VAR", Value: "hello"}},
+			wantPresent: map[string]string{
+				"MY_APP_VAR":                  "hello",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4317",
+				"OTEL_SERVICE_NAME":           "language-operator-tool-my-tool",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.envSetup {
+				t.Setenv(k, v)
+			}
+
+			tool := gen.LanguageTool("my-tool", "default")
+			if tt.userEnv != nil {
+				tool.Spec.Deployment.Env = tt.userEnv
+			}
+
+			r := &LanguageToolReconciler{}
+			got := r.buildToolEnv(tool)
+
+			for name, want := range tt.wantPresent {
+				v, ok := findEnvVar(got, name)
+				require.True(t, ok, "expected env var %s to be present", name)
+				assert.Equal(t, want, v.Value, "env var %s has unexpected value", name)
+			}
+			for _, name := range tt.wantAbsent {
+				_, ok := findEnvVar(got, name)
+				assert.False(t, ok, "expected env var %s to be absent", name)
+			}
+		})
+	}
+}
+
+func TestDiscoverSidecarSchemas_NoPods(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	tool := gen.LanguageTool("my-tool", "default",
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(8080),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
+	assert.NoError(t, err)
+	assert.Nil(t, schemas)
+}
+
+func TestDiscoverSidecarSchemas_PodNotRunning(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	tool := gen.LanguageTool("my-tool", "default",
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(8080),
+	)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-pod",
+			Namespace: "default",
+			Labels:    map[string]string{"langop.io/kind": "LanguageAgent"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
+			PodIP: "10.0.0.1",
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{Name: "tool-my-tool", Ready: true},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, pod).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
+	assert.NoError(t, err)
+	assert.Nil(t, schemas)
+}
+
+func TestDiscoverSidecarSchemas_PodMissingIP(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	tool := gen.LanguageTool("my-tool", "default",
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(8080),
+	)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-pod",
+			Namespace: "default",
+			Labels:    map[string]string{"langop.io/kind": "LanguageAgent"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			PodIP: "",
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{Name: "tool-my-tool", Ready: true},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, pod).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
+	assert.NoError(t, err)
+	assert.Nil(t, schemas)
+}
+
+func TestDiscoverSidecarSchemas_RegularContainerFallback(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	mcpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := MCPResponse{
+			JSONRpc: "2.0",
+			ID:      1,
+			Result:  json.RawMessage(`{"tools":[{"name":"do_thing","description":"Does a thing"}]}`),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer mcpServer.Close()
+
+	serverHost := mcpServer.Listener.Addr().(*net.TCPAddr).IP.String()
+	serverPort := int32(mcpServer.Listener.Addr().(*net.TCPAddr).Port)
+
+	tool := gen.LanguageTool("my-tool", "default",
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(serverPort),
+	)
+
+	// Pod has ContainerStatuses only (not InitContainerStatuses) — tests the fallback path
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-pod",
+			Namespace: "default",
+			Labels:    map[string]string{"langop.io/kind": "LanguageAgent"},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			PodIP: serverHost,
+			ContainerStatuses: []corev1.ContainerStatus{
+				{Name: "tool-my-tool", Ready: true},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, pod).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+		HTTPClient:      mcpServer.Client(),
+	}
+
+	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
+	require.NoError(t, err)
+	require.Len(t, schemas, 1)
+	assert.Equal(t, "do_thing", schemas[0].Name)
+}
+
+func TestLanguageToolController_Reconcile_MCPType_SchemaDiscoveryErrorSwallowed(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("mcp-tool", "default",
+		gen.SetToolImage("ghcr.io/test/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+		gen.SetToolType("mcp"),
+	)
+
+	// Pre-seed the deployment with ReadyReplicas=1 so updateToolStatus enters the Running branch.
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: tool.Name, Namespace: tool.Namespace},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: func() *int32 { r := int32(1); return &r }(),
+		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas:     1,
+			AvailableReplicas: 1,
+			UpdatedReplicas:   1,
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, deployment).
+		WithStatusSubresource(tool).
+		Build()
+
+	// No HTTPClient set — the default client will fail to reach the cluster-local URL.
+	// discoverMCPToolSchemas also receives an already-schemed URL so it tries
+	// "http://http://mcp-tool.default.svc.cluster.local:8080/mcp" which fails immediately.
+	// The error must be swallowed: tool is still Running.
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updated))
+
+	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
+	assert.Empty(t, updated.Status.ToolSchemas)
+	assert.Empty(t, updated.Status.AvailableTools)
+
+	var readyCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
+			readyCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, readyCond, "ConditionReady must be set")
+	assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonReconcileSuccess, readyCond.Reason)
+}
+
+func TestLanguageToolController_Reconcile_NonMCPType_SkipsSchemaDiscovery(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("openapi-tool", "default",
+		gen.SetToolImage("ghcr.io/test/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(9090),
+		gen.SetToolType("openapi"),
+	)
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: tool.Name, Namespace: tool.Namespace},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: func() *int32 { r := int32(1); return &r }(),
+		},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas:     1,
+			AvailableReplicas: 1,
+			UpdatedReplicas:   1,
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, deployment).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updated))
+
+	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
+	assert.Empty(t, updated.Status.ToolSchemas)
+	assert.Equal(t, "http://openapi-tool.default.svc.cluster.local:9090", updated.Status.Endpoint)
+
+	var readyCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
+			readyCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, readyCond, "ConditionReady must be set")
+	assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+}
