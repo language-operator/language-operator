@@ -1771,3 +1771,78 @@ func TestValidateDNS_FailureSetsWildcardDNSMissing(t *testing.T) {
 	assert.Equal(t, "WildcardDNSMissing", found.Reason)
 	assert.Equal(t, cluster.Generation, found.ObservedGeneration)
 }
+
+func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	const domain = "example.com"
+	const gatewayHost = "gateway.example.com"
+
+	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster) *networkingv1.Ingress {
+		t.Helper()
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster).
+			WithStatusSubresource(cluster).
+			Build()
+		r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		ctx := context.Background()
+		req := clusterRequest(cluster.Name)
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ing))
+		return ing
+	}
+
+	t.Run("explicit_secret_name", func(t *testing.T) {
+		cluster := gen.LanguageCluster("tls-explicit",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+				SecretName: "my-tls-secret",
+			}))
+		ing := reconcileCluster(t, cluster)
+		require.Len(t, ing.Spec.TLS, 1)
+		assert.Equal(t, "my-tls-secret", ing.Spec.TLS[0].SecretName)
+		assert.Equal(t, []string{gatewayHost}, ing.Spec.TLS[0].Hosts)
+	})
+
+	t.Run("cert_manager_clusterissuer", func(t *testing.T) {
+		cluster := gen.LanguageCluster("tls-clusterissuer",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+				IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "letsencrypt"},
+			}))
+		ing := reconcileCluster(t, cluster)
+		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/clusterissuer"])
+		require.Len(t, ing.Spec.TLS, 1)
+		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
+		assert.Equal(t, []string{gatewayHost}, ing.Spec.TLS[0].Hosts)
+	})
+
+	t.Run("cert_manager_issuer_kind", func(t *testing.T) {
+		cluster := gen.LanguageCluster("tls-issuer",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+				IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "my-issuer", Kind: "Issuer"},
+			}))
+		ing := reconcileCluster(t, cluster)
+		assert.Equal(t, "my-issuer", ing.Annotations["cert-manager.io/issuer"])
+		_, hasClusterIssuer := ing.Annotations["cert-manager.io/clusterissuer"]
+		assert.False(t, hasClusterIssuer, "cert-manager.io/clusterissuer should not be set for Issuer kind")
+		require.Len(t, ing.Spec.TLS, 1)
+		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
+	})
+
+	t.Run("tls_disabled", func(t *testing.T) {
+		disabled := false
+		cluster := gen.LanguageCluster("tls-disabled",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+				Enabled: &disabled,
+			}))
+		ing := reconcileCluster(t, cluster)
+		assert.Empty(t, ing.Spec.TLS, "TLS should not be configured when Enabled=false")
+	})
+}
