@@ -445,3 +445,79 @@ func contains(s, substr string) bool {
 func intPtr(i int32) *int32 {
 	return &i
 }
+
+func TestLanguageAgentValidateUpdate(t *testing.T) {
+	const ns = "default"
+	ctx := context.Background()
+
+	makeAgent := func(size string) *LanguageAgent {
+		return &LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+			Spec: LanguageAgentSpec{
+				Image:        "test:latest",
+				Instructions: "test",
+				Workspace:    &WorkspaceSpec{Size: size},
+			},
+		}
+	}
+
+	tests := []struct {
+		name      string
+		oldAgent  *LanguageAgent
+		newAgent  *LanguageAgent
+		expectErr bool
+		errMsg    string
+	}{
+		{
+			name:      "decrease rejected",
+			oldAgent:  makeAgent("20Gi"),
+			newAgent:  makeAgent("5Gi"),
+			expectErr: true,
+			errMsg:    "cannot decrease storage size",
+		},
+		{
+			name:      "same size allowed",
+			oldAgent:  makeAgent("10Gi"),
+			newAgent:  makeAgent("10Gi"),
+			expectErr: false,
+		},
+		{
+			name:      "increase allowed",
+			oldAgent:  makeAgent("10Gi"),
+			newAgent:  makeAgent("20Gi"),
+			expectErr: false,
+		},
+		{
+			name: "old workspace nil - allowed",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec:       LanguageAgentSpec{Image: "test:latest", Instructions: "test"},
+			},
+			newAgent:  makeAgent("10Gi"),
+			expectErr: false,
+		},
+		{
+			name:     "new workspace nil - allowed (validateSpec handles format)",
+			oldAgent: makeAgent("10Gi"),
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec:       LanguageAgentSpec{Image: "test:latest", Instructions: "test"},
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			webhook := &LanguageAgentWebhook{Client: makeClusterClient(t, ns)}
+			_, err := webhook.ValidateUpdate(ctx, tt.newAgent, tt.oldAgent)
+			if (err != nil) != tt.expectErr {
+				t.Errorf("ValidateUpdate() error = %v, expectErr %v", err, tt.expectErr)
+				return
+			}
+			if tt.expectErr && err != nil && !contains(err.Error(), tt.errMsg) {
+				t.Errorf("ValidateUpdate() error = %q, want it to contain %q", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
