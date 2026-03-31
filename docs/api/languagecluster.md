@@ -7,7 +7,7 @@ The `LanguageCluster` CRD creates a managed namespace for AI agent deployments w
 A LanguageCluster provides:
 - Dedicated namespace with network isolation
 - Shared LiteLLM proxy for all models in the cluster
-- Optional external ingress at `proxy.<domain>`
+- Optional external ingress at `gateway.<domain>`
 - NetworkPolicy enforcement for security
 
 ## Quick Example
@@ -62,7 +62,7 @@ spec:
   domain: agents.example.com
 ```
 
-Creates an Ingress/HTTPRoute at `proxy.agents.example.com` for external model access.
+Creates an Ingress/HTTPRoute at `gateway.agents.example.com` for external model access.
 
 ## Related Resources
 
