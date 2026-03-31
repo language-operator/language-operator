@@ -19,6 +19,8 @@ package telemetry
 import (
 	"context"
 	"testing"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestInitTracer_NoEndpoint(t *testing.T) {
@@ -55,5 +57,95 @@ func TestParseResourceAttributes(t *testing.T) {
 		if len(got) != tt.wantLen {
 			t.Errorf("parseResourceAttributes(%q): got %d attrs, want %d", tt.input, len(got), tt.wantLen)
 		}
+	}
+}
+
+func TestConfigureSampler(t *testing.T) {
+	tests := []struct {
+		name        string
+		samplerType string
+		samplerArg  string
+		wantDesc    string
+	}{
+		{
+			name:        "always_on",
+			samplerType: "always_on",
+			wantDesc:    sdktrace.AlwaysSample().Description(),
+		},
+		{
+			name:        "always_off",
+			samplerType: "always_off",
+			wantDesc:    sdktrace.NeverSample().Description(),
+		},
+		{
+			name:        "traceidratio with valid arg",
+			samplerType: "traceidratio",
+			samplerArg:  "0.5",
+			wantDesc:    sdktrace.TraceIDRatioBased(0.5).Description(),
+		},
+		{
+			name:        "traceidratio clamps below zero",
+			samplerType: "traceidratio",
+			samplerArg:  "-0.1",
+			wantDesc:    sdktrace.TraceIDRatioBased(0.0).Description(),
+		},
+		{
+			name:        "traceidratio clamps above one",
+			samplerType: "traceidratio",
+			samplerArg:  "1.5",
+			wantDesc:    sdktrace.TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:        "traceidratio with invalid arg defaults to 1.0",
+			samplerType: "traceidratio",
+			samplerArg:  "notanumber",
+			wantDesc:    sdktrace.TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:        "traceidratio with empty arg defaults to 1.0",
+			samplerType: "traceidratio",
+			wantDesc:    sdktrace.TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:        "unknown sampler defaults to always_on",
+			samplerType: "unknown_sampler",
+			wantDesc:    sdktrace.AlwaysSample().Description(),
+		},
+		{
+			name:     "unset sampler defaults to always_on",
+			wantDesc: sdktrace.AlwaysSample().Description(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_SAMPLER", tt.samplerType)
+			t.Setenv("OTEL_TRACES_SAMPLER_ARG", tt.samplerArg)
+			got := configureSampler()
+			if got.Description() != tt.wantDesc {
+				t.Errorf("configureSampler() = %q, want %q", got.Description(), tt.wantDesc)
+			}
+		})
+	}
+}
+
+func TestInitTracer_WithEndpoint(t *testing.T) {
+	// gRPC dial is lazy by default; pointing at a non-existent host is fine for unit tests.
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:14317")
+	tp, err := InitTracer(context.Background())
+	if err != nil {
+		t.Fatalf("InitTracer with endpoint: unexpected error: %v", err)
+	}
+	if tp == nil {
+		t.Fatal("InitTracer with endpoint: expected non-nil TracerProvider")
+	}
+	// Clean up: shut down the provider so it doesn't leak goroutines.
+	_ = Shutdown(context.Background(), tp)
+}
+
+func TestShutdown_WithSDKProvider(t *testing.T) {
+	tp := sdktrace.NewTracerProvider()
+	if err := Shutdown(context.Background(), tp); err != nil {
+		t.Errorf("Shutdown(sdkProvider): unexpected error: %v", err)
 	}
 }
