@@ -158,6 +158,13 @@ type LanguageAgentStatus struct {
 	// WebhookURLs contains the URLs where this agent can receive webhooks
 	// +optional
 	WebhookURLs []string `json:"webhookURLs,omitempty"`
+
+	// ObservedGeneration is the most recent generation observed by the controller.
+	// It corresponds to the metadata.generation of the LanguageAgent at the time
+	// the controller last processed it. Watchers can use this to detect when the
+	// status reflects a stale version of the spec.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent

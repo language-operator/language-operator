@@ -393,6 +393,11 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
+	if agent.Status.ObservedGeneration != agent.Generation {
+		agent.Status.ObservedGeneration = agent.Generation
+		statusChanged = true
+	}
+
 	if SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation) {
 		statusChanged = true
 	}
