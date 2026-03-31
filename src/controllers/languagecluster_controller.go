@@ -405,12 +405,9 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 
 	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 
-	rbacLabels := map[string]string{
-		LabelKeyK8sName:       "language-operator",
-		LabelKeyK8sManagedBy:  "language-operator",
-		LabelKeyK8sComponent:  "agent-rbac",
-		LabelKeyLangopCluster: cluster.Name,
-	}
+	rbacLabels := GetCommonLabels("language-operator", "LanguageCluster")
+	rbacLabels[LabelKeyK8sComponent] = "agent-rbac"
+	rbacLabels[LabelKeyLangopCluster] = cluster.Name
 
 	agentsRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
@@ -624,17 +621,16 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 		policyTypes = append(policyTypes, networkingv1.PolicyTypeIngress)
 	}
 
+	netpolLabels := GetCommonLabels("language-operator", "LanguageCluster")
+	netpolLabels[LabelKeyK8sComponent] = "agent-network-policy"
+	netpolLabels[LabelKeyLangopCluster] = cluster.Name
+
 	// Create NetworkPolicy
 	networkPolicy := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-agents", cluster.Name),
 			Namespace: namespace,
-			Labels: map[string]string{
-				LabelKeyK8sName:       "language-operator",
-				LabelKeyK8sManagedBy:  "language-operator",
-				LabelKeyK8sComponent:  "agent-network-policy",
-				LabelKeyLangopCluster: cluster.Name,
-			},
+			Labels:    netpolLabels,
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
@@ -884,13 +880,9 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	configHash := hex.EncodeToString(h.Sum(nil))[:16]
 
 	// Reconcile ConfigMap
-	gatewayLabels := map[string]string{
-		LabelKeyK8sName:       "language-operator",
-		LabelKeyK8sManagedBy:  "language-operator",
-		LabelKeyK8sComponent:  "gateway",
-		LabelKeyLangopCluster: cluster.Name,
-		LabelKeyLangopKind:    "gateway",
-	}
+	gatewayLabels := GetCommonLabels("language-operator", "gateway")
+	gatewayLabels[LabelKeyK8sComponent] = "gateway"
+	gatewayLabels[LabelKeyLangopCluster] = cluster.Name
 	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
 		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
 	}
@@ -1250,16 +1242,15 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 		hard[corev1.ResourceLimitsMemory] = *cap.MaxMemory
 	}
 
+	quotaLabels := GetCommonLabels("language-operator", "LanguageCluster")
+	quotaLabels[LabelKeyK8sComponent] = "capacity"
+	quotaLabels[LabelKeyLangopCluster] = cluster.Name
+
 	quota := &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      quotaName,
 			Namespace: namespace,
-			Labels: map[string]string{
-				LabelKeyK8sName:       "language-operator",
-				LabelKeyK8sManagedBy:  "language-operator",
-				LabelKeyK8sComponent:  "capacity",
-				LabelKeyLangopCluster: cluster.Name,
-			},
+			Labels:    quotaLabels,
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, quota, func() error {
