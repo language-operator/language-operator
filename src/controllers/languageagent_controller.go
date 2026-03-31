@@ -149,9 +149,15 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !agent.DeletionTimestamp.IsZero() {
 		span.AddEvent("Deleting agent")
 		if controllerutil.ContainsFinalizer(agent, FinalizerName) {
-			// All child resources (Service, Ingress, PVC, Deployment, NetworkPolicy) have
-			// owner references set via SetControllerReference. Kubernetes GC deletes them
-			// automatically; no explicit cleanup or polling needed.
+			// Shared RBAC resources (ServiceAccount, Role, RoleBinding named "language-agent")
+			// have no owner reference and are not GC'd automatically; clean them up explicitly
+			// when the last agent in the namespace is deleted.
+			if err := r.cleanupResources(ctx, agent); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "Failed to clean up agent resources")
+				reconcileErr = err
+				return ctrl.Result{}, err
+			}
 			controllerutil.RemoveFinalizer(agent, FinalizerName)
 			if err := r.Update(ctx, agent); err != nil {
 				span.RecordError(err)
