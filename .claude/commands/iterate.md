@@ -22,6 +22,7 @@ Follow these directions closely:
 
 1. Find the next issue for this queue: `gh issue list --label "queue/$ARGUMENTS" --state open --json number,title,labels --limit 1`
    - If no issue is found, report idle and stop.
+   - If found, read its comments as well.
 2. Investigate if the issue is valid, or a mis-use of the intended feature.
 3. Label the issue `in-progress` and remove the `queue/$ARGUMENTS` label:
    ```bash

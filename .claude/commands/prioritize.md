@@ -20,10 +20,10 @@ Adopt the project-manager persona.
    gh issue list --label "queue/2" --state open --json number | jq -r '.[].number' | xargs -I{} gh issue edit {} --remove-label "queue/2"
    ```
 3. Analyze the open issues for **conflict groups** — issues that likely touch the same files, controllers, CRDs, or areas of the codebase should be in the same group (they must serialize). Issues touching unrelated areas can run in parallel across queues.
-4. Assign each conflict group to a queue. Label **all** issues in a group with the same queue label (the agent will work through them in priority order):
-   - All issues in group 1 → `queue/0`
-   - All issues in group 2 → `queue/1`
-   - All issues in group 3 → `queue/2`
+4. Assign each conflict group to a queue. Label only the **single highest-priority issue** from each group — leave the rest unlabeled for `delegate` to fill in as queues drain:
+   - Top issue from group 1 → `queue/0`
+   - Top issue from group 2 → `queue/1`
+   - Top issue from group 3 → `queue/2`
    - If there are fewer than 3 independent groups, only use as many queues as there are distinct groups.
 5. Apply the queue labels: `gh issue edit <N> --add-label "queue/0"` (etc.)
 
@@ -31,4 +31,4 @@ Update `.claude/MEMORY.md` if anything is worth noting for the next run (e.g. th
 
 ## Output
 
-Up to three queues, each containing all issues from one conflict group, labelled `queue/0`, `queue/1`, or `queue/2`. Each queue is the full serialized workload for one agent.
+Up to three queues, each containing exactly one issue — the next item for that agent to pick up. Remaining issues stay unassigned until `delegate` refills the queue.

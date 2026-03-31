@@ -25,11 +25,17 @@ Adopt the project-manager persona.
 2. If **no unassigned issues** are found, report idle and stop.
 
 3. If unassigned issues **are** found:
-   - Analyze them for conflict groups (issues touching the same files, controllers, CRDs, or subsystem should serialize)
-   - Assign each group to whichever queue (`queue/0`, `queue/1`, `queue/2`) currently has the fewest open issues — preserve existing queue assignments, only label the new issues
+   - Check how many open issues each queue currently has:
+     ```bash
+     for q in 0 1 2; do
+       echo "queue/$q: $(gh issue list --label "queue/$q" --state open --json number | jq 'length')"
+     done
+     ```
+   - For each queue that has **0 open issues**, pick the single highest-priority unassigned issue that fits that queue's conflict group and assign it
+   - Do not assign to a queue that already has an open issue — it is not ready to receive new work yet
    - Apply labels: `gh issue edit <N> --add-label "queue/X"`
 
-4. Report a summary: how many issues were assigned, and to which queues.
+4. Report a summary: which queues were refilled and with which issue, and which queues were skipped (still have work).
 
 ## Loop
 
