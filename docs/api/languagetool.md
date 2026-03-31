@@ -43,9 +43,10 @@ See the [Complete API Reference](reference.md#languagetool) for full field docum
 
 Tools must implement the Model Context Protocol:
 
-- Serve HTTP on configured port (default 8080)
-- Expose `/tools` endpoint listing available tools
-- Expose `/invoke` endpoint for tool execution
+- Implement JSON-RPC 2.0 at `POST /mcp` on the configured port (default `8080`)
+- Respond to `tools/list` method with available tools and their schemas
+- Respond to `tools/call` method to execute a named tool
+- Expose `GET /health` returning `{"status":"ok"}` when ready
 
 See [Tool Protocol](../architecture/tools.md) for the full specification.
 
