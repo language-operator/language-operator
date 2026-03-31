@@ -848,7 +848,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					},
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"app.kubernetes.io/name": "language-operator-dashboard",
+							LabelKeyK8sName: "language-operator-dashboard",
 						},
 					},
 				},
@@ -1550,9 +1550,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if serviceAccount.Labels == nil {
 			serviceAccount.Labels = make(map[string]string)
 		}
-		serviceAccount.Labels["app.kubernetes.io/name"] = "language-agent"
-		serviceAccount.Labels["app.kubernetes.io/component"] = "serviceaccount"
-		serviceAccount.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		serviceAccount.Labels[LabelKeyK8sName] = "language-agent"
+		serviceAccount.Labels[LabelKeyK8sComponent] = "serviceaccount"
+		serviceAccount.Labels[LabelKeyK8sManagedBy] = "language-operator"
 
 		return nil
 	})
@@ -1582,9 +1582,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if role.Labels == nil {
 			role.Labels = make(map[string]string)
 		}
-		role.Labels["app.kubernetes.io/name"] = "language-agent"
-		role.Labels["app.kubernetes.io/component"] = "role"
-		role.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		role.Labels[LabelKeyK8sName] = "language-agent"
+		role.Labels[LabelKeyK8sComponent] = "role"
+		role.Labels[LabelKeyK8sManagedBy] = "language-operator"
 		role.Rules = []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
@@ -1616,9 +1616,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if roleBinding.Labels == nil {
 			roleBinding.Labels = make(map[string]string)
 		}
-		roleBinding.Labels["app.kubernetes.io/name"] = "language-agent"
-		roleBinding.Labels["app.kubernetes.io/component"] = "rolebinding"
-		roleBinding.Labels["app.kubernetes.io/managed-by"] = "language-operator"
+		roleBinding.Labels[LabelKeyK8sName] = "language-agent"
+		roleBinding.Labels[LabelKeyK8sComponent] = "rolebinding"
+		roleBinding.Labels[LabelKeyK8sManagedBy] = "language-operator"
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",

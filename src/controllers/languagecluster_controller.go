@@ -383,8 +383,8 @@ func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, clus
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cluster.Name,
 			Labels: map[string]string{
-				"app.kubernetes.io/managed-by": "language-operator",
-				LabelKeyLangopCluster:          cluster.Name,
+				LabelKeyK8sManagedBy:  "language-operator",
+				LabelKeyLangopCluster: cluster.Name,
 			},
 		},
 	}
@@ -406,10 +406,10 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 
 	rbacLabels := map[string]string{
-		"app.kubernetes.io/name":       "language-operator",
-		"app.kubernetes.io/managed-by": "language-operator",
-		"app.kubernetes.io/component":  "agent-rbac",
-		LabelKeyLangopCluster:          cluster.Name,
+		LabelKeyK8sName:       "language-operator",
+		LabelKeyK8sManagedBy:  "language-operator",
+		LabelKeyK8sComponent:  "agent-rbac",
+		LabelKeyLangopCluster: cluster.Name,
 	}
 
 	agentsRole := &rbacv1.Role{
@@ -630,10 +630,10 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 			Name:      fmt.Sprintf("%s-agents", cluster.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       "language-operator",
-				"app.kubernetes.io/managed-by": "language-operator",
-				"app.kubernetes.io/component":  "agent-network-policy",
-				LabelKeyLangopCluster:          cluster.Name,
+				LabelKeyK8sName:       "language-operator",
+				LabelKeyK8sManagedBy:  "language-operator",
+				LabelKeyK8sComponent:  "agent-network-policy",
+				LabelKeyLangopCluster: cluster.Name,
 			},
 		},
 		Spec: networkingv1.NetworkPolicySpec{
@@ -885,11 +885,11 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	// Reconcile ConfigMap
 	gatewayLabels := map[string]string{
-		"app.kubernetes.io/name":       "language-operator",
-		"app.kubernetes.io/managed-by": "language-operator",
-		"app.kubernetes.io/component":  "gateway",
-		LabelKeyLangopCluster:          cluster.Name,
-		LabelKeyLangopKind:             "gateway",
+		LabelKeyK8sName:       "language-operator",
+		LabelKeyK8sManagedBy:  "language-operator",
+		LabelKeyK8sComponent:  "gateway",
+		LabelKeyLangopCluster: cluster.Name,
+		LabelKeyLangopKind:    "gateway",
 	}
 	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
 		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
@@ -1255,10 +1255,10 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 			Name:      quotaName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":       "language-operator",
-				"app.kubernetes.io/managed-by": "language-operator",
-				"app.kubernetes.io/component":  "capacity",
-				LabelKeyLangopCluster:          cluster.Name,
+				LabelKeyK8sName:       "language-operator",
+				LabelKeyK8sManagedBy:  "language-operator",
+				LabelKeyK8sComponent:  "capacity",
+				LabelKeyLangopCluster: cluster.Name,
 			},
 		},
 	}

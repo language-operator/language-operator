@@ -53,6 +53,11 @@ const (
 	LabelKeyLangopConfigHash = "langop.io/config-hash"
 	LabelKeyMetadataName     = "kubernetes.io/metadata.name"
 
+	LabelKeyK8sName      = "app.kubernetes.io/name"
+	LabelKeyK8sComponent = "app.kubernetes.io/component"
+	LabelKeyK8sManagedBy = "app.kubernetes.io/managed-by"
+	LabelKeyK8sPartOf    = "app.kubernetes.io/part-of"
+
 	// LangopUserID is the user ID for the langop user (matches Dockerfile)
 	LangopUserID = 1000
 	// LangopGroupID is the group ID for the langop group
@@ -324,10 +329,10 @@ func GenerateConfigMapName(resourceName, suffix string) string {
 // GetCommonLabels returns common labels for resources
 func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/name":       resourceName,
-		"app.kubernetes.io/managed-by": "language-operator",
-		"app.kubernetes.io/part-of":    "langop",
-		LabelKeyLangopKind:             resourceKind,
+		LabelKeyK8sName:      resourceName,
+		LabelKeyK8sManagedBy: "language-operator",
+		LabelKeyK8sPartOf:    "langop",
+		LabelKeyLangopKind:   resourceKind,
 	}
 }
 
