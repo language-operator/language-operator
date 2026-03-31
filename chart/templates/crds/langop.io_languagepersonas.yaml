@@ -141,10 +141,9 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase (Ready, Failed)
+                description: Phase represents the current phase
                 enum:
                 - Ready
-                - Failed
                 type: string
             type: object
         type: object
