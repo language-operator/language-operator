@@ -1208,8 +1208,8 @@ func (r *LanguageAgentReconciler) cleanupSharedRBAC(ctx context.Context, agent *
 		return fmt.Errorf("failed to list LanguageAgents: %w", err)
 	}
 	for _, a := range agentList.Items {
-		if a.Name != agent.Name {
-			// Another agent still exists; leave shared resources intact
+		if a.Name != agent.Name && a.DeletionTimestamp.IsZero() {
+			// Another live agent still exists; leave shared resources intact
 			return nil
 		}
 	}
