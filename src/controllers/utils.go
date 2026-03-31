@@ -173,12 +173,14 @@ func CreateOrUpdateNetworkPolicyWithTimeout(
 	// Retry logic with exponential backoff
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		// Create timeout context for this attempt
+		// Create timeout context for this attempt and cancel it immediately after
+		// use — not via defer, which is function-scoped and would leak the timer
+		// goroutine across all remaining loop iterations.
 		timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
 
 		start := time.Now()
 		err := tryCreateOrUpdateNetworkPolicy(timeoutCtx, c, networkPolicy, logger)
+		cancel()
 		duration := time.Since(start)
 
 		if err == nil {
