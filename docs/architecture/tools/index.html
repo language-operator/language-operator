@@ -1798,7 +1798,7 @@
 <p>Returns <code>200 OK</code> with a JSON body when the tool is ready to serve requests:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div>
-<p>The operator polls this endpoint to determine tool availability before injecting the endpoint into agent configs. A tool that fails its health check will not be included in the agent's <code>tools.json</code>.</p>
+<p>The tool controller uses this endpoint to gate schema discovery: once the tool deployment reports <code>ReadyReplicas &gt; 0</code>, it calls <code>tools/list</code> to populate <code>status.availableTools</code>. Tool endpoints are injected into the agent's <code>/etc/agent/config.yaml</code> under the <code>tools:</code> key for every enabled tool reference in the agent spec, regardless of tool readiness.</p>
 <h2 id="languagetool-crd-reference">LanguageTool CRD Reference<a class="headerlink" href="#languagetool-crd-reference" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageTool</span>
