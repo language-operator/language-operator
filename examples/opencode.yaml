@@ -1,0 +1,120 @@
+---
+# Example: deploying opencode via language-operator
+#
+# The LanguageModel CR registers a model with the LiteLLM gateway. The operator resolves the
+# gateway endpoint and injects MODEL_ENDPOINTS into all containers (including
+# init containers). The opencode-adapter reads MODEL_ENDPOINTS and writes
+# /etc/opencode/opencode.jsonc so opencode routes LLM traffic through the
+# gateway rather than connecting to model APIs directly.
+#
+# opencode uses command: ["opencode"] + args: ["serve", ...] because its
+# Docker image has ENTRYPOINT ["opencode"] with no default CMD — the serve
+# subcommand must be supplied explicitly.
+#
+# Prerequisites:
+#
+#   kubectl create secret generic anthropic-credentials \
+#     -n language-operator-opencode \
+#     --from-literal=api-key=sk-ant-...
+#
+#   kubectl create secret generic opencode-server \
+#     -n language-operator-opencode \
+#     --from-literal=OPENCODE_SERVER_PASSWORD=$(openssl rand -hex 32)
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: language-operator-opencode
+spec:
+  domain: agents.example.com
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+  namespace: language-operator-opencode
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-5
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key
+
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: opencode
+  namespace: language-operator-opencode
+spec:
+  image: ghcr.io/sst/opencode:latest
+  port: 3000
+  models:
+    - name: claude-sonnet
+
+  workspace:
+    enabled: true
+    size: 10Gi
+
+  deployment:
+    replicas: 1
+
+    # opencode's Docker image uses ENTRYPOINT ["opencode"] with no default CMD,
+    # so the serve subcommand must be passed explicitly via args.
+    command: ["opencode"]
+    args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
+
+    initContainers:
+      - name: opencode-adapter
+        image: ghcr.io/language-operator/opencode-adapter:latest
+        # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
+        # The adapter writes /etc/opencode/opencode.jsonc with provider + MCP config.
+        volumeMounts:
+          - name: opencode-config
+            mountPath: /etc/opencode
+
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      successThreshold: 1
+      failureThreshold: 3
+
+    env:
+      # SQLite session DB and other opencode state lives under $XDG_DATA_HOME/opencode
+      - name: XDG_DATA_HOME
+        value: /workspace/.local/share
+
+    envFrom:
+      - secretRef:
+          name: opencode-server   # OPENCODE_SERVER_PASSWORD
+
+    volumes:
+      - name: opencode-config
+        emptyDir: {}
+
+    volumeMounts:
+      - name: opencode-config
+        mountPath: /etc/opencode
+
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 2Gi
+        cpu: 1000m

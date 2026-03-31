@@ -182,6 +182,14 @@ type DeploymentSpec struct {
 	// +optional
 	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
 
+	// Command overrides the container entrypoint.
+	// +optional
+	Command []string `json:"command,omitempty"`
+
+	// Args overrides the container command arguments.
+	// +optional
+	Args []string `json:"args,omitempty"`
+
 	// ServiceType specifies the type of Service to create (ClusterIP, NodePort, LoadBalancer).
 	// +kubebuilder:validation:Enum=ClusterIP;NodePort;LoadBalancer
 	// +optional

@@ -714,6 +714,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				Name:            "agent",
 				Image:           agent.Spec.Image,
 				ImagePullPolicy: agent.Spec.Deployment.ImagePullPolicy,
+				Command:         agent.Spec.Deployment.Command,
+				Args:            agent.Spec.Deployment.Args,
 				Env:             r.buildAgentEnv(ctx, agent, cluster, modelURLs, modelNames, toolURLs),
 				EnvFrom:         agent.Spec.Deployment.EnvFrom,
 				Resources:       agent.Spec.Deployment.Resources,
