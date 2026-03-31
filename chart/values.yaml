@@ -56,7 +56,7 @@ securityContext:
 # Service configuration
 service:
   type: ClusterIP
-  metricsPort: 8443
+  metricsPort: 8443  # controls both the Service port and the --metrics-bind-address flag
   annotations: {}
 
 # Resource limits and requests
@@ -126,10 +126,6 @@ config:
     leaseDuration: 15s
     renewDeadline: 10s
     retryPeriod: 2s
-
-  # Metrics configuration
-  metrics:
-    bindAddress: ":8443"
 
   # Health probe configuration
   health:
