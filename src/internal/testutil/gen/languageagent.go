@@ -185,3 +185,10 @@ func SetAgentWorkspaceAccessMode(mode corev1.PersistentVolumeAccessMode) Languag
 		a.Spec.Workspace.AccessMode = string(mode)
 	}
 }
+
+// SetAgentServiceAccountName sets spec.deployment.serviceAccountName.
+func SetAgentServiceAccountName(name string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Deployment.ServiceAccountName = name
+	}
+}
