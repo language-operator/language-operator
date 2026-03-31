@@ -72,7 +72,6 @@ resources:
 livenessProbe:
   httpGet:
     path: /healthz
-    port: 8081
   initialDelaySeconds: 15
   periodSeconds: 20
 
@@ -80,7 +79,6 @@ livenessProbe:
 readinessProbe:
   httpGet:
     path: /readyz
-    port: 8081
   initialDelaySeconds: 5
   periodSeconds: 10
 
@@ -130,7 +128,6 @@ config:
   # Health probe configuration
   health:
     port: 8081
-    bindAddress: ":8081"
 
   # Webhook configuration
   webhook:

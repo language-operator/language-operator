@@ -53,7 +53,7 @@ spec:
         - --leader-elect-retry-period={{ .Values.config.leaderElection.retryPeriod }}
         {{- end }}
         - --metrics-bind-address={{ include "language-operator.metricsBindAddress" . }}
-        - --health-probe-bind-address={{ .Values.config.health.bindAddress }}
+        - --health-probe-bind-address=:{{ .Values.config.health.port }}
         - --zap-log-level={{ .Values.config.logging.level }}
         - --zap-encoder={{ .Values.config.logging.format }}
         {{- if .Values.config.logging.development }}
