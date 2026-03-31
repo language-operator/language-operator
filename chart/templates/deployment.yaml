@@ -88,6 +88,7 @@ spec:
         {{- end }}
         {{- if .Values.config.webhook.enabled }}
         - --webhook-port={{ .Values.config.webhook.port }}
+        - --cert-dir={{ .Values.config.webhook.certDir }}
         {{- else }}
         - --disable-webhooks
         {{- end }}

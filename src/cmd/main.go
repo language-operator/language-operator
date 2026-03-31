@@ -89,6 +89,7 @@ func main() {
 	var gatewayImage string
 	var gatewayImagePullPolicy string
 	var webhookPort int
+	var webhookCertDir string
 	var disableWebhooks bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
@@ -123,6 +124,8 @@ func main() {
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"Port the webhook server listens on.")
+	flag.StringVar(&webhookCertDir, "cert-dir", "/tmp/k8s-webhook-server/serving-certs",
+		"Directory containing TLS certificates for the webhook server.")
 	flag.BoolVar(&disableWebhooks, "disable-webhooks", false,
 		"Disable webhook server and all admission webhooks. Use when cert-manager is not installed.")
 
@@ -262,7 +265,7 @@ func main() {
 		},
 	}
 	if !disableWebhooks {
-		mgrOptions.WebhookServer = webhook.NewServer(webhook.Options{Port: webhookPort})
+		mgrOptions.WebhookServer = webhook.NewServer(webhook.Options{Port: webhookPort, CertDir: webhookCertDir})
 	}
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
