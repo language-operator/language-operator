@@ -639,28 +639,9 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 		},
 	}
 
-	// Set cluster as owner so NetworkPolicy gets cleaned up when cluster is deleted
-	if err := controllerutil.SetControllerReference(cluster, networkPolicy, r.Scheme); err != nil {
-		return fmt.Errorf("failed to set controller reference for NetworkPolicy: %w", err)
-	}
-
-	// Create or update the NetworkPolicy
-	if err := r.Create(ctx, networkPolicy); err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create NetworkPolicy: %w", err)
-		}
-		// NetworkPolicy already exists, update it if needed
-		existingNetworkPolicy := &networkingv1.NetworkPolicy{}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(networkPolicy), existingNetworkPolicy); err != nil {
-			return fmt.Errorf("failed to get existing NetworkPolicy: %w", err)
-		}
-		existingNetworkPolicy.Spec = networkPolicy.Spec
-		if err := r.Update(ctx, existingNetworkPolicy); err != nil {
-			return fmt.Errorf("failed to update NetworkPolicy: %w", err)
-		}
-		log.V(1).Info("Updated existing NetworkPolicy", "namespace", namespace)
-	} else {
-		log.Info("Created NetworkPolicy", "namespace", namespace, "name", networkPolicy.Name)
+	// Create or update the NetworkPolicy (sets owner reference internally)
+	if err := CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, cluster, networkPolicy); err != nil {
+		return fmt.Errorf("failed to reconcile NetworkPolicy: %w", err)
 	}
 
 	log.V(1).Info("Successfully reconciled NetworkPolicy", "cluster", cluster.Name, "namespace", namespace)
