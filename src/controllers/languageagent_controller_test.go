@@ -1907,6 +1907,111 @@ func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 	})
 }
 
+// TestLanguageAgentController_WebhookConditions_LBNotReady verifies that when a cluster
+// has spec.domain set but the Ingress LB is not yet assigned, reconcileWebhooks sets
+// ConditionWebhookRouteCreated=True, ConditionWebhookRouteReady=False, and leaves
+// WebhookURLs empty.
+func TestLanguageAgentController_WebhookConditions_LBNotReady(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("default", gen.SetClusterDomain("example.com"))
+	agent := gen.LanguageAgent("hook-agent", "default")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileWebhooks(ctx, agent))
+
+	var routeCreated, routeReady *metav1.Condition
+	for i := range agent.Status.Conditions {
+		switch agent.Status.Conditions[i].Type {
+		case langopv1alpha1.ConditionWebhookRouteCreated:
+			routeCreated = &agent.Status.Conditions[i]
+		case langopv1alpha1.ConditionWebhookRouteReady:
+			routeReady = &agent.Status.Conditions[i]
+		}
+	}
+
+	require.NotNil(t, routeCreated, "ConditionWebhookRouteCreated must be set")
+	assert.Equal(t, metav1.ConditionTrue, routeCreated.Status)
+	assert.Equal(t, "IngressCreated", routeCreated.Reason)
+
+	require.NotNil(t, routeReady, "ConditionWebhookRouteReady must be set")
+	assert.Equal(t, metav1.ConditionFalse, routeReady.Status)
+
+	assert.Empty(t, agent.Status.WebhookURLs, "WebhookURLs must be empty when LB is not ready")
+}
+
+// TestLanguageAgentController_WebhookConditions_LBReady verifies that when the Ingress
+// LB is assigned, reconcileWebhooks sets ConditionWebhookRouteReady=True and populates
+// agent.Status.WebhookURLs with the expected URL.
+func TestLanguageAgentController_WebhookConditions_LBReady(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("default", gen.SetClusterDomain("example.com"))
+	agent := gen.LanguageAgent("hook-agent", "default")
+
+	// Pre-create the Ingress with an LB IP already assigned so checkIngressReadiness returns true.
+	ing := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{Name: "hook-agent", Namespace: "default"},
+		Status: networkingv1.IngressStatus{
+			LoadBalancer: networkingv1.IngressLoadBalancerStatus{
+				Ingress: []networkingv1.IngressLoadBalancerIngress{{IP: "10.0.0.1"}},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent, ing).
+		WithStatusSubresource(agent, ing).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileWebhooks(ctx, agent))
+
+	var routeCreated, routeReady *metav1.Condition
+	for i := range agent.Status.Conditions {
+		switch agent.Status.Conditions[i].Type {
+		case langopv1alpha1.ConditionWebhookRouteCreated:
+			routeCreated = &agent.Status.Conditions[i]
+		case langopv1alpha1.ConditionWebhookRouteReady:
+			routeReady = &agent.Status.Conditions[i]
+		}
+	}
+
+	require.NotNil(t, routeCreated, "ConditionWebhookRouteCreated must be set")
+	assert.Equal(t, metav1.ConditionTrue, routeCreated.Status)
+	assert.Equal(t, "IngressCreated", routeCreated.Reason)
+
+	require.NotNil(t, routeReady, "ConditionWebhookRouteReady must be set")
+	assert.Equal(t, metav1.ConditionTrue, routeReady.Status)
+	assert.Equal(t, "WebhookRouteReady", routeReady.Reason)
+
+	require.Len(t, agent.Status.WebhookURLs, 1, "WebhookURLs must contain exactly one entry")
+	assert.Equal(t, "https://hook-agent.example.com", agent.Status.WebhookURLs[0])
+}
+
 // --- Group 4: Resource resolution and persona ---
 
 func TestLanguageAgentController_ResolveTools(t *testing.T) {
