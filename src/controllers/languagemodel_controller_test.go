@@ -132,7 +132,7 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 	if readyCondition.Status != metav1.ConditionTrue {
 		t.Errorf("Expected condition status True, got %s", readyCondition.Status)
 	}
-	if readyCondition.Reason != "ReconcileSuccess" {
+	if readyCondition.Reason != langopv1alpha1.ReasonReconcileSuccess {
 		t.Errorf("Expected reason 'ReconcileSuccess', got '%s'", readyCondition.Reason)
 	}
 }

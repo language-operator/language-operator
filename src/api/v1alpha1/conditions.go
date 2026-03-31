@@ -31,3 +31,35 @@ const (
 	ConditionWebhookRouteCreated   = "WebhookRouteCreated"
 	ConditionWebhookRouteReady     = "WebhookRouteReady"
 )
+
+// Condition reason constants used in SetCondition calls across all controllers.
+// Use these instead of raw string literals to get compile-time safety.
+const (
+	ReasonReconcileSuccess      = "ReconcileSuccess"
+	ReasonNetworkPolicyReady    = "NetworkPolicyReady"
+	ReasonNetworkPolicyError    = "NetworkPolicyError"
+	ReasonNetworkPolicyDisabled = "NetworkPolicyDisabled"
+	ReasonNetworkPolicyTimeout  = "NetworkPolicyTimeout"
+	ReasonValidated             = "Validated"
+	ReasonServiceError          = "ServiceError"
+	ReasonRegistryNotAllowed    = "RegistryNotAllowed"
+	ReasonPending               = "Pending"
+	ReasonUpdating              = "Updating"
+	ReasonPodsNotReady          = "PodsNotReady"
+	ReasonDeploymentError       = "DeploymentError"
+	ReasonDeploymentNotFound    = "DeploymentNotFound"
+	ReasonConfigMapError        = "ConfigMapError"
+	ReasonPVCError              = "PVCError"
+	ReasonServiceAccountError   = "ServiceAccountError"
+	ReasonSchemasDiscovered     = "SchemasDiscovered"
+	ReasonNoRunningAgentPod     = "NoRunningAgentPod"
+	ReasonGatewayReady          = "GatewayReady"
+	ReasonWebhookRouteReady     = "WebhookRouteReady"
+	ReasonWebhookRouteNotReady  = "WebhookRouteNotReady"
+	ReasonIngressCreated        = "IngressCreated"
+	ReasonIngressCreationFailed = "IngressCreationFailed"
+	ReasonCNINotSupported       = "CNINotSupported"
+	ReasonEnforced              = "Enforced"
+	ReasonDisabled              = "Disabled"
+	ReasonConfigured            = "Configured"
+)

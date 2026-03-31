@@ -271,18 +271,18 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 			cluster.Status.Phase = events.PhaseStatusFailed
 			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
-				"NetworkPolicyError", err.Error(), cluster.Generation)
+				langopv1alpha1.ReasonNetworkPolicyError, err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after NetworkPolicy error")
 			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		} else {
-			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyReady",
+			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonNetworkPolicyReady,
 				"NetworkPolicy created successfully", cluster.Generation)
 		}
 	} else {
-		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyDisabled",
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonNetworkPolicyDisabled,
 			"NetworkPolicy creation disabled via networkIsolation.enabled=false", cluster.Generation)
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
@@ -322,7 +322,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionTrue,
-		"GatewayReady", "Shared LiteLLM gateway is ready", cluster.Generation)
+		langopv1alpha1.ReasonGatewayReady, "Shared LiteLLM gateway is ready", cluster.Generation)
 	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", cluster.Name)
 	cluster.Status.GatewayReady = ptr.To(true)
 
@@ -350,7 +350,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	cluster.Status.Phase = events.PhaseStatusReady
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
-		"ReconcileSuccess", "LanguageCluster is ready", cluster.Generation)
+		langopv1alpha1.ReasonReconcileSuccess, "LanguageCluster is ready", cluster.Generation)
 
 	if r.EventManager != nil {
 		r.EventManager.RecordClusterReady(cluster)

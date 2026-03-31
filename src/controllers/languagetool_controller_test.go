@@ -115,8 +115,8 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 	if readyCond.Status != metav1.ConditionTrue {
 		t.Errorf("Expected Ready condition Status %q, got %q", metav1.ConditionTrue, readyCond.Status)
 	}
-	if readyCond.Reason != "ReconcileSuccess" {
-		t.Errorf("Expected Ready condition Reason %q, got %q", "ReconcileSuccess", readyCond.Reason)
+	if readyCond.Reason != langopv1alpha1.ReasonReconcileSuccess {
+		t.Errorf("Expected Ready condition Reason %q, got %q", langopv1alpha1.ReasonReconcileSuccess, readyCond.Reason)
 	}
 	if updatedTool.Status.ObservedGeneration != tool.Generation {
 		t.Errorf("Expected ObservedGeneration %d, got %d", tool.Generation, updatedTool.Status.ObservedGeneration)
@@ -200,9 +200,9 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				UpdatedReplicas:     1,
 				UnavailableReplicas: 0,
 			},
-			expectedPhase:     "Pending",
+			expectedPhase:     langopv1alpha1.ReasonPending,
 			expectedCondition: metav1.ConditionFalse,
-			expectedReason:    "Pending",
+			expectedReason:    langopv1alpha1.ReasonPending,
 		},
 		{
 			name: "Failed - pods exist but none ready (CrashLoopBackOff)",
@@ -214,7 +214,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 			},
 			expectedPhase:     "Failed",
 			expectedCondition: metav1.ConditionFalse,
-			expectedReason:    "PodsNotReady",
+			expectedReason:    langopv1alpha1.ReasonPodsNotReady,
 		},
 		{
 			name: "Running - at least one pod ready",
@@ -226,7 +226,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 			},
 			expectedPhase:     "Running",
 			expectedCondition: metav1.ConditionTrue,
-			expectedReason:    "ReconcileSuccess",
+			expectedReason:    langopv1alpha1.ReasonReconcileSuccess,
 		},
 		{
 			name: "Updating - not all replicas updated",
@@ -236,9 +236,9 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				UpdatedReplicas:     0,
 				UnavailableReplicas: 0,
 			},
-			expectedPhase:     "Updating",
+			expectedPhase:     langopv1alpha1.ReasonUpdating,
 			expectedCondition: metav1.ConditionFalse,
-			expectedReason:    "Updating",
+			expectedReason:    langopv1alpha1.ReasonUpdating,
 		},
 	}
 
@@ -319,7 +319,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 			}
 
 			// Verify replica counts are copied from deployment
-			if tt.expectedPhase != "Pending" {
+			if tt.expectedPhase != langopv1alpha1.ReasonPending {
 				if updatedTool.Status.ReadyReplicas != tt.deploymentStatus.ReadyReplicas {
 					t.Errorf("Expected ReadyReplicas %d, got %d", tt.deploymentStatus.ReadyReplicas, updatedTool.Status.ReadyReplicas)
 				}
@@ -797,8 +797,8 @@ func TestLanguageToolController_PhaseFailedOnRegistryError(t *testing.T) {
 	if regCond.Status != metav1.ConditionFalse {
 		t.Errorf("Expected RegistryValidated status %q, got %q", metav1.ConditionFalse, regCond.Status)
 	}
-	if regCond.Reason != "RegistryNotAllowed" {
-		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
+	if regCond.Reason != langopv1alpha1.ReasonRegistryNotAllowed {
+		t.Errorf("Expected RegistryValidated reason %q, got %q", langopv1alpha1.ReasonRegistryNotAllowed, regCond.Reason)
 	}
 }
 
@@ -977,7 +977,7 @@ func TestLanguageToolController_SidecarMode_NoRunningPod(t *testing.T) {
 	if schemasCond.Status != metav1.ConditionFalse {
 		t.Errorf("Expected SchemasDiscovered=False, got %s", schemasCond.Status)
 	}
-	if schemasCond.Reason != "NoRunningAgentPod" {
+	if schemasCond.Reason != langopv1alpha1.ReasonNoRunningAgentPod {
 		t.Errorf("Expected reason NoRunningAgentPod, got %s", schemasCond.Reason)
 	}
 }
@@ -1133,7 +1133,7 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionTrue(t *testing.
 	}
 	require.NotNil(t, cond, "expected ConditionNetworkPolicyReady to be set")
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
-	assert.Equal(t, "NetworkPolicyReady", cond.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonNetworkPolicyReady, cond.Reason)
 }
 
 func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing.T) {
@@ -1188,7 +1188,7 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing
 	}
 	require.NotNil(t, cond, "expected ConditionReady to be set")
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
-	assert.Equal(t, "NetworkPolicyError", cond.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonNetworkPolicyError, cond.Reason)
 
 	var npCond *metav1.Condition
 	for i := range updated.Status.Conditions {

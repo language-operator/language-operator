@@ -262,7 +262,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	}
 
 	// After reconcile, deployment has 0 ready replicas in fake client → Pending
-	if updatedAgent.Status.Phase != "Pending" {
+	if updatedAgent.Status.Phase != langopv1alpha1.ReasonPending {
 		t.Errorf("Expected phase 'Pending', got '%s'", updatedAgent.Status.Phase)
 	}
 
@@ -280,7 +280,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	if readyCondition.Status != metav1.ConditionTrue {
 		t.Errorf("Expected condition status True, got %s", readyCondition.Status)
 	}
-	if readyCondition.Reason != "ReconcileSuccess" {
+	if readyCondition.Reason != langopv1alpha1.ReasonReconcileSuccess {
 		t.Errorf("Expected reason 'ReconcileSuccess', got '%s'", readyCondition.Reason)
 	}
 
@@ -2037,7 +2037,7 @@ func TestLanguageAgentController_WebhookConditions_LBNotReady(t *testing.T) {
 
 	require.NotNil(t, routeCreated, "ConditionWebhookRouteCreated must be set")
 	assert.Equal(t, metav1.ConditionTrue, routeCreated.Status)
-	assert.Equal(t, "IngressCreated", routeCreated.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonIngressCreated, routeCreated.Reason)
 
 	require.NotNil(t, routeReady, "ConditionWebhookRouteReady must be set")
 	assert.Equal(t, metav1.ConditionFalse, routeReady.Status)
@@ -2093,11 +2093,11 @@ func TestLanguageAgentController_WebhookConditions_LBReady(t *testing.T) {
 
 	require.NotNil(t, routeCreated, "ConditionWebhookRouteCreated must be set")
 	assert.Equal(t, metav1.ConditionTrue, routeCreated.Status)
-	assert.Equal(t, "IngressCreated", routeCreated.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonIngressCreated, routeCreated.Reason)
 
 	require.NotNil(t, routeReady, "ConditionWebhookRouteReady must be set")
 	assert.Equal(t, metav1.ConditionTrue, routeReady.Status)
-	assert.Equal(t, "WebhookRouteReady", routeReady.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonWebhookRouteReady, routeReady.Reason)
 
 	require.Len(t, agent.Status.WebhookURLs, 1, "WebhookURLs must contain exactly one entry")
 	assert.Equal(t, "https://hook-agent.example.com", agent.Status.WebhookURLs[0])
@@ -2157,7 +2157,7 @@ func TestLanguageAgentController_WebhooksReady_ViaReconcile(t *testing.T) {
 	}
 	require.NotNil(t, webhooksReady, "ConditionWebhooksReady must be set")
 	assert.Equal(t, metav1.ConditionTrue, webhooksReady.Status)
-	assert.Equal(t, "Configured", webhooksReady.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonConfigured, webhooksReady.Reason)
 }
 
 // --- Group 4: Resource resolution and persona ---
@@ -3472,8 +3472,8 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 	if regCond.Status != metav1.ConditionFalse {
 		t.Errorf("Expected RegistryValidated status %q, got %q", metav1.ConditionFalse, regCond.Status)
 	}
-	if regCond.Reason != "RegistryNotAllowed" {
-		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
+	if regCond.Reason != langopv1alpha1.ReasonRegistryNotAllowed {
+		t.Errorf("Expected RegistryValidated reason %q, got %q", langopv1alpha1.ReasonRegistryNotAllowed, regCond.Reason)
 	}
 }
 
@@ -3745,7 +3745,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 
 	cases := []errorPathCase{
 		{
-			name: "ConfigMapError",
+			name: langopv1alpha1.ReasonConfigMapError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("cm-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3756,10 +3756,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  "ConfigMapError",
+			condReason:  langopv1alpha1.ReasonConfigMapError,
 		},
 		{
-			name: "PVCError",
+			name: langopv1alpha1.ReasonPVCError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("pvc-err-agent", "default", gen.SetAgentWorkspace("5Gi"))
 				a.Finalizers = []string{FinalizerName}
@@ -3770,10 +3770,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  "PVCError",
+			condReason:  langopv1alpha1.ReasonPVCError,
 		},
 		{
-			name: "ServiceError",
+			name: langopv1alpha1.ReasonServiceError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("svc-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3784,10 +3784,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  "ServiceError",
+			condReason:  langopv1alpha1.ReasonServiceError,
 		},
 		{
-			name: "ServiceAccountError",
+			name: langopv1alpha1.ReasonServiceAccountError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("sa-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3798,10 +3798,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  "ServiceAccountError",
+			condReason:  langopv1alpha1.ReasonServiceAccountError,
 		},
 		{
-			name: "DeploymentError",
+			name: langopv1alpha1.ReasonDeploymentError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("dep-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3812,10 +3812,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  "DeploymentError",
+			condReason:  langopv1alpha1.ReasonDeploymentError,
 		},
 		{
-			name: "NetworkPolicyError",
+			name: langopv1alpha1.ReasonNetworkPolicyError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("np-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3827,10 +3827,10 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError:      true,
 			condType:         langopv1alpha1.ConditionReady,
 			condStatus:       metav1.ConditionFalse,
-			condReason:       "NetworkPolicyError",
+			condReason:       langopv1alpha1.ReasonNetworkPolicyError,
 		},
 		{
-			name: "NetworkPolicyTimeout",
+			name: langopv1alpha1.ReasonNetworkPolicyTimeout,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
 				a := gen.LanguageAgent("np-timeout-agent", "default")
 				a.Finalizers = []string{FinalizerName}
@@ -3842,7 +3842,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			expectError:      false, // degraded mode — reconcile continues without error
 			condType:         langopv1alpha1.ConditionNetworkPolicyReady,
 			condStatus:       metav1.ConditionFalse,
-			condReason:       "NetworkPolicyTimeout",
+			condReason:       langopv1alpha1.ReasonNetworkPolicyTimeout,
 		},
 	}
 
@@ -3978,7 +3978,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *tes
 	}
 	require.NotNil(t, cond, "expected ConditionNetworkPolicyEnforced to be set")
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
-	assert.Equal(t, "Enforced", cond.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonEnforced, cond.Reason)
 	assert.Contains(t, cond.Message, "cilium")
 }
 
@@ -4026,7 +4026,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *
 	}
 	require.NotNil(t, cond, "expected ConditionNetworkPolicyEnforced to be set")
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
-	assert.Equal(t, "CNINotSupported", cond.Reason)
+	assert.Equal(t, langopv1alpha1.ReasonCNINotSupported, cond.Reason)
 }
 
 // TestLanguageAgentController_CustomPortService verifies that spec.port flows through
