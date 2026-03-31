@@ -343,6 +343,13 @@ type LanguageClusterStatus struct {
 	// Capacity reports observed resource usage in this cluster's namespace.
 	// +optional
 	Capacity *ClusterCapacityStatus `json:"capacity,omitempty"`
+
+	// ObservedGeneration is the most recent generation observed by the controller.
+	// It corresponds to the metadata.generation of the LanguageCluster at the time
+	// the controller last processed it. Watchers can use this to detect when the
+	// status reflects a stale version of the spec.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 //+kubebuilder:object:root=true
