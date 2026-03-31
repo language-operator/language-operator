@@ -14,6 +14,8 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -23,7 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 // mockRegistryManager is a mock implementation of RegistryManager for testing
@@ -1074,4 +1078,107 @@ func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T
 	if schemasCond.Status != metav1.ConditionTrue {
 		t.Errorf("Expected SchemasDiscovered=True, got %s", schemasCond.Status)
 	}
+}
+
+func TestLanguageToolController_Reconcile_NetworkPolicyConditionTrue(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("np-cond-tool", "default",
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	// First reconcile: adds finalizer.
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Second reconcile: creates resources and sets conditions.
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyReady {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "expected ConditionNetworkPolicyReady to be set")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, "NetworkPolicyReady", cond.Reason)
+}
+
+func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("np-err-tool", "default",
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+	)
+	tool.Finalizers = []string{FinalizerName}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if _, ok := obj.(*networkingv1.NetworkPolicy); ok {
+					return fmt.Errorf("injected networkpolicy error")
+				}
+				return c.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	// Finalizer already set — single reconcile hits resource creation.
+	_, err := r.Reconcile(ctx, req)
+	require.Error(t, err)
+
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+
+	assert.Equal(t, events.PhaseStatusFailed, updated.Status.Phase)
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "expected ConditionReady to be set")
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, "NetworkPolicyError", cond.Reason)
 }
