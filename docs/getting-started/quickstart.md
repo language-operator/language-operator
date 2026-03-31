@@ -82,23 +82,24 @@ spec:
   port: 18789
   models:
     - name: claude-sonnet
-  initContainers:
-    - name: openclaw-adapter
-      image: ghcr.io/language-operator/openclaw-adapter:latest
-      env:
-        - name: OPENCLAW_STATE_DIR
-          value: /workspace/.openclaw
-      volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-  env:
-    - name: OPENCLAW_HOME
-      value: /workspace
-  envFrom:
-    - secretRef:
-        name: openclaw-gateway
   workspace:
     size: 10Gi
+  deployment:
+    initContainers:
+      - name: openclaw-adapter
+        image: ghcr.io/language-operator/openclaw-adapter:latest
+        env:
+          - name: OPENCLAW_STATE_DIR
+            value: /workspace/.openclaw
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+    env:
+      - name: OPENCLAW_HOME
+        value: /workspace
+    envFrom:
+      - secretRef:
+          name: openclaw-gateway
 EOF
 ```
 
