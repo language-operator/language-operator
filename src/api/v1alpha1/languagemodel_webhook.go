@@ -28,23 +28,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-//+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languagemodel,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagemodels,verbs=create;update,versions=v1alpha1,name=mlanguagemodel.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagemodel,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagemodels,verbs=create;update,versions=v1alpha1,name=vlanguagemodel.kb.io,admissionReviewVersions=v1
 
-// LanguageModelWebhook handles defaulting and validation for LanguageModel.
+// LanguageModelWebhook handles validation for LanguageModel.
 //
 // +kubebuilder:object:generate=false
 type LanguageModelWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomDefaulter = &LanguageModelWebhook{}
 var _ webhook.CustomValidator = &LanguageModelWebhook{}
-
-// Default implements webhook.CustomDefaulter
-func (h *LanguageModelWebhook) Default(_ context.Context, _ runtime.Object) error {
-	return nil
-}
 
 // ValidateCreate implements webhook.CustomValidator
 func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
@@ -77,12 +70,11 @@ func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, na
 	return nil
 }
 
-// SetupLanguageModelWebhookWithManager registers the LanguageModel mutating and validating webhooks.
+// SetupLanguageModelWebhookWithManager registers the LanguageModel validating webhook.
 func SetupLanguageModelWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguageModelWebhook{Client: mgr.GetClient()}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&LanguageModel{}).
-		WithDefaulter(h).
 		WithValidator(h).
 		Complete()
 }
