@@ -69,6 +69,12 @@ type LanguageClusterReconciler struct {
 	NetworkIsolationEnabled bool
 	GatewayImage            string
 	GatewayImagePullPolicy  corev1.PullPolicy
+	// DNSLookup replaces the live net.Resolver lookup when non-nil.
+	// Used only in unit tests to inject controlled success/failure.
+	DNSLookup func(ctx context.Context, host string) error
+	// dnsTestDone, when non-nil, is closed by the async DNS goroutine after the
+	// status update completes. Used only in unit tests to synchronise on completion.
+	dnsTestDone chan struct{}
 }
 
 func (r *LanguageClusterReconciler) gatewayImage() string {
@@ -793,10 +799,18 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 	go func() {
 		dnsCtx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 		defer cancel()
+		if r.dnsTestDone != nil {
+			defer close(r.dnsTestDone)
+		}
 
 		testHost := fmt.Sprintf("test-validation.%s", domain)
-		resolver := &net.Resolver{}
-		_, err := resolver.LookupHost(dnsCtx, testHost)
+		var err error
+		if r.DNSLookup != nil {
+			err = r.DNSLookup(dnsCtx, testHost)
+		} else {
+			resolver := &net.Resolver{}
+			_, err = resolver.LookupHost(dnsCtx, testHost)
+		}
 
 		var fresh langopv1alpha1.LanguageCluster
 		if getErr := r.Client.Get(dnsCtx, clusterKey, &fresh); getErr != nil {

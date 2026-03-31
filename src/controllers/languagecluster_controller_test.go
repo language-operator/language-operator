@@ -1671,3 +1671,103 @@ func TestValidateDNS_NonBlocking(t *testing.T) {
 			"validateDNS must not set DNS condition synchronously on the in-memory cluster")
 	}
 }
+
+// TestValidateDNS_SuccessSetsTrueCondition verifies that when DNS resolution succeeds,
+// validateDNS writes ConditionDNSConfigured=True with Reason=WildcardDNSReady back
+// to the API server via the async goroutine.
+func TestValidateDNS_SuccessSetsTrueCondition(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("dns-success",
+		gen.SetClusterDomain("example.com"),
+	)
+	cluster.Generation = 1
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	done := make(chan struct{})
+	reconciler := &LanguageClusterReconciler{
+		Client:      fakeClient,
+		Scheme:      scheme,
+		Log:         logr.Discard(),
+		DNSLookup:   func(_ context.Context, _ string) error { return nil },
+		dnsTestDone: done,
+	}
+
+	reconciler.validateDNS(context.Background(), cluster)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("DNS goroutine did not complete in time")
+	}
+
+	var updated langopv1alpha1.LanguageCluster
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "dns-success"}, &updated))
+
+	var found *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionDNSConfigured {
+			found = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "ConditionDNSConfigured must be set after successful DNS lookup")
+	assert.Equal(t, metav1.ConditionTrue, found.Status)
+	assert.Equal(t, "WildcardDNSReady", found.Reason)
+	assert.Equal(t, cluster.Generation, found.ObservedGeneration)
+}
+
+// TestValidateDNS_FailureSetsWildcardDNSMissing verifies that when DNS resolution fails,
+// validateDNS writes ConditionDNSConfigured=False with Reason=WildcardDNSMissing back
+// to the API server via the async goroutine.
+func TestValidateDNS_FailureSetsWildcardDNSMissing(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("dns-failure",
+		gen.SetClusterDomain("example.com"),
+	)
+	cluster.Generation = 1
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	done := make(chan struct{})
+	reconciler := &LanguageClusterReconciler{
+		Client:      fakeClient,
+		Scheme:      scheme,
+		Log:         logr.Discard(),
+		DNSLookup:   func(_ context.Context, _ string) error { return fmt.Errorf("no such host") },
+		dnsTestDone: done,
+	}
+
+	reconciler.validateDNS(context.Background(), cluster)
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("DNS goroutine did not complete in time")
+	}
+
+	var updated langopv1alpha1.LanguageCluster
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "dns-failure"}, &updated))
+
+	var found *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionDNSConfigured {
+			found = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "ConditionDNSConfigured must be set after failed DNS lookup")
+	assert.Equal(t, metav1.ConditionFalse, found.Status)
+	assert.Equal(t, "WildcardDNSMissing", found.Reason)
+	assert.Equal(t, cluster.Generation, found.ObservedGeneration)
+}
