@@ -2,10 +2,14 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	"fmt"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
@@ -958,5 +962,177 @@ func TestLanguageToolController_Deletion(t *testing.T) {
 				t.Error("Expected finalizer to be removed after deletion")
 			}
 		}
+	}
+}
+
+func TestLanguageToolController_SidecarMode_NoRunningPod(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("my-sidecar-tool", "default",
+		gen.SetToolImage("ghcr.io/test/tool:latest"),
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(8080),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Should requeue because no pod is available yet
+	if result.RequeueAfter == 0 {
+		t.Error("Expected non-zero RequeueAfter when no agent pod is running")
+	}
+
+	updatedTool := &langopv1alpha1.LanguageTool{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updatedTool); err != nil {
+		t.Fatalf("Failed to get updated tool: %v", err)
+	}
+
+	// AvailableTools and ToolSchemas should be empty
+	if len(updatedTool.Status.AvailableTools) != 0 {
+		t.Errorf("Expected no AvailableTools, got %v", updatedTool.Status.AvailableTools)
+	}
+	if len(updatedTool.Status.ToolSchemas) != 0 {
+		t.Errorf("Expected no ToolSchemas, got %v", updatedTool.Status.ToolSchemas)
+	}
+
+	// SchemasDiscovered condition should be False with reason NoRunningAgentPod
+	var schemasCond *metav1.Condition
+	for i := range updatedTool.Status.Conditions {
+		if updatedTool.Status.Conditions[i].Type == "SchemasDiscovered" {
+			schemasCond = &updatedTool.Status.Conditions[i]
+			break
+		}
+	}
+	if schemasCond == nil {
+		t.Fatal("Expected SchemasDiscovered condition to be set")
+	}
+	if schemasCond.Status != metav1.ConditionFalse {
+		t.Errorf("Expected SchemasDiscovered=False, got %s", schemasCond.Status)
+	}
+	if schemasCond.Reason != "NoRunningAgentPod" {
+		t.Errorf("Expected reason NoRunningAgentPod, got %s", schemasCond.Reason)
+	}
+}
+
+func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Start a mock MCP server that returns two tools
+	mcpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := MCPResponse{
+			JSONRpc: "2.0",
+			ID:      1,
+			Result: json.RawMessage(`{"tools":[
+				{"name":"read_file","description":"Read a file"},
+				{"name":"write_file","description":"Write a file"}
+			]}`),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer mcpServer.Close()
+
+	// The fake pod's IP must match what discoverSidecarSchemas will query.
+	// We use the httptest server's host:port as the pod IP:port combo by pointing the
+	// pod IP to 127.0.0.1 and using the server's port.
+	serverHost := mcpServer.Listener.Addr().(*net.TCPAddr).IP.String()
+	serverPort := int32(mcpServer.Listener.Addr().(*net.TCPAddr).Port)
+
+	tool := gen.LanguageTool("my-sidecar-tool", "default",
+		gen.SetToolImage("ghcr.io/test/tool:latest"),
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolPort(serverPort),
+	)
+
+	// Create a running agent pod with the sidecar container ready
+	agentPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-pod-1",
+			Namespace: "default",
+			Labels: map[string]string{
+				"langop.io/kind": "LanguageAgent",
+			},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+			PodIP: serverHost,
+			InitContainerStatuses: []corev1.ContainerStatus{
+				{
+					Name:  fmt.Sprintf("tool-%s", tool.Name),
+					Ready: true,
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, agentPod).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+		// Use the test server's transport so requests reach the httptest server
+		HTTPClient: mcpServer.Client(),
+	}
+
+	ctx := context.Background()
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Should NOT requeue because schemas were discovered
+	if result.RequeueAfter != 0 {
+		t.Errorf("Expected zero RequeueAfter after successful schema discovery, got %v", result.RequeueAfter)
+	}
+
+	updatedTool := &langopv1alpha1.LanguageTool{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, updatedTool); err != nil {
+		t.Fatalf("Failed to get updated tool: %v", err)
+	}
+
+	if len(updatedTool.Status.AvailableTools) != 2 {
+		t.Errorf("Expected 2 AvailableTools, got %v", updatedTool.Status.AvailableTools)
+	}
+	if len(updatedTool.Status.ToolSchemas) != 2 {
+		t.Errorf("Expected 2 ToolSchemas, got %v", updatedTool.Status.ToolSchemas)
+	}
+
+	// SchemasDiscovered condition should be True
+	var schemasCond *metav1.Condition
+	for i := range updatedTool.Status.Conditions {
+		if updatedTool.Status.Conditions[i].Type == "SchemasDiscovered" {
+			schemasCond = &updatedTool.Status.Conditions[i]
+			break
+		}
+	}
+	if schemasCond == nil {
+		t.Fatal("Expected SchemasDiscovered condition to be set")
+	}
+	if schemasCond.Status != metav1.ConditionTrue {
+		t.Errorf("Expected SchemasDiscovered=True, got %s", schemasCond.Status)
 	}
 }

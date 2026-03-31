@@ -43,6 +43,8 @@ type LanguageToolReconciler struct {
 	Recorder                record.EventRecorder
 	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool
+	// HTTPClient is used for MCP schema discovery requests. When nil, http.DefaultClient is used.
+	HTTPClient *http.Client
 }
 
 // MCPRequest represents an MCP JSON-RPC request
@@ -99,6 +101,7 @@ type MCPSchemaProperty struct {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
@@ -278,6 +281,11 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	span.SetStatus(codes.Ok, "Reconciliation successful")
+
+	// Requeue sidecar tools that haven't discovered schemas yet — retry once an agent pod is ready
+	if tool.Spec.DeploymentMode == "sidecar" && len(tool.Status.ToolSchemas) == 0 {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -579,9 +587,12 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
 	log := log.FromContext(ctx)
 
-	// Create HTTP client with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+	// Use injected client (for tests) or create a default one
+	client := r.HTTPClient
+	if client == nil {
+		client = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 
 	// Create MCP tools/list request
@@ -669,14 +680,96 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 	return schemas, nil
 }
 
+// discoverSidecarSchemas finds a running agent pod that carries this sidecar tool container
+// and queries it for MCP tool schemas. Returns nil schemas (not an error) when no suitable pod
+// is ready yet — the caller should requeue and retry.
+func (r *LanguageToolReconciler) discoverSidecarSchemas(ctx context.Context, tool *langopv1alpha1.LanguageTool) ([]langopv1alpha1.ToolSchema, error) {
+	log := log.FromContext(ctx)
+
+	// Sidecar containers are named "tool-<toolname>" inside agent pods
+	containerName := fmt.Sprintf("tool-%s", tool.Name)
+	port := tool.Spec.Port
+	if port == 0 {
+		port = 8080
+	}
+
+	// List all agent pods in this namespace
+	podList := &corev1.PodList{}
+	if err := r.List(ctx, podList,
+		client.InNamespace(tool.Namespace),
+		client.MatchingLabels{"langop.io/kind": "LanguageAgent"},
+	); err != nil {
+		return nil, fmt.Errorf("failed to list agent pods: %w", err)
+	}
+
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		if pod.Status.Phase != corev1.PodRunning || pod.Status.PodIP == "" {
+			continue
+		}
+
+		// Check init containers first (native sidecars run as init containers with restartPolicy=Always)
+		if isSidecarContainerReady(pod.Status.InitContainerStatuses, containerName) {
+			endpoint := fmt.Sprintf("%s:%d", pod.Status.PodIP, port)
+			schemas, err := r.discoverMCPToolSchemas(ctx, endpoint)
+			if err != nil {
+				log.Error(err, "Failed to discover sidecar schemas via agent pod", "pod", pod.Name, "endpoint", endpoint)
+				continue
+			}
+			log.Info("Discovered sidecar schemas via agent pod", "pod", pod.Name, "toolCount", len(schemas))
+			return schemas, nil
+		}
+
+		// Also check regular containers for compatibility
+		if isSidecarContainerReady(pod.Status.ContainerStatuses, containerName) {
+			endpoint := fmt.Sprintf("%s:%d", pod.Status.PodIP, port)
+			schemas, err := r.discoverMCPToolSchemas(ctx, endpoint)
+			if err != nil {
+				log.Error(err, "Failed to discover sidecar schemas via agent pod", "pod", pod.Name, "endpoint", endpoint)
+				continue
+			}
+			log.Info("Discovered sidecar schemas via agent pod", "pod", pod.Name, "toolCount", len(schemas))
+			return schemas, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// isSidecarContainerReady returns true if a container with the given name is ready in the status slice.
+func isSidecarContainerReady(statuses []corev1.ContainerStatus, name string) bool {
+	for _, cs := range statuses {
+		if cs.Name == name {
+			return cs.Ready
+		}
+	}
+	return false
+}
+
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
-	// For sidecar mode tools, just set as ready (no deployment to check)
+	// For sidecar mode tools, discover schemas from a running agent pod
 	if tool.Spec.DeploymentMode == "sidecar" {
 		tool.Status.Phase = events.PhaseStatusRunning
 		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
-		// Note: Sidecar tools don't have a service endpoint, so we can't discover schemas
-		// Schemas will be populated from agent runtime when the sidecar is used
+		schemas, err := r.discoverSidecarSchemas(ctx, tool)
+		if err != nil {
+			// Log but don't fail — tool is still injected even without cached schemas
+			log := log.FromContext(ctx)
+			log.Error(err, "Failed to discover sidecar schemas", "tool", tool.Name)
+		}
+
+		if len(schemas) > 0 {
+			tool.Status.ToolSchemas = schemas
+			var toolNames []string
+			for _, s := range schemas {
+				toolNames = append(toolNames, s.Name)
+			}
+			tool.Status.AvailableTools = toolNames
+			SetCondition(&tool.Status.Conditions, "SchemasDiscovered", metav1.ConditionTrue, "SchemasDiscovered", "Tool schemas discovered from running agent pod", tool.Generation)
+		} else {
+			SetCondition(&tool.Status.Conditions, "SchemasDiscovered", metav1.ConditionFalse, "NoRunningAgentPod", "No running agent pod with this sidecar found; schemas will populate once an agent pod is ready", tool.Generation)
+		}
 
 		return r.Status().Update(ctx, tool)
 	}
