@@ -3441,3 +3441,105 @@ func TestLanguageAgentController_EnqueueAgentsInNamespace(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"agent-1", "agent-2"}, names)
 }
+
+func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Seed a Cilium DaemonSet so detectNetworkPolicySupport returns (true, "cilium").
+	ciliumDS := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cilium",
+			Namespace: "kube-system",
+		},
+	}
+
+	agent := gen.LanguageAgent("np-enforced-agent", "default")
+	agent.Finalizers = []string{FinalizerName}
+
+	recorder := record.NewFakeRecorder(10)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent, ciliumDS).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                recorder,
+		EventManager:            events.NewEventManager(recorder),
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+		NetworkPolicyTimeout:    30 * time.Second,
+		NetworkPolicyRetries:    3,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyEnforced {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "expected ConditionNetworkPolicyEnforced to be set")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, "Enforced", cond.Reason)
+	assert.Contains(t, cond.Message, "cilium")
+}
+
+func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// No CNI DaemonSet present — detectNetworkPolicySupport returns (false, "unknown").
+	agent := gen.LanguageAgent("np-not-enforced-agent", "default")
+	agent.Finalizers = []string{FinalizerName}
+
+	recorder := record.NewFakeRecorder(10)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                recorder,
+		EventManager:            events.NewEventManager(recorder),
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+		NetworkPolicyTimeout:    30 * time.Second,
+		NetworkPolicyRetries:    3,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyEnforced {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "expected ConditionNetworkPolicyEnforced to be set")
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, "CNINotSupported", cond.Reason)
+}
