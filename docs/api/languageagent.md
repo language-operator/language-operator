@@ -53,12 +53,27 @@ The operator automatically mounts:
 - `/etc/agent/instructions.txt` - Task instructions
 - `/etc/agent/config.yaml` - Personas, models, tools
 
-Environment variables:
+Environment variables injected into every agent container and all init containers:
 
-- `MODEL_ENDPOINTS` - Shared proxy URL
-- `LLM_MODEL` - Comma-separated model names
-- `MCP_SERVERS` - MCP tool server URLs
-- `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID` - Identity
+| Variable | Value |
+|----------|-------|
+| `AGENT_NAME` | `metadata.name` of the LanguageAgent |
+| `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
+| `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
+| `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
+| `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
+| `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
+| `MODEL_ENDPOINTS` | Shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) |
+| `LLM_MODEL` | Comma-separated list of model names for all referenced models |
+| `MCP_SERVERS` | Comma-separated MCP tool server URLs (only injected when at least one tool is resolved) |
+| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured |
+| `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
+| `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment (conditional on OTEL endpoint) |
+| `OTEL_TRACES_SAMPLER` | Propagated from the operator environment (conditional on OTEL endpoint) |
+| `OTEL_TRACES_SAMPLER_ARG` | Propagated from the operator environment (conditional on OTEL endpoint) |
+
+Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged. See [Environment Variables](../architecture/agents.md#environment-variables) in the architecture docs for the full reference.
 
 ### Resource Management
 
