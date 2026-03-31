@@ -2330,6 +2330,55 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 	})
 }
 
+func TestLanguageAgentController_SidecarToolInjectedIntoDeployment(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("my-sidecar", "default",
+		gen.SetToolDeploymentMode("sidecar"),
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolPort(8080),
+	)
+	agent := gen.LanguageAgent("sidecar-agent", "default",
+		gen.SetAgentTool("my-sidecar", nil),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool, agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	r := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        record.NewFakeRecorder(10),
+		EventManager:    events.NewEventManager(record.NewFakeRecorder(10)),
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile: adds finalizer.
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Second reconcile: creates resources.
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, dep))
+
+	initContainers := dep.Spec.Template.Spec.InitContainers
+	require.Len(t, initContainers, 1, "expected exactly one init container from sidecar tool")
+	assert.Equal(t, "tool-my-sidecar", initContainers[0].Name)
+	assert.Equal(t, "ghcr.io/language-operator/tool:latest", initContainers[0].Image)
+	require.NotNil(t, dep.Spec.Template.Spec.ShareProcessNamespace)
+	assert.True(t, *dep.Spec.Template.Spec.ShareProcessNamespace)
+}
+
 func TestLanguageAgentController_FetchPersona(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
