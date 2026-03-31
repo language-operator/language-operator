@@ -28,23 +28,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-//+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languagepersona,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagepersonas,verbs=create;update,versions=v1alpha1,name=mlanguagepersona.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagepersona,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagepersonas,verbs=create;update,versions=v1alpha1,name=vlanguagepersona.kb.io,admissionReviewVersions=v1
 
-// LanguagePersonaWebhook handles defaulting and validation for LanguagePersona.
+// LanguagePersonaWebhook handles validation for LanguagePersona.
 //
 // +kubebuilder:object:generate=false
 type LanguagePersonaWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomDefaulter = &LanguagePersonaWebhook{}
 var _ webhook.CustomValidator = &LanguagePersonaWebhook{}
-
-// Default implements webhook.CustomDefaulter
-func (h *LanguagePersonaWebhook) Default(_ context.Context, _ runtime.Object) error {
-	return nil
-}
 
 // ValidateCreate implements webhook.CustomValidator
 func (h *LanguagePersonaWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
@@ -77,12 +70,11 @@ func (h *LanguagePersonaWebhook) validateClusterMembership(ctx context.Context, 
 	return nil
 }
 
-// SetupLanguagePersonaWebhookWithManager registers the LanguagePersona mutating and validating webhooks.
+// SetupLanguagePersonaWebhookWithManager registers the LanguagePersona validating webhook.
 func SetupLanguagePersonaWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguagePersonaWebhook{Client: mgr.GetClient()}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&LanguagePersona{}).
-		WithDefaulter(h).
 		WithValidator(h).
 		Complete()
 }
