@@ -100,7 +100,6 @@ type MCPSchemaProperty struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 
@@ -197,21 +196,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		r.EventManager.RecordRegistryValidated(tool)
 	}
 
-	// Reconcile ConfigMap
-	if err := r.reconcileConfigMap(ctx, tool); err != nil {
-		log.Error(err, "Failed to reconcile ConfigMap")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
-		if r.EventManager != nil {
-			r.EventManager.RecordConfigMapFailed(tool, err)
-		}
-		SetCondition(&tool.Status.Conditions, "Ready", metav1.ConditionFalse, "ConfigMapError", err.Error(), tool.Generation)
-		tool.Status.Phase = events.PhaseStatusFailed
-		r.Status().Update(ctx, tool)
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
 	// Skip Deployment and Service for sidecar mode tools
 	// Sidecar tools are injected into agent pods directly
 	if tool.Spec.DeploymentMode != "sidecar" {
@@ -287,25 +271,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 	return ctrl.Result{}, nil
-}
-
-func (r *LanguageToolReconciler) reconcileConfigMap(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
-	data := make(map[string]string)
-
-	// Add tool spec as JSON
-	specJSON, err := json.Marshal(tool.Spec)
-	if err != nil {
-		return err
-	}
-	data["tool.json"] = string(specJSON)
-
-	// Add other useful data
-	data["name"] = tool.Name
-	data["namespace"] = tool.Namespace
-	data["type"] = string(tool.Spec.Type)
-
-	configMapName := GenerateConfigMapName(tool.Name, "tool")
-	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, tool, configMapName, tool.Namespace, data)
 }
 
 func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
@@ -872,7 +837,6 @@ func (r *LanguageToolReconciler) SetupWithManager(mgr ctrl.Manager, concurrency 
 		For(&langopv1alpha1.LanguageTool{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Complete(r)
 }
