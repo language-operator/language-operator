@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
@@ -47,7 +46,6 @@ type LanguagePersonaReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas/finalizers,verbs=update
-//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles a LanguagePersona resource
 func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -97,27 +95,9 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Reconcile the ConfigMap
-	if err := r.reconcileConfigMap(ctx, persona); err != nil {
-		log.Error(err, "Failed to reconcile ConfigMap")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to reconcile ConfigMap")
-		if r.EventManager != nil {
-			r.EventManager.RecordConfigurationFailed(persona, err)
-		}
-		SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionFalse, "ReconcileError", err.Error(), persona.Generation)
-		persona.Status.Phase = events.PhaseStatusFailed
-		if statusErr := r.Status().Update(ctx, persona); statusErr != nil {
-			log.Error(statusErr, "Failed to update status")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
 	// Update status
 	persona.Status.ObservedGeneration = persona.Generation
 	persona.Status.Phase = events.PhaseStatusReady
-	// Status fields updated
 	SetCondition(&persona.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Persona configuration is ready", persona.Generation)
 
 	if r.EventManager != nil {
@@ -137,40 +117,11 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-// reconcileConfigMap creates or updates the ConfigMap for the persona
-func (r *LanguagePersonaReconciler) reconcileConfigMap(ctx context.Context, persona *langopv1alpha1.LanguagePersona) error {
-	// Create ConfigMap data from persona spec
-	data := make(map[string]string)
-
-	// Serialize the spec as JSON for agents that prefer a single document
-	specJSON, err := json.Marshal(persona.Spec)
-	if err != nil {
-		return err
-	}
-	data["persona.json"] = string(specJSON)
-
-	// Add individual fields for easy access
-	data["tone"] = persona.Spec.Tone
-	data["personality"] = persona.Spec.Personality
-	data["expertise"] = persona.Spec.Expertise
-
-	// Create or update the ConfigMap
-	configMapName := GenerateConfigMapName(persona.Name, "persona")
-	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, persona, configMapName, persona.Namespace, data)
-}
-
 // handleDeletion handles the deletion of the LanguagePersona
 func (r *LanguagePersonaReconciler) handleDeletion(ctx context.Context, persona *langopv1alpha1.LanguagePersona) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	if controllerutil.ContainsFinalizer(persona, FinalizerName) {
-		// Delete the ConfigMap
-		configMapName := GenerateConfigMapName(persona.Name, "persona")
-		if err := DeleteConfigMap(ctx, r.Client, configMapName, persona.Namespace); err != nil {
-			log.Error(err, "Failed to delete ConfigMap")
-			return ctrl.Result{}, err
-		}
-
 		// Remove finalizer
 		controllerutil.RemoveFinalizer(persona, FinalizerName)
 		if err := r.Update(ctx, persona); err != nil {

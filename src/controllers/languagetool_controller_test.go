@@ -23,9 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 // mockRegistryManager is a mock implementation of RegistryManager for testing
@@ -789,65 +787,6 @@ func TestLanguageToolController_PhaseFailedOnRegistryError(t *testing.T) {
 	}
 	if regCond.Reason != "RegistryNotAllowed" {
 		t.Errorf("Expected RegistryValidated reason %q, got %q", "RegistryNotAllowed", regCond.Reason)
-	}
-}
-
-func TestLanguageToolController_PhaseFailedOnConfigMapError(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	tool := gen.LanguageTool("cm-fail-tool", "default")
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(tool).
-		WithStatusSubresource(tool).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				if _, ok := obj.(*corev1.ConfigMap); ok {
-					return fmt.Errorf("injected configmap create error")
-				}
-				return c.Create(ctx, obj, opts...)
-			},
-		}).
-		Build()
-
-	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
-	}
-
-	ctx := context.Background()
-	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
-
-	// First reconcile adds finalizer; second hits ConfigMap reconcile → injected error
-	reconciler.Reconcile(ctx, req) //nolint:errcheck // first reconcile adds finalizer
-	_, err := reconciler.Reconcile(ctx, req)
-	if err == nil {
-		t.Fatal("Expected reconcile error from ConfigMap failure, got nil")
-	}
-
-	updatedTool := &langopv1alpha1.LanguageTool{}
-	if err := fakeClient.Get(ctx, req.NamespacedName, updatedTool); err != nil {
-		t.Fatalf("Failed to get tool: %v", err)
-	}
-	if updatedTool.Status.Phase != events.PhaseStatusFailed {
-		t.Errorf("Expected phase %q after ConfigMap error, got %q", events.PhaseStatusFailed, updatedTool.Status.Phase)
-	}
-	var readyCond *metav1.Condition
-	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == "Ready" {
-			readyCond = &updatedTool.Status.Conditions[i]
-			break
-		}
-	}
-	if readyCond == nil {
-		t.Fatal("Expected Ready condition to be set")
-	}
-	if readyCond.Status != metav1.ConditionFalse {
-		t.Errorf("Expected Ready status False, got %q", readyCond.Status)
-	}
-	if readyCond.Reason != "ConfigMapError" {
-		t.Errorf("Expected Ready reason ConfigMapError, got %q", readyCond.Reason)
 	}
 }
 
