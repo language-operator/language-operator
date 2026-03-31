@@ -1781,6 +1781,97 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 	})
 }
 
+func TestLanguageAgentController_IngressTLS(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tls-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+	hostname := "tls-agent.example.com"
+
+	t.Run("explicit_secret_name", func(t *testing.T) {
+		cluster := gen.ReadyCluster("default", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+			SecretName: "my-tls-secret",
+		}))
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, agent).
+			WithStatusSubresource(agent).
+			Build()
+		r := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+
+		require.NoError(t, r.reconcileIngress(context.Background(), agent, hostname))
+
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing))
+		require.Len(t, ing.Spec.TLS, 1)
+		assert.Equal(t, "my-tls-secret", ing.Spec.TLS[0].SecretName)
+		assert.Equal(t, []string{hostname}, ing.Spec.TLS[0].Hosts)
+	})
+
+	t.Run("cert_manager_annotation", func(t *testing.T) {
+		cluster := gen.ReadyCluster("default", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+			IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "letsencrypt"},
+		}))
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, agent).
+			WithStatusSubresource(agent).
+			Build()
+		r := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+
+		require.NoError(t, r.reconcileIngress(context.Background(), agent, hostname))
+
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing))
+		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/clusterissuer"])
+		require.Len(t, ing.Spec.TLS, 1)
+		assert.Equal(t, agent.Name+"-tls", ing.Spec.TLS[0].SecretName)
+	})
+
+	t.Run("cluster_classname_overrides_default", func(t *testing.T) {
+		cluster := gen.ReadyCluster("default", gen.SetClusterIngressClassName("traefik"))
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, agent).
+			WithStatusSubresource(agent).
+			Build()
+		r := &LanguageAgentReconciler{
+			Client:                  fakeClient,
+			Scheme:                  scheme,
+			Log:                     logr.Discard(),
+			Recorder:                &record.FakeRecorder{},
+			RegistryManager:         &mockRegistryManager{},
+			DefaultIngressClassName: "nginx",
+		}
+
+		require.NoError(t, r.reconcileIngress(context.Background(), agent, hostname))
+
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing))
+		require.NotNil(t, ing.Spec.IngressClassName)
+		assert.Equal(t, "traefik", *ing.Spec.IngressClassName)
+	})
+}
+
 func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

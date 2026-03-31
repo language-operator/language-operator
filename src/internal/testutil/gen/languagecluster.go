@@ -50,6 +50,16 @@ func SetClusterIngressClassName(className string) LanguageClusterModifier {
 	}
 }
 
+// SetClusterIngressTLS sets spec.ingress.tls.
+func SetClusterIngressTLS(tls *langopv1alpha1.IngressTLSConfig) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.Ingress == nil {
+			c.Spec.Ingress = &langopv1alpha1.IngressConfig{}
+		}
+		c.Spec.Ingress.TLS = tls
+	}
+}
+
 // ReadyCluster constructs a LanguageCluster with Status.Phase already set to "Ready".
 // Use this in unit tests that need a reconcilable namespace without setting up a full cluster reconciliation.
 func ReadyCluster(name string, mods ...LanguageClusterModifier) *langopv1alpha1.LanguageCluster {
