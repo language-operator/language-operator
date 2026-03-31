@@ -129,7 +129,7 @@ Forward the openclaw web interface:
 
 ```bash
 kubectl port-forward -n language-operator-openclaw \
-  svc/openclaw 18789:8080
+  svc/openclaw 18789:18789
 ```
 
 Open [http://localhost:18789](http://localhost:18789) in your browser.
