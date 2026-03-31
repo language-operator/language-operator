@@ -28,8 +28,8 @@ This code has been written by different agents with different contexts, unaware 
 
 ## Output
 
-Enter plan mode. Present ONE finding concisely — what to change, why it matters,
-and which files are affected. Ask the user if they want a GitHub issue filed.
+Enter plan mode. Present one or two findings concisely — what to change, why it matters,
+and which files are affected. Ask the user if they want GitHub issue(s) filed.
 
 Do NOT implement. Do NOT file an issue until the user confirms.
 
