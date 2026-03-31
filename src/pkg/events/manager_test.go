@@ -229,5 +229,5 @@ func TestEventManager_RecordVersionError(t *testing.T) {
 func TestEventManager_RecordRegistryValidated(t *testing.T) {
 	rec, mgr, obj := newTestSetup()
 	mgr.RecordRegistryValidated(obj)
-	assertEvent(t, rec, 0, corev1.EventTypeNormal, "RegistryValidated")
+	assertEvent(t, rec, 0, corev1.EventTypeNormal, ReasonRegistryValidated)
 }
