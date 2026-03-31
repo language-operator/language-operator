@@ -24,19 +24,18 @@ Follow these directions closely:
    - If no issue is found, report idle and stop.
    - If found, read its comments as well.
 2. Investigate if the issue is valid, or a mis-use of the intended feature.
-3. Label the issue `in-progress`:
+3. **Label and create worktree** in one step. Determine a short slug (2-4 words) from the issue title, then:
    ```bash
-   gh issue edit <N> --add-label "in-progress" --remove-label "queue/$ARGUMENTS"
+   bash .claude/commands/iterate/start-issue.sh <N> <short-slug> <queue-number>
    ```
-4. **Create a worktree** for this issue. Determine a short slug (2-4 words) from the issue title. Then run:
-   ```bash
-   bash .claude/commands/iterate/create-worktree.sh <N> <short-slug>
-   ```
-   The script prints `worktree:<path>`. `cd` into that path. All subsequent work happens inside this worktree. Do not `cd` out of it.
+   The script labels the issue `in-progress`, removes the queue label, and creates a worktree. It prints `worktree:<path>` — `cd` into that path. All subsequent work happens inside this worktree. Do not `cd` out of it.
 5. **CRITICAL:** Switch to plan mode, and propose an implementation plan. Await my feedback.
 6. Implement your plan inside the worktree.
 7. Run existing tests, and add new ones if necessary. Remember to include CI. Remember the linter.
-8. Commit with a semantic, ONE LINE message like `fix: set GatewayReady false on error` and push the branch to origin using an explicit refspec to avoid pushing to main: `git push origin HEAD:"$BRANCH" && git push -u origin "$BRANCH"`
+8. Commit with a semantic, ONE LINE message like `fix: set GatewayReady false on error` and push the branch — run as two separate commands, do not use inline variable assignments:
+   ```bash
+   bash .claude/commands/iterate/push-branch.sh <branch-name>
+   ```
 9. Open a pull request: `gh pr create --title "<commit message>" --body "Closes #<N>"`. Use conventional commit style for the PR title.
 10. **CRITICAL:** Poll CI on the PR: `gh pr checks <PR-number> --watch`. Fix any failing checks before proceeding.
 11. When all checks pass, merge: `gh pr merge <PR-number> --squash --delete-branch`.
