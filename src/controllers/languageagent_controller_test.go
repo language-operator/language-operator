@@ -2103,6 +2103,63 @@ func TestLanguageAgentController_WebhookConditions_LBReady(t *testing.T) {
 	assert.Equal(t, "https://hook-agent.example.com", agent.Status.WebhookURLs[0])
 }
 
+// TestLanguageAgentController_WebhooksReady_ViaReconcile drives ConditionWebhooksReady through
+// full Reconcile() so the condition write in the main reconcile loop is covered end-to-end.
+func TestLanguageAgentController_WebhooksReady_ViaReconcile(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("hook-agent", "default",
+		gen.SetAgentImage("ghcr.io/language-operator/agent:latest"),
+	)
+	agent.Finalizers = []string{FinalizerName}
+
+	cluster := gen.ReadyCluster("default", gen.SetClusterDomain("example.com"))
+
+	// Pre-create the Ingress with an LB IP so reconcileWebhooks returns nil and
+	// Reconcile() sets ConditionWebhooksReady=True.
+	ing := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{Name: "hook-agent", Namespace: "default"},
+		Status: networkingv1.IngressStatus{
+			LoadBalancer: networkingv1.IngressLoadBalancerStatus{
+				Ingress: []networkingv1.IngressLoadBalancerIngress{{IP: "10.0.0.1"}},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent, ing).
+		WithStatusSubresource(agent, ing).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+
+	var webhooksReady *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionWebhooksReady {
+			webhooksReady = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, webhooksReady, "ConditionWebhooksReady must be set")
+	assert.Equal(t, metav1.ConditionTrue, webhooksReady.Status)
+	assert.Equal(t, "Configured", webhooksReady.Reason)
+}
+
 // --- Group 4: Resource resolution and persona ---
 
 func TestLanguageAgentController_ResolveTools(t *testing.T) {
