@@ -118,6 +118,9 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 	if readyCond.Reason != "ReconcileSuccess" {
 		t.Errorf("Expected Ready condition Reason %q, got %q", "ReconcileSuccess", readyCond.Reason)
 	}
+	if updatedTool.Status.ObservedGeneration != tool.Generation {
+		t.Errorf("Expected ObservedGeneration %d, got %d", tool.Generation, updatedTool.Status.ObservedGeneration)
+	}
 }
 
 func TestLanguageToolController_ServiceMode(t *testing.T) {
@@ -320,6 +323,11 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				if updatedTool.Status.ReadyReplicas != tt.deploymentStatus.ReadyReplicas {
 					t.Errorf("Expected ReadyReplicas %d, got %d", tt.deploymentStatus.ReadyReplicas, updatedTool.Status.ReadyReplicas)
 				}
+			}
+
+			// Verify ObservedGeneration is always written regardless of phase
+			if updatedTool.Status.ObservedGeneration != tool.Generation {
+				t.Errorf("Expected ObservedGeneration %d, got %d", tool.Generation, updatedTool.Status.ObservedGeneration)
 			}
 		})
 	}

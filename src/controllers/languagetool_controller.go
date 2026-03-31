@@ -725,6 +725,8 @@ func isSidecarContainerReady(statuses []corev1.ContainerStatus, name string) boo
 }
 
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	tool.Status.ObservedGeneration = tool.Generation
+
 	// For sidecar mode tools, discover schemas from a running agent pod
 	if tool.Spec.DeploymentMode == "sidecar" {
 		tool.Status.Phase = events.PhaseStatusRunning
@@ -788,7 +790,6 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if deployment.Status.ReadyReplicas > 0 {
 		tool.Status.Phase = events.PhaseStatusRunning
 		tool.Status.Endpoint = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
-		tool.Status.ObservedGeneration = tool.Generation
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, "ReconcileSuccess", "LanguageTool is ready", tool.Generation)
 
 		// Discover MCP tool schemas for service mode tools
