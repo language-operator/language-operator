@@ -1901,11 +1901,7 @@
 <li>Service for agent networking</li>
 <li>HTTPRoute for routing (if gateway API available)</li>
 <li>NetworkPolicy for isolation</li>
-<li>Two ConfigMaps:<ul>
-<li>Instructions ConfigMap (<code>instructions.txt</code>)</li>
-<li>Config ConfigMap (<code>config.yaml</code> with personas, models, tools)</li>
-</ul>
-</li>
+<li>One ConfigMap (<code>config.yaml</code> with instructions, personas, models, tools)</li>
 </ul>
 <p><strong>Configuration Injection:</strong></p>
 <p>The controller assembles configuration from:</p>
@@ -1927,8 +1923,7 @@
 </ul>
 <p><strong>Volume Mounts:</strong></p>
 <ul>
-<li><code>/etc/agent/instructions.txt</code> - from instructions ConfigMap</li>
-<li><code>/etc/agent/config.yaml</code> - from config ConfigMap</li>
+<li><code>/etc/agent/config.yaml</code> - from agent ConfigMap</li>
 <li><code>/workspace</code> - optional persistent storage (if <code>spec.workspace</code> configured)</li>
 </ul>
 <hr />
