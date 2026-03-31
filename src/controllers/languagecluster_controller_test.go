@@ -383,6 +383,59 @@ func TestLanguageClusterController_DeletionWaitsForDependents(t *testing.T) {
 	}
 }
 
+func TestLanguageClusterController_DeletionDrainListError(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("test-cluster-drain-err")
+	cluster.Finalizers = []string{FinalizerName}
+	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	// Add an agent with a finalizer so that the drain check finds remaining children on
+	// the first reconcile. This prevents premature cleanup and lets us then inject a List
+	// error on the second reconcile to verify the error is propagated rather than discarded.
+	agent := gen.LanguageAgent("test-agent", "test-cluster-drain-err",
+		gen.SetAgentInstructions("test agent"),
+	)
+	agent.Finalizers = []string{FinalizerName}
+
+	failList := false
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent).
+		WithStatusSubresource(cluster).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if failList {
+					return fmt.Errorf("injected list error")
+				}
+				return c.List(ctx, list, opts...)
+			},
+		}).Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	// First reconcile: drain check finds the agent and returns errChildrenDraining (requeues).
+	result, err := reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter, "expected requeue while children drain")
+
+	// Cluster finalizer must still be present.
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+	assert.True(t, controllerutil.ContainsFinalizer(updated, FinalizerName))
+
+	// Now inject a List error — it must be propagated rather than silently treated as
+	// "no children present", which would cause premature namespace deletion.
+	failList = true
+	_, err = reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.Error(t, err, "List error during cleanup must be propagated, not silently discarded")
+}
+
 func TestLanguageClusterController_NamespaceOwnerReference(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
