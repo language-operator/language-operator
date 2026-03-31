@@ -1454,3 +1454,55 @@ func TestLanguageClusterController_GatewayVolumesAndMounts(t *testing.T) {
 	assert.Contains(t, mountPaths, "/etc/langop/models", "operator-managed mount must be retained")
 	assert.Contains(t, mountPaths, "/etc/ssl/custom", "user mount must be appended")
 }
+
+// TestValidateDNS_SkipsOnSameGeneration verifies that validateDNS does not perform
+// a DNS lookup (and does not modify the condition) when the DNSConfigured condition
+// already reflects the current resource generation.
+func TestValidateDNS_SkipsOnSameGeneration(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("skip-dns",
+		gen.SetClusterDomain("example.com"),
+	)
+	cluster.Generation = 3
+
+	// Pre-populate a DNSConfigured condition for the current generation.
+	existingCondition := metav1.Condition{
+		Type:               langopv1alpha1.ConditionDNSConfigured,
+		Status:             metav1.ConditionTrue,
+		Reason:             "WildcardDNSReady",
+		Message:            "already validated",
+		ObservedGeneration: 3,
+		LastTransitionTime: metav1.NewTime(time.Now().Add(-1 * time.Minute)),
+	}
+	cluster.Status.Conditions = []metav1.Condition{existingCondition}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	reconciler.validateDNS(context.Background(), cluster)
+
+	// Condition must be unchanged — same content and same LastTransitionTime.
+	var found *metav1.Condition
+	for i := range cluster.Status.Conditions {
+		if cluster.Status.Conditions[i].Type == langopv1alpha1.ConditionDNSConfigured {
+			found = &cluster.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, found)
+	assert.Equal(t, existingCondition.Status, found.Status)
+	assert.Equal(t, existingCondition.Reason, found.Reason)
+	assert.Equal(t, existingCondition.ObservedGeneration, found.ObservedGeneration)
+	assert.Equal(t, existingCondition.LastTransitionTime, found.LastTransitionTime,
+		"LastTransitionTime must not change when DNS lookup is skipped")
+}

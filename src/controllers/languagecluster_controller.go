@@ -587,7 +587,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 
 			// Resolve DNS hostnames to CIDR blocks at policy creation time (fail-closed)
 			if len(rule.To.DNS) > 0 {
-				resolvedCIDRs, err := resolveDNSToCIDRs(rule.To.DNS)
+				resolvedCIDRs, err := resolveDNSToCIDRs(ctx, rule.To.DNS)
 				if err == nil && len(resolvedCIDRs) > 0 {
 					for _, cidr := range resolvedCIDRs {
 						egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
@@ -796,6 +796,19 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 	}
 
 	domain := cluster.Spec.Domain
+
+	// Skip DNS lookup if the condition already reflects the current generation.
+	// This prevents blocking the reconcile worker on every loop for clusters
+	// whose domain has not changed.
+	for _, cond := range cluster.Status.Conditions {
+		if cond.Type == langopv1alpha1.ConditionDNSConfigured &&
+			cond.ObservedGeneration == cluster.Generation {
+			log.V(1).Info("DNS condition up-to-date for current generation, skipping lookup",
+				"domain", domain, "generation", cluster.Generation)
+			return
+		}
+	}
+
 	log.V(1).Info("Validating DNS configuration", "domain", domain)
 
 	// Test DNS resolution with a test subdomain

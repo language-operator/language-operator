@@ -275,3 +275,26 @@ func TestBuildEgressNetworkPolicy_NoFromRule_NoPolicyTypeIngress(t *testing.T) {
 	}
 	assert.Empty(t, policy.Spec.Ingress)
 }
+
+// TestResolveDNSToCIDRs_ContextTimeout verifies that a cancelled context causes
+// resolveDNSToCIDRs to return an empty slice immediately rather than blocking.
+func TestResolveDNSToCIDRs_ContextTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel so every lookup sees a done context
+
+	cidrs, err := resolveDNSToCIDRs(ctx, []string{"api.example.com", "*.example.org"})
+	require.NoError(t, err)
+	assert.Empty(t, cidrs, "cancelled context should produce no CIDRs")
+}
+
+// TestResolveDNSToCIDRs_WildcardAll verifies that "*" still returns 0.0.0.0/0
+// even when the context is cancelled.
+func TestResolveDNSToCIDRs_WildcardAll(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	cidrs, err := resolveDNSToCIDRs(ctx, []string{"*"})
+	require.NoError(t, err)
+	require.Len(t, cidrs, 1)
+	assert.Equal(t, "0.0.0.0/0", cidrs[0])
+}
