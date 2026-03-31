@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "description": "Auto-approve bash commands from the trusted commands directory",
+  "operations": {
+    "trusted-command-script": {
+      "description": "Execute a pre-approved shell script from .claude/commands/",
+      "pattern": "^bash \\.claude/commands/"
+    },
+    "enter-worktree": {
+      "description": "cd into a worktree created for issue work",
+      "pattern": "^cd .*\\.claude/worktrees/"
+    }
+  }
+}

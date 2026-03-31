@@ -24,25 +24,15 @@ Follow these directions closely:
    - If no issue is found, report idle and stop.
    - If found, read its comments as well.
 2. Investigate if the issue is valid, or a mis-use of the intended feature.
-3. Label the issue `in-progress` and remove the `queue/$ARGUMENTS` label:
+3. Label the issue `in-progress`:
    ```bash
    gh issue edit <N> --add-label "in-progress" --remove-label "queue/$ARGUMENTS"
    ```
 4. **Create a worktree** for this issue. Determine a short slug (2-4 words) from the issue title. Then run:
    ```bash
-   ISSUE=<N>
-   SLUG=<short-slug>
-   BRANCH="issue-${ISSUE}-${SLUG}"
-   WORKTREE=".claude/worktrees/${BRANCH}"
-   MAIN=$(git worktree list --porcelain | grep '^worktree' | head -1 | awk '{print $2}')
-   if [ "$(pwd)" != "$MAIN" ]; then
-     echo "Already in a worktree, proceeding."
-   else
-     git fetch origin main && git worktree add -b "$BRANCH" "$WORKTREE" FETCH_HEAD
-     cd "$WORKTREE"
-   fi
+   bash .claude/commands/iterate/create-worktree.sh <N> <short-slug>
    ```
-   All subsequent work happens inside this worktree. Do not `cd` out of it.
+   The script prints `worktree:<path>`. `cd` into that path. All subsequent work happens inside this worktree. Do not `cd` out of it.
 5. **CRITICAL:** Switch to plan mode, and propose an implementation plan. Await my feedback.
 6. Implement your plan inside the worktree.
 7. Run existing tests, and add new ones if necessary. Remember to include CI. Remember the linter.
@@ -50,7 +40,7 @@ Follow these directions closely:
 9. Open a pull request: `gh pr create --title "<commit message>" --body "Closes #<N>"`. Use conventional commit style for the PR title.
 10. **CRITICAL:** Poll CI on the PR: `gh pr checks <PR-number> --watch`. Fix any failing checks before proceeding.
 11. When all checks pass, merge: `gh pr merge <PR-number> --squash --delete-branch`.
-12. Clean up the worktree: `git worktree remove "$WORKTREE"`.
+12. Clean up the worktree: `bash .claude/commands/iterate/remove-worktree.sh "$WORKTREE"`.
 13. Remove the `in-progress` label, add a comment with resolution details, then close the issue:
     ```bash
     gh issue edit <N> --remove-label "in-progress"

@@ -16,10 +16,7 @@ Adopt the project-manager persona.
 
 1. Count open issues with no queue label and not `in-progress`:
    ```bash
-   gh issue list --state open --json number,title,labels \
-     | jq '[.[] | select(
-         (.labels | map(.name) | map(startswith("queue/") or . == "in-progress") | any) | not
-       )]'
+   bash .claude/commands/delegate/list-unqueued-issues.sh
    ```
 
 2. If **no unassigned issues** are found, report idle and stop.
@@ -27,9 +24,7 @@ Adopt the project-manager persona.
 3. If unassigned issues **are** found:
    - Check how many open issues each queue currently has:
      ```bash
-     for q in 0 1 2; do
-       echo "queue/$q: $(gh issue list --label "queue/$q" --state open --json number | jq 'length')"
-     done
+     bash .claude/commands/delegate/check-queue-capacity.sh
      ```
    - For each queue that has **0 open issues**, pick the single highest-priority unassigned issue that fits that queue's conflict group and assign it
    - Do not assign to a queue that already has an open issue — it is not ready to receive new work yet

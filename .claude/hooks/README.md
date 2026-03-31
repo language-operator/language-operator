@@ -5,6 +5,7 @@ Event-driven automation for Claude Code in the Language Operator project.
 ## Available Hooks
 
 - [skill-activation-prompt](skill-activation-prompt.sh) - Auto-activates relevant skills based on user prompts and file context
+- [pre-tool-use-bash-approval](pre-tool-use-bash-approval.sh) - Auto-approves named bash operations from delegate/watch/iterate workflows; patterns configured in [bash-approvals.json](bash-approvals.json)
 
 ## Setup
 
