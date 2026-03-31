@@ -89,6 +89,7 @@ func main() {
 	var gatewayImage string
 	var gatewayImagePullPolicy string
 	var webhookPort int
+	var disableWebhooks bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -122,6 +123,8 @@ func main() {
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"Port the webhook server listens on.")
+	flag.BoolVar(&disableWebhooks, "disable-webhooks", false,
+		"Disable webhook server and all admission webhooks. Use when cert-manager is not installed.")
 
 	opts := zap.Options{
 		Development: true,
@@ -242,14 +245,11 @@ func main() {
 		setupLog.Info("Watching all namespaces")
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgrOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
-		WebhookServer: webhook.NewServer(webhook.Options{
-			Port: webhookPort,
-		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "langop.io",
@@ -260,7 +260,11 @@ func main() {
 			DefaultNamespaces: namespaces,
 			SyncPeriod:        &syncPeriod,
 		},
-	})
+	}
+	if !disableWebhooks {
+		mgrOptions.WebhookServer = webhook.NewServer(webhook.Options{Port: webhookPort})
+	}
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -339,33 +343,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup LanguageAgent webhook
-	if err = langopv1alpha1.SetupLanguageAgentWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgent")
-		os.Exit(1)
-	}
-	setupLog.Info("LanguageAgent webhook registered")
+	if !disableWebhooks {
+		// Setup LanguageAgent webhook
+		if err = langopv1alpha1.SetupLanguageAgentWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgent")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageAgent webhook registered")
 
-	// Setup LanguageTool webhook
-	if err = langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageTool")
-		os.Exit(1)
-	}
-	setupLog.Info("LanguageTool webhook registered")
+		// Setup LanguageTool webhook
+		if err = langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageTool")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageTool webhook registered")
 
-	// Setup LanguageModel webhook
-	if err = langopv1alpha1.SetupLanguageModelWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageModel")
-		os.Exit(1)
-	}
-	setupLog.Info("LanguageModel webhook registered")
+		// Setup LanguageModel webhook
+		if err = langopv1alpha1.SetupLanguageModelWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageModel")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageModel webhook registered")
 
-	// Setup LanguagePersona webhook
-	if err = langopv1alpha1.SetupLanguagePersonaWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LanguagePersona")
-		os.Exit(1)
+		// Setup LanguagePersona webhook
+		if err = langopv1alpha1.SetupLanguagePersonaWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguagePersona")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguagePersona webhook registered")
+	} else {
+		setupLog.Info("Webhooks disabled via --disable-webhooks flag")
 	}
-	setupLog.Info("LanguagePersona webhook registered")
 	//+kubebuilder:scaffold:builder
 
 	// Add health and readiness checks
