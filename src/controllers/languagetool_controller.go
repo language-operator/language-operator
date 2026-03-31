@@ -209,7 +209,9 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "DeploymentError", err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
-			r.Status().Update(ctx, tool)
+			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after Deployment failure")
+			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -224,7 +226,9 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ServiceError", err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
-			r.Status().Update(ctx, tool)
+			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after Service failure")
+			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -241,7 +245,9 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
-			r.Status().Update(ctx, tool)
+			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
+			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		} else {
