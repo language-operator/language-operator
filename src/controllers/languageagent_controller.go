@@ -145,6 +145,18 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	span := result.Span
 	log := log.FromContext(ctx)
 
+	// Write status exactly once on error exit paths — prevents phase flicker and
+	// ensures ObservedGeneration is always set, even on early returns.
+	defer func() {
+		if reconcileErr == nil || !agent.DeletionTimestamp.IsZero() {
+			return
+		}
+		agent.Status.ObservedGeneration = agent.Generation
+		if updateErr := r.Status().Update(ctx, agent); updateErr != nil && !apierrors.IsNotFound(updateErr) {
+			log.Error(updateErr, "Failed to update LanguageAgent status")
+		}
+	}()
+
 	// Handle deletion
 	if !agent.DeletionTimestamp.IsZero() {
 		span.AddEvent("Deleting agent")
@@ -191,9 +203,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.EventManager.RecordRegistryValidationFailed(agent, agent.Spec.Image)
 		}
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after registry validation failure")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
@@ -206,9 +215,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "ConfigMap reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ConfigMapError", err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after ConfigMap error")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
@@ -220,9 +226,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "PVC reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "PVCError", err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after PVC error")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
@@ -259,9 +262,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
 				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
 				agent.Status.Phase = events.PhaseStatusFailed
-				if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-					log.Error(updateErr, "Failed to update status after NetworkPolicy error")
-				}
 				reconcileErr = err
 				return ctrl.Result{}, err
 			}
@@ -293,21 +293,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
-	// Ensure agent has a UUID for webhook routing
+	// Ensure agent has a UUID for webhook routing; persisted by the end-of-reconcile status write.
 	if agent.Status.UUID == "" {
 		agent.Status.UUID = uuid.New().String()
-		if err := r.Status().Update(ctx, agent); err != nil {
-			if apierrors.IsConflict(err) {
-				// Another reconciler updated first, requeue to get their UUID
-				log.V(1).Info("UUID assignment conflict, requeuing to get assigned UUID")
-				return ctrl.Result{Requeue: true}, nil
-			}
-			log.Error(err, "Failed to update agent UUID")
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to update agent UUID")
-			reconcileErr = err
-			return ctrl.Result{}, err
-		}
 		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
 	}
 
@@ -318,9 +306,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "Service reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ServiceError", err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after Service error")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
@@ -341,9 +326,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "ServiceAccount reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ServiceAccountError", err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after ServiceAccount error")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
@@ -354,9 +336,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.SetStatus(codes.Error, "Deployment reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after Deployment error")
-		}
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}

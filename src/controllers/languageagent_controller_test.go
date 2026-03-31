@@ -2985,6 +2985,55 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_ObservedGenerationSetOnError(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// Image uses ghcr.io but registry whitelist only allows docker.io → validation fails
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "gen-error-agent",
+			Namespace:  "default",
+			Generation: 3,
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{registries: []string{"docker.io"}},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	if err == nil {
+		t.Fatal("Expected reconcile error from registry validation, got nil")
+	}
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updated.Status.ObservedGeneration != agent.Generation {
+		t.Errorf("Expected ObservedGeneration %d on error path, got %d", agent.Generation, updated.Status.ObservedGeneration)
+	}
+	if updated.Status.Phase != events.PhaseStatusFailed {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusFailed, updated.Status.Phase)
+	}
+}
+
 // parseAgentConfigMap reconciles the agent once and returns the parsed config.yaml from the agent ConfigMap.
 func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client.Object) agentConfigYAML {
 	t.Helper()
