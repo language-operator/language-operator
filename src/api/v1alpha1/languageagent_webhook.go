@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -108,10 +109,14 @@ func (h *LanguageAgentWebhook) ValidateDelete(_ context.Context, _ runtime.Objec
 // validateClusterMembership verifies a LanguageCluster exists for this namespace.
 func (h *LanguageAgentWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
 	cluster := &LanguageCluster{}
-	if err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+	err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster)
+	if err == nil {
+		return nil
+	}
+	if apierrors.IsNotFound(err) {
 		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, namespace)
 	}
-	return nil
+	return fmt.Errorf("failed to check LanguageCluster for namespace %q: %w", namespace, err)
 }
 
 // validateSpec performs pure spec validation (no API calls)

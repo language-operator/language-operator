@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -88,10 +89,14 @@ func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ runtime.Object
 
 func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
 	cluster := &LanguageCluster{}
-	if err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster); err != nil {
+	err := h.Get(ctx, types.NamespacedName{Name: namespace}, cluster)
+	if err == nil {
+		return nil
+	}
+	if apierrors.IsNotFound(err) {
 		return fmt.Errorf("namespace %q is not managed by a LanguageCluster: no cluster %q exists", namespace, namespace)
 	}
-	return nil
+	return fmt.Errorf("failed to check LanguageCluster for namespace %q: %w", namespace, err)
 }
 
 // SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
