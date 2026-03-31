@@ -1777,10 +1777,10 @@
 <h3 id="shared-proxy-registration">Shared Proxy Registration<a class="headerlink" href="#shared-proxy-registration" title="Permanent link">&para;</a></h3>
 <p>When you create a LanguageModel:</p>
 <ol>
-<li>The controller creates a ConfigMap with the model spec</li>
-<li>The LanguageCluster controller detects the change</li>
-<li>The shared proxy configuration is regenerated</li>
-<li>The proxy pod is restarted with new config</li>
+<li>The LanguageModel controller validates the spec and sets <code>status.phase: Ready</code></li>
+<li>The LanguageCluster controller (which watches <code>LanguageModel</code> resources) detects the new CR</li>
+<li>The shared <code>gateway-config</code> ConfigMap is regenerated with all models in the namespace</li>
+<li>The gateway Deployment rolls over with the updated configuration</li>
 </ol>
 <p>All agents immediately have access to the new model via <code>MODEL_ENDPOINTS</code>.</p>
 <h3 id="credential-management">Credential Management<a class="headerlink" href="#credential-management" title="Permanent link">&para;</a></h3>
