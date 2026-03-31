@@ -183,3 +183,24 @@ func TestDiscoverMCPToolSchemas_MCPError(t *testing.T) {
 		t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
 	}
 }
+
+func TestDiscoverMCPToolSchemas_ContextCancelled(t *testing.T) {
+	// Server that never responds — blocks until the test is torn down.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {}
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel so the request is rejected immediately
+
+	r := &LanguageToolReconciler{
+		HTTPClient: server.Client(),
+	}
+	endpoint := server.URL[7:] // strip "http://"
+
+	_, err := r.discoverMCPToolSchemas(ctx, endpoint)
+	if err == nil {
+		t.Fatal("Expected error for cancelled context, got nil")
+	}
+}
