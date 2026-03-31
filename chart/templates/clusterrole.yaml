@@ -82,8 +82,6 @@ rules:
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - apps
@@ -92,28 +90,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - batch
-  resources:
-  - cronjobs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
   - get
   - list
   - patch
@@ -338,13 +314,8 @@ rules:
   resources:
   - clusterrolebindings
   verbs:
-  - create
   - delete
   - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - ""
   resources:

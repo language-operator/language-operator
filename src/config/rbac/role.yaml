@@ -111,6 +111,12 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
+  verbs:
+  - delete
+  - get
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
   - rolebindings
   - roles
   verbs:
