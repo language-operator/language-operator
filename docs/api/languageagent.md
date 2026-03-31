@@ -64,10 +64,10 @@ Environment variables:
 
 Agents are deployed as standard Kubernetes Deployments with:
 
-- Configurable replicas
-- Resource limits and requests
-- Horizontal Pod Autoscaling support
-- PodDisruptionBudgets for high availability
+- Configurable replicas (`spec.deployment.replicas`)
+- Resource limits and requests (`spec.deployment.resources`)
+- Node selectors, tolerations, and affinity rules
+- Custom liveness, readiness, and startup probes
 
 ## Related Resources
 
