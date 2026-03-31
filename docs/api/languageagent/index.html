@@ -1680,13 +1680,78 @@
 <li><code>/etc/agent/instructions.txt</code> - Task instructions</li>
 <li><code>/etc/agent/config.yaml</code> - Personas, models, tools</li>
 </ul>
-<p>Environment variables:</p>
-<ul>
-<li><code>MODEL_ENDPOINTS</code> - Shared proxy URL</li>
-<li><code>LLM_MODEL</code> - Comma-separated model names</li>
-<li><code>MCP_SERVERS</code> - MCP tool server URLs</li>
-<li><code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code> - Identity</li>
-</ul>
+<p>Environment variables injected into every agent container and all init containers:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENT_NAME</code></td>
+<td><code>metadata.name</code> of the LanguageAgent</td>
+</tr>
+<tr>
+<td><code>AGENT_NAMESPACE</code></td>
+<td><code>metadata.namespace</code> of the LanguageAgent</td>
+</tr>
+<tr>
+<td><code>AGENT_UUID</code></td>
+<td>Stable UUID assigned to this agent (from <code>status.uuid</code>)</td>
+</tr>
+<tr>
+<td><code>AGENT_MODE</code></td>
+<td>Execution mode from <code>spec.executionMode</code> (omitted if not set)</td>
+</tr>
+<tr>
+<td><code>AGENT_CLUSTER_NAME</code></td>
+<td>Name of the LanguageCluster this agent belongs to</td>
+</tr>
+<tr>
+<td><code>AGENT_CLUSTER_UUID</code></td>
+<td>Kubernetes UID of the LanguageCluster</td>
+</tr>
+<tr>
+<td><code>MODEL_ENDPOINTS</code></td>
+<td>Shared LiteLLM gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>)</td>
+</tr>
+<tr>
+<td><code>LLM_MODEL</code></td>
+<td>Comma-separated list of model names for all referenced models</td>
+</tr>
+<tr>
+<td><code>MCP_SERVERS</code></td>
+<td>Comma-separated MCP tool server URLs (only injected when at least one tool is resolved)</td>
+</tr>
+<tr>
+<td><code>AGENT_INSTRUCTIONS</code></td>
+<td>Content of <code>spec.instructions</code>; only set when instructions are non-empty</td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
+<td>Propagated from the operator environment when configured</td>
+</tr>
+<tr>
+<td><code>OTEL_SERVICE_NAME</code></td>
+<td>Set to <code>agent-&lt;name&gt;</code> when <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is configured</td>
+</tr>
+<tr>
+<td><code>OTEL_RESOURCE_ATTRIBUTES</code></td>
+<td>Propagated from the operator environment (conditional on OTEL endpoint)</td>
+</tr>
+<tr>
+<td><code>OTEL_TRACES_SAMPLER</code></td>
+<td>Propagated from the operator environment (conditional on OTEL endpoint)</td>
+</tr>
+<tr>
+<td><code>OTEL_TRACES_SAMPLER_ARG</code></td>
+<td>Propagated from the operator environment (conditional on OTEL endpoint)</td>
+</tr>
+</tbody>
+</table>
+<p>Additional variables from <code>spec.deployment.env</code> and <code>spec.deployment.envFrom</code> are passed through unchanged. See <a href="../../architecture/agents/#environment-variables">Environment Variables</a> in the architecture docs for the full reference.</p>
 <h3 id="resource-management">Resource Management<a class="headerlink" href="#resource-management" title="Permanent link">&para;</a></h3>
 <p>Agents are deployed as standard Kubernetes Deployments with:</p>
 <ul>
