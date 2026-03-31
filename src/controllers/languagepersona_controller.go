@@ -119,18 +119,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 // handleDeletion handles the deletion of the LanguagePersona
 func (r *LanguagePersonaReconciler) handleDeletion(ctx context.Context, persona *langopv1alpha1.LanguagePersona) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
-	if controllerutil.ContainsFinalizer(persona, FinalizerName) {
-		// Remove finalizer
-		controllerutil.RemoveFinalizer(persona, FinalizerName)
-		if err := r.Update(ctx, persona); err != nil {
-			log.Error(err, "Failed to remove finalizer")
-			return ctrl.Result{}, err
-		}
-	}
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, RemoveFinalizer(ctx, r.Client, persona)
 }
 
 // SetupWithManager sets up the controller with the Manager

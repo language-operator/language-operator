@@ -128,18 +128,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // handleDeletion handles the deletion of the LanguageModel
 func (r *LanguageModelReconciler) handleDeletion(ctx context.Context, model *langopv1alpha1.LanguageModel) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
-	if controllerutil.ContainsFinalizer(model, FinalizerName) {
-		// Remove finalizer
-		controllerutil.RemoveFinalizer(model, FinalizerName)
-		if err := r.Update(ctx, model); err != nil {
-			log.Error(err, "Failed to remove finalizer")
-			return ctrl.Result{}, err
-		}
-	}
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, RemoveFinalizer(ctx, r.Client, model)
 }
 
 // SetupWithManager sets up the controller with the Manager
