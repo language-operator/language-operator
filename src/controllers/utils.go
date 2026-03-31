@@ -59,6 +59,18 @@ const (
 	LangopGroupID = 101
 )
 
+// RemoveFinalizer removes the operator finalizer from obj and updates it.
+func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
+	if controllerutil.ContainsFinalizer(obj, FinalizerName) {
+		controllerutil.RemoveFinalizer(obj, FinalizerName)
+		if err := c.Update(ctx, obj); err != nil {
+			log.FromContext(ctx).Error(err, "Failed to remove finalizer")
+			return err
+		}
+	}
+	return nil
+}
+
 // buildPodSecurityContext returns the operator-default pod-level security context.
 // Controllers may let users override this via spec.deployment.securityContext.
 func buildPodSecurityContext() *corev1.PodSecurityContext {
