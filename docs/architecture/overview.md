@@ -191,9 +191,8 @@ kind: LanguageCluster
 metadata:
   name: language-operator-myapp
 spec:
-  domain: agents.example.com
+  domain: agents.example.com  # exposes gateway at gateway.agents.example.com via Ingress
   gateway:
-    enabled: true    # expose gateway at gateway.agents.example.com (default when domain is set)
     deployment:
       replicas: 1
 ```
@@ -217,7 +216,7 @@ The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic
 
-**Agent image:** No mandatory endpoints or protocols. The operator is runtime-agnostic. Liveness and readiness probes are defined in `spec.livenessProbe` / `spec.readinessProbe` — if not set, none are configured.
+**Agent image:** No mandatory endpoints or protocols. The operator is runtime-agnostic. Liveness and readiness probes are defined in `spec.deployment.livenessProbe` / `spec.deployment.readinessProbe` — if not set, none are configured.
 
 ---
 
