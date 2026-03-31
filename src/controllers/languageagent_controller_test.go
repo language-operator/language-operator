@@ -268,7 +268,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	// Verify Ready condition
 	var readyCondition *metav1.Condition
 	for i := range updatedAgent.Status.Conditions {
-		if updatedAgent.Status.Conditions[i].Type == "Ready" {
+		if updatedAgent.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCondition = &updatedAgent.Status.Conditions[i]
 			break
 		}
@@ -2963,7 +2963,7 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 
 	var regCond *metav1.Condition
 	for i := range updatedAgent.Status.Conditions {
-		if updatedAgent.Status.Conditions[i].Type == "RegistryValidated" {
+		if updatedAgent.Status.Conditions[i].Type == langopv1alpha1.ConditionRegistryValidated {
 			regCond = &updatedAgent.Status.Conditions[i]
 			break
 		}
@@ -3207,7 +3207,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.ConfigMap); return ok },
 			failErrMsg:  "injected configmap error",
 			expectError: true,
-			condType:    "Ready",
+			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "ConfigMapError",
 		},
@@ -3221,7 +3221,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.PersistentVolumeClaim); return ok },
 			failErrMsg:  "injected pvc error",
 			expectError: true,
-			condType:    "Ready",
+			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "PVCError",
 		},
@@ -3235,7 +3235,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.Service); return ok },
 			failErrMsg:  "injected service error",
 			expectError: true,
-			condType:    "Ready",
+			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "ServiceError",
 		},
@@ -3249,7 +3249,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failCreate:  func(obj client.Object) bool { _, ok := obj.(*corev1.ServiceAccount); return ok },
 			failErrMsg:  "injected serviceaccount error",
 			expectError: true,
-			condType:    "Ready",
+			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "ServiceAccountError",
 		},
@@ -3263,7 +3263,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failCreate:  func(obj client.Object) bool { _, ok := obj.(*appsv1.Deployment); return ok },
 			failErrMsg:  "injected deployment error",
 			expectError: true,
-			condType:    "Ready",
+			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
 			condReason:  "DeploymentError",
 		},
@@ -3278,7 +3278,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failErrMsg:       "injected networkpolicy error",
 			networkIsolation: true,
 			expectError:      true,
-			condType:         "Ready",
+			condType:         langopv1alpha1.ConditionReady,
 			condStatus:       metav1.ConditionFalse,
 			condReason:       "NetworkPolicyError",
 		},
@@ -3293,7 +3293,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			failErrMsg:       "context deadline exceeded: timeout waiting for network policy",
 			networkIsolation: true,
 			expectError:      false, // degraded mode — reconcile continues without error
-			condType:         "NetworkPolicyReady",
+			condType:         langopv1alpha1.ConditionNetworkPolicyReady,
 			condStatus:       metav1.ConditionFalse,
 			condReason:       "NetworkPolicyTimeout",
 		},

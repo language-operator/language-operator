@@ -100,7 +100,7 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 	}
 	var readyCond *metav1.Condition
 	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == "Ready" {
+		if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCond = &updatedTool.Status.Conditions[i]
 			break
 		}
@@ -296,7 +296,7 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 			// Verify Ready condition
 			var readyCondition *metav1.Condition
 			for i := range updatedTool.Status.Conditions {
-				if updatedTool.Status.Conditions[i].Type == "Ready" {
+				if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 					readyCondition = &updatedTool.Status.Conditions[i]
 					break
 				}
@@ -774,7 +774,7 @@ func TestLanguageToolController_PhaseFailedOnRegistryError(t *testing.T) {
 
 	var regCond *metav1.Condition
 	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == "RegistryValidated" {
+		if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionRegistryValidated {
 			regCond = &updatedTool.Status.Conditions[i]
 			break
 		}
@@ -954,7 +954,7 @@ func TestLanguageToolController_SidecarMode_NoRunningPod(t *testing.T) {
 	// SchemasDiscovered condition should be False with reason NoRunningAgentPod
 	var schemasCond *metav1.Condition
 	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == "SchemasDiscovered" {
+		if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionSchemasDiscovered {
 			schemasCond = &updatedTool.Status.Conditions[i]
 			break
 		}
@@ -1063,7 +1063,7 @@ func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T
 	// SchemasDiscovered condition should be True
 	var schemasCond *metav1.Condition
 	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == "SchemasDiscovered" {
+		if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionSchemasDiscovered {
 			schemasCond = &updatedTool.Status.Conditions[i]
 			break
 		}
