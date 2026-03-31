@@ -1641,7 +1641,7 @@
 <p>A LanguageCluster provides:
 - Dedicated namespace with network isolation
 - Shared LiteLLM proxy for all models in the cluster
-- Optional external ingress at <code>proxy.&lt;domain&gt;</code>
+- Optional external ingress at <code>gateway.&lt;domain&gt;</code>
 - NetworkPolicy enforcement for security</p>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
@@ -1682,7 +1682,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
 </code></pre></div>
-<p>Creates an Ingress/HTTPRoute at <code>proxy.agents.example.com</code> for external model access.</p>
+<p>Creates an Ingress/HTTPRoute at <code>gateway.agents.example.com</code> for external model access.</p>
 <h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../languageagent/">LanguageAgent</a> - Deploy agents in the cluster</li>

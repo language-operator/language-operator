@@ -1685,7 +1685,7 @@
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="no">You have access to multiple models.</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="no">Use haiku for simple tasks, sonnet for most work, opus for complex reasoning.</span>
 </code></pre></div>
-<p>The operator sets <code>LLM_MODEL=claude-sonnet,claude-opus,claude-haiku</code> and <code>MODEL_ENDPOINTS=http://proxy...</code> so your agent can choose.</p>
+<p>The operator sets <code>LLM_MODEL=claude-sonnet,claude-opus,claude-haiku</code> and <code>MODEL_ENDPOINTS=http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code> so your agent can choose.</p>
 <h3 id="agent-with-persona">Agent with Persona<a class="headerlink" href="#agent-with-persona" title="Permanent link">&para;</a></h3>
 <p>Reusable behavioral templates:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
