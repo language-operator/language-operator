@@ -96,7 +96,7 @@ func defaultGatewayLivenessProbe() *corev1.Probe {
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/health/liveliness",
-				Port: intstr.FromInt(4000),
+				Port: intstr.FromInt(GatewayContainerPort),
 			},
 		},
 		InitialDelaySeconds: 30,
@@ -110,7 +110,7 @@ func defaultGatewayReadinessProbe() *corev1.Probe {
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/health/readiness",
-				Port: intstr.FromInt(4000),
+				Port: intstr.FromInt(GatewayContainerPort),
 			},
 		},
 		InitialDelaySeconds: 30,
@@ -323,7 +323,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonGatewayReady, "Shared LiteLLM gateway is ready", cluster.Generation)
-	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", cluster.Name)
+	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", cluster.Name, GatewayServicePort)
 	cluster.Status.GatewayReady = ptr.To(true)
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
@@ -507,11 +507,11 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: &udpProtocol,
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 				{
 					Protocol: &tcpProtocol,
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 			},
 		},
@@ -1034,7 +1034,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
-								{Name: "http", ContainerPort: 4000, Protocol: corev1.ProtocolTCP},
+								{Name: "http", ContainerPort: GatewayContainerPort, Protocol: corev1.ProtocolTCP},
 							},
 							LivenessProbe:  livenessProbe,
 							ReadinessProbe: readinessProbe,
@@ -1081,8 +1081,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 				{
 					Name:       "http",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       8000,
-					TargetPort: intstr.FromInt(4000),
+					Port:       GatewayServicePort,
+					TargetPort: intstr.FromInt(GatewayContainerPort),
 				},
 			},
 		}
@@ -1143,7 +1143,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
 											Name: "gateway",
-											Port: networkingv1.ServiceBackendPort{Number: 8000},
+											Port: networkingv1.ServiceBackendPort{Number: GatewayServicePort},
 										},
 									},
 								},

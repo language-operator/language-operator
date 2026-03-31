@@ -458,7 +458,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 
 	// Models — all served via the shared namespace gateway
-	gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", agent.Namespace)
+	gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort)
 	for _, modelRef := range agent.Spec.Models {
 		model := &langopv1alpha1.LanguageModel{}
 		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
@@ -920,7 +920,7 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 
 		// All models in a cluster are served by the shared gateway
 		// in the cluster namespace. Deduplicate: only add the gateway URL once.
-		gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", agent.Namespace)
+		gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort)
 		alreadyAdded := false
 		for _, u := range modelURLs {
 			if u == gatewayURL {

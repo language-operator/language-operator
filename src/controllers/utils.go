@@ -58,6 +58,12 @@ const (
 	LabelKeyK8sManagedBy = "app.kubernetes.io/managed-by"
 	LabelKeyK8sPartOf    = "app.kubernetes.io/part-of"
 
+	GatewayContainerPort = 4000 // port the LiteLLM process listens on inside the pod
+	GatewayServicePort   = 8000 // port exposed by the gateway Service (maps → GatewayContainerPort)
+	OTELGRPCPort         = 4317
+	OTELHTTPPort         = 4318
+	DNSPort              = 53
+
 	// LangopUserID is the user ID for the langop user (matches Dockerfile)
 	LangopUserID = 1000
 	// LangopGroupID is the group ID for the langop group
@@ -448,11 +454,11 @@ func BuildEgressNetworkPolicy(
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: protocolPtr(corev1.ProtocolUDP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 				{
 					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 53},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 			},
 		},
@@ -495,11 +501,11 @@ func BuildEgressNetworkPolicy(
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4317},
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELGRPCPort},
 							},
 							{
 								Protocol: protocolPtr(corev1.ProtocolTCP),
-								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 4318},
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELHTTPPort},
 							},
 						},
 					})
