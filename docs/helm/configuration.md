@@ -172,12 +172,11 @@ env:
 | `config.leaderElection.renewDeadline` | Renew deadline | `10s` |
 | `config.leaderElection.retryPeriod` | Retry period | `2s` |
 
-#### Metrics and Health
+#### Health
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `config.metrics.bindAddress` | Metrics server bind address | `:8443` |
-| `config.health.bindAddress` | Health probe bind address | `:8081` |
+| `config.health.port` | Health probe bind port | `8081` |
 
 #### Webhook
 
