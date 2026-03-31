@@ -1181,4 +1181,15 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing
 	require.NotNil(t, cond, "expected ConditionReady to be set")
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
 	assert.Equal(t, "NetworkPolicyError", cond.Reason)
+
+	var npCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyReady {
+			npCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, npCond, "expected ConditionNetworkPolicyReady to be set")
+	assert.Equal(t, metav1.ConditionFalse, npCond.Status)
+	assert.NotEmpty(t, npCond.Reason)
 }

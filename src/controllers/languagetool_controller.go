@@ -244,6 +244,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				r.EventManager.RecordNetworkPolicyFailed(tool, err)
 			}
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
+			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, "NetworkPolicyError", err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
