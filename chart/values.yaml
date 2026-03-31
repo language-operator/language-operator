@@ -133,6 +133,7 @@ config:
 
   # Health probe configuration
   health:
+    port: 8081
     bindAddress: ":8081"
 
   # Webhook configuration

@@ -101,7 +101,7 @@ spec:
           containerPort: {{ .Values.service.metricsPort }}
           protocol: TCP
         - name: health
-          containerPort: 8081
+          containerPort: {{ .Values.config.health.port }}
           protocol: TCP
         {{- if .Values.config.webhook.enabled }}
         - name: webhook
@@ -110,11 +110,11 @@ spec:
         {{- end }}
         {{- with .Values.livenessProbe }}
         livenessProbe:
-          {{- toYaml . | nindent 10 }}
+          {{- toYaml (merge (dict "httpGet" (dict "port" ($.Values.config.health.port | int))) .) | nindent 10 }}
         {{- end }}
         {{- with .Values.readinessProbe }}
         readinessProbe:
-          {{- toYaml . | nindent 10 }}
+          {{- toYaml (merge (dict "httpGet" (dict "port" ($.Values.config.health.port | int))) .) | nindent 10 }}
         {{- end }}
         {{- with .Values.resources }}
         resources:
