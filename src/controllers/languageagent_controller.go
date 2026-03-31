@@ -404,8 +404,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconciliation successful
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 
-	// No need for periodic requeues - Job events will trigger reconciliation automatically
-	// via the Owns(&batchv1.Job{}) watch relationship in SetupWithManager
+	// No need for periodic requeues - owner-reference events from Deployment, Service, ConfigMap,
+	// and other owned resources drive re-reconciliation via SetupWithManager watches.
 	return ctrl.Result{}, nil
 }
 
