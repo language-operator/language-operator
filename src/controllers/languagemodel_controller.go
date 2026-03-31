@@ -107,7 +107,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	model.Status.ObservedGeneration = model.Generation
 	model.Status.Phase = events.PhaseStatusReady
 	model.Status.Message = "Model is managed by the cluster shared gateway"
-	SetCondition(&model.Status.Conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster gateway", model.Generation)
+	SetCondition(&model.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, "ReconcileSuccess", "Model spec registered with cluster gateway", model.Generation)
 
 	if r.EventManager != nil {
 		r.EventManager.RecordModelReady(model, model.Spec.Provider)

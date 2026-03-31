@@ -122,7 +122,7 @@ func TestLanguageClusterController_ReadyCondition(t *testing.T) {
 
 	var readyCondition *metav1.Condition
 	for i := range updatedCluster.Status.Conditions {
-		if updatedCluster.Status.Conditions[i].Type == "Ready" {
+		if updatedCluster.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCondition = &updatedCluster.Status.Conditions[i]
 			break
 		}
@@ -1114,7 +1114,7 @@ func TestLanguageClusterController_GatewayIngressError(t *testing.T) {
 	assert.False(t, *updated.Status.GatewayReady)
 	var gatewayReadyCond *metav1.Condition
 	for i := range updated.Status.Conditions {
-		if updated.Status.Conditions[i].Type == "GatewayReady" {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionGatewayReady {
 			gatewayReadyCond = &updated.Status.Conditions[i]
 			break
 		}
@@ -1141,7 +1141,7 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			name:         "NamespaceError",
 			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("ns-err-cluster") },
 			failCreate:   func(obj client.Object) bool { _, ok := obj.(*corev1.Namespace); return ok },
-			condType:     "Ready",
+			condType:     langopv1alpha1.ConditionReady,
 			condStatus:   metav1.ConditionFalse,
 			condReason:   "NamespaceError",
 		},
@@ -1149,7 +1149,7 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			name:         "RBACError",
 			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("rbac-err-cluster") },
 			failCreate:   func(obj client.Object) bool { _, ok := obj.(*rbacv1.Role); return ok },
-			condType:     "Ready",
+			condType:     langopv1alpha1.ConditionReady,
 			condStatus:   metav1.ConditionFalse,
 			condReason:   "RBACError",
 		},
@@ -1158,7 +1158,7 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			buildCluster:     func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("netpol-err-cluster") },
 			failCreate:       func(obj client.Object) bool { _, ok := obj.(*networkingv1.NetworkPolicy); return ok },
 			networkIsolation: true,
-			condType:         "Ready",
+			condType:         langopv1alpha1.ConditionReady,
 			condStatus:       metav1.ConditionFalse,
 			condReason:       "NetworkPolicyError",
 		},
@@ -1166,7 +1166,7 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			name:         "GatewayError",
 			buildCluster: func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("gw-err-cluster") },
 			failCreate:   func(obj client.Object) bool { _, ok := obj.(*corev1.ConfigMap); return ok },
-			condType:     "GatewayReady",
+			condType:     langopv1alpha1.ConditionGatewayReady,
 			condStatus:   metav1.ConditionFalse,
 			condReason:   "GatewayError",
 		},
@@ -1176,7 +1176,7 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 				return gen.LanguageCluster("cap-err-cluster", gen.SetClusterCapacity(&langopv1alpha1.ClusterCapacitySpec{MaxAgents: &maxAgents}))
 			},
 			failCreate: func(obj client.Object) bool { _, ok := obj.(*corev1.ResourceQuota); return ok },
-			condType:   "CapacityReady",
+			condType:   langopv1alpha1.ConditionCapacityReady,
 			condStatus: metav1.ConditionFalse,
 			condReason: "CapacityError",
 		},

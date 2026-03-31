@@ -121,7 +121,7 @@ func TestLanguageModelController_StatusUpdates(t *testing.T) {
 	// Verify Ready condition
 	var readyCondition *metav1.Condition
 	for i := range updatedModel.Status.Conditions {
-		if updatedModel.Status.Conditions[i].Type == "Ready" {
+		if updatedModel.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCondition = &updatedModel.Status.Conditions[i]
 			break
 		}

@@ -210,7 +210,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile namespace")
 		cluster.Status.Phase = events.PhaseStatusFailed
-		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 			"NamespaceError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after namespace error")
@@ -233,7 +233,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			r.EventManager.RecordRBACFailed(cluster, err)
 		}
 		cluster.Status.Phase = events.PhaseStatusFailed
-		SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 			"RBACError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after RBAC error")
@@ -252,7 +252,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				r.EventManager.RecordNetworkPolicyFailed(cluster, err)
 			}
 			cluster.Status.Phase = events.PhaseStatusFailed
-			SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionFalse,
+			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 				"NetworkPolicyError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after NetworkPolicy error")
@@ -260,11 +260,11 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		} else {
-			SetCondition(&cluster.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyReady",
+			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyReady",
 				"NetworkPolicy created successfully", cluster.Generation)
 		}
 	} else {
-		SetCondition(&cluster.Status.Conditions, "NetworkPolicyReady", metav1.ConditionTrue, "NetworkPolicyDisabled",
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyDisabled",
 			"NetworkPolicy creation disabled via networkIsolation.enabled=false", cluster.Generation)
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
@@ -276,7 +276,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.SetStatus(codes.Error, "Failed to reconcile gateway")
 		cluster.Status.Phase = events.PhaseStatusFailed
 		cluster.Status.GatewayReady = ptr.To(false)
-		SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
 			"GatewayError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after gateway error")
@@ -293,7 +293,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			span.SetStatus(codes.Error, "Failed to reconcile gateway ingress")
 			cluster.Status.Phase = events.PhaseStatusFailed
 			cluster.Status.GatewayReady = ptr.To(false)
-			SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionFalse,
+			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
 				"GatewayIngressError", err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after gateway ingress error")
@@ -303,7 +303,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	SetCondition(&cluster.Status.Conditions, "GatewayReady", metav1.ConditionTrue,
+	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionTrue,
 		"GatewayReady", "Shared LiteLLM gateway is ready", cluster.Generation)
 	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:8000", cluster.Name)
 	cluster.Status.GatewayReady = ptr.To(true)
@@ -321,7 +321,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile capacity quota")
 		cluster.Status.Phase = events.PhaseStatusFailed
-		SetCondition(&cluster.Status.Conditions, "CapacityReady", metav1.ConditionFalse,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionCapacityReady, metav1.ConditionFalse,
 			"CapacityError", err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after capacity error")
@@ -331,7 +331,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	cluster.Status.Phase = events.PhaseStatusReady
-	SetCondition(&cluster.Status.Conditions, "Ready", metav1.ConditionTrue,
+	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
 		"ReconcileSuccess", "LanguageCluster is ready", cluster.Generation)
 
 	if r.EventManager != nil {
@@ -814,7 +814,7 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 		log.V(1).Info("Wildcard DNS not configured or not accessible",
 			"domain", domain, "test_host", testHost, "error", err.Error())
 
-		SetCondition(&cluster.Status.Conditions, "DNSConfigured", metav1.ConditionFalse,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionFalse,
 			"WildcardDNSMissing",
 			fmt.Sprintf("Wildcard DNS (*.%s) not configured or not accessible. See docs/dns.md for setup instructions.", domain),
 			cluster.Generation)
@@ -828,7 +828,7 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 		// DNS resolution succeeded
 		log.V(1).Info("Wildcard DNS configured correctly", "domain", domain)
 
-		SetCondition(&cluster.Status.Conditions, "DNSConfigured", metav1.ConditionTrue,
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionTrue,
 			"WildcardDNSReady",
 			fmt.Sprintf("Wildcard DNS (*.%s) is correctly configured", domain),
 			cluster.Generation)

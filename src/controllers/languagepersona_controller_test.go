@@ -61,7 +61,7 @@ func TestLanguagePersonaController_ReconcileSucceeds(t *testing.T) {
 
 	var readyCondition *metav1.Condition
 	for i := range updatedPersona.Status.Conditions {
-		if updatedPersona.Status.Conditions[i].Type == "Ready" {
+		if updatedPersona.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCondition = &updatedPersona.Status.Conditions[i]
 			break
 		}
@@ -138,7 +138,7 @@ func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
 	// Verify Ready condition
 	var readyCondition *metav1.Condition
 	for i := range updatedPersona.Status.Conditions {
-		if updatedPersona.Status.Conditions[i].Type == "Ready" {
+		if updatedPersona.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
 			readyCondition = &updatedPersona.Status.Conditions[i]
 			break
 		}
