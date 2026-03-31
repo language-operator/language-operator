@@ -311,6 +311,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after Service error")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
@@ -333,6 +334,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if updateErr := r.Status().Update(ctx, agent); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after ServiceAccount error")
 		}
+		reconcileErr = err
 		return ctrl.Result{}, err
 	}
 
