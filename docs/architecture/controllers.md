@@ -113,17 +113,11 @@ If `spec.domain` is set, the controller creates an Ingress or HTTPRoute (dependi
 
 **File:** `src/controllers/languagemodel_controller.go`
 
-**Creates:**
-
-- ConfigMap containing the model spec (key: `model__<name>.json`)
-
-**No Longer Creates:**
-
-Previously, each LanguageModel had its own Deployment and Service. Now all models share the cluster's LiteLLM proxy. The controller only creates a ConfigMap that the LanguageCluster controller reads when assembling the proxy configuration.
+**Creates:** *(nothing — status only)*
 
 **Triggers:**
 
-When a LanguageModel is created, updated, or deleted, it triggers a reconciliation of the parent LanguageCluster to update the shared proxy.
+When a LanguageModel is created, updated, or deleted, it triggers a reconciliation of the parent LanguageCluster. The LanguageCluster controller reads LanguageModel CRs directly when assembling the shared gateway configuration.
 
 ---
 
@@ -131,13 +125,11 @@ When a LanguageModel is created, updated, or deleted, it triggers a reconciliati
 
 **File:** `src/controllers/languagepersona_controller.go`
 
-**Creates:**
-
-- ConfigMap with the persona's JSON spec
+**Creates:** *(nothing — status only)*
 
 **Purpose:**
 
-Personas are behavioral templates that agents can reference. The controller validates the persona spec and stores it in a ConfigMap. The LanguageAgent controller reads these ConfigMaps and merges persona configurations into the agent's `/etc/agent/config.yaml`.
+Personas are behavioral templates that agents can reference. The controller validates the persona spec and updates status conditions. The LanguageAgent controller reads LanguagePersona CRs directly and merges persona configurations into the agent's `/etc/agent/config.yaml`.
 
 ---
 
