@@ -324,8 +324,12 @@ type LanguageClusterStatus struct {
 	// +kubebuilder:validation:Enum=Pending;Ready;Failed
 	Phase string `json:"phase,omitempty"`
 
-	// Conditions
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// GatewayEndpoint is the in-cluster URL for the shared LiteLLM gateway
 	// +optional

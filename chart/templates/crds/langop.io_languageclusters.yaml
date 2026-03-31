@@ -5554,7 +5554,6 @@ spec:
                 - toolCount
                 type: object
               conditions:
-                description: Conditions
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -5610,6 +5609,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               gatewayEndpoint:
                 description: GatewayEndpoint is the in-cluster URL for the shared
                   LiteLLM gateway
