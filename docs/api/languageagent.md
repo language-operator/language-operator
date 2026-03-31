@@ -50,8 +50,7 @@ See the [Complete API Reference](reference.md#languageagent) for full field docu
 
 The operator automatically mounts:
 
-- `/etc/agent/instructions.txt` - Task instructions
-- `/etc/agent/config.yaml` - Personas, models, tools
+- `/etc/agent/config.yaml` - Instructions, personas, models, tools
 
 Environment variables:
 
