@@ -145,12 +145,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !agent.DeletionTimestamp.IsZero() {
 		span.AddEvent("Deleting agent")
 		if controllerutil.ContainsFinalizer(agent, FinalizerName) {
-			if err := r.cleanupResources(ctx, agent); err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, "Failed to cleanup resources")
-				reconcileErr = err
-				return ctrl.Result{}, err
-			}
+			// All child resources (Service, Ingress, PVC, Deployment, NetworkPolicy) have
+			// owner references set via SetControllerReference. Kubernetes GC deletes them
+			// automatically; no explicit cleanup or polling needed.
 			controllerutil.RemoveFinalizer(agent, FinalizerName)
 			if err := r.Update(ctx, agent); err != nil {
 				span.RecordError(err)
@@ -1201,102 +1198,13 @@ func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *lango
 }
 
 func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-	log.Info("Starting explicit resource cleanup", "agent", agent.Name, "namespace", agent.Namespace)
-
-	// Set cleanup timeout
-	cleanupTimeout := 30 * time.Second
-	cleanupCtx, cancel := context.WithTimeout(ctx, cleanupTimeout)
-	defer cancel()
-
-	var cleanupErrors []error
-
-	// 1. Cleanup Ingresses
-	if err := r.cleanupIngresses(cleanupCtx, agent); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("Ingress cleanup failed: %w", err))
-		log.Error(err, "Failed to cleanup Ingresses", "agent", agent.Name)
-	}
-
-	// 2. Cleanup Services
-	if err := r.cleanupServices(cleanupCtx, agent); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("Service cleanup failed: %w", err))
-		log.Error(err, "Failed to cleanup Services", "agent", agent.Name)
-	}
-
-	// 3. Cleanup shared RBAC resources if this is the last agent in the namespace
-	if err := r.cleanupSharedRBAC(cleanupCtx, agent); err != nil {
-		cleanupErrors = append(cleanupErrors, fmt.Errorf("RBAC cleanup failed: %w", err))
-		log.Error(err, "Failed to cleanup RBAC resources", "agent", agent.Name)
-	}
-
-	// Log summary
-	if len(cleanupErrors) == 0 {
-		log.Info("Resource cleanup completed successfully", "agent", agent.Name)
-		return nil
-	}
-
-	// Return combined error for critical failures, but don't block deletion indefinitely
-	log.Info("Resource cleanup completed with errors", "agent", agent.Name, "errorCount", len(cleanupErrors))
-	for _, err := range cleanupErrors {
-		log.Error(err, "Cleanup error details")
-	}
-
-	// Don't block agent deletion for cleanup failures - log and continue
-	return nil
-}
-
-// cleanupIngresses deletes Ingresses owned by the agent and verifies deletion
-func (r *LanguageAgentReconciler) cleanupIngresses(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-
-	ingressList := &networkingv1.IngressList{}
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labelSelector := client.MatchingLabels(labels)
-
-	if err := r.List(ctx, ingressList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to list Ingresses: %w", err)
-	}
-
-	// Delete each Ingress and verify deletion
-	for _, ingress := range ingressList.Items {
-		ingressObj := ingress // Create a copy to avoid pointer issues
-		if err := r.deleteAndVerifyResource(ctx, &ingressObj, "Ingress"); err != nil {
-			return fmt.Errorf("failed to delete Ingress %s: %w", ingress.Name, err)
-		}
-		log.Info("Successfully deleted Ingress", "name", ingress.Name, "namespace", ingress.Namespace)
-	}
-
-	return nil
-}
-
-// cleanupServices deletes Services owned by the agent and verifies deletion
-func (r *LanguageAgentReconciler) cleanupServices(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	log := log.FromContext(ctx)
-
-	serviceList := &corev1.ServiceList{}
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labelSelector := client.MatchingLabels(labels)
-
-	if err := r.List(ctx, serviceList, client.InNamespace(agent.Namespace), labelSelector); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to list Services: %w", err)
-	}
-
-	// Delete each Service and verify deletion
-	for _, service := range serviceList.Items {
-		serviceObj := service // Create a copy to avoid pointer issues
-		if err := r.deleteAndVerifyResource(ctx, &serviceObj, "Service"); err != nil {
-			return fmt.Errorf("failed to delete Service %s: %w", service.Name, err)
-		}
-		log.Info("Successfully deleted Service", "name", service.Name, "namespace", service.Namespace)
-	}
-
-	return nil
+	// Child resources (Service, Ingress, PVC, Deployment, NetworkPolicy) all carry owner
+	// references set via SetControllerReference. Kubernetes GC deletes them automatically
+	// when the agent is deleted; no explicit polling is needed.
+	//
+	// The only manual cleanup required is shared RBAC resources, which are not owned by
+	// any single agent and must be removed when the last agent in the namespace is deleted.
+	return r.cleanupSharedRBAC(ctx, agent)
 }
 
 // cleanupSharedRBAC deletes the shared ServiceAccount, Role, and RoleBinding for agent pods
@@ -1330,47 +1238,6 @@ func (r *LanguageAgentReconciler) cleanupSharedRBAC(ctx context.Context, agent *
 		log.Info("Deleted shared RBAC resource", "kind", fmt.Sprintf("%T", obj), "namespace", ns)
 	}
 	return nil
-}
-
-// deleteAndVerifyResource deletes a resource and waits for deletion to be confirmed
-func (r *LanguageAgentReconciler) deleteAndVerifyResource(ctx context.Context, obj client.Object, resourceType string) error {
-	log := log.FromContext(ctx)
-
-	// Delete the resource
-	if err := r.Delete(ctx, obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Already deleted
-			return nil
-		}
-		return fmt.Errorf("failed to delete %s: %w", resourceType, err)
-	}
-
-	// Wait for deletion to be confirmed with polling
-	name := obj.GetName()
-	namespace := obj.GetNamespace()
-
-	// Poll for deletion with timeout
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for %s %s/%s deletion: %w", resourceType, namespace, name, ctx.Err())
-		case <-ticker.C:
-			// Check if resource still exists
-			err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, obj)
-			if apierrors.IsNotFound(err) {
-				// Resource has been deleted successfully
-				log.V(1).Info("Verified resource deletion", "type", resourceType, "name", name, "namespace", namespace)
-				return nil
-			}
-			if err != nil {
-				return fmt.Errorf("error checking %s deletion status: %w", resourceType, err)
-			}
-			// Resource still exists, continue polling
-		}
-	}
 }
 
 // agentPort returns the port the agent container listens on.
