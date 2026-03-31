@@ -346,3 +346,182 @@ func TestResolveDNSToCIDRs_WildcardAll(t *testing.T) {
 	require.Len(t, cidrs, 1)
 	assert.Equal(t, "0.0.0.0/0", cidrs[0])
 }
+
+func TestDeleteConfigMap_Exists(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-cm", Namespace: "default"},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cm).Build()
+
+	err := DeleteConfigMap(context.Background(), c, "my-cm", "default")
+	require.NoError(t, err)
+
+	// Verify deletion
+	got := &corev1.ConfigMap{}
+	getErr := c.Get(context.Background(), client.ObjectKey{Name: "my-cm", Namespace: "default"}, got)
+	assert.True(t, client.IgnoreNotFound(getErr) == nil && getErr != nil, "expected not-found after deletion")
+}
+
+func TestDeleteConfigMap_AlreadyGone(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// ConfigMap does not exist — must return nil, not an error
+	err := DeleteConfigMap(context.Background(), c, "missing-cm", "default")
+	require.NoError(t, err)
+}
+
+func TestSetCondition_AddNew(t *testing.T) {
+	var conditions []metav1.Condition
+	changed := SetCondition(&conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "all good", 1)
+	assert.True(t, changed)
+	require.Len(t, conditions, 1)
+	assert.Equal(t, "Ready", conditions[0].Type)
+	assert.Equal(t, metav1.ConditionTrue, conditions[0].Status)
+	assert.Equal(t, "ReconcileSuccess", conditions[0].Reason)
+}
+
+func TestSetCondition_UpdateExistingStatusChange(t *testing.T) {
+	var conditions []metav1.Condition
+	SetCondition(&conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "all good", 1)
+	originalTime := conditions[0].LastTransitionTime
+
+	// Status changes from True to False → LastTransitionTime should be updated
+	changed := SetCondition(&conditions, "Ready", metav1.ConditionFalse, "Error", "something failed", 2)
+	assert.True(t, changed)
+	require.Len(t, conditions, 1, "should update in-place, not append")
+	assert.Equal(t, metav1.ConditionFalse, conditions[0].Status)
+	assert.Equal(t, "Error", conditions[0].Reason)
+	// LastTransitionTime must differ when status changes
+	assert.NotEqual(t, originalTime, conditions[0].LastTransitionTime)
+}
+
+func TestSetCondition_UpdateNoStatusChange(t *testing.T) {
+	var conditions []metav1.Condition
+	SetCondition(&conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "all good", 1)
+	originalTime := conditions[0].LastTransitionTime
+
+	// Same status, different reason → updated but LastTransitionTime preserved
+	changed := SetCondition(&conditions, "Ready", metav1.ConditionTrue, "NewReason", "updated message", 2)
+	assert.True(t, changed)
+	require.Len(t, conditions, 1)
+	assert.Equal(t, "NewReason", conditions[0].Reason)
+	assert.Equal(t, originalTime, conditions[0].LastTransitionTime, "LastTransitionTime must not change when status is unchanged")
+}
+
+func TestSetCondition_NoOpWhenUnchanged(t *testing.T) {
+	var conditions []metav1.Condition
+	SetCondition(&conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "all good", 1)
+
+	// Identical call must return false (nothing changed)
+	changed := SetCondition(&conditions, "Ready", metav1.ConditionTrue, "ReconcileSuccess", "all good", 1)
+	assert.False(t, changed)
+	require.Len(t, conditions, 1)
+}
+
+func TestBuildEgressNetworkPolicy_CIDRRule(t *testing.T) {
+	c := newFakeClient(t).Build()
+	policy := BuildEgressNetworkPolicy(
+		context.Background(), c,
+		"test-policy", "default",
+		map[string]string{"app": "test"},
+		"",
+		[]langopv1alpha1.NetworkRule{
+			{
+				To: &langopv1alpha1.NetworkPeer{CIDR: "192.168.0.0/24"},
+				Ports: []langopv1alpha1.NetworkPort{
+					{Port: 443, Protocol: "TCP"},
+					{Port: 8443, Protocol: "TCP"},
+				},
+			},
+		},
+	)
+	require.NotNil(t, policy)
+
+	var found bool
+	for _, rule := range policy.Spec.Egress {
+		for _, peer := range rule.To {
+			if peer.IPBlock != nil && peer.IPBlock.CIDR == "192.168.0.0/24" {
+				found = true
+				require.Len(t, rule.Ports, 2)
+				assert.Equal(t, int32(443), rule.Ports[0].Port.IntVal)
+				assert.Equal(t, int32(8443), rule.Ports[1].Port.IntVal)
+			}
+		}
+	}
+	assert.True(t, found, "expected egress rule with CIDR 192.168.0.0/24 and ports 443/8443")
+}
+
+func TestBuildEgressNetworkPolicy_OTELEndpointAddsEgressRule(t *testing.T) {
+	c := newFakeClient(t).Build()
+	policy := BuildEgressNetworkPolicy(
+		context.Background(), c,
+		"test-policy", "default",
+		map[string]string{"app": "test"},
+		"otel-collector.observability.svc.cluster.local:4317",
+		nil,
+	)
+	require.NotNil(t, policy)
+
+	var found bool
+	for _, rule := range policy.Spec.Egress {
+		for _, peer := range rule.To {
+			if peer.NamespaceSelector != nil {
+				v, ok := peer.NamespaceSelector.MatchLabels[LabelKeyMetadataName]
+				if ok && v == "observability" {
+					found = true
+					// Rule should include OTEL gRPC and HTTP ports
+					var portVals []int32
+					for _, p := range rule.Ports {
+						portVals = append(portVals, p.Port.IntVal)
+					}
+					assert.Contains(t, portVals, int32(OTELGRPCPort))
+					assert.Contains(t, portVals, int32(OTELHTTPPort))
+				}
+			}
+		}
+	}
+	assert.True(t, found, "expected egress rule targeting observability namespace for OTEL collector")
+}
+
+func TestBuildIngressPeerFromNetworkPeer_CIDR(t *testing.T) {
+	peer := &langopv1alpha1.NetworkPeer{CIDR: "10.0.0.0/8"}
+	result := buildIngressPeerFromNetworkPeer(peer, "default")
+	require.NotNil(t, result.IPBlock)
+	assert.Equal(t, "10.0.0.0/8", result.IPBlock.CIDR)
+	assert.Nil(t, result.PodSelector)
+	assert.Nil(t, result.NamespaceSelector)
+}
+
+func TestBuildIngressPeerFromNetworkPeer_Service(t *testing.T) {
+	peer := &langopv1alpha1.NetworkPeer{
+		Service: &langopv1alpha1.ServiceReference{Name: "my-svc", Namespace: "other-ns"},
+	}
+	result := buildIngressPeerFromNetworkPeer(peer, "default")
+	require.NotNil(t, result.NamespaceSelector)
+	assert.Equal(t, "other-ns", result.NamespaceSelector.MatchLabels[LabelKeyMetadataName])
+}
+
+func TestBuildIngressPeerFromNetworkPeer_ServiceDefaultsNamespace(t *testing.T) {
+	peer := &langopv1alpha1.NetworkPeer{
+		Service: &langopv1alpha1.ServiceReference{Name: "my-svc"},
+	}
+	result := buildIngressPeerFromNetworkPeer(peer, "my-ns")
+	require.NotNil(t, result.NamespaceSelector)
+	assert.Equal(t, "my-ns", result.NamespaceSelector.MatchLabels[LabelKeyMetadataName])
+}
+
+func TestBuildIngressPeerFromNetworkPeer_NamespaceAndPodSelector(t *testing.T) {
+	nsSel := &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}}
+	podSel := &metav1.LabelSelector{MatchLabels: map[string]string{"role": "api"}}
+	peer := &langopv1alpha1.NetworkPeer{
+		NamespaceSelector: nsSel,
+		PodSelector:       podSel,
+	}
+	result := buildIngressPeerFromNetworkPeer(peer, "default")
+	require.NotNil(t, result.NamespaceSelector)
+	require.NotNil(t, result.PodSelector)
+	assert.Equal(t, "prod", result.NamespaceSelector.MatchLabels["env"])
+	assert.Equal(t, "api", result.PodSelector.MatchLabels["role"])
+}
