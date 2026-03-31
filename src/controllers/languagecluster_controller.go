@@ -743,13 +743,21 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 	// Do not delete the namespace until all children are gone — otherwise the namespace
 	// enters Terminating with finalizer-bearing objects inside, which gets stuck.
 	drainAgents := &langopv1alpha1.LanguageAgentList{}
-	_ = r.List(ctx, drainAgents, client.InNamespace(namespace))
+	if err := r.List(ctx, drainAgents, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list agents during drain check: %w", err)
+	}
 	drainTools := &langopv1alpha1.LanguageToolList{}
-	_ = r.List(ctx, drainTools, client.InNamespace(namespace))
+	if err := r.List(ctx, drainTools, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list tools during drain check: %w", err)
+	}
 	drainModels := &langopv1alpha1.LanguageModelList{}
-	_ = r.List(ctx, drainModels, client.InNamespace(namespace))
+	if err := r.List(ctx, drainModels, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list models during drain check: %w", err)
+	}
 	drainPersonas := &langopv1alpha1.LanguagePersonaList{}
-	_ = r.List(ctx, drainPersonas, client.InNamespace(namespace))
+	if err := r.List(ctx, drainPersonas, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list personas during drain check: %w", err)
+	}
 	remaining := len(drainAgents.Items) + len(drainTools.Items) + len(drainModels.Items) + len(drainPersonas.Items)
 	if remaining > 0 {
 		log.Info("Waiting for child CRs to finish finalizing before deleting namespace", "remaining", remaining, "cluster", clusterName)
