@@ -88,6 +88,8 @@ spec:
         {{- end }}
         {{- if .Values.config.webhook.enabled }}
         - --webhook-port={{ .Values.config.webhook.port }}
+        {{- else }}
+        - --disable-webhooks
         {{- end }}
         {{- with .Values.securityContext }}
         securityContext:
