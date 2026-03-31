@@ -1184,6 +1184,9 @@ func (r *LanguageClusterReconciler) SetupWithManager(mgr ctrl.Manager, concurren
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&networkingv1.NetworkPolicy{}).
+		Owns(&networkingv1.Ingress{}).
+		Owns(&corev1.ResourceQuota{}).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(
 			func(ctx context.Context, obj client.Object) []reconcile.Request {
 				// Re-reconcile the LanguageCluster whose namespace matches the model's namespace
