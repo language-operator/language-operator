@@ -1141,6 +1141,118 @@ func TestLanguageAgentController_AgentModeInjection(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
+	agentRequest := func(name string) ctrl.Request {
+		return ctrl.Request{NamespacedName: types.NamespacedName{Name: name, Namespace: "default"}}
+	}
+
+	t.Run("AGENT_INSTRUCTIONS set from spec.instructions", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "instr-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:        "ghcr.io/language-operator/agent:latest",
+				Instructions: "do the thing",
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		assert.Equal(t, "do the thing", envMap["AGENT_INSTRUCTIONS"], "AGENT_INSTRUCTIONS must equal spec.instructions")
+	})
+
+	t.Run("MODEL_ENDPOINTS and LLM_MODEL set from spec.models", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		model := gen.LanguageModel("claude-sonnet", "default")
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "model-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:  "ghcr.io/language-operator/agent:latest",
+				Models: []langopv1alpha1.ModelReference{{Name: "claude-sonnet"}},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent, model).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", envMap["MODEL_ENDPOINTS"])
+		assert.Equal(t, model.Spec.ModelName, envMap["LLM_MODEL"])
+	})
+
+	t.Run("MCP_SERVERS set from spec.tools", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		tool := gen.LanguageTool("mem0", "default")
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "tool-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+				Tools: []langopv1alpha1.ToolReference{{Name: "mem0"}},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent, tool).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		// Default port is 0 → resolved to 8080 in resolveTools
+		assert.Equal(t, "http://mem0.default.svc.cluster.local:8080", envMap["MCP_SERVERS"])
+	})
+}
+
 func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
