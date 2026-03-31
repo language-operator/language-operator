@@ -1327,6 +1327,203 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		// Default port is 0 → resolved to 8080 in resolveTools
 		assert.Equal(t, "http://mem0.default.svc.cluster.local:8080", envMap["MCP_SERVERS"])
 	})
+
+	t.Run("AGENT_INSTRUCTIONS absent when spec.instructions is empty", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "no-instr-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+				// Instructions intentionally empty
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		_, present := envMap["AGENT_INSTRUCTIONS"]
+		assert.False(t, present, "AGENT_INSTRUCTIONS must be absent when spec.instructions is empty")
+	})
+
+	t.Run("OTEL env vars injected when OTEL_EXPORTER_OTLP_ENDPOINT is set", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel:4317")
+		t.Setenv("OTEL_RESOURCE_ATTRIBUTES", "k=v")
+		t.Setenv("OTEL_TRACES_SAMPLER", "parentbased_traceidratio")
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "0.1")
+
+		scheme := testutil.SetupTestScheme(t)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "otel-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		assert.Equal(t, "http://otel:4317", envMap["OTEL_EXPORTER_OTLP_ENDPOINT"])
+		assert.Equal(t, "agent-otel-agent", envMap["OTEL_SERVICE_NAME"])
+		assert.Equal(t, "k=v", envMap["OTEL_RESOURCE_ATTRIBUTES"])
+		assert.Equal(t, "parentbased_traceidratio", envMap["OTEL_TRACES_SAMPLER"])
+		assert.Equal(t, "0.1", envMap["OTEL_TRACES_SAMPLER_ARG"])
+	})
+
+	t.Run("OTEL env vars absent when OTEL_EXPORTER_OTLP_ENDPOINT is unset", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "no-otel-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		_, present := envMap["OTEL_EXPORTER_OTLP_ENDPOINT"]
+		assert.False(t, present, "OTEL_EXPORTER_OTLP_ENDPOINT must be absent when not set in operator env")
+	})
+
+	t.Run("MCP_SERVERS absent when no tools resolved", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "no-tools-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+				// No Tools specified
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		envMap := make(map[string]string)
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		_, present := envMap["MCP_SERVERS"]
+		assert.False(t, present, "MCP_SERVERS must be absent when no tools are resolved")
+	})
+
+	t.Run("init container receives MODEL_ENDPOINTS and LLM_MODEL", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		model := gen.LanguageModel("claude-sonnet", "default")
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "init-env-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:  "ghcr.io/language-operator/agent:latest",
+				Models: []langopv1alpha1.ModelReference{{Name: "claude-sonnet"}},
+				Deployment: langopv1alpha1.DeploymentSpec{
+					InitContainers: []corev1.Container{
+						{Name: "setup", Image: "busybox:latest"},
+					},
+				},
+			},
+		}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent, model).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+
+		var setupContainer *corev1.Container
+		for i := range dep.Spec.Template.Spec.InitContainers {
+			if dep.Spec.Template.Spec.InitContainers[i].Name == "setup" {
+				setupContainer = &dep.Spec.Template.Spec.InitContainers[i]
+				break
+			}
+		}
+		require.NotNil(t, setupContainer, "expected init container 'setup' in deployment")
+
+		initEnvMap := make(map[string]string)
+		for _, e := range setupContainer.Env {
+			initEnvMap[e.Name] = e.Value
+		}
+		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", initEnvMap["MODEL_ENDPOINTS"])
+		assert.Equal(t, model.Spec.ModelName, initEnvMap["LLM_MODEL"])
+	})
 }
 
 func TestLanguageAgentController_ResourceRequests(t *testing.T) {
