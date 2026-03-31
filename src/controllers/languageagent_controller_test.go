@@ -631,7 +631,11 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 	}
 }
 
-func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
+// TestLanguageAgentController_DeletionRemovesFinalizer verifies that reconciling an agent
+// with a DeletionTimestamp removes the finalizer so that Kubernetes can complete deletion.
+// Child resources (Service, Ingress, etc.) are cleaned up automatically by GC via owner
+// references; the controller does not poll for their deletion.
+func TestLanguageAgentController_DeletionRemovesFinalizer(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
@@ -648,24 +652,9 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 		},
 	}
 
-	// Create resources that should be cleaned up
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-
-	// Service to cleanup
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      agent.Name,
-			Namespace: agent.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{{Port: 80}},
-		},
-	}
-
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(agent, service).
+		WithObjects(agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -679,7 +668,6 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Run reconcile - should trigger cleanup since agent has DeletionTimestamp
 	_, err := reconciler.Reconcile(ctx, ctrl.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      agent.Name,
@@ -690,17 +678,7 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify the service was deleted
-	svc := &corev1.Service{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, svc)
-	if !errors.IsNotFound(err) {
-		t.Errorf("Expected service to be deleted, but it still exists or got different error: %v", err)
-	}
-
-	// Verify the agent was either deleted or finalizer was removed
+	// Finalizer must be removed so Kubernetes can complete deletion.
 	updatedAgent := &langopv1alpha1.LanguageAgent{}
 	err = fakeClient.Get(ctx, types.NamespacedName{
 		Name:      agent.Name,
@@ -708,16 +686,15 @@ func TestLanguageAgentController_ResourceCleanup(t *testing.T) {
 	}, updatedAgent)
 
 	if errors.IsNotFound(err) {
-		// Agent was fully deleted - this is expected and good
-		t.Log("Agent was successfully deleted after cleanup")
-	} else if err != nil {
+		// Agent was fully deleted — acceptable.
+		return
+	}
+	if err != nil {
 		t.Fatalf("Unexpected error getting updated agent: %v", err)
-	} else {
-		// Agent still exists, check that finalizer was removed
-		for _, finalizer := range updatedAgent.Finalizers {
-			if finalizer == FinalizerName {
-				t.Error("Expected finalizer to be removed after successful cleanup")
-			}
+	}
+	for _, finalizer := range updatedAgent.Finalizers {
+		if finalizer == FinalizerName {
+			t.Error("Expected finalizer to be removed after reconcile with DeletionTimestamp")
 		}
 	}
 }
@@ -888,76 +865,6 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 	if updatedAgent.Status.UUID == "" {
 		t.Error("Expected UUID to be assigned after conflict resolution")
 	}
-}
-
-func TestLanguageAgentController_CleanupMethods(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-agent",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Instructions: "Test agent for cleanup methods",
-		},
-	}
-
-	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-
-	// Create a service that should be cleaned up
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service",
-			Namespace: agent.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{{Port: 80}},
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(agent, service).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-
-	ctx := context.Background()
-
-	t.Run("cleanupServices", func(t *testing.T) {
-		// Test service cleanup
-		err := reconciler.cleanupServices(ctx, agent)
-		if err != nil {
-			t.Fatalf("cleanupServices failed: %v", err)
-		}
-
-		// Verify service was deleted
-		svc := &corev1.Service{}
-		err = fakeClient.Get(ctx, types.NamespacedName{
-			Name:      "test-service",
-			Namespace: agent.Namespace,
-		}, svc)
-		if !errors.IsNotFound(err) {
-			t.Errorf("Expected service to be deleted, but it still exists or got different error: %v", err)
-		}
-	})
-
-	t.Run("cleanupIngresses_empty_list", func(t *testing.T) {
-		// Test Ingress cleanup with no ingresses present
-		err := reconciler.cleanupIngresses(ctx, agent)
-		if err != nil {
-			t.Errorf("cleanupIngresses should handle empty list gracefully, got error: %v", err)
-		}
-	})
-
 }
 
 func TestLanguageAgentController_BasicReconcile(t *testing.T) {
