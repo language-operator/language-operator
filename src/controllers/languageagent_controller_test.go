@@ -787,6 +787,81 @@ func TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist(t *testin
 	}
 }
 
+// TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting verifies that shared
+// RBAC resources ARE deleted when the only other agent in the namespace is itself being deleted.
+func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	deletingAgent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "agent-being-deleted",
+			Namespace: "default",
+			DeletionTimestamp: &metav1.Time{
+				Time: metav1.Now().Time,
+			},
+			Finalizers: []string{FinalizerName},
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "Agent being deleted",
+		},
+	}
+	// This agent is also being deleted — must not count as "live"
+	otherDeletingAgent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-agent-also-deleting",
+			Namespace: "default",
+			DeletionTimestamp: &metav1.Time{
+				Time: metav1.Now().Time,
+			},
+			Finalizers: []string{FinalizerName},
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Instructions: "Other agent also being deleted",
+		},
+	}
+
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(deletingAgent, otherDeletingAgent, sa, role, rb).
+		WithStatusSubresource(deletingAgent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      deletingAgent.Name,
+			Namespace: deletingAgent.Namespace,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reconcile failed: %v", err)
+	}
+
+	// Shared RBAC resources must be deleted because no live agent remains.
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected ServiceAccount/language-agent to be deleted, got: %v", err)
+	}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected Role/language-agent to be deleted, got: %v", err)
+	}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected RoleBinding/language-agent to be deleted, got: %v", err)
+	}
+}
+
 func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
