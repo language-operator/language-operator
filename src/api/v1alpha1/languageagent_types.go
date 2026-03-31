@@ -160,8 +160,6 @@ type LanguageAgentStatus struct {
 	WebhookURLs []string `json:"webhookURLs,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // Condition types for LanguageAgent
 const (
 	// WebhookRouteCreatedCondition indicates that the webhook Ingress has been created
