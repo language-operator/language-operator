@@ -55,6 +55,10 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// errChildrenDraining is returned by cleanupDependentResources when child CRs still have
+// finalizers. The caller should requeue rather than proceed to namespace deletion.
+var errChildrenDraining = fmt.Errorf("children still draining, requeuing")
+
 // LanguageClusterReconciler reconciles a LanguageCluster object
 type LanguageClusterReconciler struct {
 	client.Client
@@ -160,6 +164,10 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if controllerutil.ContainsFinalizer(cluster, FinalizerName) {
 			// Cleanup dependent resources
 			if err := r.cleanupDependentResources(ctx, cluster); err != nil {
+				if err == errChildrenDraining {
+					// Children still have finalizers; wait for them before deleting namespace
+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+				}
 				log.Error(err, "Failed to cleanup dependent resources")
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "Failed to cleanup dependent resources")
@@ -370,6 +378,9 @@ func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, clus
 				LabelKeyLangopCluster:          cluster.Name,
 			},
 		},
+	}
+	if err := controllerutil.SetControllerReference(cluster, ns, r.Scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference on namespace %s: %w", cluster.Name, err)
 	}
 	if err := r.Create(ctx, ns); err != nil {
 		return fmt.Errorf("failed to create namespace %s: %w", cluster.Name, err)
@@ -726,6 +737,23 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 				// Continue with other resources, don't fail completely
 			}
 		}
+	}
+
+	// Re-list all child CRs; if any still exist they are waiting for finalizer removal.
+	// Do not delete the namespace until all children are gone — otherwise the namespace
+	// enters Terminating with finalizer-bearing objects inside, which gets stuck.
+	drainAgents := &langopv1alpha1.LanguageAgentList{}
+	_ = r.List(ctx, drainAgents, client.InNamespace(namespace))
+	drainTools := &langopv1alpha1.LanguageToolList{}
+	_ = r.List(ctx, drainTools, client.InNamespace(namespace))
+	drainModels := &langopv1alpha1.LanguageModelList{}
+	_ = r.List(ctx, drainModels, client.InNamespace(namespace))
+	drainPersonas := &langopv1alpha1.LanguagePersonaList{}
+	_ = r.List(ctx, drainPersonas, client.InNamespace(namespace))
+	remaining := len(drainAgents.Items) + len(drainTools.Items) + len(drainModels.Items) + len(drainPersonas.Items)
+	if remaining > 0 {
+		log.Info("Waiting for child CRs to finish finalizing before deleting namespace", "remaining", remaining, "cluster", clusterName)
+		return errChildrenDraining
 	}
 
 	// Delete the namespace for this cluster

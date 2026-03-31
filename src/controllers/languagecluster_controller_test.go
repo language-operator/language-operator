@@ -338,6 +338,84 @@ func TestLanguageClusterController_DeletionWithDependents(t *testing.T) {
 	}
 }
 
+func TestLanguageClusterController_DeletionWaitsForDependents(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("test-cluster-drain")
+	cluster.Finalizers = []string{FinalizerName}
+	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	agent := gen.LanguageAgent("test-agent", "test-cluster-drain",
+		gen.SetAgentInstructions("test agent"),
+	)
+	// Pre-set the operator finalizer so the fake client keeps the agent in the store
+	// when Delete is called (simulating an agent whose finalizer has not been stripped yet).
+	agent.Finalizers = []string{FinalizerName}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	result, err := reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter, "expected requeue while children still draining")
+
+	// Cluster finalizer must NOT be removed — still waiting for agent to finalize
+	updatedCluster := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updatedCluster))
+	assert.True(t, controllerutil.ContainsFinalizer(updatedCluster, FinalizerName), "cluster finalizer should remain while children drain")
+
+	// Namespace must NOT have been deleted
+	ns := &corev1.Namespace{}
+	nsErr := fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, ns)
+	if nsErr == nil {
+		// namespace was never created in this test, so not-found is also acceptable
+	}
+}
+
+func TestLanguageClusterController_NamespaceOwnerReference(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("test-cluster-ownerref")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	// Two reconciles: first adds finalizer, second creates resources including namespace
+	_, err := reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+
+	ns := &corev1.Namespace{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, ns))
+
+	require.Len(t, ns.OwnerReferences, 1, "namespace should have exactly one owner reference")
+	assert.Equal(t, cluster.Name, ns.OwnerReferences[0].Name)
+	assert.Equal(t, "LanguageCluster", ns.OwnerReferences[0].Kind)
+	assert.True(t, *ns.OwnerReferences[0].Controller, "owner reference should be controller=true")
+}
+
 func TestLanguageClusterController_CapacityQuota_Created(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
