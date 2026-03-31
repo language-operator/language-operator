@@ -3679,3 +3679,79 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *
 	assert.Equal(t, metav1.ConditionFalse, cond.Status)
 	assert.Equal(t, "CNINotSupported", cond.Reason)
 }
+
+// TestLanguageAgentController_CustomPortService verifies that spec.port flows through
+// to both port and targetPort of the reconciled Service.
+func TestLanguageAgentController_CustomPortService(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("custom-port-agent", "default",
+		gen.SetAgentPort(9090),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	svc := &corev1.Service{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, svc))
+	require.Len(t, svc.Spec.Ports, 1)
+	assert.Equal(t, int32(9090), svc.Spec.Ports[0].Port, "Service.Spec.Ports[0].Port must match spec.port")
+	assert.Equal(t, int32(9090), svc.Spec.Ports[0].TargetPort.IntVal, "Service.Spec.Ports[0].TargetPort must match spec.port")
+}
+
+// TestLanguageAgentController_CustomPortNetworkPolicy verifies that spec.port flows
+// through to all NetworkPolicy ingress rule ports.
+func TestLanguageAgentController_CustomPortNetworkPolicy(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("custom-port-np-agent", "default",
+		gen.SetAgentPort(9090),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                &record.FakeRecorder{},
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+		NetworkPolicyTimeout:    30 * time.Second,
+		NetworkPolicyRetries:    3,
+	}
+
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileNetworkPolicy(ctx, agent))
+
+	np := &networkingv1.NetworkPolicy{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
+	require.NotEmpty(t, np.Spec.Ingress, "expected ingress rules on NetworkPolicy")
+
+	for i, rule := range np.Spec.Ingress {
+		for j, p := range rule.Ports {
+			assert.Equal(t, int32(9090), p.Port.IntVal,
+				"NetworkPolicy ingress rule %d port %d must match spec.port", i, j)
+		}
+	}
+}
