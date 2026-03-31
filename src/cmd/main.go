@@ -340,7 +340,7 @@ func main() {
 	}
 
 	// Setup LanguageCluster webhook
-	if err = (&langopv1alpha1.LanguageCluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = langopv1alpha1.SetupLanguageClusterWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")
 		os.Exit(1)
 	}
