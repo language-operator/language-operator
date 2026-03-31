@@ -39,7 +39,10 @@ Follow these directions closely:
 9. Open a pull request: `gh pr create --title "<commit message>" --body "Closes #<N>"`. Use conventional commit style for the PR title.
 10. **CRITICAL:** Poll CI on the PR: `gh pr checks <PR-number> --watch`. Fix any failing checks before proceeding.
 11. When all checks pass, merge: `gh pr merge <PR-number> --squash --delete-branch`.
-12. Clean up the worktree: `bash .claude/commands/iterate/remove-worktree.sh "$WORKTREE"`.
+12. Clean up the worktree (run from inside it — no arguments needed):
+    ```bash
+    bash .claude/commands/iterate/remove-worktree.sh
+    ```
 13. Remove the `in-progress` label, add a comment with resolution details, then close the issue:
     ```bash
     gh issue edit <N> --remove-label "in-progress"

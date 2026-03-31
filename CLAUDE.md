@@ -59,8 +59,8 @@ One controller per CRD. Each follows the same pattern:
 - Status updated last; `SetCondition` helper manages the conditions slice
 
 Key controllers:
-- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config)
-- `languagecluster_controller.go` — reconciles the shared LiteLLM proxy (Deployment `proxy`, Service `proxy`, ConfigMap `proxy-config`) and optional Ingress/HTTPRoute at `proxy.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
+- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config), ServiceAccount/Role/RoleBinding (all named `language-agent`, namespace-scoped), and optionally a PVC for `spec.workspace`
+- `languagecluster_controller.go` — reconciles the shared LiteLLM gateway (Deployment `gateway`, Service `gateway`, ConfigMap `gateway-config`) and optional Ingress/HTTPRoute at `gateway.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
 - `languagemodel_controller.go` — reconciles status only; no longer creates any ConfigMap, Deployment, or Service — the cluster controller reads LanguageModel CRs directly when building `gateway-config`
 - `languagepersona_controller.go` — reconciles status only; the agent controller reads LanguagePersona CRs directly when building config.yaml
 - `languagetool_controller.go` — validates tool image registry, reconciles tool Deployment/Service and NetworkPolicy
@@ -73,7 +73,7 @@ Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOr
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
 - `LanguageModel` — LLM endpoint config
-- `LanguageCluster` — managed namespace; owns the shared LiteLLM proxy and optional external ingress at `proxy.<spec.domain>`
+- `LanguageCluster` — managed namespace; owns the shared LiteLLM gateway and optional external ingress at `gateway.<spec.domain>`
 
 Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` is auto-generated — never edit by hand.
 
@@ -132,6 +132,6 @@ Dashboard is at http://localhost:3000. All API routes are cluster-scoped: `/api/
 
 **Generated files must be staged.** Any change to `src/api/v1alpha1/` requires running `make generate && make helm-crds` and staging the output before committing.
 
-**Conventional commits.** Use `feat:`, `fix:`, `clean:`, `docs:`, `test:` prefixes. Use `WIP:` for partial implementations. PR titles must also follow this convention (enforced by CI).
+**Conventional commits.** Use `feat:`, `fix:`, `chore:`, `docs:`, `test:` prefixes. Use `WIP:` for partial implementations. PR titles must also follow this convention (enforced by CI). Note: `clean:` is rejected by CI — use `chore:` instead.
 
 **Operator deploys via CI only** — no local Docker builds for the operator image.

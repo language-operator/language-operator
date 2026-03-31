@@ -9,6 +9,14 @@
     "enter-worktree": {
       "description": "cd into a worktree created for issue work",
       "pattern": "^cd .*\\.claude/worktrees/"
+    },
+    "cd-then-trusted-script": {
+      "description": "cd to repo root then run a trusted command script",
+      "pattern": "^cd .+ && bash \\S*\\.claude/commands/"
+    },
+    "var-then-trusted-script": {
+      "description": "shell variable assignment then run a trusted command script",
+      "pattern": "^[A-Za-z_]\\w*=.+ && bash \\S*\\.claude/commands/"
     }
   }
 }
