@@ -552,11 +552,12 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
 	log := log.FromContext(ctx)
 
-	// Use injected client (for tests) or create a default one
+	// Use injected client (for tests) or create a default one.
+	// The client Timeout is a safety net; the context deadline is the primary bound.
 	client := r.HTTPClient
 	if client == nil {
 		client = &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 5 * time.Second,
 		}
 	}
 
@@ -572,8 +573,16 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 		return nil, fmt.Errorf("failed to marshal MCP request: %w", err)
 	}
 
-	// Make HTTP POST request to MCP server
-	resp, err := client.Post(fmt.Sprintf("http://%s/mcp", endpoint), "application/json", bytes.NewBuffer(reqBody))
+	// Make HTTP POST request to MCP server, bound to the reconcile context so that
+	// context cancellation (e.g. operator shutdown or reconcile deadline) interrupts
+	// the in-flight call instead of waiting for the client Timeout.
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		fmt.Sprintf("http://%s/mcp", endpoint), bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MCP request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call MCP server at %s: %w", endpoint, err)
 	}
