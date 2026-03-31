@@ -82,6 +82,24 @@ jobs:
           KUBEBUILDER_ASSETS="$(setup-envtest use 1.29.0 -p path)" \
             go test -tags integration -v -timeout 120s ./...
 
+  # Run Python component tests
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
+
+      - name: Run Python tests
+        run: pytest components/model/test_generate_config.py -v
+
   # Validate CRD manifests
   validate-manifests:
     runs-on: ubuntu-latest

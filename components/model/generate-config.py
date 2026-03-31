@@ -91,6 +91,30 @@ def map_provider_to_litellm(provider: str, model_name: str, endpoint: Optional[s
     return provider_map.get(provider, model_name)
 
 
+def parse_duration_to_seconds(timeout_str: str) -> float:
+    """Parse a Go-style duration string to seconds.
+
+    Supported suffixes (checked longest-first to avoid prefix collisions):
+      ns, us, µs, ms, s, m, h
+    Unknown suffixes return the default of 300.0 seconds.
+    """
+    if timeout_str.endswith("ms"):
+        return float(timeout_str[:-2]) / 1_000
+    elif timeout_str.endswith("ns"):
+        return float(timeout_str[:-2]) / 1_000_000_000
+    elif timeout_str.endswith("µs"):
+        return float(timeout_str[:-2]) / 1_000_000
+    elif timeout_str.endswith("us"):
+        return float(timeout_str[:-2]) / 1_000_000
+    elif timeout_str.endswith("h"):
+        return float(timeout_str[:-1]) * 3600
+    elif timeout_str.endswith("m"):
+        return float(timeout_str[:-1]) * 60
+    elif timeout_str.endswith("s"):
+        return float(timeout_str[:-1])
+    return 300.0  # default 5 minutes
+
+
 def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[str, Any]:
     """Build litellm_params from LanguageModel spec."""
     params: Dict[str, Any] = {}
@@ -123,17 +147,7 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[s
 
     # Add timeout
     if spec.get("timeout"):
-        # Parse duration like "5m" or "30s" to seconds
-        timeout_str = spec["timeout"]
-        if timeout_str.endswith("m"):
-            timeout = int(timeout_str[:-1]) * 60
-        elif timeout_str.endswith("s"):
-            timeout = int(timeout_str[:-1])
-        elif timeout_str.endswith("h"):
-            timeout = int(timeout_str[:-1]) * 3600
-        else:
-            timeout = 300  # default 5 minutes
-        params["timeout"] = timeout
+        params["timeout"] = parse_duration_to_seconds(spec["timeout"])
 
     return params
 
