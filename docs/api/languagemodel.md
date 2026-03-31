@@ -50,10 +50,10 @@ See the [Complete API Reference](reference.md#languagemodel) for full field docu
 
 When you create a LanguageModel:
 
-1. The controller creates a ConfigMap with the model spec
-2. The LanguageCluster controller detects the change
-3. The shared proxy configuration is regenerated
-4. The proxy pod is restarted with new config
+1. The LanguageModel controller validates the spec and sets `status.phase: Ready`
+2. The LanguageCluster controller (which watches `LanguageModel` resources) detects the new CR
+3. The shared `gateway-config` ConfigMap is regenerated with all models in the namespace
+4. The gateway Deployment rolls over with the updated configuration
 
 All agents immediately have access to the new model via `MODEL_ENDPOINTS`.
 
