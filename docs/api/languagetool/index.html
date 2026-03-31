@@ -1814,9 +1814,10 @@
 <h3 id="mcp-protocol">MCP Protocol<a class="headerlink" href="#mcp-protocol" title="Permanent link">&para;</a></h3>
 <p>Tools must implement the Model Context Protocol:</p>
 <ul>
-<li>Serve HTTP on configured port (default 8080)</li>
-<li>Expose <code>/tools</code> endpoint listing available tools</li>
-<li>Expose <code>/invoke</code> endpoint for tool execution</li>
+<li>Implement JSON-RPC 2.0 at <code>POST /mcp</code> on the configured port (default <code>8080</code>)</li>
+<li>Respond to <code>tools/list</code> method with available tools and their schemas</li>
+<li>Respond to <code>tools/call</code> method to execute a named tool</li>
+<li>Expose <code>GET /health</code> returning <code>{"status":"ok"}</code> when ready</li>
 </ul>
 <p>See <a href="../../architecture/tools/">Tool Protocol</a> for the full specification.</p>
 <h3 id="deployment-modes">Deployment Modes<a class="headerlink" href="#deployment-modes" title="Permanent link">&para;</a></h3>
