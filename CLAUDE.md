@@ -61,7 +61,7 @@ One controller per CRD. Each follows the same pattern:
 Key controllers:
 - `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config)
 - `languagecluster_controller.go` — reconciles the shared LiteLLM proxy (Deployment `proxy`, Service `proxy`, ConfigMap `proxy-config`) and optional Ingress/HTTPRoute at `proxy.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
-- `languagemodel_controller.go` — writes model spec into a ConfigMap only (key `model__<name>.json`); no longer owns a Deployment or Service — those are the cluster proxy's responsibility
+- `languagemodel_controller.go` — reconciles status only; no longer creates any ConfigMap, Deployment, or Service — the cluster controller reads LanguageModel CRs directly when building `gateway-config`
 - `languagepersona_controller.go` — creates a ConfigMap with the persona's JSON spec for agent mounting
 - `languagetool_controller.go` — validates tool image registry, reconciles tool Deployment/Service
 
