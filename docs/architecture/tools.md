@@ -110,7 +110,7 @@ Returns `200 OK` with a JSON body when the tool is ready to serve requests:
 { "status": "ok" }
 ```
 
-The operator polls this endpoint to determine tool availability before injecting the endpoint into agent configs. A tool that fails its health check will not be included in the agent's `tools.json`.
+The tool controller uses this endpoint to gate schema discovery: once the tool deployment reports `ReadyReplicas > 0`, it calls `tools/list` to populate `status.availableTools`. Tool endpoints are injected into the agent's `/etc/agent/config.yaml` under the `tools:` key for every enabled tool reference in the agent spec, regardless of tool readiness.
 
 ## LanguageTool CRD Reference
 
