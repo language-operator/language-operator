@@ -133,7 +133,7 @@ func TestLanguageClusterController_ReadyCondition(t *testing.T) {
 	if readyCondition.Status != metav1.ConditionTrue {
 		t.Errorf("Expected condition status True, got %s", readyCondition.Status)
 	}
-	if readyCondition.Reason != "ReconcileSuccess" {
+	if readyCondition.Reason != langopv1alpha1.ReasonReconcileSuccess {
 		t.Errorf("Expected reason 'ReconcileSuccess', got '%s'", readyCondition.Reason)
 	}
 	if readyCondition.Message != "LanguageCluster is ready" {
@@ -1285,13 +1285,13 @@ func TestLanguageClusterController_ErrorPathConditions(t *testing.T) {
 			condReason:   "RBACError",
 		},
 		{
-			name:             "NetworkPolicyError",
+			name:             langopv1alpha1.ReasonNetworkPolicyError,
 			buildCluster:     func() *langopv1alpha1.LanguageCluster { return gen.LanguageCluster("netpol-err-cluster") },
 			failCreate:       func(obj client.Object) bool { _, ok := obj.(*networkingv1.NetworkPolicy); return ok },
 			networkIsolation: true,
 			condType:         langopv1alpha1.ConditionReady,
 			condStatus:       metav1.ConditionFalse,
-			condReason:       "NetworkPolicyError",
+			condReason:       langopv1alpha1.ReasonNetworkPolicyError,
 		},
 		{
 			name:         "GatewayError",

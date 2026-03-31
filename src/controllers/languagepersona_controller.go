@@ -98,7 +98,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Update status
 	persona.Status.ObservedGeneration = persona.Generation
 	persona.Status.Phase = events.PhaseStatusReady
-	SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, "ReconcileSuccess", "Persona configuration is ready", persona.Generation)
+	SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "Persona configuration is ready", persona.Generation)
 
 	if r.EventManager != nil {
 		r.EventManager.RecordPersonaReady(persona, persona.Name)

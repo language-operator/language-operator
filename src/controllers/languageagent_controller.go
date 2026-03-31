@@ -195,7 +195,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Image registry validation failed", "image", agent.Spec.Image)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionFalse, "RegistryNotAllowed", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionFalse, langopv1alpha1.ReasonRegistryNotAllowed, err.Error(), agent.Generation)
 		if r.EventManager != nil {
 			r.EventManager.RecordRegistryValidationFailed(agent, agent.Spec.Image)
 		}
@@ -203,14 +203,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
-	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, "Validated", "Image registry is in whitelist", agent.Generation)
+	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, langopv1alpha1.ReasonValidated, "Image registry is in whitelist", agent.Generation)
 
 	// Reconcile ConfigMap
 	if err := r.reconcileConfigMap(ctx, agent); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ConfigMap reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ConfigMapError", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonConfigMapError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -221,7 +221,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile PVC")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "PVC reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "PVCError", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPVCError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -239,7 +239,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 			if isTimeout {
 				// For timeout errors, set a specific condition but continue reconciliation
-				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, "NetworkPolicyTimeout",
+				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyTimeout,
 					fmt.Sprintf("NetworkPolicy creation timed out after %v with %d retries. This may indicate slow CNI response. The operator will continue to retry. Error: %v",
 						r.NetworkPolicyTimeout, r.NetworkPolicyRetries, err), agent.Generation)
 
@@ -257,14 +257,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			} else {
 				// For non-timeout errors, fail the reconciliation
 				span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
-				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "NetworkPolicyError", err.Error(), agent.Generation)
+				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), agent.Generation)
 				agent.Status.Phase = events.PhaseStatusFailed
 				reconcileErr = err
 				return ctrl.Result{}, err
 			}
 		} else {
 			// NetworkPolicy succeeded
-			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyReady",
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonNetworkPolicyReady,
 				"NetworkPolicy created successfully", agent.Generation)
 		}
 
@@ -277,21 +277,21 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		if !cniSupported {
 			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cniName)
-			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionFalse, langopv1alpha1.ReasonCNINotSupported, message, agent.Generation)
 			if r.Recorder != nil {
 				r.EventManager.RecordNetworkPolicyUnsupported(agent, cniName)
 			}
 			log.Info("NetworkPolicy enforcement not supported", "cni", cniName)
 		} else {
 			message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cniName)
-			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionTrue, "Enforced", message, agent.Generation)
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionTrue, langopv1alpha1.ReasonEnforced, message, agent.Generation)
 			log.V(1).Info("NetworkPolicy enforcement supported", "cni", cniName)
 		}
 	} else {
 		// Network isolation disabled - skip NetworkPolicy creation
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, "NetworkPolicyDisabled",
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonNetworkPolicyDisabled,
 			"NetworkPolicy creation disabled via networkIsolation.enabled=false", agent.Generation)
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionTrue, "Disabled",
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionTrue, langopv1alpha1.ReasonDisabled,
 			"NetworkPolicy enforcement disabled - unrestricted network access allowed", agent.Generation)
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
@@ -307,7 +307,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Service")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Service reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ServiceError", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -317,9 +317,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcileWebhooks(ctx, agent); err != nil {
 		// Log webhook errors but don't fail reconciliation if domain not configured
 		log.Info("Webhook reconciliation skipped or pending", "reason", err.Error())
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionFalse, "Pending", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, err.Error(), agent.Generation)
 	} else {
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionTrue, "Configured", "Webhook routing configured", agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionTrue, langopv1alpha1.ReasonConfigured, "Webhook routing configured", agent.Generation)
 	}
 
 	// Reconcile ServiceAccount for agent pods
@@ -327,7 +327,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile agent ServiceAccount")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ServiceAccount reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "ServiceAccountError", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceAccountError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -337,7 +337,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Deployment reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, "DeploymentError", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -387,7 +387,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		statusChanged = true
 	}
 
-	if SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, "ReconcileSuccess", "LanguageAgent is ready", agent.Generation) {
+	if SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageAgent is ready", agent.Generation) {
 		statusChanged = true
 	}
 
@@ -1315,10 +1315,10 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 
 	log.Info("Creating Ingress for webhook", "hostname", hostname)
 	if err := r.reconcileIngress(ctx, agent, hostname); err != nil {
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteCreated, metav1.ConditionFalse, "IngressCreationFailed", err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteCreated, metav1.ConditionFalse, langopv1alpha1.ReasonIngressCreationFailed, err.Error(), agent.Generation)
 		return fmt.Errorf("failed to reconcile Ingress: %w", err)
 	}
-	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteCreated, metav1.ConditionTrue, "IngressCreated", "Ingress created successfully", agent.Generation)
+	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteCreated, metav1.ConditionTrue, langopv1alpha1.ReasonIngressCreated, "Ingress created successfully", agent.Generation)
 
 	var routeReady bool
 	var routeReadyMsg string
@@ -1335,7 +1335,7 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 
 	// Set WebhookRouteReady condition based on readiness check
 	if routeReady {
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteReady, metav1.ConditionTrue, "WebhookRouteReady", routeReadyMsg, agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteReady, metav1.ConditionTrue, langopv1alpha1.ReasonWebhookRouteReady, routeReadyMsg, agent.Generation)
 
 		// Only populate WebhookURLs when route is ready
 		webhookURL := fmt.Sprintf("https://%s", hostname)
@@ -1344,7 +1344,7 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 			log.Info("Updated webhook URL in status", "url", webhookURL)
 		}
 	} else {
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteReady, metav1.ConditionFalse, "WebhookRouteNotReady", routeReadyMsg, agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteReady, metav1.ConditionFalse, langopv1alpha1.ReasonWebhookRouteNotReady, routeReadyMsg, agent.Generation)
 
 		// Clear webhook URLs when route is not ready
 		if len(agent.Status.WebhookURLs) > 0 {
