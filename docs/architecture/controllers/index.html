@@ -1951,23 +1951,15 @@
 <hr />
 <h3 id="languagemodelcontroller">LanguageModelController<a class="headerlink" href="#languagemodelcontroller" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/controllers/languagemodel_controller.go</code></p>
-<p><strong>Creates:</strong></p>
-<ul>
-<li>ConfigMap containing the model spec (key: <code>model__&lt;name&gt;.json</code>)</li>
-</ul>
-<p><strong>No Longer Creates:</strong></p>
-<p>Previously, each LanguageModel had its own Deployment and Service. Now all models share the cluster's LiteLLM proxy. The controller only creates a ConfigMap that the LanguageCluster controller reads when assembling the proxy configuration.</p>
+<p><strong>Creates:</strong> <em>(nothing — status only)</em></p>
 <p><strong>Triggers:</strong></p>
-<p>When a LanguageModel is created, updated, or deleted, it triggers a reconciliation of the parent LanguageCluster to update the shared proxy.</p>
+<p>When a LanguageModel is created, updated, or deleted, it triggers a reconciliation of the parent LanguageCluster. The LanguageCluster controller reads LanguageModel CRs directly when assembling the shared gateway configuration.</p>
 <hr />
 <h3 id="languagepersonacontroller">LanguagePersonaController<a class="headerlink" href="#languagepersonacontroller" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/controllers/languagepersona_controller.go</code></p>
-<p><strong>Creates:</strong></p>
-<ul>
-<li>ConfigMap with the persona's JSON spec</li>
-</ul>
+<p><strong>Creates:</strong> <em>(nothing — status only)</em></p>
 <p><strong>Purpose:</strong></p>
-<p>Personas are behavioral templates that agents can reference. The controller validates the persona spec and stores it in a ConfigMap. The LanguageAgent controller reads these ConfigMaps and merges persona configurations into the agent's <code>/etc/agent/config.yaml</code>.</p>
+<p>Personas are behavioral templates that agents can reference. The controller validates the persona spec and updates status conditions. The LanguageAgent controller reads LanguagePersona CRs directly and merges persona configurations into the agent's <code>/etc/agent/config.yaml</code>.</p>
 <hr />
 <h3 id="languagetoolcontroller">LanguageToolController<a class="headerlink" href="#languagetoolcontroller" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/controllers/languagetool_controller.go</code></p>
