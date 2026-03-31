@@ -59,7 +59,7 @@ One controller per CRD. Each follows the same pattern:
 - Status updated last; `SetCondition` helper manages the conditions slice
 
 Key controllers:
-- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, two ConfigMaps (instructions + config), ServiceAccount/Role/RoleBinding (all named `language-agent`, namespace-scoped), and optionally a PVC for `spec.workspace`
+- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, one ConfigMap (`config.yaml`), ServiceAccount/Role/RoleBinding (all named `language-agent`, namespace-scoped), and optionally a PVC for `spec.workspace`
 - `languagecluster_controller.go` — reconciles the shared LiteLLM gateway (Deployment `gateway`, Service `gateway`, ConfigMap `gateway-config`) and optional Ingress/HTTPRoute at `gateway.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
 - `languagemodel_controller.go` — reconciles status only; no longer creates any ConfigMap, Deployment, or Service — the cluster controller reads LanguageModel CRs directly when building `gateway-config`
 - `languagepersona_controller.go` — reconciles status only; the agent controller reads LanguagePersona CRs directly when building config.yaml
@@ -79,9 +79,8 @@ Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` 
 
 ### Agent Configuration Injection
 
-The operator mounts two files into every agent pod:
-- `/etc/agent/instructions.txt` — from `spec.instructions` (inline string)
-- `/etc/agent/config.yaml` — assembled from referenced personas, resolved tool endpoints, model configs, and agent identity
+The operator mounts one file into every agent pod:
+- `/etc/agent/config.yaml` — assembled from `spec.instructions`, referenced personas, resolved tool endpoints, model configs, and agent identity
 
 Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
 

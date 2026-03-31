@@ -30,12 +30,11 @@ This is the openclaw-operator pattern generalised: opinionated about K8s mechani
 
 ### 2. Configuration over Code
 
-The operator injects two files into every agent container:
+The operator injects one file into every agent container:
 
 | Path | Content |
 |------|---------|
-| `/etc/agent/instructions.txt` | Task instructions (plain text) |
-| `/etc/agent/config.yaml` | Personas, tools, models, agent identity |
+| `/etc/agent/config.yaml` | Instructions, personas, tools, models, agent identity |
 
 Instructions are what the agent does. The image is how it does it. Changing instructions requires no image rebuild.
 
@@ -125,7 +124,7 @@ spec:
       periodSeconds: 10
 ```
 
-The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and two ConfigMaps (instructions, config).
+The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and one ConfigMap (`config.yaml`).
 
 If `spec.deployment.initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 
@@ -206,8 +205,7 @@ The operator creates the namespace, configures shared networking, sets up defaul
 The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 
 **Operator provides:**
-- `/etc/agent/instructions.txt` — plain text task instructions (optional)
-- `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
+- `/etc/agent/config.yaml` — structured YAML with instructions, agent identity, personas, tools, models (optional)
 - Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
 - `MODEL_ENDPOINTS` — URL of the shared LiteLLM gateway (`http://gateway.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)

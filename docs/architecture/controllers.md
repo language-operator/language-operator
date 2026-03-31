@@ -52,9 +52,7 @@ Located in `src/controllers/utils.go`:
 - Service for agent networking
 - HTTPRoute for routing (if gateway API available)
 - NetworkPolicy for isolation
-- Two ConfigMaps:
-    - Instructions ConfigMap (`instructions.txt`)
-    - Config ConfigMap (`config.yaml` with personas, models, tools)
+- One ConfigMap (`config.yaml` with instructions, personas, models, tools)
 
 **Configuration Injection:**
 
@@ -77,8 +75,7 @@ The controller assembles configuration from:
 
 **Volume Mounts:**
 
-- `/etc/agent/instructions.txt` - from instructions ConfigMap
-- `/etc/agent/config.yaml` - from config ConfigMap
+- `/etc/agent/config.yaml` - from agent ConfigMap
 - `/workspace` - optional persistent storage (if `spec.workspace` configured)
 
 ---
