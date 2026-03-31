@@ -1463,6 +1463,53 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_CustomServiceAccount(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("custom-sa-agent", "default",
+		gen.SetAgentServiceAccountName("custom-sa"))
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile adds finalizer.
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Second reconcile creates resources.
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// No default RBAC resources should be created when a custom SA is specified.
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &corev1.ServiceAccount{})
+	assert.True(t, errors.IsNotFound(err), "expected no ServiceAccount 'language-agent', got: %v", err)
+
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &rbacv1.Role{})
+	assert.True(t, errors.IsNotFound(err), "expected no Role 'language-agent', got: %v", err)
+
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &rbacv1.RoleBinding{})
+	assert.True(t, errors.IsNotFound(err), "expected no RoleBinding 'language-agent', got: %v", err)
+
+	// Deployment must use the custom service account name.
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	assert.Equal(t, "custom-sa", deployment.Spec.Template.Spec.ServiceAccountName)
+}
+
 // --- Group 1: Pure/stateless functions ---
 
 func TestLanguageAgentController_HashString(t *testing.T) {
