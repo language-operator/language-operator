@@ -804,43 +804,52 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 		}
 	}
 
-	log.V(1).Info("Validating DNS configuration", "domain", domain)
+	// DNS condition is stale — run lookup asynchronously to avoid blocking the reconcile worker.
+	clusterKey := types.NamespacedName{Name: cluster.Name}
+	clusterGen := cluster.Generation
+	log.V(1).Info("Starting async DNS validation", "domain", domain, "generation", clusterGen)
 
-	// Test DNS resolution with a test subdomain
-	testHost := fmt.Sprintf("test-validation.%s", domain)
+	go func() {
+		dnsCtx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+		defer cancel()
 
-	// Set a reasonable timeout for DNS lookup
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+		testHost := fmt.Sprintf("test-validation.%s", domain)
+		resolver := &net.Resolver{}
+		_, err := resolver.LookupHost(dnsCtx, testHost)
 
-	// Perform DNS lookup
-	resolver := &net.Resolver{}
-	_, err := resolver.LookupHost(ctx, testHost)
+		var fresh langopv1alpha1.LanguageCluster
+		if getErr := r.Client.Get(dnsCtx, clusterKey, &fresh); getErr != nil {
+			log.V(1).Info("Cluster not found during async DNS update, skipping")
+			return
+		}
+		if fresh.Generation != clusterGen {
+			log.V(1).Info("Cluster generation changed during async DNS validation, discarding result")
+			return
+		}
 
-	if err != nil {
-		// DNS resolution failed - this is expected if wildcard DNS isn't configured
-		log.V(1).Info("Wildcard DNS not configured or not accessible",
-			"domain", domain, "test_host", testHost, "error", err.Error())
+		if err != nil {
+			log.V(1).Info("Wildcard DNS not configured or not accessible",
+				"domain", domain, "test_host", testHost, "error", err.Error())
+			SetCondition(&fresh.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionFalse,
+				"WildcardDNSMissing",
+				fmt.Sprintf("Wildcard DNS (*.%s) not configured or not accessible. See docs/dns.md for setup instructions.", domain),
+				clusterGen)
+			log.Info("DNS configuration notice",
+				"domain", domain,
+				"required_dns", fmt.Sprintf("*.%s", domain),
+				"documentation", "See docs/dns.md for DNS setup instructions")
+		} else {
+			log.V(1).Info("Wildcard DNS configured correctly", "domain", domain)
+			SetCondition(&fresh.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionTrue,
+				"WildcardDNSReady",
+				fmt.Sprintf("Wildcard DNS (*.%s) is correctly configured", domain),
+				clusterGen)
+		}
 
-		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionFalse,
-			"WildcardDNSMissing",
-			fmt.Sprintf("Wildcard DNS (*.%s) not configured or not accessible. See docs/dns.md for setup instructions.", domain),
-			cluster.Generation)
-
-		// Log a helpful message for users
-		log.Info("DNS configuration notice",
-			"domain", domain,
-			"required_dns", fmt.Sprintf("*.%s", domain),
-			"documentation", "See docs/dns.md for DNS setup instructions")
-	} else {
-		// DNS resolution succeeded
-		log.V(1).Info("Wildcard DNS configured correctly", "domain", domain)
-
-		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionTrue,
-			"WildcardDNSReady",
-			fmt.Sprintf("Wildcard DNS (*.%s) is correctly configured", domain),
-			cluster.Generation)
-	}
+		if updateErr := r.Status().Update(dnsCtx, &fresh); updateErr != nil {
+			log.Error(updateErr, "Failed to update DNS condition asynchronously")
+		}
+	}()
 }
 
 // reconcileGateway creates/updates the shared LiteLLM gateway Deployment, Service, and ConfigMap.

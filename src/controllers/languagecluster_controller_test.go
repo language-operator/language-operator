@@ -1637,3 +1637,37 @@ func TestValidateDNS_SkipsOnSameGeneration(t *testing.T) {
 	assert.Equal(t, existingCondition.LastTransitionTime, found.LastTransitionTime,
 		"LastTransitionTime must not change when DNS lookup is skipped")
 }
+
+// TestValidateDNS_NonBlocking verifies that validateDNS returns immediately without
+// modifying the in-memory cluster object when the DNS condition is stale. The lookup
+// is dispatched to a background goroutine instead of blocking the reconcile worker.
+func TestValidateDNS_NonBlocking(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("async-dns",
+		gen.SetClusterDomain("example.com"),
+	)
+	cluster.Generation = 2
+	// No DNS condition — stale path, goroutine will be launched.
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	reconciler.validateDNS(context.Background(), cluster)
+
+	// The in-memory cluster object must NOT be modified — the goroutine writes
+	// back asynchronously via the API server, not by mutating the passed pointer.
+	for _, cond := range cluster.Status.Conditions {
+		assert.NotEqual(t, langopv1alpha1.ConditionDNSConfigured, cond.Type,
+			"validateDNS must not set DNS condition synchronously on the in-memory cluster")
+	}
+}
