@@ -338,6 +338,16 @@ func GenerateConfigMapName(resourceName, suffix string) string {
 	return fmt.Sprintf("%s-%s", resourceName, suffix)
 }
 
+// GeneratePVCName returns the PVC name for an agent's workspace volume.
+func GeneratePVCName(agentName string) string {
+	return agentName + "-workspace"
+}
+
+// GenerateTLSSecretName returns the TLS secret name for an agent.
+func GenerateTLSSecretName(agentName string) string {
+	return agentName + "-tls"
+}
+
 // GetCommonLabels returns common labels for resources
 func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 	return map[string]string{

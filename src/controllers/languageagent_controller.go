@@ -548,7 +548,7 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agent.Name + "-workspace",
+			Name:      GeneratePVCName(agent.Name),
 			Namespace: targetNamespace,
 			Labels:    GetCommonLabels(agent.Name, "LanguageAgent"),
 		},
@@ -641,7 +641,7 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 			Name: "workspace",
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: agent.Name + "-workspace",
+					ClaimName: GeneratePVCName(agent.Name),
 				},
 			},
 		})
@@ -1419,7 +1419,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 							}
 							ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 						}
-						secretName = agent.Name + "-tls"
+						secretName = GenerateTLSSecretName(agent.Name)
 					}
 
 					ingress.Spec.TLS = []networkingv1.IngressTLS{
