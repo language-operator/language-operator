@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	"github.com/language-operator/language-operator/pkg/cni"
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/validation"
@@ -54,6 +55,7 @@ type LanguageAgentReconciler struct {
 	NetworkPolicyRetries    int
 	NetworkIsolationEnabled bool
 	DefaultIngressClassName string
+	CNICapabilities         *cni.CNICapabilities
 }
 
 const (
@@ -271,18 +273,24 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				"NetworkPolicy created successfully", agent.Generation)
 		}
 
-		// Detect if NetworkPolicy enforcement is supported
-		if supported, cni := r.detectNetworkPolicySupport(ctx); !supported {
-			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cni)
+		// Use startup-cached CNI capabilities to determine NetworkPolicy enforcement support.
+		cniName := "unknown"
+		cniSupported := false
+		if r.CNICapabilities != nil {
+			cniName = r.CNICapabilities.Name
+			cniSupported = r.CNICapabilities.SupportsNetworkPolicy
+		}
+		if !cniSupported {
+			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cniName)
 			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionFalse, "CNINotSupported", message, agent.Generation)
 			if r.Recorder != nil {
-				r.EventManager.RecordNetworkPolicyUnsupported(agent, cni)
+				r.EventManager.RecordNetworkPolicyUnsupported(agent, cniName)
 			}
-			log.Info("NetworkPolicy enforcement not supported", "cni", cni)
+			log.Info("NetworkPolicy enforcement not supported", "cni", cniName)
 		} else {
-			message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cni)
+			message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cniName)
 			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionTrue, "Enforced", message, agent.Generation)
-			log.V(1).Info("NetworkPolicy enforcement supported", "cni", cni)
+			log.V(1).Info("NetworkPolicy enforcement supported", "cni", cniName)
 		}
 	} else {
 		// Network isolation disabled - skip NetworkPolicy creation
@@ -1357,45 +1365,6 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 	}
 
 	return nil
-}
-
-// detectNetworkPolicySupport detects if the cluster CNI supports NetworkPolicy enforcement
-func (r *LanguageAgentReconciler) detectNetworkPolicySupport(ctx context.Context) (bool, string) {
-	// Check for known CNI plugins that support NetworkPolicy
-	// We detect by looking for DaemonSets or pods in kube-system namespace
-
-	// Check for Cilium
-	ciliumDS := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "cilium", Namespace: "kube-system"}, ciliumDS); err == nil {
-		return true, "cilium"
-	}
-
-	// Check for Calico
-	calicoDS := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "calico-node", Namespace: "kube-system"}, calicoDS); err == nil {
-		return true, "calico"
-	}
-
-	// Check for Weave Net
-	weaveDS := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "weave-net", Namespace: "kube-system"}, weaveDS); err == nil {
-		return true, "weave-net"
-	}
-
-	// Check for Antrea
-	antreaDS := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "antrea-agent", Namespace: "kube-system"}, antreaDS); err == nil {
-		return true, "antrea"
-	}
-
-	// Check for Flannel (does NOT support NetworkPolicy)
-	flannelDS := &appsv1.DaemonSet{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "kube-flannel-ds", Namespace: "kube-system"}, flannelDS); err == nil {
-		return false, "flannel"
-	}
-
-	// Unknown CNI - assume not supported and warn
-	return false, "unknown"
 }
 
 // reconcileIngress creates or updates an Ingress for the agent

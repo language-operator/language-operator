@@ -11,6 +11,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
+	"github.com/language-operator/language-operator/pkg/cni"
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2274,54 +2275,9 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 // --- Group 5: CNI detection ---
 
 func TestLanguageAgentController_DetectNetworkPolicySupport(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	tests := []struct {
-		name        string
-		dsName      string
-		wantSupport bool
-		wantCNI     string
-	}{
-		{"cilium_detected", "cilium", true, "cilium"},
-		{"calico_detected", "calico-node", true, "calico"},
-		{"weave_detected", "weave-net", true, "weave-net"},
-		{"antrea_detected", "antrea-agent", true, "antrea"},
-		{"flannel_returns_false", "kube-flannel-ds", false, "flannel"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ds := &appsv1.DaemonSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      tc.dsName,
-					Namespace: "kube-system",
-				},
-			}
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ds).Build()
-			r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
-
-			supported, cni := r.detectNetworkPolicySupport(context.Background())
-			if supported != tc.wantSupport {
-				t.Errorf("supported: got %v, want %v", supported, tc.wantSupport)
-			}
-			if cni != tc.wantCNI {
-				t.Errorf("CNI: got %q, want %q", cni, tc.wantCNI)
-			}
-		})
-	}
-
-	t.Run("no_cni_returns_false", func(t *testing.T) {
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
-
-		supported, cni := r.detectNetworkPolicySupport(context.Background())
-		if supported {
-			t.Error("expected not supported when no CNI detected")
-		}
-		if cni != "unknown" {
-			t.Errorf("expected 'unknown', got %q", cni)
-		}
-	})
+	// CNI detection is no longer performed per-reconcile.
+	// The startup-cached CNICapabilities field is used instead.
+	// Coverage is provided by TestLanguageAgentController_ConditionNetworkPolicyEnforced_*.
 }
 
 func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
@@ -3632,21 +3588,13 @@ func TestLanguageAgentController_EnqueueAgentsInNamespace(t *testing.T) {
 func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	// Seed a Cilium DaemonSet so detectNetworkPolicySupport returns (true, "cilium").
-	ciliumDS := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cilium",
-			Namespace: "kube-system",
-		},
-	}
-
 	agent := gen.LanguageAgent("np-enforced-agent", "default")
 	agent.Finalizers = []string{FinalizerName}
 
 	recorder := record.NewFakeRecorder(10)
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(gen.ReadyCluster("default"), agent, ciliumDS).
+		WithObjects(gen.ReadyCluster("default"), agent).
 		WithStatusSubresource(agent).
 		Build()
 
@@ -3660,6 +3608,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *tes
 		NetworkIsolationEnabled: true,
 		NetworkPolicyTimeout:    30 * time.Second,
 		NetworkPolicyRetries:    3,
+		CNICapabilities:         &cni.CNICapabilities{Name: "cilium", SupportsNetworkPolicy: true},
 	}
 
 	ctx := context.Background()
@@ -3687,7 +3636,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *tes
 func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
-	// No CNI DaemonSet present — detectNetworkPolicySupport returns (false, "unknown").
+	// CNICapabilities nil — falls through to "unknown"/unsupported.
 	agent := gen.LanguageAgent("np-not-enforced-agent", "default")
 	agent.Finalizers = []string{FinalizerName}
 

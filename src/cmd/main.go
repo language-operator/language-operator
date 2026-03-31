@@ -312,6 +312,7 @@ func main() {
 		NetworkPolicyRetries:    networkPolicyRetries,
 		NetworkIsolationEnabled: networkIsolationEnabled,
 		DefaultIngressClassName: agentIngressClassName,
+		CNICapabilities:         cniCaps,
 	}
 
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
