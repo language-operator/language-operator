@@ -93,10 +93,20 @@ func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.O
 }
 
 // ValidateUpdate implements webhook.CustomValidator
-func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
-	a := obj.(*LanguageAgent)
+func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, newObj runtime.Object, oldObj runtime.Object) (admission.Warnings, error) {
+	a := newObj.(*LanguageAgent)
+	old := oldObj.(*LanguageAgent)
 	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
+	}
+	if old.Spec.Workspace != nil && a.Spec.Workspace != nil {
+		oldQ, err := resource.ParseQuantity(old.Spec.Workspace.Size)
+		if err == nil {
+			newQ, err := resource.ParseQuantity(a.Spec.Workspace.Size)
+			if err == nil && newQ.Cmp(oldQ) < 0 {
+				return nil, fmt.Errorf("spec.workspace.size: cannot decrease storage size (was %s, got %s)", old.Spec.Workspace.Size, a.Spec.Workspace.Size)
+			}
+		}
 	}
 	return nil, a.validateSpec()
 }
