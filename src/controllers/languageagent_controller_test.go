@@ -282,6 +282,11 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	if readyCondition.Reason != "ReconcileSuccess" {
 		t.Errorf("Expected reason 'ReconcileSuccess', got '%s'", readyCondition.Reason)
 	}
+
+	// ObservedGeneration must match the agent's generation after reconcile
+	if updatedAgent.Status.ObservedGeneration != updatedAgent.Generation {
+		t.Errorf("Expected ObservedGeneration=%d, got %d", updatedAgent.Generation, updatedAgent.Status.ObservedGeneration)
+	}
 }
 
 func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
