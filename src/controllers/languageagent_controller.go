@@ -1351,12 +1351,6 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		}
 	}
 
-	// Update agent status with conditions and potentially webhook URLs
-	if err := r.Status().Update(ctx, agent); err != nil {
-		log.Error(err, "Failed to update agent status")
-		return err
-	}
-
 	return nil
 }
 
