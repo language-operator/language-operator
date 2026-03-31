@@ -5621,6 +5621,14 @@ spec:
                   GatewayReady indicates whether the shared gateway Deployment is available.
                   Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false).
                 type: boolean
+              observedGeneration:
+                description: |-
+                  ObservedGeneration is the most recent generation observed by the controller.
+                  It corresponds to the metadata.generation of the LanguageCluster at the time
+                  the controller last processed it. Watchers can use this to detect when the
+                  status reflects a stale version of the spec.
+                format: int64
+                type: integer
               phase:
                 description: Phase of the cluster
                 enum:

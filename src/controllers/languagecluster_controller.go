@@ -210,6 +210,9 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// Track the generation being reconciled so watchers can detect stale status.
+	cluster.Status.ObservedGeneration = cluster.Generation
+
 	// Mark Pending on first real reconcile so kubectl get shows something meaningful
 	// before resources are fully provisioned.
 	if cluster.Status.Phase == "" {
