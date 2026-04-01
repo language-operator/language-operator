@@ -32,7 +32,7 @@ helm install language-operator language-operator/language-operator
 
 ## Getting Started
 
-This example deploys [openclaw](https://github.com/openclaw/openclaw) — a self-hosted AI assistant — to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
+These examples deploy [openclaw](https://github.com/openclaw/openclaw) or [opencode](https://github.com/sst/opencode) — self-hosted AI coding assistants — to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
 
 ### 1. Create a cluster
 
@@ -72,19 +72,20 @@ spec:
 EOF
 ```
 
-### 3. Create an openclaw gateway token
+### 3. Deploy an agent
+
+Choose one of the following agents:
+
+<details open>
+<summary><strong>openclaw</strong></summary>
+
+The `openclaw-adapter` init container receives the resolved LiteLLM proxy URL via `MODEL_ENDPOINTS` (injected by the operator) and seeds `openclaw.json` so openclaw routes through the proxy on first run.
 
 ```bash
 kubectl create secret generic openclaw-gateway \
   -n language-operator-openclaw \
   --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
-```
 
-### 4. Deploy openclaw
-
-The `openclaw-adapter` init container receives the resolved LiteLLM proxy URL via `MODEL_ENDPOINTS` (injected by the operator) and seeds `openclaw.json` so openclaw routes through the proxy on first run.
-
-```bash
 kubectl apply -n language-operator-openclaw -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
@@ -116,14 +117,66 @@ spec:
 EOF
 ```
 
-### 5. Check status
+See [examples/openclaw.yaml](examples/openclaw.yaml) for the full annotated example.
+
+</details>
+
+<details>
+<summary><strong>opencode</strong></summary>
+
+The `opencode-adapter` init container reads `MODEL_ENDPOINTS` and `LLM_MODEL` (injected by the operator) and writes `/etc/opencode/opencode.jsonc` so opencode routes LLM traffic through the gateway. opencode's image has no default `CMD`, so `args` must supply the `serve` subcommand explicitly.
+
+```bash
+kubectl create secret generic opencode-server \
+  -n language-operator-openclaw \
+  --from-literal=OPENCODE_SERVER_PASSWORD=$(openssl rand -hex 32)
+
+kubectl apply -n language-operator-openclaw -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: opencode
+spec:
+  image: ghcr.io/sst/opencode:latest
+  port: 3000
+  models:
+    - name: claude-sonnet
+  workspace:
+    size: 10Gi
+  deployment:
+    command: ["opencode"]
+    args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
+    initContainers:
+      - name: opencode-adapter
+        image: ghcr.io/language-operator/opencode-adapter:latest
+        volumeMounts:
+          - name: opencode-config
+            mountPath: /etc/opencode
+    env:
+      - name: XDG_DATA_HOME
+        value: /workspace/.local/share
+    envFrom:
+      - secretRef:
+          name: opencode-server
+    volumes:
+      - name: opencode-config
+        emptyDir: {}
+    volumeMounts:
+      - name: opencode-config
+        mountPath: /etc/opencode
+EOF
+```
+
+See [examples/opencode.yaml](examples/opencode.yaml) for the full annotated example.
+
+</details>
+
+### 4. Check status
 
 ```bash
 kubectl get languageagents -n language-operator-openclaw
 kubectl get pods -n language-operator-openclaw
 ```
-
-See [examples/openclaw.yaml](examples/openclaw.yaml) for the full annotated example.
 
 ## Development
 
