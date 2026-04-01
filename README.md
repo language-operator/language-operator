@@ -29,7 +29,9 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 ```bash
 helm repo add language-operator \
   https://language-operator.github.io/language-operator
-helm install language-operator language-operator/language-operator
+helm install language-operator language-operator/language-operator \
+  --create-namespace \
+  --namespace language-operator
 ```
 
 ## Getting Started
