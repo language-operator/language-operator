@@ -86,6 +86,7 @@ func main() {
 	var networkPolicyTimeout time.Duration
 	var networkPolicyRetries int
 	var agentIngressClassName string
+	var gatewayIngressClassName string
 	var gatewayImage string
 	var gatewayImagePullPolicy string
 	var webhookPort int
@@ -118,6 +119,8 @@ func main() {
 		"The number of concurrent reconciles per controller.")
 	flag.StringVar(&agentIngressClassName, "agent-ingress-class-name", "",
 		"Default IngressClass name for agent Ingress resources. Can be overridden per LanguageCluster.")
+	flag.StringVar(&gatewayIngressClassName, "gateway-ingress-class-name", "",
+		"Default IngressClass name for the gateway Ingress. Can be overridden per LanguageCluster.")
 	flag.StringVar(&gatewayImage, "gateway-image", "",
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
@@ -343,6 +346,7 @@ func main() {
 		NetworkIsolationEnabled: networkIsolationEnabled,
 		GatewayImage:            gatewayImage,
 		GatewayImagePullPolicy:  corev1.PullPolicy(gatewayImagePullPolicy),
+		DefaultIngressClassName: gatewayIngressClassName,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)

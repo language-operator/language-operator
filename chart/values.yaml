@@ -175,12 +175,11 @@ config:
     # Number of retry attempts for NetworkPolicy operations.
     retries: 3
 
-  # Agent Ingress configuration
-  agentIngress:
+  agents:
     # Default IngressClass for agent Ingress resources.
-    # Can be overridden per-cluster via LanguageCluster spec.ingressConfig.ingressClassName.
+    # Can be overridden per-cluster via LanguageCluster spec.ingress.className.
     # Example: "traefik", "nginx", "alb"
-    className: ""
+    ingressClassName: ""
 
   gateway:
     # Image for the shared LiteLLM gateway deployed per LanguageCluster.
@@ -189,6 +188,10 @@ config:
     # ImagePullPolicy for the gateway (Always, IfNotPresent, Never).
     # Defaults to Kubernetes default (IfNotPresent, or Always for :latest).
     imagePullPolicy: ""
+    # Default IngressClass for the gateway Ingress.
+    # Can be overridden per-cluster via LanguageCluster spec.ingress.className.
+    # Example: "traefik", "nginx", "alb"
+    ingressClassName: ""
 
   # Watch configuration
   watch:

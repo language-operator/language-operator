@@ -1846,3 +1846,54 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 		assert.Empty(t, ing.Spec.TLS, "TLS should not be configured when Enabled=false")
 	})
 }
+
+func TestLanguageClusterController_GatewayIngressClassName(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	const domain = "example.com"
+
+	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, defaultIngressClassName string) *networkingv1.Ingress {
+		t.Helper()
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster).
+			WithStatusSubresource(cluster).
+			Build()
+		r := &LanguageClusterReconciler{
+			Client:                  fakeClient,
+			Scheme:                  scheme,
+			Log:                     logr.Discard(),
+			DefaultIngressClassName: defaultIngressClassName,
+		}
+		ctx := context.Background()
+		req := clusterRequest(cluster.Name)
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ing))
+		return ing
+	}
+
+	t.Run("operator_default_applied_when_spec_empty", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-class-default", gen.SetClusterDomain(domain))
+		ing := reconcileCluster(t, cluster, "traefik")
+		require.NotNil(t, ing.Spec.IngressClassName)
+		assert.Equal(t, "traefik", *ing.Spec.IngressClassName)
+	})
+
+	t.Run("per_cluster_spec_overrides_operator_default", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-class-override",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressClassName("nginx"))
+		ing := reconcileCluster(t, cluster, "traefik")
+		require.NotNil(t, ing.Spec.IngressClassName)
+		assert.Equal(t, "nginx", *ing.Spec.IngressClassName)
+	})
+
+	t.Run("no_class_when_default_empty_and_spec_empty", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-class-none", gen.SetClusterDomain(domain))
+		ing := reconcileCluster(t, cluster, "")
+		assert.Nil(t, ing.Spec.IngressClassName)
+	})
+}

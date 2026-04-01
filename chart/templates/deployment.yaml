@@ -68,8 +68,11 @@ spec:
         {{- if .Values.config.watch.namespaces }}
         - --watch-namespaces={{ join "," .Values.config.watch.namespaces }}
         {{- end }}
-        {{- if .Values.config.agentIngress.className }}
-        - --agent-ingress-class-name={{ .Values.config.agentIngress.className }}
+        {{- if .Values.config.agents.ingressClassName }}
+        - --agent-ingress-class-name={{ .Values.config.agents.ingressClassName }}
+        {{- end }}
+        {{- if .Values.config.gateway.ingressClassName }}
+        - --gateway-ingress-class-name={{ .Values.config.gateway.ingressClassName }}
         {{- end }}
         {{- if .Values.config.gateway.image }}
         - --gateway-image={{ .Values.config.gateway.image }}

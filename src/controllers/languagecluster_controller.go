@@ -69,6 +69,7 @@ type LanguageClusterReconciler struct {
 	NetworkIsolationEnabled bool
 	GatewayImage            string
 	GatewayImagePullPolicy  corev1.PullPolicy
+	DefaultIngressClassName string
 	// DNSLookup replaces the live net.Resolver lookup when non-nil.
 	// Used only in unit tests to inject controlled success/failure.
 	DNSLookup func(ctx context.Context, host string) error
@@ -1109,8 +1110,8 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 	hostname := fmt.Sprintf("gateway.%s", cluster.Spec.Domain)
 	namespace := cluster.Name
 
-	ingressClass := ""
-	if cluster.Spec.Ingress != nil {
+	ingressClass := r.DefaultIngressClassName
+	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.ClassName != "" {
 		ingressClass = cluster.Spec.Ingress.ClassName
 	}
 
