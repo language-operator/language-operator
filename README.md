@@ -102,6 +102,13 @@ spec:
 EOF
 ```
 
+**Connect:**
+
+```bash
+kubectl port-forward svc/openclaw 18789:18789
+```
+
+openclaw exposes a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI. Connect using the [openclaw browser extension](https://openclaw.ai/docs/extension) or CLI client pointing to `ws://localhost:18789` with token `changeme`.
 
 </details>
 
