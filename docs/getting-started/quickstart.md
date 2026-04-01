@@ -22,6 +22,9 @@ spec:
   domain: openclaw.langop.io
 EOF
 
+kubectl wait languagecluster/language-operator-openclaw \
+  --for=condition=Ready --timeout=60s
+
 kubectl config set-context --current --namespace=language-operator-openclaw
 ```
 
