@@ -142,7 +142,7 @@ From source:
 cd chart
 helm install language-operator . \
   --create-namespace \
-  --namespace language-operator-system \
+  --namespace language-operator \
   --set image.tag=dev
 ```
 
@@ -168,7 +168,7 @@ make dev  # builds and imports into k3s
 ### Watch Logs
 
 ```bash
-kubectl logs -n language-operator-system \
+kubectl logs -n language-operator \
   -l app.kubernetes.io/name=language-operator \
   --follow
 ```

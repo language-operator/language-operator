@@ -64,5 +64,5 @@ git clone https://github.com/language-operator/language-operator
 cd language-operator/chart
 
 # Install from local directory
-helm install language-operator . --namespace language-operator-system
+helm install language-operator . --namespace language-operator
 ```

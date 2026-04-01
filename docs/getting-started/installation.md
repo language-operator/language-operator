@@ -41,13 +41,13 @@ helm repo update
 
 ### 2. Install the Operator
 
-Install into the `language-operator-system` namespace:
+Install into the `language-operator` namespace:
 
 ```bash
 helm install language-operator \
   language-operator/language-operator \
   --create-namespace \
-  --namespace language-operator-system
+  --namespace language-operator
 ```
 
 ### 3. Verify Installation
@@ -55,7 +55,7 @@ helm install language-operator \
 Check that the operator pod is running:
 
 ```bash
-kubectl get pods -n language-operator-system
+kubectl get pods -n language-operator
 ```
 
 Expected output:
@@ -118,7 +118,7 @@ Upgrade the operator to the latest version:
 ```bash
 helm repo update
 helm upgrade language-operator language-operator/language-operator \
-  --namespace language-operator-system
+  --namespace language-operator
 ```
 
 ## Uninstall
@@ -126,7 +126,7 @@ helm upgrade language-operator language-operator/language-operator \
 Remove the operator (CRDs and custom resources will be deleted):
 
 ```bash
-helm uninstall language-operator --namespace language-operator-system
+helm uninstall language-operator --namespace language-operator
 ```
 
 !!! warning "Data Loss"
