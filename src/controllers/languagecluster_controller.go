@@ -1107,7 +1107,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 		return nil
 	}
 
-	hostname := fmt.Sprintf("gateway.%s", cluster.Spec.Domain)
+	hostname := cluster.Spec.Domain
 	namespace := cluster.Name
 
 	ingressClass := r.DefaultIngressClassName

@@ -1199,7 +1199,7 @@ func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
 	ingress := &networkingv1.Ingress{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ingress))
 	require.NotEmpty(t, ingress.Spec.Rules)
-	assert.Equal(t, "gateway.example.com", ingress.Spec.Rules[0].Host)
+	assert.Equal(t, "example.com", ingress.Spec.Rules[0].Host)
 
 	updated := &langopv1alpha1.LanguageCluster{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
@@ -1775,7 +1775,7 @@ func TestValidateDNS_FailureSetsWildcardDNSMissing(t *testing.T) {
 func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	const domain = "example.com"
-	const gatewayHost = "gateway.example.com"
+	const gatewayHost = "example.com"
 
 	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster) *networkingv1.Ingress {
 		t.Helper()
