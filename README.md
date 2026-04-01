@@ -137,7 +137,7 @@ kind: LanguageAgent
 metadata:
   name: opencode
 spec:
-  image: ghcr.io/sst/opencode:latest
+  image: ghcr.io/anomalyco/opencode:latest
   port: 3000
   models:
     - name: claude-sonnet
