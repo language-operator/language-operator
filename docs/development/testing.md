@@ -210,13 +210,13 @@ go tool cover -html=coverage.out
    ```bash
    cd chart
    helm install language-operator . \
-     --namespace language-operator-system \
+     --namespace language-operator \
      --create-namespace
    ```
 
 3. **Watch logs:**
    ```bash
-   kubectl logs -n language-operator-system \
+   kubectl logs -n language-operator \
      -l app.kubernetes.io/name=language-operator \
      --follow
    ```

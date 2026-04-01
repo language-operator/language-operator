@@ -10,7 +10,7 @@ helm repo add language-operator \
 helm repo update
 helm install language-operator language-operator/language-operator \
   --create-namespace \
-  --namespace language-operator-system
+  --namespace language-operator
 ```
 
 For detailed installation instructions, see the [Getting Started Guide](../getting-started/installation.md).
