@@ -1,7 +1,7 @@
 GIT_SHA   := $(shell git rev-parse --short HEAD)
 DEV_IMAGE := language-operator:$(GIT_SHA)
 
-.PHONY: help build test dev setup-hooks install upgrade uninstall k8s-status agent-supervisor
+.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status agent-supervisor
 
 # Build the operator binary
 build:
@@ -41,6 +41,24 @@ upgrade:
 uninstall:
 	@cd chart && $(MAKE) uninstall
 
+# Wipe everything — delete all CRs, uninstall the chart, delete CRDs and namespace.
+# Use this to get back to a clean cluster state.
+wipe:
+	@echo "Deleting all language operator custom resources..."
+	@kubectl delete languageagents --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@kubectl delete languageclusters --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@kubectl delete languagemodels --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@kubectl delete languagetools --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@kubectl delete languagepersonas --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@kubectl delete languageagentruntimes --all -A --ignore-not-found --wait=true 2>/dev/null || true
+	@echo "Uninstalling Helm release..."
+	@helm uninstall language-operator --namespace language-operator --ignore-not-found 2>/dev/null || true
+	@echo "Deleting CRDs..."
+	@kubectl get crds -o name 2>/dev/null | grep langop.io | xargs -r kubectl delete --ignore-not-found
+	@echo "Deleting namespace..."
+	@kubectl delete namespace language-operator --ignore-not-found 2>/dev/null || true
+	@echo "Done."
+
 # Check Kubernetes resources status
 k8s-status:
 	@echo "Language Operator Resources:"
@@ -65,6 +83,7 @@ help:
 	@echo "  install      - Install Helm chart (chart/values.local.yaml)"
 	@echo "  upgrade      - Upgrade Helm release"
 	@echo "  uninstall    - Uninstall Helm release"
+	@echo "  wipe         - Delete all CRs, CRDs, chart, and namespace (start from scratch)"
 	@echo "  k8s-status   - Check status of all language resources"
 	@echo "  dev-supervisor   - Run the supervisor agent (triage issues into queues)"
 	@echo "  dev-worker-N     - Run worker agent for queue N (0, 1, or 2)"
