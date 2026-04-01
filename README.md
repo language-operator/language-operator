@@ -172,6 +172,19 @@ EOF
 
 See [examples/opencode.yaml](examples/opencode.yaml) for the full annotated example.
 
+**Connect:**
+
+```bash
+# In one terminal — port-forward the service
+kubectl port-forward -n language-operator-openclaw svc/opencode 3000:3000
+
+# In another terminal — launch the opencode TUI pointed at the forwarded port
+OPENCODE_SERVER_PASSWORD=$(kubectl get secret opencode-server \
+  -n language-operator-openclaw \
+  -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d) \
+  opencode --hostname localhost --port 3000
+```
+
 </details>
 
 ### 4. Check status
