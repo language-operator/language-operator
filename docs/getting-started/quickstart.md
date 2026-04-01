@@ -20,28 +20,19 @@ metadata:
 spec:
   domain: openclaw.langop.io
 EOF
-```
 
-Verify the cluster is ready:
-
-```bash
-kubectl get languagecluster language-operator-openclaw
+kubectl config set-context --current --namespace=language-operator-openclaw
 ```
 
 ## Step 2: Configure an LLM
 
-Create a secret with your Anthropic API key:
+Create a secret with your Anthropic API key, then create a `LanguageModel`:
 
 ```bash
 kubectl create secret generic anthropic-credentials \
-  -n language-operator-openclaw \
   --from-literal=api-key=sk-ant-your-key-here
-```
 
-Create a `LanguageModel` resource:
-
-```bash
-kubectl apply -n language-operator-openclaw -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
@@ -55,81 +46,38 @@ spec:
 EOF
 ```
 
-The operator will create a LiteLLM proxy that agents can use to access the model.
+The operator creates a LiteLLM proxy so all agents can reach the model through a single in-cluster endpoint.
 
-## Step 3: Create Gateway Token
+## Step 3: Deploy the Agent
 
-Generate a secure token for openclaw's web gateway:
-
-```bash
-kubectl create secret generic openclaw-gateway \
-  -n language-operator-openclaw \
-  --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
-```
-
-## Step 4: Deploy the Agent
-
-Deploy openclaw as a `LanguageAgent`:
+The `openclaw` runtime is bundled with the operator. Reference it with `runtime: openclaw` and supply a gateway token inline — the operator creates the credential secret automatically:
 
 ```bash
-kubectl apply -n language-operator-openclaw -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: openclaw
 spec:
-  image: ghcr.io/openclaw/openclaw:latest
-  port: 18789
+  runtime: openclaw
+  openclaw:
+    token: changeme
   models:
     - name: claude-sonnet
-  workspace:
-    size: 10Gi
-  deployment:
-    initContainers:
-      - name: openclaw-adapter
-        image: ghcr.io/language-operator/openclaw-adapter:latest
-        env:
-          - name: OPENCLAW_STATE_DIR
-            value: /workspace/.openclaw
-        volumeMounts:
-          - name: workspace
-            mountPath: /workspace
-    env:
-      - name: OPENCLAW_HOME
-        value: /workspace
-    envFrom:
-      - secretRef:
-          name: openclaw-gateway
 EOF
 ```
 
-## Step 5: Check Status
-
-Watch the agent pod come up:
+## Step 4: Check Status
 
 ```bash
-kubectl get pods -n language-operator-openclaw -w
+kubectl get languageagents
+kubectl get pods -w
 ```
 
-Check the agent status:
+## Step 5: Access the Agent
 
 ```bash
-kubectl get languageagent openclaw -n language-operator-openclaw
-```
-
-View agent logs:
-
-```bash
-kubectl logs -n language-operator-openclaw -l langop.io/agent=openclaw
-```
-
-## Step 6: Access the Agent
-
-Forward the openclaw web interface:
-
-```bash
-kubectl port-forward -n language-operator-openclaw \
-  svc/openclaw 18789:18789
+kubectl port-forward svc/openclaw 18789:18789
 ```
 
 Open [http://localhost:18789](http://localhost:18789) in your browser.
@@ -144,8 +92,8 @@ The operator automatically:
 1. Created a dedicated namespace (`language-operator-openclaw`)
 2. Deployed a LiteLLM proxy with your Anthropic credentials
 3. Injected the proxy URL into your agent via `MODEL_ENDPOINTS`
-4. Created a Deployment, Service, and HTTPRoute for openclaw
-5. Set up NetworkPolicy for secure communication
+4. Created a `{agent}-runtime` Secret from `spec.openclaw.token` and injected it via `envFrom`
+5. Created a Deployment, Service, and NetworkPolicy for openclaw
 
 ## Next Steps
 

@@ -74,6 +74,7 @@ nav:
       - Complete Reference (Auto-generated): api/reference.md
       - Overview: api/overview.md
       - LanguageAgent Guide: api/languageagent.md
+      - LanguageAgentRuntime Guide: api/languageagentruntime.md
       - LanguageCluster Guide: api/languagecluster.md
       - LanguageModel Guide: api/languagemodel.md
       - LanguageTool Guide: api/languagetool.md

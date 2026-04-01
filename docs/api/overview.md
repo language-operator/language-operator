@@ -101,6 +101,28 @@ A `LanguageTool` deploys a Model Context Protocol (MCP) tool server that extends
 
 ---
 
+### LanguageAgentRuntime
+
+**Scope:** Cluster
+**Purpose:** Reusable agent preset (image, port, init containers, probes, env vars)
+
+A `LanguageAgentRuntime` is a cluster-scoped template that packages everything needed to run a specific agent type. Admins install runtimes once; users reference them by name:
+
+```yaml
+spec:
+  runtime: openclaw
+```
+
+The standard runtimes (`openclaw`, `opencode`) are bundled with the Helm chart and installed automatically.
+
+**Common Use Cases:**
+
+- Standardize agent images and configuration across teams
+- Pre-package complex init container patterns (adapters, sidecars)
+- Version-control runtime defaults separately from agent configuration
+
+---
+
 ### LanguagePersona
 
 **Scope:** Namespace
@@ -129,6 +151,8 @@ A `LanguagePersona` defines reusable personality and instruction templates:
 
 ```mermaid
 graph TD
+    Runtime[LanguageAgentRuntime\ncluster-scoped] -->|preset defaults for| Agent
+
     Cluster[LanguageCluster] -->|creates namespace| NS[Namespace]
     Cluster -->|manages| Proxy[LiteLLM Proxy]
 
@@ -201,17 +225,19 @@ The operator merges all referenced configurations.
 
 ### Conditional Status
 
-All resources follow Kubernetes conventions for status:
+Most resources follow Kubernetes conventions for status conditions:
 
 ```yaml
 status:
-  phase: Running  # or Pending, Failed, Unknown
+  phase: Running  # or Pending, Failed
   conditions:
     - type: Ready
       status: "True"
-      reason: ResourcesCreated
+      reason: ReconcileSuccess
       message: All child resources created successfully
 ```
+
+`LanguageAgentRuntime` is an exception — it is a static config preset (analogous to `IngressClass` or `StorageClass`) and has no status subresource.
 
 ## Next Steps
 
