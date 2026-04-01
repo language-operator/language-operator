@@ -12,6 +12,9 @@ metadata:
 spec:
   image: ghcr.io/openclaw/openclaw:latest
 
+  openclaw:
+    enabled: true
+
   # openclaw gateway binds to loopback (ws://127.0.0.1:18789);
   # kubelet httpGet probes cannot reach it, so no liveness/readiness probes here.
   port: 18789

@@ -146,6 +146,12 @@ type WorkspaceSpec struct {
 // OpencodeConfig holds configuration specific to the opencode runtime.
 // Effective only when spec.runtime is "opencode".
 type OpencodeConfig struct {
+	// Enabled activates opencode credential management for this agent.
+	// Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
+	// without requiring any explicit config on the LanguageAgent.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
 	// Username for HTTP Basic Auth. Defaults to "opencode" if not set.
 	// Sets OPENCODE_SERVER_USERNAME in the agent container.
 	// +optional
@@ -167,6 +173,12 @@ type OpencodeConfig struct {
 // OpenclawConfig holds configuration specific to the openclaw runtime.
 // Effective only when spec.runtime is "openclaw".
 type OpenclawConfig struct {
+	// Enabled activates openclaw credential management for this agent.
+	// Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
+	// without requiring any explicit config on the LanguageAgent.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
 	// Token is the gateway authentication token (inline).
 	// The operator creates a managed Secret and injects it via envFrom.
 	// Mutually exclusive with TokenRef.

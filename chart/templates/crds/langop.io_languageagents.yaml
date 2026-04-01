@@ -5449,6 +5449,12 @@ spec:
                   Openclaw holds configuration specific to the openclaw runtime.
                   Only effective when spec.runtime is "openclaw".
                 properties:
+                  enabled:
+                    description: |-
+                      Enabled activates openclaw credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
                   token:
                     description: |-
                       Token is the gateway authentication token (inline).
@@ -5473,6 +5479,12 @@ spec:
                   Opencode holds configuration specific to the opencode runtime.
                   Only effective when spec.runtime is "opencode".
                 properties:
+                  enabled:
+                    description: |-
+                      Enabled activates opencode credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
                   password:
                     description: |-
                       Password is the HTTP Basic Auth password (inline).
