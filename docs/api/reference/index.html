@@ -1024,17 +1024,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#languageagentruntimestatus" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        LanguageAgentRuntimeStatus
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#languageagentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1233,10 +1222,43 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#openclawconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenclawConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opencodeconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpencodeConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ratelimitspec" class="md-nav__link">
     <span class="md-ellipsis">
       
         RateLimitSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtimesecretref" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RuntimeSecretRef
       
     </span>
   </a>
@@ -2003,17 +2025,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#languageagentruntimestatus" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        LanguageAgentRuntimeStatus
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#languageagentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2212,10 +2223,43 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#openclawconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenclawConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#opencodeconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpencodeConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ratelimitspec" class="md-nav__link">
     <span class="md-ellipsis">
       
         RateLimitSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtimesecretref" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RuntimeSecretRef
       
     </span>
   </a>
@@ -2814,12 +2858,6 @@ Admins create runtimes; users reference them via spec.runtime on a LanguageAgent
 <td></td>
 <td></td>
 </tr>
-<tr>
-<td><code>status</code> <em><a href="#languageagentruntimestatus">LanguageAgentRuntimeStatus</a></em></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
 </tbody>
 </table>
 <h4 id="languageagentruntimespec">LanguageAgentRuntimeSpec<a class="headerlink" href="#languageagentruntimespec" title="Permanent link">&para;</a></h4>
@@ -2866,34 +2904,6 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
 <td>Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="languageagentruntimestatus">LanguageAgentRuntimeStatus<a class="headerlink" href="#languageagentruntimestatus" title="Permanent link">&para;</a></h4>
-<p>LanguageAgentRuntimeStatus defines the observed state of LanguageAgentRuntime</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentruntime">LanguageAgentRuntime</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>observedGeneration</code> <em>integer</em></td>
-<td>ObservedGeneration is the most recent generation processed by the controller.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
-<td>Conditions represent the latest available observations of the runtime's state</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2976,6 +2986,18 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
 <td>Deployment groups Kubernetes-specific pod and container configuration.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>opencode</code> <em><a href="#opencodeconfig">OpencodeConfig</a></em></td>
+<td>Opencode holds configuration specific to the opencode runtime.<br />Only effective when spec.runtime is "opencode".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
+<td>Openclaw holds configuration specific to the openclaw runtime.<br />Only effective when spec.runtime is "openclaw".</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3751,6 +3773,70 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 </tr>
 </tbody>
 </table>
+<h4 id="openclawconfig">OpenclawConfig<a class="headerlink" href="#openclawconfig" title="Permanent link">&para;</a></h4>
+<p>OpenclawConfig holds configuration specific to the openclaw runtime.
+Effective only when spec.runtime is "openclaw".</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>token</code> <em>string</em></td>
+<td>Token is the gateway authentication token (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with TokenRef.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>tokenRef</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
+<td>TokenRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCLAW_GATEWAY_TOKEN.<br />Mutually exclusive with Token.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="opencodeconfig">OpencodeConfig<a class="headerlink" href="#opencodeconfig" title="Permanent link">&para;</a></h4>
+<p>OpencodeConfig holds configuration specific to the opencode runtime.
+Effective only when spec.runtime is "opencode".</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>username</code> <em>string</em></td>
+<td>Username for HTTP Basic Auth. Defaults to "opencode" if not set.<br />Sets OPENCODE_SERVER_USERNAME in the agent container.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>password</code> <em>string</em></td>
+<td>Password is the HTTP Basic Auth password (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with PasswordRef.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>passwordRef</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
+<td>PasswordRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).<br />Mutually exclusive with Password.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="ratelimitspec">RateLimitSpec<a class="headerlink" href="#ratelimitspec" title="Permanent link">&para;</a></h4>
 <p>RateLimitSpec defines rate limiting configuration</p>
 <p><em>Appears in:</em>
@@ -3776,6 +3862,30 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>TokensPerMinute limits tokens per minute</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="runtimesecretref">RuntimeSecretRef<a class="headerlink" href="#runtimesecretref" title="Permanent link">&para;</a></h4>
+<p>RuntimeSecretRef references a Secret in the same namespace.
+All keys in the Secret are injected as env vars via envFrom.</p>
+<p><em>Appears in:</em>
+- <a href="#openclawconfig">OpenclawConfig</a>
+- <a href="#opencodeconfig">OpencodeConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the Secret.</td>
+<td></td>
+<td>Required: {} <br /></td>
 </tr>
 </tbody>
 </table>
