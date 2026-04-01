@@ -25,7 +25,7 @@ dev:
 		--create-namespace \
 		--values chart/values.local.yaml \
 		--set image.repository=docker.io/library/language-operator \
-		--set image.tag=$(GIT_SHA) \
+		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
 		--wait --timeout 2m
 
