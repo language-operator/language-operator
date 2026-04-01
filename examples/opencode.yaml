@@ -7,9 +7,8 @@
 # /etc/opencode/opencode.jsonc so opencode routes LLM traffic through the
 # gateway rather than connecting to model APIs directly.
 #
-# opencode uses command: ["opencode"] + args: ["serve", ...] because its
-# Docker image has ENTRYPOINT ["opencode"] with no default CMD — the serve
-# subcommand must be supplied explicitly.
+# The anomalyco/opencode image has ENTRYPOINT ["opencode"] with no default CMD,
+# so the serve subcommand must be supplied explicitly via args.
 #
 # Prerequisites:
 #
@@ -61,9 +60,8 @@ spec:
   deployment:
     replicas: 1
 
-    # opencode's Docker image uses ENTRYPOINT ["opencode"] with no default CMD,
-    # so the serve subcommand must be passed explicitly via args.
-    command: ["opencode"]
+    # opencode's image has ENTRYPOINT ["opencode"] with no default CMD,
+    # so the serve subcommand must be supplied explicitly.
     args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
 
     initContainers:
@@ -95,9 +93,15 @@ spec:
       failureThreshold: 3
 
     env:
+      # The image sets WorkingDir=/ with no HOME; redirect all writable paths to /workspace
+      - name: HOME
+        value: /workspace
       # SQLite session DB and other opencode state lives under $XDG_DATA_HOME/opencode
       - name: XDG_DATA_HOME
         value: /workspace/.local/share
+      # Bun writes a runtime cache here; root fs is read-only so redirect to workspace
+      - name: XDG_CACHE_HOME
+        value: /workspace/.cache
 
     envFrom:
       - secretRef:

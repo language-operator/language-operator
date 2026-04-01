@@ -144,7 +144,6 @@ spec:
   workspace:
     size: 10Gi
   deployment:
-    command: ["opencode"]
     args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
     initContainers:
       - name: opencode-adapter
@@ -153,8 +152,12 @@ spec:
           - name: opencode-config
             mountPath: /etc/opencode
     env:
+      - name: HOME
+        value: /workspace
       - name: XDG_DATA_HOME
         value: /workspace/.local/share
+      - name: XDG_CACHE_HOME
+        value: /workspace/.cache
     envFrom:
       - secretRef:
           name: opencode-server
