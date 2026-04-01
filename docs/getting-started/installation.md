@@ -58,6 +58,7 @@ kubectl get crds | grep langop.io
 Expected output:
 
 ```
+languageagentruntimes.langop.io
 languageagents.langop.io
 languageclusters.langop.io
 languagemodels.langop.io
