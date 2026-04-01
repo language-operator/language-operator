@@ -22,6 +22,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 - Kubernetes 1.26+
 - NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
+- cert-manager v1.12+ (for webhook TLS — [install guide](docs/getting-started/installation.md#requirements))
 
 ### Install the Operator
 

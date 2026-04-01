@@ -1,0 +1,15 @@
+Language Operator {{ .Chart.AppVersion }} installed in namespace {{ .Release.Namespace }}.
+
+  kubectl get pods -n {{ .Release.Namespace }}
+{{- if and .Values.config.webhook.enabled .Values.config.webhook.certManager.enabled }}
+
+IMPORTANT: This release requires cert-manager v1.12+ for webhook TLS.
+If cert-manager is not installed, run:
+
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+  kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
+
+Without cert-manager, the webhook certificates will not be provisioned and
+all LanguageAgent, LanguageModel, LanguageTool, and LanguagePersona resource
+operations will be rejected (webhooks have failurePolicy: Fail).
+{{- end }}

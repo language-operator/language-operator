@@ -25,8 +25,10 @@ metadata:
   name: {{ include "language-operator.fullname" . }}-mutating-webhook
   labels:
     {{- include "language-operator.labels" . | nindent 4 }}
+  {{- if .Values.config.webhook.certManager.enabled }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "language-operator.fullname" . }}-webhook-cert
+  {{- end }}
 webhooks:
 - admissionReviewVersions:
   - v1
@@ -75,8 +77,10 @@ metadata:
   name: {{ include "language-operator.fullname" . }}-validating-webhook
   labels:
     {{- include "language-operator.labels" . | nindent 4 }}
+  {{- if .Values.config.webhook.certManager.enabled }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "language-operator.fullname" . }}-webhook-cert
+  {{- end }}
 webhooks:
 - admissionReviewVersions:
   - v1
@@ -158,6 +162,7 @@ webhooks:
     resources:
     - languagepersonas
   sideEffects: None
+{{- if .Values.config.webhook.certManager.enabled }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -184,4 +189,5 @@ metadata:
     {{- include "language-operator.labels" . | nindent 4 }}
 spec:
   selfSigned: {}
+{{- end }}
 {{- end }}

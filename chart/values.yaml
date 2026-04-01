@@ -134,6 +134,13 @@ config:
     enabled: true
     port: 9443
     certDir: /tmp/k8s-webhook-server/serving-certs
+    # cert-manager integration for webhook TLS certificate provisioning.
+    # When enabled, creates cert-manager Certificate and Issuer resources and
+    # annotates webhook configurations for CA injection.
+    # Requires cert-manager v1.12+ to be installed in the cluster.
+    # Set to false if you manage webhook TLS certificates yourself.
+    certManager:
+      enabled: true
 
   # Logging configuration
   logging:
