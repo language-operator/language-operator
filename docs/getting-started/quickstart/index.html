@@ -1648,7 +1648,10 @@
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: openclaw.langop.io</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">EOF</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-openclaw
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/language-operator-openclaw<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-openclaw
 </code></pre></div>
 <h2 id="step-2-configure-an-llm">Step 2: Configure an LLM<a class="headerlink" href="#step-2-configure-an-llm" title="Permanent link">&para;</a></h2>
 <p>Create a secret with your Anthropic API key, then create a <code>LanguageModel</code>:</p>
