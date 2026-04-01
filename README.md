@@ -130,12 +130,11 @@ EOF
 # Port-forward the service
 kubectl port-forward svc/opencode 3000:3000
 
-# Open in browser — use Basic Auth: username "demo", password from spec.opencode.password
-open http://localhost:3000
-
 # Or attach the TUI (opencode v1.0.10+)
 opencode attach http://localhost:3000 --password changeme
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. Sign in with username `demo` and the password from `spec.opencode.password`.
 
 </details>
 
