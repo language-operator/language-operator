@@ -58,6 +58,7 @@ func TestLanguageAgentController_NoSynthesisWithoutModels(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -112,6 +113,7 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -173,6 +175,7 @@ func TestLanguageAgentController_WorkspacePVCCreation(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -230,6 +233,7 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -311,6 +315,7 @@ func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -363,6 +368,7 @@ func TestLanguageAgentController_NotFoundHandling(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -409,6 +415,7 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -480,6 +487,7 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -563,6 +571,7 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -669,6 +678,7 @@ func TestLanguageAgentController_DeletionRemovesFinalizer(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -758,6 +768,7 @@ func TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist(t *testin
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -833,6 +844,7 @@ func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t 
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -885,6 +897,7 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -975,6 +988,7 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1052,6 +1066,7 @@ func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1110,6 +1125,7 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1185,6 +1201,7 @@ func TestLanguageAgentController_AgentModeInjection(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1238,6 +1255,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1273,6 +1291,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1309,6 +1328,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1344,6 +1364,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1383,6 +1404,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1420,6 +1442,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1455,6 +1478,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1496,6 +1520,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			Build()
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1559,6 +1584,7 @@ func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1618,6 +1644,7 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1674,6 +1701,7 @@ func TestLanguageAgentController_CustomServiceAccount(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -1806,6 +1834,7 @@ func TestLanguageAgentController_NetworkPolicy(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:               fakeClient,
+		APIReader:            fakeClient,
 		Scheme:               scheme,
 		Log:                  logr.Discard(),
 		Recorder:             &record.FakeRecorder{},
@@ -1870,6 +1899,7 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:               fakeClient,
+		APIReader:            fakeClient,
 		Scheme:               scheme,
 		Log:                  logr.Discard(),
 		Recorder:             &record.FakeRecorder{},
@@ -1935,6 +1965,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 
 		reconciler := &LanguageAgentReconciler{
 			Client:                  fakeClient,
+			APIReader:               fakeClient,
 			Scheme:                  scheme,
 			Log:                     logr.Discard(),
 			Recorder:                &record.FakeRecorder{},
@@ -1965,6 +1996,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -1994,6 +2026,7 @@ func TestLanguageAgentController_IngressCreation(t *testing.T) {
 
 		reconciler := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -2050,6 +2083,7 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 			Build()
 		r := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -2076,6 +2110,7 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 			Build()
 		r := &LanguageAgentReconciler{
 			Client:          fakeClient,
+			APIReader:       fakeClient,
 			Scheme:          scheme,
 			Log:             logr.Discard(),
 			Recorder:        &record.FakeRecorder{},
@@ -2100,6 +2135,7 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 			Build()
 		r := &LanguageAgentReconciler{
 			Client:                  fakeClient,
+			APIReader:               fakeClient,
 			Scheme:                  scheme,
 			Log:                     logr.Discard(),
 			Recorder:                &record.FakeRecorder{},
@@ -2121,7 +2157,8 @@ func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 
 	t.Run("not_found", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		ready, _, err := r.checkIngressReadiness(context.Background(), "no-ingress", "default")
 		if err != nil {
@@ -2137,7 +2174,8 @@ func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "my-ing", Namespace: "default"},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
 		if err != nil {
@@ -2160,7 +2198,8 @@ func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
 		if err != nil {
@@ -2183,7 +2222,8 @@ func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ing).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		ready, _, err := r.checkIngressReadiness(context.Background(), "my-ing", "default")
 		if err != nil {
@@ -2213,6 +2253,7 @@ func TestLanguageAgentController_WebhookConditions_LBNotReady(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -2269,6 +2310,7 @@ func TestLanguageAgentController_WebhookConditions_LBReady(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -2331,6 +2373,7 @@ func TestLanguageAgentController_WebhooksReady_ViaReconcile(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -2374,7 +2417,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, err := r.resolveTools(context.Background(), agent)
 		if err != nil {
@@ -2402,7 +2446,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, err := r.resolveTools(context.Background(), agent)
 		if err != nil {
@@ -2425,7 +2470,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		_, err := r.resolveTools(context.Background(), agent)
 		if err == nil {
@@ -2446,7 +2492,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, err := r.resolveTools(context.Background(), agent)
 		if err != nil {
@@ -2471,7 +2518,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, err := r.resolveTools(context.Background(), agent)
 		if err != nil {
@@ -2495,7 +2543,8 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, err := r.resolveTools(context.Background(), agent)
 		if err != nil {
@@ -2522,7 +2571,8 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(model).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, names, err := r.resolveModels(context.Background(), agent)
 		if err != nil {
@@ -2552,7 +2602,8 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(m1, m2).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		urls, names, err := r.resolveModels(context.Background(), agent)
 		if err != nil {
@@ -2575,7 +2626,8 @@ func TestLanguageAgentController_ResolveModels(t *testing.T) {
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		_, _, err := r.resolveModels(context.Background(), agent)
 		if err == nil {
@@ -2600,7 +2652,8 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		containers, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
@@ -2626,7 +2679,8 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		containers, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
@@ -2649,7 +2703,8 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		containers, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
@@ -2677,7 +2732,8 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		containers, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
@@ -2709,6 +2765,7 @@ func TestLanguageAgentController_SidecarToolInjectedIntoDeployment(t *testing.T)
 
 	r := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        record.NewFakeRecorder(10),
@@ -2746,7 +2803,8 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		persona, err := r.fetchPersona(context.Background(), agent)
 		if err != nil {
@@ -2769,7 +2827,8 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(p).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		persona, err := r.fetchPersona(context.Background(), agent)
 		if err != nil {
@@ -2792,7 +2851,8 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(p).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		_, err := r.fetchPersona(context.Background(), agent)
 		if err == nil {
@@ -2809,7 +2869,8 @@ func TestLanguageAgentController_FetchPersona(t *testing.T) {
 		}
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		r := &LanguageAgentReconciler{Client: fakeClient,
+			APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 		_, err := r.fetchPersona(context.Background(), agent)
 		if err == nil {
@@ -2848,6 +2909,7 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -2930,6 +2992,7 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3014,6 +3077,7 @@ func TestLanguageAgentController_ServiceTypeAndAnnotations(t *testing.T) {
 
 			reconciler := &LanguageAgentReconciler{
 				Client:          fakeClient,
+				APIReader:       fakeClient,
 				Scheme:          scheme,
 				Log:             logr.Discard(),
 				Recorder:        &record.FakeRecorder{},
@@ -3083,6 +3147,7 @@ func TestLanguageAgentController_SchedulingFields(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3156,6 +3221,7 @@ func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3236,6 +3302,7 @@ func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3320,6 +3387,7 @@ func TestLanguageAgentController_StartupProbe(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3383,6 +3451,7 @@ func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3449,6 +3518,7 @@ func TestLanguageAgentController_PhasePending(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3500,6 +3570,7 @@ func TestLanguageAgentController_PhaseRunning(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3563,6 +3634,7 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3631,10 +3703,11 @@ func TestLanguageAgentController_PhaseFailedOnEarlyExit(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageAgentReconciler{
-		Client:   fakeClient,
-		Scheme:   scheme,
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
+		Client:    fakeClient,
+		APIReader: fakeClient,
+		Scheme:    scheme,
+		Log:       logr.Discard(),
+		Recorder:  &record.FakeRecorder{},
 		// Whitelist excludes ghcr.io → registry validation will fail
 		RegistryManager: &mockRegistryManager{registries: []string{"docker.io"}},
 	}
@@ -3697,6 +3770,7 @@ func TestLanguageAgentController_ObservedGenerationSetOnError(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3739,6 +3813,7 @@ func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3847,6 +3922,7 @@ func TestLanguageAgentController_WorkspaceStorageClass(t *testing.T) {
 		WithStatusSubresource(agent).Build()
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3874,6 +3950,7 @@ func TestLanguageAgentController_WorkspaceMountPath(t *testing.T) {
 		WithStatusSubresource(agent).Build()
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -3911,6 +3988,7 @@ func TestLanguageAgentController_WorkspaceAccessMode(t *testing.T) {
 		WithStatusSubresource(agent).Build()
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -4062,6 +4140,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 
 			reconciler := &LanguageAgentReconciler{
 				Client:                  fakeClient,
+				APIReader:               fakeClient,
 				Scheme:                  scheme,
 				Log:                     logr.Discard(),
 				Recorder:                recorder,
@@ -4114,7 +4193,8 @@ func TestLanguageAgentController_EnqueueAgentsInNamespace(t *testing.T) {
 		WithObjects(agent1, agent2, agentOther).
 		Build()
 
-	r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	r := &LanguageAgentReconciler{Client: fakeClient,
+		APIReader: fakeClient, Scheme: scheme, Log: logr.Discard()}
 
 	// A LanguageTool in ns-a should enqueue agent-1 and agent-2 only.
 	tool := &langopv1alpha1.LanguageTool{
@@ -4146,6 +4226,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_Supported(t *tes
 
 	reconciler := &LanguageAgentReconciler{
 		Client:                  fakeClient,
+		APIReader:               fakeClient,
 		Scheme:                  scheme,
 		Log:                     logr.Discard(),
 		Recorder:                recorder,
@@ -4195,6 +4276,7 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *
 
 	reconciler := &LanguageAgentReconciler{
 		Client:                  fakeClient,
+		APIReader:               fakeClient,
 		Scheme:                  scheme,
 		Log:                     logr.Discard(),
 		Recorder:                recorder,
@@ -4243,6 +4325,7 @@ func TestLanguageAgentController_CustomPortService(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:          fakeClient,
+		APIReader:       fakeClient,
 		Scheme:          scheme,
 		Log:             logr.Discard(),
 		Recorder:        &record.FakeRecorder{},
@@ -4278,6 +4361,7 @@ func TestLanguageAgentController_CustomPortNetworkPolicy(t *testing.T) {
 
 	reconciler := &LanguageAgentReconciler{
 		Client:                  fakeClient,
+		APIReader:               fakeClient,
 		Scheme:                  scheme,
 		Log:                     logr.Discard(),
 		Recorder:                &record.FakeRecorder{},

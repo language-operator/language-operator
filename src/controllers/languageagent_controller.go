@@ -46,6 +46,7 @@ type RegistryManager interface {
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
+	APIReader               client.Reader
 	Scheme                  *runtime.Scheme
 	Log                     logr.Logger
 	Recorder                record.EventRecorder
@@ -1563,10 +1564,12 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		return fmt.Errorf("failed to create/update ServiceAccount: %w", err)
 	}
 
-	// Delete legacy ClusterRoleBinding if present (migration cleanup)
+	// Delete legacy ClusterRoleBinding if present (migration cleanup).
+	// Uses APIReader (direct API call) to avoid registering a cluster-scoped informer
+	// in the shared cache, which would require list+watch permissions.
 	legacyCRBName := fmt.Sprintf("language-agent-%s-language-agent", targetNamespace)
 	legacyCRB := &rbacv1.ClusterRoleBinding{}
-	if err := r.Get(ctx, types.NamespacedName{Name: legacyCRBName}, legacyCRB); err == nil {
+	if err := r.APIReader.Get(ctx, types.NamespacedName{Name: legacyCRBName}, legacyCRB); err == nil {
 		if err := r.Delete(ctx, legacyCRB); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete legacy ClusterRoleBinding: %w", err)
 		}
