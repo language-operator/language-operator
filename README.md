@@ -50,6 +50,9 @@ spec:
   domain: agents.example.com
 EOF
 
+kubectl wait languagecluster/my-cluster \
+  --for=condition=Ready --timeout=60s
+
 kubectl config set-context --current --namespace=my-cluster
 ```
 
