@@ -60,9 +60,10 @@ if (Object.keys(configModels).length > 0) {
   }
 
   if (gatewayEndpoint) {
+    const baseURL = gatewayEndpoint.replace(/\/+$/, '') + '/v1'
     provider['openai'] = {
       options: {
-        baseURL: gatewayEndpoint,
+        baseURL,
         apiKey: 'sk-langop-proxy',  // placeholder; LiteLLM proxy handles real auth
       },
       models,
@@ -81,14 +82,15 @@ if (Object.keys(configModels).length > 0) {
     for (let i = 0; i < modelNames.length; i++) {
       models[modelNames[i]] = {}
     }
+    const baseURL = endpoints[0].replace(/\/+$/, '') + '/v1'
     provider['openai'] = {
       options: {
-        baseURL: endpoints[0],
+        baseURL,
         apiKey: 'sk-langop-proxy',
       },
       models: Object.keys(models).length > 0 ? models : undefined,
     }
-    console.log(`Configured openai provider → ${endpoints[0]} (models: ${modelNames.join(', ') || 'none'})`)
+    console.log(`Configured openai provider → ${baseURL} (models: ${modelNames.join(', ') || 'none'})`)
   }
 }
 
