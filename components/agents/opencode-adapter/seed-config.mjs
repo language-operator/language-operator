@@ -45,13 +45,15 @@ if (Object.keys(configModels).length > 0) {
       console.warn(`Model '${crdName}' has no endpoint — skipping`)
       continue
     }
+    const modelId = model.model ?? crdName
     provider[crdName] = {
-      name: 'openai-compatible',
-      baseUrl: model.endpoint,
-      apiKey: 'sk-langop-proxy',
-      models: [model.model ?? crdName],
+      options: {
+        baseURL: model.endpoint,
+        apiKey: 'sk-langop-proxy',  // placeholder; LiteLLM proxy handles real auth
+      },
+      models: { [modelId]: {} },
     }
-    console.log(`Configured provider '${crdName}' → ${model.endpoint}`)
+    console.log(`Configured provider '${crdName}' → ${model.endpoint} (model: ${modelId})`)
   }
 } else {
   // Fallback: zip MODEL_ENDPOINTS + LLM_MODEL env vars
@@ -65,10 +67,11 @@ if (Object.keys(configModels).length > 0) {
   for (let i = 0; i < endpoints.length; i++) {
     const key = modelNames[i] ?? `model-${i}`
     provider[key] = {
-      name: 'openai-compatible',
-      baseUrl: endpoints[i],
-      apiKey: 'sk-langop-proxy',
-      models: [modelNames[i] ?? key],
+      options: {
+        baseURL: endpoints[i],
+        apiKey: 'sk-langop-proxy',
+      },
+      models: { [key]: {} },
     }
     console.log(`Configured provider '${key}' → ${endpoints[i]} (from env vars)`)
   }
