@@ -762,6 +762,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				LivenessProbe:   agent.Spec.Deployment.LivenessProbe,
 				ReadinessProbe:  agent.Spec.Deployment.ReadinessProbe,
 				StartupProbe:    agent.Spec.Deployment.StartupProbe,
+				Ports:           buildAgentContainerPorts(agentPorts(agent)),
 			},
 		}
 
@@ -856,9 +857,20 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.NetworkPolicies,
 	)
 
-	// Add ingress rules to allow trigger pods and dashboard to connect to agent
-	port := agentPort(agent)
-	agentPortIntStr := intstr.IntOrString{Type: intstr.Int, IntVal: port}
+	// Add ingress rules to allow trigger pods and dashboard to connect to agent.
+	// Build NetworkPolicy port list from all agent ports.
+	var npPorts []networkingv1.NetworkPolicyPort
+	for _, ap := range agentPorts(agent) {
+		proto := ap.Protocol
+		if proto == "" {
+			proto = corev1.ProtocolTCP
+		}
+		portCopy := intstr.FromInt32(ap.Port) // copy per iteration to avoid pointer aliasing
+		npPorts = append(npPorts, networkingv1.NetworkPolicyPort{
+			Protocol: protocolPtr(proto),
+			Port:     &portCopy,
+		})
+	}
 	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
 		{
@@ -872,12 +884,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					},
 				},
 			},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &agentPortIntStr,
-				},
-			},
+			Ports: npPorts,
 		},
 		{
 			// Allow dashboard pods from language-operator namespace to connect
@@ -895,12 +902,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					},
 				},
 			},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &agentPortIntStr,
-				},
-			},
+			Ports: npPorts,
 		},
 		{
 			// Allow other agent pods to connect (agent-to-agent traffic)
@@ -913,12 +915,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					},
 				},
 			},
-			Ports: []networkingv1.NetworkPolicyPort{
-				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
-					Port:     &agentPortIntStr,
-				},
-			},
+			Ports: npPorts,
 		},
 	}
 
@@ -1274,12 +1271,48 @@ func (r *LanguageAgentReconciler) cleanupSharedRBAC(ctx context.Context, agent *
 	return nil
 }
 
-// agentPort returns the port the agent container listens on.
-func agentPort(agent *langopv1alpha1.LanguageAgent) int32 {
-	if agent.Spec.Port != nil {
-		return *agent.Spec.Port
+// agentPorts returns the effective port list for the agent.
+// Falls back to a single http:8080 port when spec.ports is not set.
+func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort {
+	if len(agent.Spec.Ports) > 0 {
+		return agent.Spec.Ports
+	}
+	return []langopv1alpha1.AgentPort{
+		{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: true},
+	}
+}
+
+// agentIngressPort returns the port that ingress/HTTPRoute should route to.
+// Uses the first port with Expose: true; falls back to the first port; falls back to 8080.
+func agentIngressPort(agent *langopv1alpha1.LanguageAgent) int32 {
+	ports := agentPorts(agent)
+	for _, p := range ports {
+		if p.Expose {
+			return p.Port
+		}
+	}
+	if len(ports) > 0 {
+		return ports[0].Port
 	}
 	return 8080
+}
+
+// buildAgentContainerPorts converts AgentPorts to ContainerPorts for visibility in the Deployment.
+// Kubernetes does not enforce declared container ports; this is informational only.
+func buildAgentContainerPorts(ports []langopv1alpha1.AgentPort) []corev1.ContainerPort {
+	out := make([]corev1.ContainerPort, 0, len(ports))
+	for _, p := range ports {
+		proto := p.Protocol
+		if proto == "" {
+			proto = corev1.ProtocolTCP
+		}
+		out = append(out, corev1.ContainerPort{
+			Name:          p.Name,
+			ContainerPort: p.Port,
+			Protocol:      proto,
+		})
+	}
+	return out
 }
 
 // reconcileService creates a Service for the agent
@@ -1300,22 +1333,27 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 			return err
 		}
 
-		port := agentPort(agent)
 		svcType := agent.Spec.Deployment.ServiceType
 		if svcType == "" {
 			svcType = corev1.ServiceTypeClusterIP
 		}
+		svcPorts := make([]corev1.ServicePort, 0)
+		for _, ap := range agentPorts(agent) {
+			proto := ap.Protocol
+			if proto == "" {
+				proto = corev1.ProtocolTCP
+			}
+			svcPorts = append(svcPorts, corev1.ServicePort{
+				Name:       ap.Name,
+				Port:       ap.Port,
+				TargetPort: intstr.FromInt32(ap.Port),
+				Protocol:   proto,
+			})
+		}
 		service.Spec = corev1.ServiceSpec{
 			Selector: labels,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       port,
-					TargetPort: intstr.FromInt32(port),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-			Type: svcType,
+			Ports:    svcPorts,
+			Type:     svcType,
 		}
 		if len(agent.Spec.Deployment.ServiceAnnotations) > 0 {
 			if service.Annotations == nil {
@@ -1430,7 +1468,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 										Service: &networkingv1.IngressServiceBackend{
 											Name: agent.Name,
 											Port: networkingv1.ServiceBackendPort{
-												Number: agentPort(agent),
+												Number: agentIngressPort(agent),
 											},
 										},
 									},

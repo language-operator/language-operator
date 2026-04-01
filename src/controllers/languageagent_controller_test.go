@@ -4248,13 +4248,15 @@ func TestLanguageAgentController_ConditionNetworkPolicyEnforced_NotSupported(t *
 	assert.Equal(t, langopv1alpha1.ReasonCNINotSupported, cond.Reason)
 }
 
-// TestLanguageAgentController_CustomPortService verifies that spec.port flows through
+// TestLanguageAgentController_CustomPortService verifies that spec.ports flows through
 // to both port and targetPort of the reconciled Service.
 func TestLanguageAgentController_CustomPortService(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := gen.LanguageAgent("custom-port-agent", "default",
-		gen.SetAgentPort(9090),
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: true},
+		}),
 	)
 
 	fakeClient := fake.NewClientBuilder().
@@ -4279,17 +4281,19 @@ func TestLanguageAgentController_CustomPortService(t *testing.T) {
 	svc := &corev1.Service{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, svc))
 	require.Len(t, svc.Spec.Ports, 1)
-	assert.Equal(t, int32(9090), svc.Spec.Ports[0].Port, "Service.Spec.Ports[0].Port must match spec.port")
-	assert.Equal(t, int32(9090), svc.Spec.Ports[0].TargetPort.IntVal, "Service.Spec.Ports[0].TargetPort must match spec.port")
+	assert.Equal(t, int32(9090), svc.Spec.Ports[0].Port, "Service.Spec.Ports[0].Port must match spec.ports[0].port")
+	assert.Equal(t, int32(9090), svc.Spec.Ports[0].TargetPort.IntVal, "Service.Spec.Ports[0].TargetPort must match spec.ports[0].port")
 }
 
-// TestLanguageAgentController_CustomPortNetworkPolicy verifies that spec.port flows
+// TestLanguageAgentController_CustomPortNetworkPolicy verifies that spec.ports flows
 // through to all NetworkPolicy ingress rule ports.
 func TestLanguageAgentController_CustomPortNetworkPolicy(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := gen.LanguageAgent("custom-port-np-agent", "default",
-		gen.SetAgentPort(9090),
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: true},
+		}),
 	)
 
 	fakeClient := fake.NewClientBuilder().
@@ -4319,7 +4323,129 @@ func TestLanguageAgentController_CustomPortNetworkPolicy(t *testing.T) {
 	for i, rule := range np.Spec.Ingress {
 		for j, p := range rule.Ports {
 			assert.Equal(t, int32(9090), p.Port.IntVal,
-				"NetworkPolicy ingress rule %d port %d must match spec.port", i, j)
+				"NetworkPolicy ingress rule %d port %d must match spec.ports[0].port", i, j)
 		}
+	}
+}
+
+// TestAgentPorts_DefaultsTo8080 verifies that agentPorts returns http:8080 when spec.ports is unset.
+func TestAgentPorts_DefaultsTo8080(t *testing.T) {
+	agent := gen.LanguageAgent("default-port", "default")
+	ports := agentPorts(agent)
+	require.Len(t, ports, 1)
+	assert.Equal(t, "http", ports[0].Name)
+	assert.Equal(t, int32(8080), ports[0].Port)
+	assert.True(t, ports[0].Expose)
+}
+
+// TestAgentPorts_SpecPortsUsed verifies that spec.ports is returned as-is.
+func TestAgentPorts_SpecPortsUsed(t *testing.T) {
+	agent := gen.LanguageAgent("multi", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
+		}),
+	)
+	ports := agentPorts(agent)
+	require.Len(t, ports, 2)
+	assert.Equal(t, int32(3000), ports[0].Port)
+	assert.Equal(t, int32(4000), ports[1].Port)
+}
+
+// TestAgentIngressPort_ExposeFlagWins verifies that agentIngressPort returns the
+// port marked expose:true even when it is not the first in the list.
+func TestAgentIngressPort_ExposeFlagWins(t *testing.T) {
+	agent := gen.LanguageAgent("expose-test", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+		}),
+	)
+	assert.Equal(t, int32(3000), agentIngressPort(agent))
+}
+
+// TestAgentIngressPort_FallbackToFirst verifies that agentIngressPort falls back
+// to the first port when no port has expose:true.
+func TestAgentIngressPort_FallbackToFirst(t *testing.T) {
+	agent := gen.LanguageAgent("fallback-test", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP},
+		}),
+	)
+	assert.Equal(t, int32(4000), agentIngressPort(agent))
+}
+
+// TestLanguageAgentController_MultiPortService verifies that reconcileService
+// creates one ServicePort per AgentPort.
+func TestLanguageAgentController_MultiPortService(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("multi-port-svc", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
+		}),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileService(ctx, agent))
+
+	svc := &corev1.Service{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, svc))
+	require.Len(t, svc.Spec.Ports, 2, "expected one ServicePort per AgentPort")
+	assert.Equal(t, "http", svc.Spec.Ports[0].Name)
+	assert.Equal(t, int32(3000), svc.Spec.Ports[0].Port)
+	assert.Equal(t, "ws", svc.Spec.Ports[1].Name)
+	assert.Equal(t, int32(4000), svc.Spec.Ports[1].Port)
+}
+
+// TestLanguageAgentController_MultiPortNetworkPolicy verifies that all three
+// built-in ingress rules carry one NetworkPolicyPort per AgentPort.
+func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("multi-port-np", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
+		}),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                &record.FakeRecorder{},
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+		NetworkPolicyTimeout:    30 * time.Second,
+		NetworkPolicyRetries:    3,
+	}
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileNetworkPolicy(ctx, agent))
+
+	np := &networkingv1.NetworkPolicy{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
+	// First 3 rules are the built-in trigger/dashboard/agent-to-agent rules.
+	require.GreaterOrEqual(t, len(np.Spec.Ingress), 3)
+	for i := 0; i < 3; i++ {
+		rule := np.Spec.Ingress[i]
+		require.Len(t, rule.Ports, 2, "rule %d should have 2 ports", i)
+		assert.Equal(t, int32(3000), rule.Ports[0].Port.IntVal, "rule %d port 0", i)
+		assert.Equal(t, int32(4000), rule.Ports[1].Port.IntVal, "rule %d port 1", i)
 	}
 }

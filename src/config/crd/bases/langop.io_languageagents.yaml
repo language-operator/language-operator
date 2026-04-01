@@ -5511,15 +5511,51 @@ spec:
               persona:
                 description: Persona is the name of a LanguagePersona this agent uses
                 type: string
-              port:
+              ports:
                 description: |-
-                  Port is the port the agent container listens on.
-                  Used for the ClusterIP Service and NetworkPolicy ingress rules.
-                  Defaults to 8080.
-                format: int32
-                maximum: 65535
-                minimum: 1
-                type: integer
+                  Ports defines all network ports this agent exposes.
+                  At most one entry should have expose: true (the ingress target);
+                  if none are marked, the first port is used for ingress routing.
+                  Defaults to a single HTTP port on 8080 when not set.
+                items:
+                  description: AgentPort describes a single network port that an agent
+                    container exposes.
+                  properties:
+                    expose:
+                      description: |-
+                        Expose controls whether ingress/HTTPRoute routes to this port.
+                        At most one port should have expose: true; if none, the first port is used.
+                      type: boolean
+                    name:
+                      description: |-
+                        Name uniquely identifies this port within the agent (e.g., "web", "ws").
+                        Used as the Service port name; must conform to Kubernetes port-name rules.
+                      maxLength: 15
+                      pattern: ^[a-z][a-z0-9-]*$
+                      type: string
+                    port:
+                      description: Port is the port number the container listens on.
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
+                    protocol:
+                      default: TCP
+                      description: Protocol is the transport protocol. Defaults to
+                        TCP.
+                      enum:
+                      - TCP
+                      - UDP
+                      - SCTP
+                      type: string
+                  required:
+                  - name
+                  - port
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               runtime:
                 description: |-
                   Runtime is the name of a LanguageAgentRuntime that provides preset configuration

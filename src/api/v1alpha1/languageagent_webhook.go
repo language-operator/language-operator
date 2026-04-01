@@ -61,13 +61,6 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) 
 		}
 	}
 
-	// Default port to 8080 only when no runtime is set.
-	// When a runtime is referenced, its port preset takes effect at reconcile time.
-	if a.Spec.Port == nil && a.Spec.Runtime == "" {
-		port := int32(8080)
-		a.Spec.Port = &port
-	}
-
 	// Default resources
 	if a.Spec.Deployment.Resources.Requests == nil && a.Spec.Deployment.Resources.Limits == nil {
 		a.Spec.Deployment.Resources = corev1.ResourceRequirements{
@@ -166,6 +159,35 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
+	if len(a.Spec.Ports) > 0 {
+		if err := validateAgentPorts(a.Spec.Ports); err != nil {
+			return fmt.Errorf("spec.ports: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func validateAgentPorts(ports []AgentPort) error {
+	names := make(map[string]bool, len(ports))
+	nums := make(map[int32]bool, len(ports))
+	exposeCount := 0
+	for i, p := range ports {
+		if names[p.Name] {
+			return fmt.Errorf("ports[%d].name %q is not unique", i, p.Name)
+		}
+		names[p.Name] = true
+		if nums[p.Port] {
+			return fmt.Errorf("ports[%d].port %d is not unique", i, p.Port)
+		}
+		nums[p.Port] = true
+		if p.Expose {
+			exposeCount++
+		}
+	}
+	if exposeCount > 1 {
+		return fmt.Errorf("at most one port may have expose: true (found %d)", exposeCount)
+	}
 	return nil
 }
 

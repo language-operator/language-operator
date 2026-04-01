@@ -5190,13 +5190,49 @@ spec:
                       Sets OPENCODE_SERVER_USERNAME in the agent container.
                     type: string
                 type: object
-              port:
-                description: Port is the default port the agent container listens
-                  on.
-                format: int32
-                maximum: 65535
-                minimum: 1
-                type: integer
+              ports:
+                description: |-
+                  Ports defines default ports for agents using this runtime.
+                  Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely.
+                items:
+                  description: AgentPort describes a single network port that an agent
+                    container exposes.
+                  properties:
+                    expose:
+                      description: |-
+                        Expose controls whether ingress/HTTPRoute routes to this port.
+                        At most one port should have expose: true; if none, the first port is used.
+                      type: boolean
+                    name:
+                      description: |-
+                        Name uniquely identifies this port within the agent (e.g., "web", "ws").
+                        Used as the Service port name; must conform to Kubernetes port-name rules.
+                      maxLength: 15
+                      pattern: ^[a-z][a-z0-9-]*$
+                      type: string
+                    port:
+                      description: Port is the port number the container listens on.
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
+                    protocol:
+                      default: TCP
+                      description: Protocol is the transport protocol. Defaults to
+                        TCP.
+                      enum:
+                      - TCP
+                      - UDP
+                      - SCTP
+                      type: string
+                  required:
+                  - name
+                  - port
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               workspace:
                 description: |-
                   Workspace provides default size, storageClass, and mountPath for the agent's workspace.

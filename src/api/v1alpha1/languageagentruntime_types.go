@@ -30,11 +30,12 @@ type LanguageAgentRuntimeSpec struct {
 	// +optional
 	Image string `json:"image,omitempty"`
 
-	// Port is the default port the agent container listens on.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
+	// Ports defines default ports for agents using this runtime.
+	// Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely.
 	// +optional
-	Port *int32 `json:"port,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	Ports []AgentPort `json:"ports,omitempty"`
 
 	// ExecutionMode is the default execution mode for agents using this runtime.
 	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven

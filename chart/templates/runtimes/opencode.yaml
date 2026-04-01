@@ -12,7 +12,11 @@ metadata:
 spec:
   image: ghcr.io/anomalyco/opencode:latest
 
-  port: 3000
+  ports:
+    - name: http
+      port: 3000
+      protocol: TCP
+      expose: true
 
   workspace:
     size: 10Gi

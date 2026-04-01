@@ -53,10 +53,10 @@ func SetAgentModel(name string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentPort sets spec.port.
-func SetAgentPort(port int32) LanguageAgentModifier {
+// SetAgentPorts sets spec.ports.
+func SetAgentPorts(ports []langopv1alpha1.AgentPort) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.Port = &port
+		a.Spec.Ports = ports
 	}
 }
 

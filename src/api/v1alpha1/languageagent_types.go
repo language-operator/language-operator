@@ -1,8 +1,36 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// AgentPort describes a single network port that an agent container exposes.
+type AgentPort struct {
+	// Name uniquely identifies this port within the agent (e.g., "web", "ws").
+	// Used as the Service port name; must conform to Kubernetes port-name rules.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*$`
+	// +kubebuilder:validation:MaxLength=15
+	Name string `json:"name"`
+
+	// Port is the port number the container listens on.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port"`
+
+	// Protocol is the transport protocol. Defaults to TCP.
+	// +kubebuilder:validation:Enum=TCP;UDP;SCTP
+	// +kubebuilder:default=TCP
+	// +optional
+	Protocol corev1.Protocol `json:"protocol,omitempty"`
+
+	// Expose controls whether ingress/HTTPRoute routes to this port.
+	// At most one port should have expose: true; if none, the first port is used.
+	// +optional
+	Expose bool `json:"expose,omitempty"`
+}
 
 // LanguageAgentSpec defines the desired state of LanguageAgent
 type LanguageAgentSpec struct {
@@ -50,13 +78,14 @@ type LanguageAgentSpec struct {
 	// +optional
 	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
 
-	// Port is the port the agent container listens on.
-	// Used for the ClusterIP Service and NetworkPolicy ingress rules.
-	// Defaults to 8080.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=65535
+	// Ports defines all network ports this agent exposes.
+	// At most one entry should have expose: true (the ingress target);
+	// if none are marked, the first port is used for ingress routing.
+	// Defaults to a single HTTP port on 8080 when not set.
 	// +optional
-	Port *int32 `json:"port,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	Ports []AgentPort `json:"ports,omitempty"`
 
 	// Deployment groups Kubernetes-specific pod and container configuration.
 	// +optional

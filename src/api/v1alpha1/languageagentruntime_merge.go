@@ -34,9 +34,11 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 	if agent.Image == "" {
 		agent.Image = rt.Image
 	}
-	if agent.Port == nil && rt.Port != nil {
-		v := *rt.Port
-		agent.Port = &v
+	// Ports: replace semantics — runtime ports apply only when agent has none.
+	// Ports define the agent's network identity and must not be additively merged.
+	if len(agent.Ports) == 0 && len(rt.Ports) > 0 {
+		agent.Ports = make([]AgentPort, len(rt.Ports))
+		copy(agent.Ports, rt.Ports)
 	}
 	if agent.ExecutionMode == "" {
 		agent.ExecutionMode = rt.ExecutionMode
