@@ -59,6 +59,7 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagentruntimes
   - languageagents
   - languageclusters
   - languagemodels
@@ -75,6 +76,7 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagentruntimes/finalizers
   - languageagents/finalizers
   - languageclusters/finalizers
   - languagemodels/finalizers
@@ -85,6 +87,7 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagentruntimes/status
   - languageagents/status
   - languageclusters/status
   - languagemodels/status

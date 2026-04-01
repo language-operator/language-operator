@@ -5124,8 +5124,9 @@ spec:
                 - event-driven
                 type: string
               image:
-                description: Image is the container image to run for this agent
-                minLength: 1
+                description: |-
+                  Image is the container image to run for this agent.
+                  Required unless spec.runtime is set (the runtime provides a default image).
                 pattern: ^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$
                 type: string
               instructions:
@@ -5454,6 +5455,12 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
+              runtime:
+                description: |-
+                  Runtime is the name of a LanguageAgentRuntime that provides preset configuration
+                  (image, port, init containers, env vars, probes, etc.).
+                  When set, spec.image is optional; the runtime provides a default.
+                type: string
               tools:
                 description: Tools is a list of LanguageTool references available
                   to this agent
@@ -5509,8 +5516,6 @@ spec:
                       If not specified, uses the cluster default
                     type: string
                 type: object
-            required:
-            - image
             type: object
           status:
             description: LanguageAgentStatus defines the observed state of LanguageAgent

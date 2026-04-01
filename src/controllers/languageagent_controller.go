@@ -112,6 +112,7 @@ type modelConfigYAML struct {
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;delete
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch
+//+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -190,8 +191,33 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 	}
 
+	// Resolve LanguageAgentRuntime if referenced, and build an effective spec for this
+	// reconcile cycle. We work on a local copy so the stored agent object is never
+	// mutated with runtime-derived values (controller-time resolution, not admission-time).
+	workingAgent := agent
+	if agent.Spec.Runtime != "" {
+		rt := &langopv1alpha1.LanguageAgentRuntime{}
+		if err := r.Get(ctx, types.NamespacedName{Name: agent.Spec.Runtime}, rt); err != nil {
+			if apierrors.IsNotFound(err) {
+				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRuntimeResolved,
+					metav1.ConditionFalse, langopv1alpha1.ReasonRuntimeNotFound,
+					fmt.Sprintf("LanguageAgentRuntime %q not found", agent.Spec.Runtime), agent.Generation)
+			}
+			agent.Status.Phase = events.PhaseStatusFailed
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+		effectiveSpec := agent.Spec.DeepCopy()
+		langopv1alpha1.ApplyRuntimeDefaults(effectiveSpec, &rt.Spec)
+		workingAgent = agent.DeepCopy()
+		workingAgent.Spec = *effectiveSpec
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRuntimeResolved,
+			metav1.ConditionTrue, langopv1alpha1.ReasonRuntimeApplied,
+			fmt.Sprintf("Runtime %q applied", agent.Spec.Runtime), agent.Generation)
+	}
+
 	// Validate image registry against whitelist
-	if err := r.validateImageRegistry(agent); err != nil {
+	if err := r.validateImageRegistry(workingAgent); err != nil {
 		log.Error(err, "Image registry validation failed", "image", agent.Spec.Image)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
@@ -206,7 +232,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, langopv1alpha1.ReasonValidated, "Image registry is in whitelist", agent.Generation)
 
 	// Reconcile ConfigMap
-	if err := r.reconcileConfigMap(ctx, agent); err != nil {
+	if err := r.reconcileConfigMap(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ConfigMap reconciliation failed")
@@ -217,7 +243,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Reconcile PVC for workspace if enabled
-	if err := r.reconcilePVC(ctx, agent); err != nil {
+	if err := r.reconcilePVC(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile PVC")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "PVC reconciliation failed")
@@ -229,7 +255,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Reconcile NetworkPolicy for network isolation (if enabled)
 	if r.NetworkIsolationEnabled {
-		if err := r.reconcileNetworkPolicy(ctx, agent); err != nil {
+		if err := r.reconcileNetworkPolicy(ctx, workingAgent); err != nil {
 			log.Error(err, "Failed to reconcile NetworkPolicy")
 			span.RecordError(err)
 
@@ -302,8 +328,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
 	}
 
-	// Reconcile Service for agent webhook server (all agents expose port 8080)
-	if err := r.reconcileService(ctx, agent); err != nil {
+	// Reconcile Service for agent webhook server
+	if err := r.reconcileService(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile Service")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Service reconciliation failed")
@@ -314,7 +340,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Reconcile webhooks (Ingress for webhook access)
-	if err := r.reconcileWebhooks(ctx, agent); err != nil {
+	if err := r.reconcileWebhooks(ctx, workingAgent); err != nil {
 		// Log webhook errors but don't fail reconciliation if domain not configured
 		log.Info("Webhook reconciliation skipped or pending", "reason", err.Error())
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, err.Error(), agent.Generation)
@@ -323,7 +349,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Reconcile ServiceAccount for agent pods
-	if err := r.reconcileAgentServiceAccount(ctx, agent); err != nil {
+	if err := r.reconcileAgentServiceAccount(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile agent ServiceAccount")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ServiceAccount reconciliation failed")
@@ -333,7 +359,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileDeployment(ctx, agent); err != nil {
+	if err := r.reconcileDeployment(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Deployment reconciliation failed")
@@ -1488,6 +1514,31 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	return false, "Ingress load balancer assigned but no IP or hostname available", nil
 }
 
+// enqueueAgentsByRuntime returns a handler that lists all LanguageAgents across all
+// namespaces that reference the changed LanguageAgentRuntime and enqueues them.
+// LanguageAgentRuntime is cluster-scoped, so we list across all namespaces.
+func (r *LanguageAgentReconciler) enqueueAgentsByRuntime() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		runtimeName := obj.GetName()
+		agentList := &langopv1alpha1.LanguageAgentList{}
+		if err := r.List(ctx, agentList); err != nil {
+			return nil
+		}
+		var reqs []reconcile.Request
+		for _, agent := range agentList.Items {
+			if agent.Spec.Runtime == runtimeName {
+				reqs = append(reqs, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      agent.Name,
+						Namespace: agent.Namespace,
+					},
+				})
+			}
+		}
+		return reqs
+	}
+}
+
 // enqueueAgentsInNamespace returns a handler that lists all LanguageAgents in the
 // same namespace as the changed object and enqueues a reconcile request for each.
 func (r *LanguageAgentReconciler) enqueueAgentsInNamespace() handler.MapFunc {
@@ -1523,6 +1574,7 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
+		Watches(&langopv1alpha1.LanguageAgentRuntime{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAgentsByRuntime())).
 		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Complete(r)
 }

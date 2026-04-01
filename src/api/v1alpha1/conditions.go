@@ -30,6 +30,7 @@ const (
 	ConditionSchemasDiscovered     = "SchemasDiscovered"
 	ConditionWebhookRouteCreated   = "WebhookRouteCreated"
 	ConditionWebhookRouteReady     = "WebhookRouteReady"
+	ConditionRuntimeResolved       = "RuntimeResolved"
 )
 
 // Condition reason constants used in SetCondition calls across all controllers.
@@ -62,4 +63,6 @@ const (
 	ReasonEnforced              = "Enforced"
 	ReasonDisabled              = "Disabled"
 	ReasonConfigured            = "Configured"
+	ReasonRuntimeNotFound       = "RuntimeNotFound"
+	ReasonRuntimeApplied        = "RuntimeApplied"
 )

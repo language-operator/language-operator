@@ -6,11 +6,17 @@ import (
 
 // LanguageAgentSpec defines the desired state of LanguageAgent
 type LanguageAgentSpec struct {
-	// Image is the container image to run for this agent
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
+	// Runtime is the name of a LanguageAgentRuntime that provides preset configuration
+	// (image, port, init containers, env vars, probes, etc.).
+	// When set, spec.image is optional; the runtime provides a default.
+	// +optional
+	Runtime string `json:"runtime,omitempty"`
+
+	// Image is the container image to run for this agent.
+	// Required unless spec.runtime is set (the runtime provides a default image).
 	// +kubebuilder:validation:Pattern=`^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$`
-	Image string `json:"image"`
+	// +optional
+	Image string `json:"image,omitempty"`
 
 	// Models is a list of LanguageModel references this agent can use
 	// +optional

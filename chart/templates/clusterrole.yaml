@@ -124,6 +124,32 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagentruntimes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagentruntimes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagentruntimes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
   - languageclusters
   verbs:
   - create

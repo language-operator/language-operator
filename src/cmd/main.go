@@ -335,6 +335,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup LanguageAgentRuntime controller
+	if err = (&controllers.LanguageAgentRuntimeReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("LanguageAgentRuntime"),
+	}).SetupWithManager(mgr, concurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgentRuntime")
+		os.Exit(1)
+	}
+
 	// Setup LanguageCluster controller
 	if err = (&controllers.LanguageClusterReconciler{
 		Client:                  mgr.GetClient(),
