@@ -12,6 +12,22 @@ This guide covers installing the Language Operator on your Kubernetes cluster.
     - Antrea
 - **kubectl** configured to access your cluster
 - **Helm 3.8+**
+- **cert-manager v1.12+** — required for webhook TLS certificate provisioning
+
+Install cert-manager if not already present:
+
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
+```
+
+!!! note "Installing without cert-manager"
+    If you manage webhook TLS certificates yourself, you can disable cert-manager integration:
+    ```bash
+    helm install language-operator language-operator/language-operator \
+      --set config.webhook.certManager.enabled=false
+    ```
+    You are then responsible for populating the webhook server's TLS secret and setting the `caBundle` field on the webhook configurations.
 
 ## Install via Helm
 
