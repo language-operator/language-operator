@@ -637,6 +637,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					LabelKeyLangopCluster: cluster.Name,
+					LabelKeyLangopKind:    "LanguageAgent",
 				},
 			},
 			PolicyTypes: policyTypes,
