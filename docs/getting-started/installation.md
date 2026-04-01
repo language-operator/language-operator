@@ -64,7 +64,7 @@ For individual agents, disable the workspace PVC with `spec.workspace.enabled: f
 Install cert-manager if not already present:
 
 ```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
 kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
 ```
 
