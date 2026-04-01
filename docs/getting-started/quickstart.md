@@ -80,7 +80,8 @@ kubectl get pods -w
 kubectl port-forward svc/openclaw 18789:18789
 ```
 
-Open [http://localhost:18789](http://localhost:18789) in your browser.
+openclaw uses a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI.
+Connect using the [openclaw browser extension](https://openclaw.ai/docs/extension) or CLI client, pointing it to `ws://localhost:18789`.
 
 !!! success "You're Running!"
     You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.
