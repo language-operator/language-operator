@@ -338,6 +338,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		agent.Status.UUID = uuid.New().String()
 		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
 	}
+	// Propagate to workingAgent so AGENT_UUID is correct in the first Deployment on agents
+	// that use a runtime (workingAgent is a DeepCopy made before the UUID was generated).
+	workingAgent.Status.UUID = agent.Status.UUID
 
 	// Reconcile Service for agent webhook server
 	if err := r.reconcileService(ctx, workingAgent); err != nil {
@@ -1746,8 +1749,9 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// opencode inline credentials → managed secret
-	if agent.Spec.Opencode != nil {
-		oc := agent.Spec.Opencode
+	// Use workingAgent so runtime-provided config (e.g. spec.opencode from a LanguageAgentRuntime) is respected.
+	if workingAgent.Spec.Opencode != nil {
+		oc := workingAgent.Spec.Opencode
 		if oc.Password != "" {
 			username := oc.Username
 			if username == "" {
@@ -1788,8 +1792,8 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// openclaw inline credentials → managed secret
-	if agent.Spec.Openclaw != nil {
-		oc := agent.Spec.Openclaw
+	if workingAgent.Spec.Openclaw != nil {
+		oc := workingAgent.Spec.Openclaw
 		if oc.Token != "" {
 			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(oc.Token)
 		} else if oc.TokenRef != nil {
