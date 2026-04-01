@@ -955,10 +955,7 @@ func TestLanguageToolController_SidecarMode_NoRunningPod(t *testing.T) {
 		t.Fatalf("Failed to get updated tool: %v", err)
 	}
 
-	// AvailableTools and ToolSchemas should be empty
-	if len(updatedTool.Status.AvailableTools) != 0 {
-		t.Errorf("Expected no AvailableTools, got %v", updatedTool.Status.AvailableTools)
-	}
+	// ToolSchemas should be empty
 	if len(updatedTool.Status.ToolSchemas) != 0 {
 		t.Errorf("Expected no ToolSchemas, got %v", updatedTool.Status.ToolSchemas)
 	}
@@ -1065,9 +1062,6 @@ func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T
 		t.Fatalf("Failed to get updated tool: %v", err)
 	}
 
-	if len(updatedTool.Status.AvailableTools) != 2 {
-		t.Errorf("Expected 2 AvailableTools, got %v", updatedTool.Status.AvailableTools)
-	}
 	if len(updatedTool.Status.ToolSchemas) != 2 {
 		t.Errorf("Expected 2 ToolSchemas, got %v", updatedTool.Status.ToolSchemas)
 	}
@@ -1533,7 +1527,6 @@ func TestLanguageToolController_Reconcile_MCPType_SchemaDiscoveryErrorSwallowed(
 
 	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
 	assert.Empty(t, updated.Status.ToolSchemas)
-	assert.Empty(t, updated.Status.AvailableTools)
 
 	var readyCond *metav1.Condition
 	for i := range updated.Status.Conditions {

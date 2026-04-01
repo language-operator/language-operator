@@ -106,10 +106,6 @@ type LanguageToolStatus struct {
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`
 
-	// AvailableTools lists the tools discovered from this service
-	// +optional
-	AvailableTools []string `json:"availableTools,omitempty"`
-
 	// ToolSchemas contains the complete MCP tool schemas discovered from this service
 	// +optional
 	ToolSchemas []ToolSchema `json:"toolSchemas,omitempty"`

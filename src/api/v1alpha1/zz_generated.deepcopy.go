@@ -862,11 +862,6 @@ func (in *LanguageToolStatus) DeepCopyInto(out *LanguageToolStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.AvailableTools != nil {
-		in, out := &in.AvailableTools, &out.AvailableTools
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.ToolSchemas != nil {
 		in, out := &in.ToolSchemas, &out.ToolSchemas
 		*out = make([]ToolSchema, len(*in))

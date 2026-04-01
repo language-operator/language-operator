@@ -306,7 +306,6 @@ func main() {
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
 		Client:                  mgr.GetClient(),
-		APIReader:               mgr.GetAPIReader(),
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
 		Recorder:                mgr.GetEventRecorderFor("languageagent-controller"),

@@ -5427,11 +5427,6 @@ spec:
                   LanguageTool with at least one available condition
                 format: int32
                 type: integer
-              availableTools:
-                description: AvailableTools lists the tools discovered from this service
-                items:
-                  type: string
-                type: array
               conditions:
                 description: Conditions represent the latest available observations
                   of the tool's state

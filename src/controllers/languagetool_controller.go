@@ -742,11 +742,6 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 		if len(schemas) > 0 {
 			tool.Status.ToolSchemas = schemas
-			var toolNames []string
-			for _, s := range schemas {
-				toolNames = append(toolNames, s.Name)
-			}
-			tool.Status.AvailableTools = toolNames
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionTrue, langopv1alpha1.ReasonSchemasDiscovered, "Tool schemas discovered from running agent pod", tool.Generation)
 		} else {
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionFalse, langopv1alpha1.ReasonNoRunningAgentPod, "No running agent pod with this sidecar found; schemas will populate once an agent pod is ready", tool.Generation)
@@ -803,13 +798,6 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 			} else {
 				// Update tool schemas and available tools list
 				tool.Status.ToolSchemas = schemas
-
-				// Update the AvailableTools list for backward compatibility
-				var toolNames []string
-				for _, schema := range schemas {
-					toolNames = append(toolNames, schema.Name)
-				}
-				tool.Status.AvailableTools = toolNames
 			}
 		}
 
