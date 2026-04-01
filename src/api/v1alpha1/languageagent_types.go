@@ -61,6 +61,16 @@ type LanguageAgentSpec struct {
 	// Deployment groups Kubernetes-specific pod and container configuration.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
+
+	// Opencode holds configuration specific to the opencode runtime.
+	// Only effective when spec.runtime is "opencode".
+	// +optional
+	Opencode *OpencodeConfig `json:"opencode,omitempty"`
+
+	// Openclaw holds configuration specific to the openclaw runtime.
+	// Only effective when spec.runtime is "openclaw".
+	// +optional
+	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
 }
 
 // ModelReference references a LanguageModel
@@ -131,6 +141,51 @@ type WorkspaceSpec struct {
 	// +kubebuilder:default="/workspace"
 	// +optional
 	MountPath string `json:"mountPath,omitempty"`
+}
+
+// OpencodeConfig holds configuration specific to the opencode runtime.
+// Effective only when spec.runtime is "opencode".
+type OpencodeConfig struct {
+	// Username for HTTP Basic Auth. Defaults to "opencode" if not set.
+	// Sets OPENCODE_SERVER_USERNAME in the agent container.
+	// +optional
+	Username string `json:"username,omitempty"`
+
+	// Password is the HTTP Basic Auth password (inline).
+	// The operator creates a managed Secret and injects it via envFrom.
+	// Mutually exclusive with PasswordRef.
+	// +optional
+	Password string `json:"password,omitempty"`
+
+	// PasswordRef references a Secret whose keys are injected via envFrom.
+	// The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
+	// Mutually exclusive with Password.
+	// +optional
+	PasswordRef *RuntimeSecretRef `json:"passwordRef,omitempty"`
+}
+
+// OpenclawConfig holds configuration specific to the openclaw runtime.
+// Effective only when spec.runtime is "openclaw".
+type OpenclawConfig struct {
+	// Token is the gateway authentication token (inline).
+	// The operator creates a managed Secret and injects it via envFrom.
+	// Mutually exclusive with TokenRef.
+	// +optional
+	Token string `json:"token,omitempty"`
+
+	// TokenRef references a Secret whose keys are injected via envFrom.
+	// The Secret must contain OPENCLAW_GATEWAY_TOKEN.
+	// Mutually exclusive with Token.
+	// +optional
+	TokenRef *RuntimeSecretRef `json:"tokenRef,omitempty"`
+}
+
+// RuntimeSecretRef references a Secret in the same namespace.
+// All keys in the Secret are injected as env vars via envFrom.
+type RuntimeSecretRef struct {
+	// Name is the name of the Secret.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
 }
 
 // LanguageAgentStatus defines the observed state of LanguageAgent

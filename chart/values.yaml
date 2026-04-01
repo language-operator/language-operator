@@ -198,6 +198,16 @@ config:
     # Namespaces to watch (empty means all namespaces)
     namespaces: []
 
+# Standard runtimes bundled with the operator.
+# LanguageAgentRuntime resources are cluster-scoped; install once, use from any namespace.
+runtimes:
+  openclaw:
+    # Install the openclaw LanguageAgentRuntime with the operator.
+    enabled: true
+  opencode:
+    # Install the opencode LanguageAgentRuntime with the operator.
+    enabled: true
+
 # RBAC configuration
 rbac:
   # Specifies whether RBAC resources should be created

@@ -54,25 +54,8 @@ type LanguageAgentRuntimeSpec struct {
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 }
 
-// LanguageAgentRuntimeStatus defines the observed state of LanguageAgentRuntime
-type LanguageAgentRuntimeStatus struct {
-	// ObservedGeneration is the most recent generation processed by the controller.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Conditions represent the latest available observations of the runtime's state
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-}
-
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=laruntime
-// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageAgentRuntime is the Schema for the languageagentruntimes API.
@@ -82,8 +65,7 @@ type LanguageAgentRuntime struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LanguageAgentRuntimeSpec   `json:"spec,omitempty"`
-	Status LanguageAgentRuntimeStatus `json:"status,omitempty"`
+	Spec LanguageAgentRuntimeSpec `json:"spec,omitempty"`
 }
 
 // +kubebuilder:object:root=true

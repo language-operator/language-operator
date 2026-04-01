@@ -4,17 +4,6 @@ Common deployment patterns for Language Operator resources.
 
 ## Example Configurations
 
-All examples are in the [`examples/`](https://github.com/language-operator/language-operator/tree/main/examples) directory of the repository.
-
-### Full openclaw Example
-
-See [`examples/openclaw.yaml`](https://github.com/language-operator/language-operator/blob/main/examples/openclaw.yaml) for a complete, annotated example showing:
-
-- LanguageCluster setup
-- LanguageModel configuration
-- LanguageAgent deployment with workspace storage
-- Init container pattern for model endpoint injection
-
 ### Multi-Model Agent
 
 Agent that can choose between multiple models:
@@ -149,15 +138,6 @@ spec:
   instructions: |
     Generate a daily summary report and email it to the team.
 ```
-
-## More Examples
-
-Browse the full [`examples/`](https://github.com/language-operator/language-operator/tree/main/examples) directory for:
-
-- Advanced networking configurations
-- Resource limits and autoscaling
-- Multi-cluster deployments
-- Development patterns
 
 ## Next Steps
 

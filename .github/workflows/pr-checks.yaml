@@ -43,7 +43,6 @@ jobs:
         with:
           config_file: .yamllint.yaml
           file_or_dir: |
-            examples/
             .github/workflows/
           strict: true
         continue-on-error: true

@@ -5444,6 +5444,59 @@ spec:
                       type: object
                   type: object
                 type: array
+              openclaw:
+                description: |-
+                  Openclaw holds configuration specific to the openclaw runtime.
+                  Only effective when spec.runtime is "openclaw".
+                properties:
+                  token:
+                    description: |-
+                      Token is the gateway authentication token (inline).
+                      The operator creates a managed Secret and injects it via envFrom.
+                      Mutually exclusive with TokenRef.
+                    type: string
+                  tokenRef:
+                    description: |-
+                      TokenRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain OPENCLAW_GATEWAY_TOKEN.
+                      Mutually exclusive with Token.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              opencode:
+                description: |-
+                  Opencode holds configuration specific to the opencode runtime.
+                  Only effective when spec.runtime is "opencode".
+                properties:
+                  password:
+                    description: |-
+                      Password is the HTTP Basic Auth password (inline).
+                      The operator creates a managed Secret and injects it via envFrom.
+                      Mutually exclusive with PasswordRef.
+                    type: string
+                  passwordRef:
+                    description: |-
+                      PasswordRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
+                      Mutually exclusive with Password.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  username:
+                    description: |-
+                      Username for HTTP Basic Auth. Defaults to "opencode" if not set.
+                      Sets OPENCODE_SERVER_USERNAME in the agent container.
+                    type: string
+                type: object
               persona:
                 description: Persona is the name of a LanguagePersona this agent uses
                 type: string

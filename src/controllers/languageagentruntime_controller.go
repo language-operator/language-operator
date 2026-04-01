@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"go.opentelemetry.io/otel/codes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +40,6 @@ type LanguageAgentRuntimeReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes/finalizers,verbs=update
 
 // Reconcile reconciles a LanguageAgentRuntime resource.
@@ -68,7 +65,6 @@ func (r *LanguageAgentRuntimeReconciler) Reconcile(ctx context.Context, req ctrl
 	}()
 
 	ctx = result.Ctx
-	span := result.Span
 	log := log.FromContext(ctx)
 
 	// Handle deletion
@@ -87,21 +83,7 @@ func (r *LanguageAgentRuntimeReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Mark as Ready
-	rt.Status.ObservedGeneration = rt.Generation
-	SetCondition(&rt.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
-		langopv1alpha1.ReasonReconcileSuccess, "LanguageAgentRuntime is ready", rt.Generation)
-
-	if err := r.Status().Update(ctx, rt); err != nil {
-		log.Error(err, "Failed to update LanguageAgentRuntime status")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Failed to update status")
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
 	log.Info("Successfully reconciled LanguageAgentRuntime")
-	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
 }
 

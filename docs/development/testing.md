@@ -214,12 +214,7 @@ go tool cover -html=coverage.out
      --create-namespace
    ```
 
-3. **Create test resources:**
-   ```bash
-   kubectl apply -f examples/openclaw.yaml
-   ```
-
-4. **Watch logs:**
+3. **Watch logs:**
    ```bash
    kubectl logs -n language-operator-system \
      -l app.kubernetes.io/name=language-operator \

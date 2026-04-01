@@ -1,66 +1,20 @@
----
-# Example: deploying opencode via language-operator
-#
-# The LanguageModel CR registers a model with the LiteLLM gateway. The operator resolves the
-# gateway endpoint and injects MODEL_ENDPOINTS into all containers (including
-# init containers). The opencode-adapter reads MODEL_ENDPOINTS and writes
-# /etc/opencode/opencode.jsonc so opencode routes LLM traffic through the
-# gateway rather than connecting to model APIs directly.
-#
-# The anomalyco/opencode image has ENTRYPOINT ["opencode"] with no default CMD,
-# so the web subcommand must be supplied explicitly via args.
-#
-# Prerequisites:
-#
-#   kubectl create secret generic anthropic-credentials \
-#     -n language-operator-opencode \
-#     --from-literal=api-key=sk-ant-...
-#
-#   kubectl create secret generic opencode-server \
-#     -n language-operator-opencode \
-#     --from-literal=OPENCODE_SERVER_USERNAME=demo \
-#     --from-literal=OPENCODE_SERVER_PASSWORD=$(openssl rand -hex 32)
-
----
+{{- if .Values.runtimes.opencode.enabled -}}
 apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: language-operator-opencode
-spec:
-  domain: agents.example.com
-
----
-apiVersion: langop.io/v1alpha1
-kind: LanguageModel
-metadata:
-  name: claude-sonnet
-  namespace: language-operator-opencode
-spec:
-  provider: anthropic
-  modelName: claude-sonnet-4-5
-  apiKeySecretRef:
-    name: anthropic-credentials
-    key: api-key
-
----
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
+kind: LanguageAgentRuntime
 metadata:
   name: opencode
-  namespace: language-operator-opencode
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
 spec:
   image: ghcr.io/anomalyco/opencode:latest
+
   port: 3000
-  models:
-    - name: claude-sonnet
 
   workspace:
-    enabled: true
     size: 10Gi
+    mountPath: /workspace
 
   deployment:
-    replicas: 1
-
     # opencode web starts the server headlessly in containers (browser launch fails silently).
     # Both web and serve share the same HTTP API; web also serves the browser UI.
     args: ["web", "--hostname", "0.0.0.0", "--port", "3000"]
@@ -105,10 +59,6 @@ spec:
       - name: OPENCODE_CONFIG_DIR
         value: /etc/opencode
 
-    envFrom:
-      - secretRef:
-          name: opencode-server   # OPENCODE_SERVER_PASSWORD
-
     volumes:
       - name: opencode-config
         emptyDir: {}
@@ -124,3 +74,4 @@ spec:
       limits:
         memory: 2Gi
         cpu: 1000m
+{{- end }}

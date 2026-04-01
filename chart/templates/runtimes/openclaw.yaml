@@ -1,26 +1,10 @@
----
-# Standard LanguageAgentRuntime for openclaw.
-#
-# Install:
-#   kubectl apply -f runtimes/openclaw.yaml
-#
-# Usage in a LanguageAgent:
-#   spec:
-#     runtime: openclaw
-#     models:
-#       - name: claude-sonnet
-#
-# The runtime presets the image, port, workspace layout, init container,
-# and env vars. Agents may override any field or append additional env/volumes.
-#
-# Prerequisites (per namespace):
-#   kubectl create secret generic openclaw-gateway \
-#     -n <namespace> \
-#     --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+{{- if .Values.runtimes.openclaw.enabled -}}
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgentRuntime
 metadata:
   name: openclaw
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
 spec:
   image: ghcr.io/openclaw/openclaw:latest
 
@@ -56,3 +40,4 @@ spec:
       limits:
         memory: 2Gi
         cpu: 1000m
+{{- end }}

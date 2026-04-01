@@ -113,6 +113,7 @@ type modelConfigYAML struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -214,6 +215,14 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRuntimeResolved,
 			metav1.ConditionTrue, langopv1alpha1.ReasonRuntimeApplied,
 			fmt.Sprintf("Runtime %q applied", agent.Spec.Runtime), agent.Generation)
+	}
+
+	// Reconcile runtime-specific credential Secret (opencode, openclaw).
+	// Must run after runtime resolution so workingAgent has the merged spec.
+	if err := r.reconcileRuntimeSecret(ctx, agent, workingAgent); err != nil {
+		log.Error(err, "Failed to reconcile runtime credential secret")
+		reconcileErr = err
+		return ctrl.Result{}, err
 	}
 
 	// Validate image registry against whitelist
@@ -1701,6 +1710,99 @@ func (r *LanguageAgentReconciler) getServiceAccountName(agent *langopv1alpha1.La
 
 	// Default to a language-agent ServiceAccount that will be created in the agent's namespace
 	return "language-agent"
+}
+
+// reconcileRuntimeSecret creates or updates a managed Secret containing credentials for
+// runtime-specific configuration (opencode, openclaw). When inline values are provided,
+// the operator owns the Secret and GC's it on agent deletion. When *Ref variants are used,
+// the referenced Secret is injected into workingAgent's envFrom directly.
+func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
+	ctx context.Context,
+	agent *langopv1alpha1.LanguageAgent,
+	workingAgent *langopv1alpha1.LanguageAgent,
+) error {
+	secretName := agent.Name + "-runtime"
+	secretData := map[string][]byte{}
+	var extraEnv []corev1.EnvVar
+	var refEnvFrom []corev1.EnvFromSource
+
+	// opencode inline credentials → managed secret
+	if agent.Spec.Opencode != nil {
+		oc := agent.Spec.Opencode
+		if oc.Password != "" {
+			username := oc.Username
+			if username == "" {
+				username = "opencode"
+			}
+			secretData["OPENCODE_SERVER_USERNAME"] = []byte(username)
+			secretData["OPENCODE_SERVER_PASSWORD"] = []byte(oc.Password)
+		} else if oc.PasswordRef != nil {
+			// Username as literal env var if specified alongside a ref
+			if oc.Username != "" {
+				extraEnv = append(extraEnv, corev1.EnvVar{
+					Name:  "OPENCODE_SERVER_USERNAME",
+					Value: oc.Username,
+				})
+			}
+			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: oc.PasswordRef.Name},
+				},
+			})
+		}
+	}
+
+	// openclaw inline credentials → managed secret
+	if agent.Spec.Openclaw != nil {
+		oc := agent.Spec.Openclaw
+		if oc.Token != "" {
+			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(oc.Token)
+		} else if oc.TokenRef != nil {
+			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: oc.TokenRef.Name},
+				},
+			})
+		}
+	}
+
+	if len(secretData) > 0 {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: agent.Namespace,
+			},
+		}
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+			secret.Data = secretData
+			return controllerutil.SetControllerReference(agent, secret, r.Scheme)
+		}); err != nil {
+			return fmt.Errorf("reconciling runtime secret %s/%s: %w", agent.Namespace, secretName, err)
+		}
+		// Prepend managed secret to envFrom so it takes precedence
+		workingAgent.Spec.Deployment.EnvFrom = append(
+			[]corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+			}}},
+			workingAgent.Spec.Deployment.EnvFrom...,
+		)
+	} else {
+		// No inline credentials — delete managed secret if it exists
+		secret := &corev1.Secret{}
+		err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: agent.Namespace}, secret)
+		if err == nil {
+			if err := r.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+				return fmt.Errorf("deleting stale runtime secret %s/%s: %w", agent.Namespace, secretName, err)
+			}
+		}
+	}
+
+	// Append ref-based envFrom entries
+	workingAgent.Spec.Deployment.EnvFrom = append(workingAgent.Spec.Deployment.EnvFrom, refEnvFrom...)
+	// Prepend any literal env vars (e.g. username alongside a passwordRef)
+	workingAgent.Spec.Deployment.Env = append(extraEnv, workingAgent.Spec.Deployment.Env...)
+
+	return nil
 }
 
 // resolveCodeConfigMapName resolves the ConfigMap name for agent code based on AgentVersionRef

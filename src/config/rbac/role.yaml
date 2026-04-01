@@ -11,6 +11,7 @@ rules:
   - namespaces
   - persistentvolumeclaims
   - resourcequotas
+  - secrets
   - serviceaccounts
   - services
   verbs:
@@ -25,7 +26,6 @@ rules:
   - ""
   resources:
   - pods
-  - secrets
   verbs:
   - get
   - list
@@ -87,7 +87,6 @@ rules:
 - apiGroups:
   - langop.io
   resources:
-  - languageagentruntimes/status
   - languageagents/status
   - languageclusters/status
   - languagemodels/status
