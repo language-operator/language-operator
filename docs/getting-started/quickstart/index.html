@@ -622,10 +622,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-create-gateway-token" class="md-nav__link">
+  <a href="#step-3-deploy-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Create Gateway Token
+        Step 3: Deploy the Agent
       
     </span>
   </a>
@@ -633,10 +633,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-deploy-the-agent" class="md-nav__link">
+  <a href="#step-4-check-status" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Deploy the Agent
+        Step 4: Check Status
       
     </span>
   </a>
@@ -644,21 +644,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-5-check-status" class="md-nav__link">
+  <a href="#step-5-access-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 5: Check Status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-6-access-the-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 6: Access the Agent
+        Step 5: Access the Agent
       
     </span>
   </a>
@@ -1029,6 +1018,34 @@
     
   
     LanguageAgent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/languageagentruntime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LanguageAgentRuntime Guide
   
 
     
@@ -1538,10 +1555,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-create-gateway-token" class="md-nav__link">
+  <a href="#step-3-deploy-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Create Gateway Token
+        Step 3: Deploy the Agent
       
     </span>
   </a>
@@ -1549,10 +1566,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-deploy-the-agent" class="md-nav__link">
+  <a href="#step-4-check-status" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Deploy the Agent
+        Step 4: Check Status
       
     </span>
   </a>
@@ -1560,21 +1577,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-5-check-status" class="md-nav__link">
+  <a href="#step-5-access-the-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 5: Check Status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-6-access-the-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 6: Access the Agent
+        Step 5: Access the Agent
       
     </span>
   </a>
@@ -1640,83 +1646,49 @@
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">spec:</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: openclaw.langop.io</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">EOF</span>
-</code></pre></div>
-<p>Verify the cluster is ready:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languagecluster<span class="w"> </span>language-operator-openclaw
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-openclaw
 </code></pre></div>
 <h2 id="step-2-configure-an-llm">Step 2: Configure an LLM<a class="headerlink" href="#step-2-configure-an-llm" title="Permanent link">&para;</a></h2>
-<p>Create a secret with your Anthropic API key:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
+<p>Create a secret with your Anthropic API key, then create a <code>LanguageModel</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s">kind: LanguageModel</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="s">metadata:</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s">  name: claude-sonnet</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s">spec:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s">  provider: anthropic</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="s">  modelName: claude-sonnet-4-5</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="s">  apiKeySecretRef:</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="s">    name: anthropic-credentials</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="s">    key: api-key</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>Create a <code>LanguageModel</code> resource:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="s">kind: LanguageModel</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s">  name: claude-sonnet</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="s">spec:</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s">  provider: anthropic</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s">  modelName: claude-sonnet-4-5</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s">  apiKeySecretRef:</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s">    name: anthropic-credentials</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="s">    key: api-key</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="s">EOF</span>
+<p>The operator creates a LiteLLM proxy so all agents can reach the model through a single in-cluster endpoint.</p>
+<h2 id="step-3-deploy-the-agent">Step 3: Deploy the Agent<a class="headerlink" href="#step-3-deploy-the-agent" title="Permanent link">&para;</a></h2>
+<p>The <code>openclaw</code> runtime is bundled with the operator. Reference it with <code>runtime: openclaw</code> and supply a gateway token inline — the operator creates the credential secret automatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s">  name: openclaw</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s">spec:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s">  runtime: openclaw</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">  openclaw:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">    token: changeme</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">  models:</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>The operator will create a LiteLLM proxy that agents can use to access the model.</p>
-<h2 id="step-3-create-gateway-token">Step 3: Create Gateway Token<a class="headerlink" href="#step-3-create-gateway-token" title="Permanent link">&para;</a></h2>
-<p>Generate a secure token for openclaw's web gateway:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>openclaw-gateway<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">OPENCLAW_GATEWAY_TOKEN</span><span class="o">=</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span>
+<h2 id="step-4-check-status">Step 4: Check Status<a class="headerlink" href="#step-4-check-status" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
-<h2 id="step-4-deploy-the-agent">Step 4: Deploy the Agent<a class="headerlink" href="#step-4-deploy-the-agent" title="Permanent link">&para;</a></h2>
-<p>Deploy openclaw as a <code>LanguageAgent</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s">kind: LanguageAgent</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">  name: openclaw</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">spec:</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">  image: ghcr.io/openclaw/openclaw:latest</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">  port: 18789</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">  models:</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">    - name: claude-sonnet</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">  workspace:</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">    size: 10Gi</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">  deployment:</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">    initContainers:</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s">      - name: openclaw-adapter</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s">        image: ghcr.io/language-operator/openclaw-adapter:latest</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="s">        env:</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="s">          - name: OPENCLAW_STATE_DIR</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="s">            value: /workspace/.openclaw</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="s">        volumeMounts:</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="s">          - name: workspace</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="s">            mountPath: /workspace</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="s">    env:</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="s">      - name: OPENCLAW_HOME</span>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="s">        value: /workspace</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="s">    envFrom:</span>
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="s">      - secretRef:</span>
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="s">          name: openclaw-gateway</span>
-<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="s">EOF</span>
-</code></pre></div>
-<h2 id="step-5-check-status">Step 5: Check Status<a class="headerlink" href="#step-5-check-status" title="Permanent link">&para;</a></h2>
-<p>Watch the agent pod come up:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span>-w
-</code></pre></div>
-<p>Check the agent status:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagent<span class="w"> </span>openclaw<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw
-</code></pre></div>
-<p>View agent logs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span>-l<span class="w"> </span>langop.io/agent<span class="o">=</span>openclaw
-</code></pre></div>
-<h2 id="step-6-access-the-agent">Step 6: Access the Agent<a class="headerlink" href="#step-6-access-the-agent" title="Permanent link">&para;</a></h2>
-<p>Forward the openclaw web interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>language-operator-openclaw<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
+<h2 id="step-5-access-the-agent">Step 5: Access the Agent<a class="headerlink" href="#step-5-access-the-agent" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
 </code></pre></div>
 <p>Open <a href="http://localhost:18789">http://localhost:18789</a> in your browser.</p>
 <div class="admonition success">
@@ -1729,8 +1701,8 @@
 <li>Created a dedicated namespace (<code>language-operator-openclaw</code>)</li>
 <li>Deployed a LiteLLM proxy with your Anthropic credentials</li>
 <li>Injected the proxy URL into your agent via <code>MODEL_ENDPOINTS</code></li>
-<li>Created a Deployment, Service, and HTTPRoute for openclaw</li>
-<li>Set up NetworkPolicy for secure communication</li>
+<li>Created a <code>{agent}-runtime</code> Secret from <code>spec.openclaw.token</code> and injected it via <code>envFrom</code></li>
+<li>Created a Deployment, Service, and NetworkPolicy for openclaw</li>
 </ol>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
