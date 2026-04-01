@@ -85,7 +85,7 @@ kubectl port-forward svc/openclaw 18789:18789
 ```
 
 openclaw uses a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI.
-Connect using the [openclaw browser extension](https://openclaw.ai/docs/extension) or CLI client, pointing it to `ws://localhost:18789`.
+Connect using the openclaw browser extension or CLI client, pointing it to `ws://localhost:18789`. See the [openclaw repository](https://github.com/openclaw/openclaw) for installation instructions.
 
 !!! success "You're Running!"
     You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.
