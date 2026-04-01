@@ -52,6 +52,16 @@ type LanguageAgentRuntimeSpec struct {
 	// Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
+
+	// Openclaw provides default openclaw credential configuration for agents using this runtime.
+	// When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.
+	// +optional
+	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
+
+	// Opencode provides default opencode credential configuration for agents using this runtime.
+	// When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
+	// +optional
+	Opencode *OpencodeConfig `json:"opencode,omitempty"`
 }
 
 // +kubebuilder:object:root=true

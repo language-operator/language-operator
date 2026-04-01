@@ -5124,6 +5124,71 @@ spec:
                   Image is the default container image for agents using this runtime.
                   Agents may override this. When a runtime is referenced, spec.image on the agent is optional.
                 type: string
+              openclaw:
+                description: |-
+                  Openclaw provides default openclaw credential configuration for agents using this runtime.
+                  When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled activates openclaw credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
+                  token:
+                    description: |-
+                      Token is the gateway authentication token (inline).
+                      The operator creates a managed Secret and injects it via envFrom.
+                      Mutually exclusive with TokenRef.
+                    type: string
+                  tokenRef:
+                    description: |-
+                      TokenRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain OPENCLAW_GATEWAY_TOKEN.
+                      Mutually exclusive with Token.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              opencode:
+                description: |-
+                  Opencode provides default opencode credential configuration for agents using this runtime.
+                  When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled activates opencode credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
+                  password:
+                    description: |-
+                      Password is the HTTP Basic Auth password (inline).
+                      The operator creates a managed Secret and injects it via envFrom.
+                      Mutually exclusive with PasswordRef.
+                    type: string
+                  passwordRef:
+                    description: |-
+                      PasswordRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
+                      Mutually exclusive with Password.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  username:
+                    description: |-
+                      Username for HTTP Basic Auth. Defaults to "opencode" if not set.
+                      Sets OPENCODE_SERVER_USERNAME in the agent container.
+                    type: string
+                type: object
               port:
                 description: Port is the default port the agent container listens
                   on.

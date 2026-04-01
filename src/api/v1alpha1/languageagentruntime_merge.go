@@ -149,6 +149,17 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 		}
 	}
 
+	// --- Runtime-specific credential configs (agent wins if non-nil) ---
+
+	if agent.Openclaw == nil && rt.Openclaw != nil {
+		oc := *rt.Openclaw
+		agent.Openclaw = &oc
+	}
+	if agent.Opencode == nil && rt.Opencode != nil {
+		oc := *rt.Opencode
+		agent.Opencode = &oc
+	}
+
 	// --- DeploymentSpec list fields (runtime-first, agent-appended) ---
 
 	if len(r.InitContainers) > 0 {
