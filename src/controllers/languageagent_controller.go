@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -1712,10 +1714,20 @@ func (r *LanguageAgentReconciler) getServiceAccountName(agent *langopv1alpha1.La
 	return "language-agent"
 }
 
+// generateCredential returns a cryptographically random 32-byte hex string.
+func generateCredential() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
 // reconcileRuntimeSecret creates or updates a managed Secret containing credentials for
 // runtime-specific configuration (opencode, openclaw). When inline values are provided,
 // the operator owns the Secret and GC's it on agent deletion. When *Ref variants are used,
-// the referenced Secret is injected into workingAgent's envFrom directly.
+// the referenced Secret is injected into workingAgent's envFrom directly. When neither is
+// set, credentials are auto-generated once and preserved on subsequent reconciles.
 func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	ctx context.Context,
 	agent *langopv1alpha1.LanguageAgent,
@@ -1725,6 +1737,13 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	secretData := map[string][]byte{}
 	var extraEnv []corev1.EnvVar
 	var refEnvFrom []corev1.EnvFromSource
+
+	// Load existing secret so auto-generated values can be preserved across reconciles.
+	existing := &corev1.Secret{}
+	existingData := map[string][]byte{}
+	if err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: agent.Namespace}, existing); err == nil {
+		existingData = existing.Data
+	}
 
 	// opencode inline credentials → managed secret
 	if agent.Spec.Opencode != nil {
@@ -1749,6 +1768,22 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 					LocalObjectReference: corev1.LocalObjectReference{Name: oc.PasswordRef.Name},
 				},
 			})
+		} else {
+			// Auto-generate: preserve existing value if present, otherwise generate new.
+			password := string(existingData["OPENCODE_SERVER_PASSWORD"])
+			if password == "" {
+				var err error
+				password, err = generateCredential()
+				if err != nil {
+					return fmt.Errorf("generating opencode password: %w", err)
+				}
+			}
+			username := oc.Username
+			if username == "" {
+				username = "opencode"
+			}
+			secretData["OPENCODE_SERVER_USERNAME"] = []byte(username)
+			secretData["OPENCODE_SERVER_PASSWORD"] = []byte(password)
 		}
 	}
 
@@ -1763,6 +1798,17 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 					LocalObjectReference: corev1.LocalObjectReference{Name: oc.TokenRef.Name},
 				},
 			})
+		} else {
+			// Auto-generate: preserve existing value if present, otherwise generate new.
+			token := string(existingData["OPENCLAW_GATEWAY_TOKEN"])
+			if token == "" {
+				var err error
+				token, err = generateCredential()
+				if err != nil {
+					return fmt.Errorf("generating openclaw token: %w", err)
+				}
+			}
+			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(token)
 		}
 	}
 

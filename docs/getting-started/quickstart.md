@@ -64,8 +64,7 @@ metadata:
   name: openclaw
 spec:
   runtime: openclaw
-  openclaw:
-    token: changeme
+  openclaw: {}    # token is auto-generated; retrieve it after creation
   models:
     - name: claude-sonnet
 EOF
@@ -81,11 +80,14 @@ kubectl get pods -w
 ## Step 5: Access the Agent
 
 ```bash
+# Retrieve the auto-generated gateway token
+TOKEN=$(kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
+
 kubectl port-forward svc/openclaw 18789:18789
 ```
 
 openclaw uses a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI.
-Connect using the openclaw browser extension or CLI client, pointing it to `ws://localhost:18789`. See the [openclaw repository](https://github.com/openclaw/openclaw) for installation instructions.
+Connect using the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)), pointing it to `ws://localhost:18789` with the token retrieved above.
 
 !!! success "You're Running!"
     You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.

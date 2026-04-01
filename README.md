@@ -97,11 +97,15 @@ metadata:
   name: openclaw
 spec:
   runtime: openclaw
-  openclaw:
-    token: changeme
+  openclaw: {}    # token is auto-generated; retrieve it after creation
   models:
     - name: claude-sonnet
 EOF
+```
+
+```bash
+# Retrieve the auto-generated gateway token
+kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
 ```
 
 **Connect:**
@@ -110,7 +114,7 @@ EOF
 kubectl port-forward svc/openclaw 18789:18789
 ```
 
-openclaw exposes a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI. Connect using the [openclaw browser extension](https://openclaw.ai/docs/extension) or CLI client pointing to `ws://localhost:18789` with token `changeme`.
+openclaw exposes a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI. Connect using the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)) pointing to `ws://localhost:18789` with the token retrieved above.
 
 </details>
 
@@ -127,26 +131,26 @@ metadata:
   name: opencode
 spec:
   runtime: opencode
-  opencode:
-    username: demo
-    password: changeme
+  opencode: {}    # password is auto-generated; retrieve it after creation
   models:
     - name: claude-sonnet
 EOF
 ```
 
-
 **Connect:**
 
 ```bash
+# Retrieve the auto-generated password
+PASSWORD=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
+
 # Port-forward the service
 kubectl port-forward svc/opencode 3000:3000
 
 # Or attach the TUI (opencode v1.0.10+)
-opencode attach http://localhost:3000 --password changeme
+opencode attach http://localhost:3000 --username opencode --password "$PASSWORD"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. Sign in with username `demo` and the password from `spec.opencode.password`.
+Open [http://localhost:3000](http://localhost:3000) in your browser. Sign in with username `opencode` and the auto-generated password retrieved above.
 
 </details>
 
