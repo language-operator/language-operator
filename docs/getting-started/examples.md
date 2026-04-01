@@ -120,25 +120,6 @@ spec:
     key: api-key
 ```
 
-### Scheduled Agent
-
-Run an agent on a cron schedule:
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: daily-report
-spec:
-  image: your-report-agent:latest
-  executionMode: scheduled
-  schedule: "0 9 * * *"  # Daily at 9 AM
-  models:
-    - name: claude-sonnet
-  instructions: |
-    Generate a daily summary report and email it to the team.
-```
-
 ## Next Steps
 
 - [CRD Reference](../api/overview.md) - Full API specification
