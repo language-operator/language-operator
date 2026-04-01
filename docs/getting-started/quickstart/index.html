@@ -1681,21 +1681,23 @@
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s">  name: openclaw</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s">spec:</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s">  runtime: openclaw</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">  openclaw:</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">    token: changeme</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">  models:</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">    - name: claude-sonnet</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="s">EOF</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">  openclaw: {}    # token is auto-generated; retrieve it after creation</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">  models:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">EOF</span>
 </code></pre></div>
 <h2 id="step-4-check-status">Step 4: Check Status<a class="headerlink" href="#step-4-check-status" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <h2 id="step-5-access-the-agent">Step 5: Access the Agent<a class="headerlink" href="#step-5-access-the-agent" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Retrieve the auto-generated gateway token</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>openclaw-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCLAW_GATEWAY_TOKEN}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
 </code></pre></div>
 <p>openclaw uses a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI.
-Connect using the openclaw browser extension or CLI client, pointing it to <code>ws://localhost:18789</code>. See the <a href="https://github.com/openclaw/openclaw">openclaw repository</a> for installation instructions.</p>
+Connect using the openclaw browser extension or CLI client (see <a href="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>), pointing it to <code>ws://localhost:18789</code> with the token retrieved above.</p>
 <div class="admonition success">
 <p class="admonition-title">You're Running!</p>
 <p>You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.</p>
