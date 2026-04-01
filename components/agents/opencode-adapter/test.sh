@@ -51,7 +51,7 @@ clear_config
 
 assert "opencode.jsonc created"          "[ -f /tmp/t1/opencode.jsonc ]"
 assert "provider present"                "grep -q 'provider' /tmp/t1/opencode.jsonc"
-assert "provider key is model name"      "grep -q 'claude-sonnet' /tmp/t1/opencode.jsonc"
+assert "provider key is openai"          "grep -q '\"openai\"' /tmp/t1/opencode.jsonc"
 assert "options.baseURL set"             "grep -q 'baseURL' /tmp/t1/opencode.jsonc"
 assert "correct baseURL value"           "grep -q 'gateway.default.svc' /tmp/t1/opencode.jsonc"
 assert "model id as record key"          "grep -q 'claude-sonnet-4-5' /tmp/t1/opencode.jsonc"
@@ -82,7 +82,7 @@ OPENCODE_CONFIG_DIR=/tmp/t2 \
 clear_config
 
 assert "config overwritten"              "! grep -q '\"old\"' /tmp/t2/opencode.jsonc"
-assert "new model present"               "grep -q 'new-model' /tmp/t2/opencode.jsonc"
+assert "new model present"               "grep -q 'gpt-4o' /tmp/t2/opencode.jsonc"
 
 # ---------------------------------------------------------------------------
 # Test 3: env var fallback (no config.yaml)
@@ -97,6 +97,7 @@ MODEL_ENDPOINTS=http://gateway.default.svc.cluster.local:8000 \
   node /app/seed-config.mjs > /tmp/t3/out.txt 2>&1
 
 assert "opencode.jsonc created"          "[ -f /tmp/t3/opencode.jsonc ]"
+assert "provider key is openai"          "grep -q '\"openai\"' /tmp/t3/opencode.jsonc"
 assert "provider populated from env"     "grep -q 'gateway.default.svc' /tmp/t3/opencode.jsonc"
 assert "model name from LLM_MODEL"       "grep -q 'claude-sonnet-4-5' /tmp/t3/opencode.jsonc"
 

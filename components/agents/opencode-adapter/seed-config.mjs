@@ -38,22 +38,35 @@ if (existsSync(operatorConfigPath)) {
 const configModels = operatorConfig?.models ?? {}
 const provider = {}
 
+// LiteLLM exposes an OpenAI-compatible API, so we always use "openai" as the
+// provider key regardless of what the CRD models are named. All models are
+// aggregated under the single gateway endpoint.
+
 if (Object.keys(configModels).length > 0) {
   // Primary source: config.yaml models section
+  // All models share the same LiteLLM gateway — use the first endpoint found.
+  const models = {}
+  let gatewayEndpoint = null
+
   for (const [crdName, model] of Object.entries(configModels)) {
     if (!model.endpoint) {
       console.warn(`Model '${crdName}' has no endpoint — skipping`)
       continue
     }
+    gatewayEndpoint ??= model.endpoint
     const modelId = model.model ?? crdName
-    provider[crdName] = {
+    models[modelId] = {}
+    console.log(`Registered model '${modelId}' via gateway ${model.endpoint}`)
+  }
+
+  if (gatewayEndpoint) {
+    provider['openai'] = {
       options: {
-        baseURL: model.endpoint,
+        baseURL: gatewayEndpoint,
         apiKey: 'sk-langop-proxy',  // placeholder; LiteLLM proxy handles real auth
       },
-      models: { [modelId]: {} },
+      models,
     }
-    console.log(`Configured provider '${crdName}' → ${model.endpoint} (model: ${modelId})`)
   }
 } else {
   // Fallback: zip MODEL_ENDPOINTS + LLM_MODEL env vars
@@ -62,18 +75,20 @@ if (Object.keys(configModels).length > 0) {
 
   if (endpoints.length === 0) {
     console.warn('MODEL_ENDPOINTS is not set and config.yaml has no models — seeding without provider config')
-  }
-
-  for (let i = 0; i < endpoints.length; i++) {
-    const key = modelNames[i] ?? `model-${i}`
-    provider[key] = {
+  } else {
+    // All models share the same LiteLLM gateway — use the first endpoint.
+    const models = {}
+    for (let i = 0; i < modelNames.length; i++) {
+      models[modelNames[i]] = {}
+    }
+    provider['openai'] = {
       options: {
-        baseURL: endpoints[i],
+        baseURL: endpoints[0],
         apiKey: 'sk-langop-proxy',
       },
-      models: { [key]: {} },
+      models: Object.keys(models).length > 0 ? models : undefined,
     }
-    console.log(`Configured provider '${key}' → ${endpoints[i]} (from env vars)`)
+    console.log(`Configured openai provider → ${endpoints[0]} (models: ${modelNames.join(', ') || 'none'})`)
   }
 }
 
