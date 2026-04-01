@@ -10,6 +10,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 |----------|---------|
 | `LanguageCluster` | Managed namespace for AI clusters |
 | `LanguageAgent` | Autonomous, scheduled, and reactive agents |
+| `LanguageAgentRuntime` | Reusable agent preset (image, port, init containers, probes) |
 | `LanguageModel` | LLM (proxied through LiteLLM) |
 | `LanguageTool` | MCP server |
 | `LanguagePersona` | Behavior, tone, constraints |
@@ -34,7 +35,16 @@ helm install language-operator language-operator/language-operator
 
 These examples deploy [openclaw](https://github.com/openclaw/openclaw) or [opencode](https://github.com/sst/opencode) — self-hosted AI coding assistants — to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
 
-### 1. Create a cluster
+### 1. Install standard runtimes
+
+`LanguageAgentRuntime` is a cluster-scoped preset that packages the image, port, init containers, probes, and env vars for a specific agent type. Install once, use across any namespace.
+
+```bash
+kubectl apply -f runtimes/openclaw.yaml
+kubectl apply -f runtimes/opencode.yaml
+```
+
+### 2. Create a cluster
 
 A `LanguageCluster` is a managed namespace for logically grouped agents, models, and tools.
 
@@ -43,22 +53,23 @@ kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
-  name: language-operator-openclaw
+  name: my-cluster
 spec:
-  domain: openclaw.langop.io
+  domain: agents.example.com
 EOF
+
+kubectl config set-context --current --namespace=my-cluster
 ```
 
-### 2. Configure an LLM
+### 3. Configure an LLM
 
 The `LanguageModel` holds the real API credential and exposes a LiteLLM proxy inside the cluster.
 
 ```bash
 kubectl create secret generic anthropic-credentials \
-  -n language-operator-openclaw \
   --from-literal=api-key=sk-ant-...
 
-kubectl apply -n language-operator-openclaw -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
@@ -72,126 +83,92 @@ spec:
 EOF
 ```
 
-### 3. Deploy an agent
+### 4. Deploy an agent
 
 Choose one of the following agents:
 
 <details open>
 <summary><strong>openclaw</strong></summary>
 
-The `openclaw-adapter` init container receives the resolved LiteLLM proxy URL via `MODEL_ENDPOINTS` (injected by the operator) and seeds `openclaw.json` so openclaw routes through the proxy on first run.
+The `openclaw` runtime preset handles the image, port, init container, and env vars. Reference it with `runtime: openclaw` and the operator fills in the rest.
 
 ```bash
 kubectl create secret generic openclaw-gateway \
-  -n language-operator-openclaw \
   --from-literal=OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 
-kubectl apply -n language-operator-openclaw -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: openclaw
 spec:
-  image: ghcr.io/openclaw/openclaw:latest
-  port: 18789
+  runtime: openclaw
   models:
     - name: claude-sonnet
-  workspace:
-    size: 10Gi
   deployment:
-    initContainers:
-      - name: openclaw-adapter
-        image: ghcr.io/language-operator/openclaw-adapter:latest
-        env:
-          - name: OPENCLAW_STATE_DIR
-            value: /workspace/.openclaw
-        volumeMounts:
-          - name: workspace
-            mountPath: /workspace
-    env:
-      - name: OPENCLAW_HOME
-        value: /workspace
     envFrom:
       - secretRef:
           name: openclaw-gateway
 EOF
 ```
 
-See [examples/openclaw.yaml](examples/openclaw.yaml) for the full annotated example.
+See [runtimes/openclaw.yaml](runtimes/openclaw.yaml) for the full runtime definition and [examples/openclaw.yaml](examples/openclaw.yaml) for a self-contained example without a runtime.
 
 </details>
 
 <details>
 <summary><strong>opencode</strong></summary>
 
-The `opencode-adapter` init container reads `MODEL_ENDPOINTS` and `LLM_MODEL` (injected by the operator) and writes `/etc/opencode/opencode.jsonc` so opencode routes LLM traffic through the gateway. opencode's image has no default `CMD`, so `args` must supply the `serve` subcommand explicitly.
+The `opencode` runtime preset handles the image, port, args, init container, volumes, env vars, and health probes.
 
 ```bash
 kubectl create secret generic opencode-server \
-  -n language-operator-openclaw \
+  --from-literal=OPENCODE_SERVER_USERNAME=demo \
   --from-literal=OPENCODE_SERVER_PASSWORD=$(openssl rand -hex 32)
 
-kubectl apply -n language-operator-openclaw -f - <<EOF
+kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: opencode
 spec:
-  image: ghcr.io/anomalyco/opencode:latest
-  port: 3000
+  runtime: opencode
   models:
     - name: claude-sonnet
-  workspace:
-    size: 10Gi
   deployment:
-    args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
-    initContainers:
-      - name: opencode-adapter
-        image: ghcr.io/language-operator/opencode-adapter:latest
-        volumeMounts:
-          - name: opencode-config
-            mountPath: /etc/opencode
-    env:
-      - name: HOME
-        value: /workspace
-      - name: XDG_DATA_HOME
-        value: /workspace/.local/share
-      - name: XDG_CACHE_HOME
-        value: /workspace/.cache
     envFrom:
       - secretRef:
           name: opencode-server
-    volumes:
-      - name: opencode-config
-        emptyDir: {}
-    volumeMounts:
-      - name: opencode-config
-        mountPath: /etc/opencode
 EOF
 ```
 
-See [examples/opencode.yaml](examples/opencode.yaml) for the full annotated example.
+See [runtimes/opencode.yaml](runtimes/opencode.yaml) for the full runtime definition and [examples/opencode.yaml](examples/opencode.yaml) for a self-contained example without a runtime.
 
 **Connect:**
 
 ```bash
-# In one terminal — port-forward the service
-kubectl port-forward -n language-operator-openclaw svc/opencode 3000:3000
+# Port-forward the service
+kubectl port-forward svc/opencode 3000:3000
 
-# In another terminal — launch the opencode TUI pointed at the forwarded port
-OPENCODE_SERVER_PASSWORD=$(kubectl get secret opencode-server \
-  -n language-operator-openclaw \
-  -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d) \
-  opencode --hostname localhost --port 3000
+# Open in browser — use Basic Auth: username "demo", password from the secret
+open http://localhost:3000
+kubectl get secret opencode-server \
+  -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d
+
+# Or attach the TUI (opencode v1.0.10+)
+opencode attach http://localhost:3000 \
+  --password $(kubectl get secret opencode-server \
+    -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
 ```
 
 </details>
 
-### 4. Check status
+### 5. Check status
 
 ```bash
-kubectl get languageagents -n language-operator-openclaw
-kubectl get pods -n language-operator-openclaw
+kubectl get languageagentruntimes
+kubectl get languageagents
+kubectl get pods
 ```
 
 ## Development

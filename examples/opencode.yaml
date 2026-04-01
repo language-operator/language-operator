@@ -8,7 +8,7 @@
 # gateway rather than connecting to model APIs directly.
 #
 # The anomalyco/opencode image has ENTRYPOINT ["opencode"] with no default CMD,
-# so the serve subcommand must be supplied explicitly via args.
+# so the web subcommand must be supplied explicitly via args.
 #
 # Prerequisites:
 #
@@ -18,6 +18,7 @@
 #
 #   kubectl create secret generic opencode-server \
 #     -n language-operator-opencode \
+#     --from-literal=OPENCODE_SERVER_USERNAME=demo \
 #     --from-literal=OPENCODE_SERVER_PASSWORD=$(openssl rand -hex 32)
 
 ---
@@ -60,9 +61,9 @@ spec:
   deployment:
     replicas: 1
 
-    # opencode's image has ENTRYPOINT ["opencode"] with no default CMD,
-    # so the serve subcommand must be supplied explicitly.
-    args: ["serve", "--hostname", "0.0.0.0", "--port", "3000"]
+    # opencode web starts the server headlessly in containers (browser launch fails silently).
+    # Both web and serve share the same HTTP API; web also serves the browser UI.
+    args: ["web", "--hostname", "0.0.0.0", "--port", "3000"]
 
     initContainers:
       - name: opencode-adapter
@@ -74,8 +75,7 @@ spec:
             mountPath: /etc/opencode
 
     livenessProbe:
-      httpGet:
-        path: /
+      tcpSocket:
         port: 3000
       initialDelaySeconds: 10
       periodSeconds: 15
@@ -83,8 +83,7 @@ spec:
       failureThreshold: 3
 
     readinessProbe:
-      httpGet:
-        path: /
+      tcpSocket:
         port: 3000
       initialDelaySeconds: 5
       periodSeconds: 10
@@ -102,6 +101,9 @@ spec:
       # Bun writes a runtime cache here; root fs is read-only so redirect to workspace
       - name: XDG_CACHE_HOME
         value: /workspace/.cache
+      # Tell opencode where to find the config written by the init container
+      - name: OPENCODE_CONFIG_DIR
+        value: /etc/opencode
 
     envFrom:
       - secretRef:
