@@ -188,9 +188,9 @@ if (Object.keys(mcpServers).length > 0) {
 
 if (agentName) {
   config.agents = {
-    defaults: {
-      identity: { name: agentName },
-    },
+    list: [
+      { id: agentName, identity: { name: agentName }, default: true },
+    ],
   }
 }
 
