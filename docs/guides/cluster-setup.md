@@ -111,6 +111,113 @@ kubectl wait --for=condition=Available deployment --all -n cert-manager --timeou
     ```
     You are responsible for populating the webhook TLS secret and setting the `caBundle` on webhook configurations.
 
+## Traefik
+
+Traefik is the recommended ingress controller for Language Operator. When a `LanguageCluster` has `spec.domain` set, the operator creates an Ingress resource at `gateway.<domain>` — Traefik handles routing and TLS termination.
+
+**k3s**: Traefik is pre-installed. Verify it is running:
+
+```bash
+kubectl get pods -n kube-system | grep traefik
+kubectl get svc -n kube-system traefik
+```
+
+Note the `EXTERNAL-IP` of the `traefik` service — this is the IP your DNS records should point to.
+
+**Other clusters**: Install Traefik via Helm:
+
+```bash
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+
+helm install traefik traefik/traefik \
+  --namespace traefik \
+  --create-namespace \
+  --set ports.web.redirectTo.port=websecure \
+  --set ports.websecure.tls.enabled=true
+
+kubectl wait --for=condition=Available deployment/traefik -n traefik --timeout=60s
+```
+
+Retrieve the external IP once the LoadBalancer is provisioned:
+
+```bash
+kubectl get svc -n traefik traefik
+```
+
+Point a wildcard DNS record (`*.<your-domain>`) at this IP, or create individual A records for each agent domain.
+
+## Let's Encrypt
+
+With cert-manager installed, configure a `ClusterIssuer` to automatically provision TLS certificates via Let's Encrypt.
+
+### Staging (test first)
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: your-email@example.com
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+EOF
+```
+
+### Production
+
+Once staging certificates are issued successfully, switch to the production issuer:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: your-email@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+EOF
+```
+
+Verify the issuer is ready:
+
+```bash
+kubectl get clusterissuer
+# NAME                  READY   AGE
+# letsencrypt-staging   True    30s
+# letsencrypt-prod      True    30s
+```
+
+### Using the issuer with Language Operator
+
+Set the cert-manager issuer annotation when installing Language Operator:
+
+```bash
+helm install language-operator language-operator/language-operator \
+  --set config.ingressAnnotations."cert-manager\.io/cluster-issuer"=letsencrypt-prod
+```
+
+When a `LanguageCluster` has `spec.domain` configured, the operator creates an Ingress for `gateway.<domain>` — cert-manager automatically provisions and renews the TLS certificate.
+
+!!! tip "DNS must resolve before HTTP-01 challenge"
+    cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before applying the `LanguageCluster` with a domain.
+
 ## Verifying Cluster Readiness
 
 Run through this checklist before installing:
@@ -127,6 +234,12 @@ kubectl get storageclass | grep '(default)'
 
 # cert-manager running
 kubectl get pods -n cert-manager
+
+# Traefik running and has external IP
+kubectl get svc -n kube-system traefik 2>/dev/null || kubectl get svc -n traefik traefik
+
+# ClusterIssuers ready
+kubectl get clusterissuer
 
 # Sufficient node resources (operator + gateway + one agent needs ~4Gi RAM)
 kubectl top nodes
