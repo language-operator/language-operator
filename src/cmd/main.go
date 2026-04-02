@@ -121,6 +121,9 @@ func main() {
 		"Default IngressClass name for agent Ingress resources. Can be overridden per LanguageCluster.")
 	flag.StringVar(&gatewayIngressClassName, "gateway-ingress-class-name", "",
 		"Default IngressClass name for the gateway Ingress. Can be overridden per LanguageCluster.")
+	var ingressControllerNamespace string
+	flag.StringVar(&ingressControllerNamespace, "ingress-controller-namespace", "",
+		"Namespace the ingress controller runs in. When set, a NetworkPolicy ingress rule is added to allow traffic from that namespace to agent ports.")
 	flag.StringVar(&gatewayImage, "gateway-image", "",
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
@@ -305,17 +308,18 @@ func main() {
 
 	// Setup LanguageAgent controller with optional synthesizer
 	agentReconciler := &controllers.LanguageAgentReconciler{
-		Client:                  mgr.GetClient(),
-		Scheme:                  mgr.GetScheme(),
-		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
-		Recorder:                mgr.GetEventRecorderFor("languageagent-controller"),
-		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languageagent-controller")),
-		RegistryManager:         registryManager,
-		NetworkPolicyTimeout:    networkPolicyTimeout,
-		NetworkPolicyRetries:    networkPolicyRetries,
-		NetworkIsolationEnabled: networkIsolationEnabled,
-		DefaultIngressClassName: agentIngressClassName,
-		CNICapabilities:         cniCaps,
+		Client:                     mgr.GetClient(),
+		Scheme:                     mgr.GetScheme(),
+		Log:                        ctrl.Log.WithName("controllers").WithName("LanguageAgent"),
+		Recorder:                   mgr.GetEventRecorderFor("languageagent-controller"),
+		EventManager:               events.NewEventManager(mgr.GetEventRecorderFor("languageagent-controller")),
+		RegistryManager:            registryManager,
+		NetworkPolicyTimeout:       networkPolicyTimeout,
+		NetworkPolicyRetries:       networkPolicyRetries,
+		NetworkIsolationEnabled:    networkIsolationEnabled,
+		DefaultIngressClassName:    agentIngressClassName,
+		IngressControllerNamespace: ingressControllerNamespace,
+		CNICapabilities:            cniCaps,
 	}
 
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {

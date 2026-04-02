@@ -4449,3 +4449,74 @@ func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
 		assert.Equal(t, int32(4000), rule.Ports[1].Port.IntVal, "rule %d port 1", i)
 	}
 }
+
+// TestLanguageAgentController_IngressControllerNamespace verifies that when
+// IngressControllerNamespace is set, a fourth ingress rule is added to allow
+// the ingress controller namespace to reach agent ports.
+func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("ingress-ns-agent", "default",
+		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
+			{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: true},
+		}),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:                     fakeClient,
+		Scheme:                     scheme,
+		Log:                        logr.Discard(),
+		Recorder:                   &record.FakeRecorder{},
+		RegistryManager:            &mockRegistryManager{},
+		NetworkIsolationEnabled:    true,
+		NetworkPolicyTimeout:       30 * time.Second,
+		NetworkPolicyRetries:       3,
+		IngressControllerNamespace: "traefik",
+	}
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileNetworkPolicy(ctx, agent))
+
+	np := &networkingv1.NetworkPolicy{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
+	// 3 built-in rules + 1 ingress-controller rule
+	require.Len(t, np.Spec.Ingress, 4, "expected 4 ingress rules (3 built-in + ingress controller)")
+	ingressNsRule := np.Spec.Ingress[3]
+	require.Len(t, ingressNsRule.From, 1)
+	require.NotNil(t, ingressNsRule.From[0].NamespaceSelector)
+	assert.Equal(t, "traefik", ingressNsRule.From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
+	require.Len(t, ingressNsRule.Ports, 1)
+	assert.Equal(t, int32(8080), ingressNsRule.Ports[0].Port.IntVal)
+}
+
+// TestLanguageAgentController_NoIngressControllerNamespace verifies that without
+// IngressControllerNamespace set, only the 3 built-in ingress rules are created.
+func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("no-ingress-ns-agent", "default")
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:               fakeClient,
+		Scheme:               scheme,
+		Log:                  logr.Discard(),
+		Recorder:             &record.FakeRecorder{},
+		RegistryManager:      &mockRegistryManager{},
+		NetworkPolicyTimeout: 30 * time.Second,
+		NetworkPolicyRetries: 3,
+		// IngressControllerNamespace intentionally not set
+	}
+	ctx := context.Background()
+	require.NoError(t, reconciler.reconcileNetworkPolicy(ctx, agent))
+
+	np := &networkingv1.NetworkPolicy{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
+	assert.Len(t, np.Spec.Ingress, 3, "expected exactly 3 built-in ingress rules")
+}

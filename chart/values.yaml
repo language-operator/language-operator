@@ -187,6 +187,10 @@ config:
     # Can be overridden per-cluster via LanguageCluster spec.ingress.className.
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
+    # Namespace the ingress controller runs in.
+    # When set, a NetworkPolicy rule is added allowing the ingress controller to reach agent ports.
+    # Example: "traefik", "ingress-nginx"
+    ingressControllerNamespace: ""
 
   gateway:
     # Image for the shared LiteLLM gateway deployed per LanguageCluster.

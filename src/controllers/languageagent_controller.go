@@ -48,16 +48,17 @@ type RegistryManager interface {
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
 	client.Client
-	Scheme                  *runtime.Scheme
-	Log                     logr.Logger
-	Recorder                record.EventRecorder
-	EventManager            *events.EventManager
-	RegistryManager         RegistryManager
-	NetworkPolicyTimeout    time.Duration
-	NetworkPolicyRetries    int
-	NetworkIsolationEnabled bool
-	DefaultIngressClassName string
-	CNICapabilities         *cni.CNICapabilities
+	Scheme                     *runtime.Scheme
+	Log                        logr.Logger
+	Recorder                   record.EventRecorder
+	EventManager               *events.EventManager
+	RegistryManager            RegistryManager
+	NetworkPolicyTimeout       time.Duration
+	NetworkPolicyRetries       int
+	NetworkIsolationEnabled    bool
+	DefaultIngressClassName    string
+	IngressControllerNamespace string
+	CNICapabilities            *cni.CNICapabilities
 }
 
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
@@ -917,6 +918,23 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 			},
 			Ports: npPorts,
 		},
+	}
+
+	// Allow ingress controller pods to reach agent ports (needed when an Ingress routes external
+	// traffic to the agent). Only added when the ingress controller namespace is configured.
+	if r.IngressControllerNamespace != "" {
+		networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							LabelKeyMetadataName: r.IngressControllerNamespace,
+						},
+					},
+				},
+			},
+			Ports: npPorts,
+		})
 	}
 
 	// Append user-defined ingress rules from spec.networkPolicies[].from
