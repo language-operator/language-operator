@@ -139,6 +139,33 @@ tools:
     enabled: false   # disabled — endpoint not injected
 ```
 
+### Port References
+
+Each entry in `spec.ports` is an `AgentPort` with the following fields:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | required | Port name; used as the Service port name. Must match `^[a-z][a-z0-9-]*$`, max 15 characters |
+| `port` | int32 | required | Container port number (1–65535) |
+| `protocol` | string | `TCP` | Transport protocol: `TCP`, `UDP`, or `SCTP` |
+| `expose` | bool | `false` | When `true`, the HTTPRoute targets this port for external access. If no port has `expose: true`, the first port is used. At most one port should have `expose: true` |
+
+When `spec.ports` is empty, the operator defaults to a single port named `http` on port `8080`.
+
+Example:
+
+```yaml
+ports:
+  - name: http
+    port: 8080
+    expose: true
+  - name: metrics
+    port: 9090   # internal only — not exposed via HTTPRoute
+  - name: data
+    port: 5000
+    protocol: UDP
+```
+
 ### Configuration Injection
 
 The operator automatically mounts:
