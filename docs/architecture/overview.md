@@ -55,7 +55,7 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 │  │   Language Operator   │    │        Agent Pods            │   │
 │  │                      │    │                              │   │
-│  │  Reconciles:         │    │  /etc/agent/instructions.txt │   │
+│  │  Reconciles:         │    │                              │   │
 │  │  · LanguageAgent     │───▶│  /etc/agent/config.yaml      │   │
 │  │  · LanguagePersona   │    │                              │   │
 │  │  · LanguageTool      │    │  Env vars injected:          │   │

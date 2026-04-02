@@ -177,7 +177,7 @@ The operator automatically injects configuration into agent pods:
 
 | Injection | Source | Location |
 |-----------|--------|----------|
-| Instructions | `spec.instructions` or `spec.instructionsFrom` | `/etc/agent/instructions.txt` |
+| Instructions | `spec.instructions` (inline string) | Embedded in `/etc/agent/config.yaml` under `instructions:` key |
 | Config | Assembled from personas, models, tools | `/etc/agent/config.yaml` |
 | Model Endpoint | Shared proxy URL | `MODEL_ENDPOINTS` env var |
 | Model Names | All `models` | `LLM_MODEL` env var |
