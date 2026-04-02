@@ -117,13 +117,13 @@ env:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `livenessProbe.httpGet.path` | Liveness probe path | `/healthz` |
-| `livenessProbe.httpGet.port` | Liveness probe port | `8081` |
 | `livenessProbe.initialDelaySeconds` | Initial delay | `15` |
 | `livenessProbe.periodSeconds` | Period | `20` |
 | `readinessProbe.httpGet.path` | Readiness probe path | `/readyz` |
-| `readinessProbe.httpGet.port` | Readiness probe port | `8081` |
 | `readinessProbe.initialDelaySeconds` | Initial delay | `5` |
 | `readinessProbe.periodSeconds` | Period | `10` |
+
+> **Note:** Both probes use `config.health.port` (default `8081`) for the probe port. The `livenessProbe.httpGet.port` and `readinessProbe.httpGet.port` fields are not user-settable — the port is always derived from `config.health.port`.
 
 ### Scheduling
 
