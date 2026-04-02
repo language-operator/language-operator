@@ -215,7 +215,8 @@ env:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `config.agentIngress.className` | Default IngressClass for agent Ingress resources | `""` |
+| `config.agents.ingressClassName` | Default IngressClass for agent Ingress resources | `""` |
+| `config.agents.ingressControllerNamespace` | Namespace the ingress controller runs in (used to allow ingress controller NetworkPolicy access to agent ports) | `""` |
 
 #### Gateway
 
