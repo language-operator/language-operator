@@ -1885,7 +1885,10 @@
 <li>Service for agent networking</li>
 <li>HTTPRoute for routing (if gateway API available)</li>
 <li>NetworkPolicy for isolation</li>
-<li>One ConfigMap (<code>config.yaml</code> with instructions, personas, models, tools)</li>
+<li>ConfigMap (<code>{agent-name}-agent</code>, mounted as <code>/etc/agent/config.yaml</code>)</li>
+<li>ServiceAccount + Role + RoleBinding (named <code>language-agent</code>, shared per namespace; cleaned up when the last agent in the namespace is deleted)</li>
+<li>PersistentVolumeClaim (<code>{agent-name}-workspace</code>) — when <code>spec.workspace.enabled</code> is true</li>
+<li>Secret (<code>{agent-name}-runtime</code>) — when <code>spec.openclaw</code> or <code>spec.opencode</code> credentials are configured</li>
 </ul>
 <p><strong>Configuration Injection:</strong></p>
 <p>The controller assembles configuration from:</p>

@@ -1913,7 +1913,7 @@
 <a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="w">      </span><span class="nt">initialDelaySeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
 <a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a><span class="w">      </span><span class="nt">periodSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
 </code></pre></div>
-<p>The operator creates: Deployment, Service (one port per entry in <code>spec.ports</code>), HTTPRoute, NetworkPolicy, and one ConfigMap (<code>config.yaml</code>).</p>
+<p>The operator creates: Deployment, Service (one port per entry in <code>spec.ports</code>), HTTPRoute, NetworkPolicy, ConfigMap (<code>config.yaml</code>), ServiceAccount/Role/RoleBinding (shared per namespace), and optionally a PVC (<code>spec.workspace</code>) and Secret (runtime credentials).</p>
 <p>If <code>spec.deployment.initContainers</code> are specified, the operator prepends <code>MODEL_ENDPOINTS</code> and <code>LLM_MODEL</code> env vars into each init container so config adapters can bridge operator injection to native runtime config formats.</p>
 <h3 id="languagepersona">LanguagePersona<a class="headerlink" href="#languagepersona" title="Permanent link">&para;</a></h3>
 <p>Behavioral configuration for agents. Defines tone, personality, and expertise. The operator assembles referenced personas into <code>/etc/agent/config.yaml</code> under the <code>personas:</code> key.</p>
