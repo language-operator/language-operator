@@ -1485,6 +1485,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#runtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtimes
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2284,6 +2295,17 @@
     <span class="md-ellipsis">
       
         CRDs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtimes
       
     </span>
   </a>
@@ -3254,6 +3276,32 @@
 </tr>
 </tbody>
 </table>
+<h3 id="runtimes">Runtimes<a class="headerlink" href="#runtimes" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runtimes.openclaw.enabled</code></td>
+<td>Install the bundled <code>openclaw</code> LanguageAgentRuntime</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>runtimes.opencode.enabled</code></td>
+<td>Install the bundled <code>opencode</code> LanguageAgentRuntime</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
+<p>Disable a bundled runtime to prevent the operator from creating that LanguageAgentRuntime object:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--set<span class="w"> </span>runtimes.openclaw.enabled<span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
 <hr />
 <h2 id="dashboard-dashboard">Dashboard (<code>dashboard.*</code>)<a class="headerlink" href="#dashboard-dashboard" title="Permanent link">&para;</a></h2>
 <h3 id="basic">Basic<a class="headerlink" href="#basic" title="Permanent link">&para;</a></h3>
