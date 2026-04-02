@@ -304,25 +304,6 @@
   
 
       
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="changelog/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Changelog
-
-      </a>
-    </li>
-  
-
-      
     </ul>
   </div>
 </nav>
@@ -776,34 +757,6 @@
     
   
     Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="architecture/controllers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Controllers
   
 
     
@@ -1382,33 +1335,6 @@
   
 
     
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Changelog
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
   </ul>
 </nav>
                   </div>
@@ -1513,7 +1439,7 @@
 <h1 id="language-operator">Language Operator<a class="headerlink" href="#language-operator" title="Permanent link">&para;</a></h1>
 <p>A Kubernetes operator for running AI agent clusters as native workloads.</p>
 <h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
-<p>Language Operator provides a purpose-built set of CRDs for deploying and managing scalable AI agent clusters on Kubernetes:</p>
+<p>Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:</p>
 <table>
 <thead>
 <tr>
@@ -1524,23 +1450,27 @@
 <tbody>
 <tr>
 <td><code>LanguageCluster</code></td>
-<td>Managed namespace for AI clusters</td>
+<td>Managed namespace for agents</td>
 </tr>
 <tr>
 <td><code>LanguageAgent</code></td>
-<td>Autonomous, scheduled, and reactive agents</td>
+<td>Free-form agents like OpenClaw or OpenCode</td>
+</tr>
+<tr>
+<td><code>LanguageAgentRuntime</code></td>
+<td>Agent runtime presets</td>
 </tr>
 <tr>
 <td><code>LanguageModel</code></td>
-<td>LLM (proxied through LiteLLM)</td>
+<td>An LLM configuration (proxied through LiteLLM)</td>
 </tr>
 <tr>
 <td><code>LanguageTool</code></td>
-<td>MCP server</td>
+<td>A MCP-compatible server</td>
 </tr>
 <tr>
 <td><code>LanguagePersona</code></td>
-<td>Behavior, tone, constraints</td>
+<td>Define tone, personality and expertise</td>
 </tr>
 </tbody>
 </table>
