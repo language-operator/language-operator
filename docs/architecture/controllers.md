@@ -11,10 +11,17 @@ All controllers follow a consistent pattern using `controller-runtime`:
 ```go
 type LanguageAgentReconciler struct {
     client.Client
-    Scheme   *runtime.Scheme
-    Log      logr.Logger
-    Recorder record.EventRecorder
-    EventManager *events.EventManager
+    Scheme                     *runtime.Scheme
+    Log                        logr.Logger
+    Recorder                   record.EventRecorder
+    EventManager               *events.EventManager
+    RegistryManager            RegistryManager
+    NetworkPolicyTimeout       time.Duration
+    NetworkPolicyRetries       int
+    NetworkIsolationEnabled    bool
+    DefaultIngressClassName    string
+    IngressControllerNamespace string
+    CNICapabilities            *cni.CNICapabilities
 }
 ```
 
@@ -138,6 +145,7 @@ Personas are behavioral templates that agents can reference. The controller vali
 
 - Deployment for the MCP tool server
 - Service for tool networking
+- NetworkPolicy for network isolation (when `networkIsolation.enabled` is true)
 
 **Validation:**
 
