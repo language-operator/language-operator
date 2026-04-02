@@ -1738,7 +1738,7 @@
 <p class="admonition-title">k3s</p>
 <p>k3s ships with Flannel by default, which does <strong>not</strong> enforce NetworkPolicy. Install Cilium or Calico before deploying the operator, or disable network isolation in Helm values:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--set<span class="w"> </span>config.networkIsolationEnabled<span class="o">=</span><span class="nb">false</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--set<span class="w"> </span>networkIsolation.enabled<span class="o">=</span><span class="nb">false</span>
 </code></pre></div></p>
 </div>
 <h2 id="storageclass">StorageClass<a class="headerlink" href="#storageclass" title="Permanent link">&para;</a></h2>

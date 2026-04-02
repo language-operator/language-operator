@@ -1838,7 +1838,7 @@ You are then responsible for populating the webhook server's TLS secret and sett
 </code></pre></div>
 <p><strong>Enable network isolation:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--set<span class="w"> </span>config.networkIsolationEnabled<span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--set<span class="w"> </span>networkIsolation.enabled<span class="o">=</span><span class="nb">true</span>
 </code></pre></div>
 <p><strong>Resource limits:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
