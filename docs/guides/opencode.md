@@ -121,7 +121,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Service | `opencode` | ClusterIP on port 3000 |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
-| ConfigMap | `opencode-config` | Injected at `/etc/agent/config.yaml` |
+| ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |
 
 ## Troubleshooting
 

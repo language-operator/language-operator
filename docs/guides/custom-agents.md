@@ -188,7 +188,7 @@ kubectl get pods | grep gateway
 **Config file missing:**
 The config is mounted from a ConfigMap. Check the ConfigMap exists and the pod has it mounted:
 ```bash
-kubectl get configmap my-agent-config
+kubectl get configmap my-agent-agent
 kubectl exec deployment/my-agent -- cat /etc/agent/config.yaml
 ```
 

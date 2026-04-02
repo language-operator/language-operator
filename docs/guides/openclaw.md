@@ -117,7 +117,7 @@ OpenClaw listens on a **WebSocket** at port 18789 — it is not a browser HTTP U
 | Secret | `openclaw-runtime` | Auto-generated gateway token |
 | NetworkPolicy | `openclaw` | Allows inbound from other agents in this namespace |
 | PVC | `openclaw-workspace` | 10Gi persistent workspace |
-| ConfigMap | `openclaw-config` | Injected at `/etc/agent/config.yaml` |
+| ConfigMap | `openclaw-agent` | Injected at `/etc/agent/config.yaml` |
 
 ## Troubleshooting
 
