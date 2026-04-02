@@ -34,7 +34,7 @@ The operator creates the Deployment, Service, and NetworkPolicy, injects model e
 - **Model abstraction** — a shared LiteLLM gateway decouples agents from LLM providers; swap models without touching agent code
 - **MCP tool protocol** — tools are independent services connected via a standard interface, not embedded dependencies
 - **Network isolation** — cluster-scoped namespaces with enforced NetworkPolicy; agents communicate only with what they're permitted to
-- **Observability** — OpenTelemetry traces propagated through reconciliation loops and injected into agent containers
+- **Observability** — OpenTelemetry traces across all reconciliation loops; collector endpoint and sampler config propagated into agent containers so agent-side tracing requires no extra configuration
 
 ## Resources
 
