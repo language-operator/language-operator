@@ -1479,7 +1479,11 @@
 <td>Runtime provides default; agent overrides if set</td>
 </tr>
 <tr>
-<td>Lists (<code>ports</code>, <code>env</code>, <code>envFrom</code>, <code>volumes</code>, <code>volumeMounts</code>, <code>initContainers</code>)</td>
+<td><code>ports</code></td>
+<td><strong>Replace semantics</strong> — runtime ports apply only when the agent defines no ports of its own</td>
+</tr>
+<tr>
+<td>Other lists (<code>env</code>, <code>envFrom</code>, <code>volumes</code>, <code>volumeMounts</code>, <code>initContainers</code>)</td>
 <td>Runtime entries prepended; agent entries appended</td>
 </tr>
 </tbody>

@@ -1989,7 +1989,7 @@
 <a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1Gi</span>
 <a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">        </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500m</span>
 </code></pre></div>
-<p>Agent fields always override runtime defaults for scalar values. Lists (<code>env</code>, <code>initContainers</code>, <code>ports</code>, etc.) are runtime-first, then agent-appended. The bundled <code>openclaw</code> and <code>opencode</code> runtimes are installed automatically by the Helm chart.</p>
+<p>Agent fields always override runtime defaults for scalar values. Lists (<code>env</code>, <code>initContainers</code>, etc.) are runtime-first, then agent-appended. <code>ports</code> uses replace semantics — runtime ports apply only when the agent defines no ports of its own. The bundled <code>openclaw</code> and <code>opencode</code> runtimes are installed automatically by the Helm chart.</p>
 <hr />
 <h2 id="agent-runtime-contract">Agent Runtime Contract<a class="headerlink" href="#agent-runtime-contract" title="Permanent link">&para;</a></h2>
 <p>The full contract is defined in <a href="../agents/">Agent Runtime Contract</a>. Summary:</p>
