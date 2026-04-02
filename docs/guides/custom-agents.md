@@ -21,7 +21,7 @@ See [Agent Runtime Container Specification](../architecture/agents.md) for the f
 
 ### What Your Image Must Do
 
-1. **Listen on a port** — the operator creates a ClusterIP Service on `spec.port` (default `8080`). Your agent must bind to this port.
+1. **Listen on a port** — the operator creates a ClusterIP Service for each entry in `spec.ports` (default: `http/8080`). Your agent must bind to these port(s).
 2. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
 3. **Route LLM traffic through `MODEL_ENDPOINTS`** — never call model APIs directly from inside the pod.
 4. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts.
@@ -84,7 +84,9 @@ metadata:
   name: my-agent
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
   workspace:
     size: 5Gi
     mountPath: /workspace
@@ -191,7 +193,7 @@ kubectl exec deployment/my-agent -- cat /etc/agent/config.yaml
 ```
 
 **Port not accessible:**
-Verify your container is actually listening on `spec.port`:
+Verify your container is actually listening on the port(s) in `spec.ports`:
 ```bash
 kubectl exec deployment/my-agent -- ss -tlnp | grep 8080
 ```

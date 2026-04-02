@@ -87,7 +87,9 @@ metadata:
   namespace: language-operator-myapp
 spec:
   image: myregistry/agent-runtime:v1.0.0
-  port: 18789                               # defaults to 8080
+  ports:
+    - name: http
+      port: 18789                           # defaults to a single http/8080 port
 
   models:
     - name: claude-sonnet
@@ -124,7 +126,7 @@ spec:
       periodSeconds: 10
 ```
 
-The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and one ConfigMap (`config.yaml`).
+The operator creates: Deployment, Service (one port per entry in `spec.ports`), HTTPRoute, NetworkPolicy, and one ConfigMap (`config.yaml`).
 
 If `spec.deployment.initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 
@@ -209,7 +211,9 @@ metadata:
   name: my-runtime
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
   workspace:
     size: 10Gi
     mountPath: /workspace
@@ -223,7 +227,7 @@ spec:
         cpu: 500m
 ```
 
-Agent fields always override runtime defaults for scalar values. Lists (`env`, `initContainers`, etc.) are runtime-first, then agent-appended. The bundled `openclaw` and `opencode` runtimes are installed automatically by the Helm chart.
+Agent fields always override runtime defaults for scalar values. Lists (`env`, `initContainers`, `ports`, etc.) are runtime-first, then agent-appended. The bundled `openclaw` and `opencode` runtimes are installed automatically by the Helm chart.
 
 ---
 
@@ -237,7 +241,7 @@ The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 - `MODEL_ENDPOINTS` — URL of the shared LiteLLM gateway (`http://gateway.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs
-- ClusterIP Service on `spec.port`
+- ClusterIP Service on each port in `spec.ports`
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic
 
@@ -249,10 +253,10 @@ The full contract is defined in [Agent Runtime Contract](agents.md). Summary:
 
 Each `LanguageAgent` gets:
 
-- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local:<port>`) — in-cluster access on `spec.port`
+- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local`) — in-cluster access on each port in `spec.ports`
 - **HTTPRoute** — external access via the cluster Gateway
 - **NetworkPolicy** with ingress rules allowing:
-  - Agent pods (`langop.io/kind=LanguageAgent`) — agent-to-agent traffic on `spec.port`
+  - Agent pods (`langop.io/kind=LanguageAgent`) — agent-to-agent traffic on each port in `spec.ports`
   - Operator dashboard
   - Configured trigger pods
 

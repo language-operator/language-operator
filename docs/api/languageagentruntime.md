@@ -41,7 +41,9 @@ metadata:
   name: my-runtime
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
   workspace:
     size: 5Gi
     mountPath: /workspace
@@ -59,8 +61,8 @@ spec:
 
 | Field type | Behaviour |
 |------------|-----------|
-| Scalars (`image`, `port`, `resources`, probes) | Runtime provides default; agent overrides if set |
-| Lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
+| Scalars (`image`, `resources`, probes) | Runtime provides default; agent overrides if set |
+| Lists (`ports`, `env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
 
 ## Status
 
