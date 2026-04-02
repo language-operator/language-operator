@@ -4,7 +4,7 @@ This document defines the contract between the Language Operator and agent runti
 
 ## Overview
 
-A **LanguageAgent** runs as a standard Kubernetes Deployment (or CronJob for scheduled agents). The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
+A **LanguageAgent** runs as a standard Kubernetes Deployment. The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
 
 ## What the Operator Provides
 
