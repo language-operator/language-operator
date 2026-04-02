@@ -1817,7 +1817,7 @@ Verify <code>MODEL_ENDPOINTS</code> is set and the gateway is running:
 </code></pre></div></p>
 <p><strong>Config file missing:</strong>
 The config is mounted from a ConfigMap. Check the ConfigMap exists and the pod has it mounted:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>my-agent-config
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>my-agent-agent
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>deployment/my-agent<span class="w"> </span>--<span class="w"> </span>cat<span class="w"> </span>/etc/agent/config.yaml
 </code></pre></div></p>
 <p><strong>Port not accessible:</strong>
