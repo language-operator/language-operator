@@ -94,6 +94,8 @@ spec:
 
 NetworkPolicy is generated to allow only specified destinations.
 
+Each peer in `to` or `from` is a `NetworkPeer`. See [NetworkPeer fields](languagecluster.md#networkpeer-fields) for the full field reference including `dns` (FQDN-based egress) and `group` (langop label selector).
+
 ## Common Tool Examples
 
 ### Web Search
