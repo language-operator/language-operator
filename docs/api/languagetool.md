@@ -165,7 +165,7 @@ spec:
 The operator queries tool schemas on startup:
 
 ```bash
-kubectl get languagetool web-search -o jsonpath='{.status.availableTools}'
+kubectl get languagetool web-search -o jsonpath='{.status.toolSchemas}'
 ```
 
 Shows all tools exposed by the service.

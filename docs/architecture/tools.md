@@ -110,7 +110,7 @@ Returns `200 OK` with a JSON body when the tool is ready to serve requests:
 { "status": "ok" }
 ```
 
-The tool controller uses this endpoint to gate schema discovery: once the tool deployment reports `ReadyReplicas > 0`, it calls `tools/list` to populate `status.availableTools`. Tool endpoints are injected into the agent's `/etc/agent/config.yaml` under the `tools:` key for every enabled tool reference in the agent spec, regardless of tool readiness.
+The tool controller uses this endpoint for schema discovery: once the tool deployment reports `ReadyReplicas > 0`, it calls `tools/list` to populate `status.toolSchemas`. Tool endpoints are injected into the agent's `/etc/agent/config.yaml` under the `tools:` key for every enabled tool reference in the agent spec, regardless of tool readiness.
 
 ## LanguageTool CRD Reference
 
