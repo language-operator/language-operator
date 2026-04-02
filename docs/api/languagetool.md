@@ -84,10 +84,12 @@ Control what external resources tools can access:
 ```yaml
 spec:
   networkPolicies:
-    - ports:
-        - port: 443
-      to:
-        cidr: "0.0.0.0/0"
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
 ```
 
 NetworkPolicy is generated to allow only specified destinations.
@@ -111,10 +113,12 @@ spec:
             name: brave-api-key
             key: api-key
   networkPolicies:
-    - ports:
-        - port: 443
-      to:
-        cidr: "0.0.0.0/0"
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
 ```
 
 ### Database Access
@@ -134,12 +138,14 @@ spec:
             name: db-credentials
             key: url
   networkPolicies:
-    - ports:
-        - port: 5432
-      to:
-        podSelector:
-          matchLabels:
-            app: postgres
+    egress:
+      - to:
+          - podSelector:
+              matchLabels:
+                app: postgres
+        ports:
+          - port: 5432
+            protocol: TCP
 ```
 
 ### Custom Tool
