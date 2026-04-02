@@ -1969,7 +1969,7 @@
 <li><strong>Attributes</strong> for resource name, namespace, phase</li>
 <li><strong>Events</strong> for key reconciliation steps</li>
 </ul>
-<p>Traces are exported to the configured OTLP endpoint and queryable via the ClickHouse adapter.</p>
+<p>Traces are exported to the configured OTLP endpoint (<code>OTEL_EXPORTER_OTLP_ENDPOINT</code>).</p>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <h3 id="unit-tests">Unit Tests<a class="headerlink" href="#unit-tests" title="Permanent link">&para;</a></h3>
 <p>Use <code>sigs.k8s.io/controller-runtime/pkg/client/fake</code>:</p>
