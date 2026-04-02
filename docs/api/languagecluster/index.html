@@ -1413,6 +1413,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#gateway-deployment-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gateway Deployment Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ingress-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#capacity-and-quotas" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1590,16 +1612,217 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
 </code></pre></div>
 <p>Creates an Ingress/HTTPRoute at <code>gateway.agents.example.com</code> for external model access.</p>
+<h3 id="gateway-deployment-configuration">Gateway Deployment Configuration<a class="headerlink" href="#gateway-deployment-configuration" title="Permanent link">&para;</a></h3>
+<p>Use <code>spec.gateway.deployment</code> to customize the shared LiteLLM gateway pod. All fields are optional.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">gateway</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">deployment</span><span class="p">:</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">resources</span><span class="p">:</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="nt">requests</span><span class="p">:</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">          </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100m</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256Mi</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nt">limits</span><span class="p">:</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">          </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500m</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">512Mi</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">nodeSelector</span><span class="p">:</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nt">kubernetes.io/arch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">amd64</span>
+</code></pre></div>
+<p><strong><code>spec.gateway.deployment</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>replicas</code></td>
+<td>integer</td>
+<td>Number of gateway pod replicas (default: 1)</td>
+</tr>
+<tr>
+<td><code>imagePullPolicy</code></td>
+<td>string</td>
+<td><code>Always</code>, <code>Never</code>, or <code>IfNotPresent</code></td>
+</tr>
+<tr>
+<td><code>imagePullSecrets</code></td>
+<td>[]LocalObjectReference</td>
+<td>Image pull secrets</td>
+</tr>
+<tr>
+<td><code>env</code></td>
+<td>[]EnvVar</td>
+<td>Extra environment variables for the gateway container</td>
+</tr>
+<tr>
+<td><code>envFrom</code></td>
+<td>[]EnvFromSource</td>
+<td>Environment variables sourced from ConfigMap or Secret</td>
+</tr>
+<tr>
+<td><code>resources</code></td>
+<td>ResourceRequirements</td>
+<td>CPU/memory requests and limits</td>
+</tr>
+<tr>
+<td><code>nodeSelector</code></td>
+<td>map[string]string</td>
+<td>Node selector labels</td>
+</tr>
+<tr>
+<td><code>affinity</code></td>
+<td>Affinity</td>
+<td>Pod affinity and anti-affinity rules</td>
+</tr>
+<tr>
+<td><code>tolerations</code></td>
+<td>[]Toleration</td>
+<td>Tolerations for tainted nodes</td>
+</tr>
+<tr>
+<td><code>topologySpreadConstraints</code></td>
+<td>[]TopologySpreadConstraint</td>
+<td>Pod topology spread</td>
+</tr>
+<tr>
+<td><code>serviceAccountName</code></td>
+<td>string</td>
+<td>Service account for the gateway pod</td>
+</tr>
+<tr>
+<td><code>securityContext</code></td>
+<td>PodSecurityContext</td>
+<td>Pod-level security attributes</td>
+</tr>
+<tr>
+<td><code>volumeMounts</code></td>
+<td>[]VolumeMount</td>
+<td>Extra volume mounts</td>
+</tr>
+<tr>
+<td><code>volumes</code></td>
+<td>[]Volume</td>
+<td>Extra volumes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ingress-configuration">Ingress Configuration<a class="headerlink" href="#ingress-configuration" title="Permanent link">&para;</a></h3>
+<p>Use <code>spec.ingress</code> to control how the gateway is exposed externally. This requires <code>spec.domain</code> to be set.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">className</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="nt">issuerRef</span><span class="p">:</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">letsencrypt-prod</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ClusterIssuer</span>
+</code></pre></div>
+<p><strong><code>spec.ingress</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>*bool</td>
+<td>Enable or disable Ingress creation (default: true when <code>spec.domain</code> is set)</td>
+</tr>
+<tr>
+<td><code>className</code></td>
+<td>string</td>
+<td>IngressClass name — per-cluster override of <code>config.gateway.ingressClassName</code></td>
+</tr>
+<tr>
+<td><code>tls</code></td>
+<td>*IngressTLSConfig</td>
+<td>TLS configuration (see below)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.ingress.tls</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>*bool</td>
+<td>Enable TLS on the Ingress (default: true)</td>
+</tr>
+<tr>
+<td><code>secretName</code></td>
+<td>string</td>
+<td>Name of an existing TLS Secret (manual cert management)</td>
+</tr>
+<tr>
+<td><code>issuerRef</code></td>
+<td>*CertIssuerReference</td>
+<td>cert-manager issuer reference (used when <code>secretName</code> is empty)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.ingress.tls.issuerRef</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Name of the Issuer or ClusterIssuer (required)</td>
+</tr>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td><code>Issuer</code> or <code>ClusterIssuer</code> (default: <code>ClusterIssuer</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example — manual TLS secret:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">      </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gateway-tls</span>
+</code></pre></div>
+<p><strong>Example — disable TLS:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
 <h3 id="capacity-and-quotas">Capacity and Quotas<a class="headerlink" href="#capacity-and-quotas" title="Permanent link">&para;</a></h3>
 <p>Use <code>spec.capacity</code> to enforce hard resource limits on the cluster's namespace. When set, the operator creates a <code>ResourceQuota</code> named <code>langop-quota</code> in the namespace. When removed, the quota is deleted.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">capacity</span><span class="p">:</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">maxAgents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">maxModels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">maxTools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nt">maxPersonas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">maxCPU</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8&quot;</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">maxMemory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16Gi</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">capacity</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">maxAgents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">maxModels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">maxTools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">maxPersonas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">maxCPU</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8&quot;</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nt">maxMemory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16Gi</span>
 </code></pre></div>
 <p><strong><code>spec.capacity</code> fields:</strong></p>
 <table>
