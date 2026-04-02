@@ -174,7 +174,7 @@ All controllers emit OpenTelemetry traces via `pkg/reconciler.ReconcileHelper`:
 - **Attributes** for resource name, namespace, phase
 - **Events** for key reconciliation steps
 
-Traces are exported to the configured OTLP endpoint and queryable via the ClickHouse adapter.
+Traces are exported to the configured OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`).
 
 ## Testing
 
