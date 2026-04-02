@@ -82,6 +82,10 @@ The controller assembles configuration from:
 - `MODEL_ENDPOINTS` - shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`)
 - `LLM_MODEL` - comma-separated list of model names from `models`
 - `MCP_SERVERS` - resolved MCP tool server URLs
+- `AGENT_INSTRUCTIONS` - content of `spec.instructions`; only set when non-empty
+- `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` - propagated from operator env when OTEL is configured
+
+See [Environment Variables](agents.md#environment-variables) in the agent runtime contract for the full reference.
 
 **Volume Mounts:**
 
