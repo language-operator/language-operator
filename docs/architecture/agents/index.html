@@ -1910,7 +1910,7 @@
 </tr>
 <tr>
 <td><code>MCP_SERVERS</code></td>
-<td>Comma-separated MCP tool server URLs for each referenced LanguageTool (only injected when at least one service-mode tool is resolved)</td>
+<td>Comma-separated MCP tool server URLs for all resolved tools — service-mode tools use <code>http://&lt;name&gt;.&lt;ns&gt;.svc.cluster.local:&lt;port&gt;</code>; sidecar-mode tools use <code>http://localhost:&lt;port&gt;</code>. Only injected when at least one tool is resolved.</td>
 </tr>
 <tr>
 <td><code>AGENT_INSTRUCTIONS</code></td>
