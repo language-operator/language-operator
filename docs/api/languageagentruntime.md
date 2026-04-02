@@ -62,7 +62,8 @@ spec:
 | Field type | Behaviour |
 |------------|-----------|
 | Scalars (`image`, `resources`, probes) | Runtime provides default; agent overrides if set |
-| Lists (`ports`, `env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
+| `ports` | **Replace semantics** — runtime ports apply only when the agent defines no ports of its own |
+| Other lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
 
 ## Status
 
