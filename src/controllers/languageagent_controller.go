@@ -1284,6 +1284,15 @@ func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort 
 
 // agentIngressPort returns the port that ingress/HTTPRoute should route to.
 // Uses the first port with Expose: true; falls back to the first port; falls back to 8080.
+// certManagerIssuerAnnotationSuffix returns the cert-manager annotation suffix for a given issuer kind.
+// cert-manager uses "issuer" for Issuer and "cluster-issuer" (hyphenated) for ClusterIssuer.
+func certManagerIssuerAnnotationSuffix(kind string) string {
+	if strings.EqualFold(kind, "ClusterIssuer") {
+		return "cluster-issuer"
+	}
+	return "issuer"
+}
+
 func agentIngressPort(agent *langopv1alpha1.LanguageAgent) int32 {
 	ports := agentPorts(agent)
 	for _, p := range ports {
@@ -1497,7 +1506,10 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 							if kind == "" {
 								kind = "ClusterIssuer"
 							}
-							ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
+							// cert-manager annotation keys: "issuer" → cert-manager.io/issuer,
+							// "ClusterIssuer" → cert-manager.io/cluster-issuer (hyphenated, not lowercased).
+							annotationKey := "cert-manager.io/" + certManagerIssuerAnnotationSuffix(kind)
+							ingress.Annotations[annotationKey] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 						}
 						secretName = GenerateTLSSecretName(agent.Name)
 					}

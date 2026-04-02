@@ -4,16 +4,16 @@ A Kubernetes operator for running AI agent clusters as native workloads.
 
 ## What It Does
 
-Language Operator provides a purpose-built set of CRDs for deploying and managing scalable AI agent clusters on Kubernetes:
+Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:
 
 | Resource | Purpose |
 |----------|---------|
-| `LanguageCluster` | Managed namespace for AI clusters |
-| `LanguageAgent` | Autonomous, scheduled, and reactive agents |
-| `LanguageAgentRuntime` | Reusable agent preset (image, port, init containers, probes) |
-| `LanguageModel` | LLM (proxied through LiteLLM) |
-| `LanguageTool` | MCP server |
-| `LanguagePersona` | Behavior, tone, constraints |
+| `LanguageCluster` | Managed namespace for agents |
+| `LanguageAgent` | Free-form agents like OpenClaw or OpenCode |
+| `LanguageAgentRuntime` | Agent runtime presets |
+| `LanguageModel` | An LLM configuration (proxied through LiteLLM) |
+| `LanguageTool` | A MCP-compatible server |
+| `LanguagePersona` | Define tone, personality and expertise |
 
 
 ## Installation
@@ -29,6 +29,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 ```bash
 helm repo add language-operator \
   https://language-operator.github.io/language-operator
+
 helm install language-operator language-operator/language-operator \
   --create-namespace \
   --namespace language-operator
@@ -36,7 +37,7 @@ helm install language-operator language-operator/language-operator \
 
 ## Getting Started
 
-These examples deploy [openclaw](https://github.com/openclaw/openclaw) or [opencode](https://github.com/sst/opencode) — self-hosted AI coding assistants — to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
+These examples deploy [openclaw](https://github.com/openclaw/openclaw) or [opencode](https://github.com/sst/opencode) to demonstrate the operator's deployment mechanics. LLM traffic routes through an operator-managed LiteLLM proxy rather than connecting to model APIs directly.
 
 ### 1. Create a cluster
 
@@ -49,7 +50,7 @@ kind: LanguageCluster
 metadata:
   name: my-cluster
 spec:
-  domain: agents.example.com
+  domain: demo.langop.io
 EOF
 
 kubectl wait languagecluster/my-cluster \
@@ -87,8 +88,6 @@ Choose one of the following agents:
 <details open>
 <summary><strong>openclaw</strong></summary>
 
-The `openclaw` runtime preset handles the image, port, init container, and env vars. Reference it with `runtime: openclaw` and the operator fills in the rest.
-
 ```bash
 kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
@@ -97,18 +96,17 @@ metadata:
   name: openclaw
 spec:
   runtime: openclaw
-  openclaw: {}    # token is auto-generated; retrieve it after creation
   models:
     - name: claude-sonnet
 EOF
 ```
 
+**Connect:**
+
 ```bash
 # Retrieve the auto-generated gateway token
 kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
 ```
-
-**Connect:**
 
 ```bash
 kubectl port-forward svc/openclaw 18789:18789
@@ -120,8 +118,6 @@ openclaw exposes a WebSocket gateway on port 18789 — it is not a browser-based
 
 <details>
 <summary><strong>opencode</strong></summary>
-
-The `opencode` runtime preset handles the image, port, args, init container, volumes, env vars, and health probes.
 
 ```bash
 kubectl apply -f - <<EOF

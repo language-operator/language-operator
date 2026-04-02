@@ -2086,7 +2086,7 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 
 		ing := &networkingv1.Ingress{}
 		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing))
-		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/clusterissuer"])
+		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/cluster-issuer"])
 		require.Len(t, ing.Spec.TLS, 1)
 		assert.Equal(t, agent.Name+"-tls", ing.Spec.TLS[0].SecretName)
 	})

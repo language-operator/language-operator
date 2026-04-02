@@ -1815,7 +1815,7 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 				IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "letsencrypt"},
 			}))
 		ing := reconcileCluster(t, cluster)
-		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/clusterissuer"])
+		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/cluster-issuer"])
 		require.Len(t, ing.Spec.TLS, 1)
 		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
 		assert.Equal(t, []string{gatewayHost}, ing.Spec.TLS[0].Hosts)
@@ -1829,8 +1829,8 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 			}))
 		ing := reconcileCluster(t, cluster)
 		assert.Equal(t, "my-issuer", ing.Annotations["cert-manager.io/issuer"])
-		_, hasClusterIssuer := ing.Annotations["cert-manager.io/clusterissuer"]
-		assert.False(t, hasClusterIssuer, "cert-manager.io/clusterissuer should not be set for Issuer kind")
+		_, hasClusterIssuer := ing.Annotations["cert-manager.io/cluster-issuer"]
+		assert.False(t, hasClusterIssuer, "cert-manager.io/cluster-issuer should not be set for Issuer kind")
 		require.Len(t, ing.Spec.TLS, 1)
 		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
 	})

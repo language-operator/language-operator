@@ -1158,7 +1158,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 					if kind == "" {
 						kind = "ClusterIssuer"
 					}
-					ingress.Annotations["cert-manager.io/"+strings.ToLower(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
+					ingress.Annotations["cert-manager.io/"+certManagerIssuerAnnotationSuffix(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
 				}
 				secretName = "gateway-tls"
 			}
