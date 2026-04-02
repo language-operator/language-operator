@@ -111,6 +111,11 @@ agent:
   name: data-analyst
   namespace: default
 
+# Task instructions from spec.instructions — what this agent should do.
+# Omitted if spec.instructions is empty.
+instructions: |
+  You are a data analyst. Analyze CSV files and generate insights.
+
 # Persona configuration — merged in order if multiple are specified.
 # Each entry reflects the tone/personality/expertise fields of the referenced LanguagePersona.
 personas:
