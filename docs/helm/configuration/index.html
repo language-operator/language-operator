@@ -3120,8 +3120,13 @@
 </thead>
 <tbody>
 <tr>
-<td><code>config.agentIngress.className</code></td>
+<td><code>config.agents.ingressClassName</code></td>
 <td>Default IngressClass for agent Ingress resources</td>
+<td><code>""</code></td>
+</tr>
+<tr>
+<td><code>config.agents.ingressControllerNamespace</code></td>
+<td>Namespace the ingress controller runs in (used to allow ingress controller NetworkPolicy access to agent ports)</td>
 <td><code>""</code></td>
 </tr>
 </tbody>
