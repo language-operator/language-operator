@@ -12,13 +12,13 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/helm/installation/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/guides/openclaw/">
       
       
-        <link rel="prev" href="../../api/languagepersona/">
+        <link rel="prev" href="../cluster-setup/">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../opencode/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Installation - Language Operator</title>
+        <title>Deploying OpenClaw - Language Operator</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#helm-installation" class="md-skip">
+        <a href="#deploying-openclaw" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Installation
+              Deploying OpenClaw
             
           </span>
         </div>
@@ -249,11 +249,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guides/cluster-setup/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../cluster-setup/" class="md-tabs__link">
           
   
   
@@ -289,13 +291,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../helm/installation/" class="md-tabs__link">
           
   
   
@@ -804,28 +804,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -843,7 +846,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -861,7 +864,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/cluster-setup/" class="md-nav__link">
+      <a href="../cluster-setup/" class="md-nav__link">
         
   
   
@@ -886,10 +889,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/openclaw/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deploying OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -905,6 +935,136 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-create-a-languagecluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a LanguageCluster
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-configure-a-languagemodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Configure a LanguageModel
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-verify-the-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Verify the Runtime
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-deploy-the-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Deploy the Agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-operator-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the Operator Created
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -917,7 +1077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/opencode/" class="md-nav__link">
+      <a href="../opencode/" class="md-nav__link">
         
   
   
@@ -945,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/custom-agents/" class="md-nav__link">
+      <a href="../custom-agents/" class="md-nav__link">
         
   
   
@@ -1262,31 +1422,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1304,7 +1461,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1319,37 +1476,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Installation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../helm/installation/" class="md-nav__link">
         
   
   
@@ -1365,70 +1495,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-install" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chart-repository" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chart Repository
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Values
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1441,7 +1507,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../helm/configuration/" class="md-nav__link">
         
   
   
@@ -1469,7 +1535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../repository/" class="md-nav__link">
+      <a href="../../helm/repository/" class="md-nav__link">
         
   
   
@@ -1696,10 +1762,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-install" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Install
+        Prerequisites
       
     </span>
   </a>
@@ -1707,10 +1773,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#chart-repository" class="md-nav__link">
+  <a href="#step-1-create-a-languagecluster" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Chart Repository
+        Step 1: Create a LanguageCluster
       
     </span>
   </a>
@@ -1718,10 +1784,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#values" class="md-nav__link">
+  <a href="#step-2-configure-a-languagemodel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Values
+        Step 2: Configure a LanguageModel
       
     </span>
   </a>
@@ -1729,10 +1795,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
+  <a href="#step-3-verify-the-runtime" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development
+        Step 3: Verify the Runtime
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-deploy-the-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Deploy the Agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-connect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Connect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-operator-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the Operator Created
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
       
     </span>
   </a>
@@ -1759,33 +1891,156 @@
   
 
 
-<h1 id="helm-installation">Helm Installation<a class="headerlink" href="#helm-installation" title="Permanent link">&para;</a></h1>
-<p>Install Language Operator using Helm.</p>
-<h2 id="quick-install">Quick Install<a class="headerlink" href="#quick-install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>https://language-operator.github.io/language-operator
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
+<h1 id="deploying-openclaw">Deploying OpenClaw<a class="headerlink" href="#deploying-openclaw" title="Permanent link">&para;</a></h1>
+<p>OpenClaw is an AI coding assistant that connects to your editor via a WebSocket gateway. The <code>openclaw</code> runtime is bundled with Language Operator and is installed automatically with the Helm chart.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Language Operator <a href="../../getting-started/installation/">installed</a></li>
+<li>Anthropic API key (get one at <a href="https://console.anthropic.com">console.anthropic.com</a>)</li>
+<li>A default StorageClass (for the workspace PVC — see <a href="../cluster-setup/#storageclass">cluster setup</a>)</li>
+<li>OpenClaw browser extension or CLI client</li>
+</ul>
+<h2 id="step-1-create-a-languagecluster">Step 1: Create a LanguageCluster<a class="headerlink" href="#step-1-create-a-languagecluster" title="Permanent link">&para;</a></h2>
+<p>A <code>LanguageCluster</code> is a managed namespace. All agents, models, and tools inside it share a LiteLLM gateway.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">kind: LanguageCluster</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">  name: openclaw</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">spec:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: openclaw.langop.io</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">EOF</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/openclaw<span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>openclaw
 </code></pre></div>
-<p>For detailed installation instructions, see the <a href="../../getting-started/installation/">Getting Started Guide</a>.</p>
-<h2 id="chart-repository">Chart Repository<a class="headerlink" href="#chart-repository" title="Permanent link">&para;</a></h2>
-<p>The Helm chart is hosted on GitHub Pages at:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>https://language-operator.github.io/language-operator
+<h2 id="step-2-configure-a-languagemodel">Step 2: Configure a LanguageModel<a class="headerlink" href="#step-2-configure-a-languagemodel" title="Permanent link">&para;</a></h2>
+<p>Create a secret with your Anthropic API key, then declare a model:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s">kind: LanguageModel</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="s">metadata:</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s">  name: claude-sonnet</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s">spec:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s">  provider: anthropic</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="s">  modelName: claude-sonnet-4-5</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="s">  apiKeySecretRef:</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="s">    name: anthropic-credentials</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="s">    key: api-key</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>Browse available versions:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>search<span class="w"> </span>repo<span class="w"> </span>language-operator<span class="w"> </span>--versions
+<p>The operator deploys a LiteLLM proxy in the cluster namespace so the agent never holds raw API credentials.</p>
+<h2 id="step-3-verify-the-runtime">Step 3: Verify the Runtime<a class="headerlink" href="#step-3-verify-the-runtime" title="Permanent link">&para;</a></h2>
+<p>The <code>openclaw</code> <code>LanguageAgentRuntime</code> is installed by the Helm chart. Confirm it is present:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># NAME       AGE</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># openclaw   5m</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># opencode   5m</span>
 </code></pre></div>
-<h2 id="values">Values<a class="headerlink" href="#values" title="Permanent link">&para;</a></h2>
-<p>See <a href="../configuration/">Configuration</a> for all available Helm values.</p>
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<p>To test the chart locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># From repository root</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>chart
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>lint<span class="w"> </span>.
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>helm<span class="w"> </span>template<span class="w"> </span>language-operator<span class="w"> </span>.<span class="w"> </span>--debug
+<h2 id="step-4-deploy-the-agent">Step 4: Deploy the Agent<a class="headerlink" href="#step-4-deploy-the-agent" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s">  name: openclaw</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="s">spec:</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s">  runtime: openclaw</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s">  openclaw: {}</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s">  models:</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="s">EOF</span>
 </code></pre></div>
+<p><code>spec.openclaw: {}</code> tells the operator to auto-generate a gateway token. The token is written to a Secret named <code>&lt;agent&gt;-runtime</code> after creation.</p>
+<h2 id="step-5-verify">Step 5: Verify<a class="headerlink" href="#step-5-verify" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
+</code></pre></div>
+<p>Wait for the pod to reach <code>Running</code> and the LanguageAgent to show <code>Ready=True</code>.</p>
+<h2 id="step-6-connect">Step 6: Connect<a class="headerlink" href="#step-6-connect" title="Permanent link">&para;</a></h2>
+<p>Retrieve the auto-generated gateway token and forward the port:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>openclaw-runtime<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCLAW_GATEWAY_TOKEN}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Token: </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
+</code></pre></div>
+<p>OpenClaw listens on a <strong>WebSocket</strong> at port 18789 — it is not a browser HTTP UI. Connect using the <a href="https://github.com/openclaw/openclaw">OpenClaw browser extension</a> or CLI client, pointing it to <code>ws://localhost:18789</code> with the token above.</p>
+<div class="admonition tip">
+<p class="admonition-title">External access</p>
+<p>If your cluster has a Gateway API controller, the operator creates an <code>HTTPRoute</code> at <code>openclaw.&lt;cluster-domain&gt;</code> for external access. Set <code>spec.domain</code> in the <code>LanguageCluster</code> to enable this.</p>
+</div>
+<h2 id="what-the-operator-created">What the Operator Created<a class="headerlink" href="#what-the-operator-created" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Namespace</td>
+<td><code>openclaw</code></td>
+<td>Isolated workload namespace</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td><code>openclaw</code></td>
+<td>Runs the OpenClaw container</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>openclaw</code></td>
+<td>ClusterIP on port 18789</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>openclaw-runtime</code></td>
+<td>Auto-generated gateway token</td>
+</tr>
+<tr>
+<td>NetworkPolicy</td>
+<td><code>openclaw</code></td>
+<td>Allows inbound from other agents in this namespace</td>
+</tr>
+<tr>
+<td>PVC</td>
+<td><code>openclaw-workspace</code></td>
+<td>10Gi persistent workspace</td>
+</tr>
+<tr>
+<td>ConfigMap</td>
+<td><code>openclaw-config</code></td>
+<td>Injected at <code>/etc/agent/config.yaml</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p><strong>Pod stuck in <code>Pending</code>:</strong>
+Check PVC binding — a default StorageClass is required for the workspace PVC:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span><span class="nv">app</span><span class="o">=</span>openclaw
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pvc
+</code></pre></div></p>
+<p><strong>Pod <code>CrashLoopBackOff</code>:</strong>
+The agent couldn't reach the LiteLLM gateway. Verify the model and gateway pod are running:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deployment/gateway
+</code></pre></div></p>
+<p><strong>Token not found:</strong>
+The secret is created after the first successful reconcile. If the agent is not <code>Ready</code>, the secret may not exist yet:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>events<span class="w"> </span>--sort-by<span class="o">=</span><span class="s1">&#39;.lastTimestamp&#39;</span>
+</code></pre></div></p>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../opencode/">Deploying OpenCode</a></li>
+<li><a href="../custom-agents/">Deploying Custom Agents</a></li>
+<li><a href="../../api/languageagentruntime/">LanguageAgentRuntime reference</a></li>
+</ul>
 
 
 

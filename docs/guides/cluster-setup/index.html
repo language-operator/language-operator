@@ -12,13 +12,13 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/helm/installation/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/guides/cluster-setup/">
       
       
-        <link rel="prev" href="../../api/languagepersona/">
+        <link rel="prev" href="../../architecture/tools/">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../openclaw/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Installation - Language Operator</title>
+        <title>Preparing a Kubernetes Cluster - Language Operator</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#helm-installation" class="md-skip">
+        <a href="#preparing-a-kubernetes-cluster" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Installation
+              Preparing a Kubernetes Cluster
             
           </span>
         </div>
@@ -249,11 +249,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guides/cluster-setup/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -289,13 +291,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../helm/installation/" class="md-tabs__link">
           
   
   
@@ -804,28 +804,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -843,7 +846,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -858,10 +861,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/cluster-setup/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preparing a Kubernetes Cluster
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -877,6 +907,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-distributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Distributions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cni-networkpolicy-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CNI — NetworkPolicy Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storageclass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StorageClass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cert-manager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-cluster-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Cluster Readiness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -889,7 +1016,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/openclaw/" class="md-nav__link">
+      <a href="../openclaw/" class="md-nav__link">
         
   
   
@@ -917,7 +1044,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/opencode/" class="md-nav__link">
+      <a href="../opencode/" class="md-nav__link">
         
   
   
@@ -945,7 +1072,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/custom-agents/" class="md-nav__link">
+      <a href="../custom-agents/" class="md-nav__link">
         
   
   
@@ -1262,31 +1389,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
             
   
   
@@ -1304,7 +1428,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1319,37 +1443,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Installation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../helm/installation/" class="md-nav__link">
         
   
   
@@ -1365,70 +1462,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-install" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chart-repository" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chart Repository
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Values
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1441,7 +1474,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../helm/configuration/" class="md-nav__link">
         
   
   
@@ -1469,7 +1502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../repository/" class="md-nav__link">
+      <a href="../../helm/repository/" class="md-nav__link">
         
   
   
@@ -1696,10 +1729,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-install" class="md-nav__link">
+  <a href="#supported-distributions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Install
+        Supported Distributions
       
     </span>
   </a>
@@ -1707,10 +1740,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#chart-repository" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Chart Repository
+        Prerequisites
       
     </span>
   </a>
@@ -1718,10 +1751,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#values" class="md-nav__link">
+  <a href="#cni-networkpolicy-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Values
+        CNI — NetworkPolicy Support
       
     </span>
   </a>
@@ -1729,10 +1762,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development" class="md-nav__link">
+  <a href="#storageclass" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development
+        StorageClass
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cert-manager
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-cluster-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying Cluster Readiness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
       
     </span>
   </a>
@@ -1759,33 +1825,130 @@
   
 
 
-<h1 id="helm-installation">Helm Installation<a class="headerlink" href="#helm-installation" title="Permanent link">&para;</a></h1>
-<p>Install Language Operator using Helm.</p>
-<h2 id="quick-install">Quick Install<a class="headerlink" href="#quick-install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>https://language-operator.github.io/language-operator
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
+<h1 id="preparing-a-kubernetes-cluster">Preparing a Kubernetes Cluster<a class="headerlink" href="#preparing-a-kubernetes-cluster" title="Permanent link">&para;</a></h1>
+<p>Before installing Language Operator, your cluster must meet a few requirements. This guide walks through the prerequisites and how to verify them.</p>
+<h2 id="supported-distributions">Supported Distributions<a class="headerlink" href="#supported-distributions" title="Permanent link">&para;</a></h2>
+<p>Language Operator runs on any CNCF-conformant Kubernetes 1.26+ cluster. Tested distributions:</p>
+<table>
+<thead>
+<tr>
+<th>Distribution</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>k3s</strong></td>
+<td>Recommended for local development; includes Traefik and local-path provisioner out of the box</td>
+</tr>
+<tr>
+<td><strong>kind</strong></td>
+<td>Good for CI; requires manual CNI and StorageClass setup</td>
+</tr>
+<tr>
+<td><strong>EKS</strong></td>
+<td>Use VPC CNI + Calico for NetworkPolicy support</td>
+</tr>
+<tr>
+<td><strong>GKE</strong></td>
+<td>Enable "Network Policy" at cluster creation; uses built-in provisioner</td>
+</tr>
+<tr>
+<td><strong>AKS</strong></td>
+<td>Enable "Network Policy: Azure" or install Calico</td>
+</tr>
+</tbody>
+</table>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>Install these tools locally before proceeding:</p>
+<ul>
+<li><strong>kubectl</strong> — configured to access your target cluster</li>
+<li><strong>Helm 3.8+</strong></li>
+</ul>
+<p>Verify:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--client
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>helm<span class="w"> </span>version
 </code></pre></div>
-<p>For detailed installation instructions, see the <a href="../../getting-started/installation/">Getting Started Guide</a>.</p>
-<h2 id="chart-repository">Chart Repository<a class="headerlink" href="#chart-repository" title="Permanent link">&para;</a></h2>
-<p>The Helm chart is hosted on GitHub Pages at:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>https://language-operator.github.io/language-operator
+<h2 id="cni-networkpolicy-support">CNI — NetworkPolicy Support<a class="headerlink" href="#cni-networkpolicy-support" title="Permanent link">&para;</a></h2>
+<p>Language Operator uses <code>NetworkPolicy</code> resources to isolate agents. Your cluster's CNI plugin must support NetworkPolicy enforcement. The standard CNI plugins that ship with most cloud providers do <strong>not</strong> enforce NetworkPolicy on their own.</p>
+<p>Supported CNIs:</p>
+<ul>
+<li><a href="https://cilium.io/">Cilium</a> (recommended)</li>
+<li><a href="https://www.tigera.io/project-calico/">Calico</a></li>
+<li><a href="https://github.com/weaveworks/weave">Weave Net</a></li>
+<li><a href="https://antrea.io/">Antrea</a></li>
+</ul>
+<p>Verify that NetworkPolicy is enforced by checking that your CNI pods are running:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;cilium|calico|weave|antrea&#39;</span>
 </code></pre></div>
-<p>Browse available versions:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>search<span class="w"> </span>repo<span class="w"> </span>language-operator<span class="w"> </span>--versions
+<div class="admonition note">
+<p class="admonition-title">k3s</p>
+<p>k3s ships with Flannel by default, which does <strong>not</strong> enforce NetworkPolicy. Install Cilium or Calico before deploying the operator, or disable network isolation in Helm values:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--set<span class="w"> </span>config.networkIsolationEnabled<span class="o">=</span><span class="nb">false</span>
+</code></pre></div></p>
+</div>
+<h2 id="storageclass">StorageClass<a class="headerlink" href="#storageclass" title="Permanent link">&para;</a></h2>
+<p>Language Operator requires a <strong>default StorageClass</strong> for:</p>
+<ul>
+<li>Dashboard PostgreSQL (10Gi, can be disabled)</li>
+<li>Agent workspace PVCs created by bundled runtimes (openclaw, opencode)</li>
+</ul>
+<p>Verify a default StorageClass is configured:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>storageclass
 </code></pre></div>
-<h2 id="values">Values<a class="headerlink" href="#values" title="Permanent link">&para;</a></h2>
-<p>See <a href="../configuration/">Configuration</a> for all available Helm values.</p>
-<h2 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h2>
-<p>To test the chart locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># From repository root</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">cd</span><span class="w"> </span>chart
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>lint<span class="w"> </span>.
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>helm<span class="w"> </span>template<span class="w"> </span>language-operator<span class="w"> </span>.<span class="w"> </span>--debug
+<p>The StorageClass with <code>(default)</code> in its name is used automatically. If none is marked default, either mark one:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>patch<span class="w"> </span>storageclass<span class="w"> </span>&lt;name&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>-p<span class="w"> </span><span class="s1">&#39;{&quot;metadata&quot;: {&quot;annotations&quot;:{&quot;storageclass.kubernetes.io/is-default-class&quot;:&quot;true&quot;}}}&#39;</span>
 </code></pre></div>
+<p>Or disable persistence at install time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--set<span class="w"> </span>dashboard.postgresql.persistence.enabled<span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+<p>Individual agents can also opt out of workspace storage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">workspace</span><span class="p">:</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<h2 id="cert-manager">cert-manager<a class="headerlink" href="#cert-manager" title="Permanent link">&para;</a></h2>
+<p>Language Operator uses admission webhooks, which require TLS certificates. cert-manager provisions these automatically.</p>
+<p>Check if cert-manager is already installed:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>cert-manager
+</code></pre></div>
+<p>If not, install it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Available<span class="w"> </span>deployment<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>cert-manager<span class="w"> </span>--timeout<span class="o">=</span>60s
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Without cert-manager</p>
+<p>If you manage TLS certificates yourself, disable cert-manager integration:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>--set<span class="w"> </span>config.webhook.certManager.enabled<span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+You are responsible for populating the webhook TLS secret and setting the <code>caBundle</code> on webhook configurations.</p>
+</div>
+<h2 id="verifying-cluster-readiness">Verifying Cluster Readiness<a class="headerlink" href="#verifying-cluster-readiness" title="Permanent link">&para;</a></h2>
+<p>Run through this checklist before installing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Kubernetes version</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--short
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># NetworkPolicy-capable CNI pods running</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;cilium|calico|weave|antrea&#39;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Default StorageClass present</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>kubectl<span class="w"> </span>get<span class="w"> </span>storageclass<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;(default)&#39;</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="c1"># cert-manager running</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>cert-manager
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="c1"># Sufficient node resources (operator + gateway + one agent needs ~4Gi RAM)</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>kubectl<span class="w"> </span>top<span class="w"> </span>nodes
+</code></pre></div>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../getting-started/installation/">Install Language Operator</a></li>
+<li><a href="../openclaw/">Deploy OpenClaw</a></li>
+<li><a href="../opencode/">Deploy OpenCode</a></li>
+</ul>
 
 
 
