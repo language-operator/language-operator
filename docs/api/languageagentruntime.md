@@ -65,7 +65,7 @@ spec:
 | `ports` | `[]AgentPort` | Default port list; see merge semantics below |
 | `executionMode` | string | Default execution mode (`autonomous`, `interactive`, `scheduled`, `event-driven`); agent's own `executionMode` takes precedence if set |
 | `workspace` | `WorkspaceSpec` | Default workspace configuration (size, mountPath) |
-| `deployment` | `AgentDeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
+| `deployment` | `DeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
 | `openclaw` | `OpenclawConfig` | When `openclaw.enabled: true`, the operator auto-generates `OPENCLAW_GATEWAY_TOKEN` for every agent referencing this runtime (without the agent needing `spec.openclaw`) |
 | `opencode` | `OpencodeConfig` | When `opencode.enabled: true`, the operator auto-generates `OPENCODE_SERVER_PASSWORD` for every agent referencing this runtime |
 
