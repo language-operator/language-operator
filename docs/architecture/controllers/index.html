@@ -1841,11 +1841,18 @@
 <h3 id="common-structure">Common Structure<a class="headerlink" href="#common-structure" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">LanguageAgentReconciler</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">client</span><span class="p">.</span><span class="nx">Client</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">Scheme</span><span class="w">   </span><span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Scheme</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">Log</span><span class="w">      </span><span class="nx">logr</span><span class="p">.</span><span class="nx">Logger</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">Recorder</span><span class="w"> </span><span class="nx">record</span><span class="p">.</span><span class="nx">EventRecorder</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">EventManager</span><span class="w"> </span><span class="o">*</span><span class="nx">events</span><span class="p">.</span><span class="nx">EventManager</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">Scheme</span><span class="w">                     </span><span class="o">*</span><span class="nx">runtime</span><span class="p">.</span><span class="nx">Scheme</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">Log</span><span class="w">                        </span><span class="nx">logr</span><span class="p">.</span><span class="nx">Logger</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">Recorder</span><span class="w">                   </span><span class="nx">record</span><span class="p">.</span><span class="nx">EventRecorder</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">EventManager</span><span class="w">               </span><span class="o">*</span><span class="nx">events</span><span class="p">.</span><span class="nx">EventManager</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">RegistryManager</span><span class="w">            </span><span class="nx">RegistryManager</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nx">NetworkPolicyTimeout</span><span class="w">       </span><span class="nx">time</span><span class="p">.</span><span class="nx">Duration</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nx">NetworkPolicyRetries</span><span class="w">       </span><span class="kt">int</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">NetworkIsolationEnabled</span><span class="w">    </span><span class="kt">bool</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">DefaultIngressClassName</span><span class="w">    </span><span class="kt">string</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="nx">IngressControllerNamespace</span><span class="w"> </span><span class="kt">string</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="nx">CNICapabilities</span><span class="w">            </span><span class="o">*</span><span class="nx">cni</span><span class="p">.</span><span class="nx">CNICapabilities</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
 </code></pre></div>
 <h3 id="reconciliation-flow">Reconciliation Flow<a class="headerlink" href="#reconciliation-flow" title="Permanent link">&para;</a></h3>
 <p>Each controller follows this pattern:</p>
@@ -1939,6 +1946,7 @@
 <ul>
 <li>Deployment for the MCP tool server</li>
 <li>Service for tool networking</li>
+<li>NetworkPolicy for network isolation (when <code>networkIsolation.enabled</code> is true)</li>
 </ul>
 <p><strong>Validation:</strong></p>
 <ul>
