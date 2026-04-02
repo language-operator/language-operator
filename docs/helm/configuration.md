@@ -257,6 +257,20 @@ env:
 | `crds.keep` | Keep CRDs on chart uninstall | `true` |
 | `crds.annotations` | Annotations to add to CRDs | `{}` |
 
+### Runtimes
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `runtimes.openclaw.enabled` | Install the bundled `openclaw` LanguageAgentRuntime | `true` |
+| `runtimes.opencode.enabled` | Install the bundled `opencode` LanguageAgentRuntime | `true` |
+
+Disable a bundled runtime to prevent the operator from creating that LanguageAgentRuntime object:
+
+```bash
+helm install language-operator language-operator/language-operator \
+  --set runtimes.openclaw.enabled=false
+```
+
 ---
 
 ## Dashboard (`dashboard.*`)
