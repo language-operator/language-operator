@@ -258,7 +258,6 @@ After modifying CRD types:
 
 Use real:
 
-- ClickHouse for telemetry queries
 - Kubernetes API for integration tests
 - Actual model proxies for e2e tests
 
