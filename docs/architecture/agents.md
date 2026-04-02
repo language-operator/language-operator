@@ -137,6 +137,7 @@ models:
     provider: anthropic
     model: claude-sonnet-4-5
     endpoint: http://gateway.default.svc.cluster.local:8000
+    # priority: 1   # only present when spec.models[].priority is set
 ```
 
 The `MODEL_ENDPOINTS` env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.
