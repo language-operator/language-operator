@@ -198,6 +198,33 @@ spec:
 
 The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM gateway. The gateway is exposed externally at `gateway.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
 
+### LanguageAgentRuntime
+
+A cluster-scoped preset that packages a container image, port, workspace settings, resource limits, and init containers for a specific agent type. Analogous to a `StorageClass` — admins install runtimes once, users reference them by name.
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgentRuntime
+metadata:
+  name: my-runtime
+spec:
+  image: ghcr.io/my-org/my-agent:latest
+  port: 8080
+  workspace:
+    size: 10Gi
+    mountPath: /workspace
+  deployment:
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+```
+
+Agent fields always override runtime defaults for scalar values. Lists (`env`, `initContainers`, etc.) are runtime-first, then agent-appended. The bundled `openclaw` and `opencode` runtimes are installed automatically by the Helm chart.
+
 ---
 
 ## Agent Runtime Contract
