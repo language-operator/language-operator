@@ -6,27 +6,11 @@ This guide covers installing the Language Operator on your Kubernetes cluster.
 
 ### Cluster Resources
 
-Each agent deployment consumes meaningful resources. Plan accordingly before installing.
-
-| Component | CPU Request | Memory Request | Notes |
-|-----------|-------------|----------------|-------|
-| Operator | 100m | 128Mi | Runs in `language-operator-system` |
-| LiteLLM gateway | — | — | One per `LanguageCluster`; no explicit request |
-| Agent (openclaw/opencode) | 250m | 512Mi | Per agent; 2Gi memory limit |
-| Dashboard PostgreSQL | 100m | 256Mi | Optional; disable with `dashboard.postgresql.enabled=false` |
-
-**Minimum recommended node capacity:**
+Minimum recommended node capacity:
 
 - **2 CPU cores** (4+ for running agents)
 - **4Gi RAM** (8Gi+ for running agents)
 - **15Gi persistent storage** (10Gi workspace per agent)
-
-!!! tip "Minimal setup"
-    To minimise resource usage, disable the dashboard PostgreSQL:
-    ```bash
-    helm install language-operator language-operator/language-operator \
-      --set dashboard.postgresql.enabled=false
-    ```
 
 ### Software
 
