@@ -1395,6 +1395,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#capacity-and-quotas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capacity and Quotas
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1499,6 +1510,95 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
 </code></pre></div>
 <p>Creates an Ingress/HTTPRoute at <code>gateway.agents.example.com</code> for external model access.</p>
+<h3 id="capacity-and-quotas">Capacity and Quotas<a class="headerlink" href="#capacity-and-quotas" title="Permanent link">&para;</a></h3>
+<p>Use <code>spec.capacity</code> to enforce hard resource limits on the cluster's namespace. When set, the operator creates a <code>ResourceQuota</code> named <code>langop-quota</code> in the namespace. When removed, the quota is deleted.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">capacity</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">maxAgents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">maxModels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">maxTools</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">maxPersonas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">maxCPU</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8&quot;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">maxMemory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16Gi</span>
+</code></pre></div>
+<p><strong><code>spec.capacity</code> fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maxAgents</code></td>
+<td>integer</td>
+<td>Maximum number of <code>LanguageAgent</code> objects</td>
+</tr>
+<tr>
+<td><code>maxModels</code></td>
+<td>integer</td>
+<td>Maximum number of <code>LanguageModel</code> objects</td>
+</tr>
+<tr>
+<td><code>maxTools</code></td>
+<td>integer</td>
+<td>Maximum number of <code>LanguageTool</code> objects</td>
+</tr>
+<tr>
+<td><code>maxPersonas</code></td>
+<td>integer</td>
+<td>Maximum number of <code>LanguagePersona</code> objects</td>
+</tr>
+<tr>
+<td><code>maxCPU</code></td>
+<td>quantity</td>
+<td>Aggregate <code>limits.cpu</code> across all pods (e.g. <code>"8"</code>, <code>"2500m"</code>)</td>
+</tr>
+<tr>
+<td><code>maxMemory</code></td>
+<td>quantity</td>
+<td>Aggregate <code>limits.memory</code> across all pods (e.g. <code>"16Gi"</code>, <code>"512Mi"</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>All fields are optional. Omit a field to leave that dimension unrestricted.</p>
+<p><strong><code>status.capacity</code> fields</strong> report observed usage:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agentCount</code></td>
+<td>Current number of <code>LanguageAgent</code> objects</td>
+</tr>
+<tr>
+<td><code>modelCount</code></td>
+<td>Current number of <code>LanguageModel</code> objects</td>
+</tr>
+<tr>
+<td><code>toolCount</code></td>
+<td>Current number of <code>LanguageTool</code> objects</td>
+</tr>
+<tr>
+<td><code>personaCount</code></td>
+<td>Current number of <code>LanguagePersona</code> objects</td>
+</tr>
+<tr>
+<td><code>totalCPULimits</code></td>
+<td>Sum of <code>limits.cpu</code> across all agent pod specs</td>
+</tr>
+<tr>
+<td><code>totalMemoryLimits</code></td>
+<td>Sum of <code>limits.memory</code> across all agent pod specs</td>
+</tr>
+</tbody>
+</table>
 <h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../languageagent/">LanguageAgent</a> - Deploy agents in the cluster</li>
