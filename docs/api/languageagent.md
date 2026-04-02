@@ -95,6 +95,50 @@ spec:
 - `interactive` - User-triggered execution
 - `event-driven` - Responds to Kubernetes events
 
+### Model References
+
+Each entry in `spec.models` is a `ModelReference` with the following fields:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | required | Name of a `LanguageModel` resource |
+| `role` | string | `primary` | Hint for the agent runtime. Valid values: `primary`, `fallback`, `reasoning`, `tool-calling`, `summarization` |
+| `priority` | integer | — | Optional selection priority hint; lower value = higher priority |
+
+The `role` and `priority` fields are surfaced in `/etc/agent/config.yaml` under each model entry. The operator does not enforce them — they are hints for the agent runtime's model selection logic.
+
+Example:
+
+```yaml
+models:
+  - name: claude-sonnet
+    role: primary
+  - name: claude-haiku
+    role: fallback
+    priority: 2
+```
+
+### Tool References
+
+Each entry in `spec.tools` is a `ToolReference` with the following fields:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | required | Name of a `LanguageTool` resource |
+| `enabled` | boolean | `true` | Set to `false` to temporarily disable a tool without removing the reference |
+
+When `enabled` is `false`, the tool endpoint is not injected into `/etc/agent/config.yaml` and not included in `MCP_SERVERS`.
+
+Example:
+
+```yaml
+tools:
+  - name: web-search
+    enabled: true
+  - name: code-executor
+    enabled: false   # disabled — endpoint not injected
+```
+
 ### Configuration Injection
 
 The operator automatically mounts:
