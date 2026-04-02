@@ -1413,6 +1413,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#agentport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentPort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#certissuerreference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1887,6 +1898,47 @@
 <li><a href="#languagepersona">LanguagePersona</a></li>
 <li><a href="#languagetool">LanguageTool</a></li>
 </ul>
+<h4 id="agentport">AgentPort<a class="headerlink" href="#agentport" title="Permanent link">&para;</a></h4>
+<p>AgentPort describes a single network port that an agent container exposes.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name uniquely identifies this port within the agent (e.g., "web", "ws").<br />Used as the Service port name; must conform to Kubernetes port-name rules.</td>
+<td></td>
+<td>MaxLength: 15 <br />Pattern: <code>^[a-z][a-z0-9-]*$</code> <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>port</code> <em>integer</em></td>
+<td>Port is the port number the container listens on.</td>
+<td></td>
+<td>Maximum: 65535 <br />Minimum: 1 <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>protocol</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#protocol-v1-core">Protocol</a></em></td>
+<td>Protocol is the transport protocol. Defaults to TCP.</td>
+<td>TCP</td>
+<td>Enum: [TCP UDP SCTP] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>expose</code> <em>boolean</em></td>
+<td>Expose controls whether ingress/HTTPRoute routes to this port.<br />At most one port should have expose: true; if none, the first port is used.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="certissuerreference">CertIssuerReference<a class="headerlink" href="#certissuerreference" title="Permanent link">&para;</a></h4>
 <p>CertIssuerReference references a cert-manager issuer</p>
 <p><em>Appears in:</em>
@@ -2382,10 +2434,10 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>port</code> <em>integer</em></td>
-<td>Port is the default port the agent container listens on.</td>
+<td><code>ports</code> <em><a href="#agentport">AgentPort</a> array</em></td>
+<td>Ports defines default ports for agents using this runtime.<br />Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely.</td>
 <td></td>
-<td>Maximum: 65535 <br />Minimum: 1 <br />Optional: {} <br /></td>
+<td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>executionMode</code> <em>string</em></td>
@@ -2402,6 +2454,18 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
 <td>Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
+<td>Openclaw provides default openclaw credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>opencode</code> <em><a href="#opencodeconfig">OpencodeConfig</a></em></td>
+<td>Opencode provides default opencode credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2476,10 +2540,10 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>port</code> <em>integer</em></td>
-<td>Port is the port the agent container listens on.<br />Used for the ClusterIP Service and NetworkPolicy ingress rules.<br />Defaults to 8080.</td>
+<td><code>ports</code> <em><a href="#agentport">AgentPort</a> array</em></td>
+<td>Ports defines all network ports this agent exposes.<br />At most one entry should have expose: true (the ingress target);<br />if none are marked, the first port is used for ingress routing.<br />Defaults to a single HTTP port on 8080 when not set.</td>
 <td></td>
-<td>Maximum: 65535 <br />Minimum: 1 <br />Optional: {} <br /></td>
+<td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
@@ -3275,6 +3339,7 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <p>OpenclawConfig holds configuration specific to the openclaw runtime.
 Effective only when spec.runtime is "openclaw".</p>
 <p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
 - <a href="#languageagentspec">LanguageAgentSpec</a></p>
 <table>
 <thead>
@@ -3286,6 +3351,12 @@ Effective only when spec.runtime is "openclaw".</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled activates openclaw credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN<br />without requiring any explicit config on the LanguageAgent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 <tr>
 <td><code>token</code> <em>string</em></td>
 <td>Token is the gateway authentication token (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with TokenRef.</td>
@@ -3304,6 +3375,7 @@ Effective only when spec.runtime is "openclaw".</p>
 <p>OpencodeConfig holds configuration specific to the opencode runtime.
 Effective only when spec.runtime is "opencode".</p>
 <p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
 - <a href="#languageagentspec">LanguageAgentSpec</a></p>
 <table>
 <thead>
@@ -3315,6 +3387,12 @@ Effective only when spec.runtime is "opencode".</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled activates opencode credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials<br />without requiring any explicit config on the LanguageAgent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 <tr>
 <td><code>username</code> <em>string</em></td>
 <td>Username for HTTP Basic Auth. Defaults to "opencode" if not set.<br />Sets OPENCODE_SERVER_USERNAME in the agent container.</td>
