@@ -206,14 +206,24 @@ kubectl get clusterissuer
 
 ### Using the issuer with Language Operator
 
-Set the cert-manager issuer annotation when installing Language Operator:
+Configure TLS via the `LanguageCluster` resource using `spec.ingress.tls.issuerRef`:
 
-```bash
-helm install language-operator language-operator/language-operator \
-  --set config.ingressAnnotations."cert-manager\.io/cluster-issuer"=letsencrypt-prod
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: my-cluster
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      enabled: true
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer   # or "Issuer" for namespace-scoped issuers
 ```
 
-When a `LanguageCluster` has `spec.domain` configured, the operator creates an Ingress for `gateway.<domain>` — cert-manager automatically provisions and renews the TLS certificate.
+When `issuerRef` is set, the operator automatically adds the `cert-manager.io/cluster-issuer` annotation to the gateway Ingress it creates for `gateway.<domain>`. cert-manager then provisions and renews the TLS certificate.
 
 !!! tip "DNS must resolve before HTTP-01 challenge"
     cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before applying the `LanguageCluster` with a domain.
