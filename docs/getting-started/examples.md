@@ -84,7 +84,7 @@ spec:
     - name: web-search
 ```
 
-The operator injects `MCP_SERVERS=http://web-search:8080` into the agent.
+The operator injects `MCP_SERVERS=http://web-search.<namespace>.svc.cluster.local:8080` into the agent.
 
 ### Custom Model Provider
 
