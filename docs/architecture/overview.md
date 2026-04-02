@@ -227,7 +227,7 @@ spec:
         cpu: 500m
 ```
 
-Agent fields always override runtime defaults for scalar values. Lists (`env`, `initContainers`, `ports`, etc.) are runtime-first, then agent-appended. The bundled `openclaw` and `opencode` runtimes are installed automatically by the Helm chart.
+Agent fields always override runtime defaults for scalar values. Lists (`env`, `initContainers`, etc.) are runtime-first, then agent-appended. `ports` uses replace semantics — runtime ports apply only when the agent defines no ports of its own. The bundled `openclaw` and `opencode` runtimes are installed automatically by the Helm chart.
 
 ---
 
