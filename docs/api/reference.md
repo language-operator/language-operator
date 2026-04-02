@@ -19,6 +19,7 @@ This reference documents all fields available in each Custom Resource Definition
 Click to jump to each resource:
 
 - [LanguageAgent](#languageagent) - Deploy autonomous AI agents
+- [LanguageAgentRuntime](#languageagentruntime) - Reusable agent defaults
 - [LanguageCluster](#languagecluster) - Managed namespace with shared proxy
 - [LanguageModel](#languagemodel) - Configure LLM access
 - [LanguageTool](#languagetool) - Deploy MCP tool servers
@@ -29,6 +30,7 @@ Click to jump to each resource:
 For conceptual overviews and examples, see:
 
 - [LanguageAgent Guide](languageagent.md)
+- [LanguageAgentRuntime Guide](languageagentruntime.md)
 - [LanguageCluster Guide](languagecluster.md)
 - [LanguageModel Guide](languagemodel.md)
 - [LanguageTool Guide](languagetool.md)
