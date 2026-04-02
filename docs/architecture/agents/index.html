@@ -1990,6 +1990,7 @@
 <a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic</span>
 <a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet-4-5</span>
 <a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://gateway.default.svc.cluster.local:8000</span>
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="w">    </span><span class="c1"># priority: 1   # only present when spec.models[].priority is set</span>
 </code></pre></div>
 <p>The <code>MODEL_ENDPOINTS</code> env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.</p>
 <h2 id="example-languageagent-yaml">Example LanguageAgent YAML<a class="headerlink" href="#example-languageagent-yaml" title="Permanent link">&para;</a></h2>

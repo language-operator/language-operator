@@ -1462,6 +1462,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#tool-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1649,6 +1660,34 @@
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100m</span>
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">128Mi</span>
 </code></pre></div>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
+<p><code>kubectl get languagetool</code> shows the current phase:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pending</code></td>
+<td>Deployment not yet scheduled or pods not ready</td>
+</tr>
+<tr>
+<td><code>Running</code></td>
+<td>Deployment is available and the tool is healthy</td>
+</tr>
+<tr>
+<td><code>Updating</code></td>
+<td>A spec change is in progress (e.g. image update or replica change); not yet fully rolled out</td>
+</tr>
+<tr>
+<td><code>Failed</code></td>
+<td>Deployment failed or health check is not passing</td>
+</tr>
+</tbody>
+</table>
 <h2 id="tool-discovery">Tool Discovery<a class="headerlink" href="#tool-discovery" title="Permanent link">&para;</a></h2>
 <p>The operator queries tool schemas on startup:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languagetool<span class="w"> </span>web-search<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.status.toolSchemas}&#39;</span>
