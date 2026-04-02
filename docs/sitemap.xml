@@ -96,16 +96,4 @@
          <loc>https://language-operator.github.io/language-operator/guides/opencode/</loc>
          <lastmod>2026-04-02</lastmod>
     </url>
-    <url>
-         <loc>https://language-operator.github.io/language-operator/helm/configuration/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://language-operator.github.io/language-operator/helm/installation/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
-    <url>
-         <loc>https://language-operator.github.io/language-operator/helm/repository/</loc>
-         <lastmod>2026-04-02</lastmod>
-    </url>
 </urlset>
