@@ -1351,6 +1351,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#spec-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec Fields
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Spec Fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-credential-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Credential Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#merge-semantics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1465,6 +1493,69 @@
 <a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">        </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1Gi</span>
 <a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500m</span>
 </code></pre></div>
+<h2 id="spec-fields">Spec Fields<a class="headerlink" href="#spec-fields" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image</code></td>
+<td>string</td>
+<td>Default container image for agents using this runtime</td>
+</tr>
+<tr>
+<td><code>ports</code></td>
+<td><code>[]AgentPort</code></td>
+<td>Default port list; see merge semantics below</td>
+</tr>
+<tr>
+<td><code>executionMode</code></td>
+<td>string</td>
+<td>Default execution mode (<code>autonomous</code>, <code>interactive</code>, <code>scheduled</code>, <code>event-driven</code>); agent's own <code>executionMode</code> takes precedence if set</td>
+</tr>
+<tr>
+<td><code>workspace</code></td>
+<td><code>WorkspaceSpec</code></td>
+<td>Default workspace configuration (size, mountPath)</td>
+</tr>
+<tr>
+<td><code>deployment</code></td>
+<td><code>AgentDeploymentSpec</code></td>
+<td>Default deployment settings (resources, probes, initContainers, env, …)</td>
+</tr>
+<tr>
+<td><code>openclaw</code></td>
+<td><code>OpenclawConfig</code></td>
+<td>When <code>openclaw.enabled: true</code>, the operator auto-generates <code>OPENCLAW_GATEWAY_TOKEN</code> for every agent referencing this runtime (without the agent needing <code>spec.openclaw</code>)</td>
+</tr>
+<tr>
+<td><code>opencode</code></td>
+<td><code>OpencodeConfig</code></td>
+<td>When <code>opencode.enabled: true</code>, the operator auto-generates <code>OPENCODE_SERVER_PASSWORD</code> for every agent referencing this runtime</td>
+</tr>
+</tbody>
+</table>
+<h3 id="automatic-credential-generation">Automatic Credential Generation<a class="headerlink" href="#automatic-credential-generation" title="Permanent link">&para;</a></h3>
+<p>Setting <code>spec.openclaw.enabled: true</code> or <code>spec.opencode.enabled: true</code> on a runtime causes the operator to create a <code>{agent-name}-runtime</code> Secret and inject the generated credential env var into every agent that references the runtime. This is how the bundled runtimes enable auto-credential management without requiring each <code>LanguageAgent</code> to configure credentials manually.</p>
+<p>Custom runtimes can use the same mechanism:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgentRuntime</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-runtime</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/my-org/my-agent:latest</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">executionMode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">autonomous</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">openclaw</span><span class="p">:</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># auto-generates OPENCLAW_GATEWAY_TOKEN for all agents using this runtime</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
+</code></pre></div>
 <h2 id="merge-semantics">Merge Semantics<a class="headerlink" href="#merge-semantics" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1475,7 +1566,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Scalars (<code>image</code>, <code>resources</code>, probes)</td>
+<td>Scalars (<code>image</code>, <code>executionMode</code>, <code>resources</code>, probes)</td>
 <td>Runtime provides default; agent overrides if set</td>
 </tr>
 <tr>
@@ -1490,10 +1581,10 @@
 </table>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p><code>LanguageAgentRuntime</code> has no status subresource. It is a static configuration object — the operator reads it at reconcile time but does not track its health.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># NAME       AGE</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># openclaw   5m</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># opencode   5m</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># NAME       AGE</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># openclaw   5m</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># opencode   5m</span>
 </code></pre></div>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
