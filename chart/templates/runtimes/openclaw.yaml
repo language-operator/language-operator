@@ -15,8 +15,6 @@ spec:
   openclaw:
     enabled: true
 
-  # openclaw gateway binds to loopback (ws://127.0.0.1:18789);
-  # kubelet httpGet probes cannot reach it, so no liveness/readiness probes here.
   ports:
     - name: gateway
       port: 18789
@@ -28,6 +26,17 @@ spec:
     mountPath: /workspace
 
   deployment:
+    # Override the default CMD to bind on all interfaces.
+    # By default, openclaw binds to 127.0.0.1; --bind lan switches to 0.0.0.0
+    # so the Service and Ingress can route traffic to the pod.
+    command:
+      - node
+      - openclaw.mjs
+      - gateway
+      - --allow-unconfigured
+      - --bind
+      - lan
+
     initContainers:
       - name: openclaw-adapter
         image: ghcr.io/language-operator/openclaw-adapter:latest
