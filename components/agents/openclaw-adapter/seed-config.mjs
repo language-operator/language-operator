@@ -99,10 +99,40 @@ if (personas.length > 0) {
 }
 
 // -------------------------------------------------------------------
-// openclaw.json — skip if already exists (preserve user state)
+// Gateway config — always written (operator-managed, not user state).
+// When the gateway binds to 0.0.0.0 (--bind lan), openclaw requires
+// either explicit allowedOrigins or dangerouslyAllowHostHeaderOriginFallback.
+// We use the Host-header fallback: safe in-cluster because only Traefik
+// reaches the pod (enforced by NetworkPolicy) and Traefik always sends
+// the correct Host header.
 // -------------------------------------------------------------------
+const gatewayConfig = {
+  gateway: {
+    controlUi: {
+      dangerouslyAllowHostHeaderOriginFallback: true,
+    },
+  },
+}
+
 if (existsSync(configFile)) {
-  console.log(`openclaw.json already exists at ${configFile}, skipping seed`)
+  console.log(`openclaw.json already exists at ${configFile}, merging gateway config`)
+  let existing = {}
+  try {
+    existing = JSON.parse(readFileSync(configFile, 'utf8'))
+  } catch (err) {
+    console.warn(`Failed to parse existing openclaw.json: ${err.message} — overwriting`)
+  }
+  // Deep-merge only the gateway section; preserve all other user state.
+  existing.gateway = {
+    ...(existing.gateway ?? {}),
+    ...gatewayConfig.gateway,
+    controlUi: {
+      ...((existing.gateway ?? {}).controlUi ?? {}),
+      ...gatewayConfig.gateway.controlUi,
+    },
+  }
+  writeFileSync(configFile, JSON.stringify(existing, null, 2))
+  console.log('Merged gateway config into existing openclaw.json')
   process.exit(0)
 }
 
@@ -176,7 +206,7 @@ for (const [toolName, tool] of Object.entries(configTools)) {
 // -------------------------------------------------------------------
 // Assemble and write openclaw.json
 // -------------------------------------------------------------------
-const config = {}
+const config = { ...gatewayConfig }
 
 if (Object.keys(providers).length > 0) {
   config.models = { providers }
