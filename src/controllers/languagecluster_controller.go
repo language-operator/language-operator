@@ -515,106 +515,85 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 		},
 	}
 
-	// Add user-defined network policies
-	for _, rule := range cluster.Spec.NetworkPolicies {
-		if rule.To != nil {
+	// Add user-defined egress rules from spec.networkPolicies.egress
+	if cluster.Spec.NetworkPolicies != nil {
+		for _, rule := range cluster.Spec.NetworkPolicies.Egress {
 			egressRule := networkingv1.NetworkPolicyEgressRule{}
-
-			// Convert langop NetworkPeer to k8s NetworkPolicyPeer
-			peer := networkingv1.NetworkPolicyPeer{}
-
-			if rule.To.CIDR != "" {
-				peer.IPBlock = &networkingv1.IPBlock{
-					CIDR: rule.To.CIDR,
+			for _, peer := range rule.To {
+				peer := peer
+				kpeer := networkingv1.NetworkPolicyPeer{}
+				if peer.CIDR != "" {
+					kpeer.IPBlock = &networkingv1.IPBlock{CIDR: peer.CIDR}
 				}
-			}
-
-			if rule.To.Service != nil {
-				serviceNamespace := rule.To.Service.Namespace
-				if serviceNamespace == "" {
-					serviceNamespace = namespace
-				}
-				peer.NamespaceSelector = &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						LabelKeyMetadataName: serviceNamespace,
-					},
-				}
-			}
-
-			if rule.To.Group != "" {
-				peer.PodSelector = &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						LabelKeyLangopGroup: rule.To.Group,
-					},
-				}
-			}
-
-			if rule.To.PodSelector != nil {
-				peer.PodSelector = rule.To.PodSelector
-			}
-
-			if rule.To.NamespaceSelector != nil {
-				peer.NamespaceSelector = rule.To.NamespaceSelector
-			}
-
-			// Only include the peer if it has actual selectors
-			if peer.IPBlock != nil || peer.PodSelector != nil || peer.NamespaceSelector != nil {
-				egressRule.To = append(egressRule.To, peer)
-			}
-
-			// Resolve DNS hostnames to CIDR blocks at policy creation time (fail-closed)
-			if len(rule.To.DNS) > 0 {
-				resolvedCIDRs, err := resolveDNSToCIDRs(ctx, rule.To.DNS)
-				if err == nil && len(resolvedCIDRs) > 0 {
-					for _, cidr := range resolvedCIDRs {
-						egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
-							IPBlock: &networkingv1.IPBlock{CIDR: cidr},
-						})
+				if peer.Service != nil {
+					ns := peer.Service.Namespace
+					if ns == "" {
+						ns = namespace
+					}
+					kpeer.NamespaceSelector = &metav1.LabelSelector{
+						MatchLabels: map[string]string{LabelKeyMetadataName: ns},
 					}
 				}
-				// DNS resolution failure = fail-closed: no destinations added
-			}
-
-			// Convert ports
-			if len(rule.Ports) > 0 {
-				for _, port := range rule.Ports {
-					protocol := corev1.ProtocolTCP
-					if port.Protocol != "" {
-						protocol = corev1.Protocol(port.Protocol)
+				if peer.Group != "" {
+					kpeer.PodSelector = &metav1.LabelSelector{
+						MatchLabels: map[string]string{LabelKeyLangopGroup: peer.Group},
 					}
-					egressRule.Ports = append(egressRule.Ports, networkingv1.NetworkPolicyPort{
-						Protocol: &protocol,
-						Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
-					})
+				}
+				if peer.PodSelector != nil {
+					kpeer.PodSelector = peer.PodSelector
+				}
+				if peer.NamespaceSelector != nil {
+					kpeer.NamespaceSelector = peer.NamespaceSelector
+				}
+				if kpeer.IPBlock != nil || kpeer.PodSelector != nil || kpeer.NamespaceSelector != nil {
+					egressRule.To = append(egressRule.To, kpeer)
+				}
+				if len(peer.DNS) > 0 {
+					resolvedCIDRs, err := resolveDNSToCIDRs(ctx, peer.DNS)
+					if err == nil {
+						for _, cidr := range resolvedCIDRs {
+							egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
+								IPBlock: &networkingv1.IPBlock{CIDR: cidr},
+							})
+						}
+					}
 				}
 			}
-
+			for _, port := range rule.Ports {
+				protocol := corev1.ProtocolTCP
+				if port.Protocol != "" {
+					protocol = corev1.Protocol(port.Protocol)
+				}
+				egressRule.Ports = append(egressRule.Ports, networkingv1.NetworkPolicyPort{
+					Protocol: &protocol,
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+				})
+			}
 			egressRules = append(egressRules, egressRule)
 		}
 	}
 
-	// Wire user-defined ingress rules from spec.networkPolicies[].from
+	// Wire user-defined ingress rules from spec.networkPolicies.ingress
 	var ingressRules []networkingv1.NetworkPolicyIngressRule
-	for _, rule := range cluster.Spec.NetworkPolicies {
-		if rule.From == nil {
-			continue
-		}
-		ingressRule := networkingv1.NetworkPolicyIngressRule{
-			From: []networkingv1.NetworkPolicyPeer{
-				buildIngressPeerFromNetworkPeer(rule.From, namespace),
-			},
-		}
-		for _, port := range rule.Ports {
-			protocol := corev1.ProtocolTCP
-			if port.Protocol != "" {
-				protocol = corev1.Protocol(port.Protocol)
+	if cluster.Spec.NetworkPolicies != nil {
+		for _, rule := range cluster.Spec.NetworkPolicies.Ingress {
+			ingressRule := networkingv1.NetworkPolicyIngressRule{}
+			for _, peer := range rule.From {
+				peer := peer
+				ingressRule.From = append(ingressRule.From, buildIngressPeerFromNetworkPeer(&peer, namespace))
 			}
-			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
-				Protocol: &protocol,
-				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
-			})
+			for _, port := range rule.Ports {
+				protocol := corev1.ProtocolTCP
+				if port.Protocol != "" {
+					protocol = corev1.Protocol(port.Protocol)
+				}
+				ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+					Protocol: &protocol,
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: port.Port},
+				})
+			}
+			ingressRules = append(ingressRules, ingressRule)
 		}
-		ingressRules = append(ingressRules, ingressRule)
 	}
 
 	policyTypes := []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}

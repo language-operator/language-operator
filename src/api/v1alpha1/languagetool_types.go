@@ -77,10 +77,10 @@ type LanguageToolSpec struct {
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 
-	// NetworkPolicies defines network access rules for this tool
-	// By default, tools can access all resources within the cluster but no external endpoints
+	// NetworkPolicies defines ingress and egress rules for this tool.
+	// Rules mirror the native Kubernetes NetworkPolicy shape.
 	// +optional
-	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
+	NetworkPolicies *AgentNetworkPolicies `json:"networkPolicies,omitempty"`
 }
 
 // LanguageToolStatus defines the observed state of LanguageTool

@@ -850,13 +850,11 @@ func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	cluster := gen.LanguageCluster("from-cluster",
-		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
-			{
-				From: &langopv1alpha1.NetworkPeer{
-					Group: "external-readers",
-				},
-				Ports: []langopv1alpha1.NetworkPort{
-					{Port: 8000},
+		gen.SetClusterNetworkPolicies(&langopv1alpha1.AgentNetworkPolicies{
+			Ingress: []langopv1alpha1.NetworkIngressRule{
+				{
+					From:  []langopv1alpha1.NetworkPeer{{Group: "external-readers"}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 8000}},
 				},
 			},
 		}),
@@ -906,15 +904,17 @@ func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	cluster := gen.LanguageCluster("svc-cluster",
-		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
-			{
-				To: &langopv1alpha1.NetworkPeer{
-					Service: &langopv1alpha1.ServiceReference{
-						Name:      "my-service",
-						Namespace: "other-ns",
-					},
+		gen.SetClusterNetworkPolicies(&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{
+					To: []langopv1alpha1.NetworkPeer{{
+						Service: &langopv1alpha1.ServiceReference{
+							Name:      "my-service",
+							Namespace: "other-ns",
+						},
+					}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
 				},
-				Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
 			},
 		}),
 	)
@@ -964,12 +964,12 @@ func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
 func TestLanguageClusterController_NetworkPolicy_DNSRule(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	cluster := gen.LanguageCluster("dns-cluster",
-		gen.SetClusterNetworkPolicies([]langopv1alpha1.NetworkRule{
-			{
-				To: &langopv1alpha1.NetworkPeer{
-					DNS: []string{"api.example.com"},
+		gen.SetClusterNetworkPolicies(&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{
+					To:    []langopv1alpha1.NetworkPeer{{DNS: []string{"api.example.com"}}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
 				},
-				Ports: []langopv1alpha1.NetworkPort{{Port: 443}},
 			},
 		}),
 	)

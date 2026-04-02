@@ -937,27 +937,26 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		})
 	}
 
-	// Append user-defined ingress rules from spec.networkPolicies[].from
-	for _, rule := range agent.Spec.NetworkPolicies {
-		if rule.From == nil {
-			continue
-		}
-		ingressRule := networkingv1.NetworkPolicyIngressRule{
-			From: []networkingv1.NetworkPolicyPeer{
-				buildIngressPeerFromNetworkPeer(rule.From, agent.Namespace),
-			},
-		}
-		for _, p := range rule.Ports {
-			protocol := corev1.Protocol(p.Protocol)
-			if protocol == "" {
-				protocol = corev1.ProtocolTCP
+	// Append user-defined ingress rules from spec.networkPolicies.ingress
+	if agent.Spec.NetworkPolicies != nil {
+		for _, rule := range agent.Spec.NetworkPolicies.Ingress {
+			ingressRule := networkingv1.NetworkPolicyIngressRule{}
+			for _, peer := range rule.From {
+				peer := peer
+				ingressRule.From = append(ingressRule.From, buildIngressPeerFromNetworkPeer(&peer, agent.Namespace))
 			}
-			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
-				Protocol: protocolPtr(protocol),
-				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
-			})
+			for _, p := range rule.Ports {
+				protocol := corev1.Protocol(p.Protocol)
+				if protocol == "" {
+					protocol = corev1.ProtocolTCP
+				}
+				ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+					Protocol: protocolPtr(protocol),
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
+				})
+			}
+			networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, ingressRule)
 		}
-		networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, ingressRule)
 	}
 
 	// Create or update the NetworkPolicy with owner reference and configured timeout/retries

@@ -147,9 +147,9 @@ func SetAgentTool(name string, enabled *bool) LanguageAgentModifier {
 }
 
 // SetAgentNetworkPolicies sets spec.networkPolicies.
-func SetAgentNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageAgentModifier {
+func SetAgentNetworkPolicies(policies *langopv1alpha1.AgentNetworkPolicies) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.NetworkPolicies = rules
+		a.Spec.NetworkPolicies = policies
 	}
 }
 

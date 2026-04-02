@@ -1850,13 +1850,11 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := gen.LanguageAgent("from-rule-agent", "default",
-		gen.SetAgentNetworkPolicies([]langopv1alpha1.NetworkRule{
-			{
-				From: &langopv1alpha1.NetworkPeer{
-					Group: "monitoring",
-				},
-				Ports: []langopv1alpha1.NetworkPort{
-					{Port: 9090},
+		gen.SetAgentNetworkPolicies(&langopv1alpha1.AgentNetworkPolicies{
+			Ingress: []langopv1alpha1.NetworkIngressRule{
+				{
+					From:  []langopv1alpha1.NetworkPeer{{Group: "monitoring"}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 9090}},
 				},
 			},
 		}),

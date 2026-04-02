@@ -81,9 +81,10 @@ type LanguageClusterSpec struct {
 	// +optional
 	Ingress *IngressConfig `json:"ingress,omitempty"`
 
-	// NetworkPolicies defines egress network policies for agents in this cluster
+	// NetworkPolicies defines ingress and egress rules for agents in this cluster.
+	// Rules mirror the native Kubernetes NetworkPolicy shape.
 	// +optional
-	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
+	NetworkPolicies *AgentNetworkPolicies `json:"networkPolicies,omitempty"`
 
 	// Gateway configures the shared LiteLLM gateway deployed per cluster
 	// +optional
@@ -253,21 +254,39 @@ type CertIssuerReference struct {
 	Kind string `json:"kind,omitempty"`
 }
 
-// NetworkRule defines a single network policy rule
-type NetworkRule struct {
-	// Description of this rule
+// AgentNetworkPolicies defines user-supplied ingress and egress rules for an agent workload.
+// The shape mirrors the native Kubernetes NetworkPolicySpec so that rules can be copied
+// verbatim from real NetworkPolicy manifests.
+type AgentNetworkPolicies struct {
+	// Ingress rules — each entry allows traffic into the workload from the listed sources.
 	// +optional
-	Description string `json:"description,omitempty"`
+	Ingress []NetworkIngressRule `json:"ingress,omitempty"`
 
-	// From selector for ingress rules
+	// Egress rules — each entry allows traffic from the workload to the listed destinations.
 	// +optional
-	From *NetworkPeer `json:"from,omitempty"`
+	Egress []NetworkEgressRule `json:"egress,omitempty"`
+}
 
-	// To selector for egress rules
+// NetworkIngressRule is one ingress rule: zero or more source peers, zero or more ports.
+// Mirrors networkingv1.NetworkPolicyIngressRule.
+type NetworkIngressRule struct {
+	// From lists the sources allowed to send traffic to this workload.
 	// +optional
-	To *NetworkPeer `json:"to,omitempty"`
+	From []NetworkPeer `json:"from,omitempty"`
 
-	// Ports allowed by this rule
+	// Ports lists the ports on which to allow incoming traffic.
+	// +optional
+	Ports []NetworkPort `json:"ports,omitempty"`
+}
+
+// NetworkEgressRule is one egress rule: zero or more destination peers, zero or more ports.
+// Mirrors networkingv1.NetworkPolicyEgressRule.
+type NetworkEgressRule struct {
+	// To lists the destinations this workload is allowed to reach.
+	// +optional
+	To []NetworkPeer `json:"to,omitempty"`
+
+	// Ports lists the destination ports to allow.
 	// +optional
 	Ports []NetworkPort `json:"ports,omitempty"`
 }

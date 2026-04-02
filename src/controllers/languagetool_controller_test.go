@@ -808,13 +808,11 @@ func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
 	tool := gen.LanguageTool("from-rule-tool", "default",
 		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
 		gen.SetToolPort(8080),
-		gen.SetToolNetworkPolicies([]langopv1alpha1.NetworkRule{
-			{
-				From: &langopv1alpha1.NetworkPeer{
-					Group: "trusted-agents",
-				},
-				Ports: []langopv1alpha1.NetworkPort{
-					{Port: 8080},
+		gen.SetToolNetworkPolicies(&langopv1alpha1.AgentNetworkPolicies{
+			Ingress: []langopv1alpha1.NetworkIngressRule{
+				{
+					From:  []langopv1alpha1.NetworkPeer{{Group: "trusted-agents"}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 8080}},
 				},
 			},
 		}),

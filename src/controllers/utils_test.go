@@ -48,8 +48,10 @@ func TestBuildEgressNetworkPolicy_GroupSelector(t *testing.T) {
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{Group: "my-group"}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{Group: "my-group"}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -76,11 +78,13 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_ExplicitNamespace(t *testing.T
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{Service: &langopv1alpha1.ServiceReference{
-				Name:      "my-svc",
-				Namespace: "other-ns",
-			}}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{Service: &langopv1alpha1.ServiceReference{
+					Name:      "my-svc",
+					Namespace: "other-ns",
+				}}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -106,11 +110,13 @@ func TestBuildEgressNetworkPolicy_ServiceSelector_DefaultsToCurrentNamespace(t *
 		"test-policy", "my-namespace",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{Service: &langopv1alpha1.ServiceReference{
-				Name: "my-svc",
-				// Namespace intentionally omitted
-			}}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{Service: &langopv1alpha1.ServiceReference{
+					Name: "my-svc",
+					// Namespace intentionally omitted
+				}}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -136,12 +142,14 @@ func TestBuildEgressNetworkPolicy_NamespaceSelector(t *testing.T) {
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"env": "prod"},
-				},
-			}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"env": "prod"},
+					},
+				}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -167,12 +175,14 @@ func TestBuildEgressNetworkPolicy_PodSelector(t *testing.T) {
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"role": "backend"},
-				},
-			}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"role": "backend"},
+					},
+				}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -201,11 +211,13 @@ func TestBuildEgressNetworkPolicy_NamespaceAndPodSelectorCombined(t *testing.T) 
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{
-				NamespaceSelector: nsSel,
-				PodSelector:       podSel,
-			}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{
+					NamespaceSelector: nsSel,
+					PodSelector:       podSel,
+				}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
@@ -226,57 +238,50 @@ func TestBuildEgressNetworkPolicy_NamespaceAndPodSelectorCombined(t *testing.T) 
 	assert.True(t, found, "expected a single egress peer combining NamespaceSelector and PodSelector")
 }
 
-func TestBuildEgressNetworkPolicy_FromRule_AddsIngressAndPolicyType(t *testing.T) {
+// BuildEgressNetworkPolicy only processes egress rules; ingress rules are assembled by each
+// controller after calling this function. Verify the builder does not populate Ingress.
+func TestBuildEgressNetworkPolicy_IngressRulesNotSetByBuilder(t *testing.T) {
 	c := newFakeClient(t).Build()
 	policy := BuildEgressNetworkPolicy(
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{
-				From: &langopv1alpha1.NetworkPeer{
-					Group: "external-readers",
+		&langopv1alpha1.AgentNetworkPolicies{
+			Ingress: []langopv1alpha1.NetworkIngressRule{
+				{
+					From:  []langopv1alpha1.NetworkPeer{{Group: "external-readers"}},
+					Ports: []langopv1alpha1.NetworkPort{{Port: 8080}},
 				},
-				Ports: []langopv1alpha1.NetworkPort{{Port: 8080}},
 			},
 		},
 	)
 	require.NotNil(t, policy)
 
-	// PolicyTypeIngress must be present
-	hasIngress := false
+	// Builder must not add PolicyTypeIngress or Ingress rules — controllers do that.
 	for _, pt := range policy.Spec.PolicyTypes {
-		if pt == networkingv1.PolicyTypeIngress {
-			hasIngress = true
-		}
+		assert.NotEqual(t, networkingv1.PolicyTypeIngress, pt, "builder must not set PolicyTypeIngress; controllers are responsible")
 	}
-	assert.True(t, hasIngress, "expected PolicyTypeIngress when From rules are present")
-
-	require.NotEmpty(t, policy.Spec.Ingress, "expected at least one ingress rule")
-	peer := policy.Spec.Ingress[0].From[0]
-	require.NotNil(t, peer.PodSelector)
-	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels[LabelKeyLangopGroup])
-
-	require.NotEmpty(t, policy.Spec.Ingress[0].Ports)
-	assert.Equal(t, int32(8080), policy.Spec.Ingress[0].Ports[0].Port.IntVal)
+	assert.Empty(t, policy.Spec.Ingress, "builder must not populate Ingress; controllers append ingress rules after calling BuildEgressNetworkPolicy")
 }
 
-func TestBuildEgressNetworkPolicy_NoFromRule_NoPolicyTypeIngress(t *testing.T) {
+func TestBuildEgressNetworkPolicy_NoIngressRules_NoPolicyTypeIngress(t *testing.T) {
 	c := newFakeClient(t).Build()
 	policy := BuildEgressNetworkPolicy(
 		context.Background(), c,
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{To: &langopv1alpha1.NetworkPeer{CIDR: "10.0.0.0/8"}},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{To: []langopv1alpha1.NetworkPeer{{CIDR: "10.0.0.0/8"}}},
+			},
 		},
 	)
 	require.NotNil(t, policy)
 
 	for _, pt := range policy.Spec.PolicyTypes {
-		assert.NotEqual(t, networkingv1.PolicyTypeIngress, pt, "PolicyTypeIngress must not appear when no From rules present")
+		assert.NotEqual(t, networkingv1.PolicyTypeIngress, pt, "PolicyTypeIngress must not appear when no ingress rules present")
 	}
 	assert.Empty(t, policy.Spec.Ingress)
 }
@@ -427,12 +432,14 @@ func TestBuildEgressNetworkPolicy_CIDRRule(t *testing.T) {
 		"test-policy", "default",
 		map[string]string{"app": "test"},
 		"",
-		[]langopv1alpha1.NetworkRule{
-			{
-				To: &langopv1alpha1.NetworkPeer{CIDR: "192.168.0.0/24"},
-				Ports: []langopv1alpha1.NetworkPort{
-					{Port: 443, Protocol: "TCP"},
-					{Port: 8443, Protocol: "TCP"},
+		&langopv1alpha1.AgentNetworkPolicies{
+			Egress: []langopv1alpha1.NetworkEgressRule{
+				{
+					To: []langopv1alpha1.NetworkPeer{{CIDR: "192.168.0.0/24"}},
+					Ports: []langopv1alpha1.NetworkPort{
+						{Port: 443, Protocol: "TCP"},
+						{Port: 8443, Protocol: "TCP"},
+					},
 				},
 			},
 		},

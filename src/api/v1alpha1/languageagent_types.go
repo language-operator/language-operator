@@ -73,10 +73,10 @@ type LanguageAgentSpec struct {
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
 
-	// NetworkPolicies defines network access rules for this agent
-	// By default, agents can access all resources within the cluster but no external endpoints
+	// NetworkPolicies defines ingress and egress rules for this agent.
+	// Rules mirror the native Kubernetes NetworkPolicy shape.
 	// +optional
-	NetworkPolicies []NetworkRule `json:"networkPolicies,omitempty"`
+	NetworkPolicies *AgentNetworkPolicies `json:"networkPolicies,omitempty"`
 
 	// Ports defines all network ports this agent exposes.
 	// At most one entry should have expose: true (the ingress target);

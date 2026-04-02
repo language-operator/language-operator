@@ -80,8 +80,8 @@ func SetToolServiceAnnotations(annotations map[string]string) LanguageToolModifi
 }
 
 // SetToolNetworkPolicies sets spec.networkPolicies.
-func SetToolNetworkPolicies(rules []langopv1alpha1.NetworkRule) LanguageToolModifier {
+func SetToolNetworkPolicies(policies *langopv1alpha1.AgentNetworkPolicies) LanguageToolModifier {
 	return func(t *langopv1alpha1.LanguageTool) {
-		t.Spec.NetworkPolicies = rules
+		t.Spec.NetworkPolicies = policies
 	}
 }
