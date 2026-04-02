@@ -1907,7 +1907,10 @@
 <li><code>MODEL_ENDPOINTS</code> - shared gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>)</li>
 <li><code>LLM_MODEL</code> - comma-separated list of model names from <code>models</code></li>
 <li><code>MCP_SERVERS</code> - resolved MCP tool server URLs</li>
+<li><code>AGENT_INSTRUCTIONS</code> - content of <code>spec.instructions</code>; only set when non-empty</li>
+<li><code>OTEL_EXPORTER_OTLP_ENDPOINT</code>, <code>OTEL_SERVICE_NAME</code>, <code>OTEL_RESOURCE_ATTRIBUTES</code>, <code>OTEL_TRACES_SAMPLER</code>, <code>OTEL_TRACES_SAMPLER_ARG</code> - propagated from operator env when OTEL is configured</li>
 </ul>
+<p>See <a href="../agents/#environment-variables">Environment Variables</a> in the agent runtime contract for the full reference.</p>
 <p><strong>Volume Mounts:</strong></p>
 <ul>
 <li><code>/etc/agent/config.yaml</code> - from agent ConfigMap</li>

@@ -1995,10 +1995,7 @@
 <p>The full contract is defined in <a href="../agents/">Agent Runtime Contract</a>. Summary:</p>
 <p><strong>Operator provides:</strong>
 - <code>/etc/agent/config.yaml</code> — structured YAML with instructions, agent identity, personas, tools, models (optional)
-- Environment variables: <code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code>, <code>AGENT_MODE</code>, <code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code>
-- <code>MODEL_ENDPOINTS</code> — URL of the shared LiteLLM gateway (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>), injected into main container and all init containers
-- <code>LLM_MODEL</code> — comma-separated model names registered in the proxy (from all <code>models</code>)
-- <code>MCP_SERVERS</code> — resolved MCP tool server URLs
+- Environment variables: <code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code>, <code>AGENT_MODE</code>, <code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code>, <code>MODEL_ENDPOINTS</code>, <code>LLM_MODEL</code>, <code>MCP_SERVERS</code>, <code>AGENT_INSTRUCTIONS</code>, and OTEL propagation vars — see <a href="../agents/#environment-variables">Environment Variables</a> for the full list
 - ClusterIP Service on each port in <code>spec.ports</code>
 - HTTPRoute for external access
 - NetworkPolicy allowing agent-to-agent traffic</p>
