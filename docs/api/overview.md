@@ -130,11 +130,9 @@ The standard runtimes (`openclaw`, `opencode`) are bundled with the Helm chart a
 
 A `LanguagePersona` defines reusable personality and instruction templates:
 
-- System prompts
-- Tone and style guidelines
-- Capability preferences
-- Behavioral constraints
-- Template inheritance
+- `tone` — communication style (e.g. professional, casual, technical)
+- `personality` — character traits and reasoning style
+- `expertise` — domain knowledge and specialization
 
 **Common Use Cases:**
 
@@ -195,16 +193,9 @@ All CRDs use API version `langop.io/v1alpha1`.
 
 ## Common Patterns
 
-### Cross-Namespace References
+### Namespace Scope
 
-Agents can reference models, tools, and personas in other namespaces:
-
-```yaml
-spec:
-  models:
-    - name: claude-sonnet
-      namespace: shared-models  # Cross-namespace reference
-```
+All references (`models`, `tools`, `personas`) are namespace-scoped — a `LanguageAgent` can only reference resources in the same namespace. Deploy shared resources (models, tools) into each namespace that needs them, or use the `LanguageCluster` to manage a shared namespace boundary.
 
 ### Multiple References
 
