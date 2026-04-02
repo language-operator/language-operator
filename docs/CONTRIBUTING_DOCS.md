@@ -43,7 +43,7 @@ cd src
 make docs
 ```
 
-This creates `src/docs/api-reference.md`. The CI workflow automatically splits this into individual CRD pages.
+This creates `src/docs/api-reference.md` for **local inspection only**. In CI, `crd-ref-docs` is run separately with `--output-path=../docs/api-generated.md`, and that file is copied to `docs/api/reference.md` to produce the single reference page on the docs site.
 
 ### Preview the Site
 
@@ -145,7 +145,7 @@ For CRD documentation changes:
 
 1. Edit Go type comments in `src/api/v1alpha1/*.go`
 2. Regenerate with `cd src && make docs`
-3. The CI workflow will extract and split the reference
+3. The CI workflow will regenerate `docs/api/reference.md` from your type comments
 
 ## Troubleshooting
 
