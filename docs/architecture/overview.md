@@ -126,7 +126,7 @@ spec:
       periodSeconds: 10
 ```
 
-The operator creates: Deployment, Service (one port per entry in `spec.ports`), HTTPRoute, NetworkPolicy, and one ConfigMap (`config.yaml`).
+The operator creates: Deployment, Service (one port per entry in `spec.ports`), HTTPRoute, NetworkPolicy, ConfigMap (`config.yaml`), ServiceAccount/Role/RoleBinding (shared per namespace), and optionally a PVC (`spec.workspace`) and Secret (runtime credentials).
 
 If `spec.deployment.initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 

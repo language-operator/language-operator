@@ -59,7 +59,10 @@ Located in `src/controllers/utils.go`:
 - Service for agent networking
 - HTTPRoute for routing (if gateway API available)
 - NetworkPolicy for isolation
-- One ConfigMap (`config.yaml` with instructions, personas, models, tools)
+- ConfigMap (`{agent-name}-agent`, mounted as `/etc/agent/config.yaml`)
+- ServiceAccount + Role + RoleBinding (named `language-agent`, shared per namespace; cleaned up when the last agent in the namespace is deleted)
+- PersistentVolumeClaim (`{agent-name}-workspace`) — when `spec.workspace.enabled` is true
+- Secret (`{agent-name}-runtime`) — when `spec.openclaw` or `spec.opencode` credentials are configured
 
 **Configuration Injection:**
 
