@@ -1418,6 +1418,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#port-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Port References
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#configuration-injection" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1632,6 +1643,56 @@
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code-executor</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">   </span><span class="c1"># disabled — endpoint not injected</span>
+</code></pre></div>
+<h3 id="port-references">Port References<a class="headerlink" href="#port-references" title="Permanent link">&para;</a></h3>
+<p>Each entry in <code>spec.ports</code> is an <code>AgentPort</code> with the following fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>required</td>
+<td>Port name; used as the Service port name. Must match <code>^[a-z][a-z0-9-]*$</code>, max 15 characters</td>
+</tr>
+<tr>
+<td><code>port</code></td>
+<td>int32</td>
+<td>required</td>
+<td>Container port number (1–65535)</td>
+</tr>
+<tr>
+<td><code>protocol</code></td>
+<td>string</td>
+<td><code>TCP</code></td>
+<td>Transport protocol: <code>TCP</code>, <code>UDP</code>, or <code>SCTP</code></td>
+</tr>
+<tr>
+<td><code>expose</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>When <code>true</code>, the HTTPRoute targets this port for external access. If no port has <code>expose: true</code>, the first port is used. At most one port should have <code>expose: true</code></td>
+</tr>
+</tbody>
+</table>
+<p>When <code>spec.ports</code> is empty, the operator defaults to a single port named <code>http</code> on port <code>8080</code>.</p>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">expose</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metrics</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9090</span><span class="w">   </span><span class="c1"># internal only — not exposed via HTTPRoute</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">UDP</span>
 </code></pre></div>
 <h3 id="configuration-injection">Configuration Injection<a class="headerlink" href="#configuration-injection" title="Permanent link">&para;</a></h3>
 <p>The operator automatically mounts:</p>
