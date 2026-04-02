@@ -453,10 +453,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-it-does" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What It Does
+        How It Works
       
     </span>
   </a>
@@ -468,6 +468,17 @@
     <span class="md-ellipsis">
       
         Key Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources
       
     </span>
   </a>
@@ -1197,10 +1208,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-it-does" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What It Does
+        How It Works
       
     </span>
   </a>
@@ -1212,6 +1223,17 @@
     <span class="md-ellipsis">
       
         Key Features
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resources
       
     </span>
   </a>
@@ -1272,52 +1294,69 @@
 
 
 <h1 id="language-operator">Language Operator<a class="headerlink" href="#language-operator" title="Permanent link">&para;</a></h1>
-<p>A Kubernetes operator for running AI agent clusters as native workloads.</p>
-<h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
-<p>Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:</p>
+<p>AI agents as first-class Kubernetes workloads.</p>
+<p>Language Operator extends Kubernetes with purpose-built CRDs for deploying and operating AI agents. Agents run as standard Deployments — managed by the control plane, observable with existing tooling, and configured through the same GitOps workflows as the rest of your infrastructure.</p>
+<p>There is no proprietary runtime, no agent framework, and no code generation. Bring a container image; the operator handles the rest.</p>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>Declare what you want — the operator reconciles it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data-analyst</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openclaw</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="no">You are a data analyst. Analyze CSV files and generate insights.</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">models</span><span class="p">:</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python-executor</span>
+</code></pre></div>
+<p>The operator creates the Deployment, Service, and NetworkPolicy, injects model endpoints and tool URLs, mounts persona and instruction config, and keeps everything reconciled as your cluster changes.</p>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Kubernetes-native</strong> — agents are Deployments; use <code>kubectl</code>, Helm, Argo CD, Flux, or any standard tooling</li>
+<li><strong>GitOps-ready</strong> — declarative CRDs mean agent configuration lives in version control alongside your infrastructure</li>
+<li><strong>Model abstraction</strong> — a shared LiteLLM gateway decouples agents from LLM providers; swap models without touching agent code</li>
+<li><strong>MCP tool protocol</strong> — tools are independent services connected via a standard interface, not embedded dependencies</li>
+<li><strong>Network isolation</strong> — cluster-scoped namespaces with enforced NetworkPolicy; agents communicate only with what they're permitted to</li>
+<li><strong>Observability</strong> — OpenTelemetry traces propagated through reconciliation loops and injected into agent containers</li>
+</ul>
+<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Resource</th>
+<th>CRD</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>LanguageCluster</code></td>
-<td>Managed namespace for agents</td>
+<td>Managed namespace; owns the shared model gateway</td>
 </tr>
 <tr>
 <td><code>LanguageAgent</code></td>
-<td>Free-form agents like OpenClaw or OpenCode</td>
+<td>An agent workload — image, instructions, models, tools</td>
 </tr>
 <tr>
 <td><code>LanguageAgentRuntime</code></td>
-<td>Agent runtime presets</td>
+<td>Reusable defaults for a class of agents</td>
 </tr>
 <tr>
 <td><code>LanguageModel</code></td>
-<td>An LLM configuration (proxied through LiteLLM)</td>
+<td>An LLM endpoint, proxied through LiteLLM</td>
 </tr>
 <tr>
 <td><code>LanguageTool</code></td>
-<td>A MCP-compatible server</td>
+<td>An MCP-compatible tool server</td>
 </tr>
 <tr>
 <td><code>LanguagePersona</code></td>
-<td>Define tone, personality and expertise</td>
+<td>Reusable behavioral configuration — tone, expertise, constraints</td>
 </tr>
 </tbody>
 </table>
-<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Native Kubernetes Integration</strong> - Agents run as standard Kubernetes workloads with full lifecycle management</li>
-<li><strong>Network Isolation</strong> - Cluster-scoped namespaces with NetworkPolicy enforcement</li>
-<li><strong>Model Abstraction</strong> - Unified LiteLLM proxy handles provider diversity and credential management</li>
-<li><strong>MCP Tool Protocol</strong> - Standard interface for extending agent capabilities</li>
-<li><strong>Configuration Injection</strong> - Automated mounting of personas, instructions, and tool endpoints</li>
-<li><strong>Observability</strong> - OpenTelemetry traces and metrics for all agent operations</li>
-</ul>
 <h2 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="getting-started/installation/">Installation Guide</a> - Install the operator via Helm</li>
