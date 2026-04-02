@@ -12,6 +12,9 @@ metadata:
 spec:
   image: ghcr.io/anomalyco/opencode:latest
 
+  opencode:
+    enabled: true
+
   ports:
     - name: http
       port: 3000

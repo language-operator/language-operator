@@ -51,6 +51,12 @@ metadata:
   name: my-cluster
 spec:
   domain: demo.langop.io
+  ingress:
+    tls:
+      enabled: true
+      issuerRef:
+        name: letsencrypt-production
+        kind: ClusterIssuer
 EOF
 
 kubectl wait languagecluster/my-cluster \
@@ -61,7 +67,7 @@ kubectl config set-context --current --namespace=my-cluster
 
 ### 2. Configure an LLM
 
-The `LanguageModel` holds the real API credential and exposes a LiteLLM proxy inside the cluster.
+`LanguageModel` makes a model available to agents inside the cluster.
 
 ```bash
 kubectl create secret generic anthropic-credentials \
@@ -108,11 +114,14 @@ EOF
 kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
 ```
 
+Connect the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)) to `wss://openclaw.demo.langop.io` with the token retrieved above.
+
+Alternatively, port-forward for local access:
+
 ```bash
 kubectl port-forward svc/openclaw 18789:18789
+# then connect to ws://localhost:18789
 ```
-
-openclaw exposes a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI. Connect using the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)) pointing to `ws://localhost:18789` with the token retrieved above.
 
 </details>
 
@@ -127,7 +136,6 @@ metadata:
   name: opencode
 spec:
   runtime: opencode
-  opencode: {}    # password is auto-generated; retrieve it after creation
   models:
     - name: claude-sonnet
 EOF
@@ -138,15 +146,22 @@ EOF
 ```bash
 # Retrieve the auto-generated password
 PASSWORD=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
-
-# Port-forward the service
-kubectl port-forward svc/opencode 3000:3000
-
-# Or attach the TUI (opencode v1.0.10+)
-opencode attach http://localhost:3000 --username opencode --password "$PASSWORD"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. Sign in with username `opencode` and the auto-generated password retrieved above.
+Open [https://opencode.demo.langop.io](https://opencode.demo.langop.io) in your browser. Sign in with username `opencode` and the password retrieved above.
+
+To attach the TUI (opencode v1.0.10+):
+
+```bash
+opencode attach https://opencode.demo.langop.io --username opencode --password "$PASSWORD"
+```
+
+Alternatively, port-forward for local access:
+
+```bash
+kubectl port-forward svc/opencode 3000:3000
+# then open http://localhost:3000 or: opencode attach http://localhost:3000 --username opencode --password "$PASSWORD"
+```
 
 </details>
 
