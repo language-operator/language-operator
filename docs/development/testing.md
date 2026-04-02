@@ -33,10 +33,15 @@ func TestLanguageAgentController(t *testing.T) {
         Build()
 
     reconciler := &LanguageAgentReconciler{
-        Client: fakeClient,
-        Scheme: scheme,
-        Log:    logr.Discard(),
+        Client:                  fakeClient,
+        Scheme:                  scheme,
+        Log:                     logr.Discard(),
+        Recorder:                record.NewFakeRecorder(100),
+        EventManager:            events.NewEventManager(record.NewFakeRecorder(100)),
+        RegistryManager:         &mockRegistryManager{},
+        NetworkIsolationEnabled: false,
     }
+    // mockRegistryManager is defined in languageagent_controller_test.go — copy it into your test file.
 
     // First reconcile adds finalizer
     _, err := reconciler.Reconcile(ctx, req)
@@ -143,7 +148,13 @@ Verify events are recorded:
 ```go
 recorder := record.NewFakeRecorder(100)
 reconciler := &LanguageAgentReconciler{
-    Recorder: recorder,
+    Client:                  fakeClient,
+    Scheme:                  scheme,
+    Log:                     logr.Discard(),
+    Recorder:                recorder,
+    EventManager:            events.NewEventManager(recorder),
+    RegistryManager:         &mockRegistryManager{},
+    NetworkIsolationEnabled: false,
 }
 
 // ... reconcile ...
