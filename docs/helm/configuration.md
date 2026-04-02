@@ -185,6 +185,7 @@ env:
 | `config.webhook.enabled` | Enable admission webhooks | `true` |
 | `config.webhook.port` | Webhook server port | `9443` |
 | `config.webhook.certDir` | TLS certificate directory | `/tmp/k8s-webhook-server/serving-certs` |
+| `config.webhook.certManager.enabled` | Use cert-manager to provision the webhook TLS certificate | `true` |
 
 #### Logging
 
@@ -224,6 +225,7 @@ env:
 |-----------|-------------|---------|
 | `config.gateway.image` | LiteLLM gateway image (defaults to `ghcr.io/language-operator/model:latest`) | `""` |
 | `config.gateway.imagePullPolicy` | Gateway image pull policy | `""` |
+| `config.gateway.ingressClassName` | Default IngressClass for the gateway Ingress; overridden per-cluster via `spec.ingress.className` | `""` |
 
 #### Watch
 
