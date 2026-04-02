@@ -1,28 +1,51 @@
 # Language Operator
 
-A Kubernetes operator for running AI agent clusters as native workloads.
+AI agents as first-class Kubernetes workloads.
 
-## What It Does
+Language Operator extends Kubernetes with purpose-built CRDs for deploying and operating AI agents. Agents run as standard Deployments — managed by the control plane, observable with existing tooling, and configured through the same GitOps workflows as the rest of your infrastructure.
 
-Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:
+There is no proprietary runtime, no agent framework, and no code generation. Bring a container image; the operator handles the rest.
 
-| Resource | Purpose |
-|----------|---------|
-| `LanguageCluster` | Managed namespace for agents |
-| `LanguageAgent` | Free-form agents like OpenClaw or OpenCode |
-| `LanguageAgentRuntime` | Agent runtime presets |
-| `LanguageModel` | An LLM configuration (proxied through LiteLLM) |
-| `LanguageTool` | A MCP-compatible server |
-| `LanguagePersona` | Define tone, personality and expertise |
+## How It Works
+
+Declare what you want — the operator reconciles it:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: data-analyst
+spec:
+  runtime: openclaw
+  instructions: |
+    You are a data analyst. Analyze CSV files and generate insights.
+  models:
+    - name: claude-sonnet
+  tools:
+    - name: python-executor
+```
+
+The operator creates the Deployment, Service, and NetworkPolicy, injects model endpoints and tool URLs, mounts persona and instruction config, and keeps everything reconciled as your cluster changes.
 
 ## Key Features
 
-- **Native Kubernetes Integration** - Agents run as standard Kubernetes workloads with full lifecycle management
-- **Network Isolation** - Cluster-scoped namespaces with NetworkPolicy enforcement
-- **Model Abstraction** - Unified LiteLLM proxy handles provider diversity and credential management
-- **MCP Tool Protocol** - Standard interface for extending agent capabilities
-- **Configuration Injection** - Automated mounting of personas, instructions, and tool endpoints
-- **Observability** - OpenTelemetry traces and metrics for all agent operations
+- **Kubernetes-native** — agents are Deployments; use `kubectl`, Helm, Argo CD, Flux, or any standard tooling
+- **GitOps-ready** — declarative CRDs mean agent configuration lives in version control alongside your infrastructure
+- **Model abstraction** — a shared LiteLLM gateway decouples agents from LLM providers; swap models without touching agent code
+- **MCP tool protocol** — tools are independent services connected via a standard interface, not embedded dependencies
+- **Network isolation** — cluster-scoped namespaces with enforced NetworkPolicy; agents communicate only with what they're permitted to
+- **Observability** — OpenTelemetry traces propagated through reconciliation loops and injected into agent containers
+
+## Resources
+
+| CRD | Purpose |
+|-----|---------|
+| `LanguageCluster` | Managed namespace; owns the shared model gateway |
+| `LanguageAgent` | An agent workload — image, instructions, models, tools |
+| `LanguageAgentRuntime` | Reusable defaults for a class of agents |
+| `LanguageModel` | An LLM endpoint, proxied through LiteLLM |
+| `LanguageTool` | An MCP-compatible tool server |
+| `LanguagePersona` | Reusable behavioral configuration — tone, expertise, constraints |
 
 ## Quick Links
 
