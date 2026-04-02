@@ -30,7 +30,6 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 - [Quick Start](getting-started/quickstart.md) - Deploy your first agent in 5 minutes
 - **[API Reference](api/reference.md)** - Auto-generated CRD field documentation
 - [Architecture](architecture/overview.md) - System design and component interaction
-- [Helm Repository](helm/repository.md) - Chart installation and configuration
 
 ## Project Status
 

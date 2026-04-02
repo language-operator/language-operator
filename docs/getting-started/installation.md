@@ -131,8 +131,6 @@ languagetools.langop.io
 
 ## Configuration Options
 
-The operator can be configured via Helm values. See the [Helm Configuration](../helm/configuration.md) guide for details.
-
 ### Common Configurations
 
 **Custom image:**
@@ -184,4 +182,3 @@ helm uninstall language-operator --namespace language-operator
 
 - [Quick Start Guide](quickstart.md) - Deploy your first agent
 - [Examples](examples.md) - Common deployment patterns
-- [Helm Configuration](../helm/configuration.md) - Detailed configuration reference
