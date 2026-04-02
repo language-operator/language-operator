@@ -1320,7 +1320,7 @@
 <li><strong>Model abstraction</strong> — a shared LiteLLM gateway decouples agents from LLM providers; swap models without touching agent code</li>
 <li><strong>MCP tool protocol</strong> — tools are independent services connected via a standard interface, not embedded dependencies</li>
 <li><strong>Network isolation</strong> — cluster-scoped namespaces with enforced NetworkPolicy; agents communicate only with what they're permitted to</li>
-<li><strong>Observability</strong> — OpenTelemetry traces propagated through reconciliation loops and injected into agent containers</li>
+<li><strong>Observability</strong> — OpenTelemetry traces across all reconciliation loops; collector endpoint and sampler config propagated into agent containers so agent-side tracing requires no extra configuration</li>
 </ul>
 <h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
 <table>
