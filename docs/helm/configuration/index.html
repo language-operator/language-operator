@@ -3014,6 +3014,11 @@
 <td>TLS certificate directory</td>
 <td><code>/tmp/k8s-webhook-server/serving-certs</code></td>
 </tr>
+<tr>
+<td><code>config.webhook.certManager.enabled</code></td>
+<td>Use cert-manager to provision the webhook TLS certificate</td>
+<td><code>true</code></td>
+</tr>
 </tbody>
 </table>
 <h4 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h4>
@@ -3142,6 +3147,11 @@
 <tr>
 <td><code>config.gateway.imagePullPolicy</code></td>
 <td>Gateway image pull policy</td>
+<td><code>""</code></td>
+</tr>
+<tr>
+<td><code>config.gateway.ingressClassName</code></td>
+<td>Default IngressClass for the gateway Ingress; overridden per-cluster via <code>spec.ingress.className</code></td>
 <td><code>""</code></td>
 </tr>
 </tbody>
