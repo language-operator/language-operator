@@ -86,7 +86,7 @@ Every agent gets:
 
 The agent listens on the port(s) defined in `spec.ports`. The operator creates a ClusterIP Service with one port entry per `AgentPort`. What the agent serves there is up to the image — HTTP, gRPC, OpenAI-compatible API, or anything else.
 
-Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the HTTPRoute targets this port; if no port has `expose: true`, the first port is used).
+Each `AgentPort` has four fields: `name` (required, used as the Service port name), `port` (required, the container port number), `protocol` (optional — `TCP`, `UDP`, or `SCTP`; defaults to `TCP`), and `expose` (optional bool — when `true`, the HTTPRoute targets this port; if no port has `expose: true`, the first port is used).
 
 ### Probes
 
