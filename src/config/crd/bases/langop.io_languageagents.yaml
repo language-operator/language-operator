@@ -5113,16 +5113,6 @@ spec:
                       type: object
                     type: array
                 type: object
-              executionMode:
-                description: |-
-                  ExecutionMode defines how the agent operates.
-                  Injected as AGENT_MODE into the agent container.
-                enum:
-                - autonomous
-                - interactive
-                - scheduled
-                - event-driven
-                type: string
               image:
                 description: |-
                   Image is the container image to run for this agent.

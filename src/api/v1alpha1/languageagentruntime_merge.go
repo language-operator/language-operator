@@ -40,10 +40,6 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 		agent.Ports = make([]AgentPort, len(rt.Ports))
 		copy(agent.Ports, rt.Ports)
 	}
-	if agent.ExecutionMode == "" {
-		agent.ExecutionMode = rt.ExecutionMode
-	}
-
 	// Workspace: whole-object replacement (agent wins if non-nil).
 	// WorkspaceSpec fields are interdependent (size, accessMode, mountPath),
 	// so partial field-by-field merging would produce inconsistent objects.

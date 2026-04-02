@@ -98,8 +98,6 @@ spec:
     size: 10Gi
     mountPath: /home/node/.myapp
 
-  executionMode: autonomous     # autonomous|interactive|scheduled|event-driven
-
   deployment:
     replicas: 1
     envFrom:

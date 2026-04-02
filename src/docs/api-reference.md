@@ -10,11 +10,53 @@ Package v1alpha1 contains API Schema definitions for the language v1alpha1 API g
 
 ### Resource Types
 - [LanguageAgent](#languageagent)
+- [LanguageAgentRuntime](#languageagentruntime)
 - [LanguageCluster](#languagecluster)
 - [LanguageModel](#languagemodel)
 - [LanguagePersona](#languagepersona)
 - [LanguageTool](#languagetool)
 
+
+
+#### AgentNetworkPolicies
+
+
+
+AgentNetworkPolicies defines user-supplied ingress and egress rules for an agent workload.
+The shape mirrors the native Kubernetes NetworkPolicySpec so that rules can be copied
+verbatim from real NetworkPolicy manifests.
+
+
+
+_Appears in:_
+- [LanguageAgentSpec](#languageagentspec)
+- [LanguageClusterSpec](#languageclusterspec)
+- [LanguageToolSpec](#languagetoolspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ingress` _[NetworkIngressRule](#networkingressrule) array_ | Ingress rules — each entry allows traffic into the workload from the listed sources. |  |  |
+| `egress` _[NetworkEgressRule](#networkegressrule) array_ | Egress rules — each entry allows traffic from the workload to the listed destinations. |  |  |
+
+
+#### AgentPort
+
+
+
+AgentPort describes a single network port that an agent container exposes.
+
+
+
+_Appears in:_
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
+- [LanguageAgentSpec](#languageagentspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name uniquely identifies this port within the agent (e.g., "web", "ws").<br />Used as the Service port name; must conform to Kubernetes port-name rules. |  | MaxLength: 15 <br />Pattern: `^[a-z][a-z0-9-]*$` <br />Required: \{\} <br /> |
+| `port` _integer_ | Port is the port number the container listens on. |  | Maximum: 65535 <br />Minimum: 1 <br />Required: \{\} <br /> |
+| `protocol` _[Protocol](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#protocol-v1-core)_ | Protocol is the transport protocol. Defaults to TCP. | TCP | Enum: [TCP UDP SCTP] <br /> |
+| `expose` _boolean_ | Expose controls whether ingress/HTTPRoute routes to this port.<br />At most one port should have expose: true; if none, the first port is used. |  |  |
 
 
 #### CertIssuerReference
@@ -32,7 +74,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `name` _string_ | Name of the Issuer or ClusterIssuer |  | Required: \{\} <br /> |
 | `kind` _string_ | Kind is either "Issuer" or "ClusterIssuer" | ClusterIssuer | Enum: [Issuer ClusterIssuer] <br /> |
-| `group` _string_ | Group is the API group of the issuer | cert-manager.io |  |
 
 
 #### ClusterCapacitySpec
@@ -89,6 +130,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 
 _Appears in:_
 - [GatewaySpec](#gatewayspec)
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
 - [LanguageAgentSpec](#languageagentspec)
 - [LanguageToolSpec](#languagetoolspec)
 
@@ -114,6 +156,8 @@ _Appears in:_
 | `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | LivenessProbe defines the liveness probe for the container. |  |  |
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | ReadinessProbe defines the readiness probe for the container. |  |  |
 | `startupProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#probe-v1-core)_ | StartupProbe defines the startup probe for the container. |  |  |
+| `command` _string array_ | Command overrides the container entrypoint. |  |  |
+| `args` _string array_ | Args overrides the container command arguments. |  |  |
 | `serviceType` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#servicetype-v1-core)_ | ServiceType specifies the type of Service to create (ClusterIP, NodePort, LoadBalancer). |  | Enum: [ClusterIP NodePort LoadBalancer] <br /> |
 | `serviceAnnotations` _object (keys:string, values:string)_ | ServiceAnnotations are annotations to add to the Service. |  |  |
 
@@ -131,7 +175,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set. |  |  |
 | `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment configures the Kubernetes deployment for the gateway pod. |  |  |
 
 
@@ -148,6 +191,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set. |  |  |
 | `tls` _[IngressTLSConfig](#ingresstlsconfig)_ | TLS configuration for agent webhooks |  |  |
 | `className` _string_ | ClassName specifies the IngressClass to use (maps to spec.ingressClassName on the Ingress object). |  |  |
 
@@ -189,6 +233,50 @@ LanguageAgent is the Schema for the languageagents API
 | `status` _[LanguageAgentStatus](#languageagentstatus)_ |  |  |  |
 
 
+#### LanguageAgentRuntime
+
+
+
+LanguageAgentRuntime is the Schema for the languageagentruntimes API.
+It defines a reusable preset for LanguageAgent deployments, analogous to an IngressClass.
+Admins create runtimes; users reference them via spec.runtime on a LanguageAgent.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `langop.io/v1alpha1` | | |
+| `kind` _string_ | `LanguageAgentRuntime` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[LanguageAgentRuntimeSpec](#languageagentruntimespec)_ |  |  |  |
+
+
+#### LanguageAgentRuntimeSpec
+
+
+
+LanguageAgentRuntimeSpec defines a preset configuration for LanguageAgent deployments.
+All fields are optional; unset fields leave the agent's own spec in effect.
+When a LanguageAgent references a runtime, the runtime's fields are merged as defaults:
+scalars fill in zeros/nils (agent wins if set), lists are runtime-first then agent-appended.
+
+
+
+_Appears in:_
+- [LanguageAgentRuntime](#languageagentruntime)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `image` _string_ | Image is the default container image for agents using this runtime.<br />Agents may override this. When a runtime is referenced, spec.image on the agent is optional. |  |  |
+| `ports` _[AgentPort](#agentport) array_ | Ports defines default ports for agents using this runtime.<br />Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely. |  |  |
+| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace provides default size, storageClass, and mountPath for the agent's workspace.<br />Workspace storage is always provisioned; this presets its parameters.<br />Agents may override individual workspace fields. |  |  |
+| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended. |  |  |
+| `openclaw` _[OpenclawConfig](#openclawconfig)_ | Openclaw provides default openclaw credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden. |  |  |
+| `opencode` _[OpencodeConfig](#opencodeconfig)_ | Opencode provides default opencode credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden. |  |  |
+
+
 #### LanguageAgentSpec
 
 
@@ -202,16 +290,18 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `image` _string_ | Image is the container image to run for this agent |  | MinLength: 1 <br />Pattern: `^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$` <br />Required: \{\} <br /> |
+| `runtime` _string_ | Runtime is the name of a LanguageAgentRuntime that provides preset configuration<br />(image, port, init containers, env vars, probes, etc.).<br />When set, spec.image is optional; the runtime provides a default. |  |  |
+| `image` _string_ | Image is the container image to run for this agent.<br />Required unless spec.runtime is set (the runtime provides a default image). |  | Pattern: `^([a-z0-9]+([._-][a-z0-9]+)*\/)*[a-z0-9]+([._-][a-z0-9]+)*(:[a-z0-9]+([._-][a-z0-9]+)*)?$` <br /> |
 | `models` _[ModelReference](#modelreference) array_ | Models is a list of LanguageModel references this agent can use |  |  |
 | `tools` _[ToolReference](#toolreference) array_ | Tools is a list of LanguageTool references available to this agent |  |  |
 | `persona` _string_ | Persona is the name of a LanguagePersona this agent uses |  |  |
-| `instructions` _string_ | Instructions provides system instructions for the agent.<br />Mounted at /etc/agent/instructions.txt if set. |  |  |
-| `executionMode` _string_ | ExecutionMode defines how the agent operates.<br />Injected as AGENT_MODE into the agent container. |  | Enum: [autonomous interactive scheduled event-driven] <br /> |
+| `instructions` _string_ | Instructions provides system instructions for the agent.<br />Delivered as the top-level "instructions" field in /etc/agent/config.yaml. |  |  |
 | `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace defines persistent storage for the agent |  |  |
-| `networkPolicies` _[NetworkRule](#networkrule) array_ | NetworkPolicies defines network access rules for this agent<br />By default, agents can access all resources within the cluster but no external endpoints |  |  |
-| `port` _integer_ | Port is the port the agent container listens on.<br />Used for the ClusterIP Service and NetworkPolicy ingress rules.<br />Defaults to 8080. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for this agent.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  |  |
+| `ports` _[AgentPort](#agentport) array_ | Ports defines all network ports this agent exposes.<br />At most one entry should have expose: true (the ingress target);<br />if none are marked, the first port is used for ingress routing.<br />Defaults to a single HTTP port on 8080 when not set. |  |  |
 | `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration. |  |  |
+| `opencode` _[OpencodeConfig](#opencodeconfig)_ | Opencode holds configuration specific to the opencode runtime.<br />Only effective when spec.runtime is "opencode". |  |  |
+| `openclaw` _[OpenclawConfig](#openclawconfig)_ | Openclaw holds configuration specific to the openclaw runtime.<br />Only effective when spec.runtime is "openclaw". |  |  |
 
 
 #### LanguageAgentStatus
@@ -231,8 +321,9 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the agent's state |  |  |
 | `activeReplicas` _integer_ | ActiveReplicas is the number of agent pods currently running |  |  |
 | `readyReplicas` _integer_ | ReadyReplicas is the number of agent pods ready |  |  |
-| `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Used for webhook routing (e.g., <uuid>.domain.com) |  |  |
+| `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Not used for webhook routing; webhooks are routed via agent name (e.g., <agent-name>.domain.com) |  |  |
 | `webhookURLs` _string array_ | WebhookURLs contains the URLs where this agent can receive webhooks |  |  |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed by the controller.<br />It corresponds to the metadata.generation of the LanguageAgent at the time<br />the controller last processed it. Watchers can use this to detect when the<br />status reflects a stale version of the spec. |  |  |
 
 
 
@@ -269,9 +360,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `domain` _string_ | Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <uuid>.<domain><br />Example: "ai.theryans.io" results in webhooks like "abc123.ai.theryans.io" |  |  |
+| `domain` _string_ | Domain is the base domain for the cluster and agent webhook routing<br />The domain itself serves as the cluster dashboard/UI endpoint<br />Agent webhooks will be accessible at <agent-name>.<domain><br />Example: "ai.theryans.io" results in webhooks like "my-agent.ai.theryans.io" |  |  |
 | `ingress` _[IngressConfig](#ingressconfig)_ | Ingress defines ingress configuration for the cluster |  |  |
-| `networkPolicies` _[NetworkRule](#networkrule) array_ | NetworkPolicies defines egress network policies for agents in this cluster |  |  |
+| `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for agents in this cluster.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  |  |
 | `gateway` _[GatewaySpec](#gatewayspec)_ | Gateway configures the shared LiteLLM gateway deployed per cluster |  |  |
 | `capacity` _[ClusterCapacitySpec](#clustercapacityspec)_ | Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.<br />When set, the controller creates a ResourceQuota named "langop-quota".<br />When unset, any existing "langop-quota" is deleted. |  |  |
 
@@ -290,10 +381,11 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `phase` _string_ | Phase of the cluster |  | Enum: [Pending Ready Failed] <br /> |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ |  |  |  |
 | `gatewayEndpoint` _string_ | GatewayEndpoint is the in-cluster URL for the shared LiteLLM gateway |  |  |
 | `gatewayReady` _boolean_ | GatewayReady indicates whether the shared gateway Deployment is available.<br />Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false). |  |  |
 | `capacity` _[ClusterCapacityStatus](#clustercapacitystatus)_ | Capacity reports observed resource usage in this cluster's namespace. |  |  |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed by the controller.<br />It corresponds to the metadata.generation of the LanguageCluster at the time<br />the controller last processed it. Watchers can use this to detect when the<br />status reflects a stale version of the spec. |  |  |
 
 
 #### LanguageModel
@@ -350,7 +442,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguageModel |  |  |
-| `phase` _string_ | Phase represents the current phase of the model (Ready, Failed) |  | Enum: [Ready Failed] <br /> |
+| `phase` _string_ | Phase represents the current phase of the model |  | Enum: [Ready] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the model's state |  |  |
 | `message` _string_ | Message provides human-readable details about the current state |  |  |
 
@@ -408,7 +500,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration reflects the generation of the most recently observed LanguagePersona |  |  |
-| `phase` _string_ | Phase represents the current phase (Ready, Failed) |  | Enum: [Ready Failed] <br /> |
+| `phase` _string_ | Phase represents the current phase |  | Enum: [Ready] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the persona's state |  |  |
 
 
@@ -451,7 +543,7 @@ _Appears in:_
 | `deploymentMode` _string_ | DeploymentMode specifies how this tool should be deployed<br />- "service": Deployed as a standalone Deployment+Service (default, shared across agents)<br />- "sidecar": Deployed as a sidecar container in each agent pod (dedicated, with workspace access) | service | Enum: [service sidecar] <br /> |
 | `port` _integer_ | Port is the port the tool listens on | 8080 | Maximum: 65535 <br />Minimum: 1 <br /> |
 | `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration. |  |  |
-| `networkPolicies` _[NetworkRule](#networkrule) array_ | NetworkPolicies defines network access rules for this tool<br />By default, tools can access all resources within the cluster but no external endpoints |  |  |
+| `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for this tool.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  |  |
 
 
 #### LanguageToolStatus
@@ -471,7 +563,6 @@ _Appears in:_
 | `phase` _string_ | Phase represents the current phase of the tool (Pending, Running, Failed, Updating) |  | Enum: [Pending Running Failed Updating] <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the tool's state |  |  |
 | `endpoint` _string_ | Endpoint is the service endpoint where the tool is accessible |  |  |
-| `availableTools` _string array_ | AvailableTools lists the tools discovered from this service |  |  |
 | `toolSchemas` _[ToolSchema](#toolschema) array_ | ToolSchemas contains the complete MCP tool schemas discovered from this service |  |  |
 | `readyReplicas` _integer_ | ReadyReplicas is the number of pods ready and passing health checks |  |  |
 | `availableReplicas` _integer_ | AvailableReplicas is the number of pods targeted by this LanguageTool with at least one available condition |  |  |
@@ -499,6 +590,42 @@ _Appears in:_
 | `priority` _integer_ | Priority for model selection — a hint for the agent runtime (lower value = higher priority).<br />The operator does not enforce priority; it is surfaced in the agent config (agent.json). |  |  |
 
 
+#### NetworkEgressRule
+
+
+
+NetworkEgressRule is one egress rule: zero or more destination peers, zero or more ports.
+Mirrors networkingv1.NetworkPolicyEgressRule.
+
+
+
+_Appears in:_
+- [AgentNetworkPolicies](#agentnetworkpolicies)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `to` _[NetworkPeer](#networkpeer) array_ | To lists the destinations this workload is allowed to reach. |  |  |
+| `ports` _[NetworkPort](#networkport) array_ | Ports lists the destination ports to allow. |  |  |
+
+
+#### NetworkIngressRule
+
+
+
+NetworkIngressRule is one ingress rule: zero or more source peers, zero or more ports.
+Mirrors networkingv1.NetworkPolicyIngressRule.
+
+
+
+_Appears in:_
+- [AgentNetworkPolicies](#agentnetworkpolicies)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `from` _[NetworkPeer](#networkpeer) array_ | From lists the sources allowed to send traffic to this workload. |  |  |
+| `ports` _[NetworkPort](#networkport) array_ | Ports lists the ports on which to allow incoming traffic. |  |  |
+
+
 #### NetworkPeer
 
 
@@ -508,7 +635,8 @@ NetworkPeer defines the source/destination of network traffic
 
 
 _Appears in:_
-- [NetworkRule](#networkrule)
+- [NetworkEgressRule](#networkegressrule)
+- [NetworkIngressRule](#networkingressrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -529,7 +657,8 @@ NetworkPort defines a port and protocol
 
 
 _Appears in:_
-- [NetworkRule](#networkrule)
+- [NetworkEgressRule](#networkegressrule)
+- [NetworkIngressRule](#networkingressrule)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -537,25 +666,45 @@ _Appears in:_
 | `port` _integer_ | Port number |  | Maximum: 65535 <br />Minimum: 1 <br /> |
 
 
-#### NetworkRule
+#### OpenclawConfig
 
 
 
-NetworkRule defines a single network policy rule
+OpenclawConfig holds configuration specific to the openclaw runtime.
+Effective only when spec.runtime is "openclaw".
 
 
 
 _Appears in:_
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
 - [LanguageAgentSpec](#languageagentspec)
-- [LanguageClusterSpec](#languageclusterspec)
-- [LanguageToolSpec](#languagetoolspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `description` _string_ | Description of this rule |  |  |
-| `from` _[NetworkPeer](#networkpeer)_ | From selector for ingress rules |  |  |
-| `to` _[NetworkPeer](#networkpeer)_ | To selector for egress rules |  |  |
-| `ports` _[NetworkPort](#networkport) array_ | Ports allowed by this rule |  |  |
+| `enabled` _boolean_ | Enabled activates openclaw credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN<br />without requiring any explicit config on the LanguageAgent. |  |  |
+| `token` _string_ | Token is the gateway authentication token (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with TokenRef. |  |  |
+| `tokenRef` _[RuntimeSecretRef](#runtimesecretref)_ | TokenRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCLAW_GATEWAY_TOKEN.<br />Mutually exclusive with Token. |  |  |
+
+
+#### OpencodeConfig
+
+
+
+OpencodeConfig holds configuration specific to the opencode runtime.
+Effective only when spec.runtime is "opencode".
+
+
+
+_Appears in:_
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
+- [LanguageAgentSpec](#languageagentspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enabled activates opencode credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials<br />without requiring any explicit config on the LanguageAgent. |  |  |
+| `username` _string_ | Username for HTTP Basic Auth. Defaults to "opencode" if not set.<br />Sets OPENCODE_SERVER_USERNAME in the agent container. |  |  |
+| `password` _string_ | Password is the HTTP Basic Auth password (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with PasswordRef. |  |  |
+| `passwordRef` _[RuntimeSecretRef](#runtimesecretref)_ | PasswordRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).<br />Mutually exclusive with Password. |  |  |
 
 
 #### RateLimitSpec
@@ -573,6 +722,24 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `requestsPerMinute` _integer_ | RequestsPerMinute limits requests per minute |  |  |
 | `tokensPerMinute` _integer_ | TokensPerMinute limits tokens per minute |  |  |
+
+
+#### RuntimeSecretRef
+
+
+
+RuntimeSecretRef references a Secret in the same namespace.
+All keys in the Secret are injected as env vars via envFrom.
+
+
+
+_Appears in:_
+- [OpenclawConfig](#openclawconfig)
+- [OpencodeConfig](#opencodeconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the Secret. |  | Required: \{\} <br /> |
 
 
 #### SecretReference
@@ -661,7 +828,6 @@ _Appears in:_
 | `name` _string_ | Name is the tool identifier |  |  |
 | `description` _string_ | Description is a human-readable description of the tool |  |  |
 | `inputSchema` _[ToolSchemaDefinition](#toolschemadefinition)_ | InputSchema defines the parameters this tool accepts |  |  |
-| `outputSchema` _[ToolSchemaDefinition](#toolschemadefinition)_ | OutputSchema defines the structure this tool returns |  |  |
 
 
 #### ToolSchemaDefinition
@@ -691,6 +857,7 @@ WorkspaceSpec defines persistent workspace storage for an agent
 
 
 _Appears in:_
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
 - [LanguageAgentSpec](#languageagentspec)
 
 | Field | Description | Default | Validation |

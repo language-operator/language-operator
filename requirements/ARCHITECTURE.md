@@ -120,7 +120,6 @@ spec:
     size: 10Gi
     mountPath: /home/node/.myapp
 
-  executionMode: autonomous     # autonomous|interactive|scheduled|event-driven
   replicas: 1
 ```
 
@@ -211,7 +210,7 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 **Operator provides:**
 - `/etc/agent/instructions.txt` — plain text task instructions (optional)
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
-- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
+- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
 - `MODEL_ENDPOINTS` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs

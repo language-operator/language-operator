@@ -1151,13 +1151,6 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		},
 	}
 
-	if agent.Spec.ExecutionMode != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AGENT_MODE",
-			Value: agent.Spec.ExecutionMode,
-		})
-	}
-
 	// Pass through OpenTelemetry collector endpoint from operator environment.
 	// Agents are responsible for configuring their own OTEL SDK.
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {

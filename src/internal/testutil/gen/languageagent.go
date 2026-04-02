@@ -125,13 +125,6 @@ func SetAgentLabel(key, value string) LanguageAgentModifier {
 	}
 }
 
-// SetAgentExecutionMode sets spec.executionMode.
-func SetAgentExecutionMode(mode string) LanguageAgentModifier {
-	return func(a *langopv1alpha1.LanguageAgent) {
-		a.Spec.ExecutionMode = mode
-	}
-}
-
 // SetAgentPersona sets spec.persona.
 func SetAgentPersona(name string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

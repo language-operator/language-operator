@@ -181,7 +181,6 @@ spec:
     role: primary
   tools:
   - name: kubectl-tool
-  executionMode: interactive
 ```
 
 ### Deploy a Language Model

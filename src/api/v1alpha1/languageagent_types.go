@@ -63,12 +63,6 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
-	// ExecutionMode defines how the agent operates.
-	// Injected as AGENT_MODE into the agent container.
-	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
-	// +optional
-	ExecutionMode string `json:"executionMode,omitempty"`
-
 	// Workspace defines persistent storage for the agent
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`

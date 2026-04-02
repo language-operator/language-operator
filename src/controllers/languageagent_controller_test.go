@@ -1154,67 +1154,6 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 	if envMap["AGENT_CLUSTER_UUID"] != "test-cluster-uid-1234" {
 		t.Errorf("Expected AGENT_CLUSTER_UUID=test-cluster-uid-1234, got %s", envMap["AGENT_CLUSTER_UUID"])
 	}
-	// AGENT_MODE must not be set when ExecutionMode is empty
-	if _, ok := envMap["AGENT_MODE"]; ok {
-		t.Errorf("Expected AGENT_MODE to be absent when ExecutionMode is empty, but got %s", envMap["AGENT_MODE"])
-	}
-}
-
-func TestLanguageAgentController_AgentModeInjection(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	agent := &langopv1alpha1.LanguageAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mode-agent",
-			Namespace: "default",
-		},
-		Spec: langopv1alpha1.LanguageAgentSpec{
-			Image:         "ghcr.io/language-operator/agent:latest",
-			ExecutionMode: "autonomous",
-		},
-	}
-
-	cluster := gen.ReadyCluster("default")
-	cluster.UID = "cluster-uid-mode-test"
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(cluster, agent).
-		WithStatusSubresource(agent).
-		Build()
-
-	reconciler := &LanguageAgentReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		Log:             logr.Discard(),
-		Recorder:        &record.FakeRecorder{},
-		RegistryManager: &mockRegistryManager{},
-	}
-
-	ctx := context.Background()
-	_, err := reconciler.Reconcile(ctx, ctrl.Request{
-		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
-	})
-	if err != nil {
-		t.Fatalf("Reconcile failed: %v", err)
-	}
-
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
-
-	envMap := make(map[string]string)
-	for _, e := range deployment.Spec.Template.Spec.Containers[0].Env {
-		envMap[e.Name] = e.Value
-	}
-
-	if envMap["AGENT_MODE"] != "autonomous" {
-		t.Errorf("Expected AGENT_MODE=autonomous, got %q", envMap["AGENT_MODE"])
-	}
-	if envMap["AGENT_CLUSTER_UUID"] != "cluster-uid-mode-test" {
-		t.Errorf("Expected AGENT_CLUSTER_UUID=cluster-uid-mode-test, got %s", envMap["AGENT_CLUSTER_UUID"])
-	}
 }
 
 func TestLanguageAgentController_ContractEnvVars(t *testing.T) {

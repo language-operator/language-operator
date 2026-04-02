@@ -69,7 +69,7 @@ Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOr
 
 ### CRDs (`src/api/v1alpha1/`)
 
-- `LanguageAgent` — agent deployment spec (image, instructions, personas, models, tools, executionMode)
+- `LanguageAgent` — agent deployment spec (image, instructions, personas, models, tools)
 - `LanguageAgentRuntime` — reusable agent defaults (image, spec.openclaw, spec.opencode, deployment config); merged into the agent's effective spec at reconcile time via `ApplyRuntimeDefaults`
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
@@ -83,7 +83,7 @@ Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` 
 The operator mounts one file into every agent pod:
 - `/etc/agent/config.yaml` — assembled from `spec.instructions`, referenced personas, resolved tool endpoints, model configs, and agent identity
 
-Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
+Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
 
 `MODEL_ENDPOINTS` is the shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) — one URL regardless of how many models are referenced. `LLM_MODEL` is a comma-separated list of model names from all `models`. Both are injected into the main container and all init containers. `MCP_SERVERS` contains resolved MCP tool server URLs.
 

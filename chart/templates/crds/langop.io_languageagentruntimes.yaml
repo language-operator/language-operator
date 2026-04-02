@@ -5111,15 +5111,6 @@ spec:
                       type: object
                     type: array
                 type: object
-              executionMode:
-                description: ExecutionMode is the default execution mode for agents
-                  using this runtime.
-                enum:
-                - autonomous
-                - interactive
-                - scheduled
-                - event-driven
-                type: string
               image:
                 description: |-
                   Image is the default container image for agents using this runtime.

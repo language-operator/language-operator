@@ -58,7 +58,6 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_NAME` | `metadata.name` of the LanguageAgent |
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
-| `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINTS` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
@@ -166,8 +165,6 @@ spec:
     Focus on trends, anomalies, and actionable recommendations.
 
   persona: analytical-persona
-
-  executionMode: autonomous
 
   tools:
     - name: mem0-memory

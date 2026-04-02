@@ -196,7 +196,6 @@ Environment variables injected into every agent container and all init container
 | `AGENT_NAME` | `metadata.name` of the LanguageAgent |
 | `AGENT_NAMESPACE` | `metadata.namespace` of the LanguageAgent |
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
-| `AGENT_MODE` | Execution mode from `spec.executionMode` (omitted if not set) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINTS` | Shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) |

@@ -63,7 +63,6 @@ spec:
 |-------|------|-------------|
 | `image` | string | Default container image for agents using this runtime |
 | `ports` | `[]AgentPort` | Default port list; see merge semantics below |
-| `executionMode` | string | Default execution mode (`autonomous`, `interactive`, `scheduled`, `event-driven`); agent's own `executionMode` takes precedence if set |
 | `workspace` | `WorkspaceSpec` | Default workspace configuration (size, mountPath) |
 | `deployment` | `DeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
 | `openclaw` | `OpenclawConfig` | When `openclaw.enabled: true`, the operator auto-generates `OPENCLAW_GATEWAY_TOKEN` for every agent referencing this runtime (without the agent needing `spec.openclaw`) |
@@ -82,7 +81,6 @@ metadata:
   name: my-runtime
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  executionMode: autonomous
   openclaw:
     enabled: true   # auto-generates OPENCLAW_GATEWAY_TOKEN for all agents using this runtime
   ports:
@@ -94,7 +92,7 @@ spec:
 
 | Field type | Behaviour |
 |------------|-----------|
-| Scalars (`image`, `executionMode`, `resources`, probes) | Runtime provides default; agent overrides if set |
+| Scalars (`image`, `resources`, probes) | Runtime provides default; agent overrides if set |
 | `ports` | **Replace semantics** — runtime ports apply only when the agent defines no ports of its own |
 | Other lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
 

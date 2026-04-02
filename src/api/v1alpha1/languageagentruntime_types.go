@@ -37,11 +37,6 @@ type LanguageAgentRuntimeSpec struct {
 	// +listMapKey=name
 	Ports []AgentPort `json:"ports,omitempty"`
 
-	// ExecutionMode is the default execution mode for agents using this runtime.
-	// +kubebuilder:validation:Enum=autonomous;interactive;scheduled;event-driven
-	// +optional
-	ExecutionMode string `json:"executionMode,omitempty"`
-
 	// Workspace provides default size, storageClass, and mountPath for the agent's workspace.
 	// Workspace storage is always provisioned; this presets its parameters.
 	// Agents may override individual workspace fields.
