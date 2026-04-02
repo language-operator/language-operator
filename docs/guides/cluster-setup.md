@@ -28,7 +28,7 @@ kubectl version --client
 helm version
 ```
 
-## CNI — NetworkPolicy Support
+## CNI Support
 
 Language Operator uses `NetworkPolicy` resources to isolate agents. Your cluster's CNI plugin must support NetworkPolicy enforcement. The standard CNI plugins that ship with most cloud providers do **not** enforce NetworkPolicy on their own.
 
