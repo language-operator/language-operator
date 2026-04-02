@@ -24,6 +24,17 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 - NetworkPolicy-capable CNI (Cilium, Calico, Weave, Antrea)
 - cert-manager v1.12+ (for webhook TLS — [install guide](docs/getting-started/installation.md#requirements))
 
+### Recommended
+
+These components are not required but enable the full feature set:
+
+| Component | Purpose |
+|-----------|---------|
+| [cert-manager](https://cert-manager.io) with a [Let's Encrypt ClusterIssuer](https://cert-manager.io/docs/configuration/acme/) | Automatic TLS certificates for agent ingresses |
+| [external-dns](https://github.com/kubernetes-sigs/external-dns) | Automatic DNS records for agent hostnames |
+
+With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at `<agent-name>.<cluster-domain>`.
+
 ### Install the Operator
 
 ```bash
@@ -107,20 +118,23 @@ spec:
 EOF
 ```
 
+The runtime auto-generates a gateway token and stores it in a secret.
+
 **Connect:**
 
 ```bash
-# Retrieve the auto-generated gateway token
-kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d
+TOKEN=$(kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
 ```
 
-Connect the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)) to `wss://openclaw.demo.langop.io` with the token retrieved above.
+Open [https://openclaw.demo.langop.io](https://openclaw.demo.langop.io) in your browser and enter `$TOKEN` when prompted.
+
+You can also connect the openclaw CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)) directly to `wss://openclaw.demo.langop.io`.
 
 Alternatively, port-forward for local access:
 
 ```bash
 kubectl port-forward svc/openclaw 18789:18789
-# then connect to ws://localhost:18789
+# then open http://localhost:18789 or connect to ws://localhost:18789
 ```
 
 </details>
@@ -141,26 +155,29 @@ spec:
 EOF
 ```
 
+The runtime auto-generates a login password and stores it in a secret.
+
 **Connect:**
 
 ```bash
-# Retrieve the auto-generated password
+USERNAME=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_USERNAME}' | base64 -d)
 PASSWORD=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
+echo "username: $USERNAME  password: $PASSWORD"
 ```
 
-Open [https://opencode.demo.langop.io](https://opencode.demo.langop.io) in your browser. Sign in with username `opencode` and the password retrieved above.
+Open [https://opencode.demo.langop.io](https://opencode.demo.langop.io) in your browser and sign in with `$USERNAME` / `$PASSWORD`.
 
 To attach the TUI (opencode v1.0.10+):
 
 ```bash
-opencode attach https://opencode.demo.langop.io --username opencode --password "$PASSWORD"
+opencode attach https://opencode.demo.langop.io --username "$USERNAME" --password "$PASSWORD"
 ```
 
 Alternatively, port-forward for local access:
 
 ```bash
 kubectl port-forward svc/opencode 3000:3000
-# then open http://localhost:3000 or: opencode attach http://localhost:3000 --username opencode --password "$PASSWORD"
+# then open http://localhost:3000 or: opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
 ```
 
 </details>

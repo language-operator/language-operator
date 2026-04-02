@@ -59,7 +59,7 @@ One controller per CRD. Each follows the same pattern:
 - Status updated last; `SetCondition` helper manages the conditions slice
 
 Key controllers:
-- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, one ConfigMap (`config.yaml`), ServiceAccount/Role/RoleBinding (all named `language-agent`, namespace-scoped), and optionally a PVC for `spec.workspace`
+- `languageagent_controller.go` — main agent reconciler; creates Deployment, Service, HTTPRoute, NetworkPolicy, one ConfigMap (`config.yaml`), ServiceAccount/Role/RoleBinding (all named `language-agent`, namespace-scoped), and optionally a PVC for `spec.workspace`; cleanup logic in `cleanupResources`
 - `languagecluster_controller.go` — reconciles the shared LiteLLM gateway (Deployment `gateway`, Service `gateway`, ConfigMap `gateway-config`) and optional Ingress/HTTPRoute at `gateway.<cluster.domain>`; watches LanguageModels to trigger re-reconcile when the model list changes
 - `languagemodel_controller.go` — reconciles status only; no longer creates any ConfigMap, Deployment, or Service — the cluster controller reads LanguageModel CRs directly when building `gateway-config`
 - `languagepersona_controller.go` — reconciles status only; the agent controller reads LanguagePersona CRs directly when building config.yaml
@@ -70,6 +70,7 @@ Shared utilities in `utils.go`: `GenerateConfigMapName(name, suffix)`, `CreateOr
 ### CRDs (`src/api/v1alpha1/`)
 
 - `LanguageAgent` — agent deployment spec (image, instructions, personas, models, tools, executionMode)
+- `LanguageAgentRuntime` — reusable agent defaults (image, spec.openclaw, spec.opencode, deployment config); merged into the agent's effective spec at reconcile time via `ApplyRuntimeDefaults`
 - `LanguagePersona` — behavioral config (systemPrompt, tone, instructions, capabilities, constraints)
 - `LanguageTool` — MCP tool server (serviceRef, port)
 - `LanguageModel` — LLM endpoint config
@@ -86,7 +87,7 @@ Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, 
 
 `MODEL_ENDPOINTS` is the shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) — one URL regardless of how many models are referenced. `LLM_MODEL` is a comma-separated list of model names from all `models`. Both are injected into the main container and all init containers. `MCP_SERVERS` contains resolved MCP tool server URLs.
 
-NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on port 8080.
+NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on the agent's port (default 8080, overridden by `spec.deployment.port`).
 
 The shared gateway image (`ghcr.io/language-operator/model:latest`) is configured via `config.gateway.image` and `config.gateway.imagePullPolicy` in the Helm chart. For local development, `make dev` in `components/model/` builds and imports the image into k3s.
 
@@ -133,4 +134,4 @@ Dashboard is at http://localhost:3000. All API routes are cluster-scoped: `/api/
 
 **Conventional commits.** Use `feat:`, `fix:`, `chore:`, `docs:`, `test:` prefixes. Use `WIP:` for partial implementations. PR titles must also follow this convention (enforced by CI). Note: `clean:` is rejected by CI — use `chore:` instead.
 
-**Operator deploys via CI only** — no local Docker builds for the operator image.
+**Local development deploys via `make dev`** (project root) — builds the Go binary, builds a Docker image tagged with the current git SHA, imports it into k3s, and helm-upgrades the release. Commit changes before running `make dev` so the git SHA changes and Docker cache is busted.
