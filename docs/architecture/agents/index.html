@@ -1783,7 +1783,7 @@
 <h1 id="agent-runtime-container-specification">Agent Runtime Container Specification<a class="headerlink" href="#agent-runtime-container-specification" title="Permanent link">&para;</a></h1>
 <p>This document defines the contract between the Language Operator and agent runtime containers. It specifies what the operator guarantees to provide to every running agent, and what a compliant agent image must implement.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>A <strong>LanguageAgent</strong> runs as a standard Kubernetes Deployment (or CronJob for scheduled agents). The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.</p>
+<p>A <strong>LanguageAgent</strong> runs as a standard Kubernetes Deployment. The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.</p>
 <h2 id="what-the-operator-provides">What the Operator Provides<a class="headerlink" href="#what-the-operator-provides" title="Permanent link">&para;</a></h2>
 <h3 id="mounted-files">Mounted Files<a class="headerlink" href="#mounted-files" title="Permanent link">&para;</a></h3>
 <p>The operator mounts exactly one file into every agent container:</p>
