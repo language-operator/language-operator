@@ -128,6 +128,12 @@ func main() {
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
+	var tlsIssuerName string
+	flag.StringVar(&tlsIssuerName, "tls-issuer-name", "",
+		"cert-manager issuer name used to provision TLS certificates for gateway and agent Ingress resources. Empty disables cert-manager integration.")
+	var tlsIssuerKind string
+	flag.StringVar(&tlsIssuerKind, "tls-issuer-kind", "ClusterIssuer",
+		"Kind of the cert-manager issuer (ClusterIssuer or Issuer). Defaults to ClusterIssuer.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"Port the webhook server listens on.")
 	flag.StringVar(&webhookCertDir, "cert-dir", "/tmp/k8s-webhook-server/serving-certs",
@@ -318,6 +324,8 @@ func main() {
 		NetworkPolicyRetries:       networkPolicyRetries,
 		NetworkIsolationEnabled:    networkIsolationEnabled,
 		DefaultIngressClassName:    agentIngressClassName,
+		DefaultTLSIssuerName:       tlsIssuerName,
+		DefaultTLSIssuerKind:       tlsIssuerKind,
 		IngressControllerNamespace: ingressControllerNamespace,
 		CNICapabilities:            cniCaps,
 	}
@@ -360,6 +368,8 @@ func main() {
 		GatewayImage:            gatewayImage,
 		GatewayImagePullPolicy:  corev1.PullPolicy(gatewayImagePullPolicy),
 		DefaultIngressClassName: gatewayIngressClassName,
+		DefaultTLSIssuerName:    tlsIssuerName,
+		DefaultTLSIssuerKind:    tlsIssuerKind,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)

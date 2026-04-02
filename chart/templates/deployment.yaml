@@ -83,6 +83,12 @@ spec:
         {{- if .Values.config.gateway.imagePullPolicy }}
         - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}
+        {{- if .Values.config.ingress.tls.issuerName }}
+        - --tls-issuer-name={{ .Values.config.ingress.tls.issuerName }}
+        {{- end }}
+        {{- if .Values.config.ingress.tls.issuerKind }}
+        - --tls-issuer-kind={{ .Values.config.ingress.tls.issuerKind }}
+        {{- end }}
         {{- if .Values.config.networkPolicy.requireNetworkPolicy }}
         - --require-network-policy={{ .Values.config.networkPolicy.requireNetworkPolicy }}
         {{- end }}

@@ -1777,7 +1777,7 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 	const domain = "example.com"
 	const gatewayHost = "example.com"
 
-	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster) *networkingv1.Ingress {
+	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, rOpts ...func(*LanguageClusterReconciler)) *networkingv1.Ingress {
 		t.Helper()
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -1785,6 +1785,9 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 			WithStatusSubresource(cluster).
 			Build()
 		r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		for _, opt := range rOpts {
+			opt(r)
+		}
 		ctx := context.Background()
 		req := clusterRequest(cluster.Name)
 		_, err := r.Reconcile(ctx, req)
@@ -1811,10 +1814,10 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 	t.Run("cert_manager_clusterissuer", func(t *testing.T) {
 		cluster := gen.LanguageCluster("tls-clusterissuer",
 			gen.SetClusterDomain(domain),
-			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
-				IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "letsencrypt"},
-			}))
-		ing := reconcileCluster(t, cluster)
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
+		ing := reconcileCluster(t, cluster, func(r *LanguageClusterReconciler) {
+			r.DefaultTLSIssuerName = "letsencrypt"
+		})
 		assert.Equal(t, "letsencrypt", ing.Annotations["cert-manager.io/cluster-issuer"])
 		require.Len(t, ing.Spec.TLS, 1)
 		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
@@ -1824,10 +1827,11 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 	t.Run("cert_manager_issuer_kind", func(t *testing.T) {
 		cluster := gen.LanguageCluster("tls-issuer",
 			gen.SetClusterDomain(domain),
-			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
-				IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "my-issuer", Kind: "Issuer"},
-			}))
-		ing := reconcileCluster(t, cluster)
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
+		ing := reconcileCluster(t, cluster, func(r *LanguageClusterReconciler) {
+			r.DefaultTLSIssuerName = "my-issuer"
+			r.DefaultTLSIssuerKind = "Issuer"
+		})
 		assert.Equal(t, "my-issuer", ing.Annotations["cert-manager.io/issuer"])
 		_, hasClusterIssuer := ing.Annotations["cert-manager.io/cluster-issuer"]
 		assert.False(t, hasClusterIssuer, "cert-manager.io/cluster-issuer should not be set for Issuer kind")

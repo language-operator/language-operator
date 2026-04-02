@@ -5212,29 +5212,14 @@ spec:
                     properties:
                       enabled:
                         default: true
-                        description: Enabled controls whether TLS is enabled for webhooks
+                        description: |-
+                          Enabled controls whether TLS is enabled for webhooks.
+                          Defaults to true; set to false to disable TLS.
                         type: boolean
-                      issuerRef:
-                        description: IssuerRef references a cert-manager Issuer or
-                          ClusterIssuer
-                        properties:
-                          kind:
-                            default: ClusterIssuer
-                            description: Kind is either "Issuer" or "ClusterIssuer"
-                            enum:
-                            - Issuer
-                            - ClusterIssuer
-                            type: string
-                          name:
-                            description: Name of the Issuer or ClusterIssuer
-                            type: string
-                        required:
-                        - name
-                        type: object
                       secretName:
                         description: |-
-                          SecretName is the name of the TLS secret (for manual cert management)
-                          If empty, cert-manager will be used if available
+                          SecretName is the name of an existing TLS secret (bring-your-own certificate).
+                          When set, cert-manager integration is skipped and this secret is used directly.
                         type: string
                     type: object
                 type: object

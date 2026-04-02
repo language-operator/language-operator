@@ -57,6 +57,8 @@ type LanguageAgentReconciler struct {
 	NetworkPolicyRetries       int
 	NetworkIsolationEnabled    bool
 	DefaultIngressClassName    string
+	DefaultTLSIssuerName       string
+	DefaultTLSIssuerKind       string
 	IngressControllerNamespace string
 	CNICapabilities            *cni.CNICapabilities
 }
@@ -1294,15 +1296,6 @@ func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort 
 
 // agentIngressPort returns the port that ingress/HTTPRoute should route to.
 // Uses the first port with Expose: true; falls back to the first port; falls back to 8080.
-// certManagerIssuerAnnotationSuffix returns the cert-manager annotation suffix for a given issuer kind.
-// cert-manager uses "issuer" for Issuer and "cluster-issuer" (hyphenated) for ClusterIssuer.
-func certManagerIssuerAnnotationSuffix(kind string) string {
-	if strings.EqualFold(kind, "ClusterIssuer") {
-		return "cluster-issuer"
-	}
-	return "issuer"
-}
-
 func agentIngressPort(agent *langopv1alpha1.LanguageAgent) int32 {
 	ports := agentPorts(agent)
 	for _, p := range ports {
@@ -1507,19 +1500,16 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 				if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
 					secretName := cluster.Spec.Ingress.TLS.SecretName
 					if secretName == "" {
-						// Use cert-manager annotation for automatic certificate provisioning
-						if ingress.Annotations == nil {
-							ingress.Annotations = make(map[string]string)
-						}
-						if cluster.Spec.Ingress.TLS.IssuerRef != nil {
-							kind := cluster.Spec.Ingress.TLS.IssuerRef.Kind
+						if r.DefaultTLSIssuerName != "" {
+							if ingress.Annotations == nil {
+								ingress.Annotations = make(map[string]string)
+							}
+							kind := r.DefaultTLSIssuerKind
 							if kind == "" {
 								kind = "ClusterIssuer"
 							}
-							// cert-manager annotation keys: "issuer" → cert-manager.io/issuer,
-							// "ClusterIssuer" → cert-manager.io/cluster-issuer (hyphenated, not lowercased).
 							annotationKey := "cert-manager.io/" + certManagerIssuerAnnotationSuffix(kind)
-							ingress.Annotations[annotationKey] = cluster.Spec.Ingress.TLS.IssuerRef.Name
+							ingress.Annotations[annotationKey] = r.DefaultTLSIssuerName
 						}
 						secretName = GenerateTLSSecretName(agent.Name)
 					}

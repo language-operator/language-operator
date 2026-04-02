@@ -70,6 +70,8 @@ type LanguageClusterReconciler struct {
 	GatewayImage            string
 	GatewayImagePullPolicy  corev1.PullPolicy
 	DefaultIngressClassName string
+	DefaultTLSIssuerName    string
+	DefaultTLSIssuerKind    string
 	// DNSLookup replaces the live net.Resolver lookup when non-nil.
 	// Used only in unit tests to inject controlled success/failure.
 	DNSLookup func(ctx context.Context, host string) error
@@ -1129,15 +1131,15 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
 			secretName := cluster.Spec.Ingress.TLS.SecretName
 			if secretName == "" {
-				if ingress.Annotations == nil {
-					ingress.Annotations = make(map[string]string)
-				}
-				if cluster.Spec.Ingress.TLS.IssuerRef != nil {
-					kind := cluster.Spec.Ingress.TLS.IssuerRef.Kind
+				if r.DefaultTLSIssuerName != "" {
+					if ingress.Annotations == nil {
+						ingress.Annotations = make(map[string]string)
+					}
+					kind := r.DefaultTLSIssuerKind
 					if kind == "" {
 						kind = "ClusterIssuer"
 					}
-					ingress.Annotations["cert-manager.io/"+certManagerIssuerAnnotationSuffix(kind)] = cluster.Spec.Ingress.TLS.IssuerRef.Name
+					ingress.Annotations["cert-manager.io/"+certManagerIssuerAnnotationSuffix(kind)] = r.DefaultTLSIssuerName
 				}
 				secretName = "gateway-tls"
 			}

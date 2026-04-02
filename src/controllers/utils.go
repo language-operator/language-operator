@@ -354,6 +354,15 @@ func GenerateTLSSecretName(agentName string) string {
 	return agentName + "-tls"
 }
 
+// certManagerIssuerAnnotationSuffix returns the cert-manager annotation suffix for a given issuer kind.
+// cert-manager uses "issuer" for Issuer and "cluster-issuer" (hyphenated) for ClusterIssuer.
+func certManagerIssuerAnnotationSuffix(kind string) string {
+	if strings.EqualFold(kind, "ClusterIssuer") {
+		return "cluster-issuer"
+	}
+	return "issuer"
+}
+
 // GetCommonLabels returns common labels for resources
 func GetCommonLabels(resourceName, resourceKind string) map[string]string {
 	return map[string]string{

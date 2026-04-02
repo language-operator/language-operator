@@ -30,7 +30,7 @@ These components are not required but enable the full feature set:
 
 | Component | Purpose |
 |-----------|---------|
-| [cert-manager](https://cert-manager.io) with a [Let's Encrypt ClusterIssuer](https://cert-manager.io/docs/configuration/acme/) | Automatic TLS certificates for agent ingresses |
+| [cert-manager](https://cert-manager.io) with a `letsencrypt-production` [ClusterIssuer](https://cert-manager.io/docs/configuration/acme/) | Automatic TLS certificates for agent ingresses (issuer configured via `config.ingress.tls` in Helm values) |
 | [external-dns](https://github.com/kubernetes-sigs/external-dns) | Automatic DNS records for agent hostnames |
 
 With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at `<agent-name>.<cluster-domain>`.
@@ -62,12 +62,6 @@ metadata:
   name: my-cluster
 spec:
   domain: demo.langop.io
-  ingress:
-    tls:
-      enabled: true
-      issuerRef:
-        name: letsencrypt-production
-        kind: ClusterIssuer
 EOF
 
 kubectl wait languagecluster/my-cluster \

@@ -2003,20 +2003,19 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 	})
 
 	t.Run("cert_manager_annotation", func(t *testing.T) {
-		cluster := gen.ReadyCluster("default", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
-			IssuerRef: &langopv1alpha1.CertIssuerReference{Name: "letsencrypt"},
-		}))
+		cluster := gen.ReadyCluster("default", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(cluster, agent).
 			WithStatusSubresource(agent).
 			Build()
 		r := &LanguageAgentReconciler{
-			Client:          fakeClient,
-			Scheme:          scheme,
-			Log:             logr.Discard(),
-			Recorder:        &record.FakeRecorder{},
-			RegistryManager: &mockRegistryManager{},
+			Client:               fakeClient,
+			Scheme:               scheme,
+			Log:                  logr.Discard(),
+			Recorder:             &record.FakeRecorder{},
+			RegistryManager:      &mockRegistryManager{},
+			DefaultTLSIssuerName: "letsencrypt",
 		}
 
 		require.NoError(t, r.reconcileIngress(context.Background(), agent, hostname))

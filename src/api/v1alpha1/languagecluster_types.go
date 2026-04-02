@@ -226,32 +226,16 @@ type IngressConfig struct {
 
 // IngressTLSConfig defines TLS configuration
 type IngressTLSConfig struct {
-	// Enabled controls whether TLS is enabled for webhooks
+	// Enabled controls whether TLS is enabled for webhooks.
+	// Defaults to true; set to false to disable TLS.
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// SecretName is the name of the TLS secret (for manual cert management)
-	// If empty, cert-manager will be used if available
+	// SecretName is the name of an existing TLS secret (bring-your-own certificate).
+	// When set, cert-manager integration is skipped and this secret is used directly.
 	// +optional
 	SecretName string `json:"secretName,omitempty"`
-
-	// IssuerRef references a cert-manager Issuer or ClusterIssuer
-	// +optional
-	IssuerRef *CertIssuerReference `json:"issuerRef,omitempty"`
-}
-
-// CertIssuerReference references a cert-manager issuer
-type CertIssuerReference struct {
-	// Name of the Issuer or ClusterIssuer
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
-
-	// Kind is either "Issuer" or "ClusterIssuer"
-	// +kubebuilder:validation:Enum=Issuer;ClusterIssuer
-	// +kubebuilder:default=ClusterIssuer
-	// +optional
-	Kind string `json:"kind,omitempty"`
 }
 
 // AgentNetworkPolicies defines user-supplied ingress and egress rules for an agent workload.

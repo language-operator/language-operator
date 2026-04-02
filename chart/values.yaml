@@ -204,6 +204,15 @@ config:
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
 
+  ingress:
+    tls:
+      # cert-manager issuer name used to provision TLS certificates for all gateway and agent
+      # Ingress resources. Set to "" to disable cert-manager integration (e.g. when using
+      # spec.ingress.tls.secretName to supply certificates manually).
+      issuerName: "letsencrypt-production"
+      # Kind of the cert-manager issuer: ClusterIssuer (default) or Issuer.
+      issuerKind: "ClusterIssuer"
+
   # Watch configuration
   watch:
     # Namespaces to watch (empty means all namespaces)
