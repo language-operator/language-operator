@@ -31,7 +31,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 - `fix:` - Bug fix
 - `docs:` - Documentation changes
 - `test:` - Test additions or fixes
-- `clean:` - Code cleanup, refactoring
+- `chore:` - Code cleanup, refactoring, dependency updates
 - `WIP:` - Work in progress (partial implementation)
 
 **Examples:**
