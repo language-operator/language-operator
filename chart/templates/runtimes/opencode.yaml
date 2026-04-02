@@ -26,9 +26,11 @@ spec:
     mountPath: /workspace
 
   deployment:
-    # opencode web starts the server headlessly in containers (browser launch fails silently).
-    # Both web and serve share the same HTTP API; web also serves the browser UI.
-    args: ["web", "--hostname", "0.0.0.0", "--port", "3000"]
+    # Pre-seed /workspace as the default project so the picker is bypassed on first launch.
+    # opencode db creates and migrates the DB if it doesn't exist yet (fresh PVC).
+    # INSERT OR IGNORE is idempotent — safe to run on every pod start.
+    command: ["/bin/sh", "-c"]
+    args: ["opencode db \"INSERT OR IGNORE INTO project (id, worktree, vcs, time_created, time_updated, sandboxes) VALUES ('workspace', '/workspace', null, (strftime('%s','now')*1000), (strftime('%s','now')*1000), '[]')\" 2>/dev/null || true; exec opencode web --hostname 0.0.0.0 --port 3000"]
 
     initContainers:
       - name: opencode-adapter

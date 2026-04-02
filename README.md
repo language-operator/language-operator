@@ -179,7 +179,6 @@ Alternatively, port-forward for local access:
 kubectl port-forward svc/opencode 3000:3000
 # then open http://localhost:3000 or: opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
 ```
-
 </details>
 
 ### 4. Check status
