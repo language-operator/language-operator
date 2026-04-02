@@ -106,14 +106,11 @@ On startup, the agent should:
 A single YAML document assembled by the operator. Contains everything the agent needs to configure its runtime: task instructions, persona(s), tool endpoints, and model configuration.
 
 ```yaml
-# Agent identity (mirrors AGENT_* env vars for convenience)
+# Agent identity — only name and namespace are written by the operator.
+# uuid, mode, clusterName, clusterUUID are injected as env vars (AGENT_UUID, AGENT_MODE, etc.), not written here.
 agent:
   name: data-analyst
   namespace: default
-  uuid: "550e8400-e29b-41d4-a716-446655440000"
-  mode: autonomous
-  clusterName: production-cluster
-  clusterUUID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 
 # Task instructions from spec.instructions — what this agent should do.
 # Omitted if spec.instructions is empty.
@@ -217,22 +214,23 @@ spec:
     - name: http
       port: 18789
 
-  initContainers:
-    - name: seed-config
-      image: myregistry/config-adapter:latest
-      env:
-        - name: STATE_DIR
-          value: /workspace/.config
-      volumeMounts:
-        - name: workspace
-          mountPath: /workspace
-        - name: agent-config
-          mountPath: /etc/agent
-          readOnly: true
-
   workspace:
     size: 10Gi
     mountPath: /workspace
+
+  deployment:
+    initContainers:
+      - name: seed-config
+        image: myregistry/config-adapter:latest
+        env:
+          - name: STATE_DIR
+            value: /workspace/.config
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: agent-config
+            mountPath: /etc/agent
+            readOnly: true
 ```
 
 The init container runs to completion before the agent container starts. On subsequent pod restarts, it can check for existing state and skip re-seeding.
