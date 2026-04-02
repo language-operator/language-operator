@@ -76,6 +76,45 @@ spec:
 
 Creates an Ingress/HTTPRoute at `gateway.agents.example.com` for external model access.
 
+### Capacity and Quotas
+
+Use `spec.capacity` to enforce hard resource limits on the cluster's namespace. When set, the operator creates a `ResourceQuota` named `langop-quota` in the namespace. When removed, the quota is deleted.
+
+```yaml
+spec:
+  capacity:
+    maxAgents: 10
+    maxModels: 5
+    maxTools: 20
+    maxPersonas: 20
+    maxCPU: "8"
+    maxMemory: 16Gi
+```
+
+**`spec.capacity` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `maxAgents` | integer | Maximum number of `LanguageAgent` objects |
+| `maxModels` | integer | Maximum number of `LanguageModel` objects |
+| `maxTools` | integer | Maximum number of `LanguageTool` objects |
+| `maxPersonas` | integer | Maximum number of `LanguagePersona` objects |
+| `maxCPU` | quantity | Aggregate `limits.cpu` across all pods (e.g. `"8"`, `"2500m"`) |
+| `maxMemory` | quantity | Aggregate `limits.memory` across all pods (e.g. `"16Gi"`, `"512Mi"`) |
+
+All fields are optional. Omit a field to leave that dimension unrestricted.
+
+**`status.capacity` fields** report observed usage:
+
+| Field | Description |
+|-------|-------------|
+| `agentCount` | Current number of `LanguageAgent` objects |
+| `modelCount` | Current number of `LanguageModel` objects |
+| `toolCount` | Current number of `LanguageTool` objects |
+| `personaCount` | Current number of `LanguagePersona` objects |
+| `totalCPULimits` | Sum of `limits.cpu` across all agent pod specs |
+| `totalMemoryLimits` | Sum of `limits.memory` across all agent pod specs |
+
 ## Related Resources
 
 - [LanguageAgent](languageagent.md) - Deploy agents in the cluster
