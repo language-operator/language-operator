@@ -166,6 +166,23 @@ ports:
     protocol: UDP
 ```
 
+### Network Policies
+
+Control what traffic agents can send and receive:
+
+```yaml
+spec:
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+```
+
+Each peer in `ingress[].from` and `egress[].to` is a `NetworkPeer`. See [NetworkPeer fields](languagecluster.md#networkpeer-fields) for the full field reference including `dns` (FQDN-based egress) and `group` (langop label selector).
+
 ### Configuration Injection
 
 The operator automatically mounts:
