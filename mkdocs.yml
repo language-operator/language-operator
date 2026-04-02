@@ -72,10 +72,10 @@ nav:
         - Agents: architecture/agents.md
         - Tools: architecture/tools.md
     - Guides:
-        - Preparing a Kubernetes Cluster: guides/cluster-setup.md
-        - Deploying OpenClaw: guides/openclaw.md
-        - Deploying OpenCode: guides/opencode.md
-        - Deploying Custom Agents: guides/custom-agents.md
+        - Kubernetes: guides/cluster-setup.md
+        - OpenClaw: guides/openclaw.md
+        - OpenCode: guides/opencode.md
+        - Custom Agents: guides/custom-agents.md
   - API Reference:
       - Complete Reference (Auto-generated): api/reference.md
       - Overview: api/overview.md
