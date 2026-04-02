@@ -1136,17 +1136,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#certissuerreference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CertIssuerReference
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#clustercapacityspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1694,34 +1683,6 @@ verbatim from real NetworkPolicy manifests.</p>
 </tr>
 </tbody>
 </table>
-<h4 id="certissuerreference">CertIssuerReference<a class="headerlink" href="#certissuerreference" title="Permanent link">&para;</a></h4>
-<p>CertIssuerReference references a cert-manager issuer</p>
-<p><em>Appears in:</em>
-- <a href="#ingresstlsconfig">IngressTLSConfig</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>name</code> <em>string</em></td>
-<td>Name of the Issuer or ClusterIssuer</td>
-<td></td>
-<td>Required: {} <br /></td>
-</tr>
-<tr>
-<td><code>kind</code> <em>string</em></td>
-<td>Kind is either "Issuer" or "ClusterIssuer"</td>
-<td>ClusterIssuer</td>
-<td>Enum: [Issuer ClusterIssuer] <br />Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="clustercapacityspec">ClusterCapacitySpec<a class="headerlink" href="#clustercapacityspec" title="Permanent link">&para;</a></h4>
 <p>ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.</p>
 <p><em>Appears in:</em>
@@ -2063,19 +2024,13 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tbody>
 <tr>
 <td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled controls whether TLS is enabled for webhooks</td>
+<td>Enabled controls whether TLS is enabled for webhooks.<br />Defaults to true; set to false to disable TLS.</td>
 <td>true</td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>secretName</code> <em>string</em></td>
-<td>SecretName is the name of the TLS secret (for manual cert management)<br />If empty, cert-manager will be used if available</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>issuerRef</code> <em><a href="#certissuerreference">CertIssuerReference</a></em></td>
-<td>IssuerRef references a cert-manager Issuer or ClusterIssuer</td>
+<td>SecretName is the name of an existing TLS secret (bring-your-own certificate).<br />When set, cert-manager integration is skipped and this secret is used directly.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
