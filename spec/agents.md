@@ -76,15 +76,17 @@ Additional environment variables from `spec.deployment.env` and `spec.deployment
 ### Networking
 
 Every agent gets:
-- A **ClusterIP Service** on `spec.port` (default `8080`) named `<agent-name>` in the agent's namespace
+- A **ClusterIP Service** for each port in `spec.ports` named `<agent-name>` in the agent's namespace (the port with `expose: true`, or the first port if none, is used for the HTTPRoute)
 - An **HTTPRoute** for external access (if a Gateway is configured)
 - **NetworkPolicy** permitting inbound traffic from other agent pods in the same cluster namespace
 
 ## What the Agent Must Implement
 
-### Port
+### Ports
 
-The agent listens on `spec.port` (default `8080`). The operator creates a ClusterIP Service on this port. What the agent serves there is up to the image — HTTP, gRPC, OpenAI-compatible API, or anything else.
+The agent listens on the port(s) defined in `spec.ports`. The operator creates a ClusterIP Service with one port entry per `AgentPort`. What the agent serves there is up to the image — HTTP, gRPC, OpenAI-compatible API, or anything else.
+
+Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the HTTPRoute targets this port; if no port has `expose: true`, the first port is used).
 
 ### Probes
 
@@ -95,7 +97,7 @@ Liveness and readiness probes are configured via `spec.deployment.livenessProbe`
 On startup, the agent should:
 
 1. Read `/etc/agent/config.yaml` for all configuration (instructions, personas, tools, models)
-2. Start listening on `spec.port`
+2. Start listening on the port(s) defined in `spec.ports`
 
 ## File Formats
 
@@ -160,7 +162,9 @@ metadata:
   namespace: default
 spec:
   image: myregistry/agent-runtime:python-v1.0.0
-  port: 8080
+  ports:
+    - name: http
+      port: 8080
 
   instructions: |
     You are a data analyst. Analyze CSV files and generate insights.
@@ -209,7 +213,9 @@ For agent runtimes that require configuration in a format other than `/etc/agent
 ```yaml
 spec:
   image: ghcr.io/myorg/my-agent:latest
-  port: 18789
+  ports:
+    - name: http
+      port: 18789
 
   initContainers:
     - name: seed-config
@@ -235,7 +241,7 @@ The init container runs to completion before the agent container starts. On subs
 
 A well-behaved agent image should:
 
-- [ ] Listen on the port specified by `spec.port` (default `8080`)
+- [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
 - [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
 - [ ] Route LLM traffic through `MODEL_ENDPOINTS` proxy URLs rather than connecting to model APIs directly
