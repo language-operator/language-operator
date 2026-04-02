@@ -68,7 +68,6 @@ nav:
         - Examples: getting-started/examples.md
     - Architecture:
         - Overview: architecture/overview.md
-        - Controllers: architecture/controllers.md
         - Agents: architecture/agents.md
         - Tools: architecture/tools.md
     - Guides:
@@ -85,8 +84,6 @@ nav:
       - Contributing: development/contributing.md
       - Development Setup: development/setup.md
       - Testing: development/testing.md
-  - Changelog: changelog.md
-
 extra:
   social:
     - icon: fontawesome/brands/github

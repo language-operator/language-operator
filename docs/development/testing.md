@@ -318,4 +318,3 @@ KUBEBUILDER_ASSETS=$(setup-envtest use 1.29.0 -p path) \
 
 - [Development Setup](setup.md) - Set up your environment
 - [Contributing Guide](contributing.md) - PR process
-- [Controller Architecture](../architecture/controllers.md) - Understand the code

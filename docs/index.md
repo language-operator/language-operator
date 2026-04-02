@@ -4,15 +4,16 @@ A Kubernetes operator for running AI agent clusters as native workloads.
 
 ## What It Does
 
-Language Operator provides a purpose-built set of CRDs for deploying and managing scalable AI agent clusters on Kubernetes:
+Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:
 
 | Resource | Purpose |
 |----------|---------|
-| `LanguageCluster` | Managed namespace for AI clusters |
-| `LanguageAgent` | Autonomous, scheduled, and reactive agents |
-| `LanguageModel` | LLM (proxied through LiteLLM) |
-| `LanguageTool` | MCP server |
-| `LanguagePersona` | Behavior, tone, constraints |
+| `LanguageCluster` | Managed namespace for agents |
+| `LanguageAgent` | Free-form agents like OpenClaw or OpenCode |
+| `LanguageAgentRuntime` | Agent runtime presets |
+| `LanguageModel` | An LLM configuration (proxied through LiteLLM) |
+| `LanguageTool` | A MCP-compatible server |
+| `LanguagePersona` | Define tone, personality and expertise |
 
 ## Key Features
 
