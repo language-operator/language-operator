@@ -2994,12 +2994,6 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>executionMode</code> <em>string</em></td>
-<td>ExecutionMode is the default execution mode for agents using this runtime.</td>
-<td></td>
-<td>Enum: [autonomous interactive scheduled event-driven] <br />Optional: {} <br /></td>
-</tr>
-<tr>
 <td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
 <td>Workspace provides default size, storageClass, and mountPath for the agent's workspace.<br />Workspace storage is always provisioned; this presets its parameters.<br />Agents may override individual workspace fields.</td>
 <td></td>
@@ -3074,12 +3068,6 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>Instructions provides system instructions for the agent.<br />Delivered as the top-level "instructions" field in /etc/agent/config.yaml.</td>
 <td></td>
 <td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>executionMode</code> <em>string</em></td>
-<td>ExecutionMode defines how the agent operates.<br />Injected as AGENT_MODE into the agent container.</td>
-<td></td>
-<td>Enum: [autonomous interactive scheduled event-driven] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
