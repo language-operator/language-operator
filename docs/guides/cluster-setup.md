@@ -49,7 +49,7 @@ kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
     k3s ships with Flannel by default, which does **not** enforce NetworkPolicy. Install Cilium or Calico before deploying the operator, or disable network isolation in Helm values:
     ```bash
     helm install language-operator language-operator/language-operator \
-      --set config.networkIsolationEnabled=false
+      --set networkIsolation.enabled=false
     ```
 
 ## StorageClass

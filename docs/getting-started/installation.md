@@ -147,7 +147,7 @@ helm install language-operator language-operator/language-operator \
 
 ```bash
 helm install language-operator language-operator/language-operator \
-  --set config.networkIsolationEnabled=true
+  --set networkIsolation.enabled=true
 ```
 
 **Resource limits:**
