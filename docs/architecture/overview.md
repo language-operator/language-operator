@@ -164,7 +164,7 @@ Agents connect to tools directly over MCP. The operator does not proxy tool traf
 
 ### LanguageModel
 
-Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM gateway (`gateway` Deployment + Service). The gateway URL is injected as `MODEL_ENDPOINTS` into every agent container (main container and all init containers). Agents never hold real API credentials.
+Declares an LLM endpoint. The `LanguageCluster` controller reads all `LanguageModel` CRs in the namespace directly and assembles them into the shared LiteLLM gateway configuration (`gateway-config` ConfigMap, `gateway` Deployment + Service). The LanguageModel controller only validates the spec and sets status — it creates no resources of its own. The gateway URL is injected as `MODEL_ENDPOINTS` into every agent container (main container and all init containers). Agents never hold real API credentials.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
