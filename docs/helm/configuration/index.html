@@ -2782,11 +2782,6 @@
 <td><code>/healthz</code></td>
 </tr>
 <tr>
-<td><code>livenessProbe.httpGet.port</code></td>
-<td>Liveness probe port</td>
-<td><code>8081</code></td>
-</tr>
-<tr>
 <td><code>livenessProbe.initialDelaySeconds</code></td>
 <td>Initial delay</td>
 <td><code>15</code></td>
@@ -2802,11 +2797,6 @@
 <td><code>/readyz</code></td>
 </tr>
 <tr>
-<td><code>readinessProbe.httpGet.port</code></td>
-<td>Readiness probe port</td>
-<td><code>8081</code></td>
-</tr>
-<tr>
 <td><code>readinessProbe.initialDelaySeconds</code></td>
 <td>Initial delay</td>
 <td><code>5</code></td>
@@ -2818,6 +2808,9 @@
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note:</strong> Both probes use <code>config.health.port</code> (default <code>8081</code>) for the probe port. The <code>livenessProbe.httpGet.port</code> and <code>readinessProbe.httpGet.port</code> fields are not user-settable — the port is always derived from <code>config.health.port</code>.</p>
+</blockquote>
 <h3 id="scheduling">Scheduling<a class="headerlink" href="#scheduling" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
