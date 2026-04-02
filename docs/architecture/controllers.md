@@ -147,7 +147,7 @@ Personas are behavioral templates that agents can reference. The controller vali
 **Deployment Modes:**
 
 - **Service** (default) - Standalone Deployment shared by multiple agents
-- **Sidecar** - Tool container injected into each agent pod (future)
+- **Sidecar** - Tool container injected as a native sidecar init container into each agent pod; endpoint is `http://localhost:<port>`
 
 ---
 
