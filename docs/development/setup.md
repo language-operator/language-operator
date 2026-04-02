@@ -109,7 +109,7 @@ helm template language-operator . --debug
 
 ```bash
 cd src
-make docs   # generates src/docs/api-reference.md
+make docs   # generates src/docs/api-reference.md (local inspection only; CI generates docs/api/reference.md)
 ```
 
 ### Preview Documentation Site
