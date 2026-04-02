@@ -65,6 +65,45 @@ spec:
           - port: 443
 ```
 
+#### NetworkPeer fields
+
+Each entry in an `ingress[].from` or `egress[].to` list is a `NetworkPeer`. All fields are optional and can be combined:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `group` | string | Selects pods with the matching `langop.io/group` label value |
+| `cidr` | string | CIDR block (e.g. `"10.0.0.0/8"`, `"0.0.0.0/0"`) |
+| `dns` | []string | DNS names; supports `*` wildcards (e.g. `"*.openai.com"`). Requires a CNI that supports FQDN-based egress (e.g. Cilium). |
+| `service` | object | Kubernetes Service reference (`name`, optional `namespace`) |
+| `namespaceSelector` | LabelSelector | Selects namespaces for cross-namespace rules |
+| `podSelector` | LabelSelector | Selects pods within the (current or selected) namespace |
+
+**`dns` example** — allow egress to an external API without maintaining CIDR lists:
+
+```yaml
+spec:
+  networkPolicies:
+    egress:
+      - to:
+          - dns:
+              - "api.openai.com"
+              - "*.googleapis.com"
+        ports:
+          - port: 443
+```
+
+**`group` example** — allow agents in group `"data-pipeline"` to reach each other:
+
+```yaml
+spec:
+  networkPolicies:
+    ingress:
+      - from:
+          - group: data-pipeline
+        ports:
+          - port: 8080
+```
+
 ### External Access
 
 Configure `spec.domain` to expose the proxy externally:
