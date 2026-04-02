@@ -76,15 +76,7 @@ nav:
         - OpenClaw: guides/openclaw.md
         - OpenCode: guides/opencode.md
         - Custom Agents: guides/custom-agents.md
-  - API Reference:
-      - Complete Reference (Auto-generated): api/reference.md
-      - Overview: api/overview.md
-      - LanguageAgent Guide: api/languageagent.md
-      - LanguageAgentRuntime Guide: api/languageagentruntime.md
-      - LanguageCluster Guide: api/languagecluster.md
-      - LanguageModel Guide: api/languagemodel.md
-      - LanguageTool Guide: api/languagetool.md
-      - LanguagePersona Guide: api/languagepersona.md
+  - CRD Reference: api/reference.md
   - Helm Chart:
       - Installation: helm/installation.md
       - Configuration: helm/configuration.md
