@@ -46,12 +46,24 @@ All agents in the cluster connect to this shared proxy via the `MODEL_ENDPOINTS`
 
 ### Network Isolation
 
-NetworkPolicy rules are defined via `spec.networkPolicies` (a list of `NetworkRule` objects). By default:
+Network isolation for agents in this cluster is configured via `spec.networkPolicies`, an object with `ingress` and `egress` rule lists. Rules mirror the native Kubernetes NetworkPolicy shape — see `AgentNetworkPolicies` in the API reference. By default:
 
 - Agents can communicate with each other on port 8080
 - Agents can reach the shared proxy
 - Agents can reach tools in the same namespace
 - External ingress is controlled via the domain setting
+
+Example — allow HTTPS egress from all agents in the cluster:
+
+```yaml
+spec:
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+```
 
 ### External Access
 
