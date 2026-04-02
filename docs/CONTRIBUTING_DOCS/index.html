@@ -1592,7 +1592,7 @@
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">cd</span><span class="w"> </span>src
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>make<span class="w"> </span>docs
 </code></pre></div>
-<p>This creates <code>src/docs/api-reference.md</code>. The CI workflow automatically splits this into individual CRD pages.</p>
+<p>This creates <code>src/docs/api-reference.md</code> for <strong>local inspection only</strong>. In CI, <code>crd-ref-docs</code> is run separately with <code>--output-path=../docs/api-generated.md</code>, and that file is copied to <code>docs/api/reference.md</code> to produce the single reference page on the docs site.</p>
 <h3 id="preview-the-site">Preview the Site<a class="headerlink" href="#preview-the-site" title="Permanent link">&para;</a></h3>
 <p>Start a local development server:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mkdocs<span class="w"> </span>serve
@@ -1663,7 +1663,7 @@
 <ol>
 <li>Edit Go type comments in <code>src/api/v1alpha1/*.go</code></li>
 <li>Regenerate with <code>cd src &amp;&amp; make docs</code></li>
-<li>The CI workflow will extract and split the reference</li>
+<li>The CI workflow will regenerate <code>docs/api/reference.md</code> from your type comments</li>
 </ol>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="mkdocs-build-fails">MkDocs build fails<a class="headerlink" href="#mkdocs-build-fails" title="Permanent link">&para;</a></h3>
