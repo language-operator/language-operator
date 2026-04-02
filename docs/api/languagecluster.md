@@ -115,6 +115,105 @@ spec:
 
 Creates an Ingress/HTTPRoute at `gateway.agents.example.com` for external model access.
 
+### Gateway Deployment Configuration
+
+Use `spec.gateway.deployment` to customize the shared LiteLLM gateway pod. All fields are optional.
+
+```yaml
+spec:
+  gateway:
+    deployment:
+      replicas: 2
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      nodeSelector:
+        kubernetes.io/arch: amd64
+```
+
+**`spec.gateway.deployment` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `replicas` | integer | Number of gateway pod replicas (default: 1) |
+| `imagePullPolicy` | string | `Always`, `Never`, or `IfNotPresent` |
+| `imagePullSecrets` | []LocalObjectReference | Image pull secrets |
+| `env` | []EnvVar | Extra environment variables for the gateway container |
+| `envFrom` | []EnvFromSource | Environment variables sourced from ConfigMap or Secret |
+| `resources` | ResourceRequirements | CPU/memory requests and limits |
+| `nodeSelector` | map[string]string | Node selector labels |
+| `affinity` | Affinity | Pod affinity and anti-affinity rules |
+| `tolerations` | []Toleration | Tolerations for tainted nodes |
+| `topologySpreadConstraints` | []TopologySpreadConstraint | Pod topology spread |
+| `serviceAccountName` | string | Service account for the gateway pod |
+| `securityContext` | PodSecurityContext | Pod-level security attributes |
+| `volumeMounts` | []VolumeMount | Extra volume mounts |
+| `volumes` | []Volume | Extra volumes |
+
+### Ingress Configuration
+
+Use `spec.ingress` to control how the gateway is exposed externally. This requires `spec.domain` to be set.
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    enabled: true
+    className: nginx
+    tls:
+      enabled: true
+      issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+```
+
+**`spec.ingress` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | *bool | Enable or disable Ingress creation (default: true when `spec.domain` is set) |
+| `className` | string | IngressClass name — per-cluster override of `config.gateway.ingressClassName` |
+| `tls` | *IngressTLSConfig | TLS configuration (see below) |
+
+**`spec.ingress.tls` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | *bool | Enable TLS on the Ingress (default: true) |
+| `secretName` | string | Name of an existing TLS Secret (manual cert management) |
+| `issuerRef` | *CertIssuerReference | cert-manager issuer reference (used when `secretName` is empty) |
+
+**`spec.ingress.tls.issuerRef` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Name of the Issuer or ClusterIssuer (required) |
+| `kind` | string | `Issuer` or `ClusterIssuer` (default: `ClusterIssuer`) |
+
+**Example — manual TLS secret:**
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      secretName: gateway-tls
+```
+
+**Example — disable TLS:**
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      enabled: false
+```
+
 ### Capacity and Quotas
 
 Use `spec.capacity` to enforce hard resource limits on the cluster's namespace. When set, the operator creates a `ResourceQuota` named `langop-quota` in the namespace. When removed, the quota is deleted.
