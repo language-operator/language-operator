@@ -15,49 +15,12 @@ Minimum recommended node capacity:
 ### Software
 
 - **Kubernetes 1.26+**
-- **NetworkPolicy-capable CNI** - One of:
-    - Cilium
-    - Calico
-    - Weave
-    - Antrea
-- **kubectl** configured to access your cluster
-- **Helm 3.8+**
-- **cert-manager v1.12+** — required for webhook TLS certificate provisioning
-- **Default StorageClass** — required for agent workspace PVCs created by bundled runtimes (openclaw, opencode)
+- **kubectl** and **Helm 3.8+**
+- **cert-manager v1.12+** — required for webhook TLS
+- **NetworkPolicy-capable CNI** — Cilium, Calico, Weave, or Antrea
+- **Persistent storage** — for agent workspace PVCs
 
-Verify a default StorageClass is available:
-
-```bash
-kubectl get storageclass
-```
-
-Set `config.agents.storageClassName` in your Helm values to use a specific StorageClass for all agent workspace PVCs. Individual agents can override this with `spec.workspace.storageClassName`.
-
-Install cert-manager if not already present:
-
-```bash
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
-kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
-```
-
-!!! note "Installing without cert-manager"
-    If you manage webhook TLS certificates yourself, you can disable cert-manager integration:
-    ```bash
-    helm install language-operator language-operator/language-operator \
-      --set config.webhook.certManager.enabled=false
-    ```
-    You are then responsible for populating the webhook server's TLS secret and setting the `caBundle` field on the webhook configurations.
-
-## Recommended Components
-
-These are not required to install the operator, but unlock the full feature set:
-
-| Component | Purpose |
-|-----------|---------|
-| [cert-manager](https://cert-manager.io) with a `letsencrypt-production` ClusterIssuer | Automatic TLS certificates for agent ingresses — configure via `config.tls.certificateIssuerName` in Helm values |
-| [external-dns](https://github.com/kubernetes-sigs/external-dns) | Automatic DNS records for agent hostnames |
-
-With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at `<agent-name>.<cluster-domain>`.
+See the [cluster setup guide](../guides/cluster-setup.md) for instructions on installing and verifying these prerequisites.
 
 ## Install via Helm
 

@@ -94,12 +94,6 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
 ```
 
-!!! note "Without cert-manager"
-    If you manage TLS certificates yourself, disable cert-manager integration:
-    ```bash
-    --set config.webhook.certManager.enabled=false
-    ```
-    You are responsible for populating the webhook TLS secret and setting the `caBundle` on webhook configurations.
 
 ## Traefik
 
