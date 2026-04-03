@@ -17,7 +17,7 @@ kind: LanguageCluster
 metadata:
   name: language-operator-openclaw
 spec:
-  domain: openclaw.agents.my-company.com
+  domain: openclaw.agents.example.com
 EOF
 ```
 

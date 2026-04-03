@@ -20,7 +20,7 @@ kind: LanguageCluster
 metadata:
   name: openclaw
 spec:
-  domain: openclaw.agents.my-company.com
+  domain: openclaw.agents.example.com
 EOF
 
 kubectl wait languagecluster/openclaw --for=condition=Ready --timeout=60s
