@@ -28,7 +28,7 @@ kubectl config set-context --current --namespace=language-operator-openclaw
 
 ## Step 2: Configure an LLM
 
-Create a secret with your Anthropic API key, then create a `LanguageModel`:
+Create a secret with your API key, then create a `LanguageModel`:
 
 ```bash
 kubectl create secret generic anthropic-credentials \
@@ -48,13 +48,11 @@ spec:
 EOF
 ```
 
-The operator creates a LiteLLM proxy so all agents can reach the model through a single in-cluster endpoint.
-
 ## Step 3: Deploy an Agent
 
 Choose one of the bundled runtimes:
 
-=== "openclaw"
+=== "OpenClaw"
 
     ```bash
     kubectl apply -f - <<EOF
@@ -70,7 +68,7 @@ Choose one of the bundled runtimes:
     EOF
     ```
 
-=== "opencode"
+=== "OpenCode"
 
     ```bash
     kubectl apply -f - <<EOF
@@ -94,7 +92,7 @@ kubectl get pods -w
 
 ## Step 5: Access the Agent
 
-=== "openclaw"
+=== "OpenClaw"
 
     Retrieve the auto-generated gateway token:
 
@@ -113,7 +111,7 @@ kubectl get pods -w
 
     openclaw uses a WebSocket gateway on port 18789. Connect using the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)).
 
-=== "opencode"
+=== "OpenCode"
 
     Retrieve the auto-generated credentials:
 
@@ -147,10 +145,10 @@ kubectl get pods -w
 The operator automatically:
 
 1. Created a dedicated namespace (`language-operator-openclaw`)
-2. Deployed a LiteLLM proxy with your Anthropic credentials
+2. Deployed a LiteLLM proxy with your model credentials
 3. Injected the proxy URL into your agent via `MODEL_ENDPOINTS`
 4. Created a `{agent}-runtime` Secret from `spec.openclaw.token` and injected it via `envFrom`
-5. Created a Deployment, Service, and NetworkPolicy for openclaw
+5. Created a Deployment, Service, and secure NetworkPolicy for OpenClaw
 
 ## Next Steps
 
