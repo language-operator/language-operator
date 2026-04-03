@@ -62,9 +62,8 @@ markdown_extensions:
 nav:
   - Documentation:
     - Introduction: index.md
-    - Getting Started:
-        - Installation: getting-started/installation.md
-        - Quick Start: getting-started/quickstart.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
     - Architecture:
         - Overview: architecture/overview.md
         - Agents: architecture/agents.md
