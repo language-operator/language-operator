@@ -97,6 +97,20 @@ helm upgrade language-operator language-operator/language-operator \
   --namespace language-operator
 ```
 
+!!! note "CRD schema changes"
+    Helm does not update CRDs automatically on `helm upgrade`. When upgrading to a version that includes CRD changes, apply the updated CRDs first:
+
+    ```bash
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagents.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagentruntimes.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageclusters.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagemodels.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagepersonas.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagetools.yaml
+    ```
+
+    Check the release notes before upgrading to see if CRD changes are included.
+
 ## Uninstall
 
 Remove the operator (CRDs and custom resources will be deleted):
