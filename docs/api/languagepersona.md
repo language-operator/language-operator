@@ -115,7 +115,6 @@ spec:
 ## Related Resources
 
 - [LanguageAgent](languageagent.md) - Reference personas in agents
-- [Examples](../getting-started/examples.md) - Common persona patterns
 
 ## Use Cases
 

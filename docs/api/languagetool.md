@@ -194,6 +194,3 @@ Shows all tools exposed by the service.
 - [LanguageAgent](languageagent.md) - Reference tools in agents
 - [Tool Protocol](../architecture/tools.md) - MCP specification
 
-## Examples
-
-See [Examples](../getting-started/examples.md) for common tool configurations.

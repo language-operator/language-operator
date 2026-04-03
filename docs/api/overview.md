@@ -234,4 +234,3 @@ status:
 
 - Dive into individual CRD references (sidebar navigation)
 - Read [Architecture Overview](../architecture/overview.md)
-- See [Examples](../getting-started/examples.md) for common patterns

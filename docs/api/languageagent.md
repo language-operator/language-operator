@@ -226,6 +226,3 @@ Agents are deployed as standard Kubernetes Deployments with:
 - [LanguagePersona](languagepersona.md) - Define behavioral templates
 - [Agent Runtime Contract](../architecture/agents.md) - What the operator injects
 
-## Examples
-
-See [Examples](../getting-started/examples.md) for common deployment patterns.

@@ -120,6 +120,3 @@ spec:
 - [LanguageAgent](languageagent.md) - Reference models in agents
 - [LanguageCluster](languagecluster.md) - Shared proxy architecture
 
-## Examples
-
-See [Examples](../getting-started/examples.md) for multi-model configurations.

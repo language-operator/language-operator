@@ -149,5 +149,4 @@ kubectl logs deployment/opencode
 ## Next Steps
 
 - [Deploying Custom Agents](custom-agents.md)
-- [Examples — multi-model and persona patterns](../getting-started/examples.md)
 - [LanguageAgentRuntime reference](../api/languageagentruntime.md)

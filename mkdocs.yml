@@ -65,7 +65,6 @@ nav:
     - Getting Started:
         - Installation: getting-started/installation.md
         - Quick Start: getting-started/quickstart.md
-        - Examples: getting-started/examples.md
     - Architecture:
         - Overview: architecture/overview.md
         - Agents: architecture/agents.md

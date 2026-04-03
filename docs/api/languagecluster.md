@@ -259,6 +259,3 @@ All fields are optional. Omit a field to leave that dimension unrestricted.
 - [LanguageModel](languagemodel.md) - Register models with the proxy
 - [Architecture Overview](../architecture/overview.md) - System design
 
-## Examples
-
-See [Examples](../getting-started/examples.md) for multi-cluster patterns.

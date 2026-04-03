@@ -156,6 +156,5 @@ The operator automatically:
 
 ## Next Steps
 
-- [Examples](examples.md) - More deployment patterns
 - [CRD Reference](../api/overview.md) - Complete API documentation
 - [Architecture](../architecture/overview.md) - How the operator works

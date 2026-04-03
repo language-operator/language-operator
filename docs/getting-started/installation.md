@@ -4,7 +4,7 @@ This guide covers installing the Language Operator on your Kubernetes cluster.
 
 ## Requirements
 
-### Cluster Resources
+### Hardware
 
 Minimum recommended node capacity:
 
@@ -12,7 +12,7 @@ Minimum recommended node capacity:
 - **4Gi RAM** (8Gi+ for running agents)
 - **15Gi persistent storage** (10Gi workspace per agent)
 
-### Software
+### Cluster
 
 - **Kubernetes 1.26+**
 - **kubectl** and **Helm 3.8+**
@@ -20,7 +20,7 @@ Minimum recommended node capacity:
 - **NetworkPolicy-capable CNI** — Cilium, Calico, Weave, or Antrea
 - **Persistent storage** — for agent workspace PVCs
 
-See the [cluster setup guide](../guides/cluster-setup.md) for instructions on installing and verifying these prerequisites.
+See the [Kubernetes guide](../guides/cluster-setup.md) for instructions on installing and verifying these prerequisites.
 
 ## Install via Helm
 
@@ -29,6 +29,7 @@ See the [cluster setup guide](../guides/cluster-setup.md) for instructions on in
 ```bash
 helm repo add language-operator \
   https://language-operator.github.io/language-operator
+
 helm repo update
 ```
 
@@ -64,7 +65,7 @@ Expected output:
 
 ```
 NAME                                  READY   STATUS    RESTARTS   AGE
-language-operator-5f7b8d9c4d-x8z2q   1/1     Running   0          30s
+language-operator-5f7b8d9c4d-x8z2q    1/1     Running   0          30s
 ```
 
 Check CRDs are installed:
@@ -82,33 +83,6 @@ languageclusters.langop.io
 languagemodels.langop.io
 languagepersonas.langop.io
 languagetools.langop.io
-```
-
-## Configuration Options
-
-### Common Configurations
-
-**Custom image:**
-
-```bash
-helm install language-operator language-operator/language-operator \
-  --set image.repository=ghcr.io/your-org/language-operator \
-  --set image.tag=v1.0.0
-```
-
-**Enable network isolation:**
-
-```bash
-helm install language-operator language-operator/language-operator \
-  --set networkIsolation.enabled=true
-```
-
-**Resource limits:**
-
-```bash
-helm install language-operator language-operator/language-operator \
-  --set resources.limits.cpu=500m \
-  --set resources.limits.memory=512Mi
 ```
 
 ## Upgrade
@@ -136,4 +110,3 @@ helm uninstall language-operator --namespace language-operator
 ## Next Steps
 
 - [Quick Start Guide](quickstart.md) - Deploy your first agent
-- [Examples](examples.md) - Common deployment patterns
