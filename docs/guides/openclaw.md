@@ -6,8 +6,6 @@ OpenClaw is an AI personal assistant that connects to your editor via a WebSocke
 
 - Language Operator [installed](../getting-started/installation.md)
 - An LLM provider API key, or a local model endpoint (e.g. Ollama)
-- A StorageClass for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass)
-- OpenClaw browser extension or CLI client
 
 ## Instructions
 
