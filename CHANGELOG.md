@@ -8,6 +8,17 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.1.128 — 2026-04-03
+
+**Bug Fixes**
+- enable TLS by default when DefaultTLSIssuerName is configured
+- disable device pairing in openclaw-adapter for Kubernetes compatibility
+
+**Chores**
+- update docs
+
+---
+
 ## v0.1.127 — 2026-04-03
 
 **Bug Fixes**
