@@ -65,7 +65,6 @@ nav:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
     - Components:
-        - Overview: components/overview.md
         - Clusters: components/clusters.md
         - Agents: components/agents.md
         - Tools: components/tools.md
