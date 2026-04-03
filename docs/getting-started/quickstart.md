@@ -1,6 +1,6 @@
 # Quick Start
 
-Deploy an OpenClaw agent in under 5 minutes.
+Deploy OpenClaw or OpenCode in under 5 minutes.
 
 ## Prerequisites
 
@@ -15,23 +15,23 @@ kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
-  name: language-operator-openclaw
+  name: language-operator-demo
 spec:
-  domain: openclaw.agents.example.com
+  domain: agents.example.com
 EOF
 ```
 
 Wait for it to be ready:
 
 ```bash
-kubectl wait languagecluster/language-operator-openclaw \
+kubectl wait languagecluster/language-operator-demo \
   --for=condition=Ready --timeout=60s
 ```
 
 Switch into its namespace:
 
 ```bash
-kubectl config set-context --current --namespace=language-operator-openclaw
+kubectl config set-context --current --namespace=language-operator-demo
 ```
 
 ## Step 2: Configure an LLM
@@ -158,15 +158,10 @@ kubectl get pods -w
     opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
     ```
 
-!!! success "You're Running!"
-    You now have OpenClaw running on Kubernetes with AI capabilities provided through the Language Operator.
-
 ## What Just Happened?
 
 The operator automatically:
 
-1. Created a dedicated namespace (`language-operator-openclaw`)
+1. Created a dedicated namespace (`language-operator-demo`)
 2. Deployed a LiteLLM proxy with your model credentials
-3. Injected the proxy URL into your agent via `MODEL_ENDPOINT`
-4. Created a `{agent}-runtime` Secret from `spec.openclaw.token` and injected it via `envFrom`
-5. Created a Deployment, Service, and secure NetworkPolicy for OpenClaw
+3. Configured and deployed your agent
