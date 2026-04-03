@@ -1445,9 +1445,21 @@
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
 </code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">CRD schema changes</p>
+<p>Helm does not update CRDs automatically on <code>helm upgrade</code>. When upgrading to a version that includes CRD changes, apply the updated CRDs first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagents.yaml
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagentruntimes.yaml
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageclusters.yaml
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagemodels.yaml
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagepersonas.yaml
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagetools.yaml
+</code></pre></div>
+<p>Check the release notes before upgrading to see if CRD changes are included.</p>
+</div>
 <h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
 <p>Remove the operator (CRDs and custom resources will be deleted):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator<span class="w"> </span>--namespace<span class="w"> </span>language-operator
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator<span class="w"> </span>--namespace<span class="w"> </span>language-operator
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Data Loss</p>
