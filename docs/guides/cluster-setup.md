@@ -54,7 +54,7 @@ kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
 
 ## StorageClass
 
-Language Operator requires a StorageClass for agent workspace PVCs created by bundled runtimes (openclaw, opencode).
+Language Operator requires a StorageClass for agent workspace PVCs created by bundled runtimes (OpenClaw, OpenCode).
 
 List available StorageClasses:
 
@@ -215,7 +215,3 @@ kubectl get clusterissuer
 # Sufficient node resources (operator + gateway + one agent needs ~4Gi RAM)
 kubectl top nodes
 ```
-
-## Next Steps
-
-- [Next: Install Language Operator](../getting-started/installation.md)

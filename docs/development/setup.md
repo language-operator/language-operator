@@ -219,7 +219,3 @@ The hook checks:
 - No obvious issues in Go code
 
 Read the error message carefully—it will tell you what needs fixing.
-
-## Next Steps
-
-- [Next: Testing Guide](testing.md)

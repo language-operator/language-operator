@@ -65,7 +65,7 @@ The standard runtimes (`openclaw`, `opencode`) are bundled with the Helm chart. 
 
 Each standard runtime has a corresponding config block for inline credential injection. The operator creates a managed Secret and injects it via `envFrom` — no manual `kubectl create secret` needed.
 
-**openclaw:**
+**OpenClaw:**
 
 ```yaml
 spec:
@@ -76,7 +76,7 @@ spec:
     #   name: my-secret       # must contain OPENCLAW_GATEWAY_TOKEN
 ```
 
-**opencode:**
+**OpenCode:**
 
 ```yaml
 spec:

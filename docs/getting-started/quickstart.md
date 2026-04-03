@@ -1,6 +1,6 @@
 # Quick Start
 
-Deploy an openclaw agent in under 5 minutes.
+Deploy an OpenClaw agent in under 5 minutes.
 
 ## Prerequisites
 
@@ -117,7 +117,7 @@ kubectl get pods -w
     TOKEN=$(kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
     ```
 
-    If you have a domain configured on your `LanguageCluster`, open `https://openclaw.<cluster-domain>` and enter the token when prompted, or connect the openclaw CLI directly to `wss://openclaw.<cluster-domain>`.
+    If you have a domain configured on your `LanguageCluster`, open `https://openclaw.<cluster-domain>` and enter the token when prompted, or connect the OpenClaw CLI directly to `wss://openclaw.<cluster-domain>`.
 
     Otherwise, port-forward for local access:
 
@@ -126,7 +126,7 @@ kubectl get pods -w
     # connect to ws://localhost:18789 with the token above
     ```
 
-    openclaw uses a WebSocket gateway on port 18789. Connect using the openclaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)).
+    OpenClaw uses a WebSocket gateway on port 18789. Connect using the OpenClaw browser extension or CLI client (see [github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)).
 
 === "OpenCode"
 
@@ -140,7 +140,7 @@ kubectl get pods -w
 
     If you have a domain configured on your `LanguageCluster`, open `https://opencode.<cluster-domain>` and sign in with the credentials above.
 
-    To attach the TUI (opencode v1.0.10+):
+    To attach the TUI (OpenCode v1.0.10+):
 
     ```bash
     opencode attach https://opencode.<cluster-domain> --username "$USERNAME" --password "$PASSWORD"
@@ -159,7 +159,7 @@ kubectl get pods -w
     ```
 
 !!! success "You're Running!"
-    You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.
+    You now have OpenClaw running on Kubernetes with AI capabilities provided through the Language Operator.
 
 ## What Just Happened?
 
@@ -170,7 +170,3 @@ The operator automatically:
 3. Injected the proxy URL into your agent via `MODEL_ENDPOINTS`
 4. Created a `{agent}-runtime` Secret from `spec.openclaw.token` and injected it via `envFrom`
 5. Created a Deployment, Service, and secure NetworkPolicy for OpenClaw
-
-## Next Steps
-
-- [Next: Architecture](../architecture/overview.md)

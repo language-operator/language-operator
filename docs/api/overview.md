@@ -45,7 +45,7 @@ A `LanguageAgent` represents an AI agent running as a Kubernetes workload with:
 
 **Common Use Cases:**
 
-- Deploying AI assistants (openclaw, etc.)
+- Deploying AI assistants (OpenClaw, etc.)
 - Scheduled automation tasks
 - Interactive agent services
 - Multi-agent systems
@@ -229,7 +229,3 @@ status:
 ```
 
 `LanguageAgentRuntime` is an exception — it is a static config preset (analogous to `IngressClass` or `StorageClass`) and has no status subresource.
-
-## Next Steps
-
-- [Next: Architecture Overview](../architecture/overview.md)

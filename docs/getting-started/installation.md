@@ -106,7 +106,3 @@ helm uninstall language-operator --namespace language-operator
 !!! warning "Data Loss"
     Uninstalling will delete all LanguageAgent, LanguageModel, and related resources.
     Back up any important configurations before uninstalling.
-
-## Next Steps
-
-- [Next: Quick Start](quickstart.md)

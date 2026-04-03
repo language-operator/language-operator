@@ -140,7 +140,3 @@ The secret is created after the first successful reconcile. If the agent is not 
 ```bash
 kubectl get events --sort-by='.lastTimestamp'
 ```
-
-## Next Steps
-
-- [Next: Deploy OpenCode](opencode.md)

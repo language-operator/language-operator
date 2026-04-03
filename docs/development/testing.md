@@ -313,7 +313,3 @@ KUBEBUILDER_ASSETS=$(setup-envtest use 1.29.0 -p path) \
 5. **Use meaningful assertions** with clear messages
 6. **Avoid sleeps** - use Eventually/Consistently from Gomega
 7. **Test status conditions** not just resource existence
-
-## Next Steps
-
-- [Next: Development Setup](setup.md)

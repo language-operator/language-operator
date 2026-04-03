@@ -27,15 +27,6 @@ spec:
 
 The operator creates the Deployment, Service, and NetworkPolicy, injects model endpoints and tool URLs, mounts persona and instruction config, and keeps everything reconciled as your cluster changes.
 
-## Key Features
-
-- **Kubernetes-native** — agents are Deployments; use `kubectl`, Helm, Argo CD, Flux, or any standard tooling
-- **GitOps-ready** — declarative CRDs mean agent configuration lives in version control alongside your infrastructure
-- **Model abstraction** — a shared LiteLLM gateway decouples agents from LLM providers; swap models without touching agent code
-- **MCP tool protocol** — tools are independent services connected via a standard interface, not embedded dependencies
-- **Network isolation** — cluster-scoped namespaces with enforced NetworkPolicy; agents communicate only with what they're permitted to
-- **Observability** — OpenTelemetry traces across all reconciliation loops; collector endpoint and sampler config propagated into agent containers so agent-side tracing requires no extra configuration
-
 ## Resources
 
 | CRD | Purpose |
@@ -46,13 +37,6 @@ The operator creates the Deployment, Service, and NetworkPolicy, injects model e
 | `LanguageModel` | An LLM endpoint, proxied through LiteLLM |
 | `LanguageTool` | An MCP-compatible tool server |
 | `LanguagePersona` | Reusable behavioral configuration — tone, expertise, constraints |
-
-## Quick Links
-
-- [Installation Guide](getting-started/installation.md) - Install the operator via Helm
-- [Quick Start](getting-started/quickstart.md) - Deploy your first agent in 5 minutes
-- **[API Reference](api/reference.md)** - Auto-generated CRD field documentation
-- [Architecture](architecture/overview.md) - System design and component interaction
 
 ## Project Status
 

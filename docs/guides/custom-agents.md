@@ -197,7 +197,3 @@ Verify your container is actually listening on the port(s) in `spec.ports`:
 ```bash
 kubectl exec deployment/my-agent -- ss -tlnp | grep 8080
 ```
-
-## Next Steps
-
-- [Next: Agent Runtime Contract](../architecture/agents.md)

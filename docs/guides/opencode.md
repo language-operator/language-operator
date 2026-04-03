@@ -145,7 +145,3 @@ Check the OpenCode container logs:
 ```bash
 kubectl logs deployment/opencode
 ```
-
-## Next Steps
-
-- [Next: Custom Agents](custom-agents.md)
