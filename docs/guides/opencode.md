@@ -8,23 +8,25 @@ OpenCode is an AI coding assistant with a browser-based HTTP UI. The `opencode` 
 - An LLM provider API key, or a local model endpoint (e.g. Ollama)
 - A StorageClass for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass)
 
-## Step 1: Create a LanguageCluster
+## Instructions
+
+### Create a Cluster
 
 ```bash
 kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
-  name: opencode
+  name: demo-cluster
 spec:
-  domain: opencode.agents.example.com
+  domain: demo-cluster.<your-domain>
 EOF
 
-kubectl wait languagecluster/opencode --for=condition=Ready --timeout=60s
-kubectl config set-context --current --namespace=opencode
+kubectl wait languagecluster/demo-cluster --for=condition=Ready --timeout=60s
+kubectl config set-context --current --namespace=demo-cluster
 ```
 
-## Step 2: Configure a LanguageModel
+### Configure a Model
 
 === "Anthropic"
 
@@ -83,16 +85,7 @@ kubectl config set-context --current --namespace=opencode
     EOF
     ```
 
-## Step 3: Verify the Runtime
-
-```bash
-kubectl get languageagentruntimes
-# NAME       AGE
-# openclaw   5m
-# opencode   5m
-```
-
-## Step 4: Deploy the Agent
+### Deploy OpenCode
 
 === "Anthropic"
 
@@ -139,7 +132,7 @@ kubectl get languageagentruntimes
     EOF
     ```
 
-## Step 5: Verify
+### Verify
 
 ```bash
 kubectl get languageagents
@@ -148,9 +141,9 @@ kubectl get pods -w
 
 Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
-## Step 6: Access the UI
+### Get Credentials
 
-OpenCode serves a browser UI on port **3000**. Retrieve the auto-generated credentials and forward the port:
+Retrieve the auto-generated credentials:
 
 ```bash
 USERNAME=$(kubectl get secret opencode-runtime \
@@ -159,48 +152,25 @@ PASSWORD=$(kubectl get secret opencode-runtime \
   -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
 
 echo "username: $USERNAME  password: $PASSWORD"
-
-kubectl port-forward svc/opencode 3000:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with the credentials above.
+### Connect
 
-!!! tip "TUI access"
-    To attach the OpenCode TUI (v1.0.10+) instead of the browser UI:
-    ```bash
-    opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
-    ```
+Log in at https://opencode.demo-cluster.\<your-domain\> with the credentials above, or attach the TUI:
 
-!!! tip "External access"
-    If your `LanguageCluster` has `spec.domain` set, the operator creates an Ingress at `opencode.<cluster-domain>` for external access.
+```bash
+opencode attach https://opencode.demo-cluster.<your-domain> \
+  --username "$USERNAME" --password "$PASSWORD"
+```
 
 ## What the Operator Created
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Namespace | `opencode` | Isolated workload namespace |
+| Namespace | `demo-cluster` | Isolated workload namespace |
 | Deployment | `opencode` | Runs the OpenCode container |
 | Service | `opencode` | ClusterIP on port 3000 |
 | Secret | `opencode-runtime` | Auto-generated username and password |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
 | ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |
-
-## Troubleshooting
-
-**Pod stuck in `Pending`:**
-```bash
-kubectl describe pod -l app=opencode
-kubectl get pvc
-```
-
-**UI loads but no model available:**
-```bash
-kubectl get languagemodels
-kubectl logs deployment/gateway
-```
-
-**UI errors after port-forward:**
-```bash
-kubectl logs deployment/opencode
-```
