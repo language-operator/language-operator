@@ -1482,8 +1482,19 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 		{
 			cluster := &langopv1alpha1.LanguageCluster{}
 			if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err == nil {
-				if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
-					secretName := cluster.Spec.Ingress.TLS.SecretName
+				tlsEnabled := r.DefaultTLSIssuerName != ""
+				if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
+					if cluster.Spec.Ingress.TLS.Enabled != nil {
+						tlsEnabled = *cluster.Spec.Ingress.TLS.Enabled
+					} else {
+						tlsEnabled = true
+					}
+				}
+				if tlsEnabled {
+					secretName := ""
+					if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
+						secretName = cluster.Spec.Ingress.TLS.SecretName
+					}
 					if secretName == "" {
 						if r.DefaultTLSIssuerName != "" {
 							if ingress.Annotations == nil {
@@ -1498,7 +1509,6 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 						}
 						secretName = GenerateTLSSecretName(agent.Name)
 					}
-
 					ingress.Spec.TLS = []networkingv1.IngressTLS{
 						{
 							Hosts:      []string{hostname},

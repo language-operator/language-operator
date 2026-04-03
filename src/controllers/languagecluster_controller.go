@@ -1128,8 +1128,19 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 				},
 			},
 		}
-		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil && (cluster.Spec.Ingress.TLS.Enabled == nil || *cluster.Spec.Ingress.TLS.Enabled) {
-			secretName := cluster.Spec.Ingress.TLS.SecretName
+		tlsEnabled := r.DefaultTLSIssuerName != ""
+		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
+			if cluster.Spec.Ingress.TLS.Enabled != nil {
+				tlsEnabled = *cluster.Spec.Ingress.TLS.Enabled
+			} else {
+				tlsEnabled = true
+			}
+		}
+		if tlsEnabled {
+			secretName := ""
+			if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
+				secretName = cluster.Spec.Ingress.TLS.SecretName
+			}
 			if secretName == "" {
 				if r.DefaultTLSIssuerName != "" {
 					if ingress.Annotations == nil {
