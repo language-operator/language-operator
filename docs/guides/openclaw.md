@@ -1,6 +1,6 @@
 # Deploying OpenClaw
 
-OpenClaw is an AI coding assistant that connects to your editor via a WebSocket gateway. The `openclaw` runtime is bundled with Language Operator and is installed automatically with the Helm chart.
+OpenClaw is an AI personal assistant that connects to your editor via a WebSocket gateway. The `openclaw` runtime is bundled with Language Operator and is installed automatically with the Helm chart.
 
 ## Prerequisites
 

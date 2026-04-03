@@ -19,7 +19,7 @@ The standard runtimes are installed automatically with the Helm chart:
 
 | Name | Image | Port | Use case |
 |------|-------|------|----------|
-| `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | AI coding assistant (WebSocket gateway) |
+| `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | AI personal assistant (WebSocket gateway) |
 | `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | AI coding assistant (HTTP/browser UI) |
 
 Disable a bundled runtime in `values.yaml`:
