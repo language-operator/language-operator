@@ -8,12 +8,12 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| `LanguageCluster` | Provisions a managed namespace for agents |
-| `LanguageAgent` | Deploys arbitrary agents like OpenClaw or OpenCode |
-| `LanguageAgentRuntime` | Defines agent runtime presets |
-| `LanguageModel` | Defines an LLM configuration (proxied through LiteLLM) |
-| `LanguageTool` | Deploys an MCP-compatible server |
-| `LanguagePersona` | Defines tone, personality and expertise |
+| [`LanguageCluster`](https://language-operator.github.io/language-operator/api/reference/#languagecluster) | Provisions a managed namespace for agents |
+| [`LanguageAgent`](https://language-operator.github.io/language-operator/api/reference/#languageagent) | Deploys arbitrary agents like OpenClaw or OpenCode |
+| [`LanguageAgentRuntime`](https://language-operator.github.io/language-operator/api/reference/#languageagentruntime) | Defines agent runtime presets |
+| [`LanguageModel`](https://language-operator.github.io/language-operator/api/reference/#languagemodel) | Defines an LLM configuration (proxied through LiteLLM) |
+| [`LanguageTool`](https://language-operator.github.io/language-operator/api/reference/#languagetool) | Deploys an MCP-compatible server |
+| [`LanguagePersona`](https://language-operator.github.io/language-operator/api/reference/#languagepersona) | Defines tone, personality and expertise |
 
 
 ## Getting Started
