@@ -1283,7 +1283,7 @@
 <li>The shared <code>gateway-config</code> ConfigMap is regenerated with all models in the namespace</li>
 <li>The gateway Deployment rolls over with the updated configuration</li>
 </ol>
-<p>All agents immediately have access to the new model via <code>MODEL_ENDPOINTS</code>.</p>
+<p>All agents immediately have access to the new model via <code>MODEL_ENDPOINT</code>.</p>
 <h3 id="credential-management">Credential Management<a class="headerlink" href="#credential-management" title="Permanent link">&para;</a></h3>
 <p>Store API keys in Secrets:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-key<span class="w"> </span><span class="se">\</span>

@@ -1352,8 +1352,8 @@
 </code></pre></div>
 <p>All namespace-scoped resources (<code>LanguageAgent</code>, <code>LanguageModel</code>, <code>LanguageTool</code>, <code>LanguagePersona</code>) are deployed into this namespace.</p>
 <h2 id="the-shared-gateway">The Shared Gateway<a class="headerlink" href="#the-shared-gateway" title="Permanent link">&para;</a></h2>
-<p>Every cluster runs exactly one LiteLLM proxy. It aggregates all <code>LanguageModel</code> resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the <code>MODEL_ENDPOINTS</code> environment variable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>MODEL_ENDPOINTS=http://gateway.&lt;namespace&gt;.svc.cluster.local:8000
+<p>Every cluster runs exactly one LiteLLM proxy. It aggregates all <code>LanguageModel</code> resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the <code>MODEL_ENDPOINT</code> environment variable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>MODEL_ENDPOINT=http://gateway.&lt;namespace&gt;.svc.cluster.local:8000
 </code></pre></div>
 <p>Credentials never leave the gateway pod. Agents send model names and prompts; the gateway holds the API keys and routes to the correct upstream provider.</p>
 <p>When the model list changes — a <code>LanguageModel</code> is added, updated, or deleted — the cluster controller regenerates the <code>gateway-config</code> ConfigMap and triggers a rolling restart of the gateway Deployment. No agent redeploy is required.</p>

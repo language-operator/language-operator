@@ -1649,7 +1649,7 @@
 <td>Kubernetes UID of the LanguageCluster</td>
 </tr>
 <tr>
-<td><code>MODEL_ENDPOINTS</code></td>
+<td><code>MODEL_ENDPOINT</code></td>
 <td>Single shared LiteLLM gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>). The same URL is used regardless of how many models are referenced.</td>
 </tr>
 <tr>
@@ -1745,7 +1745,7 @@
 <a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://gateway.default.svc.cluster.local:8000</span>
 <a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="w">    </span><span class="c1"># priority: 1   # only present when spec.models[].priority is set</span>
 </code></pre></div>
-<p>The <code>MODEL_ENDPOINTS</code> env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.</p>
+<p>The <code>MODEL_ENDPOINT</code> env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.</p>
 <h2 id="example-languageagent-yaml">Example LanguageAgent YAML<a class="headerlink" href="#example-languageagent-yaml" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
@@ -1828,7 +1828,7 @@
 <li>[ ] Listen on the port(s) defined in <code>spec.ports</code> (default: one port named <code>http</code> on <code>8080</code>)</li>
 <li>[ ] Read runtime configuration from <code>/etc/agent/config.yaml</code> on startup (if present); task instructions are in the top-level <code>instructions</code> field</li>
 <li>[ ] Respect <code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code>, <code>AGENT_MODE</code>, <code>AGENT_CLUSTER_NAME</code>, <code>AGENT_CLUSTER_UUID</code> environment variables</li>
-<li>[ ] Route LLM traffic through <code>MODEL_ENDPOINTS</code> proxy URLs rather than connecting to model APIs directly</li>
+<li>[ ] Route LLM traffic through <code>MODEL_ENDPOINT</code> proxy URLs rather than connecting to model APIs directly</li>
 <li>[ ] Use <code>spec.workspace.mountPath</code> (default <code>/workspace</code>) for persistent state — do not assume local container storage survives restarts</li>
 </ul>
 

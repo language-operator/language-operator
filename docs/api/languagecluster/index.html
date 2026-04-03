@@ -1269,7 +1269,7 @@
 <li>Handles credential management centrally</li>
 <li>Enables cross-model cost tracking</li>
 </ul>
-<p>All agents in the cluster connect to this shared proxy via the <code>MODEL_ENDPOINTS</code> environment variable.</p>
+<p>All agents in the cluster connect to this shared proxy via the <code>MODEL_ENDPOINT</code> environment variable.</p>
 <h3 id="network-isolation">Network Isolation<a class="headerlink" href="#network-isolation" title="Permanent link">&para;</a></h3>
 <p>Network isolation for agents in this cluster is configured via <code>spec.networkPolicies</code>, an object with <code>ingress</code> and <code>egress</code> rule lists. Rules mirror the native Kubernetes NetworkPolicy shape — see <code>AgentNetworkPolicies</code> in the API reference. By default:</p>
 <ul>

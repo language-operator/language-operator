@@ -1348,7 +1348,7 @@
 <p>The model gateway is a single LiteLLM proxy Deployment (<code>gateway</code>) deployed per <code>LanguageCluster</code>. When you create or update a <code>LanguageModel</code>, the <code>LanguageCluster</code> controller detects the change, regenerates the <code>gateway-config</code> ConfigMap with the full model list, and rolls the gateway Deployment. Existing agents pick up the new model immediately — no agent redeploy required.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>LanguageModel CRs  →  gateway-config ConfigMap  →  gateway Deployment (LiteLLM)
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                                                            ↑
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                          all agents connect here via MODEL_ENDPOINTS
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                          all agents connect here via MODEL_ENDPOINT
 </code></pre></div>
 <p>The <code>LanguageModel</code> controller itself only validates the spec and sets <code>status.phase</code>. It creates no Deployment or Service of its own.</p>
 <h2 id="credential-management">Credential Management<a class="headerlink" href="#credential-management" title="Permanent link">&para;</a></h2>
@@ -1380,7 +1380,7 @@
 </thead>
 <tbody>
 <tr>
-<td><code>MODEL_ENDPOINTS</code></td>
+<td><code>MODEL_ENDPOINT</code></td>
 <td><code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code></td>
 </tr>
 <tr>
