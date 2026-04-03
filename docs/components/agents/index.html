@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agent-runtime-container-specification" class="md-skip">
+        <a href="#agents" class="md-skip">
           Skip to content
         </a>
       
@@ -1532,7 +1532,7 @@
   
 
 
-<h1 id="agent-runtime-container-specification">Agent Runtime Container Specification<a class="headerlink" href="#agent-runtime-container-specification" title="Permanent link">&para;</a></h1>
+<h1 id="agents">Agents<a class="headerlink" href="#agents" title="Permanent link">&para;</a></h1>
 <p>This document defines the contract between the Language Operator and agent runtime containers. It specifies what the operator guarantees to provide to every running agent, and what a compliant agent image must implement.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>A <strong>LanguageAgent</strong> runs as a standard Kubernetes Deployment. The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.</p>

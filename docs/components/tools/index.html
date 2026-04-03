@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#languagetool-implementation-specification" class="md-skip">
+        <a href="#tools" class="md-skip">
           Skip to content
         </a>
       
@@ -1442,7 +1442,7 @@
   
 
 
-<h1 id="languagetool-implementation-specification">LanguageTool Implementation Specification<a class="headerlink" href="#languagetool-implementation-specification" title="Permanent link">&para;</a></h1>
+<h1 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h1>
 <p>This document defines the contract for implementing a <code>LanguageTool</code> — an MCP-compatible service that agents use for memory, knowledge retrieval, code execution, and other capabilities.</p>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>A <strong>LanguageTool</strong> is a Kubernetes-managed service that exposes the <a href="https://modelcontextprotocol.io/">Model Context Protocol (MCP)</a>. The operator discovers tools via <code>LanguageTool</code> CRDs, resolves their endpoints, and injects connection details into agent containers via the <code>MCP_SERVERS</code> environment variable and the <code>tools:</code> section of <code>/etc/agent/config.yaml</code>.</p>
