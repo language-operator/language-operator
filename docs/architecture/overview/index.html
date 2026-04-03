@@ -1767,7 +1767,6 @@
 <li><strong>HTTPRoute</strong> — external access via the cluster Gateway</li>
 <li><strong>NetworkPolicy</strong> with ingress rules allowing:</li>
 <li>Agent pods (<code>langop.io/kind=LanguageAgent</code>) — agent-to-agent traffic on each port in <code>spec.ports</code></li>
-<li>Operator dashboard</li>
 <li>Configured trigger pods</li>
 </ul>
 <p>Tool servers (<code>LanguageTool</code>) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.</p>
