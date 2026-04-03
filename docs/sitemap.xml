@@ -45,15 +45,27 @@
          <lastmod>2026-04-03</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/architecture/agents/</loc>
+         <loc>https://language-operator.github.io/language-operator/components/agents/</loc>
          <lastmod>2026-04-03</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/architecture/overview/</loc>
+         <loc>https://language-operator.github.io/language-operator/components/models/</loc>
          <lastmod>2026-04-03</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/architecture/tools/</loc>
+         <loc>https://language-operator.github.io/language-operator/components/overview/</loc>
+         <lastmod>2026-04-03</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/components/personas/</loc>
+         <lastmod>2026-04-03</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/components/runtimes/</loc>
+         <lastmod>2026-04-03</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/components/tools/</loc>
          <lastmod>2026-04-03</lastmod>
     </url>
     <url>
