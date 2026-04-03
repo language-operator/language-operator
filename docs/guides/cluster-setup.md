@@ -54,10 +54,7 @@ kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
 
 ## StorageClass
 
-Language Operator requires a **default StorageClass** for:
-
-- Dashboard PostgreSQL (10Gi, can be disabled)
-- Agent workspace PVCs created by bundled runtimes (openclaw, opencode)
+Language Operator requires a **default StorageClass** for agent workspace PVCs created by bundled runtimes (openclaw, opencode).
 
 Verify a default StorageClass is configured:
 
@@ -65,18 +62,11 @@ Verify a default StorageClass is configured:
 kubectl get storageclass
 ```
 
-The StorageClass with `(default)` in its name is used automatically. If none is marked default, either mark one:
+The StorageClass with `(default)` in its name is used automatically. If none is marked default, mark one:
 
 ```bash
 kubectl patch storageclass <name> \
   -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-```
-
-Or disable persistence at install time:
-
-```bash
-helm install language-operator language-operator/language-operator \
-  --set dashboard.postgresql.persistence.enabled=false
 ```
 
 Individual agents can also opt out of workspace storage:

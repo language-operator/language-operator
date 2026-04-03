@@ -23,7 +23,7 @@ Minimum recommended node capacity:
 - **kubectl** configured to access your cluster
 - **Helm 3.8+**
 - **cert-manager v1.12+** — required for webhook TLS certificate provisioning
-- **Default StorageClass** — required for dashboard PostgreSQL and agent workspace PVCs
+- **Default StorageClass** — required for agent workspace PVCs created by bundled runtimes (openclaw, opencode)
 
 Verify a default StorageClass is available:
 
@@ -31,19 +31,7 @@ Verify a default StorageClass is available:
 kubectl get storageclass
 ```
 
-The StorageClass marked `(default)` is used for:
-
-- The dashboard's PostgreSQL database (10Gi, `dashboard.postgresql.persistence.enabled: true` by default)
-- Workspace PVCs created for agents that use bundled runtimes (openclaw, opencode)
-
-To install without a default StorageClass, disable persistence for each component:
-
-```bash
-helm install language-operator language-operator/language-operator \
-  --set dashboard.postgresql.persistence.enabled=false
-```
-
-For individual agents, disable the workspace PVC with `spec.workspace.enabled: false` in the LanguageAgent spec.
+To install without a default StorageClass, agents can opt out of workspace storage with `spec.workspace.enabled: false` in the LanguageAgent spec.
 
 Install cert-manager if not already present:
 

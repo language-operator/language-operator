@@ -185,25 +185,7 @@ kubectl get pods
 
 ## Development
 
-```bash
-# Install git hooks
-./scripts/setup-hooks
-
-# Build
-cd src && make build
-
-# Test
-cd src && make test
-
-# Regenerate CRDs and deepcopy after type changes
-cd src && make generate && make helm-crds
-```
-
-## Further Reading
-
-- [Architecture](requirements/ARCHITECTURE.md) — system design and component interaction
-- [Agent Contract](spec/agents.md) — what the operator injects into agent pods
-- [Tool Contract](spec/tools.md) — how to implement a compatible MCP tool server
+See the [development setup guide](docs/development/setup.md) for full instructions.
 
 ## Status
 

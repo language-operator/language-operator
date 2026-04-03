@@ -1826,9 +1826,9 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 	}
 
 	t.Run("from_rule_appended_to_ingress", func(t *testing.T) {
-		// Hardcoded rules: trigger, dashboard, agent-to-agent = 3; user From rule = 1; total >= 4
-		if len(np.Spec.Ingress) < 4 {
-			t.Errorf("expected at least 4 ingress rules (3 default + 1 from spec), got %d", len(np.Spec.Ingress))
+		// Hardcoded rules: trigger, agent-to-agent = 2; user From rule = 1; total >= 3
+		if len(np.Spec.Ingress) < 3 {
+			t.Errorf("expected at least 3 ingress rules (2 default + 1 from spec), got %d", len(np.Spec.Ingress))
 		}
 		// Last rule should be the user-defined one
 		last := np.Spec.Ingress[len(np.Spec.Ingress)-1]
@@ -4376,9 +4376,9 @@ func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// First 3 rules are the built-in trigger/dashboard/agent-to-agent rules.
-	require.GreaterOrEqual(t, len(np.Spec.Ingress), 3)
-	for i := 0; i < 3; i++ {
+	// First 2 rules are the built-in trigger/agent-to-agent rules.
+	require.GreaterOrEqual(t, len(np.Spec.Ingress), 2)
+	for i := 0; i < 2; i++ {
 		rule := np.Spec.Ingress[i]
 		require.Len(t, rule.Ports, 2, "rule %d should have 2 ports", i)
 		assert.Equal(t, int32(3000), rule.Ports[0].Port.IntVal, "rule %d port 0", i)
@@ -4387,7 +4387,7 @@ func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
 }
 
 // TestLanguageAgentController_IngressControllerNamespace verifies that when
-// IngressControllerNamespace is set, a fourth ingress rule is added to allow
+// IngressControllerNamespace is set, a third ingress rule is added to allow
 // the ingress controller namespace to reach agent ports.
 func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
@@ -4418,9 +4418,9 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// 3 built-in rules + 1 ingress-controller rule
-	require.Len(t, np.Spec.Ingress, 4, "expected 4 ingress rules (3 built-in + ingress controller)")
-	ingressNsRule := np.Spec.Ingress[3]
+	// 2 built-in rules + 1 ingress-controller rule
+	require.Len(t, np.Spec.Ingress, 3, "expected 3 ingress rules (2 built-in + ingress controller)")
+	ingressNsRule := np.Spec.Ingress[2]
 	require.Len(t, ingressNsRule.From, 1)
 	require.NotNil(t, ingressNsRule.From[0].NamespaceSelector)
 	assert.Equal(t, "traefik", ingressNsRule.From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
@@ -4429,7 +4429,7 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 }
 
 // TestLanguageAgentController_NoIngressControllerNamespace verifies that without
-// IngressControllerNamespace set, only the 3 built-in ingress rules are created.
+// IngressControllerNamespace set, only the 2 built-in ingress rules are created.
 func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("no-ingress-ns-agent", "default")
@@ -4454,5 +4454,5 @@ func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	assert.Len(t, np.Spec.Ingress, 3, "expected exactly 3 built-in ingress rules")
+	assert.Len(t, np.Spec.Ingress, 2, "expected exactly 2 built-in ingress rules")
 }

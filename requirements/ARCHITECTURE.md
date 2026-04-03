@@ -230,7 +230,6 @@ Each `LanguageAgent` gets:
 - **HTTPRoute** — external access via the cluster Gateway
 - **NetworkPolicy** with ingress rules allowing:
   - Agent pods (`langop.io/kind=LanguageAgent`) — agent-to-agent traffic on `spec.port`
-  - Operator dashboard
   - Configured trigger pods
 
 Tool servers (`LanguageTool`) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.

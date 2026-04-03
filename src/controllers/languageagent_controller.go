@@ -860,7 +860,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.NetworkPolicies,
 	)
 
-	// Add ingress rules to allow trigger pods and dashboard to connect to agent.
+	// Add ingress rules to allow trigger pods to connect to agent.
 	// Build NetworkPolicy port list from all agent ports.
 	var npPorts []networkingv1.NetworkPolicyPort
 	for _, ap := range agentPorts(agent) {
@@ -883,24 +883,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							LabelKeyLangopComponent: "trigger",
-						},
-					},
-				},
-			},
-			Ports: npPorts,
-		},
-		{
-			// Allow dashboard pods from language-operator namespace to connect
-			From: []networkingv1.NetworkPolicyPeer{
-				{
-					NamespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							LabelKeyMetadataName: "language-operator",
-						},
-					},
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							LabelKeyK8sName: "language-operator-dashboard",
 						},
 					},
 				},
