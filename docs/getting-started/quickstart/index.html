@@ -1309,7 +1309,7 @@
 
 
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>Deploy an OpenClaw agent in under 5 minutes.</p>
+<p>Deploy OpenClaw or OpenCode in under 5 minutes.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>A cluster with <a href="../installation/">Language Operator</a> installed and access to a large language model.</p>
 <h2 id="step-1-create-a-cluster">Step 1: Create a Cluster<a class="headerlink" href="#step-1-create-a-cluster" title="Permanent link">&para;</a></h2>
@@ -1318,17 +1318,17 @@
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">kind: LanguageCluster</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">  name: language-operator-openclaw</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">  name: language-operator-demo</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">spec:</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: openclaw.agents.example.com</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: agents.example.com</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">EOF</span>
 </code></pre></div>
 <p>Wait for it to be ready:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/language-operator-openclaw<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/language-operator-demo<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
 </code></pre></div>
 <p>Switch into its namespace:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-openclaw
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-demo
 </code></pre></div>
 <h2 id="step-2-configure-an-llm">Step 2: Configure an LLM<a class="headerlink" href="#step-2-configure-an-llm" title="Permanent link">&para;</a></h2>
 <p>Store your API key in a secret:</p>
@@ -1421,18 +1421,12 @@
 </div>
 </div>
 </div>
-<div class="admonition success">
-<p class="admonition-title">You're Running!</p>
-<p>You now have OpenClaw running on Kubernetes with AI capabilities provided through the Language Operator.</p>
-</div>
 <h2 id="what-just-happened">What Just Happened?<a class="headerlink" href="#what-just-happened" title="Permanent link">&para;</a></h2>
 <p>The operator automatically:</p>
 <ol>
-<li>Created a dedicated namespace (<code>language-operator-openclaw</code>)</li>
+<li>Created a dedicated namespace (<code>language-operator-demo</code>)</li>
 <li>Deployed a LiteLLM proxy with your model credentials</li>
-<li>Injected the proxy URL into your agent via <code>MODEL_ENDPOINT</code></li>
-<li>Created a <code>{agent}-runtime</code> Secret from <code>spec.openclaw.token</code> and injected it via <code>envFrom</code></li>
-<li>Created a Deployment, Service, and secure NetworkPolicy for OpenClaw</li>
+<li>Configured and deployed your agent</li>
 </ol>
 
 
