@@ -3820,6 +3820,61 @@ func TestLanguageAgentController_WorkspaceStorageClass(t *testing.T) {
 	assert.Equal(t, "fast-ssd", *pvc.Spec.StorageClassName)
 }
 
+func TestLanguageAgentController_WorkspaceStorageClass_DefaultFromReconciler(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("sc-default-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                &record.FakeRecorder{},
+		RegistryManager:         &mockRegistryManager{},
+		DefaultStorageClassName: "local-path",
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: agent.Namespace}, pvc))
+	require.NotNil(t, pvc.Spec.StorageClassName)
+	assert.Equal(t, "local-path", *pvc.Spec.StorageClassName)
+}
+
+func TestLanguageAgentController_WorkspaceStorageClass_PerAgentOverridesDefault(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("sc-override-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceStorageClass("fast-ssd"),
+	)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                &record.FakeRecorder{},
+		RegistryManager:         &mockRegistryManager{},
+		DefaultStorageClassName: "local-path",
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: agent.Namespace}, pvc))
+	require.NotNil(t, pvc.Spec.StorageClassName)
+	assert.Equal(t, "fast-ssd", *pvc.Spec.StorageClassName)
+}
+
 func TestLanguageAgentController_WorkspaceMountPath(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("mp-agent", "default",

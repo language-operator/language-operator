@@ -86,6 +86,7 @@ func main() {
 	var networkPolicyTimeout time.Duration
 	var networkPolicyRetries int
 	var agentIngressClassName string
+	var agentStorageClassName string
 	var gatewayIngressClassName string
 	var gatewayImage string
 	var gatewayImagePullPolicy string
@@ -119,6 +120,8 @@ func main() {
 		"The number of concurrent reconciles per controller.")
 	flag.StringVar(&agentIngressClassName, "agent-ingress-class-name", "",
 		"Default IngressClass name for agent Ingress resources. Can be overridden per LanguageCluster.")
+	flag.StringVar(&agentStorageClassName, "agent-storage-class-name", "",
+		"Default StorageClass for agent workspace PVCs. Uses cluster default when empty. Can be overridden per agent via spec.workspace.storageClassName.")
 	flag.StringVar(&gatewayIngressClassName, "gateway-ingress-class-name", "",
 		"Default IngressClass name for the gateway Ingress. Can be overridden per LanguageCluster.")
 	var ingressControllerNamespace string
@@ -324,6 +327,7 @@ func main() {
 		NetworkPolicyRetries:       networkPolicyRetries,
 		NetworkIsolationEnabled:    networkIsolationEnabled,
 		DefaultIngressClassName:    agentIngressClassName,
+		DefaultStorageClassName:    agentStorageClassName,
 		DefaultTLSIssuerName:       tlsIssuerName,
 		DefaultTLSIssuerKind:       tlsIssuerKind,
 		IngressControllerNamespace: ingressControllerNamespace,

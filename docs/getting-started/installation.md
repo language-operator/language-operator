@@ -31,7 +31,7 @@ Verify a default StorageClass is available:
 kubectl get storageclass
 ```
 
-To install without a default StorageClass, agents can opt out of workspace storage with `spec.workspace.enabled: false` in the LanguageAgent spec.
+Set `config.agents.storageClassName` in your Helm values to use a specific StorageClass for all agent workspace PVCs. Individual agents can override this with `spec.workspace.storageClassName`.
 
 Install cert-manager if not already present:
 
@@ -54,7 +54,7 @@ These are not required to install the operator, but unlock the full feature set:
 
 | Component | Purpose |
 |-----------|---------|
-| [cert-manager](https://cert-manager.io) with a `letsencrypt-production` ClusterIssuer | Automatic TLS certificates for agent ingresses — configure via `config.ingress.tls` in Helm values |
+| [cert-manager](https://cert-manager.io) with a `letsencrypt-production` ClusterIssuer | Automatic TLS certificates for agent ingresses — configure via `config.tls.certificateIssuerName` in Helm values |
 | [external-dns](https://github.com/kubernetes-sigs/external-dns) | Automatic DNS records for agent hostnames |
 
 With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at `<agent-name>.<cluster-domain>`.
@@ -71,14 +71,23 @@ helm repo update
 
 ### 2. Install the Operator
 
-Install into the `language-operator` namespace:
+Install into the `language-operator` namespace, substituting the values for your cluster:
 
 ```bash
 helm install language-operator \
   language-operator/language-operator \
   --create-namespace \
-  --namespace language-operator
+  --namespace language-operator \
+  --set config.agents.ingressClassName=traefik \
+  --set config.agents.ingressControllerNamespace=traefik \
+  --set config.agents.storageClassName=local-path \
+  --set config.gateway.ingressClassName=traefik \
+  --set config.tls.certificateIssuerName=letsencrypt-production \
+  --set config.tls.certificateIssuerKind=ClusterIssuer
 ```
+
+!!! note "Values vary by cluster"
+    Replace `traefik` with your ingress class (e.g. `nginx`, `alb`), `local-path` with your StorageClass, and the TLS issuer with the name of your cert-manager `ClusterIssuer` or `Issuer`. All of these can also be set in a values file with `helm install -f values.yaml`.
 
 ### 3. Verify Installation
 

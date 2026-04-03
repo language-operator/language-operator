@@ -191,6 +191,11 @@ config:
     # When set, a NetworkPolicy rule is added allowing the ingress controller to reach agent ports.
     # Example: "traefik", "ingress-nginx"
     ingressControllerNamespace: ""
+    # Default StorageClass for agent workspace PVCs.
+    # When empty, the cluster default StorageClass is used.
+    # Can be overridden per-agent via spec.workspace.storageClassName.
+    # Example: "local-path", "standard", "gp2"
+    storageClassName: ""
 
   gateway:
     # Image for the shared LiteLLM gateway deployed per LanguageCluster.
@@ -204,14 +209,12 @@ config:
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
 
-  ingress:
-    tls:
-      # cert-manager issuer name used to provision TLS certificates for all gateway and agent
-      # Ingress resources. Set to "" to disable cert-manager integration (e.g. when using
-      # spec.ingress.tls.secretName to supply certificates manually).
-      issuerName: "letsencrypt-production"
-      # Kind of the cert-manager issuer: ClusterIssuer (default) or Issuer.
-      issuerKind: "ClusterIssuer"
+  tls:
+    # cert-manager issuer name for gateway and agent Ingress TLS certificates.
+    # Set to "" to disable cert-manager integration (e.g. when supplying certificates manually).
+    certificateIssuerName: "letsencrypt-production"
+    # Kind of the cert-manager issuer: ClusterIssuer (default) or Issuer.
+    certificateIssuerKind: "ClusterIssuer"
 
   # Watch configuration
   watch:

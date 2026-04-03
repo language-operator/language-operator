@@ -57,6 +57,7 @@ type LanguageAgentReconciler struct {
 	NetworkPolicyRetries       int
 	NetworkIsolationEnabled    bool
 	DefaultIngressClassName    string
+	DefaultStorageClassName    string
 	DefaultTLSIssuerName       string
 	DefaultTLSIssuerKind       string
 	IngressControllerNamespace string
@@ -626,6 +627,8 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 
 			if agent.Spec.Workspace.StorageClassName != nil {
 				pvc.Spec.StorageClassName = agent.Spec.Workspace.StorageClassName
+			} else if r.DefaultStorageClassName != "" {
+				pvc.Spec.StorageClassName = &r.DefaultStorageClassName
 			}
 		}
 
