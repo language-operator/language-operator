@@ -1419,6 +1419,7 @@
 <p class="admonition-title">Values vary by cluster</p>
 <p>Replace <code>traefik</code> with your ingress class (e.g. <code>nginx</code>, <code>alb</code>), <code>local-path</code> with your StorageClass, and the TLS issuer with the name of your cert-manager <code>ClusterIssuer</code> or <code>Issuer</code>. All of these can also be set in a values file with <code>helm install -f values.yaml</code>.</p>
 </div>
+<p>See the <a href="https://github.com/language-operator/language-operator/blob/main/chart/values.yaml">complete <code>values.yaml</code></a> for all available configuration options.</p>
 <h3 id="3-verify-installation">3. Verify Installation<a class="headerlink" href="#3-verify-installation" title="Permanent link">&para;</a></h3>
 <p>Check that the operator pod is running:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator
