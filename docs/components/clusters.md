@@ -2,18 +2,6 @@
 
 A `LanguageCluster` is the top-level organizational unit in Language Operator. It creates a managed Kubernetes namespace and deploys the shared infrastructure that all agents, models, and tools in that namespace depend on: a LiteLLM gateway, NetworkPolicies, and optional external ingress.
 
-## How It Works
-
-Creating a `LanguageCluster` triggers the cluster controller to:
-
-1. Create a Kubernetes namespace with the same name as the resource
-2. Deploy the shared LiteLLM gateway (`gateway` Deployment + Service)
-3. Set up default RBAC for agent pods
-4. Create an Ingress at `gateway.<spec.domain>` (when `spec.domain` is set)
-5. Watch for `LanguageModel` changes in the namespace and reconcile the gateway config on each change
-
-The cluster is the reconciliation boundary: the controller watches `LanguageModel` CRs in the namespace directly, so adding or removing a model triggers a gateway config update without touching any agent.
-
 ## Namespace Mapping
 
 Each `LanguageCluster` maps 1:1 to a namespace. The namespace is created and owned by the cluster resource — deleting the `LanguageCluster` deletes the namespace and everything in it.
@@ -38,7 +26,7 @@ MODEL_ENDPOINT=http://gateway.<namespace>.svc.cluster.local:8000
 
 Credentials never leave the gateway pod. Agents send model names and prompts; the gateway holds the API keys and routes to the correct upstream provider.
 
-When the model list changes — a `LanguageModel` is added, updated, or deleted — the cluster controller regenerates the `gateway-config` ConfigMap and triggers a rolling restart of the gateway Deployment. No agent redeploy is required.
+When the model list changes, the gateway restarts with the updated configuration. No agent redeploy is required.
 
 ## Network Isolation
 

@@ -101,7 +101,7 @@ spec:
 
 ## Status
 
-`LanguageAgentRuntime` has no status subresource. It is a static configuration object; the operator reads it at reconcile time but does not track its health or readiness.
+`LanguageAgentRuntime` has no status subresource — it is a static configuration preset, not a running workload.
 
 ```bash
 kubectl get languageagentruntimes

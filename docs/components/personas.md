@@ -103,12 +103,6 @@ spec:
   expertise: "regulatory compliance in financial services"
 ```
 
-## The `LanguagePersona` Controller
-
-The `LanguagePersona` controller is minimal — it validates the spec and sets `status.phase: Ready`. It creates no other Kubernetes resources. The agent controller reads persona CRs directly when assembling `/etc/agent/config.yaml`.
-
-Updating a persona spec triggers reconciliation of every agent that references it, updating the agents' ConfigMaps without a pod restart.
-
 ## Related
 
 - [LanguageAgent](../api/languageagent.md) — references personas via `spec.persona`

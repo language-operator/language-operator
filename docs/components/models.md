@@ -4,15 +4,7 @@ A `LanguageModel` configures LLM access for a `LanguageCluster`. The operator re
 
 ## How It Works
 
-The model gateway is a single LiteLLM proxy Deployment (`gateway`) deployed per `LanguageCluster`. When you create or update a `LanguageModel`, the `LanguageCluster` controller detects the change, regenerates the `gateway-config` ConfigMap with the full model list, and rolls the gateway Deployment. Existing agents pick up the new model immediately — no agent redeploy required.
-
-```
-LanguageModel CRs  →  gateway-config ConfigMap  →  gateway Deployment (LiteLLM)
-                                                            ↑
-                                          all agents connect here via MODEL_ENDPOINT
-```
-
-The `LanguageModel` controller itself only validates the spec and sets `status.phase`. It creates no Deployment or Service of its own.
+One LiteLLM proxy (`gateway`) runs per `LanguageCluster`. When you add or remove a `LanguageModel`, the gateway restarts with the updated model list — no agent redeploy required.
 
 ## Credential Management
 
