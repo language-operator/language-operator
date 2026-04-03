@@ -4,9 +4,7 @@ Deploy an openclaw agent in under 5 minutes.
 
 ## Prerequisites
 
-- Language Operator [installed](installation.md)
-- Anthropic API key (get one at [console.anthropic.com](https://console.anthropic.com))
-- A **default StorageClass** — verify with `kubectl get storageclass` (see [installation requirements](installation.md#requirements))
+A cluster with [Language Operator](installation.md) installed and access to a large language model.
 
 ## Step 1: Create a Cluster
 
