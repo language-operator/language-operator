@@ -8,17 +8,17 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| [`LanguageCluster`](https://language-operator.github.io/language-operator/api/reference/#languagecluster) | Configures a managed namespace and domain for agents |
-| [`LanguageAgent`](https://language-operator.github.io/language-operator/api/reference/#languageagent) | Deploys arbitrary agents like OpenClaw or OpenCode |
-| [`LanguageAgentRuntime`](https://language-operator.github.io/language-operator/api/reference/#languageagentruntime) | Defines agent runtime presets |
-| [`LanguageModel`](https://language-operator.github.io/language-operator/api/reference/#languagemodel) | Defines an LLM configuration (proxied through LiteLLM) |
-| [`LanguageTool`](https://language-operator.github.io/language-operator/api/reference/#languagetool) | Deploys an MCP-compatible server |
-| [`LanguagePersona`](https://language-operator.github.io/language-operator/api/reference/#languagepersona) | Defines tone, personality and expertise |
+| [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Configures a managed namespace and domain for agents |
+| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploys arbitrary agents like OpenClaw or OpenCode |
+| [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Defines agent runtime presets |
+| [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Defines an LLM configuration (proxied through LiteLLM) |
+| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | Deploys an MCP-compatible server |
+| [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Defines tone, personality and expertise |
 
 
 ## Getting Started
 
-See the [installation guide](https://language-operator.github.io/language-operator/docs/getting-started/installation/) and [quick start](https://language-operator.github.io/language-operator/docs/getting-started/quickstart/) to deploy your first agent.
+See the [installation guide](https://langop.io/docs/getting-started/installation/) and [quick start](https://langop.io/docs/getting-started/quickstart/) to deploy your first agent.
 
 ## Development
 
