@@ -601,10 +601,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-deploy-the-agent" class="md-nav__link">
+  <a href="#step-3-deploy-an-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Deploy the Agent
+        Step 3: Deploy an Agent
       
     </span>
   </a>
@@ -1265,10 +1265,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-deploy-the-agent" class="md-nav__link">
+  <a href="#step-3-deploy-an-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Deploy the Agent
+        Step 3: Deploy an Agent
       
     </span>
   </a>
@@ -1382,8 +1382,11 @@
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="s">EOF</span>
 </code></pre></div>
 <p>The operator creates a LiteLLM proxy so all agents can reach the model through a single in-cluster endpoint.</p>
-<h2 id="step-3-deploy-the-agent">Step 3: Deploy the Agent<a class="headerlink" href="#step-3-deploy-the-agent" title="Permanent link">&para;</a></h2>
-<p>The <code>openclaw</code> runtime is bundled with the operator. Reference it with <code>runtime: openclaw</code> and supply a gateway token inline — the operator creates the credential secret automatically:</p>
+<h2 id="step-3-deploy-an-agent">Step 3: Deploy an Agent<a class="headerlink" href="#step-3-deploy-an-agent" title="Permanent link">&para;</a></h2>
+<p>Choose one of the bundled runtimes:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">openclaw</label><label for="__tabbed_1_2">opencode</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s">kind: LanguageAgent</span>
@@ -1396,18 +1399,58 @@
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">    - name: claude-sonnet</span>
 <a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">EOF</span>
 </code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s">  name: opencode</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="s">spec:</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s">  runtime: opencode</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s">  models:</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="s">EOF</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <h2 id="step-4-check-status">Step 4: Check Status<a class="headerlink" href="#step-4-check-status" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <h2 id="step-5-access-the-agent">Step 5: Access the Agent<a class="headerlink" href="#step-5-access-the-agent" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Retrieve the auto-generated gateway token</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>openclaw-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCLAW_GATEWAY_TOKEN}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">openclaw</label><label for="__tabbed_2_2">opencode</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Retrieve the auto-generated gateway token:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>openclaw-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCLAW_GATEWAY_TOKEN}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
 </code></pre></div>
-<p>openclaw uses a WebSocket gateway on port 18789 — it is not a browser-based HTTP UI.
-Connect using the openclaw browser extension or CLI client (see <a href="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>), pointing it to <code>ws://localhost:18789</code> with the token retrieved above.</p>
+<p>If you have a domain configured on your <code>LanguageCluster</code>, open <code>https://openclaw.&lt;cluster-domain&gt;</code> and enter the token when prompted, or connect the openclaw CLI directly to <code>wss://openclaw.&lt;cluster-domain&gt;</code>.</p>
+<p>Otherwise, port-forward for local access:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># connect to ws://localhost:18789 with the token above</span>
+</code></pre></div>
+<p>openclaw uses a WebSocket gateway on port 18789. Connect using the openclaw browser extension or CLI client (see <a href="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>).</p>
+</div>
+<div class="tabbed-block">
+<p>Retrieve the auto-generated credentials:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">USERNAME</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>opencode-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCODE_SERVER_USERNAME}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">PASSWORD</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>opencode-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCODE_SERVER_PASSWORD}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;username: </span><span class="nv">$USERNAME</span><span class="s2">  password: </span><span class="nv">$PASSWORD</span><span class="s2">&quot;</span>
+</code></pre></div>
+<p>If you have a domain configured on your <code>LanguageCluster</code>, open <code>https://opencode.&lt;cluster-domain&gt;</code> and sign in with the credentials above.</p>
+<p>To attach the TUI (opencode v1.0.10+):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>opencode<span class="w"> </span>attach<span class="w"> </span>https://opencode.&lt;cluster-domain&gt;<span class="w"> </span>--username<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$USERNAME</span><span class="s2">&quot;</span><span class="w"> </span>--password<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PASSWORD</span><span class="s2">&quot;</span>
+</code></pre></div>
+<p>Otherwise, port-forward for local access:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/opencode<span class="w"> </span><span class="m">3000</span>:3000
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># then open http://localhost:3000 or:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>opencode<span class="w"> </span>attach<span class="w"> </span>http://localhost:3000<span class="w"> </span>--username<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$USERNAME</span><span class="s2">&quot;</span><span class="w"> </span>--password<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PASSWORD</span><span class="s2">&quot;</span>
+</code></pre></div>
+</div>
+</div>
+</div>
 <div class="admonition success">
 <p class="admonition-title">You're Running!</p>
 <p>You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.</p>

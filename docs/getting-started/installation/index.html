@@ -579,6 +579,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recommended-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#install-via-helm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1333,6 +1344,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recommended-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#install-via-helm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1504,6 +1526,27 @@
 </code></pre></div>
 You are then responsible for populating the webhook server's TLS secret and setting the <code>caBundle</code> field on the webhook configurations.</p>
 </div>
+<h2 id="recommended-components">Recommended Components<a class="headerlink" href="#recommended-components" title="Permanent link">&para;</a></h2>
+<p>These are not required to install the operator, but unlock the full feature set:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://cert-manager.io">cert-manager</a> with a <code>letsencrypt-production</code> ClusterIssuer</td>
+<td>Automatic TLS certificates for agent ingresses — configure via <code>config.ingress.tls</code> in Helm values</td>
+</tr>
+<tr>
+<td><a href="https://github.com/kubernetes-sigs/external-dns">external-dns</a></td>
+<td>Automatic DNS records for agent hostnames</td>
+</tr>
+</tbody>
+</table>
+<p>With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at <code>&lt;agent-name&gt;.&lt;cluster-domain&gt;</code>.</p>
 <h2 id="install-via-helm">Install via Helm<a class="headerlink" href="#install-via-helm" title="Permanent link">&para;</a></h2>
 <h3 id="1-add-the-helm-repository">1. Add the Helm Repository<a class="headerlink" href="#1-add-the-helm-repository" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
