@@ -1046,7 +1046,7 @@ func TestLanguageClusterController_GatewayDeploymentImage(t *testing.T) {
 		{
 			name:         "default image when GatewayImage unset",
 			gatewayImage: "",
-			wantImage:    "ghcr.io/language-operator/model:latest",
+			wantImage:    "ghcr.io/language-operator/model-gateway:latest",
 		},
 	}
 

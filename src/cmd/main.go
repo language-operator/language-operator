@@ -128,7 +128,7 @@ func main() {
 	flag.StringVar(&ingressControllerNamespace, "ingress-controller-namespace", "",
 		"Namespace the ingress controller runs in. When set, a NetworkPolicy ingress rule is added to allow traffic from that namespace to agent ports.")
 	flag.StringVar(&gatewayImage, "gateway-image", "",
-		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model:latest.")
+		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model-gateway:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
 	var tlsIssuerName string

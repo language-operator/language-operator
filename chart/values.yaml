@@ -177,8 +177,10 @@ config:
     # Fail operator startup if CNI does not support NetworkPolicy enforcement.
     # Set to true in production clusters where NetworkPolicy enforcement is required.
     requireNetworkPolicy: false
+
     # Timeout for CNI detection and NetworkPolicy operations.
     timeout: 30s
+
     # Number of retry attempts for NetworkPolicy operations.
     retries: 3
 
@@ -199,7 +201,7 @@ config:
 
   gateway:
     # Image for the shared LiteLLM gateway deployed per LanguageCluster.
-    # Defaults to ghcr.io/language-operator/model:latest when empty.
+    # Defaults to ghcr.io/language-operator/model-gateway:latest when empty.
     image: ""
     # ImagePullPolicy for the gateway (Always, IfNotPresent, Never).
     # Defaults to Kubernetes default (IfNotPresent, or Always for :latest).

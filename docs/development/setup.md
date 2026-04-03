@@ -161,7 +161,7 @@ k3d image import language-operator:dev -c langop-dev
 For the model proxy:
 
 ```bash
-cd components/model
+cd components/model-gateway
 make dev  # builds and imports into k3s
 ```
 

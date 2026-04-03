@@ -98,7 +98,7 @@ jobs:
         run: pip install pytest pyyaml
 
       - name: Run Python tests
-        run: pytest components/model/test_generate_config.py -v
+        run: pytest components/model-gateway/test_generate_config.py -v
 
   # Validate CRD manifests
   validate-manifests:

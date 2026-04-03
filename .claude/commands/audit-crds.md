@@ -23,7 +23,7 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - Phase string literals written to `status.Phase`
 - TODO / FIXME comments
 
-**Component scripts** — also read `components/model/generate-config.py`. Some spec fields are consumed here rather than in Go controllers (e.g. `LanguageModel.Spec` fields flow through to LiteLLM config). A field is not dead just because no controller reads it if a component script does.
+**Component scripts** — also read `components/model-gateway/generate-config.py`. Some spec fields are consumed here rather than in Go controllers (e.g. `LanguageModel.Spec` fields flow through to LiteLLM config). A field is not dead just because no controller reads it if a component script does.
 
 **Shared types** — `DeploymentSpec` is used by LanguageAgent, LanguageTool, and LanguageCluster controllers. A field is only dead if *no* controller reads it. Check all three before marking a field dead.
 

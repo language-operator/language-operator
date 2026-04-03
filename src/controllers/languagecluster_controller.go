@@ -84,7 +84,7 @@ func (r *LanguageClusterReconciler) gatewayImage() string {
 	if r.GatewayImage != "" {
 		return r.GatewayImage
 	}
-	return "ghcr.io/language-operator/model:latest"
+	return "ghcr.io/language-operator/model-gateway:latest"
 }
 
 func (r *LanguageClusterReconciler) gatewayImagePullPolicy(cluster *langopv1alpha1.LanguageCluster) corev1.PullPolicy {
