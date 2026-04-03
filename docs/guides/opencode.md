@@ -1,12 +1,11 @@
 # Deploying OpenCode
 
-OpenCode is an AI coding assistant with a browser-based HTTP UI. The `opencode` runtime is bundled with Language Operator and installed automatically with the Helm chart.
+OpenCode is an AI coding assistant similar to Claude Code. The `opencode` runtime is bundled with Language Operator and installed automatically with the Helm chart.
 
 ## Prerequisites
 
 - Language Operator [installed](../getting-started/installation.md)
 - An LLM provider API key, or a local model endpoint (e.g. Ollama)
-- A StorageClass for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass)
 
 ## Instructions
 
