@@ -5,8 +5,8 @@ OpenCode is an AI coding assistant with a browser-based HTTP UI. The `opencode` 
 ## Prerequisites
 
 - Language Operator [installed](../getting-started/installation.md)
-- An LLM provider API key (Anthropic, OpenAI, or any OpenAI-compatible endpoint)
-- A default StorageClass (for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass))
+- An LLM provider API key, or a local model endpoint (e.g. Ollama)
+- A StorageClass for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass)
 
 ## Step 1: Create a LanguageCluster
 
@@ -66,6 +66,23 @@ kubectl config set-context --current --namespace=opencode
     EOF
     ```
 
+=== "Local Model"
+
+    Assumes Ollama is running in your cluster. No API key required.
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageModel
+    metadata:
+      name: llama3
+    spec:
+      provider: openai-compatible
+      modelName: llama3.2
+      endpoint: http://ollama.default.svc.cluster.local:11434/v1
+    EOF
+    ```
+
 ## Step 3: Verify the Runtime
 
 ```bash
@@ -77,18 +94,50 @@ kubectl get languageagentruntimes
 
 ## Step 4: Deploy the Agent
 
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: opencode
-spec:
-  runtime: opencode
-  models:
-    - name: claude-sonnet   # or gpt-4o if you configured OpenAI
-EOF
-```
+=== "Anthropic"
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageAgent
+    metadata:
+      name: opencode
+    spec:
+      runtime: opencode
+      models:
+        - name: claude-sonnet
+    EOF
+    ```
+
+=== "OpenAI"
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageAgent
+    metadata:
+      name: opencode
+    spec:
+      runtime: opencode
+      models:
+        - name: gpt-4o
+    EOF
+    ```
+
+=== "Local Model"
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageAgent
+    metadata:
+      name: opencode
+    spec:
+      runtime: opencode
+      models:
+        - name: llama3
+    EOF
+    ```
 
 ## Step 5: Verify
 
@@ -101,16 +150,29 @@ Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
 ## Step 6: Access the UI
 
-OpenCode serves a browser UI on port **3000**:
+OpenCode serves a browser UI on port **3000**. Retrieve the auto-generated credentials and forward the port:
 
 ```bash
+USERNAME=$(kubectl get secret opencode-runtime \
+  -o jsonpath='{.data.OPENCODE_SERVER_USERNAME}' | base64 -d)
+PASSWORD=$(kubectl get secret opencode-runtime \
+  -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
+
+echo "username: $USERNAME  password: $PASSWORD"
+
 kubectl port-forward svc/opencode 3000:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) and sign in with the credentials above.
+
+!!! tip "TUI access"
+    To attach the OpenCode TUI (v1.0.10+) instead of the browser UI:
+    ```bash
+    opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
+    ```
 
 !!! tip "External access"
-    If your cluster has a Gateway API controller, the operator creates an `HTTPRoute` at `opencode.<cluster-domain>`. Set `spec.domain` in the `LanguageCluster` to enable this.
+    If your `LanguageCluster` has `spec.domain` set, the operator creates an Ingress at `opencode.<cluster-domain>` for external access.
 
 ## What the Operator Created
 
@@ -119,6 +181,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Namespace | `opencode` | Isolated workload namespace |
 | Deployment | `opencode` | Runs the OpenCode container |
 | Service | `opencode` | ClusterIP on port 3000 |
+| Secret | `opencode-runtime` | Auto-generated username and password |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
 | ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |
@@ -126,22 +189,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ## Troubleshooting
 
 **Pod stuck in `Pending`:**
-Check PVC binding — a default StorageClass is required:
 ```bash
 kubectl describe pod -l app=opencode
 kubectl get pvc
 ```
 
 **UI loads but no model available:**
-Verify the gateway and LanguageModel are ready:
 ```bash
 kubectl get languagemodels
-kubectl get pods
 kubectl logs deployment/gateway
 ```
 
-**Port-forward works but UI errors:**
-Check the OpenCode container logs:
+**UI errors after port-forward:**
 ```bash
 kubectl logs deployment/opencode
 ```
