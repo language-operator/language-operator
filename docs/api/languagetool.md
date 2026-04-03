@@ -48,7 +48,7 @@ Tools must implement the Model Context Protocol:
 - Respond to `tools/call` method to execute a named tool
 - Expose `GET /health` returning `{"status":"ok"}` when ready
 
-See [Tool Protocol](../architecture/tools.md) for the full specification.
+See [Tool Protocol](../components/tools.md) for the full specification.
 
 ### Deployment Modes
 
@@ -192,5 +192,5 @@ Shows all tools exposed by the service.
 ## Related Resources
 
 - [LanguageAgent](languageagent.md) - Reference tools in agents
-- [Tool Protocol](../architecture/tools.md) - MCP specification
+- [Tool Protocol](../components/tools.md) - MCP specification
 

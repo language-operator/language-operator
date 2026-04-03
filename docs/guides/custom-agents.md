@@ -17,7 +17,7 @@ The operator injects configuration into every agent pod. Your image must be read
 | Tool URLs | `MCP_SERVERS` env var | Comma-separated MCP endpoint URLs |
 | Identity | `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID` | Standard env vars |
 
-See [Agent Runtime Container Specification](../architecture/agents.md) for the full contract including the `config.yaml` schema.
+See [Agent Runtime Container Specification](../components/agents.md) for the full contract including the `config.yaml` schema.
 
 ### What Your Image Must Do
 

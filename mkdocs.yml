@@ -64,10 +64,13 @@ nav:
     - Introduction: index.md
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-    - Architecture:
-        - Overview: architecture/overview.md
-        - Agents: architecture/agents.md
-        - Tools: architecture/tools.md
+    - Components:
+        - Overview: components/overview.md
+        - Agents: components/agents.md
+        - Tools: components/tools.md
+        - Models: components/models.md
+        - Personas: components/personas.md
+        - Runtimes: components/runtimes.md
     - Guides:
         - Kubernetes: guides/cluster-setup.md
         - OpenClaw: guides/openclaw.md

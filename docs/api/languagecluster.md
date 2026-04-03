@@ -257,5 +257,5 @@ All fields are optional. Omit a field to leave that dimension unrestricted.
 
 - [LanguageAgent](languageagent.md) - Deploy agents in the cluster
 - [LanguageModel](languagemodel.md) - Register models with the proxy
-- [Architecture Overview](../architecture/overview.md) - System design
+- [Architecture Overview](../components/overview.md) - System design
 

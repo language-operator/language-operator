@@ -182,7 +182,7 @@ The operator automatically injects configuration into agent pods:
 | Tool Endpoints | All `tools` | `MCP_SERVERS` env var |
 | Agent Identity | Metadata | `AGENT_NAME`, `AGENT_NAMESPACE`, etc. |
 
-See [Agent Runtime Contract](../architecture/agents.md) for complete injection spec.
+See [Agent Runtime Contract](../components/agents.md) for complete injection spec.
 
 ## API Versions
 

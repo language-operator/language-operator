@@ -208,7 +208,7 @@ Environment variables injected into every agent container and all init container
 | `OTEL_TRACES_SAMPLER` | Propagated from the operator environment (conditional on OTEL endpoint) |
 | `OTEL_TRACES_SAMPLER_ARG` | Propagated from the operator environment (conditional on OTEL endpoint) |
 
-Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged. See [Environment Variables](../architecture/agents.md#environment-variables) in the architecture docs for the full reference.
+Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged. See [Environment Variables](../components/agents.md#environment-variables) in the architecture docs for the full reference.
 
 ### Resource Management
 
@@ -224,5 +224,5 @@ Agents are deployed as standard Kubernetes Deployments with:
 - [LanguageModel](languagemodel.md) - Configure LLM access
 - [LanguageTool](languagetool.md) - Add tool capabilities
 - [LanguagePersona](languagepersona.md) - Define behavioral templates
-- [Agent Runtime Contract](../architecture/agents.md) - What the operator injects
+- [Agent Runtime Contract](../components/agents.md) - What the operator injects
 
