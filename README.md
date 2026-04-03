@@ -8,7 +8,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| [`LanguageCluster`](https://language-operator.github.io/language-operator/api/reference/#languagecluster) | Provisions a managed namespace for agents |
+| [`LanguageCluster`](https://language-operator.github.io/language-operator/api/reference/#languagecluster) | Configures a managed namespace and domain for agents |
 | [`LanguageAgent`](https://language-operator.github.io/language-operator/api/reference/#languageagent) | Deploys arbitrary agents like OpenClaw or OpenCode |
 | [`LanguageAgentRuntime`](https://language-operator.github.io/language-operator/api/reference/#languageagentruntime) | Defines agent runtime presets |
 | [`LanguageModel`](https://language-operator.github.io/language-operator/api/reference/#languagemodel) | Defines an LLM configuration (proxied through LiteLLM) |
