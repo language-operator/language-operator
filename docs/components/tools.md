@@ -1,4 +1,4 @@
-# LanguageTool Implementation Specification
+# Tools
 
 This document defines the contract for implementing a `LanguageTool` — an MCP-compatible service that agents use for memory, knowledge retrieval, code execution, and other capabilities.
 

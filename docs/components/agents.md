@@ -1,4 +1,4 @@
-# Agent Runtime Container Specification
+# Agents
 
 This document defines the contract between the Language Operator and agent runtime containers. It specifies what the operator guarantees to provide to every running agent, and what a compliant agent image must implement.
 
