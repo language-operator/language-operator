@@ -1,6 +1,6 @@
 # Language Operator
 
-A Kubernetes operator for running AI agent clusters as native workloads.
+A [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) for running AI agent clusters as native workloads.
 
 ## What It Does
 
@@ -8,12 +8,12 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| `LanguageCluster` | Managed namespace for agents |
-| `LanguageAgent` | Free-form agents like OpenClaw or OpenCode |
-| `LanguageAgentRuntime` | Agent runtime presets |
-| `LanguageModel` | An LLM configuration (proxied through LiteLLM) |
-| `LanguageTool` | A MCP-compatible server |
-| `LanguagePersona` | Define tone, personality and expertise |
+| `LanguageCluster` | Provisions a managed namespace for agents |
+| `LanguageAgent` | Deploys arbitrary agents like OpenClaw or OpenCode |
+| `LanguageAgentRuntime` | Defines agent runtime presets |
+| `LanguageModel` | Defines an LLM configuration (proxied through LiteLLM) |
+| `LanguageTool` | Deploys an MCP-compatible server |
+| `LanguagePersona` | Defines tone, personality and expertise |
 
 
 ## Getting Started
