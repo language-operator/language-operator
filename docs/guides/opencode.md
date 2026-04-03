@@ -17,7 +17,7 @@ kind: LanguageCluster
 metadata:
   name: opencode
 spec:
-  domain: opencode.langop.io
+  domain: opencode.agents.my-company.com
 EOF
 
 kubectl wait languagecluster/opencode --for=condition=Ready --timeout=60s
