@@ -53,6 +53,8 @@ helm install language-operator \
 !!! note "Values vary by cluster"
     Replace `traefik` with your ingress class (e.g. `nginx`, `alb`), `local-path` with your StorageClass, and the TLS issuer with the name of your cert-manager `ClusterIssuer` or `Issuer`. All of these can also be set in a values file with `helm install -f values.yaml`.
 
+See the [complete `values.yaml`](https://github.com/language-operator/language-operator/blob/main/chart/values.yaml) for all available configuration options.
+
 ### 3. Verify Installation
 
 Check that the operator pod is running:
