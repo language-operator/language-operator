@@ -74,7 +74,6 @@ Choose one of the bundled runtimes:
       name: openclaw
     spec:
       runtime: openclaw
-      openclaw: {}    # token is auto-generated; retrieve it after creation
       models:
         - name: claude-sonnet
     EOF
@@ -115,6 +114,7 @@ kubectl get pods -w
 
     ```bash
     TOKEN=$(kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
+    echo "Token: $TOKEN
     ```
 
     If you have a domain configured on your `LanguageCluster`, open `https://openclaw.<cluster-domain>` and enter the token when prompted, or connect the OpenClaw CLI directly to `wss://openclaw.<cluster-domain>`.
