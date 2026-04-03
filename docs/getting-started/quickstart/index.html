@@ -1267,7 +1267,7 @@
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>language-operator-openclaw
 </code></pre></div>
 <h2 id="step-2-configure-an-llm">Step 2: Configure an LLM<a class="headerlink" href="#step-2-configure-an-llm" title="Permanent link">&para;</a></h2>
-<p>Create a secret with your Anthropic API key, then create a <code>LanguageModel</code>:</p>
+<p>Create a secret with your API key, then create a <code>LanguageModel</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
@@ -1284,10 +1284,9 @@
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="s">    key: api-key</span>
 <a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>The operator creates a LiteLLM proxy so all agents can reach the model through a single in-cluster endpoint.</p>
 <h2 id="step-3-deploy-an-agent">Step 3: Deploy an Agent<a class="headerlink" href="#step-3-deploy-an-agent" title="Permanent link">&para;</a></h2>
 <p>Choose one of the bundled runtimes:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">openclaw</label><label for="__tabbed_1_2">opencode</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">OpenClaw</label><label for="__tabbed_1_2">OpenCode</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
@@ -1323,7 +1322,7 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <h2 id="step-5-access-the-agent">Step 5: Access the Agent<a class="headerlink" href="#step-5-access-the-agent" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">openclaw</label><label for="__tabbed_2_2">opencode</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">OpenClaw</label><label for="__tabbed_2_2">OpenCode</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Retrieve the auto-generated gateway token:</p>
@@ -1362,10 +1361,10 @@
 <p>The operator automatically:</p>
 <ol>
 <li>Created a dedicated namespace (<code>language-operator-openclaw</code>)</li>
-<li>Deployed a LiteLLM proxy with your Anthropic credentials</li>
+<li>Deployed a LiteLLM proxy with your model credentials</li>
 <li>Injected the proxy URL into your agent via <code>MODEL_ENDPOINTS</code></li>
 <li>Created a <code>{agent}-runtime</code> Secret from <code>spec.openclaw.token</code> and injected it via <code>envFrom</code></li>
-<li>Created a Deployment, Service, and NetworkPolicy for openclaw</li>
+<li>Created a Deployment, Service, and secure NetworkPolicy for OpenClaw</li>
 </ol>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
