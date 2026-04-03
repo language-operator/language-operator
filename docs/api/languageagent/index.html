@@ -1216,7 +1216,7 @@
 <p>The standard runtimes (<code>openclaw</code>, <code>opencode</code>) are bundled with the Helm chart. See <a href="../languageagentruntime/">LanguageAgentRuntime</a> for details.</p>
 <h3 id="runtime-specific-configuration">Runtime-Specific Configuration<a class="headerlink" href="#runtime-specific-configuration" title="Permanent link">&para;</a></h3>
 <p>Each standard runtime has a corresponding config block for inline credential injection. The operator creates a managed Secret and injects it via <code>envFrom</code> — no manual <code>kubectl create secret</code> needed.</p>
-<p><strong>openclaw:</strong></p>
+<p><strong>OpenClaw:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openclaw</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">openclaw</span><span class="p">:</span>
@@ -1224,7 +1224,7 @@
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="c1"># tokenRef:               # or reference a pre-existing Secret</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="c1">#   name: my-secret       # must contain OPENCLAW_GATEWAY_TOKEN</span>
 </code></pre></div>
-<p><strong>opencode:</strong></p>
+<p><strong>OpenCode:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">opencode</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">opencode</span><span class="p">:</span>

@@ -587,17 +587,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1215,17 +1204,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next Steps
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1247,7 +1225,7 @@
 
 
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>Deploy an openclaw agent in under 5 minutes.</p>
+<p>Deploy an OpenClaw agent in under 5 minutes.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>A cluster with <a href="../installation/">Language Operator</a> installed and access to a large language model.</p>
 <h2 id="step-1-create-a-cluster">Step 1: Create a Cluster<a class="headerlink" href="#step-1-create-a-cluster" title="Permanent link">&para;</a></h2>
@@ -1333,12 +1311,12 @@
 <p>Retrieve the auto-generated gateway token:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">TOKEN</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>openclaw-runtime<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.OPENCLAW_GATEWAY_TOKEN}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="k">)</span>
 </code></pre></div>
-<p>If you have a domain configured on your <code>LanguageCluster</code>, open <code>https://openclaw.&lt;cluster-domain&gt;</code> and enter the token when prompted, or connect the openclaw CLI directly to <code>wss://openclaw.&lt;cluster-domain&gt;</code>.</p>
+<p>If you have a domain configured on your <code>LanguageCluster</code>, open <code>https://openclaw.&lt;cluster-domain&gt;</code> and enter the token when prompted, or connect the OpenClaw CLI directly to <code>wss://openclaw.&lt;cluster-domain&gt;</code>.</p>
 <p>Otherwise, port-forward for local access:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/openclaw<span class="w"> </span><span class="m">18789</span>:18789
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># connect to ws://localhost:18789 with the token above</span>
 </code></pre></div>
-<p>openclaw uses a WebSocket gateway on port 18789. Connect using the openclaw browser extension or CLI client (see <a href="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>).</p>
+<p>OpenClaw uses a WebSocket gateway on port 18789. Connect using the OpenClaw browser extension or CLI client (see <a href="https://github.com/openclaw/openclaw">github.com/openclaw/openclaw</a>).</p>
 </div>
 <div class="tabbed-block">
 <p>Retrieve the auto-generated credentials:</p>
@@ -1347,7 +1325,7 @@
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;username: </span><span class="nv">$USERNAME</span><span class="s2">  password: </span><span class="nv">$PASSWORD</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>If you have a domain configured on your <code>LanguageCluster</code>, open <code>https://opencode.&lt;cluster-domain&gt;</code> and sign in with the credentials above.</p>
-<p>To attach the TUI (opencode v1.0.10+):</p>
+<p>To attach the TUI (OpenCode v1.0.10+):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>opencode<span class="w"> </span>attach<span class="w"> </span>https://opencode.&lt;cluster-domain&gt;<span class="w"> </span>--username<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$USERNAME</span><span class="s2">&quot;</span><span class="w"> </span>--password<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$PASSWORD</span><span class="s2">&quot;</span>
 </code></pre></div>
 <p>Otherwise, port-forward for local access:</p>
@@ -1361,7 +1339,7 @@
 </div>
 <div class="admonition success">
 <p class="admonition-title">You're Running!</p>
-<p>You now have openclaw running on Kubernetes with AI capabilities provided through the Language Operator.</p>
+<p>You now have OpenClaw running on Kubernetes with AI capabilities provided through the Language Operator.</p>
 </div>
 <h2 id="what-just-happened">What Just Happened?<a class="headerlink" href="#what-just-happened" title="Permanent link">&para;</a></h2>
 <p>The operator automatically:</p>
@@ -1372,10 +1350,6 @@
 <li>Created a <code>{agent}-runtime</code> Secret from <code>spec.openclaw.token</code> and injected it via <code>envFrom</code></li>
 <li>Created a Deployment, Service, and secure NetworkPolicy for OpenClaw</li>
 </ol>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../../architecture/overview/">Next: Architecture</a></li>
-</ul>
 
 
 
