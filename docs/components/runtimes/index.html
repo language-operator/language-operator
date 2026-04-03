@@ -1419,7 +1419,7 @@
 </code></pre></div>
 <p><code>LanguageAgentRuntime</code> is cluster-scoped — one runtime can be referenced by agents in any namespace.</p>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
-<p><code>LanguageAgentRuntime</code> has no status subresource. It is a static configuration object; the operator reads it at reconcile time but does not track its health or readiness.</p>
+<p><code>LanguageAgentRuntime</code> has no status subresource — it is a static configuration preset, not a running workload.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># NAME       AGE</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># openclaw   5m</span>

@@ -791,17 +791,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-languagepersona-controller" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The LanguagePersona Controller
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#related" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1323,17 +1312,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-languagepersona-controller" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The LanguagePersona Controller
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#related" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1458,9 +1436,6 @@
 <a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">personality</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;never</span><span class="nv"> </span><span class="s">speculates;</span><span class="nv"> </span><span class="s">cites</span><span class="nv"> </span><span class="s">policy</span><span class="nv"> </span><span class="s">references</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">answering</span><span class="nv"> </span><span class="s">compliance</span><span class="nv"> </span><span class="s">questions;</span><span class="nv"> </span><span class="s">escalates</span><span class="nv"> </span><span class="s">ambiguous</span><span class="nv"> </span><span class="s">cases&quot;</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">expertise</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;regulatory</span><span class="nv"> </span><span class="s">compliance</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">financial</span><span class="nv"> </span><span class="s">services&quot;</span>
 </code></pre></div>
-<h2 id="the-languagepersona-controller">The <code>LanguagePersona</code> Controller<a class="headerlink" href="#the-languagepersona-controller" title="Permanent link">&para;</a></h2>
-<p>The <code>LanguagePersona</code> controller is minimal — it validates the spec and sets <code>status.phase: Ready</code>. It creates no other Kubernetes resources. The agent controller reads persona CRs directly when assembling <code>/etc/agent/config.yaml</code>.</p>
-<p>Updating a persona spec triggers reconciliation of every agent that references it, updating the agents' ConfigMaps without a pod restart.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../api/languageagent/">LanguageAgent</a> — references personas via <code>spec.persona</code></li>
