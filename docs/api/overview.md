@@ -232,5 +232,4 @@ status:
 
 ## Next Steps
 
-- Dive into individual CRD references (sidebar navigation)
-- Read [Architecture Overview](../architecture/overview.md)
+- [Next: Architecture Overview](../architecture/overview.md)

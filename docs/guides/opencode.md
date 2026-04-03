@@ -148,5 +148,4 @@ kubectl logs deployment/opencode
 
 ## Next Steps
 
-- [Deploying Custom Agents](custom-agents.md)
-- [LanguageAgentRuntime reference](../api/languageagentruntime.md)
+- [Next: Custom Agents](custom-agents.md)

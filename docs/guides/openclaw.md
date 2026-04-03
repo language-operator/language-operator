@@ -143,6 +143,4 @@ kubectl get events --sort-by='.lastTimestamp'
 
 ## Next Steps
 
-- [Deploying OpenCode](opencode.md)
-- [Deploying Custom Agents](custom-agents.md)
-- [LanguageAgentRuntime reference](../api/languageagentruntime.md)
+- [Next: Deploy OpenCode](opencode.md)

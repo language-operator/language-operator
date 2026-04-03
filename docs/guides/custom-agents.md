@@ -200,6 +200,4 @@ kubectl exec deployment/my-agent -- ss -tlnp | grep 8080
 
 ## Next Steps
 
-- [Agent Runtime Container Specification](../architecture/agents.md) — full contract with config.yaml schema
-- [LanguageAgentRuntime reference](../api/languageagentruntime.md)
-- [LanguageTool reference](../api/languagetool.md) — adding MCP tool servers
+- [Next: Agent Runtime Contract](../architecture/agents.md)

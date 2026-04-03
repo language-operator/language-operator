@@ -109,4 +109,4 @@ helm uninstall language-operator --namespace language-operator
 
 ## Next Steps
 
-- [Quick Start Guide](quickstart.md) - Deploy your first agent
+- [Next: Quick Start](quickstart.md)

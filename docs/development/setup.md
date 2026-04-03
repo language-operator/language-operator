@@ -222,6 +222,4 @@ Read the error message carefully—it will tell you what needs fixing.
 
 ## Next Steps
 
-- [Testing Guide](testing.md) - Comprehensive testing practices
-- [Contributing Guidelines](contributing.md) - PR process and conventions
-- [Architecture Overview](../architecture/overview.md) - System design
+- [Next: Testing Guide](testing.md)

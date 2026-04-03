@@ -173,5 +173,4 @@ The operator automatically:
 
 ## Next Steps
 
-- [CRD Reference](../api/overview.md) - Complete API documentation
-- [Architecture](../architecture/overview.md) - How the operator works
+- [Next: Architecture](../architecture/overview.md)

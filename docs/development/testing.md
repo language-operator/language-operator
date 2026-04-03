@@ -316,5 +316,4 @@ KUBEBUILDER_ASSETS=$(setup-envtest use 1.29.0 -p path) \
 
 ## Next Steps
 
-- [Development Setup](setup.md) - Set up your environment
-- [Contributing Guide](contributing.md) - PR process
+- [Next: Development Setup](setup.md)

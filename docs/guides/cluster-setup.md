@@ -54,28 +54,15 @@ kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
 
 ## StorageClass
 
-Language Operator requires a **default StorageClass** for agent workspace PVCs created by bundled runtimes (openclaw, opencode).
+Language Operator requires a StorageClass for agent workspace PVCs created by bundled runtimes (openclaw, opencode).
 
-Verify a default StorageClass is configured:
+List available StorageClasses:
 
 ```bash
 kubectl get storageclass
 ```
 
-The StorageClass with `(default)` in its name is used automatically. If none is marked default, mark one:
-
-```bash
-kubectl patch storageclass <name> \
-  -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-```
-
-Individual agents can also opt out of workspace storage:
-
-```yaml
-spec:
-  workspace:
-    enabled: false
-```
+Set `config.agents.storageClassName` in your Helm values to the StorageClass you want to use. If left empty, the cluster default StorageClass is used.
 
 ## cert-manager
 
@@ -165,13 +152,13 @@ kubectl apply -f - <<EOF
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: letsencrypt-prod
+  name: letsencrypt-production
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
     email: your-email@example.com
     privateKeySecretRef:
-      name: letsencrypt-prod
+      name: letsencrypt-production
     solvers:
       - http01:
           ingress:
@@ -183,34 +170,24 @@ Verify the issuer is ready:
 
 ```bash
 kubectl get clusterissuer
-# NAME                  READY   AGE
-# letsencrypt-staging   True    30s
-# letsencrypt-prod      True    30s
+# NAME                     READY   AGE
+# letsencrypt-staging      True    30s
+# letsencrypt-production   True    30s
 ```
 
 ### Using the issuer with Language Operator
 
-Configure TLS via the `LanguageCluster` resource using `spec.ingress.tls.issuerRef`:
+Pass the issuer name when installing the operator:
 
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: my-cluster
-spec:
-  domain: agents.example.com
-  ingress:
-    tls:
-      enabled: true
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer   # or "Issuer" for namespace-scoped issuers
+```bash
+--set config.tls.certificateIssuerName=letsencrypt-production \
+--set config.tls.certificateIssuerKind=ClusterIssuer
 ```
 
-When `issuerRef` is set, the operator automatically adds the `cert-manager.io/cluster-issuer` annotation to the gateway Ingress it creates for `gateway.<domain>`. cert-manager then provisions and renews the TLS certificate.
+These are included in the `helm install` command on the [installation page](../getting-started/installation.md). The operator uses them to annotate every gateway and agent Ingress it creates, so cert-manager automatically provisions and renews the TLS certificates.
 
 !!! tip "DNS must resolve before HTTP-01 challenge"
-    cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before applying the `LanguageCluster` with a domain.
+    cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before creating any `LanguageCluster` with a domain.
 
 ## Verifying Cluster Readiness
 
@@ -223,8 +200,8 @@ kubectl version --short
 # NetworkPolicy-capable CNI pods running
 kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
 
-# Default StorageClass present
-kubectl get storageclass | grep '(default)'
+# StorageClass available
+kubectl get storageclass
 
 # cert-manager running
 kubectl get pods -n cert-manager
@@ -241,6 +218,4 @@ kubectl top nodes
 
 ## Next Steps
 
-- [Install Language Operator](../getting-started/installation.md)
-- [Deploy OpenClaw](openclaw.md)
-- [Deploy OpenCode](opencode.md)
+- [Next: Install Language Operator](../getting-started/installation.md)
