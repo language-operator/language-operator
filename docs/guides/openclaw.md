@@ -9,23 +9,25 @@ OpenClaw is an AI coding assistant that connects to your editor via a WebSocket 
 - A StorageClass for the workspace PVC — see [cluster setup](cluster-setup.md#storageclass)
 - OpenClaw browser extension or CLI client
 
-## Step 1: Create a LanguageCluster
+## Instructions
+
+### Create a Cluster
 
 ```bash
 kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageCluster
 metadata:
-  name: openclaw
+  name: demo-cluster
 spec:
-  domain: openclaw.agents.example.com
+  domain: demo-cluster.<your-domain>
 EOF
 
-kubectl wait languagecluster/openclaw --for=condition=Ready --timeout=60s
-kubectl config set-context --current --namespace=openclaw
+kubectl wait languagecluster/demo-cluster --for=condition=Ready --timeout=60s
+kubectl config set-context --current --namespace=demo-cluster
 ```
 
-## Step 2: Configure a LanguageModel
+### Configure a Model
 
 === "Anthropic"
 
@@ -84,16 +86,7 @@ kubectl config set-context --current --namespace=openclaw
     EOF
     ```
 
-## Step 3: Verify the Runtime
-
-```bash
-kubectl get languageagentruntimes
-# NAME       AGE
-# openclaw   5m
-# opencode   5m
-```
-
-## Step 4: Deploy the Agent
+### Deploy OpenClaw
 
 === "Anthropic"
 
@@ -105,7 +98,6 @@ kubectl get languageagentruntimes
       name: openclaw
     spec:
       runtime: openclaw
-      openclaw: {}
       models:
         - name: claude-sonnet
     EOF
@@ -121,7 +113,6 @@ kubectl get languageagentruntimes
       name: openclaw
     spec:
       runtime: openclaw
-      openclaw: {}
       models:
         - name: gpt-4o
     EOF
@@ -137,7 +128,6 @@ kubectl get languageagentruntimes
       name: openclaw
     spec:
       runtime: openclaw
-      openclaw: {}
       models:
         - name: llama3
     EOF
@@ -145,7 +135,7 @@ kubectl get languageagentruntimes
 
 `spec.openclaw: {}` tells the operator to auto-generate a gateway token, written to a Secret named `openclaw-runtime` after creation.
 
-## Step 5: Verify
+### Verify
 
 ```bash
 kubectl get languageagents
@@ -154,52 +144,30 @@ kubectl get pods -w
 
 Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
-## Step 6: Connect
+### Get Credentials
 
-Retrieve the auto-generated token and forward the port:
+Retrieve the auto-generated token:
 
 ```bash
 TOKEN=$(kubectl get secret openclaw-runtime \
   -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
 
 echo "Token: $TOKEN"
-
-kubectl port-forward svc/openclaw 18789:18789
 ```
 
-OpenClaw listens on a **WebSocket** at port 18789. Connect using the [OpenClaw browser extension](https://github.com/openclaw/openclaw) or CLI client, pointing it to `ws://localhost:18789` with the token above.
+### Connect
 
-!!! tip "External access"
-    If your `LanguageCluster` has `spec.domain` set, the operator creates an Ingress at `openclaw.<cluster-domain>` for external access.
+Log in with your token at https://openclaw.demo-cluster.<your-domain>.
+
 
 ## What the Operator Created
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Namespace | `openclaw` | Isolated workload namespace |
+| Namespace | `my-cluster` | Isolated workload namespace |
 | Deployment | `openclaw` | Runs the OpenClaw container |
 | Service | `openclaw` | ClusterIP on port 18789 |
 | Secret | `openclaw-runtime` | Auto-generated gateway token |
 | NetworkPolicy | `openclaw` | Allows inbound from other agents in this namespace |
 | PVC | `openclaw-workspace` | 10Gi persistent workspace |
 | ConfigMap | `openclaw-agent` | Injected at `/etc/agent/config.yaml` |
-
-## Troubleshooting
-
-**Pod stuck in `Pending`:**
-```bash
-kubectl describe pod -l app=openclaw
-kubectl get pvc
-```
-
-**Pod `CrashLoopBackOff`:**
-```bash
-kubectl get pods
-kubectl logs deployment/gateway
-```
-
-**Token not found:**
-The secret is created after the first successful reconcile. Check events if the agent is not yet `Ready`:
-```bash
-kubectl get events --sort-by='.lastTimestamp'
-```
