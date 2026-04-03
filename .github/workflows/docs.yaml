@@ -81,6 +81,36 @@ jobs:
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'docs: update documentation site'
 
+      - name: Deploy root redirect
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p redirect
+          cat > redirect/index.html <<'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=/docs/">
+            <link rel="canonical" href="/docs/">
+          </head>
+          <body>
+            <p>Redirecting to <a href="/docs/">docs</a>...</p>
+          </body>
+          </html>
+          HTML
+          echo "langop.io" > redirect/CNAME
+
+      - name: Publish root redirect to gh-pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./redirect
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'docs: update root redirect'
+
       - name: Upload artifact for PR preview
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
