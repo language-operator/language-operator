@@ -28,7 +28,7 @@ spec: {}
 
 All namespace-scoped resources (`LanguageAgent`, `LanguageModel`, `LanguageTool`, `LanguagePersona`) are deployed into this namespace.
 
-## The Shared Gateway
+## Shared Gateway
 
 Every cluster runs exactly one LiteLLM proxy. It aggregates all `LanguageModel` resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the `MODEL_ENDPOINT` environment variable:
 
@@ -39,28 +39,6 @@ MODEL_ENDPOINT=http://gateway.<namespace>.svc.cluster.local:8000
 Credentials never leave the gateway pod. Agents send model names and prompts; the gateway holds the API keys and routes to the correct upstream provider.
 
 When the model list changes — a `LanguageModel` is added, updated, or deleted — the cluster controller regenerates the `gateway-config` ConfigMap and triggers a rolling restart of the gateway Deployment. No agent redeploy is required.
-
-## External Access
-
-Set `spec.domain` to expose the gateway outside the cluster:
-
-```yaml
-spec:
-  domain: agents.example.com
-```
-
-This creates an Ingress at `gateway.agents.example.com`. TLS is handled by cert-manager using the issuer configured in Helm values (`config.tls.certificateIssuerName`). Per-cluster overrides are available via `spec.ingress`:
-
-```yaml
-spec:
-  domain: agents.example.com
-  ingress:
-    className: nginx
-    tls:
-      issuerRef:
-        name: letsencrypt-production
-        kind: ClusterIssuer
-```
 
 ## Network Isolation
 

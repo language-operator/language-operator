@@ -176,24 +176,3 @@ spec:
 
 The init container runs to completion before the main agent container starts. Both containers share the `workspace` volume.
 
-## Troubleshooting
-
-**Pod running but agent can't reach LLM:**
-Verify `MODEL_ENDPOINT` is set and the gateway is running:
-```bash
-kubectl exec deployment/my-agent -- env | grep MODEL_ENDPOINT
-kubectl get pods | grep gateway
-```
-
-**Config file missing:**
-The config is mounted from a ConfigMap. Check the ConfigMap exists and the pod has it mounted:
-```bash
-kubectl get configmap my-agent-agent
-kubectl exec deployment/my-agent -- cat /etc/agent/config.yaml
-```
-
-**Port not accessible:**
-Verify your container is actually listening on the port(s) in `spec.ports`:
-```bash
-kubectl exec deployment/my-agent -- ss -tlnp | grep 8080
-```
