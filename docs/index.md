@@ -2,7 +2,7 @@
 
 AI agents as first-class Kubernetes workloads.
 
-Language Operator extends Kubernetes with purpose-built CRDs for deploying and operating AI agents. Agents run as standard Deployments — managed by the control plane, observable with existing tooling, and configured through the same GitOps workflows as the rest of your infrastructure.
+Language Operator extends Kubernetes with purpose-built CRDs for deploying and operating AI agents like [OpenClaw](https://github.com/openclaw/openclaw) and [OpenCode](https://github.com/sst/opencode). Agents run as standard Deployments — managed by the control plane, observable with existing tooling, and configured through the same GitOps workflows as the rest of your infrastructure.
 
 There is no proprietary runtime, no agent framework, and no code generation. Bring a container image; the operator handles the rest.
 
