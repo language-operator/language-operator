@@ -99,17 +99,6 @@ spec:
 
 `LanguageAgentRuntime` is cluster-scoped — one runtime can be referenced by agents in any namespace.
 
-## Status
-
-`LanguageAgentRuntime` has no status subresource — it is a static configuration preset, not a running workload.
-
-```bash
-kubectl get languageagentruntimes
-# NAME       AGE
-# openclaw   5m
-# opencode   5m
-```
-
 ## Related
 
 - [LanguageAgent](../api/languageagent.md) — references runtimes via `spec.runtime`
