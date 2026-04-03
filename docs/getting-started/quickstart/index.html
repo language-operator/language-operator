@@ -1249,11 +1249,7 @@
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
 <p>Deploy an openclaw agent in under 5 minutes.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Language Operator <a href="../installation/">installed</a></li>
-<li>Anthropic API key (get one at <a href="https://console.anthropic.com">console.anthropic.com</a>)</li>
-<li>A <strong>default StorageClass</strong> — verify with <code>kubectl get storageclass</code> (see <a href="../installation/#requirements">installation requirements</a>)</li>
-</ul>
+<p>A cluster with <a href="../installation/">Language Operator</a> installed and access to a large language model.</p>
 <h2 id="step-1-create-a-cluster">Step 1: Create a Cluster<a class="headerlink" href="#step-1-create-a-cluster" title="Permanent link">&para;</a></h2>
 <p>A <code>LanguageCluster</code> is a managed namespace for logically grouped agents, models, and tools.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
