@@ -6,6 +6,10 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+---
+
+## v0.1.126 — 2026-04-03
+
 ### Learning System Simplification
 
 **2025-12-09:**
