@@ -43,7 +43,6 @@ helm install language-operator \
   --create-namespace \
   --namespace language-operator \
   --set config.agents.ingressClassName=traefik \
-  --set config.agents.ingressControllerNamespace=traefik \
   --set config.agents.storageClassName=local-path \
   --set config.gateway.ingressClassName=traefik \
   --set config.tls.certificateIssuerName=letsencrypt-production \

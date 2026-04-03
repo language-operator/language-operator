@@ -190,7 +190,8 @@ config:
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
     # Namespace the ingress controller runs in.
-    # When set, a NetworkPolicy rule is added allowing the ingress controller to reach agent ports.
+    # Auto-detected from the ingressClassName at startup (via IngressClass annotation or pod label scan).
+    # Set explicitly to override auto-detection.
     # Example: "traefik", "ingress-nginx"
     ingressControllerNamespace: ""
     # Default StorageClass for agent workspace PVCs.
