@@ -110,6 +110,7 @@ const gatewayConfig = {
   gateway: {
     controlUi: {
       dangerouslyAllowHostHeaderOriginFallback: true,
+      dangerouslyDisableDeviceAuth: true,
     },
   },
 }
