@@ -2,8 +2,8 @@ apiVersion: v2
 name: language-operator
 description: A Kubernetes operator for managing language models, tools, agents, personas, and clients
 type: application
-version: 0.1.126
-appVersion: "0.1.126"
+version: 0.1.127
+appVersion: "0.1.127"
 keywords:
   - ai
   - llm

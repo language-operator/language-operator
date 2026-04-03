@@ -8,6 +8,20 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.1.127 — 2026-04-03
+
+**Bug Fixes**
+- move CRDs to chart/crds/ so Helm installs them before post-install hooks
+
+**Documentation**
+- add links to Kubernetes operator docs and CRD API reference in README
+
+**Chores**
+- readme (×3)
+- release command
+
+---
+
 ## v0.1.126 — 2026-04-03
 
 ### Learning System Simplification
