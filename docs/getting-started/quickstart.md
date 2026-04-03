@@ -19,21 +19,33 @@ metadata:
 spec:
   domain: openclaw.langop.io
 EOF
+```
 
+Wait for it to be ready:
+
+```bash
 kubectl wait languagecluster/language-operator-openclaw \
   --for=condition=Ready --timeout=60s
+```
 
+Switch into its namespace:
+
+```bash
 kubectl config set-context --current --namespace=language-operator-openclaw
 ```
 
 ## Step 2: Configure an LLM
 
-Create a secret with your API key, then create a `LanguageModel`:
+Store your API key in a secret:
 
 ```bash
 kubectl create secret generic anthropic-credentials \
   --from-literal=api-key=sk-ant-your-key-here
+```
 
+Create a `LanguageModel` pointing to it:
+
+```bash
 kubectl apply -f - <<EOF
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
@@ -87,6 +99,11 @@ Choose one of the bundled runtimes:
 
 ```bash
 kubectl get languageagents
+```
+
+Watch the agent pod come up:
+
+```bash
 kubectl get pods -w
 ```
 
@@ -133,7 +150,11 @@ kubectl get pods -w
 
     ```bash
     kubectl port-forward svc/opencode 3000:3000
-    # then open http://localhost:3000 or:
+    ```
+
+    Then open `http://localhost:3000` or attach the TUI:
+
+    ```bash
     opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
     ```
 
