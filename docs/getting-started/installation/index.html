@@ -1513,7 +1513,7 @@
 <p>Verify a default StorageClass is available:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>storageclass
 </code></pre></div>
-<p>To install without a default StorageClass, agents can opt out of workspace storage with <code>spec.workspace.enabled: false</code> in the LanguageAgent spec.</p>
+<p>Set <code>config.agents.storageClassName</code> in your Helm values to use a specific StorageClass for all agent workspace PVCs. Individual agents can override this with <code>spec.workspace.storageClassName</code>.</p>
 <p>Install cert-manager if not already present:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Available<span class="w"> </span>deployment<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>cert-manager<span class="w"> </span>--timeout<span class="o">=</span>60s
@@ -1538,7 +1538,7 @@ You are then responsible for populating the webhook server's TLS secret and sett
 <tbody>
 <tr>
 <td><a href="https://cert-manager.io">cert-manager</a> with a <code>letsencrypt-production</code> ClusterIssuer</td>
-<td>Automatic TLS certificates for agent ingresses — configure via <code>config.ingress.tls</code> in Helm values</td>
+<td>Automatic TLS certificates for agent ingresses — configure via <code>config.tls.certificateIssuerName</code> in Helm values</td>
 </tr>
 <tr>
 <td><a href="https://github.com/kubernetes-sigs/external-dns">external-dns</a></td>
@@ -1554,12 +1554,22 @@ You are then responsible for populating the webhook server's TLS secret and sett
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
 </code></pre></div>
 <h3 id="2-install-the-operator">2. Install the Operator<a class="headerlink" href="#2-install-the-operator" title="Permanent link">&para;</a></h3>
-<p>Install into the <code>language-operator</code> namespace:</p>
+<p>Install into the <code>language-operator</code> namespace, substituting the values for your cluster:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--set<span class="w"> </span>config.agents.ingressClassName<span class="o">=</span>traefik<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--set<span class="w"> </span>config.agents.ingressControllerNamespace<span class="o">=</span>traefik<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--set<span class="w"> </span>config.agents.storageClassName<span class="o">=</span>local-path<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>--set<span class="w"> </span>config.gateway.ingressClassName<span class="o">=</span>traefik<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>--set<span class="w"> </span>config.tls.certificateIssuerName<span class="o">=</span>letsencrypt-production<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>--set<span class="w"> </span>config.tls.certificateIssuerKind<span class="o">=</span>ClusterIssuer
 </code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Values vary by cluster</p>
+<p>Replace <code>traefik</code> with your ingress class (e.g. <code>nginx</code>, <code>alb</code>), <code>local-path</code> with your StorageClass, and the TLS issuer with the name of your cert-manager <code>ClusterIssuer</code> or <code>Issuer</code>. All of these can also be set in a values file with <code>helm install -f values.yaml</code>.</p>
+</div>
 <h3 id="3-verify-installation">3. Verify Installation<a class="headerlink" href="#3-verify-installation" title="Permanent link">&para;</a></h3>
 <p>Check that the operator pod is running:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator
