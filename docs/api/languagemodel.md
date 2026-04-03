@@ -55,7 +55,7 @@ When you create a LanguageModel:
 3. The shared `gateway-config` ConfigMap is regenerated with all models in the namespace
 4. The gateway Deployment rolls over with the updated configuration
 
-All agents immediately have access to the new model via `MODEL_ENDPOINTS`.
+All agents immediately have access to the new model via `MODEL_ENDPOINT`.
 
 ### Credential Management
 

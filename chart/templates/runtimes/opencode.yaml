@@ -35,7 +35,7 @@ spec:
     initContainers:
       - name: opencode-adapter
         image: ghcr.io/language-operator/opencode-adapter:latest
-        # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
+        # MODEL_ENDPOINT and LLM_MODEL are injected by the operator.
         # The adapter writes /etc/opencode/opencode.jsonc with provider + MCP config.
         volumeMounts:
           - name: opencode-config

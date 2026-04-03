@@ -40,7 +40,7 @@ spec:
     initContainers:
       - name: openclaw-adapter
         image: ghcr.io/language-operator/openclaw-adapter:latest
-        # MODEL_ENDPOINTS and LLM_MODEL are injected by the operator.
+        # MODEL_ENDPOINT and LLM_MODEL are injected by the operator.
         # The adapter uses them to configure openclaw's provider settings.
         env:
           - name: OPENCLAW_STATE_DIR

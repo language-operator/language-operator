@@ -33,7 +33,7 @@ if (existsSync(operatorConfigPath)) {
 
 // -------------------------------------------------------------------
 // Build provider config from config.yaml models section.
-// Fall back to MODEL_ENDPOINTS / LLM_MODEL env vars if absent.
+// Fall back to MODEL_ENDPOINT / LLM_MODEL env vars if absent.
 // -------------------------------------------------------------------
 const configModels = operatorConfig?.models ?? {}
 const provider = {}
@@ -70,12 +70,12 @@ if (Object.keys(configModels).length > 0) {
     }
   }
 } else {
-  // Fallback: zip MODEL_ENDPOINTS + LLM_MODEL env vars
-  const endpoints = (process.env.MODEL_ENDPOINTS ?? '').split(',').map(s => s.trim()).filter(Boolean)
+  // Fallback: zip MODEL_ENDPOINT + LLM_MODEL env vars
+  const endpoints = (process.env.MODEL_ENDPOINT ?? '').split(',').map(s => s.trim()).filter(Boolean)
   const modelNames = (process.env.LLM_MODEL ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
   if (endpoints.length === 0) {
-    console.warn('MODEL_ENDPOINTS is not set and config.yaml has no models — seeding without provider config')
+    console.warn('MODEL_ENDPOINT is not set and config.yaml has no models — seeding without provider config')
   } else {
     // All models share the same LiteLLM gateway — use the first endpoint.
     const models = {}

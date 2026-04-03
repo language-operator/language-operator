@@ -30,10 +30,10 @@ All namespace-scoped resources (`LanguageAgent`, `LanguageModel`, `LanguageTool`
 
 ## The Shared Gateway
 
-Every cluster runs exactly one LiteLLM proxy. It aggregates all `LanguageModel` resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the `MODEL_ENDPOINTS` environment variable:
+Every cluster runs exactly one LiteLLM proxy. It aggregates all `LanguageModel` resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the `MODEL_ENDPOINT` environment variable:
 
 ```
-MODEL_ENDPOINTS=http://gateway.<namespace>.svc.cluster.local:8000
+MODEL_ENDPOINT=http://gateway.<namespace>.svc.cluster.local:8000
 ```
 
 Credentials never leave the gateway pod. Agents send model names and prompts; the gateway holds the API keys and routes to the correct upstream provider.

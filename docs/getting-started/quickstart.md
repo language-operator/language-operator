@@ -167,6 +167,6 @@ The operator automatically:
 
 1. Created a dedicated namespace (`language-operator-openclaw`)
 2. Deployed a LiteLLM proxy with your model credentials
-3. Injected the proxy URL into your agent via `MODEL_ENDPOINTS`
+3. Injected the proxy URL into your agent via `MODEL_ENDPOINT`
 4. Created a `{agent}-runtime` Secret from `spec.openclaw.token` and injected it via `envFrom`
 5. Created a Deployment, Service, and secure NetworkPolicy for OpenClaw

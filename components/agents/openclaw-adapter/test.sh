@@ -111,7 +111,7 @@ echo "--- Test 3: env var fallback ---"
 mkdir -p /tmp/t3/state
 
 AGENT_NAME=test-agent \
-  MODEL_ENDPOINTS=http://proxy.default.svc.cluster.local:8000 \
+  MODEL_ENDPOINT=http://proxy.default.svc.cluster.local:8000 \
   LLM_MODEL=claude-sonnet-4-5 \
   OPENCLAW_STATE_DIR=/tmp/t3/state \
   node /app/seed-config.mjs > /tmp/t3/out.txt 2>&1

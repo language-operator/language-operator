@@ -58,7 +58,7 @@ Must follow conventional commit format:
 ```
 feat: add LanguageAgentVersion CRD for versioning
 fix: handle missing namespace in cross-namespace references
-docs: clarify MODEL_ENDPOINTS injection behavior
+docs: clarify MODEL_ENDPOINT injection behavior
 ```
 
 **This is enforced by CI** via `pr-checks.yaml`.

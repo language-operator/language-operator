@@ -9,7 +9,7 @@ The model gateway is a single LiteLLM proxy Deployment (`gateway`) deployed per 
 ```
 LanguageModel CRs  →  gateway-config ConfigMap  →  gateway Deployment (LiteLLM)
                                                             ↑
-                                          all agents connect here via MODEL_ENDPOINTS
+                                          all agents connect here via MODEL_ENDPOINT
 ```
 
 The `LanguageModel` controller itself only validates the spec and sets `status.phase`. It creates no Deployment or Service of its own.
@@ -46,7 +46,7 @@ The operator injects two environment variables into every agent container:
 
 | Variable | Value |
 |----------|-------|
-| `MODEL_ENDPOINTS` | `http://gateway.<namespace>.svc.cluster.local:8000` |
+| `MODEL_ENDPOINT` | `http://gateway.<namespace>.svc.cluster.local:8000` |
 | `LLM_MODEL` | Comma-separated list of model names from `spec.models[].name` |
 
 Both are also available through `/etc/agent/config.yaml` under the `models:` key:

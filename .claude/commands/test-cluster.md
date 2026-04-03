@@ -82,11 +82,11 @@ Verify:
 Pick the first Running agent pod and verify operator-injected env vars:
 
 ```bash
-kubectl exec <pod> -- env | grep -E 'MODEL_ENDPOINTS|LLM_MODEL|MCP_SERVERS|AGENT_NAME|AGENT_NAMESPACE|AGENT_CLUSTER'
+kubectl exec <pod> -- env | grep -E 'MODEL_ENDPOINT|LLM_MODEL|MCP_SERVERS|AGENT_NAME|AGENT_NAMESPACE|AGENT_CLUSTER'
 ```
 
 Cross-check against the LanguageAgent spec:
-- `MODEL_ENDPOINTS` should point to `http://gateway.<namespace>.svc.cluster.local:8000`
+- `MODEL_ENDPOINT` should point to `http://gateway.<namespace>.svc.cluster.local:8000`
 - `LLM_MODEL` should list comma-separated model names matching `spec.models`
 - `AGENT_NAME` should match the LanguageAgent name
 - `MCP_SERVERS` should be present only if tools are referenced

@@ -91,7 +91,7 @@ echo "--- Test 3: env var fallback ---"
 
 mkdir -p /tmp/t3
 
-MODEL_ENDPOINTS=http://gateway.default.svc.cluster.local:8000 \
+MODEL_ENDPOINT=http://gateway.default.svc.cluster.local:8000 \
   LLM_MODEL=claude-sonnet-4-5 \
   OPENCODE_CONFIG_DIR=/tmp/t3 \
   node /app/seed-config.mjs > /tmp/t3/out.txt 2>&1

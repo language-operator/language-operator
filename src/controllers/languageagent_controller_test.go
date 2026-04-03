@@ -1195,7 +1195,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		assert.Equal(t, "do the thing", envMap["AGENT_INSTRUCTIONS"], "AGENT_INSTRUCTIONS must equal spec.instructions")
 	})
 
-	t.Run("MODEL_ENDPOINTS and LLM_MODEL set from spec.models", func(t *testing.T) {
+	t.Run("MODEL_ENDPOINT and LLM_MODEL set from spec.models", func(t *testing.T) {
 		scheme := testutil.SetupTestScheme(t)
 		model := gen.LanguageModel("claude-sonnet", "default")
 		agent := &langopv1alpha1.LanguageAgent{
@@ -1227,7 +1227,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
-		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", envMap["MODEL_ENDPOINTS"])
+		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", envMap["MODEL_ENDPOINT"])
 		assert.Equal(t, model.Spec.ModelName, envMap["LLM_MODEL"])
 	})
 
@@ -1413,7 +1413,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		assert.False(t, present, "MCP_SERVERS must be absent when no tools are resolved")
 	})
 
-	t.Run("init container receives MODEL_ENDPOINTS and LLM_MODEL", func(t *testing.T) {
+	t.Run("init container receives MODEL_ENDPOINT and LLM_MODEL", func(t *testing.T) {
 		scheme := testutil.SetupTestScheme(t)
 		model := gen.LanguageModel("claude-sonnet", "default")
 		agent := &langopv1alpha1.LanguageAgent{
@@ -1460,7 +1460,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		for _, e := range setupContainer.Env {
 			initEnvMap[e.Name] = e.Value
 		}
-		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", initEnvMap["MODEL_ENDPOINTS"])
+		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", initEnvMap["MODEL_ENDPOINT"])
 		assert.Equal(t, model.Spec.ModelName, initEnvMap["LLM_MODEL"])
 	})
 }

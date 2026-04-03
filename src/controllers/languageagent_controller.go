@@ -1180,7 +1180,7 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 	// Model gateway URLs and names (comma-separated)
 	if len(modelURLs) > 0 {
 		env = append(env, corev1.EnvVar{
-			Name:  "MODEL_ENDPOINTS",
+			Name:  "MODEL_ENDPOINT",
 			Value: strings.Join(modelURLs, ","),
 		})
 	}

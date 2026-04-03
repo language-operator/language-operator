@@ -12,7 +12,7 @@ The operator injects configuration into every agent pod. Your image must be read
 |---|---|---|
 | Agent config | `/etc/agent/config.yaml` | Instructions, persona, tools, models |
 | Persistent storage | `spec.workspace.mountPath` (default `/workspace`) | Survives pod restarts |
-| LLM gateway URL | `MODEL_ENDPOINTS` env var | Single proxy URL for all models |
+| LLM gateway URL | `MODEL_ENDPOINT` env var | Single proxy URL for all models |
 | Model names | `LLM_MODEL` env var | Comma-separated list |
 | Tool URLs | `MCP_SERVERS` env var | Comma-separated MCP endpoint URLs |
 | Identity | `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID` | Standard env vars |
@@ -23,7 +23,7 @@ See [Agent Runtime Container Specification](../components/agents.md) for the ful
 
 1. **Listen on a port** — the operator creates a ClusterIP Service for each entry in `spec.ports` (default: `http/8080`). Your agent must bind to these port(s).
 2. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
-3. **Route LLM traffic through `MODEL_ENDPOINTS`** — never call model APIs directly from inside the pod.
+3. **Route LLM traffic through `MODEL_ENDPOINT`** — never call model APIs directly from inside the pod.
 4. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts.
 
 ## Minimal Dockerfile
@@ -59,7 +59,7 @@ def load_config():
     return {}
 
 config = load_config()
-model_endpoint = os.environ.get("MODEL_ENDPOINTS", "")
+model_endpoint = os.environ.get("MODEL_ENDPOINT", "")
 models = os.environ.get("LLM_MODEL", "").split(",")
 
 class Handler(BaseHTTPRequestHandler):
@@ -179,9 +179,9 @@ The init container runs to completion before the main agent container starts. Bo
 ## Troubleshooting
 
 **Pod running but agent can't reach LLM:**
-Verify `MODEL_ENDPOINTS` is set and the gateway is running:
+Verify `MODEL_ENDPOINT` is set and the gateway is running:
 ```bash
-kubectl exec deployment/my-agent -- env | grep MODEL_ENDPOINTS
+kubectl exec deployment/my-agent -- env | grep MODEL_ENDPOINT
 kubectl get pods | grep gateway
 ```
 

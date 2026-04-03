@@ -61,7 +61,7 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │  │  · LanguagePersona   │    │                              │   │
 │  │  · LanguageTool      │    │  Env vars injected:          │   │
 │  │  · LanguageModel     │    │  · AGENT_NAME, AGENT_UUID    │   │
-│  │  · LanguageCluster   │    │  · MODEL_ENDPOINTS           │   │
+│  │  · LanguageCluster   │    │  · MODEL_ENDPOINT           │   │
 │  └──────────────────────┘    │  · MCP_SERVERS            │   │
 │                               └──────────────────────────────┘   │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
@@ -96,7 +96,7 @@ spec:
   initContainers:
     - name: config-adapter
       image: myregistry/adapter:latest
-      # MODEL_ENDPOINTS is injected into all init containers automatically
+      # MODEL_ENDPOINT is injected into all init containers automatically
 
   livenessProbe:
     httpGet:
@@ -125,7 +125,7 @@ spec:
 
 The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and two ConfigMaps (instructions, config).
 
-If `initContainers` are specified, the operator prepends `MODEL_ENDPOINTS` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
+If `initContainers` are specified, the operator prepends `MODEL_ENDPOINT` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 
 ### LanguagePersona
 
@@ -165,7 +165,7 @@ Agents connect to tools directly over MCP. The operator does not proxy tool traf
 
 ### LanguageModel
 
-Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM proxy (`proxy` Deployment + Service). The proxy URL is injected as `MODEL_ENDPOINTS` into every agent container (main container and all init containers). Agents never hold real API credentials.
+Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM proxy (`proxy` Deployment + Service). The proxy URL is injected as `MODEL_ENDPOINT` into every agent container (main container and all init containers). Agents never hold real API credentials.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -211,7 +211,7 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 - `/etc/agent/instructions.txt` — plain text task instructions (optional)
 - `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
 - Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
-- `MODEL_ENDPOINTS` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
+- `MODEL_ENDPOINT` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs
 - ClusterIP Service on `spec.port`

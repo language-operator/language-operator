@@ -60,7 +60,7 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
-| `MODEL_ENDPOINTS` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
+| `MODEL_ENDPOINT` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>`; sidecar-mode tools use `http://localhost:<port>`. Only injected when at least one tool is resolved. |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
@@ -146,7 +146,7 @@ models:
     endpoint: http://gateway.default.svc.cluster.local:8000
 ```
 
-The `MODEL_ENDPOINTS` env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.
+The `MODEL_ENDPOINT` env var also carries this gateway URL for runtimes that prefer environment-variable-based configuration.
 
 ## Example LanguageAgent YAML
 
@@ -239,5 +239,5 @@ A well-behaved agent image should:
 - [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
 - [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
-- [ ] Route LLM traffic through `MODEL_ENDPOINTS` proxy URLs rather than connecting to model APIs directly
+- [ ] Route LLM traffic through `MODEL_ENDPOINT` proxy URLs rather than connecting to model APIs directly
 - [ ] Use `spec.workspace.mountPath` (default `/workspace`) for persistent state — do not assume local container storage survives restarts

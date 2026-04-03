@@ -42,7 +42,7 @@ Each cluster has exactly one LiteLLM proxy that:
 - Handles credential management centrally
 - Enables cross-model cost tracking
 
-All agents in the cluster connect to this shared proxy via the `MODEL_ENDPOINTS` environment variable.
+All agents in the cluster connect to this shared proxy via the `MODEL_ENDPOINT` environment variable.
 
 ### Network Isolation
 
