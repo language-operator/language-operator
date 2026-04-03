@@ -150,7 +150,7 @@ USERNAME=$(kubectl get secret opencode-runtime \
 PASSWORD=$(kubectl get secret opencode-runtime \
   -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
 
-echo "username: $USERNAME  password: $PASSWORD"
+echo "Username: $USERNAME\nPassword: $PASSWORD"
 ```
 
 ### Connect

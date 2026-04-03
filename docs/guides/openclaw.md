@@ -131,7 +131,7 @@ kubectl config set-context --current --namespace=demo-cluster
     EOF
     ```
 
-`spec.openclaw: {}` tells the operator to auto-generate a gateway token, written to a Secret named `openclaw-runtime` after creation.
+The operator will auto-generate a gateway token and store it in a Secret named `openclaw-runtime` after creation.
 
 ### Verify
 
