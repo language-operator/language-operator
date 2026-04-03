@@ -48,6 +48,17 @@ kubectl wait --for=condition=Available deployment --all -n cert-manager --timeou
     ```
     You are then responsible for populating the webhook server's TLS secret and setting the `caBundle` field on the webhook configurations.
 
+## Recommended Components
+
+These are not required to install the operator, but unlock the full feature set:
+
+| Component | Purpose |
+|-----------|---------|
+| [cert-manager](https://cert-manager.io) with a `letsencrypt-production` ClusterIssuer | Automatic TLS certificates for agent ingresses — configure via `config.ingress.tls` in Helm values |
+| [external-dns](https://github.com/kubernetes-sigs/external-dns) | Automatic DNS records for agent hostnames |
+
+With both in place, deploying an agent automatically provisions a DNS record and a trusted TLS certificate at `<agent-name>.<cluster-domain>`.
+
 ## Install via Helm
 
 ### 1. Add the Helm Repository
