@@ -1,6 +1,6 @@
 # Language Operator
 
-A [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) for running AI agent clusters as native workloads.
+A [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) for running AI agent clusters at scale.
 
 ## What It Does
 
