@@ -552,10 +552,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#cluster-resources" class="md-nav__link">
+  <a href="#hardware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cluster Resources
+        Hardware
       
     </span>
   </a>
@@ -563,10 +563,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#software" class="md-nav__link">
+  <a href="#cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software
+        Cluster
       
     </span>
   </a>
@@ -617,34 +617,6 @@
     <span class="md-ellipsis">
       
         3. Verify Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Options
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#common-configurations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Configurations
       
     </span>
   </a>
@@ -713,34 +685,6 @@
     
   
     Quick Start
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../examples/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Examples
   
 
     
@@ -1306,10 +1250,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#cluster-resources" class="md-nav__link">
+  <a href="#hardware" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cluster Resources
+        Hardware
       
     </span>
   </a>
@@ -1317,10 +1261,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#software" class="md-nav__link">
+  <a href="#cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Software
+        Cluster
       
     </span>
   </a>
@@ -1371,34 +1315,6 @@
     <span class="md-ellipsis">
       
         3. Verify Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Options
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#common-configurations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Configurations
       
     </span>
   </a>
@@ -1466,14 +1382,14 @@
 <h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
 <p>This guide covers installing the Language Operator on your Kubernetes cluster.</p>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<h3 id="cluster-resources">Cluster Resources<a class="headerlink" href="#cluster-resources" title="Permanent link">&para;</a></h3>
+<h3 id="hardware">Hardware<a class="headerlink" href="#hardware" title="Permanent link">&para;</a></h3>
 <p>Minimum recommended node capacity:</p>
 <ul>
 <li><strong>2 CPU cores</strong> (4+ for running agents)</li>
 <li><strong>4Gi RAM</strong> (8Gi+ for running agents)</li>
 <li><strong>15Gi persistent storage</strong> (10Gi workspace per agent)</li>
 </ul>
-<h3 id="software">Software<a class="headerlink" href="#software" title="Permanent link">&para;</a></h3>
+<h3 id="cluster">Cluster<a class="headerlink" href="#cluster" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Kubernetes 1.26+</strong></li>
 <li><strong>kubectl</strong> and <strong>Helm 3.8+</strong></li>
@@ -1481,12 +1397,13 @@
 <li><strong>NetworkPolicy-capable CNI</strong> — Cilium, Calico, Weave, or Antrea</li>
 <li><strong>Persistent storage</strong> — for agent workspace PVCs</li>
 </ul>
-<p>See the <a href="../../guides/cluster-setup/">cluster setup guide</a> for instructions on installing and verifying these prerequisites.</p>
+<p>See the <a href="../../guides/cluster-setup/">Kubernetes guide</a> for instructions on installing and verifying these prerequisites.</p>
 <h2 id="install-via-helm">Install via Helm<a class="headerlink" href="#install-via-helm" title="Permanent link">&para;</a></h2>
 <h3 id="1-add-the-helm-repository">1. Add the Helm Repository<a class="headerlink" href="#1-add-the-helm-repository" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>https://language-operator.github.io/language-operator
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
 </code></pre></div>
 <h3 id="2-install-the-operator">2. Install the Operator<a class="headerlink" href="#2-install-the-operator" title="Permanent link">&para;</a></h3>
 <p>Install into the <code>language-operator</code> namespace, substituting the values for your cluster:</p>
@@ -1511,7 +1428,7 @@
 </code></pre></div>
 <p>Expected output:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>NAME                                  READY   STATUS    RESTARTS   AGE
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>language-operator-5f7b8d9c4d-x8z2q   1/1     Running   0          30s
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>language-operator-5f7b8d9c4d-x8z2q    1/1     Running   0          30s
 </code></pre></div>
 <p>Check CRDs are installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>langop.io
@@ -1524,31 +1441,15 @@
 <a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>languagepersonas.langop.io
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>languagetools.langop.io
 </code></pre></div>
-<h2 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h2>
-<h3 id="common-configurations">Common Configurations<a class="headerlink" href="#common-configurations" title="Permanent link">&para;</a></h3>
-<p><strong>Custom image:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--set<span class="w"> </span>image.repository<span class="o">=</span>ghcr.io/your-org/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--set<span class="w"> </span>image.tag<span class="o">=</span>v1.0.0
-</code></pre></div>
-<p><strong>Enable network isolation:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--set<span class="w"> </span>networkIsolation.enabled<span class="o">=</span><span class="nb">true</span>
-</code></pre></div>
-<p><strong>Resource limits:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--set<span class="w"> </span>resources.limits.cpu<span class="o">=</span>500m<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--set<span class="w"> </span>resources.limits.memory<span class="o">=</span>512Mi
-</code></pre></div>
 <h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
 <p>Upgrade the operator to the latest version:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
 </code></pre></div>
 <h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
 <p>Remove the operator (CRDs and custom resources will be deleted):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator<span class="w"> </span>--namespace<span class="w"> </span>language-operator
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator<span class="w"> </span>--namespace<span class="w"> </span>language-operator
 </code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Data Loss</p>
@@ -1558,7 +1459,6 @@ Back up any important configurations before uninstalling.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../quickstart/">Quick Start Guide</a> - Deploy your first agent</li>
-<li><a href="../examples/">Examples</a> - Common deployment patterns</li>
 </ul>
 
 
