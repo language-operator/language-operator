@@ -12,13 +12,13 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/development/contributing/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/getting-started/mcp/">
       
       
-        <link rel="prev" href="../../api/reference/">
+        <link rel="prev" href="../quickstart/">
       
       
-        <link rel="next" href="../setup/">
+        <link rel="next" href="../../components/clusters/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Contributing - Language Operator</title>
+        <title>MCP - Language Operator</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing" class="md-skip">
+        <a href="#mcp-tools" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing
+              MCP
             
           </span>
         </div>
@@ -229,10 +229,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../.." class="md-tabs__link">
           
   
@@ -268,13 +270,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../development/contributing/" class="md-tabs__link">
           
   
   
@@ -335,28 +335,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
-        
-          
-          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
             
   
   
@@ -374,7 +377,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -420,7 +423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -448,7 +451,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -473,10 +476,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../getting-started/mcp/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -492,6 +522,92 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-create-a-languagetool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a LanguageTool
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-attach-the-tool-to-your-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Attach the Tool to Your Agent
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Verify
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-just-happened" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Just Happened?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's Next?
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -510,10 +626,13 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
@@ -522,7 +641,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_5" >
         
           
-          <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="">
             
   
   
@@ -740,10 +859,13 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
@@ -752,7 +874,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_6" >
         
           
-          <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="">
             
   
   
@@ -939,31 +1061,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -981,7 +1100,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -996,37 +1115,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Contributing
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
         
   
   
@@ -1042,242 +1134,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#commit-message-convention" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Commit Message Convention
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pull-request-guidelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pull Request Guidelines
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pull Request Guidelines">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pr-title" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Title
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pr-description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Description
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pr-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Size
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-guidelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Guidelines
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Guidelines">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#go-code" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Go Code
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generated-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generated Files
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development Workflow
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Development Workflow">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#making-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Making Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#code-review" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Review
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ci-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI Checks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture Decisions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#questions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Questions?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        License
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1290,7 +1146,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../setup/" class="md-nav__link">
+      <a href="../../development/setup/" class="md-nav__link">
         
   
   
@@ -1318,7 +1174,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../testing/" class="md-nav__link">
+      <a href="../../development/testing/" class="md-nav__link">
         
   
   
@@ -1373,10 +1229,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Getting Started
+        Prerequisites
       
     </span>
   </a>
@@ -1384,10 +1240,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#commit-message-convention" class="md-nav__link">
+  <a href="#step-1-create-a-languagetool" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commit Message Convention
+        Step 1: Create a LanguageTool
       
     </span>
   </a>
@@ -1395,110 +1251,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pull-request-guidelines" class="md-nav__link">
+  <a href="#step-2-attach-the-tool-to-your-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pull Request Guidelines
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pull Request Guidelines">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pr-title" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Title
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pr-description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Description
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pr-size" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PR Size
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-guidelines" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Guidelines
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Guidelines">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#go-code" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Go Code
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generated-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generated Files
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
+        Step 2: Attach the Tool to Your Agent
       
     </span>
   </a>
@@ -1506,60 +1262,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
+  <a href="#step-3-verify" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Workflow
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Development Workflow">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#making-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Making Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#code-review" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Code Review
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ci-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI Checks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture-decisions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture Decisions
+        Step 3: Verify
       
     </span>
   </a>
@@ -1567,10 +1273,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#questions" class="md-nav__link">
+  <a href="#what-just-happened" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Questions?
+        What Just Happened?
       
     </span>
   </a>
@@ -1578,10 +1284,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
+  <a href="#whats-next" class="md-nav__link">
     <span class="md-ellipsis">
       
-        License
+        What's Next?
       
     </span>
   </a>
@@ -1608,150 +1314,136 @@
   
 
 
-<h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
-<p>Thank you for your interest in contributing to Language Operator!</p>
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<h1 id="mcp-tools">MCP Tools<a class="headerlink" href="#mcp-tools" title="Permanent link">&para;</a></h1>
+<p>Tools extend what agents can do. Every tool the operator manages speaks <a href="../../components/tools/">MCP</a> — the Model Context Protocol — a JSON-RPC interface that lets agents discover and call tools at runtime.</p>
+<p>This guide adds a Kubernetes tool to the agent you deployed in <a href="../quickstart/">Quick Start</a>.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>A cluster with a running agent from the <a href="../quickstart/">Quick Start</a>.</p>
+<h2 id="step-1-create-a-languagetool">Step 1: Create a LanguageTool<a class="headerlink" href="#step-1-create-a-languagetool" title="Permanent link">&para;</a></h2>
+<p>A <code>LanguageTool</code> describes a tool server. The operator creates and manages its Deployment, Service, and NetworkPolicy.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">kind: LanguageTool</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">  name: k8s</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">spec:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  image: ghcr.io/language-operator/k8s-tool:latest</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">  port: 80</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="s">EOF</span>
+</code></pre></div>
+<p>Wait for the tool to be ready:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagetool/k8s<span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
+</code></pre></div>
+<p>Once ready, the operator has queried the tool and catalogued its capabilities:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languagetool<span class="w"> </span>k8s<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.status.toolSchemas}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">[</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kubectl_get&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Get Kubernetes resources&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">&quot;inputSchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kubectl_apply&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Apply a Kubernetes manifest&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">&quot;inputSchema&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">]</span>
+</code></pre></div>
+<h2 id="step-2-attach-the-tool-to-your-agent">Step 2: Attach the Tool to Your Agent<a class="headerlink" href="#step-2-attach-the-tool-to-your-agent" title="Permanent link">&para;</a></h2>
+<p>Add <code>spec.tools</code> to your agent and re-apply:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">OpenClaw</label><label for="__tabbed_1_2">OpenCode</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s">  name: openclaw</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s">spec:</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="s">  runtime: openclaw</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="s">  models:</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="s">  tools:</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s">    - name: k8s</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="s">EOF</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">  name: opencode</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">spec:</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">  runtime: opencode</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">  models:</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">  tools:</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">    - name: k8s</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">EOF</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Watch the agent pod restart with the updated configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
+</code></pre></div>
+<h2 id="step-3-verify">Step 3: Verify<a class="headerlink" href="#step-3-verify" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">OpenClaw</label><label for="__tabbed_2_2">OpenCode</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>OpenClaw reads its tool config from <code>openclaw.json</code>, which the <code>openclaw-adapter</code> init
+container writes on every pod start from the operator-injected <code>config.yaml</code>. Confirm
+the k8s server was registered:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>deploy/openclaw<span class="w"> </span>--<span class="w"> </span>cat<span class="w"> </span>/workspace/.openclaw/openclaw.json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.mcp&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;servers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;k8s&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://k8s.language-operator-demo.svc.cluster.local:80&quot;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>OpenCode reads its tool config from <code>/etc/opencode/opencode.jsonc</code>, which the
+<code>opencode-adapter</code> init container writes on every pod start from the
+operator-injected <code>config.yaml</code>. Confirm the k8s server was registered:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>deploy/opencode<span class="w"> </span>--<span class="w"> </span>cat<span class="w"> </span>/etc/opencode/opencode.jsonc<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.mcp&#39;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;k8s&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;remote&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://k8s.language-operator-demo.svc.cluster.local:80&quot;</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Your agent now has access to Kubernetes operations. Ask it to list the pods in your namespace.</p>
+<h2 id="what-just-happened">What Just Happened?<a class="headerlink" href="#what-just-happened" title="Permanent link">&para;</a></h2>
+<p><strong>When the LanguageTool was created</strong>, the operator:</p>
 <ol>
-<li><strong>Fork the repository</strong> on GitHub</li>
-<li><strong>Clone your fork</strong> locally</li>
-<li><strong>Set up development environment</strong> - see <a href="../setup/">Development Setup</a></li>
-<li><strong>Create a feature branch</strong> from <code>main</code></li>
-<li><strong>Make your changes</strong> following our guidelines below</li>
-<li><strong>Test your changes</strong> - see <a href="../testing/">Testing</a></li>
-<li><strong>Commit with conventional commits</strong> (see below)</li>
-<li><strong>Push and create a pull request</strong></li>
+<li>Deployed the tool image as a <code>Deployment</code> named <code>k8s</code></li>
+<li>Created a <code>Service</code> named <code>k8s</code> on port 80</li>
+<li>Created a <code>NetworkPolicy</code> permitting egress to the Kubernetes API server (auto-detected from the cluster CNI)</li>
+<li>Queried <code>POST /mcp</code> → <code>tools/list</code> on the service, and stored the discovered schemas in <code>status.toolSchemas</code></li>
 </ol>
-<h2 id="commit-message-convention">Commit Message Convention<a class="headerlink" href="#commit-message-convention" title="Permanent link">&para;</a></h2>
-<p>We use <a href="https://www.conventionalcommits.org/">Conventional Commits</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&lt;type&gt;: &lt;description&gt;
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>[optional body]
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>[optional footer]
-</code></pre></div>
-<p><strong>Types:</strong></p>
-<ul>
-<li><code>feat:</code> - New feature</li>
-<li><code>fix:</code> - Bug fix</li>
-<li><code>docs:</code> - Documentation changes</li>
-<li><code>test:</code> - Test additions or fixes</li>
-<li><code>chore:</code> - Code cleanup, refactoring, dependency updates</li>
-<li><code>WIP:</code> - Work in progress (partial implementation)</li>
-</ul>
-<p><strong>Examples:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>feat: add support for Azure OpenAI provider
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>fix: resolve race condition in model reconciliation
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>docs: update installation guide with RBAC requirements
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>test: add integration tests for LanguageCluster controller
-</code></pre></div>
-<p><strong>The pre-commit hook enforces this convention.</strong> Install hooks with:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./scripts/setup-hooks
-</code></pre></div>
-<h2 id="pull-request-guidelines">Pull Request Guidelines<a class="headerlink" href="#pull-request-guidelines" title="Permanent link">&para;</a></h2>
-<h3 id="pr-title">PR Title<a class="headerlink" href="#pr-title" title="Permanent link">&para;</a></h3>
-<p>Must follow conventional commit format:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>feat: add LanguageAgentVersion CRD for versioning
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>fix: handle missing namespace in cross-namespace references
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>docs: clarify MODEL_ENDPOINT injection behavior
-</code></pre></div>
-<p><strong>This is enforced by CI</strong> via <code>pr-checks.yaml</code>.</p>
-<h3 id="pr-description">PR Description<a class="headerlink" href="#pr-description" title="Permanent link">&para;</a></h3>
-<p>Include:</p>
-<ul>
-<li><strong>What</strong> this PR changes</li>
-<li><strong>Why</strong> the change is needed</li>
-<li><strong>How</strong> it works (for complex changes)</li>
-<li><strong>Testing</strong> - how you verified it works</li>
-</ul>
-<h3 id="pr-size">PR Size<a class="headerlink" href="#pr-size" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Keep PRs focused and reasonably sized</li>
-<li>CI automatically labels PRs by size (xs/s/m/l/xl)</li>
-<li>Consider breaking large changes into multiple PRs</li>
-</ul>
-<h2 id="code-guidelines">Code Guidelines<a class="headerlink" href="#code-guidelines" title="Permanent link">&para;</a></h2>
-<h3 id="go-code">Go Code<a class="headerlink" href="#go-code" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Format:</strong> Run <code>cd src &amp;&amp; make fmt</code> before committing</li>
-<li><strong>Lint:</strong> Run <code>cd src &amp;&amp; make vet</code> to check for issues</li>
-<li><strong>Tests:</strong> Add tests for new features</li>
-<li><strong>Comments:</strong> Add godoc comments for exported types and functions</li>
-</ul>
-<h3 id="generated-files">Generated Files<a class="headerlink" href="#generated-files" title="Permanent link">&para;</a></h3>
-<p><strong>After modifying CRD types</strong> (<code>src/api/v1alpha1/*.go</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>src
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>make<span class="w"> </span>generate<span class="w">    </span><span class="c1"># regenerate zz_generated.deepcopy.go</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>make<span class="w"> </span>helm-crds<span class="w">   </span><span class="c1"># regenerate CRD YAMLs and copy to chart/crds/</span>
-</code></pre></div>
-<p><strong>Stage all generated files together:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>add<span class="w"> </span>src/api/v1alpha1/zz_generated.deepcopy.go
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>add<span class="w"> </span>src/config/crd/bases/
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>add<span class="w"> </span>chart/crds/
-</code></pre></div>
-<p><strong>The pre-commit hook will fail if generated files are modified but not staged.</strong></p>
-<h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>API docs</strong> are auto-generated from Go comments</li>
-<li><strong>User docs</strong> live in <code>docs/</code> (Markdown)</li>
-<li>Update relevant docs when changing behavior</li>
-<li>Use clear, concise language</li>
-</ul>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<p>See the <a href="../testing/">Testing Guide</a> for details on:</p>
-<ul>
-<li>Unit tests</li>
-<li>Integration tests</li>
-<li>Manual testing</li>
-</ul>
-<p><strong>Run tests before submitting:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>src<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="nb">test</span>
-</code></pre></div>
-<h2 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
-<h3 id="making-changes">Making Changes<a class="headerlink" href="#making-changes" title="Permanent link">&para;</a></h3>
+<p><strong>When the agent was updated</strong>, the operator:</p>
 <ol>
-<li>
-<p><strong>Branch naming:</strong> Use descriptive names
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/azure-openai-support
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/model-reconciliation-race
-</code></pre></div></p>
-</li>
-<li>
-<p><strong>Make incremental commits</strong> with clear messages</p>
-</li>
-<li><strong>Test locally</strong> before pushing</li>
-<li><strong>Push and create PR</strong> when ready</li>
+<li>Resolved the <code>k8s</code> LanguageTool to its in-cluster DNS address</li>
+<li>Updated <code>config.yaml</code> (mounted at <code>/etc/agent/config.yaml</code>) with the tool endpoint</li>
+<li>Rolled the agent pod to pick up the new configuration</li>
 </ol>
-<h3 id="code-review">Code Review<a class="headerlink" href="#code-review" title="Permanent link">&para;</a></h3>
+<p>On pod start, each runtime's adapter init container reads <code>config.yaml</code> and writes the tool endpoints into the runtime's native config before the agent starts — no agent code changes required.</p>
+<h2 id="whats-next">What's Next?<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
 <ul>
-<li>All PRs require review before merging</li>
-<li>Address review feedback promptly</li>
-<li>Keep discussion focused and respectful</li>
+<li><a href="../../components/tools/">Tools reference</a> — sidecar mode, network policies, and writing your own tool server</li>
+<li><a href="../../api/languagetool/">LanguageTool API reference</a> — full spec field documentation</li>
 </ul>
-<h3 id="ci-checks">CI Checks<a class="headerlink" href="#ci-checks" title="Permanent link">&para;</a></h3>
-<p>All PRs must pass:</p>
-<ul>
-<li>✅ Go formatting (<code>gofmt</code>)</li>
-<li>✅ Go vet</li>
-<li>✅ Unit tests</li>
-<li>✅ Integration tests</li>
-<li>✅ CRD manifest validation</li>
-<li>✅ PR title convention check</li>
-<li>✅ YAML linting</li>
-</ul>
-<h2 id="architecture-decisions">Architecture Decisions<a class="headerlink" href="#architecture-decisions" title="Permanent link">&para;</a></h2>
-<p>For significant architectural changes:</p>
-<ol>
-<li><strong>Open an issue</strong> to discuss the approach first</li>
-<li><strong>Reference the issue</strong> in your PR</li>
-<li><strong>Update architecture docs</strong> if needed</li>
-</ol>
-<h2 id="questions">Questions?<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Issues:</strong> <a href="https://github.com/language-operator/language-operator/issues">GitHub Issues</a></li>
-<li><strong>Discussions:</strong> <a href="https://github.com/language-operator/language-operator/discussions">GitHub Discussions</a></li>
-</ul>
-<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
-<p>By contributing, you agree that your contributions will be licensed under the MIT License.</p>
 
 
 
