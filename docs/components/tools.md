@@ -1,39 +1,53 @@
 # Tools
 
-This document defines the contract for implementing a `LanguageTool` — an MCP-compatible service that agents use for memory, knowledge retrieval, code execution, and other capabilities.
+A `LanguageTool` is an MCP-compatible service that agents call to do things beyond generating text — query a database, search the web, run code, read files. The operator manages the Deployment and Service, discovers what the tool can do, and injects its endpoint into every agent that references it.
 
-## Overview
+## How it works
 
-A **LanguageTool** is a Kubernetes-managed service that exposes the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). The operator discovers tools via `LanguageTool` CRDs, resolves their endpoints, and injects connection details into agent containers via the `MCP_SERVERS` environment variable and the `tools:` section of `/etc/agent/config.yaml`.
+When you create a `LanguageTool`, the operator:
 
-Agents connect to tools over MCP. The operator does not proxy or inspect tool traffic — it only handles discovery and configuration injection.
+1. Deploys the tool image as a standard Kubernetes Deployment and Service
+2. Waits for the pod to become ready, then calls `tools/list` to discover what the tool exposes
+3. Stores the discovered schemas in `status.toolSchemas`
+4. Injects the tool's endpoint into every referencing agent via `/etc/agent/config.yaml`
 
-## What the Operator Provides
+Agents connect to tools directly over MCP — the operator doesn't proxy or inspect tool traffic.
 
-When a `LanguageTool` resource is created, the operator:
+## Deploying a tool
 
-1. Creates and manages the tool's Deployment and Service
-2. Resolves the tool endpoint: `http://<service-name>.<namespace>.svc.cluster.local:<port>`
-3. Syncs the MCP tool schema by calling `tools/list` on the endpoint
-4. Injects the resolved endpoint into each referencing agent via the `MCP_SERVERS` env var and the `tools:` section of `/etc/agent/config.yaml`
-5. Reconciles NetworkPolicy to allow agent pods to reach the tool service
+A `LanguageTool` is self-contained. You provide an image; the operator creates the Deployment and Service:
 
-## What the Tool Must Implement
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: mem0-memory
+  namespace: language-operator-myapp
+spec:
+  image: myregistry/mem0-mcp:latest
+  port: 8080
+```
 
-### MCP Protocol (Required)
+That's enough to get a running tool with an in-cluster endpoint at `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080`.
 
-The tool must implement the [MCP specification](https://spec.modelcontextprotocol.io/) and respond on the port defined in `spec.port` (default: `8080`).
+The `deploymentMode` field controls whether the tool runs as a shared service (default) or as a sidecar inside each agent pod:
 
-#### Tool Listing
+- **`service`** — one Deployment shared across all agents that reference the tool. Good for stateless tools.
+- **`sidecar`** — injected into each agent pod. Gets access to the agent's workspace volume. Good for tools that need per-agent state.
+
+## MCP protocol
+
+The tool must implement [MCP](https://spec.modelcontextprotocol.io/) on the port defined in `spec.port`. The operator calls two methods: `tools/list` for schema discovery, and agents call `tools/call` at runtime.
+
+### Tool listing
 
 ```
 POST /mcp
 Content-Type: application/json
+Accept: application/json, text/event-stream
 
 {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
 ```
-
-Response:
 
 ```json
 {
@@ -52,28 +66,18 @@ Response:
           },
           "required": ["content"]
         }
-      },
-      {
-        "name": "recall",
-        "description": "Retrieve information from long-term memory",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "query": { "type": "string", "description": "What to search for" }
-          },
-          "required": ["query"]
-        }
       }
     ]
   }
 }
 ```
 
-#### Tool Invocation
+### Tool invocation
 
 ```
 POST /mcp
 Content-Type: application/json
+Accept: application/json, text/event-stream
 
 {
   "jsonrpc": "2.0",
@@ -86,8 +90,6 @@ Content-Type: application/json
 }
 ```
 
-Response:
-
 ```json
 {
   "jsonrpc": "2.0",
@@ -98,90 +100,17 @@ Response:
 }
 ```
 
-### Health Check (Required)
+### Health check
 
-```
-GET /health
-```
-
-Returns `200 OK` with a JSON body when the tool is ready to serve requests:
+The operator uses `GET /health` to determine when the tool is ready before attempting schema discovery:
 
 ```json
 { "status": "ok" }
 ```
 
-The tool controller uses this endpoint for schema discovery: once the tool deployment reports `ReadyReplicas > 0`, it calls `tools/list` to populate `status.toolSchemas`. Tool endpoints are injected into the agent's `/etc/agent/config.yaml` under the `tools:` key for every enabled tool reference in the agent spec, regardless of tool readiness.
+### Error responses
 
-## LanguageTool CRD Reference
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: mem0-memory
-  namespace: language-operator-myapp
-spec:
-  image: myregistry/mem0-mcp:latest
-
-  # Protocol type — only "mcp" is currently supported (default)
-  type: mcp
-
-  # Deployment mode:
-  # - "service": standalone Deployment+Service shared across agents (default)
-  # - "sidecar": injected as a sidecar into each agent pod (dedicated, with workspace access)
-  deploymentMode: service
-
-  # Port the tool listens on (default: 8080)
-  port: 8080
-```
-
-## Agent Connection
-
-The operator injects tool endpoints into each referencing agent two ways:
-
-1. **`MCP_SERVERS` env var** — a comma-separated list of tool endpoint URLs (e.g. `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080`)
-2. **`/etc/agent/config.yaml`** — a `tools:` map keyed by tool name:
-
-```yaml
-tools:
-  mem0-memory:
-    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080
-    protocol: mcp
-```
-
-Agents can use either source; `MCP_SERVERS` is convenient for simple single-tool lookup, while `config.yaml` provides structured access to all tools by name.
-
-## Deployment Pattern
-
-A `LanguageTool` is a self-contained resource — the operator creates the Deployment and Service automatically from `spec.image`. No separate Deployment or Service manifest is needed:
-
-```yaml
-apiVersion: langop.io/v1alpha1
-kind: LanguageTool
-metadata:
-  name: mem0-memory
-  namespace: language-operator-myapp
-spec:
-  image: myregistry/mem0-mcp:latest
-  port: 8080
-```
-
-The operator creates a `Deployment` named `mem0-memory` and a `ClusterIP` Service named `mem0-memory` in the same namespace. The tool endpoint `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080` is injected into every agent that references this tool.
-
-## Compliance Checklist
-
-A compliant tool implementation must:
-
-- [ ] Implement the MCP JSON-RPC protocol at the configured port
-- [ ] Respond to `tools/list` with a complete list of available tools and their input schemas
-- [ ] Respond to `tools/call` with the result of invoking the named tool
-- [ ] Expose `GET /health` returning `200 OK` with `{"status":"ok"}` when ready
-- [ ] Expose an MCP-compliant HTTP endpoint on `spec.port` (the operator creates the Kubernetes Service automatically)
-- [ ] Handle errors gracefully with MCP error responses (not HTTP 5xx)
-
-## Error Responses
-
-Tool errors must use MCP error format, not HTTP error codes:
+Tool errors should use MCP error format rather than HTTP error status codes:
 
 ```json
 {
@@ -195,8 +124,6 @@ Tool errors must use MCP error format, not HTTP error codes:
 }
 ```
 
-Standard MCP error codes:
-
 | Code | Meaning |
 |------|---------|
 | `-32700` | Parse error |
@@ -204,3 +131,26 @@ Standard MCP error codes:
 | `-32601` | Method not found |
 | `-32602` | Invalid params |
 | `-32603` | Internal error |
+
+## How agents receive tool endpoints
+
+The operator writes each tool's endpoint into the referencing agent's `/etc/agent/config.yaml` under the `tools:` key:
+
+```yaml
+tools:
+  mem0-memory:
+    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080
+    protocol: mcp
+```
+
+Runtime adapters (like `openclaw-adapter` and `opencode-adapter`) read this file and translate it into their runtime's native tool configuration before the agent starts.
+
+## Checklist
+
+A compliant tool image must:
+
+- [ ] Implement MCP JSON-RPC at the port defined in `spec.port`
+- [ ] Respond to `tools/list` with all available tools and their input schemas
+- [ ] Respond to `tools/call` with the result of invoking the named tool
+- [ ] Expose `GET /health` returning `200 OK` with `{"status":"ok"}` when ready
+- [ ] Return MCP error objects for failures, not HTTP error status codes
