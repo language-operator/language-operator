@@ -586,6 +586,7 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 		return nil, fmt.Errorf("failed to create MCP request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json, text/event-stream")
 	resp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call MCP server at %s: %w", endpoint, err)
@@ -787,16 +788,18 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 		tool.Status.Endpoint = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageTool is ready", tool.Generation)
 
-		// Discover MCP tool schemas for service mode tools
-		if tool.Status.Endpoint != "" && tool.Spec.Type == "mcp" {
-			schemas, err := r.discoverMCPToolSchemas(ctx, tool.Status.Endpoint)
+		// Discover MCP tool schemas for service mode tools.
+		// Pass host:port (not the full URL) because discoverMCPToolSchemas prepends "http://".
+		if tool.Spec.Type == "mcp" {
+			hostPort := fmt.Sprintf("%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
+			schemas, err := r.discoverMCPToolSchemas(ctx, hostPort)
 			if err != nil {
-				// Log error but don't fail - tool is still ready even if schema discovery fails
 				log := log.FromContext(ctx)
-				log.Error(err, "Failed to discover MCP tool schemas", "tool", tool.Name, "endpoint", tool.Status.Endpoint)
+				log.Error(err, "Failed to discover MCP tool schemas", "tool", tool.Name, "endpoint", hostPort)
+				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionFalse, langopv1alpha1.ReasonSchemaDiscoveryFailed, err.Error(), tool.Generation)
 			} else {
-				// Update tool schemas and available tools list
 				tool.Status.ToolSchemas = schemas
+				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionTrue, langopv1alpha1.ReasonSchemasDiscovered, "Tool schemas discovered", tool.Generation)
 			}
 		}
 

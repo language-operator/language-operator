@@ -53,6 +53,7 @@ const (
 	ReasonPVCError              = "PVCError"
 	ReasonServiceAccountError   = "ServiceAccountError"
 	ReasonSchemasDiscovered     = "SchemasDiscovered"
+	ReasonSchemaDiscoveryFailed = "SchemaDiscoveryFailed"
 	ReasonNoRunningAgentPod     = "NoRunningAgentPod"
 	ReasonGatewayReady          = "GatewayReady"
 	ReasonWebhookRouteReady     = "WebhookRouteReady"
