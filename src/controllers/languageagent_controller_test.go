@@ -3162,6 +3162,61 @@ func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_ConfigHashAnnotation(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-hash-agent", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				PodAnnotations: map[string]string{
+					"prometheus.io/scrape": "true",
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	for i := range 2 {
+		_, err := reconciler.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+		})
+		if err != nil {
+			t.Fatalf("Reconcile %d failed: %v", i+1, err)
+		}
+	}
+
+	deployment := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
+		t.Fatalf("Expected Deployment to exist: %v", err)
+	}
+
+	annotations := deployment.Spec.Template.Annotations
+	hash, ok := annotations[LabelKeyLangopConfigHash]
+	if !ok || hash == "" {
+		t.Errorf("Expected pod annotation %q to be set, got annotations: %v", LabelKeyLangopConfigHash, annotations)
+	}
+	// User annotations must still be present alongside the operator-managed hash.
+	if annotations["prometheus.io/scrape"] != "true" {
+		t.Errorf("Expected user annotation prometheus.io/scrape=true to be preserved, got %q", annotations["prometheus.io/scrape"])
+	}
+}
+
 func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
