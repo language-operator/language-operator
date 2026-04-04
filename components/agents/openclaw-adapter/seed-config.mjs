@@ -6,9 +6,9 @@
  * translates models, tools, and personas into openclaw.json and workspace
  * bootstrap files.
  *
- * openclaw.json is written only on first run (skip-if-exists) to preserve
- * user runtime state across pod restarts. Bootstrap files (AGENTS.md, SOUL.md)
- * are always overwritten — they are operator-managed configuration, not user state.
+ * On subsequent runs (openclaw.json already exists), only operator-managed sections
+ * are updated: gateway config and mcp.servers. All other user runtime state is
+ * preserved. Bootstrap files (AGENTS.md, SOUL.md) are always overwritten.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
@@ -115,8 +115,30 @@ const gatewayConfig = {
   },
 }
 
+// -------------------------------------------------------------------
+// Build mcp.servers from config.yaml tools section.
+// Done before the existsSync branch so it is available in both the
+// merge path (existing file) and the new-file path below.
+// mcp.servers is operator-managed — always overwrite, never preserve.
+// -------------------------------------------------------------------
+const configTools = operatorConfig?.tools ?? {}
+const mcpServers = {}
+
+for (const [toolName, tool] of Object.entries(configTools)) {
+  if (!tool.endpoint) {
+    console.warn(`Tool '${toolName}' has no endpoint — skipping`)
+    continue
+  }
+  if (!tool.endpoint.startsWith('http://') && !tool.endpoint.startsWith('https://')) {
+    console.warn(`Tool '${toolName}' endpoint '${tool.endpoint}' is not an HTTP URL — skipping`)
+    continue
+  }
+  mcpServers[toolName] = { url: tool.endpoint }
+  console.log(`Configured MCP server '${toolName}' → ${tool.endpoint}`)
+}
+
 if (existsSync(configFile)) {
-  console.log(`openclaw.json already exists at ${configFile}, merging gateway config`)
+  console.log(`openclaw.json already exists at ${configFile}, merging gateway config and mcp.servers`)
   let existing = {}
   try {
     existing = JSON.parse(readFileSync(configFile, 'utf8'))
@@ -132,8 +154,16 @@ if (existsSync(configFile)) {
       ...gatewayConfig.gateway.controlUi,
     },
   }
+  // Always overwrite mcp.servers — operator-managed, not user state.
+  if (Object.keys(mcpServers).length > 0) {
+    existing.mcp = { servers: mcpServers }
+    console.log(`Updated mcp.servers with ${Object.keys(mcpServers).length} tool(s)`)
+  } else {
+    delete existing.mcp
+    console.log('No tools in config.yaml — cleared mcp.servers')
+  }
   writeFileSync(configFile, JSON.stringify(existing, null, 2))
-  console.log('Merged gateway config into existing openclaw.json')
+  console.log('Merged gateway config and mcp.servers into existing openclaw.json')
   process.exit(0)
 }
 
@@ -182,26 +212,6 @@ if (Object.keys(configModels).length > 0) {
     }
     console.log(`Configured model provider '${providerKey}' → ${endpoints[i]} (from env vars)`)
   }
-}
-
-// -------------------------------------------------------------------
-// Build mcp.servers from config.yaml tools section
-// -------------------------------------------------------------------
-const configTools = operatorConfig?.tools ?? {}
-const mcpServers = {}
-
-for (const [toolName, tool] of Object.entries(configTools)) {
-  if (!tool.endpoint) {
-    console.warn(`Tool '${toolName}' has no endpoint — skipping`)
-    continue
-  }
-  // Map all tools (default protocol is mcp; skip non-http entries)
-  if (!tool.endpoint.startsWith('http://') && !tool.endpoint.startsWith('https://')) {
-    console.warn(`Tool '${toolName}' endpoint '${tool.endpoint}' is not an HTTP URL — skipping`)
-    continue
-  }
-  mcpServers[toolName] = { url: tool.endpoint }
-  console.log(`Configured MCP server '${toolName}' → ${tool.endpoint}`)
 }
 
 // -------------------------------------------------------------------
