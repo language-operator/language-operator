@@ -774,14 +774,21 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			},
 		}
 
-		// Inject operator-managed env vars into user-specified init containers.
+		// Inject operator-managed env vars and volume mounts into user-specified init containers.
 		// Per spec/agents.md, all contracted env vars must be present in every
-		// container including init containers.
+		// container including init containers. The agent-config volume mount is also
+		// injected so init containers (e.g. runtime adapters) can read /etc/agent/config.yaml.
 		userInitContainers := make([]corev1.Container, len(agent.Spec.Deployment.InitContainers))
 		copy(userInitContainers, agent.Spec.Deployment.InitContainers)
 		agentEnv := r.buildAgentEnv(ctx, agent, cluster, modelURLs, modelNames, toolURLs)
+		agentConfigMount := corev1.VolumeMount{
+			Name:      "agent-config",
+			MountPath: "/etc/agent",
+			ReadOnly:  true,
+		}
 		for i := range userInitContainers {
 			userInitContainers[i].Env = append(agentEnv, userInitContainers[i].Env...)
+			userInitContainers[i].VolumeMounts = append([]corev1.VolumeMount{agentConfigMount}, userInitContainers[i].VolumeMounts...)
 		}
 
 		// User-specified init containers run before operator-managed sidecar containers
