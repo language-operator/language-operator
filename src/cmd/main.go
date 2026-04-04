@@ -199,6 +199,16 @@ func main() {
 	cniCtx, cniCancel := context.WithTimeout(ctx, networkPolicyTimeout)
 	defer cniCancel()
 
+	// Auto-detect ingress controller namespace if not explicitly configured.
+	if ingressControllerNamespace == "" && agentIngressClassName != "" {
+		ingressControllerNamespace = registryconfig.DetectIngressControllerNamespace(cniCtx, clientset, agentIngressClassName)
+		if ingressControllerNamespace != "" {
+			setupLog.Info("Auto-detected ingress controller namespace", "namespace", ingressControllerNamespace, "ingressClass", agentIngressClassName)
+		} else {
+			setupLog.Info("Could not auto-detect ingress controller namespace; NetworkPolicy will not include ingress controller rule")
+		}
+	}
+
 	cniCaps, cniErr := cni.DetectNetworkPolicySupport(cniCtx, clientset)
 	if cniErr != nil && errors.Is(cniErr, context.DeadlineExceeded) {
 		setupLog.Error(cniErr, "CNI detection timed out", "timeout", networkPolicyTimeout)
@@ -286,16 +296,6 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
-	}
-
-	// Auto-detect ingress controller namespace if not explicitly configured.
-	if ingressControllerNamespace == "" && agentIngressClassName != "" {
-		ingressControllerNamespace = registryconfig.DetectIngressControllerNamespace(ctx, mgr.GetClient(), agentIngressClassName)
-		if ingressControllerNamespace != "" {
-			setupLog.Info("Auto-detected ingress controller namespace", "namespace", ingressControllerNamespace, "ingressClass", agentIngressClassName)
-		} else {
-			setupLog.Info("Could not auto-detect ingress controller namespace; NetworkPolicy will not include ingress controller rule")
-		}
 	}
 
 	// Setup LanguageTool controller

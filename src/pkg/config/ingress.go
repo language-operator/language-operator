@@ -4,10 +4,8 @@ import (
 	"context"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 // DetectIngressControllerNamespace attempts to find the namespace the ingress
@@ -17,13 +15,13 @@ import (
 // Detection order:
 //  1. meta.helm.sh/release-namespace annotation on the IngressClass
 //  2. Pod label scan: app.kubernetes.io/name=<controller-shortname>
-func DetectIngressControllerNamespace(ctx context.Context, c client.Client, ingressClassName string) string {
+func DetectIngressControllerNamespace(ctx context.Context, clientset kubernetes.Interface, ingressClassName string) string {
 	if ingressClassName == "" {
 		return ""
 	}
 
-	ic := &networkingv1.IngressClass{}
-	if err := c.Get(ctx, client.ObjectKey{Name: ingressClassName}, ic); err != nil {
+	ic, err := clientset.NetworkingV1().IngressClasses().Get(ctx, ingressClassName, metav1.GetOptions{})
+	if err != nil {
 		return ""
 	}
 
@@ -38,16 +36,14 @@ func DetectIngressControllerNamespace(ctx context.Context, c client.Client, ingr
 		return ""
 	}
 
-	podList := &corev1.PodList{}
-	if err := c.List(ctx, podList, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labels.Set{
-			"app.kubernetes.io/name": controllerShortName,
-		}),
-	}); err != nil || len(podList.Items) == 0 {
+	pods, err := clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
+		LabelSelector: "app.kubernetes.io/name=" + controllerShortName,
+	})
+	if err != nil || len(pods.Items) == 0 {
 		return ""
 	}
 
-	return podList.Items[0].Namespace
+	return pods.Items[0].Namespace
 }
 
 // extractControllerShortName derives a short name from an IngressClass controller string.
@@ -59,8 +55,7 @@ func extractControllerShortName(controller string) string {
 	if i := strings.Index(controller, "/"); i >= 0 {
 		controller = controller[i+1:]
 	}
-	// Strip "-controller" suffix so "ingress-controller" → "ingress" doesn't happen;
-	// but "traefik-controller" → "traefik" does.
+	// Strip "-controller" suffix so "traefik-controller" → "traefik"
 	if name, _, found := strings.Cut(controller, "-controller"); found {
 		return name
 	}
