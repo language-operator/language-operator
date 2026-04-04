@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -88,6 +89,7 @@ func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.O
 	if err != nil {
 		return warns, err
 	}
+	warns = append(warns, securityWarnings(a)...)
 	return warns, a.validateSpec()
 }
 
@@ -111,7 +113,34 @@ func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, newObj runtim
 	if err != nil {
 		return warns, err
 	}
+	warns = append(warns, securityWarnings(a)...)
 	return warns, a.validateSpec()
+}
+
+// securityWarnings returns advisory (non-blocking) warnings for dangerous agent configurations.
+func securityWarnings(a *LanguageAgent) admission.Warnings {
+	var warns admission.Warnings
+
+	if strings.Contains(a.Spec.Image, ":latest") && !strings.Contains(a.Spec.Image, "@sha256:") {
+		warns = append(warns, "spec.image: using ':latest' tag without a digest pin is not reproducible; consider pinning to a specific digest")
+	}
+
+	limits := a.Spec.Deployment.Resources.Limits
+	if limits != nil {
+		if cpu, ok := limits[corev1.ResourceCPU]; ok && cpu.IsZero() {
+			warns = append(warns, "spec.deployment.resources.limits.cpu: explicitly set to zero; the container will be throttled")
+		}
+		if mem, ok := limits[corev1.ResourceMemory]; ok && mem.IsZero() {
+			warns = append(warns, "spec.deployment.resources.limits.memory: explicitly set to zero; the container may be OOM-killed unexpectedly")
+		}
+	}
+
+	sc := a.Spec.Deployment.SecurityContext
+	if sc != nil && sc.RunAsNonRoot != nil && !*sc.RunAsNonRoot {
+		warns = append(warns, "spec.deployment.securityContext.runAsNonRoot: explicitly set to false; the container will run as root")
+	}
+
+	return warns
 }
 
 // validateRuntime verifies the referenced LanguageAgentRuntime exists.
