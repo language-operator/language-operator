@@ -8,6 +8,28 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.1.129 — 2026-04-03
+
+**Features**
+- auto-detect ingress controller namespace from IngressClass
+
+**Bug Fixes**
+- mount agent-config volume into user init containers
+- config.yaml generated with PascalCase keys; adapter mcp.servers not updated on restart
+- update mcp.servers on every adapter run, not only on first boot
+- missing Accept header and double http:// prefix in MCP schema discovery
+- add ingressclasses RBAC so ingress controller namespace detection works
+- run ingress controller namespace detection before cache start
+
+**Documentation**
+- add MCP getting-started guide
+- fix README links to use langop.io custom domain
+
+**Chores**
+- update docs
+
+---
+
 ## v0.1.128 — 2026-04-03
 
 **Bug Fixes**
