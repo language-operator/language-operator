@@ -65,37 +65,38 @@ type LanguageAgentReconciler struct {
 }
 
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
+// sigs.k8s.io/yaml marshals via JSON, so json tags control the output key names.
 type agentConfigYAML struct {
-	Agent        agentIdentityYAML          `yaml:"agent"`
-	Instructions string                     `yaml:"instructions,omitempty"`
-	Personas     []personaConfigYAML        `yaml:"personas,omitempty"`
-	Tools        map[string]toolConfigYAML  `yaml:"tools,omitempty"`
-	Models       map[string]modelConfigYAML `yaml:"models,omitempty"`
+	Agent        agentIdentityYAML          `json:"agent"`
+	Instructions string                     `json:"instructions,omitempty"`
+	Personas     []personaConfigYAML        `json:"personas,omitempty"`
+	Tools        map[string]toolConfigYAML  `json:"tools,omitempty"`
+	Models       map[string]modelConfigYAML `json:"models,omitempty"`
 }
 
 type agentIdentityYAML struct {
-	Name      string `yaml:"name"`
-	Namespace string `yaml:"namespace"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 }
 
 type personaConfigYAML struct {
-	Name        string `yaml:"name"`
-	Tone        string `yaml:"tone,omitempty"`
-	Personality string `yaml:"personality,omitempty"`
-	Expertise   string `yaml:"expertise,omitempty"`
+	Name        string `json:"name"`
+	Tone        string `json:"tone,omitempty"`
+	Personality string `json:"personality,omitempty"`
+	Expertise   string `json:"expertise,omitempty"`
 }
 
 type toolConfigYAML struct {
-	Endpoint string `yaml:"endpoint"`
-	Protocol string `yaml:"protocol"`
+	Endpoint string `json:"endpoint"`
+	Protocol string `json:"protocol"`
 }
 
 type modelConfigYAML struct {
-	Role     string `yaml:"role,omitempty"`
-	Provider string `yaml:"provider"`
-	Model    string `yaml:"model"`
-	Endpoint string `yaml:"endpoint"`
-	Priority *int32 `yaml:"priority,omitempty"`
+	Role     string `json:"role,omitempty"`
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+	Endpoint string `json:"endpoint"`
+	Priority *int32 `json:"priority,omitempty"`
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
