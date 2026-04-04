@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -249,7 +250,8 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, langopv1alpha1.ReasonValidated, "Image registry is in whitelist", agent.Generation)
 
 	// Reconcile ConfigMap
-	if err := r.reconcileConfigMap(ctx, workingAgent); err != nil {
+	configHash, err := r.reconcileConfigMap(ctx, workingAgent)
+	if err != nil {
 		log.Error(err, "Failed to reconcile ConfigMap")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ConfigMap reconciliation failed")
@@ -379,7 +381,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileDeployment(ctx, workingAgent); err != nil {
+	if err := r.reconcileDeployment(ctx, workingAgent, configHash); err != nil {
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Deployment reconciliation failed")
@@ -454,7 +456,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
-func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (string, error) {
 	l := log.FromContext(ctx)
 
 	cfg := agentConfigYAML{
@@ -525,15 +527,17 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 
 	configYAMLBytes, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config.yaml: %w", err)
+		return "", fmt.Errorf("failed to marshal config.yaml: %w", err)
 	}
+
+	configHash := hashString(string(configYAMLBytes))[:16]
 
 	data := map[string]string{
 		"config.yaml": string(configYAMLBytes),
 	}
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
-	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, configMapName, agent.Namespace, data)
+	return configHash, CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, configMapName, agent.Namespace, data)
 }
 
 // getToolNames extracts tool names from agent's tools
@@ -703,7 +707,7 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 	return volumes, volumeMounts
 }
 
-func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent, configHash string) error {
 	// Resolve model URLs and names
 	modelURLs, modelNames, err := r.resolveModels(ctx, agent)
 	if err != nil {
@@ -809,6 +813,10 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			podSecCtx = agent.Spec.Deployment.SecurityContext
 		}
 
+		// Seed pod annotations with the operator-managed config-hash, then overlay user annotations.
+		podAnnotations := map[string]string{LabelKeyLangopConfigHash: configHash}
+		maps.Copy(podAnnotations, agent.Spec.Deployment.PodAnnotations)
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
@@ -817,7 +825,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      podLabels,
-					Annotations: agent.Spec.Deployment.PodAnnotations,
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName:        r.getServiceAccountName(agent),
