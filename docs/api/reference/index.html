@@ -2890,6 +2890,12 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>workspacePVCName</code> <em>string</em></td>
+<td>WorkspacePVCName is the name of the retained workspace PVC after agent deletion.<br />Only set when spec.workspace.retain is true.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languagecluster">LanguageCluster<a class="headerlink" href="#languagecluster" title="Permanent link">&para;</a></h4>
@@ -3987,6 +3993,12 @@ All keys in the Secret are injected as env vars via envFrom.</p>
 <td><code>mountPath</code> <em>string</em></td>
 <td>MountPath is where the workspace is mounted in containers</td>
 <td>/workspace</td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>retain</code> <em>boolean</em></td>
+<td>Retain prevents the workspace PVC from being deleted when the agent is deleted.<br />When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC<br />does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.<br />Defaults to false.</td>
+<td></td>
 <td>Optional: {} <br /></td>
 </tr>
 </tbody>
