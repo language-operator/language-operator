@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -4754,6 +4755,163 @@ func TestLanguageAgentController_PDB_DeletedWhenReplicasReducedToOne(t *testing.
 	assert.True(t, errors.IsNotFound(err), "PDB must be deleted after scaling down to 1 replica")
 }
 
+func TestLanguageAgentController_HPA_CreatedWhenAutoscalingSet(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("hpa-agent", "default", gen.SetAgentAutoscaling(2, 10))
+	cluster := gen.ReadyCluster("default")
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, hpa))
+	require.NotNil(t, hpa.Spec.MinReplicas)
+	assert.Equal(t, int32(2), *hpa.Spec.MinReplicas)
+	assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
+	assert.Equal(t, "Deployment", hpa.Spec.ScaleTargetRef.Kind)
+	assert.Equal(t, agent.Name, hpa.Spec.ScaleTargetRef.Name)
+	// Default CPU metric injected when no metrics specified
+	require.Len(t, hpa.Spec.Metrics, 1)
+	assert.Equal(t, autoscalingv2.ResourceMetricSourceType, hpa.Spec.Metrics[0].Type)
+	assert.Equal(t, corev1.ResourceCPU, hpa.Spec.Metrics[0].Resource.Name)
+	assert.Equal(t, int32(80), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+}
+
+func TestLanguageAgentController_HPA_NotCreatedWhenAutoscalingNil(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("no-hpa-agent", "default")
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, hpa)
+	assert.True(t, errors.IsNotFound(err), "HPA must not exist when autoscaling is not configured")
+}
+
+func TestLanguageAgentController_HPA_DeletedWhenAutoscalingRemoved(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("rm-hpa-agent", "default", gen.SetAgentAutoscaling(2, 5))
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, hpa), "HPA should exist after autoscaling reconcile")
+
+	// Remove autoscaling from the agent spec
+	current := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, current))
+	current.Spec.Deployment.Autoscaling = nil
+	require.NoError(t, fakeClient.Update(ctx, current))
+
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, hpa)
+	assert.True(t, errors.IsNotFound(err), "HPA must be deleted when autoscaling is removed")
+}
+
+func TestLanguageAgentController_HPA_CustomMetricsPreserved(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	avgUtil := int32(60)
+	agent := gen.LanguageAgent("custom-hpa-agent", "default")
+	agent.Spec.Deployment.Autoscaling = &langopv1alpha1.AutoscalingSpec{
+		MinReplicas: func() *int32 { v := int32(3); return &v }(),
+		MaxReplicas: 20,
+		Metrics: []autoscalingv2.MetricSpec{
+			{
+				Type: autoscalingv2.ResourceMetricSourceType,
+				Resource: &autoscalingv2.ResourceMetricSource{
+					Name: corev1.ResourceMemory,
+					Target: autoscalingv2.MetricTarget{
+						Type:               autoscalingv2.UtilizationMetricType,
+						AverageUtilization: &avgUtil,
+					},
+				},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, hpa))
+	// Custom metrics must be preserved — no CPU default should be added
+	require.Len(t, hpa.Spec.Metrics, 1)
+	assert.Equal(t, corev1.ResourceMemory, hpa.Spec.Metrics[0].Resource.Name)
+	assert.Equal(t, int32(60), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+}
+
 func TestLanguageAgentController_ManagedResources(t *testing.T) {
 	reconcileAgent := func(t *testing.T, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, networkIsolation bool) *langopv1alpha1.LanguageAgent {
 		t.Helper()
@@ -4902,5 +5060,31 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		}
 		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
 		assert.False(t, hasMR(updated.Status.ManagedResources, "PodDisruptionBudget", "no-pdb-agent"))
+	})
+
+	t.Run("autoscaling_adds_hpa", func(t *testing.T) {
+		ten := int32(10)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "hpa-mr-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+				Deployment: langopv1alpha1.DeploymentSpec{
+					Autoscaling: &langopv1alpha1.AutoscalingSpec{MaxReplicas: ten},
+				},
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "HorizontalPodAutoscaler", "hpa-mr-agent"))
+	})
+
+	t.Run("no_autoscaling_omits_hpa", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "no-hpa-mr-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.False(t, hasMR(updated.Status.ManagedResources, "HorizontalPodAutoscaler", "no-hpa-mr-agent"))
 	})
 }
