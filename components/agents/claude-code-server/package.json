@@ -1,7 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.0",
+    "@anthropic-ai/claude-code": "^2.0.0",
     "express": "^4.21.2",
     "uuid": "^11.1.0"
   }
