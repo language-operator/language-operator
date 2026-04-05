@@ -171,6 +171,17 @@ type WorkspaceSpec struct {
 	// Defaults to false.
 	// +optional
 	Retain bool `json:"retain,omitempty"`
+
+	// InitialFiles are seeded into the workspace PVC on first boot only.
+	// Keys are filenames (must be valid ConfigMap keys: alphanumeric, '.', '-', '_').
+	// Files are not overwritten if they already exist on the PVC.
+	// +optional
+	InitialFiles map[string]string `json:"initialFiles,omitempty"`
+
+	// SeedConfigMapRef references an external ConfigMap whose keys are filenames
+	// and values are file contents. Merged with InitialFiles; InitialFiles wins on collision.
+	// +optional
+	SeedConfigMapRef *corev1.LocalObjectReference `json:"seedConfigMapRef,omitempty"`
 }
 
 // OpencodeConfig holds configuration specific to the opencode runtime.
