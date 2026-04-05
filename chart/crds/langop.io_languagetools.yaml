@@ -6038,12 +6038,13 @@ spec:
                 type: integer
               phase:
                 description: Phase represents the current phase of the tool (Pending,
-                  Running, Failed, Updating)
+                  Running, Failed, Updating, Degraded)
                 enum:
                 - Pending
                 - Running
                 - Failed
                 - Updating
+                - Degraded
                 type: string
               readyReplicas:
                 description: ReadyReplicas is the number of pods ready and passing

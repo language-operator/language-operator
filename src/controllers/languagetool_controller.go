@@ -239,18 +239,40 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err := r.reconcileNetworkPolicy(ctx, tool); err != nil {
 			log.Error(err, "Failed to reconcile NetworkPolicy")
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-			if r.EventManager != nil {
-				r.EventManager.RecordNetworkPolicyFailed(tool, err)
+
+			// Determine if this is a timeout error vs other error
+			isTimeout := strings.Contains(err.Error(), "context deadline exceeded") ||
+				strings.Contains(err.Error(), "timeout")
+
+			if isTimeout {
+				// For timeout errors, set a specific condition but continue reconciliation
+				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyTimeout,
+					fmt.Sprintf("NetworkPolicy creation timed out. This may indicate slow CNI response. The operator will continue to retry. Error: %v", err), tool.Generation)
+
+				log.Info("NetworkPolicy timeout detected - continuing reconciliation with degraded network isolation",
+					"error", err.Error())
+
+				// Record warning event
+				if r.EventManager != nil {
+					r.EventManager.RecordNetworkPolicyTimeout(tool)
+				}
+
+				// Don't fail the entire reconciliation for timeout - continue with degraded state
+			} else {
+				// For non-timeout errors, fail the reconciliation
+				span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
+				if r.EventManager != nil {
+					r.EventManager.RecordNetworkPolicyFailed(tool, err)
+				}
+				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
+				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
+				tool.Status.Phase = events.PhaseStatusFailed
+				if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+					log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
+				}
+				reconcileErr = err
+				return ctrl.Result{}, err
 			}
-			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
-			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
-			tool.Status.Phase = events.PhaseStatusFailed
-			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
-			}
-			reconcileErr = err
-			return ctrl.Result{}, err
 		} else {
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonNetworkPolicyReady,
 				"NetworkPolicy created successfully", tool.Generation)
@@ -784,7 +806,16 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 	// Check if any pods are ready
 	if deployment.Status.ReadyReplicas > 0 {
-		tool.Status.Phase = events.PhaseStatusRunning
+		// Downgrade Running to Degraded when a non-critical subsystem has failed
+		// (e.g. NetworkPolicy timed out). The tool is operational but at reduced capability.
+		phase := events.PhaseStatusRunning
+		for _, c := range tool.Status.Conditions {
+			if c.Type == langopv1alpha1.ConditionNetworkPolicyReady && c.Status == metav1.ConditionFalse {
+				phase = events.PhaseStatusDegraded
+				break
+			}
+		}
+		tool.Status.Phase = phase
 		tool.Status.Endpoint = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageTool is ready", tool.Generation)
 

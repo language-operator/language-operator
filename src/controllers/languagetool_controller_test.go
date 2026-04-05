@@ -1194,6 +1194,73 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing
 	assert.NotEmpty(t, npCond.Reason)
 }
 
+func TestLanguageToolController_Reconcile_NetworkPolicyTimeout_Degraded(t *testing.T) {
+	// Verify that a running tool whose NetworkPolicy timed out reports Degraded (not Running).
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("np-timeout-tool", "default",
+		gen.SetToolImage("ghcr.io/language-operator/tool:latest"),
+		gen.SetToolDeploymentMode("service"),
+		gen.SetToolPort(8080),
+	)
+	tool.Finalizers = []string{FinalizerName}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if _, ok := obj.(*networkingv1.NetworkPolicy); ok {
+					return fmt.Errorf("context deadline exceeded: timeout waiting for network policy")
+				}
+				return c.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+
+	r := &LanguageToolReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	// First reconcile: NP times out but reconcile continues; Deployment is created.
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Seed the Deployment status to simulate ready pods.
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment))
+	deployment.Status.ReadyReplicas = 1
+	deployment.Status.UpdatedReplicas = 1
+	require.NoError(t, fakeClient.Status().Update(ctx, deployment))
+
+	// Second reconcile: NP still times out; deployment is running → Degraded phase.
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+
+	assert.Equal(t, events.PhaseStatusDegraded, updated.Status.Phase, "expected Degraded when tool is running but NetworkPolicy timed out")
+
+	var npCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyReady {
+			npCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, npCond, "expected ConditionNetworkPolicyReady to be set")
+	assert.Equal(t, metav1.ConditionFalse, npCond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonNetworkPolicyTimeout, npCond.Reason)
+}
+
 // findEnvVar returns the EnvVar with the given name from the slice, and false if not found.
 func findEnvVar(vars []corev1.EnvVar, name string) (corev1.EnvVar, bool) {
 	for _, v := range vars {

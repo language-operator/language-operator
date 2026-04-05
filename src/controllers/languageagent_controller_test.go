@@ -4255,6 +4255,72 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_DegradedPhase(t *testing.T) {
+	// Verify that a running agent (ReadyReplicas > 0) whose NetworkPolicy timed out
+	// reports Degraded rather than Running.
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := gen.LanguageAgent("degraded-agent", "default")
+	agent.Finalizers = []string{FinalizerName}
+
+	recorder := record.NewFakeRecorder(10)
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if _, ok := obj.(*networkingv1.NetworkPolicy); ok {
+					return fmt.Errorf("context deadline exceeded: timeout waiting for network policy")
+				}
+				return c.Create(ctx, obj, opts...)
+			},
+		}).Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:                  fakeClient,
+		Scheme:                  scheme,
+		Log:                     logr.Discard(),
+		Recorder:                recorder,
+		EventManager:            events.NewEventManager(recorder),
+		RegistryManager:         &mockRegistryManager{},
+		NetworkIsolationEnabled: true,
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First reconcile: NP times out but reconcile continues; Deployment is created.
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Seed the Deployment status to simulate ready pods.
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	deployment.Status.Replicas = 1
+	deployment.Status.ReadyReplicas = 1
+	require.NoError(t, fakeClient.Status().Update(ctx, deployment))
+
+	// Second reconcile: NP still times out; deployment is running → Degraded phase.
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+
+	assert.Equal(t, events.PhaseStatusDegraded, updated.Status.Phase, "expected Degraded when agent is running but NetworkPolicy timed out")
+
+	var npCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionNetworkPolicyReady {
+			npCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, npCond, "expected ConditionNetworkPolicyReady to be set")
+	assert.Equal(t, metav1.ConditionFalse, npCond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonNetworkPolicyTimeout, npCond.Reason)
+}
+
 func TestLanguageAgentController_EnqueueAgentsInNamespace(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

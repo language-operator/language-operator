@@ -443,6 +443,16 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				}
 			}
 		}
+		// Downgrade Running to Degraded when a non-critical subsystem has failed
+		// (e.g. NetworkPolicy timed out). The agent is operational but at reduced capability.
+		if newPhase == events.PhaseStatusRunning {
+			for _, c := range agent.Status.Conditions {
+				if c.Type == langopv1alpha1.ConditionNetworkPolicyReady && c.Status == metav1.ConditionFalse {
+					newPhase = events.PhaseStatusDegraded
+					break
+				}
+			}
+		}
 		if agent.Status.Phase != newPhase {
 			agent.Status.Phase = newPhase
 			statusChanged = true

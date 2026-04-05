@@ -6272,6 +6272,7 @@ spec:
                 - Pending
                 - Running
                 - Failed
+                - Degraded
                 type: string
               readyReplicas:
                 description: ReadyReplicas is the number of agent pods ready

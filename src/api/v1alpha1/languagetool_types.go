@@ -89,8 +89,8 @@ type LanguageToolStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase represents the current phase of the tool (Pending, Running, Failed, Updating)
-	// +kubebuilder:validation:Enum=Pending;Running;Failed;Updating
+	// Phase represents the current phase of the tool (Pending, Running, Failed, Updating, Degraded)
+	// +kubebuilder:validation:Enum=Pending;Running;Failed;Updating;Degraded
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
