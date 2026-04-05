@@ -276,6 +276,20 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	// Reconcile workspace seed ConfigMap (holds InitialFiles for seed-once init container)
+	if err := r.reconcileWorkspaceSeedConfigMap(ctx, workingAgent); err != nil {
+		log.Error(err, "Failed to reconcile workspace seed ConfigMap")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Workspace seed ConfigMap reconciliation failed")
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWorkspaceSeeded, metav1.ConditionFalse, langopv1alpha1.ReasonWorkspaceSeedError, err.Error(), agent.Generation)
+		agent.Status.Phase = events.PhaseStatusFailed
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+	if workspaceSeedEnabled(workingAgent) {
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWorkspaceSeeded, metav1.ConditionTrue, langopv1alpha1.ReasonWorkspaceSeedReady, "Workspace seed ConfigMap reconciled", agent.Generation)
+	}
+
 	// Reconcile NetworkPolicy for network isolation (if enabled)
 	if r.NetworkIsolationEnabled {
 		if err := r.reconcileNetworkPolicy(ctx, workingAgent); err != nil {
@@ -695,6 +709,128 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 	return nil
 }
 
+// reconcileWorkspaceSeedConfigMap creates or deletes the workspace-seed ConfigMap
+// that holds the contents of spec.workspace.initialFiles.
+// When InitialFiles is empty (or workspace is nil/disabled), the ConfigMap is deleted
+// so stale seed data is not left behind.
+func (r *LanguageAgentReconciler) reconcileWorkspaceSeedConfigMap(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	cmName := GenerateConfigMapName(agent.Name, "workspace-seed")
+
+	wsEnabled := agent.Spec.Workspace != nil &&
+		(agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled)
+
+	if !wsEnabled || len(agent.Spec.Workspace.InitialFiles) == 0 {
+		// No InitialFiles — remove any previously-created seed ConfigMap.
+		return DeleteConfigMap(ctx, r.Client, cmName, agent.Namespace)
+	}
+
+	return CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, cmName, agent.Namespace, agent.Spec.Workspace.InitialFiles)
+}
+
+// workspaceSeedEnabled reports whether workspace seeding is configured on the agent.
+func workspaceSeedEnabled(agent *langopv1alpha1.LanguageAgent) bool {
+	if agent.Spec.Workspace == nil {
+		return false
+	}
+	if agent.Spec.Workspace.Enabled != nil && !*agent.Spec.Workspace.Enabled {
+		return false
+	}
+	return len(agent.Spec.Workspace.InitialFiles) > 0 || agent.Spec.Workspace.SeedConfigMapRef != nil
+}
+
+// buildWorkspaceSeedVolumes returns pod-level volumes required by the workspace-seeder
+// init container. These are not mounted in the main agent container.
+func buildWorkspaceSeedVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume {
+	if !workspaceSeedEnabled(agent) {
+		return nil
+	}
+	var vols []corev1.Volume
+	if len(agent.Spec.Workspace.InitialFiles) > 0 {
+		vols = append(vols, corev1.Volume{
+			Name: "workspace-seed-init",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: GenerateConfigMapName(agent.Name, "workspace-seed"),
+					},
+				},
+			},
+		})
+	}
+	if agent.Spec.Workspace.SeedConfigMapRef != nil {
+		vols = append(vols, corev1.Volume{
+			Name: "workspace-seed-ref",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: *agent.Spec.Workspace.SeedConfigMapRef,
+				},
+			},
+		})
+	}
+	return vols
+}
+
+// buildWorkspaceSeedInitContainer returns the workspace-seeder init container when seeding
+// is configured, or nil otherwise. The container uses seed-once semantics: files are only
+// copied if they do not already exist at the destination path, preserving any agent edits.
+// InitialFiles are processed first (higher priority), SeedConfigMapRef second.
+func buildWorkspaceSeedInitContainer(agent *langopv1alpha1.LanguageAgent) *corev1.Container {
+	if !workspaceSeedEnabled(agent) {
+		return nil
+	}
+
+	mountPath := agent.Spec.Workspace.MountPath
+	if mountPath == "" {
+		mountPath = "/workspace"
+	}
+
+	// Build the shell script. Both loops use seed-once semantics (test -f).
+	script := fmt.Sprintf(`set -e
+WORKSPACE=%s
+if [ -d /seed-init ]; then
+  for f in /seed-init/*; do
+    [ -f "$f" ] || continue
+    dest="$WORKSPACE/$(basename "$f")"
+    [ -f "$dest" ] || cp "$f" "$dest"
+  done
+fi
+if [ -d /seed-ref ]; then
+  for f in /seed-ref/*; do
+    [ -f "$f" ] || continue
+    dest="$WORKSPACE/$(basename "$f")"
+    [ -f "$dest" ] || cp "$f" "$dest"
+  done
+fi`, mountPath)
+
+	mounts := []corev1.VolumeMount{
+		{
+			Name:      "workspace",
+			MountPath: mountPath,
+		},
+	}
+	if len(agent.Spec.Workspace.InitialFiles) > 0 {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "workspace-seed-init",
+			MountPath: "/seed-init",
+			ReadOnly:  true,
+		})
+	}
+	if agent.Spec.Workspace.SeedConfigMapRef != nil {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "workspace-seed-ref",
+			MountPath: "/seed-ref",
+			ReadOnly:  true,
+		})
+	}
+
+	return &corev1.Container{
+		Name:         "workspace-seeder",
+		Image:        "busybox:latest",
+		Command:      []string{"/bin/sh", "-c", script},
+		VolumeMounts: mounts,
+	}
+}
+
 // buildVolumes creates the volumes and volume mounts for agent pods
 func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{}
@@ -853,8 +989,13 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			userInitContainers[i].VolumeMounts = append([]corev1.VolumeMount{agentConfigMount}, userInitContainers[i].VolumeMounts...)
 		}
 
-		// User-specified init containers run before operator-managed sidecar containers
-		allInitContainers := append(userInitContainers, sidecarContainers...)
+		// Prepend the workspace-seeder init container so the workspace is populated
+		// before any user init containers or sidecar tools run.
+		allInitContainers := userInitContainers
+		if seedContainer := buildWorkspaceSeedInitContainer(agent); seedContainer != nil {
+			allInitContainers = append([]corev1.Container{*seedContainer}, allInitContainers...)
+		}
+		allInitContainers = append(allInitContainers, sidecarContainers...)
 
 		// Merge user pod labels; operator-managed labels take precedence to protect selector stability.
 		podLabels := make(map[string]string, len(labels)+len(agent.Spec.Deployment.PodLabels))
@@ -905,6 +1046,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 
 		// Build operator-managed volumes and volume mounts, then append user-supplied ones.
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
+		// Append seed ConfigMap volumes (not mounted in main container; used by workspace-seeder init container).
+		volumes = append(volumes, buildWorkspaceSeedVolumes(agent)...)
 		volumes = append(volumes, agent.Spec.Deployment.Volumes...)
 		volumeMounts = append(volumeMounts, agent.Spec.Deployment.VolumeMounts...)
 		if len(volumes) > 0 {

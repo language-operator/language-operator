@@ -31,6 +31,7 @@ const (
 	ConditionWebhookRouteCreated   = "WebhookRouteCreated"
 	ConditionWebhookRouteReady     = "WebhookRouteReady"
 	ConditionRuntimeResolved       = "RuntimeResolved"
+	ConditionWorkspaceSeeded       = "WorkspaceSeeded"
 )
 
 // Condition reason constants used in SetCondition calls across all controllers.
@@ -66,4 +67,6 @@ const (
 	ReasonConfigured            = "Configured"
 	ReasonRuntimeNotFound       = "RuntimeNotFound"
 	ReasonRuntimeApplied        = "RuntimeApplied"
+	ReasonWorkspaceSeedReady    = "WorkspaceSeedReady"
+	ReasonWorkspaceSeedError    = "WorkspaceSeedError"
 )

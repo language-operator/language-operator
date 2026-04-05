@@ -5154,3 +5154,217 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		assert.False(t, hasMR(updated.Status.ManagedResources, "HorizontalPodAutoscaler", "no-hpa-mr-agent"))
 	})
 }
+
+// --- Workspace seeding tests ---
+
+func newSeedReconciler(t *testing.T, objs ...client.Object) (*LanguageAgentReconciler, client.Client) {
+	t.Helper()
+	scheme := testutil.SetupTestScheme(t)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(objs[0]).
+		Build()
+	return &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}, fakeClient
+}
+
+func reconcileTwice(t *testing.T, r *LanguageAgentReconciler, name, ns string) {
+	t.Helper()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: name, Namespace: ns}}
+	_, err := r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(context.Background(), req)
+	require.NoError(t, err)
+}
+
+func TestLanguageAgentController_WorkspaceSeed_InitialFiles(t *testing.T) {
+	agent := gen.LanguageAgent("seed-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceInitialFiles(map[string]string{
+			"AGENT.md":    "# Hello",
+			"memory.json": "{}",
+		}),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+
+	// Seed ConfigMap should exist with the initial files as data
+	cm := &corev1.ConfigMap{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+		Name:      agent.Name + "-workspace-seed",
+		Namespace: agent.Namespace,
+	}, cm))
+	assert.Equal(t, "# Hello", cm.Data["AGENT.md"])
+	assert.Equal(t, "{}", cm.Data["memory.json"])
+
+	// Deployment should have a workspace-seeder init container
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	var seeder *corev1.Container
+	for i := range deployment.Spec.Template.Spec.InitContainers {
+		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+			break
+		}
+	}
+	require.NotNil(t, seeder, "expected workspace-seeder init container")
+	assert.Equal(t, "busybox:latest", seeder.Image)
+
+	// Init container must mount the workspace PVC
+	var hasWorkspace bool
+	for _, vm := range seeder.VolumeMounts {
+		if vm.Name == "workspace" {
+			hasWorkspace = true
+		}
+	}
+	assert.True(t, hasWorkspace, "workspace-seeder must mount workspace PVC")
+
+	// seed-init volume mount must be present
+	var hasSeedInit bool
+	for _, vm := range seeder.VolumeMounts {
+		if vm.Name == "workspace-seed-init" {
+			hasSeedInit = true
+		}
+	}
+	assert.True(t, hasSeedInit, "workspace-seeder must mount workspace-seed-init volume")
+
+	// Pod volumes must include workspace-seed-init
+	var hasVol bool
+	for _, v := range deployment.Spec.Template.Spec.Volumes {
+		if v.Name == "workspace-seed-init" {
+			hasVol = true
+		}
+	}
+	assert.True(t, hasVol, "pod volumes must include workspace-seed-init")
+
+	// Seed init container runs before user init containers (it must be index 0 when no user containers)
+	assert.Equal(t, "workspace-seeder", deployment.Spec.Template.Spec.InitContainers[0].Name)
+}
+
+func TestLanguageAgentController_WorkspaceSeed_SeedConfigMapRef(t *testing.T) {
+	refCM := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-seed", Namespace: "default"},
+		Data:       map[string]string{"prompt.md": "be helpful"},
+	}
+	agent := gen.LanguageAgent("ref-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceSeedConfigMapRef("my-seed"),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), refCM)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+
+	// No operator-managed seed ConfigMap (no InitialFiles)
+	cm := &corev1.ConfigMap{}
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace-seed", Namespace: agent.Namespace}, cm)
+	assert.True(t, errors.IsNotFound(err), "seed ConfigMap should not be created when only SeedConfigMapRef is set")
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	var seeder *corev1.Container
+	for i := range deployment.Spec.Template.Spec.InitContainers {
+		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+			break
+		}
+	}
+	require.NotNil(t, seeder, "expected workspace-seeder init container for SeedConfigMapRef")
+
+	var hasSeedRef bool
+	for _, vm := range seeder.VolumeMounts {
+		if vm.Name == "workspace-seed-ref" {
+			hasSeedRef = true
+		}
+	}
+	assert.True(t, hasSeedRef, "workspace-seeder must mount workspace-seed-ref volume")
+}
+
+func TestLanguageAgentController_WorkspaceSeed_Both(t *testing.T) {
+	refCM := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: "extra-seed", Namespace: "default"},
+		Data:       map[string]string{"extra.md": "extra content"},
+	}
+	agent := gen.LanguageAgent("both-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceInitialFiles(map[string]string{"AGENT.md": "# Agent"}),
+		gen.SetAgentWorkspaceSeedConfigMapRef("extra-seed"),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), refCM)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	var seeder *corev1.Container
+	for i := range deployment.Spec.Template.Spec.InitContainers {
+		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+			break
+		}
+	}
+	require.NotNil(t, seeder)
+
+	mountNames := map[string]bool{}
+	for _, vm := range seeder.VolumeMounts {
+		mountNames[vm.Name] = true
+	}
+	assert.True(t, mountNames["workspace"], "must mount workspace")
+	assert.True(t, mountNames["workspace-seed-init"], "must mount workspace-seed-init")
+	assert.True(t, mountNames["workspace-seed-ref"], "must mount workspace-seed-ref")
+}
+
+func TestLanguageAgentController_WorkspaceSeed_NoWorkspace(t *testing.T) {
+	agent := gen.LanguageAgent("no-ws-agent", "default")
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+
+	// No seed ConfigMap
+	cm := &corev1.ConfigMap{}
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace-seed", Namespace: agent.Namespace}, cm)
+	assert.True(t, errors.IsNotFound(err), "no seed ConfigMap without workspace")
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	for _, c := range deployment.Spec.Template.Spec.InitContainers {
+		assert.NotEqual(t, "workspace-seeder", c.Name, "workspace-seeder must not be injected without workspace")
+	}
+}
+
+func TestLanguageAgentController_WorkspaceSeed_ConditionSet(t *testing.T) {
+	agent := gen.LanguageAgent("cond-seed-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceInitialFiles(map[string]string{"AGENT.md": "# Hello"}),
+	)
+	agent.Generation = 1
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+
+	var seededCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionWorkspaceSeeded {
+			seededCond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, seededCond, "WorkspaceSeeded condition must be set")
+	assert.Equal(t, metav1.ConditionTrue, seededCond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonWorkspaceSeedReady, seededCond.Reason)
+}

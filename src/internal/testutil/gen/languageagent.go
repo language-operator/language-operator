@@ -207,6 +207,28 @@ func SetAgentWorkspaceRetain(retain bool) LanguageAgentModifier {
 	}
 }
 
+// SetAgentWorkspaceInitialFiles sets spec.workspace.initialFiles, initialising the workspace if needed.
+func SetAgentWorkspaceInitialFiles(files map[string]string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.InitialFiles = files
+	}
+}
+
+// SetAgentWorkspaceSeedConfigMapRef sets spec.workspace.seedConfigMapRef, initialising the workspace if needed.
+func SetAgentWorkspaceSeedConfigMapRef(name string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.SeedConfigMapRef = &corev1.LocalObjectReference{Name: name}
+	}
+}
+
 // SetAgentServiceAccountName sets spec.deployment.serviceAccountName.
 func SetAgentServiceAccountName(name string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
