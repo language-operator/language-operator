@@ -1142,6 +1142,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#languageagentselfconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentselfconfigspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfigSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentselfconfigstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfigStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#languageagentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1410,6 +1443,50 @@
     <span class="md-ellipsis">
       
         SecretReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigAction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigenvvar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigEnvVar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigphase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigPhase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigurespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigureSpec
       
     </span>
   </a>
@@ -1839,6 +1916,39 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#languageagentselfconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentselfconfigspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfigSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#languageagentselfconfigstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfigStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#languageagentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2114,6 +2224,50 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#selfconfigaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigAction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigenvvar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigEnvVar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigphase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigPhase
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selfconfigurespec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SelfConfigureSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#servicereference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2220,6 +2374,7 @@
 <ul>
 <li><a href="#languageagent">LanguageAgent</a></li>
 <li><a href="#languageagentruntime">LanguageAgentRuntime</a></li>
+<li><a href="#languageagentselfconfig">LanguageAgentSelfConfig</a></li>
 <li><a href="#languagecluster">LanguageCluster</a></li>
 <li><a href="#languagemodel">LanguageModel</a></li>
 <li><a href="#languagepersona">LanguagePersona</a></li>
@@ -2842,6 +2997,150 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 </tr>
 </tbody>
 </table>
+<h4 id="languageagentselfconfig">LanguageAgentSelfConfig<a class="headerlink" href="#languageagentselfconfig" title="Permanent link">&para;</a></h4>
+<p>LanguageAgentSelfConfig is submitted by an agent pod to request runtime modifications
+to its own LanguageAgent spec. The controller validates the request against the parent's
+spec.selfConfigure allowlist before patching.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td><code>langop.io/v1alpha1</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td><code>LanguageAgentSelfConfig</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>metadata</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#objectmeta-v1-meta">ObjectMeta</a></em></td>
+<td>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>spec</code> <em><a href="#languageagentselfconfigspec">LanguageAgentSelfConfigSpec</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>status</code> <em><a href="#languageagentselfconfigstatus">LanguageAgentSelfConfigStatus</a></em></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageagentselfconfigspec">LanguageAgentSelfConfigSpec<a class="headerlink" href="#languageagentselfconfigspec" title="Permanent link">&para;</a></h4>
+<p>LanguageAgentSelfConfigSpec defines the desired self-modification.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentselfconfig">LanguageAgentSelfConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instanceRef</code> <em>string</em></td>
+<td>InstanceRef is the name of the LanguageAgent to modify. Must be in the same namespace.</td>
+<td></td>
+<td>MinLength: 1 <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>addTools</code> <em>string array</em></td>
+<td>AddTools lists LanguageTool names to append to spec.tools on the parent agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>removeTools</code> <em>string array</em></td>
+<td>RemoveTools lists LanguageTool names to remove from spec.tools on the parent agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>addModels</code> <em>string array</em></td>
+<td>AddModels lists LanguageModel names to append to spec.models on the parent agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>removeModels</code> <em>string array</em></td>
+<td>RemoveModels lists LanguageModel names to remove from spec.models on the parent agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>addEnvVars</code> <em><a href="#selfconfigenvvar">SelfConfigEnvVar</a> array</em></td>
+<td>AddEnvVars lists plain-value environment variables to inject into the parent agent's<br />spec.deployment.env. Existing vars with the same name are overwritten.<br />SecretKeyRef and other value sources are not supported.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>updateInstructions</code> <em>string</em></td>
+<td>UpdateInstructions, when non-empty, replaces spec.instructions on the parent agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>addRoleRules</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#policyrule-v1-rbac">PolicyRule</a> array</em></td>
+<td>AddRoleRules lists RBAC policy rules to append to spec.deployment.roleRules on the<br />parent agent. Duplicate rules (identical APIGroups+Resources+Verbs) are de-duplicated.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="languageagentselfconfigstatus">LanguageAgentSelfConfigStatus<a class="headerlink" href="#languageagentselfconfigstatus" title="Permanent link">&para;</a></h4>
+<p>LanguageAgentSelfConfigStatus reflects the observed state of a self-config request.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentselfconfig">LanguageAgentSelfConfig</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phase</code> <em><a href="#selfconfigphase">SelfConfigPhase</a></em></td>
+<td>Phase is the current processing state.</td>
+<td></td>
+<td>Enum: [Pending Applied Failed Denied] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>message</code> <em>string</em></td>
+<td>Message provides a human-readable explanation of the current phase.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>completionTime</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta">Time</a></em></td>
+<td>CompletionTime is set when the request reaches a terminal phase (Applied, Failed, Denied).<br />The CR is automatically deleted 1 hour after this time.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="languageagentspec">LanguageAgentSpec<a class="headerlink" href="#languageagentspec" title="Permanent link">&para;</a></h4>
 <p>LanguageAgentSpec defines the desired state of LanguageAgent</p>
 <p><em>Appears in:</em>
@@ -2925,6 +3224,12 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
 <td>Openclaw holds configuration specific to the openclaw runtime.<br />Only effective when spec.runtime is "openclaw".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>selfConfigure</code> <em><a href="#selfconfigurespec">SelfConfigureSpec</a></em></td>
+<td>SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig<br />requests to modify its own spec at runtime. When enabled, the operator grants<br />the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3940,6 +4245,134 @@ All keys in the Secret are injected as env vars via envFrom.</p>
 <td>Key is the key within the secret containing the value</td>
 <td>api-key</td>
 <td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="selfconfigaction">SelfConfigAction<a class="headerlink" href="#selfconfigaction" title="Permanent link">&para;</a></h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p>SelfConfigAction is a category of self-modification an agent may request.</p>
+<p><em>Validation:</em>
+- Enum: [tools models envVars instructions roleRules]</p>
+<p><em>Appears in:</em>
+- <a href="#selfconfigurespec">SelfConfigureSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools</code></td>
+<td>SelfConfigActionTools allows the agent to add or remove tool references.<br /></td>
+</tr>
+<tr>
+<td><code>models</code></td>
+<td>SelfConfigActionModels allows the agent to add or remove model references.<br /></td>
+</tr>
+<tr>
+<td><code>envVars</code></td>
+<td>SelfConfigActionEnvVars allows the agent to inject plain-value environment variables.<br /></td>
+</tr>
+<tr>
+<td><code>instructions</code></td>
+<td>SelfConfigActionInstructions allows the agent to replace its system instructions.<br /></td>
+</tr>
+<tr>
+<td><code>roleRules</code></td>
+<td>SelfConfigActionRoleRules allows the agent to append RBAC policy rules to its Role.<br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="selfconfigenvvar">SelfConfigEnvVar<a class="headerlink" href="#selfconfigenvvar" title="Permanent link">&para;</a></h4>
+<p>SelfConfigEnvVar is a plain-value environment variable injected by a self-config request.
+SecretKeyRef and other value sources are intentionally not supported.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentselfconfigspec">LanguageAgentSelfConfigSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name of the environment variable.</td>
+<td></td>
+<td>MinLength: 1 <br />Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>value</code> <em>string</em></td>
+<td>Value is the literal string value of the variable.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="selfconfigphase">SelfConfigPhase<a class="headerlink" href="#selfconfigphase" title="Permanent link">&para;</a></h4>
+<p><em>Underlying type:</em> <em>string</em></p>
+<p>SelfConfigPhase reflects the current processing state of a LanguageAgentSelfConfig.</p>
+<p><em>Validation:</em>
+- Enum: [Pending Applied Failed Denied]</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentselfconfigstatus">LanguageAgentSelfConfigStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pending</code></td>
+<td>SelfConfigPhasePending means the request has not yet been processed.<br /></td>
+</tr>
+<tr>
+<td><code>Applied</code></td>
+<td>SelfConfigPhaseApplied means the requested changes were patched onto the parent LanguageAgent.<br /></td>
+</tr>
+<tr>
+<td><code>Failed</code></td>
+<td>SelfConfigPhaseFailed means the controller encountered an error while processing the request.<br /></td>
+</tr>
+<tr>
+<td><code>Denied</code></td>
+<td>SelfConfigPhaseDenied means the request was rejected due to policy (not enabled, or action not allowed).<br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="selfconfigurespec">SelfConfigureSpec<a class="headerlink" href="#selfconfigurespec" title="Permanent link">&para;</a></h4>
+<p>SelfConfigureSpec controls whether a LanguageAgent may submit LanguageAgentSelfConfig
+requests to modify its own spec at runtime.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled gates all self-configuration. When false, any LanguageAgentSelfConfig<br />targeting this agent is immediately Denied.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>allowedActions</code> <em><a href="#selfconfigaction">SelfConfigAction</a> array</em></td>
+<td>AllowedActions is the allowlist of self-config categories the agent may request.<br />If empty while Enabled=true, all actions are denied.</td>
+<td></td>
+<td>Enum: [tools models envVars instructions roleRules] <br />Optional: {} <br /></td>
 </tr>
 </tbody>
 </table>
