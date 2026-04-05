@@ -4140,6 +4140,18 @@ All keys in the Secret are injected as env vars via envFrom.</p>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>initialFiles</code> <em>object (keys:string, values:string)</em></td>
+<td>InitialFiles are seeded into the workspace PVC on first boot only.<br />Keys are filenames (must be valid ConfigMap keys: alphanumeric, '.', '-', '_').<br />Files are not overwritten if they already exist on the PVC.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>seedConfigMapRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a></em></td>
+<td>SeedConfigMapRef references an external ConfigMap whose keys are filenames<br />and values are file contents. Merged with InitialFiles; InitialFiles wins on collision.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 
