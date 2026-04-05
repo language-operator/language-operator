@@ -233,7 +233,7 @@ type RuntimeSecretRef struct {
 // LanguageAgentStatus defines the observed state of LanguageAgent
 type LanguageAgentStatus struct {
 	// Phase represents the current phase of the agent
-	// +kubebuilder:validation:Enum=Pending;Running;Failed
+	// +kubebuilder:validation:Enum=Pending;Running;Failed;Degraded
 	// +optional
 	Phase string `json:"phase,omitempty"`
 

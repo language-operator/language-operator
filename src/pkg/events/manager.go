@@ -59,6 +59,7 @@ const (
 	PhaseStatusFailed   = "Failed"
 	PhaseStatusRunning  = "Running"
 	PhaseStatusUpdating = "Updating"
+	PhaseStatusDegraded = "Degraded"
 )
 
 // EventManager provides centralized, type-safe event recording for all controllers
