@@ -17,6 +17,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -123,6 +124,7 @@ type modelConfigYAML struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -385,6 +387,16 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile Deployment")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Deployment reconciliation failed")
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
+		agent.Status.Phase = events.PhaseStatusFailed
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcilePodDisruptionBudget(ctx, workingAgent); err != nil {
+		log.Error(err, "Failed to reconcile PodDisruptionBudget")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "PodDisruptionBudget reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
@@ -1431,6 +1443,47 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 	return err
 }
 
+// reconcilePodDisruptionBudget creates a PodDisruptionBudget for agents with more than one replica,
+// and deletes any existing PDB when the agent is scaled down to a single replica.
+func (r *LanguageAgentReconciler) reconcilePodDisruptionBudget(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	replicas := int32(1)
+	if agent.Spec.Deployment.Replicas != nil {
+		replicas = *agent.Spec.Deployment.Replicas
+	}
+
+	pdb := &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	}
+
+	if replicas <= 1 {
+		if err := r.Delete(ctx, pdb); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete PodDisruptionBudget: %w", err)
+		}
+		return nil
+	}
+
+	minAvailable := intstr.FromInt32(1)
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pdb, func() error {
+		if err := controllerutil.SetControllerReference(agent, pdb, r.Scheme); err != nil {
+			return err
+		}
+		pdb.Labels = labels
+		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: &minAvailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+		}
+		return nil
+	})
+	return err
+}
+
 // reconcileWebhooks creates an Ingress for webhook access
 func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
@@ -1694,6 +1747,7 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
@@ -2031,6 +2085,17 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "language-agent", Namespace: ns},
 			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "language-agent", Namespace: ns},
 		)
+	}
+
+	// PodDisruptionBudget is created only when replicas > 1.
+	replicas := int32(1)
+	if workingAgent.Spec.Deployment.Replicas != nil {
+		replicas = *workingAgent.Spec.Deployment.Replicas
+	}
+	if replicas > 1 {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "policy", Kind: "PodDisruptionBudget", Name: agent.Name, Namespace: ns,
+		})
 	}
 
 	return resources

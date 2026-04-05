@@ -39,6 +39,13 @@ func LanguageAgentFrom(a *langopv1alpha1.LanguageAgent, mods ...LanguageAgentMod
 	return clone
 }
 
+// SetAgentReplicas sets spec.deployment.replicas.
+func SetAgentReplicas(replicas int32) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Deployment.Replicas = &replicas
+	}
+}
+
 // SetAgentImage sets spec.image.
 func SetAgentImage(image string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

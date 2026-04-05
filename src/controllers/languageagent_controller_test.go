@@ -18,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -4651,6 +4652,108 @@ func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 	assert.Len(t, np.Spec.Ingress, 2, "expected exactly 2 built-in ingress rules")
 }
 
+func TestLanguageAgentController_PDB_CreatedForMultiReplica(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("multi-agent", "default", gen.SetAgentReplicas(3))
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pdb := &policyv1.PodDisruptionBudget{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, pdb))
+	require.NotNil(t, pdb.Spec.MinAvailable)
+	assert.Equal(t, int32(1), pdb.Spec.MinAvailable.IntVal)
+	assert.Equal(t, GetCommonLabels(agent.Name, "LanguageAgent"), pdb.Spec.Selector.MatchLabels)
+}
+
+func TestLanguageAgentController_PDB_NotCreatedForSingleReplica(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("single-agent", "default")
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pdb := &policyv1.PodDisruptionBudget{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, pdb)
+	assert.True(t, errors.IsNotFound(err), "PDB must not exist for a single-replica agent")
+}
+
+func TestLanguageAgentController_PDB_DeletedWhenReplicasReducedToOne(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("scale-agent", "default", gen.SetAgentReplicas(3))
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// First pair of reconciles: creates PDB for replicas=3.
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pdb := &policyv1.PodDisruptionBudget{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, pdb), "PDB should exist after multi-replica reconcile")
+
+	// Scale down to 1 replica.
+	current := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, current))
+	one := int32(1)
+	current.Spec.Deployment.Replicas = &one
+	require.NoError(t, fakeClient.Update(ctx, current))
+
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, pdb)
+	assert.True(t, errors.IsNotFound(err), "PDB must be deleted after scaling down to 1 replica")
+}
+
 func TestLanguageAgentController_ManagedResources(t *testing.T) {
 	reconcileAgent := func(t *testing.T, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, networkIsolation bool) *langopv1alpha1.LanguageAgent {
 		t.Helper()
@@ -4775,5 +4878,29 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		assert.False(t, hasMR(mr, "ServiceAccount", "language-agent"))
 		assert.False(t, hasMR(mr, "Role", "language-agent"))
 		assert.False(t, hasMR(mr, "RoleBinding", "language-agent"))
+	})
+
+	t.Run("multi_replica_adds_pdb", func(t *testing.T) {
+		three := int32(3)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "pdb-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:      "ghcr.io/language-operator/agent:latest",
+				Deployment: langopv1alpha1.DeploymentSpec{Replicas: &three},
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "PodDisruptionBudget", "pdb-agent"))
+	})
+
+	t.Run("single_replica_omits_pdb", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "no-pdb-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.False(t, hasMR(updated.Status.ManagedResources, "PodDisruptionBudget", "no-pdb-agent"))
 	})
 }
