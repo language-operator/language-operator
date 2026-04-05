@@ -76,6 +76,7 @@ nav:
         - Kubernetes: guides/cluster-setup.md
         - OpenClaw: guides/openclaw.md
         - OpenCode: guides/opencode.md
+        - Claude Code: guides/claude-code.md
         - Custom Agents: guides/custom-agents.md
   - CRD Reference: api/reference.md
   - Development:
