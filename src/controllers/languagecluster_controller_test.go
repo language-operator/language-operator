@@ -1862,11 +1862,23 @@ func TestLanguageClusterController_GatewayIngressClassName(t *testing.T) {
 			WithObjects(cluster).
 			WithStatusSubresource(cluster).
 			Build()
+		// Block the async DNS goroutine until after the reconcile returns to
+		// prevent a concurrent Status().Update() racing with the main reconcile.
+		dnsUnblock := make(chan struct{})
+		t.Cleanup(func() { close(dnsUnblock) })
 		r := &LanguageClusterReconciler{
 			Client:                  fakeClient,
 			Scheme:                  scheme,
 			Log:                     logr.Discard(),
 			DefaultIngressClassName: defaultIngressClassName,
+			DNSLookup: func(ctx context.Context, host string) error {
+				select {
+				case <-dnsUnblock:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
 		}
 		ctx := context.Background()
 		req := clusterRequest(cluster.Name)
