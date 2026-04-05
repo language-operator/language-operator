@@ -12,13 +12,13 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/components/clusters/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/guides/claude-code/">
       
       
-        <link rel="prev" href="../../getting-started/mcp/">
+        <link rel="prev" href="../opencode/">
       
       
-        <link rel="next" href="../agents/">
+        <link rel="next" href="../custom-agents/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Clusters - Language Operator</title>
+        <title>Claude Code - Language Operator</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clusters" class="md-skip">
+        <a href="#deploying-claude-code" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Clusters
+              Claude Code
             
           </span>
         </div>
@@ -504,8 +504,6 @@
                 
   
   
-    
-  
   
   
     
@@ -521,11 +519,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_5" >
         
           
           <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="">
@@ -546,7 +546,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_1_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -561,37 +561,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Clusters
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../components/clusters/" class="md-nav__link">
         
   
   
@@ -607,92 +580,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#namespace-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Namespace Mapping
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#shared-gateway" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Shared Gateway
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#network-isolation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Network Isolation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#capacity-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capacity Limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gateway-customization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gateway Customization
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -705,7 +592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agents/" class="md-nav__link">
+      <a href="../../components/agents/" class="md-nav__link">
         
   
   
@@ -733,7 +620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tools/" class="md-nav__link">
+      <a href="../../components/tools/" class="md-nav__link">
         
   
   
@@ -761,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../models/" class="md-nav__link">
+      <a href="../../components/models/" class="md-nav__link">
         
   
   
@@ -789,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../personas/" class="md-nav__link">
+      <a href="../../components/personas/" class="md-nav__link">
         
   
   
@@ -817,7 +704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../runtimes/" class="md-nav__link">
+      <a href="../../components/runtimes/" class="md-nav__link">
         
   
   
@@ -850,8 +737,10 @@
                 
   
   
+    
   
   
+  
     
     
     
@@ -865,13 +754,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1_6" checked>
         
           
           <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="">
@@ -892,7 +779,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_1_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -910,7 +797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/cluster-setup/" class="md-nav__link">
+      <a href="../cluster-setup/" class="md-nav__link">
         
   
   
@@ -938,7 +825,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/openclaw/" class="md-nav__link">
+      <a href="../openclaw/" class="md-nav__link">
         
   
   
@@ -966,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/opencode/" class="md-nav__link">
+      <a href="../opencode/" class="md-nav__link">
         
   
   
@@ -991,10 +878,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guides/claude-code/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1010,6 +924,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Instructions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-an-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get an API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a Cluster
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store Your API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deploy-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy Claude Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interact-via-a2a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interact via A2A
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-the-shared-gateway-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the Shared Gateway Instead
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-operator-created" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the Operator Created
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1022,7 +1083,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/custom-agents/" class="md-nav__link">
+      <a href="../custom-agents/" class="md-nav__link">
         
   
   
@@ -1257,10 +1318,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#namespace-mapping" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Namespace Mapping
+        Prerequisites
       
     </span>
   </a>
@@ -1268,10 +1329,93 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#shared-gateway" class="md-nav__link">
+  <a href="#instructions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Shared Gateway
+        Instructions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-an-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get an API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a Cluster
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store Your API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deploy-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy Claude Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interact-via-a2a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interact via A2A
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-the-shared-gateway-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using the Shared Gateway Instead
       
     </span>
   </a>
@@ -1279,10 +1423,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#network-isolation" class="md-nav__link">
+  <a href="#configuration-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Network Isolation
+        Configuration Reference
       
     </span>
   </a>
@@ -1290,32 +1434,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#capacity-limits" class="md-nav__link">
+  <a href="#what-the-operator-created" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Capacity Limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gateway-customization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Gateway Customization
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Related
+        What the Operator Created
       
     </span>
   </a>
@@ -1342,86 +1464,176 @@
   
 
 
-<h1 id="clusters">Clusters<a class="headerlink" href="#clusters" title="Permanent link">&para;</a></h1>
-<p>A <code>LanguageCluster</code> is the top-level organizational unit in Language Operator. It creates a managed Kubernetes namespace and deploys the shared infrastructure that all agents, models, and tools in that namespace depend on: a LiteLLM gateway, NetworkPolicies, and optional external ingress.</p>
-<h2 id="namespace-mapping">Namespace Mapping<a class="headerlink" href="#namespace-mapping" title="Permanent link">&para;</a></h2>
-<p>Each <code>LanguageCluster</code> maps 1:1 to a namespace. The namespace is created and owned by the cluster resource — deleting the <code>LanguageCluster</code> deletes the namespace and everything in it.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageCluster</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">production-agents</span><span class="w">   </span><span class="c1"># → namespace: production-agents</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">spec</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-</code></pre></div>
-<p>All namespace-scoped resources (<code>LanguageAgent</code>, <code>LanguageModel</code>, <code>LanguageTool</code>, <code>LanguagePersona</code>) are deployed into this namespace.</p>
-<h2 id="shared-gateway">Shared Gateway<a class="headerlink" href="#shared-gateway" title="Permanent link">&para;</a></h2>
-<p>Every cluster runs exactly one LiteLLM proxy. It aggregates all <code>LanguageModel</code> resources in the namespace into a single OpenAI-compatible endpoint. Agents connect to it via the <code>MODEL_ENDPOINT</code> environment variable:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>MODEL_ENDPOINT=http://gateway.&lt;namespace&gt;.svc.cluster.local:8000
-</code></pre></div>
-<p>Credentials never leave the gateway pod. Agents send model names and prompts; the gateway holds the API keys and routes to the correct upstream provider.</p>
-<p>When the model list changes, the gateway restarts with the updated configuration. No agent redeploy is required.</p>
-<h2 id="network-isolation">Network Isolation<a class="headerlink" href="#network-isolation" title="Permanent link">&para;</a></h2>
-<p>By default, agents in a cluster can communicate with each other and with the shared gateway, but not with arbitrary external hosts. Additional ingress and egress rules are configured on the cluster and applied as built-in rules to every agent's <code>NetworkPolicy</code>.</p>
-<p>Allow HTTPS egress to upstream APIs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">networkPolicies</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">egress</span><span class="p">:</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">to</span><span class="p">:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">cidr</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0.0.0.0/0&quot;</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">        </span><span class="nt">ports</span><span class="p">:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">443</span>
-</code></pre></div>
-<p>Allow egress by DNS name (requires Cilium):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">networkPolicies</span><span class="p">:</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">egress</span><span class="p">:</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">to</span><span class="p">:</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">dns</span><span class="p">:</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">              </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;api.anthropic.com&quot;</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">              </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;api.openai.com&quot;</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">        </span><span class="nt">ports</span><span class="p">:</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">443</span>
-</code></pre></div>
-<p>Restrict ingress to agents in a named group:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">networkPolicies</span><span class="p">:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">ingress</span><span class="p">:</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">from</span><span class="p">:</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">group</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data-pipeline</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="nt">ports</span><span class="p">:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
-</code></pre></div>
-<p>See <a href="../../api/languagecluster/#network-isolation">LanguageCluster API Reference</a> for the full <code>NetworkPeer</code> field reference.</p>
-<h2 id="capacity-limits">Capacity Limits<a class="headerlink" href="#capacity-limits" title="Permanent link">&para;</a></h2>
-<p>Enforce hard limits on how many resources can be created in the namespace:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">capacity</span><span class="p">:</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">maxAgents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">maxModels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">maxCPU</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;8&quot;</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nt">maxMemory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16Gi</span>
-</code></pre></div>
-<p>The operator creates a <code>ResourceQuota</code> named <code>langop-quota</code> in the namespace. Current usage is reflected in <code>status.capacity</code>.</p>
-<h2 id="gateway-customization">Gateway Customization<a class="headerlink" href="#gateway-customization" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">gateway</span><span class="p">:</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">deployment</span><span class="p">:</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">resources</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">        </span><span class="nt">requests</span><span class="p">:</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">          </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100m</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256Mi</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">limits</span><span class="p">:</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">          </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500m</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">          </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">512Mi</span>
-</code></pre></div>
-<p>All standard Kubernetes deployment fields are supported: <code>nodeSelector</code>, <code>affinity</code>, <code>tolerations</code>, <code>topologySpreadConstraints</code>, <code>env</code>, <code>envFrom</code>, <code>volumes</code>, and <code>volumeMounts</code>.</p>
-<h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
+<h1 id="deploying-claude-code">Deploying Claude Code<a class="headerlink" href="#deploying-claude-code" title="Permanent link">&para;</a></h1>
+<p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes the <a href="https://google.github.io/A2A/">A2A (Agent-to-Agent) protocol</a>, so any A2A-compatible orchestrator or agent can call it directly.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../api/languagemodel/">LanguageModel</a> — register LLM endpoints with the cluster gateway</li>
-<li><a href="../../api/languageagent/">LanguageAgent</a> — deploy agents into the cluster namespace</li>
-<li><a href="../../api/languagecluster/">LanguageCluster API Reference</a> — full field documentation</li>
-<li><a href="../models/">Models</a> — how the shared gateway and model registration works</li>
+<li>Language Operator <a href="../../getting-started/installation/">installed</a></li>
+<li>An Anthropic API key (<a href="https://console.anthropic.com/settings/keys">get one here</a>)</li>
 </ul>
+<h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
+<h3 id="get-an-api-key">Get an API Key<a class="headerlink" href="#get-an-api-key" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <a href="https://console.anthropic.com/settings/keys">console.anthropic.com/settings/keys</a></li>
+<li>Click <strong>Create Key</strong>, give it a name, and copy the key (<code>sk-ant-...</code>)</li>
+</ol>
+<p>Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. <code>claude-sonnet-4-5</code>).</p>
+<h3 id="create-a-cluster">Create a Cluster<a class="headerlink" href="#create-a-cluster" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">kind: LanguageCluster</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">  name: demo-cluster</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">spec:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">  domain: demo-cluster.&lt;your-domain&gt;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">EOF</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/demo-cluster<span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>demo-cluster
+</code></pre></div>
+<h3 id="store-your-api-key">Store Your API Key<a class="headerlink" href="#store-your-api-key" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-your-key-here
+</code></pre></div>
+<h3 id="deploy-claude-code">Deploy Claude Code<a class="headerlink" href="#deploy-claude-code" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s">  name: code-agent</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s">spec:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s">  runtime: claude-code</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">    You are an expert software engineer. Help with code review,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">    debugging, and implementation tasks.</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">  claudeCode:</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="s">    apiKeyRef:</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="s">      name: anthropic-credentials</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="s">EOF</span>
+</code></pre></div>
+<p>The <code>apiKeyRef</code> tells the operator to inject <code>ANTHROPIC_API_KEY</code> from your secret directly into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.</p>
+<h3 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
+</code></pre></div>
+<p>Wait for the pod to reach <code>Running</code> and the LanguageAgent to show <code>Ready=True</code>.</p>
+<h3 id="interact-via-a2a">Interact via A2A<a class="headerlink" href="#interact-via-a2a" title="Permanent link">&para;</a></h3>
+<p>The agent exposes the A2A protocol at its service endpoint. Submit a task:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Get the in-cluster service address</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">SVC</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>code-agent<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.clusterIP}&#39;</span><span class="k">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Check the agent card</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>curl<span class="w"> </span>http://<span class="nv">$SVC</span>:8080/.well-known/agent-card<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Submit a task</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://<span class="nv">$SVC</span>:8080/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s1">    &quot;jsonrpc&quot;: &quot;2.0&quot;,</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="s1">    &quot;method&quot;: &quot;tasks/send&quot;,</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="s1">    &quot;params&quot;: {</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="s1">      &quot;message&quot;: {</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="s1">        &quot;role&quot;: &quot;user&quot;,</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="s1">        &quot;parts&quot;: [{&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;List the files in /workspace&quot;}]</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="s1">      }</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="s1">    }</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="s1">  }&#39;</span>
+</code></pre></div>
+<p>Streaming task responses use Server-Sent Events (<code>tasks/sendSubscribe</code>). Use <code>tasks/get</code> to poll task status by ID.</p>
+<h2 id="using-the-shared-gateway-instead">Using the Shared Gateway Instead<a class="headerlink" href="#using-the-shared-gateway-instead" title="Permanent link">&para;</a></h2>
+<p>If you'd rather route Claude Code traffic through the shared LiteLLM gateway (e.g. to centralise billing or use a different provider), configure a <code>LanguageModel</code> instead of an <code>apiKeyRef</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">kind: LanguageModel</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">metadata:</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">  name: claude-sonnet</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">spec:</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">  provider: anthropic</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">  modelName: claude-sonnet-4-5</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">  apiKeySecretRef:</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">    name: anthropic-credentials</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">    key: api-key</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s">---</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="s">metadata:</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="s">  name: code-agent</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="s">spec:</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="s">  runtime: claude-code</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="s">    You are an expert software engineer.</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="s">  models:</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="s">    - name: claude-sonnet</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="s">EOF</span>
+</code></pre></div>
+<p>The adapter will set <code>ANTHROPIC_BASE_URL</code> to the shared gateway and the operator injects a placeholder key. No <code>claudeCode.apiKeyRef</code> is needed.</p>
+<h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spec.claudeCode.apiKeyRef.name</code></td>
+<td>Secret containing <code>ANTHROPIC_API_KEY</code>. Recommended for direct Anthropic access.</td>
+</tr>
+<tr>
+<td><code>spec.claudeCode.apiKey</code></td>
+<td>Inline API key (stored in a managed Secret). Use <code>apiKeyRef</code> instead if the key is already in a Secret.</td>
+</tr>
+<tr>
+<td><code>spec.claudeCode.maxTurns</code></td>
+<td>Max agentic turns per request. Sets <code>CLAUDE_CODE_MAX_TURNS</code>.</td>
+</tr>
+<tr>
+<td><code>spec.claudeCode.enabled</code></td>
+<td>Set automatically by the <code>claude-code</code> runtime. No need to set this manually.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-the-operator-created">What the Operator Created<a class="headerlink" href="#what-the-operator-created" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deployment</td>
+<td><code>code-agent</code></td>
+<td>Runs the Claude Code server container</td>
+</tr>
+<tr>
+<td>Service</td>
+<td><code>code-agent</code></td>
+<td>ClusterIP on port 8080</td>
+</tr>
+<tr>
+<td>NetworkPolicy</td>
+<td><code>code-agent</code></td>
+<td>Allows inbound from other agents in this namespace</td>
+</tr>
+<tr>
+<td>PVC</td>
+<td><code>code-agent-workspace</code></td>
+<td>10Gi persistent workspace; task store at <code>/workspace/.a2a/</code></td>
+</tr>
+<tr>
+<td>ConfigMap</td>
+<td><code>code-agent-agent</code></td>
+<td>Injected at <code>/etc/agent/config.yaml</code></td>
+</tr>
+</tbody>
+</table>
 
 
 
