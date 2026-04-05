@@ -640,8 +640,14 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
-	return err
+	if agent.Spec.Workspace.Retain {
+		agent.Status.WorkspacePVCName = GeneratePVCName(agent.Name)
+	}
+	return nil
 }
 
 // buildVolumes creates the volumes and volume mounts for agent pods
@@ -1247,9 +1253,39 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 	// references set via SetControllerReference. Kubernetes GC deletes them automatically
 	// when the agent is deleted; no explicit polling is needed.
 	//
+	// Exception: when spec.workspace.retain is true, strip the PVC's ownerReference
+	// before the finalizer is removed so GC does not collect it.
+	//
 	// The only manual cleanup required is shared RBAC resources, which are not owned by
 	// any single agent and must be removed when the last agent in the namespace is deleted.
+	if agent.Spec.Workspace != nil &&
+		(agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) &&
+		agent.Spec.Workspace.Retain {
+		if err := r.orphanWorkspacePVC(ctx, agent); err != nil {
+			return err
+		}
+	}
 	return r.cleanupSharedRBAC(ctx, agent)
+}
+
+// orphanWorkspacePVC removes the ownerReference from the workspace PVC so that
+// Kubernetes GC does not delete it when the LanguageAgent is deleted.
+func (r *LanguageAgentReconciler) orphanWorkspacePVC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	pvc := &corev1.PersistentVolumeClaim{}
+	err := r.Get(ctx, types.NamespacedName{Name: GeneratePVCName(agent.Name), Namespace: agent.Namespace}, pvc)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get workspace PVC: %w", err)
+	}
+	patch := client.MergeFrom(pvc.DeepCopy())
+	pvc.OwnerReferences = nil
+	if err := r.Patch(ctx, pvc, patch); err != nil {
+		return fmt.Errorf("failed to patch workspace PVC owner refs: %w", err)
+	}
+	log.FromContext(ctx).Info("Retained workspace PVC", "pvc", pvc.Name)
+	return nil
 }
 
 // cleanupSharedRBAC deletes the shared ServiceAccount, Role, and RoleBinding for agent pods

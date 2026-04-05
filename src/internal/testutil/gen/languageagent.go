@@ -179,6 +179,17 @@ func SetAgentWorkspaceAccessMode(mode corev1.PersistentVolumeAccessMode) Languag
 	}
 }
 
+// SetAgentWorkspaceRetain sets spec.workspace.retain, initialising the workspace if needed.
+func SetAgentWorkspaceRetain(retain bool) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Workspace == nil {
+			enabled := true
+			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
+		}
+		a.Spec.Workspace.Retain = retain
+	}
+}
+
 // SetAgentServiceAccountName sets spec.deployment.serviceAccountName.
 func SetAgentServiceAccountName(name string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
