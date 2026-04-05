@@ -14,15 +14,24 @@ Please read the following context files:
 
 ## Arguments
 
-`$ARGUMENTS` is the queue number to work from: `0`, `1`, or `2`.
+`$ARGUMENTS` is either:
+- A queue number to work from: `0`, `1`, or `2`
+- A specific issue reference: `#706`, `issue #706`, or bare `706`
 
 ## Instructions
 
 Follow these directions closely:
 
-1. Find the next issue for this queue: `gh issue list --label "queue/$ARGUMENTS" --state open --json number,title,labels --limit 1`
-   - If no issue is found, report idle and stop.
-   - If found, read its comments as well.
+1. Determine the issue to work on based on `$ARGUMENTS`:
+   - **If it looks like an issue ID** (contains `#` or is a plain integer ≥ 10, e.g. `#706`, `issue #706`, `706`):
+     Parse out the number N and fetch it directly: `gh issue view <N> --json number,title,labels,state`
+     - If the issue is closed or not found, report and stop.
+     - Read its comments as well: `gh issue view <N> --comments`
+     - Note: since this issue was not pulled from a queue, skip the queue-label removal in step 3 and pass an empty string for `<queue-number>` to `start-issue.sh`.
+   - **Otherwise** treat `$ARGUMENTS` as a queue label:
+     `gh issue list --label "queue/$ARGUMENTS" --state open --json number,title,labels --limit 1`
+     - If no issue is found, report idle and stop.
+     - If found, read its comments as well.
 2. Investigate if the issue is valid, or a mis-use of the intended feature.
 3. **Label and create worktree** in one step. Determine a short slug (2-4 words) from the issue title, then:
    ```bash
@@ -50,9 +59,11 @@ Follow these directions closely:
     gh issue close <N>
     ```
 14. Consider if you need to update .claude/MEMORY.md for the next run.  It's not a changelog, it's for things that you may forget.
-15. Check if there are remaining issues in this queue: `gh issue list --label "queue/$ARGUMENTS" --state open --json number --limit 1`
+15. If `$ARGUMENTS` was a queue number (not a specific issue ID), check for remaining issues:
+    `gh issue list --label "queue/$ARGUMENTS" --state open --json number --limit 1`
     - If issues remain, loop back to step 1 to pick up the next one.
     - If the queue is empty, report idle and stop.
+    - If `$ARGUMENTS` was a specific issue ID, stop here.
 
 ## Output
 
