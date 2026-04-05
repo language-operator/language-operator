@@ -1010,6 +1010,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#agentmonitoringspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentMonitoringSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#agentnetworkpolicies" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1025,6 +1036,17 @@
     <span class="md-ellipsis">
       
         AgentPort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentservicemonitorspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentServiceMonitorSpec
       
     </span>
   </a>
@@ -1410,6 +1432,28 @@
     <span class="md-ellipsis">
       
         OpencodeConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prometheusalertingrule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrometheusAlertingRule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prometheusrulegroup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrometheusRuleGroup
       
     </span>
   </a>
@@ -1784,6 +1828,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#agentmonitoringspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentMonitoringSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#agentnetworkpolicies" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1799,6 +1854,17 @@
     <span class="md-ellipsis">
       
         AgentPort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentservicemonitorspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentServiceMonitorSpec
       
     </span>
   </a>
@@ -2191,6 +2257,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prometheusalertingrule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrometheusAlertingRule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prometheusrulegroup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PrometheusRuleGroup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ratelimitspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2380,6 +2468,34 @@
 <li><a href="#languagepersona">LanguagePersona</a></li>
 <li><a href="#languagetool">LanguageTool</a></li>
 </ul>
+<h4 id="agentmonitoringspec">AgentMonitoringSpec<a class="headerlink" href="#agentmonitoringspec" title="Permanent link">&para;</a></h4>
+<p>AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>serviceMonitor</code> <em><a href="#agentservicemonitorspec">AgentServiceMonitorSpec</a></em></td>
+<td>ServiceMonitor configures a ServiceMonitor resource for this agent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>rules</code> <em><a href="#prometheusrulegroup">PrometheusRuleGroup</a> array</em></td>
+<td>Rules defines PrometheusRule groups for this agent.<br />When non-empty, the operator creates a PrometheusRule resource.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="agentnetworkpolicies">AgentNetworkPolicies<a class="headerlink" href="#agentnetworkpolicies" title="Permanent link">&para;</a></h4>
 <p>AgentNetworkPolicies defines user-supplied ingress and egress rules for an agent workload.
 The shape mirrors the native Kubernetes NetworkPolicySpec so that rules can be copied
@@ -2448,6 +2564,58 @@ verbatim from real NetworkPolicy manifests.</p>
 <tr>
 <td><code>expose</code> <em>boolean</em></td>
 <td>Expose controls whether ingress/HTTPRoute routes to this port.<br />At most one port should have expose: true; if none, the first port is used.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="agentservicemonitorspec">AgentServiceMonitorSpec<a class="headerlink" href="#agentservicemonitorspec" title="Permanent link">&para;</a></h4>
+<p>AgentServiceMonitorSpec configures a Prometheus Operator ServiceMonitor for an agent.</p>
+<p><em>Appears in:</em>
+- <a href="#agentmonitoringspec">AgentMonitoringSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled controls whether a ServiceMonitor is created for this agent.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>port</code> <em>string</em></td>
+<td>Port is the name of the service port to scrape for metrics.<br />Defaults to the name of the first port in spec.ports, or "http" if no ports are defined.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>path</code> <em>string</em></td>
+<td>Path is the HTTP path to scrape for metrics. Defaults to /metrics.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>interval</code> <em>string</em></td>
+<td>Interval is the scrape interval (e.g. "30s"). Uses the Prometheus default when omitted.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>scrapeTimeout</code> <em>string</em></td>
+<td>ScrapeTimeout is the per-scrape timeout. Uses the Prometheus default when omitted.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+<td>Labels are additional labels added to the ServiceMonitor metadata.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3230,6 +3398,12 @@ spec.selfConfigure allowlist before patching.</p>
 <tr>
 <td><code>selfConfigure</code> <em><a href="#selfconfigurespec">SelfConfigureSpec</a></em></td>
 <td>SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig<br />requests to modify its own spec at runtime. When enabled, the operator grants<br />the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>monitoring</code> <em><a href="#agentmonitoringspec">AgentMonitoringSpec</a></em></td>
+<td>Monitoring configures Prometheus Operator integration for this agent.<br />When set, the operator creates a ServiceMonitor and/or PrometheusRule resource.<br />Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -4159,6 +4333,92 @@ Effective only when spec.runtime is "opencode".</p>
 <td>PasswordRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).<br />Mutually exclusive with Password.</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="prometheusalertingrule">PrometheusAlertingRule<a class="headerlink" href="#prometheusalertingrule" title="Permanent link">&para;</a></h4>
+<p>PrometheusAlertingRule defines a single Prometheus alerting or recording rule.</p>
+<p><em>Appears in:</em>
+- <a href="#prometheusrulegroup">PrometheusRuleGroup</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alert</code> <em>string</em></td>
+<td>Alert is the alert name. Leave empty for recording rules.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>record</code> <em>string</em></td>
+<td>Record is the output metric name for recording rules. Leave empty for alerting rules.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>expr</code> <em>string</em></td>
+<td>Expr is the PromQL expression evaluated at each evaluation cycle.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>for</code> <em>string</em></td>
+<td>For is the duration the condition must be true before the alert fires.<br />Only valid for alerting rules.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>labels</code> <em>object (keys:string, values:string)</em></td>
+<td>Labels are labels attached to the alert or recording rule.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>annotations</code> <em>object (keys:string, values:string)</em></td>
+<td>Annotations are annotations attached to the alert. Only valid for alerting rules.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="prometheusrulegroup">PrometheusRuleGroup<a class="headerlink" href="#prometheusrulegroup" title="Permanent link">&para;</a></h4>
+<p>PrometheusRuleGroup defines a group of Prometheus alerting or recording rules.</p>
+<p><em>Appears in:</em>
+- <a href="#agentmonitoringspec">AgentMonitoringSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the rule group.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>interval</code> <em>string</em></td>
+<td>Interval is the evaluation interval for this group. Uses the Prometheus default when omitted.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>rules</code> <em><a href="#prometheusalertingrule">PrometheusAlertingRule</a> array</em></td>
+<td>Rules is the list of alerting or recording rules in this group.</td>
+<td></td>
+<td>MinItems: 1 <br /></td>
 </tr>
 </tbody>
 </table>
