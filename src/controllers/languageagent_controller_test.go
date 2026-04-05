@@ -4650,3 +4650,130 @@ func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
 	assert.Len(t, np.Spec.Ingress, 2, "expected exactly 2 built-in ingress rules")
 }
+
+func TestLanguageAgentController_ManagedResources(t *testing.T) {
+	reconcileAgent := func(t *testing.T, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, networkIsolation bool) *langopv1alpha1.LanguageAgent {
+		t.Helper()
+		scheme := testutil.SetupTestScheme(t)
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, agent).
+			WithStatusSubresource(agent).
+			Build()
+		recorder := record.NewFakeRecorder(10)
+		reconciler := &LanguageAgentReconciler{
+			Client:                  fakeClient,
+			Scheme:                  scheme,
+			Log:                     logr.Discard(),
+			Recorder:                recorder,
+			EventManager:            events.NewEventManager(recorder),
+			RegistryManager:         &mockRegistryManager{},
+			NetworkIsolationEnabled: networkIsolation,
+		}
+		ctx := context.Background()
+		req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+		// First reconcile adds finalizer; second creates resources and writes status.
+		_, err := reconciler.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = reconciler.Reconcile(ctx, req)
+		require.NoError(t, err)
+		updated := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, updated))
+		return updated
+	}
+
+	hasMR := func(resources []langopv1alpha1.ManagedResource, kind, name string) bool {
+		for _, r := range resources {
+			if r.Kind == kind && r.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("baseline_no_workspace_no_domain_no_creds", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "base-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:     "ghcr.io/language-operator/agent:latest",
+				Workspace: &langopv1alpha1.WorkspaceSpec{Enabled: func() *bool { b := false; return &b }()},
+			},
+		}
+		cluster := gen.ReadyCluster("default")
+		updated := reconcileAgent(t, agent, cluster, false)
+		mr := updated.Status.ManagedResources
+
+		assert.NotEmpty(t, mr)
+		assert.True(t, hasMR(mr, "Deployment", "base-agent"), "Deployment must be present")
+		assert.True(t, hasMR(mr, "Service", "base-agent"), "Service must be present")
+		assert.True(t, hasMR(mr, "ConfigMap", GenerateConfigMapName("base-agent", "agent")), "ConfigMap must be present")
+		assert.True(t, hasMR(mr, "ServiceAccount", "language-agent"), "ServiceAccount must be present")
+		assert.True(t, hasMR(mr, "Role", "language-agent"), "Role must be present")
+		assert.True(t, hasMR(mr, "RoleBinding", "language-agent"), "RoleBinding must be present")
+
+		assert.False(t, hasMR(mr, "PersistentVolumeClaim", GeneratePVCName("base-agent")), "PVC must not be present when workspace disabled")
+		assert.False(t, hasMR(mr, "Secret", "base-agent-runtime"), "Secret must not be present without creds")
+		assert.False(t, hasMR(mr, "Ingress", "base-agent"), "Ingress must not be present without domain")
+		assert.False(t, hasMR(mr, "NetworkPolicy", "base-agent"), "NetworkPolicy must not be present without isolation")
+	})
+
+	t.Run("workspace_enabled", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "ws-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:     "ghcr.io/language-operator/agent:latest",
+				Workspace: &langopv1alpha1.WorkspaceSpec{Enabled: func() *bool { b := true; return &b }()},
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "PersistentVolumeClaim", GeneratePVCName("ws-agent")))
+	})
+
+	t.Run("workspace_nil_defaults_to_enabled", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "ws-nil-agent", Namespace: "default"},
+			Spec:       langopv1alpha1.LanguageAgentSpec{Image: "ghcr.io/language-operator/agent:latest"},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "PersistentVolumeClaim", GeneratePVCName("ws-nil-agent")))
+	})
+
+	t.Run("cluster_domain_adds_ingress", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "ing-agent", Namespace: "test-cluster"},
+			Spec:       langopv1alpha1.LanguageAgentSpec{Image: "ghcr.io/language-operator/agent:latest"},
+		}
+		cluster := gen.ReadyCluster("test-cluster", gen.SetClusterDomain("agents.example.com"))
+		updated := reconcileAgent(t, agent, cluster, false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "Ingress", "ing-agent"))
+	})
+
+	t.Run("network_isolation_adds_networkpolicy", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "np-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image:     "ghcr.io/language-operator/agent:latest",
+				Workspace: &langopv1alpha1.WorkspaceSpec{Enabled: func() *bool { b := false; return &b }()},
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), true)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "NetworkPolicy", "np-agent"))
+	})
+
+	t.Run("custom_service_account_omits_rbac", func(t *testing.T) {
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "custom-sa-agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Image: "ghcr.io/language-operator/agent:latest",
+				Deployment: langopv1alpha1.DeploymentSpec{
+					ServiceAccountName: "my-sa",
+				},
+			},
+		}
+		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
+		mr := updated.Status.ManagedResources
+		assert.False(t, hasMR(mr, "ServiceAccount", "language-agent"))
+		assert.False(t, hasMR(mr, "Role", "language-agent"))
+		assert.False(t, hasMR(mr, "RoleBinding", "language-agent"))
+	})
+}

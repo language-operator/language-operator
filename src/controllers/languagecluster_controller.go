@@ -355,6 +355,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonReconcileSuccess, "LanguageCluster is ready", cluster.Generation)
 
+	cluster.Status.ManagedResources = r.buildClusterManagedResources(cluster)
+
 	if r.EventManager != nil {
 		r.EventManager.RecordClusterReady(cluster)
 	}
@@ -1304,4 +1306,53 @@ func (r *LanguageClusterReconciler) reconcileCapacityStatus(ctx context.Context,
 	status.TotalCPULimits = totalCPU
 	status.TotalMemoryLimits = totalMem
 	return nil
+}
+
+// buildClusterManagedResources returns the inventory of Kubernetes resources managed by this
+// controller on behalf of cluster.
+func (r *LanguageClusterReconciler) buildClusterManagedResources(
+	cluster *langopv1alpha1.LanguageCluster,
+) []langopv1alpha1.ManagedResource {
+	ns := cluster.Name
+	resources := []langopv1alpha1.ManagedResource{
+		// Namespace is cluster-scoped: Namespace field intentionally empty.
+		{Kind: "Namespace", Name: cluster.Name},
+		{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "agents", Namespace: ns},
+		{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "agents", Namespace: ns},
+	}
+
+	if r.NetworkIsolationEnabled {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "networking.k8s.io", Kind: "NetworkPolicy",
+			Name: fmt.Sprintf("%s-agents", cluster.Name), Namespace: ns,
+		})
+	}
+
+	resources = append(resources,
+		langopv1alpha1.ManagedResource{Kind: "ConfigMap", Name: "gateway-config", Namespace: ns},
+		langopv1alpha1.ManagedResource{Group: "apps", Kind: "Deployment", Name: "gateway", Namespace: ns},
+		langopv1alpha1.ManagedResource{Kind: "Service", Name: "gateway", Namespace: ns},
+	)
+
+	// Ingress is created when a domain is configured and not explicitly disabled.
+	if cluster.Spec.Domain != "" {
+		ingressEnabled := true
+		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil {
+			ingressEnabled = *cluster.Spec.Ingress.Enabled
+		}
+		if ingressEnabled {
+			resources = append(resources, langopv1alpha1.ManagedResource{
+				Group: "networking.k8s.io", Kind: "Ingress", Name: "gateway", Namespace: ns,
+			})
+		}
+	}
+
+	// ResourceQuota is created when capacity limits are configured.
+	if cluster.Spec.Capacity != nil {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Kind: "ResourceQuota", Name: "langop-quota", Namespace: ns,
+		})
+	}
+
+	return resources
 }

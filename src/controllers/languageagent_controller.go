@@ -435,6 +435,17 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		statusChanged = true
 	}
 
+	// Build managed resources inventory. Fetch cluster domain for Ingress detection (non-fatal).
+	clusterDomain := ""
+	if cl := (&langopv1alpha1.LanguageCluster{}); r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cl) == nil {
+		clusterDomain = cl.Spec.Domain
+	}
+	managed := r.buildAgentManagedResources(agent, workingAgent, clusterDomain)
+	if !managedResourcesEqual(agent.Status.ManagedResources, managed) {
+		agent.Status.ManagedResources = managed
+		statusChanged = true
+	}
+
 	if SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageAgent is ready", agent.Generation) {
 		statusChanged = true
 	}
@@ -1951,6 +1962,78 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	workingAgent.Spec.Deployment.Env = append(extraEnv, workingAgent.Spec.Deployment.Env...)
 
 	return nil
+}
+
+// managedResourcesEqual returns true when a and b contain the same entries in the same order.
+// ManagedResource is a pure-value struct (all string fields), so direct struct comparison is valid.
+func managedResourcesEqual(a, b []langopv1alpha1.ManagedResource) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// buildAgentManagedResources returns the inventory of Kubernetes resources managed by this
+// controller on behalf of agent. workingAgent carries the merged spec (after runtime resolution).
+// clusterDomain is cluster.Spec.Domain, empty if the cluster has no domain configured.
+func (r *LanguageAgentReconciler) buildAgentManagedResources(
+	agent *langopv1alpha1.LanguageAgent,
+	workingAgent *langopv1alpha1.LanguageAgent,
+	clusterDomain string,
+) []langopv1alpha1.ManagedResource {
+	ns := agent.Namespace
+	resources := []langopv1alpha1.ManagedResource{
+		{Group: "apps", Kind: "Deployment", Name: agent.Name, Namespace: ns},
+		{Kind: "Service", Name: agent.Name, Namespace: ns},
+		{Kind: "ConfigMap", Name: GenerateConfigMapName(agent.Name, "agent"), Namespace: ns},
+	}
+
+	if r.NetworkIsolationEnabled {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "networking.k8s.io", Kind: "NetworkPolicy", Name: agent.Name, Namespace: ns,
+		})
+	}
+
+	// PVC is created when workspace is nil (defaults enabled) or explicitly enabled.
+	ws := workingAgent.Spec.Workspace
+	if ws == nil || ws.Enabled == nil || *ws.Enabled {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Kind: "PersistentVolumeClaim", Name: GeneratePVCName(agent.Name), Namespace: ns,
+		})
+	}
+
+	// Runtime Secret is managed when opencode/openclaw is configured without a *Ref (i.e.
+	// credentials are inline or auto-generated rather than pointing at an existing Secret).
+	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.PasswordRef == nil) ||
+		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.TokenRef == nil)
+	if hasSecret {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Kind: "Secret", Name: agent.Name + "-runtime", Namespace: ns,
+		})
+	}
+
+	// Ingress is created when the cluster has a domain configured.
+	if clusterDomain != "" {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "networking.k8s.io", Kind: "Ingress", Name: agent.Name, Namespace: ns,
+		})
+	}
+
+	// Shared RBAC resources are created when no custom ServiceAccount is specified.
+	if agent.Spec.Deployment.ServiceAccountName == "" {
+		resources = append(resources,
+			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: "language-agent", Namespace: ns},
+			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "language-agent", Namespace: ns},
+			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "language-agent", Namespace: ns},
+		)
+	}
+
+	return resources
 }
 
 // resolveCodeConfigMapName resolves the ConfigMap name for agent code based on AgentVersionRef

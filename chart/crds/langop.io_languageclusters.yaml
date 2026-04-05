@@ -5669,6 +5669,40 @@ spec:
                   GatewayReady indicates whether the shared gateway Deployment is available.
                   Pointer distinguishes "not yet reconciled" (nil) from "known not ready" (false).
                 type: boolean
+              managedResources:
+                description: |-
+                  ManagedResources is the inventory of Kubernetes resources created and owned
+                  by this controller on behalf of this LanguageCluster.
+                  The list is replaced atomically on every successful reconcile.
+                items:
+                  description: |-
+                    ManagedResource describes a single Kubernetes resource created and owned
+                    by this operator on behalf of a LanguageAgent or LanguageCluster.
+                    The combination of Group+Kind+Namespace+Name uniquely identifies the resource.
+                  properties:
+                    group:
+                      description: |-
+                        Group is the API group of the resource.
+                        Empty string means the core API group (e.g. ConfigMap, Service, PersistentVolumeClaim).
+                      type: string
+                    kind:
+                      description: Kind is the Kubernetes resource kind (e.g. "Deployment",
+                        "ConfigMap").
+                      type: string
+                    name:
+                      description: Name is the name of the resource.
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace is the namespace of the resource.
+                        Empty for cluster-scoped resources (e.g. Namespace).
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
               observedGeneration:
                 description: |-
                   ObservedGeneration is the most recent generation observed by the controller.

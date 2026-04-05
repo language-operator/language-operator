@@ -273,6 +273,13 @@ type LanguageAgentStatus struct {
 	// Only set when spec.workspace.retain is true.
 	// +optional
 	WorkspacePVCName string `json:"workspacePVCName,omitempty"`
+
+	// ManagedResources is the inventory of Kubernetes resources created and owned
+	// by this controller on behalf of this LanguageAgent.
+	// The list is replaced atomically on every successful reconcile.
+	// +optional
+	// +listType=atomic
+	ManagedResources []ManagedResource `json:"managedResources,omitempty"`
 }
 
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent
