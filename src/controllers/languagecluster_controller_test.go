@@ -1187,7 +1187,19 @@ func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
 	cluster := gen.LanguageCluster("ingress-cluster", gen.SetClusterDomain("example.com"))
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(cluster).WithStatusSubresource(cluster).Build()
-	reconciler := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	dnsUnblock := make(chan struct{})
+	t.Cleanup(func() { close(dnsUnblock) })
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient, Scheme: scheme, Log: logr.Discard(),
+		DNSLookup: func(ctx context.Context, host string) error {
+			select {
+			case <-dnsUnblock:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		},
+	}
 
 	ctx := context.Background()
 	req := clusterRequest(cluster.Name)
@@ -1225,7 +1237,19 @@ func TestLanguageClusterController_GatewayIngressError(t *testing.T) {
 				return c.Create(ctx, obj, opts...)
 			},
 		}).Build()
-	reconciler := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	dnsUnblock2 := make(chan struct{})
+	t.Cleanup(func() { close(dnsUnblock2) })
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient, Scheme: scheme, Log: logr.Discard(),
+		DNSLookup: func(ctx context.Context, host string) error {
+			select {
+			case <-dnsUnblock2:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		},
+	}
 	ctx := context.Background()
 	req := clusterRequest(cluster.Name)
 
@@ -1784,7 +1808,19 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 			WithObjects(cluster).
 			WithStatusSubresource(cluster).
 			Build()
-		r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+		dnsUnblock := make(chan struct{})
+		t.Cleanup(func() { close(dnsUnblock) })
+		r := &LanguageClusterReconciler{
+			Client: fakeClient, Scheme: scheme, Log: logr.Discard(),
+			DNSLookup: func(ctx context.Context, host string) error {
+				select {
+				case <-dnsUnblock:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}
 		for _, opt := range rOpts {
 			opt(r)
 		}
@@ -1923,11 +1959,21 @@ func TestLanguageClusterController_ManagedResources(t *testing.T) {
 			WithObjects(cluster).
 			WithStatusSubresource(cluster).
 			Build()
+		dnsUnblock := make(chan struct{})
+		t.Cleanup(func() { close(dnsUnblock) })
 		reconciler := &LanguageClusterReconciler{
 			Client:                  fakeClient,
 			Scheme:                  scheme,
 			Log:                     logr.Discard(),
 			NetworkIsolationEnabled: networkIsolation,
+			DNSLookup: func(ctx context.Context, host string) error {
+				select {
+				case <-dnsUnblock:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
 		}
 		ctx := context.Background()
 		req := clusterRequest(cluster.Name)
