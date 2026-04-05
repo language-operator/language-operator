@@ -95,6 +95,11 @@ type LanguageAgentSpec struct {
 	// +optional
 	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
 
+	// ClaudeCode holds configuration specific to the claude-code runtime.
+	// Only effective when spec.runtime is "claude-code".
+	// +optional
+	ClaudeCode *ClaudeCodeConfig `json:"claudeCode,omitempty"`
+
 	// SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig
 	// requests to modify its own spec at runtime. When enabled, the operator grants
 	// the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.
@@ -325,6 +330,35 @@ type OpenclawConfig struct {
 	// Mutually exclusive with Token.
 	// +optional
 	TokenRef *RuntimeSecretRef `json:"tokenRef,omitempty"`
+}
+
+// ClaudeCodeConfig holds configuration specific to the claude-code runtime.
+// Effective only when spec.runtime is "claude-code".
+type ClaudeCodeConfig struct {
+	// Enabled activates claude-code credential management for this agent.
+	// Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
+	// without requiring any explicit config on the LanguageAgent.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// APIKey is the Anthropic API key (inline).
+	// The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
+	// When omitted, the operator injects a gateway-routed placeholder so all LLM
+	// traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
+	// Mutually exclusive with APIKeyRef.
+	// +optional
+	APIKey string `json:"apiKey,omitempty"`
+
+	// APIKeyRef references a Secret whose keys are injected via envFrom.
+	// The Secret must contain ANTHROPIC_API_KEY.
+	// Mutually exclusive with APIKey.
+	// +optional
+	APIKeyRef *RuntimeSecretRef `json:"apiKeyRef,omitempty"`
+
+	// MaxTurns limits the number of agentic turns per request.
+	// Sets CLAUDE_CODE_MAX_TURNS in the agent container.
+	// +optional
+	MaxTurns *int32 `json:"maxTurns,omitempty"`
 }
 
 // RuntimeSecretRef references a Secret in the same namespace.

@@ -161,6 +161,10 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 		oc := *rt.Opencode
 		agent.Opencode = &oc
 	}
+	if agent.ClaudeCode == nil && rt.ClaudeCode != nil {
+		cc := *rt.ClaudeCode
+		agent.ClaudeCode = &cc
+	}
 
 	// --- DeploymentSpec list fields (runtime-first, agent-appended) ---
 

@@ -57,6 +57,44 @@ spec:
           spec:
             description: LanguageAgentSpec defines the desired state of LanguageAgent
             properties:
+              claudeCode:
+                description: |-
+                  ClaudeCode holds configuration specific to the claude-code runtime.
+                  Only effective when spec.runtime is "claude-code".
+                properties:
+                  apiKey:
+                    description: |-
+                      APIKey is the Anthropic API key (inline).
+                      The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
+                      When omitted, the operator injects a gateway-routed placeholder so all LLM
+                      traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
+                      Mutually exclusive with APIKeyRef.
+                    type: string
+                  apiKeyRef:
+                    description: |-
+                      APIKeyRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain ANTHROPIC_API_KEY.
+                      Mutually exclusive with APIKey.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  enabled:
+                    description: |-
+                      Enabled activates claude-code credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
+                  maxTurns:
+                    description: |-
+                      MaxTurns limits the number of agentic turns per request.
+                      Sets CLAUDE_CODE_MAX_TURNS in the agent container.
+                    format: int32
+                    type: integer
+                type: object
               deployment:
                 description: Deployment groups Kubernetes-specific pod and container
                   configuration.

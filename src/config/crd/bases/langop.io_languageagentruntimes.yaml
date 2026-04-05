@@ -52,6 +52,44 @@ spec:
               When a LanguageAgent references a runtime, the runtime's fields are merged as defaults:
               scalars fill in zeros/nils (agent wins if set), lists are runtime-first then agent-appended.
             properties:
+              claudeCode:
+                description: |-
+                  ClaudeCode provides default claude-code credential configuration for agents using this runtime.
+                  When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.
+                properties:
+                  apiKey:
+                    description: |-
+                      APIKey is the Anthropic API key (inline).
+                      The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
+                      When omitted, the operator injects a gateway-routed placeholder so all LLM
+                      traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
+                      Mutually exclusive with APIKeyRef.
+                    type: string
+                  apiKeyRef:
+                    description: |-
+                      APIKeyRef references a Secret whose keys are injected via envFrom.
+                      The Secret must contain ANTHROPIC_API_KEY.
+                      Mutually exclusive with APIKey.
+                    properties:
+                      name:
+                        description: Name is the name of the Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  enabled:
+                    description: |-
+                      Enabled activates claude-code credential management for this agent.
+                      Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
+                      without requiring any explicit config on the LanguageAgent.
+                    type: boolean
+                  maxTurns:
+                    description: |-
+                      MaxTurns limits the number of agentic turns per request.
+                      Sets CLAUDE_CODE_MAX_TURNS in the agent container.
+                    format: int32
+                    type: integer
+                type: object
               deployment:
                 description: |-
                   Deployment provides default Kubernetes pod and container configuration.
