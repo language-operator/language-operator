@@ -6150,6 +6150,34 @@ spec:
                   (image, port, init containers, env vars, probes, etc.).
                   When set, spec.image is optional; the runtime provides a default.
                 type: string
+              selfConfigure:
+                description: |-
+                  SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig
+                  requests to modify its own spec at runtime. When enabled, the operator grants
+                  the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.
+                properties:
+                  allowedActions:
+                    description: |-
+                      AllowedActions is the allowlist of self-config categories the agent may request.
+                      If empty while Enabled=true, all actions are denied.
+                    items:
+                      description: SelfConfigAction is a category of self-modification
+                        an agent may request.
+                      enum:
+                      - tools
+                      - models
+                      - envVars
+                      - instructions
+                      - roleRules
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  enabled:
+                    description: |-
+                      Enabled gates all self-configuration. When false, any LanguageAgentSelfConfig
+                      targeting this agent is immediately Denied.
+                    type: boolean
+                type: object
               tools:
                 description: Tools is a list of LanguageTool references available
                   to this agent

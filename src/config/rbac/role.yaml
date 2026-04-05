@@ -73,6 +73,7 @@ rules:
   resources:
   - languageagentruntimes
   - languageagents
+  - languageagentselfconfigs
   - languageclusters
   - languagemodels
   - languagepersonas
@@ -90,6 +91,7 @@ rules:
   resources:
   - languageagentruntimes/finalizers
   - languageagents/finalizers
+  - languageagentselfconfigs/finalizers
   - languageclusters/finalizers
   - languagemodels/finalizers
   - languagepersonas/finalizers
@@ -100,6 +102,7 @@ rules:
   - langop.io
   resources:
   - languageagents/status
+  - languageagentselfconfigs/status
   - languageclusters/status
   - languagemodels/status
   - languagepersonas/status

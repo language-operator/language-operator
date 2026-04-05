@@ -76,6 +76,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-langop-io-v1alpha1-languageagentselfconfig
+  failurePolicy: Fail
+  name: vlanguageagentselfconfig.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languageagentselfconfigs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-langop-io-v1alpha1-languagemodel
   failurePolicy: Fail
   name: vlanguagemodel.kb.io

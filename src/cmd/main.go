@@ -371,6 +371,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup LanguageAgentSelfConfig controller
+	if err = (&controllers.LanguageAgentSelfConfigReconciler{
+		Client:       mgr.GetClient(),
+		Scheme:       mgr.GetScheme(),
+		Log:          ctrl.Log.WithName("controllers").WithName("LanguageAgentSelfConfig"),
+		Recorder:     mgr.GetEventRecorderFor("languageagentselfconfig-controller"),
+		EventManager: events.NewEventManager(mgr.GetEventRecorderFor("languageagentselfconfig-controller")),
+	}).SetupWithManager(mgr, concurrency); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LanguageAgentSelfConfig")
+		os.Exit(1)
+	}
+
 	// Setup LanguageCluster controller
 	if err = (&controllers.LanguageClusterReconciler{
 		Client:                  mgr.GetClient(),
@@ -417,6 +429,13 @@ func main() {
 			os.Exit(1)
 		}
 		setupLog.Info("LanguagePersona webhook registered")
+
+		// Setup LanguageAgentSelfConfig webhook
+		if err = langopv1alpha1.SetupLanguageAgentSelfConfigWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgentSelfConfig")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageAgentSelfConfig webhook registered")
 	} else {
 		setupLog.Info("Webhooks disabled via --disable-webhooks flag")
 	}
