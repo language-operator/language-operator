@@ -100,6 +100,94 @@ type LanguageAgentSpec struct {
 	// the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.
 	// +optional
 	SelfConfigure *SelfConfigureSpec `json:"selfConfigure,omitempty"`
+
+	// Monitoring configures Prometheus Operator integration for this agent.
+	// When set, the operator creates a ServiceMonitor and/or PrometheusRule resource.
+	// Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.
+	// +optional
+	Monitoring *AgentMonitoringSpec `json:"monitoring,omitempty"`
+}
+
+// AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.
+type AgentMonitoringSpec struct {
+	// ServiceMonitor configures a ServiceMonitor resource for this agent.
+	// +optional
+	ServiceMonitor *AgentServiceMonitorSpec `json:"serviceMonitor,omitempty"`
+
+	// Rules defines PrometheusRule groups for this agent.
+	// When non-empty, the operator creates a PrometheusRule resource.
+	// +optional
+	Rules []PrometheusRuleGroup `json:"rules,omitempty"`
+}
+
+// AgentServiceMonitorSpec configures a Prometheus Operator ServiceMonitor for an agent.
+type AgentServiceMonitorSpec struct {
+	// Enabled controls whether a ServiceMonitor is created for this agent.
+	Enabled bool `json:"enabled"`
+
+	// Port is the name of the service port to scrape for metrics.
+	// Defaults to the name of the first port in spec.ports, or "http" if no ports are defined.
+	// +optional
+	Port string `json:"port,omitempty"`
+
+	// Path is the HTTP path to scrape for metrics. Defaults to /metrics.
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// Interval is the scrape interval (e.g. "30s"). Uses the Prometheus default when omitted.
+	// +optional
+	Interval string `json:"interval,omitempty"`
+
+	// ScrapeTimeout is the per-scrape timeout. Uses the Prometheus default when omitted.
+	// +optional
+	ScrapeTimeout string `json:"scrapeTimeout,omitempty"`
+
+	// Labels are additional labels added to the ServiceMonitor metadata.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// PrometheusRuleGroup defines a group of Prometheus alerting or recording rules.
+type PrometheusRuleGroup struct {
+	// Name is the name of the rule group.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Interval is the evaluation interval for this group. Uses the Prometheus default when omitted.
+	// +optional
+	Interval string `json:"interval,omitempty"`
+
+	// Rules is the list of alerting or recording rules in this group.
+	// +kubebuilder:validation:MinItems=1
+	Rules []PrometheusAlertingRule `json:"rules"`
+}
+
+// PrometheusAlertingRule defines a single Prometheus alerting or recording rule.
+type PrometheusAlertingRule struct {
+	// Alert is the alert name. Leave empty for recording rules.
+	// +optional
+	Alert string `json:"alert,omitempty"`
+
+	// Record is the output metric name for recording rules. Leave empty for alerting rules.
+	// +optional
+	Record string `json:"record,omitempty"`
+
+	// Expr is the PromQL expression evaluated at each evaluation cycle.
+	// +kubebuilder:validation:Required
+	Expr string `json:"expr"`
+
+	// For is the duration the condition must be true before the alert fires.
+	// Only valid for alerting rules.
+	// +optional
+	For string `json:"for,omitempty"`
+
+	// Labels are labels attached to the alert or recording rule.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations are annotations attached to the alert. Only valid for alerting rules.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // ModelReference references a LanguageModel
