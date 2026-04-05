@@ -8,6 +8,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -23,6 +24,7 @@ func SetupTestScheme(t *testing.T) *runtime.Scheme {
 		appsv1.AddToScheme,
 		batchv1.AddToScheme,
 		networkingv1.AddToScheme,
+		policyv1.AddToScheme,
 		rbacv1.AddToScheme,
 	}
 
