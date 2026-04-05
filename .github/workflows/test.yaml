@@ -79,7 +79,7 @@ jobs:
       - name: Run integration tests
         working-directory: src
         run: |
-          KUBEBUILDER_ASSETS="$(setup-envtest use 1.29.0 -p path)" \
+          KUBEBUILDER_ASSETS="$(setup-envtest use 1.35.0 -p path)" \
             go test -tags integration -v -timeout 120s ./...
 
   # Run Python component tests
@@ -116,7 +116,7 @@ jobs:
       - name: Install controller-gen
         working-directory: src
         run: |
-          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.3
+          go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.20.1
 
       - name: Generate manifests
         working-directory: src
