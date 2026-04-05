@@ -5702,6 +5702,108 @@ spec:
                   - name
                   type: object
                 type: array
+              monitoring:
+                description: |-
+                  Monitoring configures Prometheus Operator integration for this agent.
+                  When set, the operator creates a ServiceMonitor and/or PrometheusRule resource.
+                  Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.
+                properties:
+                  rules:
+                    description: |-
+                      Rules defines PrometheusRule groups for this agent.
+                      When non-empty, the operator creates a PrometheusRule resource.
+                    items:
+                      description: PrometheusRuleGroup defines a group of Prometheus
+                        alerting or recording rules.
+                      properties:
+                        interval:
+                          description: Interval is the evaluation interval for this
+                            group. Uses the Prometheus default when omitted.
+                          type: string
+                        name:
+                          description: Name is the name of the rule group.
+                          type: string
+                        rules:
+                          description: Rules is the list of alerting or recording
+                            rules in this group.
+                          items:
+                            description: PrometheusAlertingRule defines a single Prometheus
+                              alerting or recording rule.
+                            properties:
+                              alert:
+                                description: Alert is the alert name. Leave empty
+                                  for recording rules.
+                                type: string
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations are annotations attached
+                                  to the alert. Only valid for alerting rules.
+                                type: object
+                              expr:
+                                description: Expr is the PromQL expression evaluated
+                                  at each evaluation cycle.
+                                type: string
+                              for:
+                                description: |-
+                                  For is the duration the condition must be true before the alert fires.
+                                  Only valid for alerting rules.
+                                type: string
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                description: Labels are labels attached to the alert
+                                  or recording rule.
+                                type: object
+                              record:
+                                description: Record is the output metric name for
+                                  recording rules. Leave empty for alerting rules.
+                                type: string
+                            required:
+                            - expr
+                            type: object
+                          minItems: 1
+                          type: array
+                      required:
+                      - name
+                      - rules
+                      type: object
+                    type: array
+                  serviceMonitor:
+                    description: ServiceMonitor configures a ServiceMonitor resource
+                      for this agent.
+                    properties:
+                      enabled:
+                        description: Enabled controls whether a ServiceMonitor is
+                          created for this agent.
+                        type: boolean
+                      interval:
+                        description: Interval is the scrape interval (e.g. "30s").
+                          Uses the Prometheus default when omitted.
+                        type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels are additional labels added to the ServiceMonitor
+                          metadata.
+                        type: object
+                      path:
+                        description: Path is the HTTP path to scrape for metrics.
+                          Defaults to /metrics.
+                        type: string
+                      port:
+                        description: |-
+                          Port is the name of the service port to scrape for metrics.
+                          Defaults to the name of the first port in spec.ports, or "http" if no ports are defined.
+                        type: string
+                      scrapeTimeout:
+                        description: ScrapeTimeout is the per-scrape timeout. Uses
+                          the Prometheus default when omitted.
+                        type: string
+                    required:
+                    - enabled
+                    type: object
+                type: object
               networkPolicies:
                 description: |-
                   NetworkPolicies defines ingress and egress rules for this agent.

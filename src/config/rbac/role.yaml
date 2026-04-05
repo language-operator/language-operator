@@ -112,6 +112,19 @@ rules:
   - patch
   - update
 - apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - prometheusrules
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - networking.k8s.io
   resources:
   - ingressclasses
