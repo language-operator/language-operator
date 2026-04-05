@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -198,6 +199,30 @@ type DeploymentSpec struct {
 	// ServiceAnnotations are annotations to add to the Service.
 	// +optional
 	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
+
+	// Autoscaling enables and configures a HorizontalPodAutoscaler for this deployment.
+	// When set, the HPA manages the replica count; spec.deployment.replicas is used as
+	// the initial desired count only and is no longer written on each reconcile.
+	// +optional
+	Autoscaling *AutoscalingSpec `json:"autoscaling,omitempty"`
+}
+
+// AutoscalingSpec configures a HorizontalPodAutoscaler for the deployment.
+type AutoscalingSpec struct {
+	// MinReplicas is the lower bound for replicas the HPA can scale down to.
+	// Defaults to 1 if not specified.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// MaxReplicas is the upper bound for replicas the HPA can scale up to.
+	// +kubebuilder:validation:Minimum=1
+	MaxReplicas int32 `json:"maxReplicas"`
+
+	// Metrics specifies which metrics to use for scaling.
+	// Defaults to 80% average CPU utilization if not specified.
+	// +optional
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
 }
 
 // GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.

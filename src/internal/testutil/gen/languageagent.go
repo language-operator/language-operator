@@ -46,6 +46,16 @@ func SetAgentReplicas(replicas int32) LanguageAgentModifier {
 	}
 }
 
+// SetAgentAutoscaling sets spec.deployment.autoscaling with the given min/max replica bounds.
+func SetAgentAutoscaling(minReplicas, maxReplicas int32) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		a.Spec.Deployment.Autoscaling = &langopv1alpha1.AutoscalingSpec{
+			MinReplicas: &minReplicas,
+			MaxReplicas: maxReplicas,
+		}
+	}
+}
+
 // SetAgentImage sets spec.image.
 func SetAgentImage(image string) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

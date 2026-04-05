@@ -57,6 +57,10 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 		v := *r.Replicas
 		d.Replicas = &v
 	}
+	if d.Autoscaling == nil && r.Autoscaling != nil {
+		a := *r.Autoscaling
+		d.Autoscaling = &a
+	}
 	if d.ImagePullPolicy == "" {
 		d.ImagePullPolicy = r.ImagePullPolicy
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -125,6 +126,7 @@ type modelConfigYAML struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -397,6 +399,16 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile PodDisruptionBudget")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "PodDisruptionBudget reconciliation failed")
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
+		agent.Status.Phase = events.PhaseStatusFailed
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileHPA(ctx, workingAgent); err != nil {
+		log.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "HPA reconciliation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
@@ -788,6 +800,13 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		if agent.Spec.Deployment.Replicas != nil {
 			replicas = *agent.Spec.Deployment.Replicas
 		}
+		// When HPA is active, preserve the current replica count rather than overwriting it.
+		// The HPA controller owns spec.replicas; if we reset it every reconcile the
+		// Deployment will never scale.
+		deploymentReplicas := &replicas
+		if agent.Spec.Deployment.Autoscaling != nil && deployment.Spec.Replicas != nil {
+			deploymentReplicas = deployment.Spec.Replicas
+		}
 
 		// Build container list starting with the agent
 		containers := []corev1.Container{
@@ -847,7 +866,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		maps.Copy(podAnnotations, agent.Spec.Deployment.PodAnnotations)
 
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: deploymentReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -1484,6 +1503,64 @@ func (r *LanguageAgentReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 	return err
 }
 
+// reconcileHPA creates a HorizontalPodAutoscaler for agents with autoscaling configured,
+// and deletes any existing HPA when autoscaling is removed from the spec.
+func (r *LanguageAgentReconciler) reconcileHPA(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      agent.Name,
+			Namespace: agent.Namespace,
+		},
+	}
+
+	if agent.Spec.Deployment.Autoscaling == nil {
+		if err := r.Delete(ctx, hpa); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete HorizontalPodAutoscaler: %w", err)
+		}
+		return nil
+	}
+
+	as := agent.Spec.Deployment.Autoscaling
+	labels := GetCommonLabels(agent.Name, "LanguageAgent")
+
+	metrics := as.Metrics
+	if len(metrics) == 0 {
+		// Default: 80% average CPU utilization
+		avgUtil := int32(80)
+		metrics = []autoscalingv2.MetricSpec{
+			{
+				Type: autoscalingv2.ResourceMetricSourceType,
+				Resource: &autoscalingv2.ResourceMetricSource{
+					Name: corev1.ResourceCPU,
+					Target: autoscalingv2.MetricTarget{
+						Type:               autoscalingv2.UtilizationMetricType,
+						AverageUtilization: &avgUtil,
+					},
+				},
+			},
+		}
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
+		if err := controllerutil.SetControllerReference(agent, hpa, r.Scheme); err != nil {
+			return err
+		}
+		hpa.Labels = labels
+		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       agent.Name,
+			},
+			MinReplicas: as.MinReplicas,
+			MaxReplicas: as.MaxReplicas,
+			Metrics:     metrics,
+		}
+		return nil
+	})
+	return err
+}
+
 // reconcileWebhooks creates an Ingress for webhook access
 func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
@@ -1748,6 +1825,7 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
@@ -2095,6 +2173,13 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 	if replicas > 1 {
 		resources = append(resources, langopv1alpha1.ManagedResource{
 			Group: "policy", Kind: "PodDisruptionBudget", Name: agent.Name, Namespace: ns,
+		})
+	}
+
+	// HorizontalPodAutoscaler is created when autoscaling is configured.
+	if workingAgent.Spec.Deployment.Autoscaling != nil {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "autoscaling", Kind: "HorizontalPodAutoscaler", Name: agent.Name, Namespace: ns,
 		})
 	}
 

@@ -5,6 +5,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -25,6 +26,7 @@ func SetupTestScheme(t *testing.T) *runtime.Scheme {
 		batchv1.AddToScheme,
 		networkingv1.AddToScheme,
 		policyv1.AddToScheme,
+		autoscalingv2.AddToScheme,
 		rbacv1.AddToScheme,
 	}
 
