@@ -5728,6 +5728,14 @@ spec:
                       Enabled controls whether to create a workspace volume.
                       Defaults to true. Set to false to explicitly disable without removing the workspace config.
                     type: boolean
+                  initialFiles:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      InitialFiles are seeded into the workspace PVC on first boot only.
+                      Keys are filenames (must be valid ConfigMap keys: alphanumeric, '.', '-', '_').
+                      Files are not overwritten if they already exist on the PVC.
+                    type: object
                   mountPath:
                     default: /workspace
                     description: MountPath is where the workspace is mounted in containers
@@ -5739,6 +5747,18 @@ spec:
                       does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.
                       Defaults to false.
                     type: boolean
+                  seedConfigMapRef:
+                    description: |-
+                      SeedConfigMapRef references an external ConfigMap whose keys are filenames
+                      and values are file contents. Merged with InitialFiles; InitialFiles wins on collision.
+                    properties:
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
                   size:
                     default: 10Gi
                     description: |-
