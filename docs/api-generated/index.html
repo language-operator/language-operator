@@ -1411,6 +1411,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#managedresource" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ManagedResource
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#modelreference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2347,6 +2358,12 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>managedResources</code> <em><a href="#managedresource">ManagedResource</a> array</em></td>
+<td>ManagedResources is the inventory of Kubernetes resources created and owned<br />by this controller on behalf of this LanguageAgent.<br />The list is replaced atomically on every successful reconcile.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languagecluster">LanguageCluster<a class="headerlink" href="#languagecluster" title="Permanent link">&para;</a></h4>
@@ -2486,6 +2503,12 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>observedGeneration</code> <em>integer</em></td>
 <td>ObservedGeneration is the most recent generation observed by the controller.<br />It corresponds to the metadata.generation of the LanguageCluster at the time<br />the controller last processed it. Watchers can use this to detect when the<br />status reflects a stale version of the spec.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>managedResources</code> <em><a href="#managedresource">ManagedResource</a> array</em></td>
+<td>ManagedResources is the inventory of Kubernetes resources created and owned<br />by this controller on behalf of this LanguageCluster.<br />The list is replaced atomically on every successful reconcile.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2900,6 +2923,49 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <tr>
 <td><code>unavailableReplicas</code> <em>integer</em></td>
 <td>UnavailableReplicas is the number of pods targeted by this LanguageTool that are unavailable</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="managedresource">ManagedResource<a class="headerlink" href="#managedresource" title="Permanent link">&para;</a></h4>
+<p>ManagedResource describes a single Kubernetes resource created and owned
+by this operator on behalf of a LanguageAgent or LanguageCluster.
+The combination of Group+Kind+Namespace+Name uniquely identifies the resource.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentstatus">LanguageAgentStatus</a>
+- <a href="#languageclusterstatus">LanguageClusterStatus</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>group</code> <em>string</em></td>
+<td>Group is the API group of the resource.<br />Empty string means the core API group (e.g. ConfigMap, Service, PersistentVolumeClaim).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>kind</code> <em>string</em></td>
+<td>Kind is the Kubernetes resource kind (e.g. "Deployment", "ConfigMap").</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the resource.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>namespace</code> <em>string</em></td>
+<td>Namespace is the namespace of the resource.<br />Empty for cluster-scoped resources (e.g. Namespace).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
