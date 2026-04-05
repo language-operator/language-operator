@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -146,6 +147,19 @@ type DeploymentSpec struct {
 	// ServiceAccountName is the name of the ServiceAccount to use.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// ServiceAccountAnnotations are annotations to add to the operator-managed ServiceAccount.
+	// Use this to attach cloud workload identity bindings, e.g. AWS IRSA, GCP WI, AKS WI.
+	// Ignored when ServiceAccountName is set.
+	// +optional
+	ServiceAccountAnnotations map[string]string `json:"serviceAccountAnnotations,omitempty"`
+
+	// RoleRules are additional RBAC policy rules appended to the operator-managed Role.
+	// Use this to grant the agent extra in-cluster permissions beyond the defaults
+	// (configmaps get/list, pods get/list/watch).
+	// Ignored when ServiceAccountName is set.
+	// +optional
+	RoleRules []rbacv1.PolicyRule `json:"roleRules,omitempty"`
 
 	// SecurityContext holds pod-level security attributes.
 	// +optional

@@ -344,6 +344,11 @@ func GenerateConfigMapName(resourceName, suffix string) string {
 	return fmt.Sprintf("%s-%s", resourceName, suffix)
 }
 
+// GenerateServiceAccountName returns the name of the operator-managed ServiceAccount for an agent.
+func GenerateServiceAccountName(agentName string) string {
+	return "language-agent-" + agentName
+}
+
 // GeneratePVCName returns the PVC name for an agent's workspace volume.
 func GeneratePVCName(agentName string) string {
 	return agentName + "-workspace"
