@@ -1951,6 +1951,18 @@ All fields are optional; controllers only read the fields relevant to their reso
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
+<td><code>serviceAccountAnnotations</code> <em>object (keys:string, values:string)</em></td>
+<td>ServiceAccountAnnotations are annotations to add to the operator-managed ServiceAccount.<br />Use this to attach cloud workload identity bindings, e.g. AWS IRSA, GCP WI, AKS WI.<br />Ignored when ServiceAccountName is set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>roleRules</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#policyrule-v1-rbac">PolicyRule</a> array</em></td>
+<td>RoleRules are additional RBAC policy rules appended to the operator-managed Role.<br />Use this to grant the agent extra in-cluster permissions beyond the defaults<br />(configmaps get/list, pods get/list/watch).<br />Ignored when ServiceAccountName is set.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
 <td><code>securityContext</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#podsecuritycontext-v1-core">PodSecurityContext</a></em></td>
 <td>SecurityContext holds pod-level security attributes.</td>
 <td></td>
