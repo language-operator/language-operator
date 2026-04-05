@@ -19,10 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -35,28 +33,26 @@ type LanguagePersonaWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomValidator = &LanguagePersonaWebhook{}
+var _ admission.Validator[*LanguagePersona] = &LanguagePersonaWebhook{}
 
-// ValidateCreate implements webhook.CustomValidator
-func (h *LanguagePersonaWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	p := obj.(*LanguagePersona)
+// ValidateCreate implements admission.Validator
+func (h *LanguagePersonaWebhook) ValidateCreate(ctx context.Context, p *LanguagePersona) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, p.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateUpdate implements webhook.CustomValidator
-func (h *LanguagePersonaWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
-	p := obj.(*LanguagePersona)
+// ValidateUpdate implements admission.Validator
+func (h *LanguagePersonaWebhook) ValidateUpdate(ctx context.Context, _, p *LanguagePersona) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, p.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator
-func (h *LanguagePersonaWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator
+func (h *LanguagePersonaWebhook) ValidateDelete(_ context.Context, _ *LanguagePersona) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -67,8 +63,7 @@ func (h *LanguagePersonaWebhook) validateClusterMembership(ctx context.Context, 
 // SetupLanguagePersonaWebhookWithManager registers the LanguagePersona validating webhook.
 func SetupLanguagePersonaWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguagePersonaWebhook{Client: mgr.GetClient()}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&LanguagePersona{}).
+	return ctrl.NewWebhookManagedBy(mgr, &LanguagePersona{}).
 		WithValidator(h).
 		Complete()
 }

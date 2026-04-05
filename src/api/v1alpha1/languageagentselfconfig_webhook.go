@@ -20,10 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -36,27 +34,24 @@ type LanguageAgentSelfConfigWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomValidator = &LanguageAgentSelfConfigWebhook{}
+var _ admission.Validator[*LanguageAgentSelfConfig] = &LanguageAgentSelfConfigWebhook{}
 
 // ValidateCreate validates a new LanguageAgentSelfConfig.
-func (h *LanguageAgentSelfConfigWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	sc := obj.(*LanguageAgentSelfConfig)
+func (h *LanguageAgentSelfConfigWebhook) ValidateCreate(_ context.Context, sc *LanguageAgentSelfConfig) (admission.Warnings, error) {
 	return nil, validateSelfConfigSpec(sc)
 }
 
 // ValidateUpdate rejects spec changes once the request has reached a terminal phase.
-func (h *LanguageAgentSelfConfigWebhook) ValidateUpdate(_ context.Context, newObj runtime.Object, oldObj runtime.Object) (admission.Warnings, error) {
-	old := oldObj.(*LanguageAgentSelfConfig)
+func (h *LanguageAgentSelfConfigWebhook) ValidateUpdate(_ context.Context, old, sc *LanguageAgentSelfConfig) (admission.Warnings, error) {
 	if isTerminalPhase(old.Status.Phase) {
 		return nil, fmt.Errorf("LanguageAgentSelfConfig %q is already in terminal phase %q and cannot be modified",
 			old.Name, old.Status.Phase)
 	}
-	sc := newObj.(*LanguageAgentSelfConfig)
 	return nil, validateSelfConfigSpec(sc)
 }
 
 // ValidateDelete always allows deletion.
-func (h *LanguageAgentSelfConfigWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (h *LanguageAgentSelfConfigWebhook) ValidateDelete(_ context.Context, _ *LanguageAgentSelfConfig) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -89,8 +84,7 @@ func isTerminalPhase(phase SelfConfigPhase) bool {
 // SetupLanguageAgentSelfConfigWebhookWithManager registers the LanguageAgentSelfConfig validating webhook.
 func SetupLanguageAgentSelfConfigWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguageAgentSelfConfigWebhook{Client: mgr.GetClient()}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&LanguageAgentSelfConfig{}).
+	return ctrl.NewWebhookManagedBy(mgr, &LanguageAgentSelfConfig{}).
 		WithValidator(h).
 		Complete()
 }

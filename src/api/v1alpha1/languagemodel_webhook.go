@@ -19,10 +19,8 @@ package v1alpha1
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -35,28 +33,26 @@ type LanguageModelWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomValidator = &LanguageModelWebhook{}
+var _ admission.Validator[*LanguageModel] = &LanguageModelWebhook{}
 
-// ValidateCreate implements webhook.CustomValidator
-func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	m := obj.(*LanguageModel)
+// ValidateCreate implements admission.Validator
+func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, m *LanguageModel) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateUpdate implements webhook.CustomValidator
-func (h *LanguageModelWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
-	m := obj.(*LanguageModel)
+// ValidateUpdate implements admission.Validator
+func (h *LanguageModelWebhook) ValidateUpdate(ctx context.Context, _, m *LanguageModel) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator
-func (h *LanguageModelWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator
+func (h *LanguageModelWebhook) ValidateDelete(_ context.Context, _ *LanguageModel) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -67,8 +63,7 @@ func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, na
 // SetupLanguageModelWebhookWithManager registers the LanguageModel validating webhook.
 func SetupLanguageModelWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguageModelWebhook{Client: mgr.GetClient()}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&LanguageModel{}).
+	return ctrl.NewWebhookManagedBy(mgr, &LanguageModel{}).
 		WithValidator(h).
 		Complete()
 }

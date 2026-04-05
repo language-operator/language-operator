@@ -823,7 +823,7 @@ func TestLanguageAgentValidateUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			webhook := &LanguageAgentWebhook{Client: makeClusterClient(t, ns)}
-			_, err := webhook.ValidateUpdate(ctx, tt.newAgent, tt.oldAgent)
+			_, err := webhook.ValidateUpdate(ctx, tt.oldAgent, tt.newAgent)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("ValidateUpdate() error = %v, expectErr %v", err, tt.expectErr)
 				return

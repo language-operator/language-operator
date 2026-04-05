@@ -24,11 +24,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -43,13 +41,11 @@ type LanguageAgentWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomDefaulter = &LanguageAgentWebhook{}
-var _ webhook.CustomValidator = &LanguageAgentWebhook{}
+var _ admission.Defaulter[*LanguageAgent] = &LanguageAgentWebhook{}
+var _ admission.Validator[*LanguageAgent] = &LanguageAgentWebhook{}
 
-// Default implements webhook.CustomDefaulter
-func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	a := obj.(*LanguageAgent)
-
+// Default implements admission.Defaulter
+func (h *LanguageAgentWebhook) Default(ctx context.Context, a *LanguageAgent) error {
 	// Default workspace only when no runtime is set.
 	// When a runtime is referenced, its workspace preset takes effect at reconcile time.
 	if a.Spec.Workspace == nil && a.Spec.Runtime == "" {
@@ -79,9 +75,8 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, obj runtime.Object) 
 	return nil
 }
 
-// ValidateCreate implements webhook.CustomValidator
-func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	a := obj.(*LanguageAgent)
+// ValidateCreate implements admission.Validator
+func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, a *LanguageAgent) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
 	}
@@ -93,10 +88,8 @@ func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, obj runtime.O
 	return warns, a.validateSpec()
 }
 
-// ValidateUpdate implements webhook.CustomValidator
-func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, newObj runtime.Object, oldObj runtime.Object) (admission.Warnings, error) {
-	a := newObj.(*LanguageAgent)
-	old := oldObj.(*LanguageAgent)
+// ValidateUpdate implements admission.Validator
+func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, old, a *LanguageAgent) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
 	}
@@ -180,8 +173,8 @@ func (h *LanguageAgentWebhook) validateRuntime(ctx context.Context, a *LanguageA
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator
-func (h *LanguageAgentWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator
+func (h *LanguageAgentWebhook) ValidateDelete(_ context.Context, _ *LanguageAgent) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -282,8 +275,7 @@ func (a *LanguageAgent) validateModelReferences() error {
 // SetupWebhookWithManager registers the LanguageAgent mutating and validating webhooks.
 func SetupLanguageAgentWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguageAgentWebhook{Client: mgr.GetClient()}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&LanguageAgent{}).
+	return ctrl.NewWebhookManagedBy(mgr, &LanguageAgent{}).
 		WithDefaulter(h).
 		WithValidator(h).
 		Complete()

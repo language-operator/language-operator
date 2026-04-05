@@ -21,10 +21,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -38,13 +36,11 @@ type LanguageToolWebhook struct {
 	client.Client
 }
 
-var _ webhook.CustomDefaulter = &LanguageToolWebhook{}
-var _ webhook.CustomValidator = &LanguageToolWebhook{}
+var _ admission.Defaulter[*LanguageTool] = &LanguageToolWebhook{}
+var _ admission.Validator[*LanguageTool] = &LanguageToolWebhook{}
 
-// Default implements webhook.CustomDefaulter
-func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) error {
-	t := obj.(*LanguageTool)
-
+// Default implements admission.Defaulter
+func (h *LanguageToolWebhook) Default(ctx context.Context, t *LanguageTool) error {
 	if t.Spec.Deployment.Resources.Requests == nil && t.Spec.Deployment.Resources.Limits == nil {
 		t.Spec.Deployment.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -61,26 +57,24 @@ func (h *LanguageToolWebhook) Default(ctx context.Context, obj runtime.Object) e
 	return nil
 }
 
-// ValidateCreate implements webhook.CustomValidator
-func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	t := obj.(*LanguageTool)
+// ValidateCreate implements admission.Validator
+func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, t *LanguageTool) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateUpdate implements webhook.CustomValidator
-func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, obj runtime.Object, _ runtime.Object) (admission.Warnings, error) {
-	t := obj.(*LanguageTool)
+// ValidateUpdate implements admission.Validator
+func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, _, t *LanguageTool) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.CustomValidator
-func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+// ValidateDelete implements admission.Validator
+func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ *LanguageTool) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -91,8 +85,7 @@ func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, nam
 // SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
 func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager) error {
 	h := &LanguageToolWebhook{Client: mgr.GetClient()}
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&LanguageTool{}).
+	return ctrl.NewWebhookManagedBy(mgr, &LanguageTool{}).
 		WithDefaulter(h).
 		WithValidator(h).
 		Complete()
