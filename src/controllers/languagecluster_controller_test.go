@@ -1901,3 +1901,100 @@ func TestLanguageClusterController_GatewayIngressClassName(t *testing.T) {
 		assert.Nil(t, ing.Spec.IngressClassName)
 	})
 }
+
+func TestLanguageClusterController_ManagedResources(t *testing.T) {
+	reconcileClusterMR := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, networkIsolation bool) *langopv1alpha1.LanguageCluster {
+		t.Helper()
+		scheme := testutil.SetupTestScheme(t)
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster).
+			WithStatusSubresource(cluster).
+			Build()
+		reconciler := &LanguageClusterReconciler{
+			Client:                  fakeClient,
+			Scheme:                  scheme,
+			Log:                     logr.Discard(),
+			NetworkIsolationEnabled: networkIsolation,
+		}
+		ctx := context.Background()
+		req := clusterRequest(cluster.Name)
+		// First reconcile adds finalizer; second creates resources and writes status.
+		_, err := reconciler.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = reconciler.Reconcile(ctx, req)
+		require.NoError(t, err)
+		updated := &langopv1alpha1.LanguageCluster{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+		return updated
+	}
+
+	hasMR := func(resources []langopv1alpha1.ManagedResource, kind, name string) bool {
+		for _, r := range resources {
+			if r.Kind == kind && r.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+
+	t.Run("baseline_no_domain_no_capacity", func(t *testing.T) {
+		cluster := gen.LanguageCluster("mr-cluster")
+		updated := reconcileClusterMR(t, cluster, false)
+		mr := updated.Status.ManagedResources
+
+		assert.NotEmpty(t, mr)
+		assert.True(t, hasMR(mr, "Namespace", "mr-cluster"), "Namespace must be present")
+		assert.True(t, hasMR(mr, "Role", "agents"), "Role must be present")
+		assert.True(t, hasMR(mr, "RoleBinding", "agents"), "RoleBinding must be present")
+		assert.True(t, hasMR(mr, "ConfigMap", "gateway-config"), "gateway ConfigMap must be present")
+		assert.True(t, hasMR(mr, "Deployment", "gateway"), "gateway Deployment must be present")
+		assert.True(t, hasMR(mr, "Service", "gateway"), "gateway Service must be present")
+
+		assert.False(t, hasMR(mr, "Ingress", "gateway"), "Ingress must not be present without domain")
+		assert.False(t, hasMR(mr, "ResourceQuota", "langop-quota"), "ResourceQuota must not be present without capacity")
+		assert.False(t, hasMR(mr, "NetworkPolicy", "mr-cluster-agents"), "NetworkPolicy must not be present without isolation")
+
+		// Namespace entry must be cluster-scoped (empty namespace field)
+		for _, r := range mr {
+			if r.Kind == "Namespace" {
+				assert.Empty(t, r.Namespace, "Namespace resource must have empty namespace field (cluster-scoped)")
+				break
+			}
+		}
+	})
+
+	t.Run("domain_adds_ingress", func(t *testing.T) {
+		cluster := gen.LanguageCluster("mr-cluster-domain", gen.SetClusterDomain("ai.example.com"))
+		updated := reconcileClusterMR(t, cluster, false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "Ingress", "gateway"))
+	})
+
+	t.Run("ingress_explicitly_disabled", func(t *testing.T) {
+		disabled := false
+		cluster := gen.LanguageCluster("mr-cluster-noing",
+			gen.SetClusterDomain("ai.example.com"),
+			func(c *langopv1alpha1.LanguageCluster) {
+				if c.Spec.Ingress == nil {
+					c.Spec.Ingress = &langopv1alpha1.IngressConfig{}
+				}
+				c.Spec.Ingress.Enabled = &disabled
+			})
+		updated := reconcileClusterMR(t, cluster, false)
+		assert.False(t, hasMR(updated.Status.ManagedResources, "Ingress", "gateway"))
+	})
+
+	t.Run("capacity_adds_resourcequota", func(t *testing.T) {
+		maxAgents := int32(10)
+		cluster := gen.LanguageCluster("mr-cluster-cap",
+			gen.SetClusterCapacity(&langopv1alpha1.ClusterCapacitySpec{MaxAgents: &maxAgents}))
+		updated := reconcileClusterMR(t, cluster, false)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "ResourceQuota", "langop-quota"))
+	})
+
+	t.Run("network_isolation_adds_networkpolicy", func(t *testing.T) {
+		cluster := gen.LanguageCluster("mr-cluster-np")
+		updated := reconcileClusterMR(t, cluster, true)
+		assert.True(t, hasMR(updated.Status.ManagedResources, "NetworkPolicy", fmt.Sprintf("%s-agents", cluster.Name)))
+	})
+}

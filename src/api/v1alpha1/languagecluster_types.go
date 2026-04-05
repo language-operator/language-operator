@@ -360,6 +360,13 @@ type LanguageClusterStatus struct {
 	// status reflects a stale version of the spec.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// ManagedResources is the inventory of Kubernetes resources created and owned
+	// by this controller on behalf of this LanguageCluster.
+	// The list is replaced atomically on every successful reconcile.
+	// +optional
+	// +listType=atomic
+	ManagedResources []ManagedResource `json:"managedResources,omitempty"`
 }
 
 //+kubebuilder:object:root=true
