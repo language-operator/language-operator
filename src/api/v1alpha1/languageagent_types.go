@@ -164,6 +164,13 @@ type WorkspaceSpec struct {
 	// +kubebuilder:default="/workspace"
 	// +optional
 	MountPath string `json:"mountPath,omitempty"`
+
+	// Retain prevents the workspace PVC from being deleted when the agent is deleted.
+	// When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC
+	// does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.
+	// Defaults to false.
+	// +optional
+	Retain bool `json:"retain,omitempty"`
 }
 
 // OpencodeConfig holds configuration specific to the opencode runtime.
@@ -261,6 +268,11 @@ type LanguageAgentStatus struct {
 	// status reflects a stale version of the spec.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// WorkspacePVCName is the name of the retained workspace PVC after agent deletion.
+	// Only set when spec.workspace.retain is true.
+	// +optional
+	WorkspacePVCName string `json:"workspacePVCName,omitempty"`
 }
 
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent

@@ -3994,6 +3994,90 @@ func TestLanguageAgentController_WorkspaceAccessMode(t *testing.T) {
 	assert.Equal(t, corev1.ReadWriteMany, pvc.Spec.AccessModes[0])
 }
 
+func TestLanguageAgentController_WorkspaceRetain_PVCOrphaned(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("retain-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceRetain(true),
+	)
+	agent.Finalizers = []string{FinalizerName}
+	agent.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
+
+	// Pre-create the PVC with an owner reference pointing at the agent.
+	pvcName := agent.Name + "-workspace"
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pvcName,
+			Namespace: "default",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "langop.io/v1alpha1",
+					Kind:       "LanguageAgent",
+					Name:       agent.Name,
+					UID:        agent.UID,
+					Controller: func() *bool { b := true; return &b }(),
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, pvc).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+
+	_, err := reconciler.Reconcile(ctx, ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+	})
+	require.NoError(t, err)
+
+	// PVC must still exist (not garbage-collected) with no owner references.
+	got := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: pvcName, Namespace: "default"}, got))
+	assert.Empty(t, got.OwnerReferences, "expected PVC owner references to be stripped when retain=true")
+}
+
+func TestLanguageAgentController_WorkspaceRetain_False_PVCKeepsOwnerRef(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	agent := gen.LanguageAgent("no-retain-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// Two reconciles: first adds finalizer, second creates resources.
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace", Namespace: "default"}, pvc))
+	assert.NotEmpty(t, pvc.OwnerReferences, "expected PVC to retain owner reference when retain=false")
+}
+
 func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 	type errorPathCase struct {
 		name             string

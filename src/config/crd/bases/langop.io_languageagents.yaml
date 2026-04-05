@@ -5647,6 +5647,13 @@ spec:
                     default: /workspace
                     description: MountPath is where the workspace is mounted in containers
                     type: string
+                  retain:
+                    description: |-
+                      Retain prevents the workspace PVC from being deleted when the agent is deleted.
+                      When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC
+                      does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.
+                      Defaults to false.
+                    type: boolean
                   size:
                     default: 10Gi
                     description: |-
@@ -5761,6 +5768,11 @@ spec:
                 items:
                   type: string
                 type: array
+              workspacePVCName:
+                description: |-
+                  WorkspacePVCName is the name of the retained workspace PVC after agent deletion.
+                  Only set when spec.workspace.retain is true.
+                type: string
             type: object
         type: object
     served: true
