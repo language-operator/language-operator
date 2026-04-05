@@ -601,6 +601,8 @@ func TestLanguageAgentSecurityWarnings(t *testing.T) {
 	}
 }
 
+func strPtr(s string) *string { return &s }
+
 func TestLanguageAgentValidateUpdate(t *testing.T) {
 	const ns = "default"
 	ctx := context.Background()
@@ -657,6 +659,162 @@ func TestLanguageAgentValidateUpdate(t *testing.T) {
 			newAgent: &LanguageAgent{
 				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
 				Spec:       LanguageAgentSpec{Image: "test:latest", Instructions: "test"},
+			},
+			expectErr: false,
+		},
+		// storageClassName immutability
+		{
+			name: "storageClassName changed - rejected",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("fast-ssd")},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("standard")},
+				},
+			},
+			expectErr: true,
+			errMsg:    "storageClassName",
+		},
+		{
+			name: "storageClassName nil to set - rejected",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi"},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("fast-ssd")},
+				},
+			},
+			expectErr: true,
+			errMsg:    "storageClassName",
+		},
+		{
+			name: "storageClassName set to nil - rejected",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("fast-ssd")},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi"},
+				},
+			},
+			expectErr: true,
+			errMsg:    "storageClassName",
+		},
+		{
+			name: "storageClassName unchanged - allowed",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("fast-ssd")},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", StorageClassName: strPtr("fast-ssd")},
+				},
+			},
+			expectErr: false,
+		},
+		// accessMode immutability
+		{
+			name: "accessMode changed - rejected",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", AccessMode: "ReadWriteOnce"},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", AccessMode: "ReadWriteMany"},
+				},
+			},
+			expectErr: true,
+			errMsg:    "accessMode",
+		},
+		{
+			name: "accessMode unchanged - allowed",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", AccessMode: "ReadWriteOnce"},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace:    &WorkspaceSpec{Size: "10Gi", AccessMode: "ReadWriteOnce"},
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "old workspace disabled - immutable fields not enforced",
+			oldAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace: &WorkspaceSpec{
+						Enabled:          boolPtr(false),
+						Size:             "10Gi",
+						StorageClassName: strPtr("fast-ssd"),
+						AccessMode:       "ReadWriteOnce",
+					},
+				},
+			},
+			newAgent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: ns},
+				Spec: LanguageAgentSpec{
+					Image:        "test:latest",
+					Instructions: "test",
+					Workspace: &WorkspaceSpec{
+						Enabled:          boolPtr(true),
+						Size:             "10Gi",
+						StorageClassName: strPtr("standard"),
+						AccessMode:       "ReadWriteMany",
+					},
+				},
 			},
 			expectErr: false,
 		},

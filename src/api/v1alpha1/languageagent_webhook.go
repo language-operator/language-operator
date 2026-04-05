@@ -108,6 +108,18 @@ func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, newObj runtim
 				return nil, fmt.Errorf("spec.workspace.size: cannot decrease storage size (was %s, got %s)", old.Spec.Workspace.Size, a.Spec.Workspace.Size)
 			}
 		}
+		// storageClassName and accessMode are immutable PVC fields after creation.
+		oldEnabled := old.Spec.Workspace.Enabled == nil || *old.Spec.Workspace.Enabled
+		if oldEnabled {
+			if ptrStr(old.Spec.Workspace.StorageClassName) != ptrStr(a.Spec.Workspace.StorageClassName) {
+				return nil, fmt.Errorf("spec.workspace.storageClassName: field is immutable after PVC creation (was %q, got %q)",
+					ptrStr(old.Spec.Workspace.StorageClassName), ptrStr(a.Spec.Workspace.StorageClassName))
+			}
+			if old.Spec.Workspace.AccessMode != a.Spec.Workspace.AccessMode {
+				return nil, fmt.Errorf("spec.workspace.accessMode: field is immutable after PVC creation (was %q, got %q)",
+					old.Spec.Workspace.AccessMode, a.Spec.Workspace.AccessMode)
+			}
+		}
 	}
 	warns, err := h.validateRuntime(ctx, a)
 	if err != nil {
@@ -115,6 +127,14 @@ func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, newObj runtim
 	}
 	warns = append(warns, securityWarnings(a)...)
 	return warns, a.validateSpec()
+}
+
+// ptrStr dereferences a string pointer, returning "" for nil.
+func ptrStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // securityWarnings returns advisory (non-blocking) warnings for dangerous agent configurations.
