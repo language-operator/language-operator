@@ -58,6 +58,11 @@ type LanguageAgentRuntimeSpec struct {
 	// When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
 	// +optional
 	Opencode *OpencodeConfig `json:"opencode,omitempty"`
+
+	// ClaudeCode provides default claude-code credential configuration for agents using this runtime.
+	// When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.
+	// +optional
+	ClaudeCode *ClaudeCodeConfig `json:"claudeCode,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -233,6 +233,9 @@ runtimes:
   opencode:
     # Install the opencode LanguageAgentRuntime with the operator.
     enabled: true
+  claudeCode:
+    # Install the claude-code LanguageAgentRuntime with the operator.
+    enabled: true
 
 # RBAC configuration
 rbac:

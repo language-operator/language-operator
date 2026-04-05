@@ -2397,6 +2397,33 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 		}
 	}
 
+	// claude-code credentials → managed secret, ref envFrom, or gateway-routed placeholder
+	if workingAgent.Spec.ClaudeCode != nil {
+		cc := workingAgent.Spec.ClaudeCode
+		if cc.APIKey != "" {
+			secretData["ANTHROPIC_API_KEY"] = []byte(cc.APIKey)
+		} else if cc.APIKeyRef != nil {
+			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: cc.APIKeyRef.Name},
+				},
+			})
+		} else {
+			// Gateway-routed mode: inject placeholder so ANTHROPIC_API_KEY is always present.
+			// Real auth flows via ANTHROPIC_BASE_URL → LiteLLM gateway.
+			extraEnv = append(extraEnv, corev1.EnvVar{
+				Name:  "ANTHROPIC_API_KEY",
+				Value: "sk-langop-proxy",
+			})
+		}
+		if cc.MaxTurns != nil {
+			extraEnv = append(extraEnv, corev1.EnvVar{
+				Name:  "CLAUDE_CODE_MAX_TURNS",
+				Value: fmt.Sprintf("%d", *cc.MaxTurns),
+			})
+		}
+	}
+
 	if len(secretData) > 0 {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
