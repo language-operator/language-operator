@@ -173,9 +173,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !agent.DeletionTimestamp.IsZero() {
 		span.AddEvent("Deleting agent")
 		if controllerutil.ContainsFinalizer(agent, FinalizerName) {
-			// Shared RBAC resources (ServiceAccount, Role, RoleBinding named "language-agent")
-			// have no owner reference and are not GC'd automatically; clean them up explicitly
-			// when the last agent in the namespace is deleted.
+			// Per-agent RBAC resources (ServiceAccount, Role, RoleBinding named
+			// "language-agent-<agent>") have no owner reference and are not GC'd
+			// automatically; clean them up explicitly on deletion.
 			if err := r.cleanupResources(ctx, agent); err != nil {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, "Failed to clean up agent resources")
@@ -1451,8 +1451,9 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 	// Exception: when spec.workspace.retain is true, strip the PVC's ownerReference
 	// before the finalizer is removed so GC does not collect it.
 	//
-	// The only manual cleanup required is shared RBAC resources, which are not owned by
-	// any single agent and must be removed when the last agent in the namespace is deleted.
+	// Per-agent RBAC resources (ServiceAccount, Role, RoleBinding) are not owned by the
+	// agent (ServiceAccounts cannot be owner-referenced from Pods across namespaces) so
+	// they must be deleted explicitly here.
 	if agent.Spec.Workspace != nil &&
 		(agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) &&
 		agent.Spec.Workspace.Retain {
@@ -1460,7 +1461,7 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 			return err
 		}
 	}
-	return r.cleanupSharedRBAC(ctx, agent)
+	return r.cleanupPerAgentRBAC(ctx, agent)
 }
 
 // orphanWorkspacePVC removes the ownerReference from the workspace PVC so that
@@ -1483,35 +1484,28 @@ func (r *LanguageAgentReconciler) orphanWorkspacePVC(ctx context.Context, agent 
 	return nil
 }
 
-// cleanupSharedRBAC deletes the shared ServiceAccount, Role, and RoleBinding for agent pods
-// in the given namespace, but only when no other LanguageAgents remain in that namespace.
-func (r *LanguageAgentReconciler) cleanupSharedRBAC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+// cleanupPerAgentRBAC deletes the per-agent ServiceAccount, Role, and RoleBinding.
+// These are not covered by owner-reference GC because ServiceAccounts cannot be
+// owner-referenced from Pods across namespaces, so they must be deleted explicitly.
+// Skipped when a custom ServiceAccountName is set (user manages their own SA).
+func (r *LanguageAgentReconciler) cleanupPerAgentRBAC(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	if agent.Spec.Deployment.ServiceAccountName != "" {
+		return nil
+	}
 	log := log.FromContext(ctx)
 	ns := agent.Namespace
+	saName := GenerateServiceAccountName(agent.Name)
 
-	// Check whether any other agents remain in this namespace
-	agentList := &langopv1alpha1.LanguageAgentList{}
-	if err := r.List(ctx, agentList, client.InNamespace(ns)); err != nil {
-		return fmt.Errorf("failed to list LanguageAgents: %w", err)
-	}
-	for _, a := range agentList.Items {
-		if a.Name != agent.Name && a.DeletionTimestamp.IsZero() {
-			// Another live agent still exists; leave shared resources intact
-			return nil
-		}
-	}
-
-	// Last agent in namespace — delete shared RBAC resources
 	toDelete := []client.Object{
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: ns}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: ns}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: ns}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: ns}},
 	}
 	for _, obj := range toDelete {
 		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete %T %s: %w", obj, "language-agent", err)
+			return fmt.Errorf("failed to delete %T %s: %w", obj, saName, err)
 		}
-		log.Info("Deleted shared RBAC resource", "kind", fmt.Sprintf("%T", obj), "namespace", ns)
+		log.Info("Deleted per-agent RBAC resource", "kind", fmt.Sprintf("%T", obj), "name", saName, "namespace", ns)
 	}
 	return nil
 }
@@ -1998,23 +1992,31 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 
 	// ServiceAccount always lives in the agent's own namespace
 	targetNamespace := agent.Namespace
+	saName := GenerateServiceAccountName(agent.Name)
 
 	// Create ServiceAccount
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "language-agent",
+			Name:      saName,
 			Namespace: targetNamespace,
 		},
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, serviceAccount, func() error {
-		// Set labels
 		if serviceAccount.Labels == nil {
 			serviceAccount.Labels = make(map[string]string)
 		}
-		serviceAccount.Labels[LabelKeyK8sName] = "language-agent"
+		serviceAccount.Labels[LabelKeyK8sName] = saName
 		serviceAccount.Labels[LabelKeyK8sComponent] = "serviceaccount"
 		serviceAccount.Labels[LabelKeyK8sManagedBy] = "language-operator"
+
+		// Merge user-supplied annotations (e.g. IRSA, GCP WI, AKS WI)
+		if len(agent.Spec.Deployment.ServiceAccountAnnotations) > 0 {
+			if serviceAccount.Annotations == nil {
+				serviceAccount.Annotations = make(map[string]string)
+			}
+			maps.Copy(serviceAccount.Annotations, agent.Spec.Deployment.ServiceAccountAnnotations)
+		}
 
 		return nil
 	})
@@ -2026,7 +2028,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 	// Create namespace-scoped Role with minimal permissions for agent pods
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "language-agent",
+			Name:      saName,
 			Namespace: targetNamespace,
 		},
 	}
@@ -2035,7 +2037,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if role.Labels == nil {
 			role.Labels = make(map[string]string)
 		}
-		role.Labels[LabelKeyK8sName] = "language-agent"
+		role.Labels[LabelKeyK8sName] = saName
 		role.Labels[LabelKeyK8sComponent] = "role"
 		role.Labels[LabelKeyK8sManagedBy] = "language-operator"
 		role.Rules = []rbacv1.PolicyRule{
@@ -2050,6 +2052,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 				Verbs:     []string{"get", "list", "watch"},
 			},
 		}
+		role.Rules = append(role.Rules, agent.Spec.Deployment.RoleRules...)
 		return nil
 	})
 
@@ -2060,7 +2063,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 	// Create namespace-scoped RoleBinding binding the ServiceAccount to the Role
 	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "language-agent",
+			Name:      saName,
 			Namespace: targetNamespace,
 		},
 	}
@@ -2069,18 +2072,18 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if roleBinding.Labels == nil {
 			roleBinding.Labels = make(map[string]string)
 		}
-		roleBinding.Labels[LabelKeyK8sName] = "language-agent"
+		roleBinding.Labels[LabelKeyK8sName] = saName
 		roleBinding.Labels[LabelKeyK8sComponent] = "rolebinding"
 		roleBinding.Labels[LabelKeyK8sManagedBy] = "language-operator"
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			Name:     "language-agent",
+			Name:     saName,
 		}
 		roleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      "language-agent",
+				Name:      saName,
 				Namespace: targetNamespace,
 			},
 		}
@@ -2092,7 +2095,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 	}
 
 	log.Info("Reconciled agent ServiceAccount and permissions",
-		"serviceAccount", "language-agent",
+		"serviceAccount", saName,
 		"namespace", targetNamespace,
 		"role", role.Name,
 		"roleBinding", roleBinding.Name)
@@ -2107,8 +2110,8 @@ func (r *LanguageAgentReconciler) getServiceAccountName(agent *langopv1alpha1.La
 		return agent.Spec.Deployment.ServiceAccountName
 	}
 
-	// Default to a language-agent ServiceAccount that will be created in the agent's namespace
-	return "language-agent"
+	// Default to an operator-managed per-agent ServiceAccount
+	return GenerateServiceAccountName(agent.Name)
 }
 
 // generateCredential returns a cryptographically random 32-byte hex string.
@@ -2309,12 +2312,13 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 		})
 	}
 
-	// Shared RBAC resources are created when no custom ServiceAccount is specified.
+	// Per-agent RBAC resources are created when no custom ServiceAccount is specified.
 	if agent.Spec.Deployment.ServiceAccountName == "" {
+		saName := GenerateServiceAccountName(agent.Name)
 		resources = append(resources,
-			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: "language-agent", Namespace: ns},
-			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "language-agent", Namespace: ns},
-			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "language-agent", Namespace: ns},
+			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: saName, Namespace: ns},
+			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: saName, Namespace: ns},
+			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: saName, Namespace: ns},
 		)
 	}
 

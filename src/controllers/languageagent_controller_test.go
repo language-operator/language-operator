@@ -658,10 +658,11 @@ func TestLanguageAgentController_DeletionRemovesFinalizer(t *testing.T) {
 		},
 	}
 
-	// Pre-create shared RBAC resources that should be deleted when the last agent goes away.
-	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+	// Pre-create per-agent RBAC resources that should be deleted on agent deletion.
+	saName := GenerateServiceAccountName(agent.Name)
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
+	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
+	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -708,21 +709,21 @@ func TestLanguageAgentController_DeletionRemovesFinalizer(t *testing.T) {
 		}
 	}
 
-	// Shared RBAC resources must be deleted when the last agent is gone.
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected ServiceAccount/language-agent to be deleted, got: %v", err)
+	// Per-agent RBAC resources must be deleted on agent deletion.
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected ServiceAccount/%s to be deleted, got: %v", saName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected Role/language-agent to be deleted, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected Role/%s to be deleted, got: %v", saName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected RoleBinding/language-agent to be deleted, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected RoleBinding/%s to be deleted, got: %v", saName, err)
 	}
 }
 
-// TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist verifies that shared
-// RBAC resources are NOT deleted when another LanguageAgent still exists in the namespace.
-func TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist(t *testing.T) {
+// TestLanguageAgentController_DeletionCleansPerAgentRBACLeavesOtherAgentsIntact verifies that
+// deleting an agent removes only its own per-agent RBAC and leaves the other agent's RBAC untouched.
+func TestLanguageAgentController_DeletionCleansPerAgentRBACLeavesOtherAgentsIntact(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	deletingAgent := &langopv1alpha1.LanguageAgent{
@@ -748,13 +749,20 @@ func TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist(t *testin
 		},
 	}
 
-	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+	deletingSAName := GenerateServiceAccountName(deletingAgent.Name)
+	otherSAName := GenerateServiceAccountName(otherAgent.Name)
+
+	// Pre-create per-agent RBAC for both agents.
+	deletingSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: deletingSAName, Namespace: "default"}}
+	deletingRole := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: deletingSAName, Namespace: "default"}}
+	deletingRB := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: deletingSAName, Namespace: "default"}}
+	otherSA := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: otherSAName, Namespace: "default"}}
+	otherRole := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: otherSAName, Namespace: "default"}}
+	otherRB := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: otherSAName, Namespace: "default"}}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(deletingAgent, otherAgent, sa, role, rb).
+		WithObjects(deletingAgent, otherAgent, deletingSA, deletingRole, deletingRB, otherSA, otherRole, otherRB).
 		WithStatusSubresource(deletingAgent).
 		Build()
 
@@ -778,21 +786,33 @@ func TestLanguageAgentController_DeletionKeepsRBACWhenOtherAgentsExist(t *testin
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Shared RBAC resources must remain because other-agent still exists.
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &corev1.ServiceAccount{}); err != nil {
-		t.Errorf("Expected ServiceAccount/language-agent to still exist, got: %v", err)
+	// Deleting agent's per-agent RBAC must be cleaned up.
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: deletingSAName, Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected ServiceAccount/%s to be deleted, got: %v", deletingSAName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.Role{}); err != nil {
-		t.Errorf("Expected Role/language-agent to still exist, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: deletingSAName, Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected Role/%s to be deleted, got: %v", deletingSAName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.RoleBinding{}); err != nil {
-		t.Errorf("Expected RoleBinding/language-agent to still exist, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: deletingSAName, Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected RoleBinding/%s to be deleted, got: %v", deletingSAName, err)
+	}
+
+	// Other agent's per-agent RBAC must remain untouched.
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: otherSAName, Namespace: "default"}, &corev1.ServiceAccount{}); err != nil {
+		t.Errorf("Expected ServiceAccount/%s to still exist, got: %v", otherSAName, err)
+	}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: otherSAName, Namespace: "default"}, &rbacv1.Role{}); err != nil {
+		t.Errorf("Expected Role/%s to still exist, got: %v", otherSAName, err)
+	}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: otherSAName, Namespace: "default"}, &rbacv1.RoleBinding{}); err != nil {
+		t.Errorf("Expected RoleBinding/%s to still exist, got: %v", otherSAName, err)
 	}
 }
 
-// TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting verifies that shared
-// RBAC resources ARE deleted when the only other agent in the namespace is itself being deleted.
-func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t *testing.T) {
+// TestLanguageAgentController_DeletionCleansPerAgentRBACAlwaysDeletesOwn verifies that an
+// agent's own per-agent RBAC is always cleaned up on deletion, even when other agents are
+// also being deleted concurrently.
+func TestLanguageAgentController_DeletionCleansPerAgentRBACAlwaysDeletesOwn(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	deletingAgent := &langopv1alpha1.LanguageAgent{
@@ -808,7 +828,6 @@ func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t 
 			Instructions: "Agent being deleted",
 		},
 	}
-	// This agent is also being deleted — must not count as "live"
 	otherDeletingAgent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "other-agent-also-deleting",
@@ -823,9 +842,10 @@ func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t 
 		},
 	}
 
-	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "language-agent", Namespace: "default"}}
+	saName := GenerateServiceAccountName(deletingAgent.Name)
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
+	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
+	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: "default"}}
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -853,15 +873,15 @@ func TestLanguageAgentController_DeletionCleansRBACWhenOtherAgentAlsoDeleting(t 
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Shared RBAC resources must be deleted because no live agent remains.
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected ServiceAccount/language-agent to be deleted, got: %v", err)
+	// The deleting agent's per-agent RBAC must always be cleaned up.
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &corev1.ServiceAccount{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected ServiceAccount/%s to be deleted, got: %v", saName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected Role/language-agent to be deleted, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &rbacv1.Role{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected Role/%s to be deleted, got: %v", saName, err)
 	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
-		t.Errorf("Expected RoleBinding/language-agent to be deleted, got: %v", err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: "default"}, &rbacv1.RoleBinding{}); !errors.IsNotFound(err) {
+		t.Errorf("Expected RoleBinding/%s to be deleted, got: %v", saName, err)
 	}
 }
 
@@ -1573,31 +1593,32 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify ServiceAccount created in agent namespace
+	// Verify per-agent ServiceAccount created with expected name.
+	saName := GenerateServiceAccountName(agent.Name)
 	sa := &corev1.ServiceAccount{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, sa); err != nil {
-		t.Fatalf("Expected ServiceAccount 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, sa); err != nil {
+		t.Fatalf("Expected ServiceAccount %q to exist in namespace %s: %v", saName, agent.Namespace, err)
 	}
 
-	// Verify namespace-scoped Role created
+	// Verify namespace-scoped Role created with default rules.
 	role := &rbacv1.Role{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, role); err != nil {
-		t.Fatalf("Expected Role 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, role); err != nil {
+		t.Fatalf("Expected Role %q to exist in namespace %s: %v", saName, agent.Namespace, err)
 	}
 	if len(role.Rules) == 0 {
 		t.Errorf("Expected Role to have at least one rule")
 	}
 
-	// Verify namespace-scoped RoleBinding created and points to the Role (not the operator ClusterRole)
+	// Verify namespace-scoped RoleBinding created and points to the Role (not the operator ClusterRole).
 	rb := &rbacv1.RoleBinding{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, rb); err != nil {
-		t.Fatalf("Expected RoleBinding 'language-agent' to exist in namespace %s: %v", agent.Namespace, err)
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, rb); err != nil {
+		t.Fatalf("Expected RoleBinding %q to exist in namespace %s: %v", saName, agent.Namespace, err)
 	}
 	if rb.RoleRef.Kind != "Role" {
 		t.Errorf("Expected RoleBinding RoleRef.Kind 'Role', got %q", rb.RoleRef.Kind)
 	}
-	if rb.RoleRef.Name != "language-agent" {
-		t.Errorf("Expected RoleBinding RoleRef.Name 'language-agent', got %q", rb.RoleRef.Name)
+	if rb.RoleRef.Name != saName {
+		t.Errorf("Expected RoleBinding RoleRef.Name %q, got %q", saName, rb.RoleRef.Name)
 	}
 }
 
@@ -1632,20 +1653,131 @@ func TestLanguageAgentController_CustomServiceAccount(t *testing.T) {
 	_, err = reconciler.Reconcile(ctx, req)
 	require.NoError(t, err)
 
-	// No default RBAC resources should be created when a custom SA is specified.
-	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &corev1.ServiceAccount{})
-	assert.True(t, errors.IsNotFound(err), "expected no ServiceAccount 'language-agent', got: %v", err)
+	// No operator-managed RBAC resources should be created when a custom SA is specified.
+	defaultSAName := GenerateServiceAccountName(agent.Name)
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: defaultSAName, Namespace: agent.Namespace}, &corev1.ServiceAccount{})
+	assert.True(t, errors.IsNotFound(err), "expected no ServiceAccount %q, got: %v", defaultSAName, err)
 
-	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &rbacv1.Role{})
-	assert.True(t, errors.IsNotFound(err), "expected no Role 'language-agent', got: %v", err)
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: defaultSAName, Namespace: agent.Namespace}, &rbacv1.Role{})
+	assert.True(t, errors.IsNotFound(err), "expected no Role %q, got: %v", defaultSAName, err)
 
-	err = fakeClient.Get(ctx, types.NamespacedName{Name: "language-agent", Namespace: agent.Namespace}, &rbacv1.RoleBinding{})
-	assert.True(t, errors.IsNotFound(err), "expected no RoleBinding 'language-agent', got: %v", err)
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: defaultSAName, Namespace: agent.Namespace}, &rbacv1.RoleBinding{})
+	assert.True(t, errors.IsNotFound(err), "expected no RoleBinding %q, got: %v", defaultSAName, err)
 
 	// Deployment must use the custom service account name.
 	deployment := &appsv1.Deployment{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
 	assert.Equal(t, "custom-sa", deployment.Spec.Template.Spec.ServiceAccountName)
+}
+
+func TestLanguageAgentController_ServiceAccountAnnotations(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "annotated-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				ServiceAccountAnnotations: map[string]string{
+					"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-role",
+					"iam.gke.io/service-account": "my-gsa@my-project.iam.gserviceaccount.com",
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	saName := GenerateServiceAccountName(agent.Name)
+	sa := &corev1.ServiceAccount{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, sa))
+
+	assert.Equal(t, "arn:aws:iam::123456789012:role/my-role", sa.Annotations["eks.amazonaws.com/role-arn"])
+	assert.Equal(t, "my-gsa@my-project.iam.gserviceaccount.com", sa.Annotations["iam.gke.io/service-account"])
+}
+
+func TestLanguageAgentController_RoleRules(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "custom-rules-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Deployment: langopv1alpha1.DeploymentSpec{
+				RoleRules: []rbacv1.PolicyRule{
+					{
+						APIGroups: []string{""},
+						Resources: []string{"secrets"},
+						Verbs:     []string{"get"},
+					},
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	saName := GenerateServiceAccountName(agent.Name)
+	role := &rbacv1.Role{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, role))
+
+	// Default rules (configmaps, pods) must still be present.
+	var hasConfigMaps, hasPods, hasSecrets bool
+	for _, rule := range role.Rules {
+		for _, res := range rule.Resources {
+			switch res {
+			case "configmaps":
+				hasConfigMaps = true
+			case "pods":
+				hasPods = true
+			case "secrets":
+				hasSecrets = true
+			}
+		}
+	}
+	assert.True(t, hasConfigMaps, "expected default configmaps rule in Role")
+	assert.True(t, hasPods, "expected default pods rule in Role")
+	assert.True(t, hasSecrets, "expected custom secrets rule to be appended to Role")
 }
 
 // --- Group 1: Pure/stateless functions ---
@@ -5034,9 +5166,9 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		assert.True(t, hasMR(mr, "Deployment", "base-agent"), "Deployment must be present")
 		assert.True(t, hasMR(mr, "Service", "base-agent"), "Service must be present")
 		assert.True(t, hasMR(mr, "ConfigMap", GenerateConfigMapName("base-agent", "agent")), "ConfigMap must be present")
-		assert.True(t, hasMR(mr, "ServiceAccount", "language-agent"), "ServiceAccount must be present")
-		assert.True(t, hasMR(mr, "Role", "language-agent"), "Role must be present")
-		assert.True(t, hasMR(mr, "RoleBinding", "language-agent"), "RoleBinding must be present")
+		assert.True(t, hasMR(mr, "ServiceAccount", GenerateServiceAccountName("base-agent")), "ServiceAccount must be present")
+		assert.True(t, hasMR(mr, "Role", GenerateServiceAccountName("base-agent")), "Role must be present")
+		assert.True(t, hasMR(mr, "RoleBinding", GenerateServiceAccountName("base-agent")), "RoleBinding must be present")
 
 		assert.False(t, hasMR(mr, "PersistentVolumeClaim", GeneratePVCName("base-agent")), "PVC must not be present when workspace disabled")
 		assert.False(t, hasMR(mr, "Secret", "base-agent-runtime"), "Secret must not be present without creds")
