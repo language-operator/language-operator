@@ -1191,6 +1191,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#claudecodeconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClaudeCodeConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#clustercapacityspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1963,6 +1974,48 @@ verbatim from real NetworkPolicy manifests.</p>
 </tr>
 </tbody>
 </table>
+<h4 id="claudecodeconfig">ClaudeCodeConfig<a class="headerlink" href="#claudecodeconfig" title="Permanent link">&para;</a></h4>
+<p>ClaudeCodeConfig holds configuration specific to the claude-code runtime.
+Effective only when spec.runtime is "claude-code".</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled activates claude-code credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection<br />without requiring any explicit config on the LanguageAgent.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>apiKey</code> <em>string</em></td>
+<td>APIKey is the Anthropic API key (inline).<br />The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.<br />When omitted, the operator injects a gateway-routed placeholder so all LLM<br />traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.<br />Mutually exclusive with APIKeyRef.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>apiKeyRef</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
+<td>APIKeyRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain ANTHROPIC_API_KEY.<br />Mutually exclusive with APIKey.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>maxTurns</code> <em>integer</em></td>
+<td>MaxTurns limits the number of agentic turns per request.<br />Sets CLAUDE_CODE_MAX_TURNS in the agent container.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="clustercapacityspec">ClusterCapacitySpec<a class="headerlink" href="#clustercapacityspec" title="Permanent link">&para;</a></h4>
 <p>ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.</p>
 <p><em>Appears in:</em>
@@ -2471,6 +2524,12 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>claudeCode</code> <em><a href="#claudecodeconfig">ClaudeCodeConfig</a></em></td>
+<td>ClaudeCode provides default claude-code credential configuration for agents using this runtime.<br />When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languageagentselfconfig">LanguageAgentSelfConfig<a class="headerlink" href="#languageagentselfconfig" title="Permanent link">&para;</a></h4>
@@ -2700,6 +2759,12 @@ spec.selfConfigure allowlist before patching.</p>
 <tr>
 <td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
 <td>Openclaw holds configuration specific to the openclaw runtime.<br />Only effective when spec.runtime is "openclaw".</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>claudeCode</code> <em><a href="#claudecodeconfig">ClaudeCodeConfig</a></em></td>
+<td>ClaudeCode holds configuration specific to the claude-code runtime.<br />Only effective when spec.runtime is "claude-code".</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3762,6 +3827,7 @@ Effective only when spec.runtime is "opencode".</p>
 <p>RuntimeSecretRef references a Secret in the same namespace.
 All keys in the Secret are injected as env vars via envFrom.</p>
 <p><em>Appears in:</em>
+- <a href="#claudecodeconfig">ClaudeCodeConfig</a>
 - <a href="#openclawconfig">OpenclawConfig</a>
 - <a href="#opencodeconfig">OpencodeConfig</a></p>
 <table>
