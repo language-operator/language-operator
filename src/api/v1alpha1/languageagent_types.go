@@ -94,6 +94,12 @@ type LanguageAgentSpec struct {
 	// Only effective when spec.runtime is "openclaw".
 	// +optional
 	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
+
+	// SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig
+	// requests to modify its own spec at runtime. When enabled, the operator grants
+	// the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources.
+	// +optional
+	SelfConfigure *SelfConfigureSpec `json:"selfConfigure,omitempty"`
 }
 
 // ModelReference references a LanguageModel

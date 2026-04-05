@@ -1,0 +1,189 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: languageagentselfconfigs.langop.io
+spec:
+  group: langop.io
+  names:
+    kind: LanguageAgentSelfConfig
+    listKind: LanguageAgentSelfConfigList
+    plural: languageagentselfconfigs
+    shortNames:
+    - lasc
+    singular: languageagentselfconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.instanceRef
+      name: Agent
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          LanguageAgentSelfConfig is submitted by an agent pod to request runtime modifications
+          to its own LanguageAgent spec. The controller validates the request against the parent's
+          spec.selfConfigure allowlist before patching.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LanguageAgentSelfConfigSpec defines the desired self-modification.
+            properties:
+              addEnvVars:
+                description: |-
+                  AddEnvVars lists plain-value environment variables to inject into the parent agent's
+                  spec.deployment.env. Existing vars with the same name are overwritten.
+                  SecretKeyRef and other value sources are not supported.
+                items:
+                  description: |-
+                    SelfConfigEnvVar is a plain-value environment variable injected by a self-config request.
+                    SecretKeyRef and other value sources are intentionally not supported.
+                  properties:
+                    name:
+                      description: Name of the environment variable.
+                      minLength: 1
+                      type: string
+                    value:
+                      description: Value is the literal string value of the variable.
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                type: array
+              addModels:
+                description: AddModels lists LanguageModel names to append to spec.models
+                  on the parent agent.
+                items:
+                  type: string
+                type: array
+              addRoleRules:
+                description: |-
+                  AddRoleRules lists RBAC policy rules to append to spec.deployment.roleRules on the
+                  parent agent. Duplicate rules (identical APIGroups+Resources+Verbs) are de-duplicated.
+                items:
+                  description: |-
+                    PolicyRule holds information that describes a policy rule, but does not contain information
+                    about who the rule applies to or which namespace the rule applies to.
+                  properties:
+                    apiGroups:
+                      description: |-
+                        APIGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of
+                        the enumerated resources in any API group will be allowed. "" represents the core API group and "*" represents all API groups.
+                      items:
+                        type: string
+                      type: array
+                    nonResourceURLs:
+                      description: |-
+                        NonResourceURLs is a set of partial urls that a user should have access to.  *s are allowed, but only as the full, final step in the path
+                        Since non-resource URLs are not namespaced, this field is only applicable for ClusterRoles referenced from a ClusterRoleBinding.
+                        Rules can either apply to API resources (such as "pods" or "secrets") or non-resource URL paths (such as "/api"),  but not both.
+                      items:
+                        type: string
+                      type: array
+                    resourceNames:
+                      description: ResourceNames is an optional white list of names
+                        that the rule applies to.  An empty set means that everything
+                        is allowed.
+                      items:
+                        type: string
+                      type: array
+                    resources:
+                      description: Resources is a list of resources this rule applies
+                        to. '*' represents all resources.
+                      items:
+                        type: string
+                      type: array
+                    verbs:
+                      description: Verbs is a list of Verbs that apply to ALL the
+                        ResourceKinds contained in this rule. '*' represents all verbs.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - verbs
+                  type: object
+                type: array
+              addTools:
+                description: AddTools lists LanguageTool names to append to spec.tools
+                  on the parent agent.
+                items:
+                  type: string
+                type: array
+              instanceRef:
+                description: InstanceRef is the name of the LanguageAgent to modify.
+                  Must be in the same namespace.
+                minLength: 1
+                type: string
+              removeModels:
+                description: RemoveModels lists LanguageModel names to remove from
+                  spec.models on the parent agent.
+                items:
+                  type: string
+                type: array
+              removeTools:
+                description: RemoveTools lists LanguageTool names to remove from spec.tools
+                  on the parent agent.
+                items:
+                  type: string
+                type: array
+              updateInstructions:
+                description: UpdateInstructions, when non-empty, replaces spec.instructions
+                  on the parent agent.
+                type: string
+            required:
+            - instanceRef
+            type: object
+          status:
+            description: LanguageAgentSelfConfigStatus reflects the observed state
+              of a self-config request.
+            properties:
+              completionTime:
+                description: |-
+                  CompletionTime is set when the request reaches a terminal phase (Applied, Failed, Denied).
+                  The CR is automatically deleted 1 hour after this time.
+                format: date-time
+                type: string
+              message:
+                description: Message provides a human-readable explanation of the
+                  current phase.
+                type: string
+              phase:
+                description: Phase is the current processing state.
+                enum:
+                - Pending
+                - Applied
+                - Failed
+                - Denied
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

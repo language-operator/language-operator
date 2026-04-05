@@ -206,6 +206,32 @@ rules:
 - apiGroups:
   - langop.io
   resources:
+  - languageagentselfconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagentselfconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - langop.io
+  resources:
+  - languageagentselfconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - langop.io
+  resources:
   - languagepersonas
   verbs:
   - create

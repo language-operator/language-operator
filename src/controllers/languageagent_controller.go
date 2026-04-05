@@ -2052,6 +2052,15 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 				Verbs:     []string{"get", "list", "watch"},
 			},
 		}
+		// When self-configure is enabled, grant the agent's SA permission to
+		// create LanguageAgentSelfConfig requests targeting itself.
+		if agent.Spec.SelfConfigure != nil && agent.Spec.SelfConfigure.Enabled {
+			role.Rules = append(role.Rules, rbacv1.PolicyRule{
+				APIGroups: []string{"langop.io"},
+				Resources: []string{"languageagentselfconfigs"},
+				Verbs:     []string{"create"},
+			})
+		}
 		role.Rules = append(role.Rules, agent.Spec.Deployment.RoleRules...)
 		return nil
 	})
