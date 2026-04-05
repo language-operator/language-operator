@@ -2936,7 +2936,7 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td><code>phase</code> <em>string</em></td>
 <td>Phase represents the current phase of the agent</td>
 <td></td>
-<td>Enum: [Pending Running Failed] <br />Optional: {} <br /></td>
+<td>Enum: [Pending Running Failed Degraded] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
@@ -3502,9 +3502,9 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 </tr>
 <tr>
 <td><code>phase</code> <em>string</em></td>
-<td>Phase represents the current phase of the tool (Pending, Running, Failed, Updating)</td>
+<td>Phase represents the current phase of the tool (Pending, Running, Failed, Updating, Degraded)</td>
 <td></td>
-<td>Enum: [Pending Running Failed Updating] <br />Optional: {} <br /></td>
+<td>Enum: [Pending Running Failed Updating Degraded] <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>conditions</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta">Condition</a> array</em></td>
