@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -76,6 +77,17 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	span := result.Span
 	log := log.FromContext(ctx)
 
+	// Write Failed phase on error exit paths via deferred status update.
+	defer func() {
+		if reconcileErr == nil || !persona.DeletionTimestamp.IsZero() {
+			return
+		}
+		persona.Status.ObservedGeneration = persona.Generation
+		if updateErr := r.Status().Update(ctx, persona); updateErr != nil && !apierrors.IsNotFound(updateErr) {
+			log.Error(updateErr, "Failed to update LanguagePersona status")
+		}
+	}()
+
 	// Handle deletion
 	if !persona.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.handleDeletion(ctx, persona)
@@ -83,6 +95,15 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Add finalizer if it doesn't exist
 	if !controllerutil.ContainsFinalizer(persona, FinalizerName) {
+		persona.Status.Phase = events.PhaseStatusPending
+		persona.Status.ObservedGeneration = persona.Generation
+		SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, "Persona initializing", persona.Generation)
+		if err := r.Status().Update(ctx, persona); err != nil {
+			log.Error(err, "Failed to write Pending status")
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+
 		controllerutil.AddFinalizer(persona, FinalizerName)
 		if err := r.Update(ctx, persona); err != nil {
 			log.Error(err, "Failed to add finalizer")
@@ -108,6 +129,8 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
+		persona.Status.Phase = events.PhaseStatusFailed
+		SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), persona.Generation)
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
