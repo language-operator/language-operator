@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -161,13 +162,13 @@ func TestReconcileRuntimeSecret_ClaudeCode_GatewayMode(t *testing.T) {
 	err = reconciler.reconcileRuntimeSecret(context.Background(), agent, working)
 	require.NoError(t, err)
 
-	var found bool
+	envMap := make(map[string]string)
 	for _, e := range working.Spec.Deployment.Env {
-		if e.Name == "ANTHROPIC_API_KEY" && e.Value == "sk-langop-proxy" {
-			found = true
-		}
+		envMap[e.Name] = e.Value
 	}
-	assert.True(t, found, "ANTHROPIC_API_KEY=sk-langop-proxy injected in gateway mode")
+	assert.Equal(t, "sk-langop-proxy", envMap["ANTHROPIC_API_KEY"], "ANTHROPIC_API_KEY placeholder injected in gateway mode")
+	assert.Equal(t, fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort),
+		envMap["ANTHROPIC_BASE_URL"], "ANTHROPIC_BASE_URL injected in gateway mode")
 }
 
 func TestReconcileRuntimeSecret_ClaudeCode_InlineAPIKey(t *testing.T) {
