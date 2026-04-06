@@ -55,6 +55,36 @@ func agentWithSelfConfigure(name, ns string, actions ...langopv1alpha1.SelfConfi
 	})
 }
 
+func TestSelfConfigController_PendingPhaseOnFirstReconcile(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	ns := "default"
+	agent := agentWithSelfConfigure("my-agent", ns, langopv1alpha1.SelfConfigActionTools)
+	sc := gen.LanguageAgentSelfConfig("req1", ns, "my-agent",
+		gen.SetSelfConfigAddTools("web-search"),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(agent, sc).
+		WithStatusSubresource(sc).
+		Build()
+
+	r := &LanguageAgentSelfConfigReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: "req1", Namespace: ns}}
+
+	// First reconcile: writes Pending status then adds finalizer.
+	r.Reconcile(ctx, req)
+
+	updated := &langopv1alpha1.LanguageAgentSelfConfig{}
+	if err := fakeClient.Get(ctx, req.NamespacedName, updated); err != nil {
+		t.Fatalf("get selfconfig: %v", err)
+	}
+	if updated.Status.Phase != langopv1alpha1.SelfConfigPhasePending {
+		t.Errorf("expected phase Pending after first reconcile, got %q", updated.Status.Phase)
+	}
+}
+
 func TestSelfConfigController_HappyPath_AddTool(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	ns := "default"
