@@ -129,15 +129,11 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Validate apiKeySecretRef if set — surface a missing Secret as Phase: Failed
 	// rather than letting the gateway fail silently at runtime.
 	if model.Spec.APIKeySecretRef != nil {
-		secretNS := model.Spec.APIKeySecretRef.Namespace
-		if secretNS == "" {
-			secretNS = model.Namespace
-		}
 		secret := &corev1.Secret{}
-		if err := r.Get(ctx, types.NamespacedName{Name: model.Spec.APIKeySecretRef.Name, Namespace: secretNS}, secret); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: model.Spec.APIKeySecretRef.Name, Namespace: model.Namespace}, secret); err != nil {
 			var msg string
 			if apierrors.IsNotFound(err) {
-				msg = fmt.Sprintf("secret %q not found in namespace %q", model.Spec.APIKeySecretRef.Name, secretNS)
+				msg = fmt.Sprintf("secret %q not found in namespace %q", model.Spec.APIKeySecretRef.Name, model.Namespace)
 			} else {
 				msg = fmt.Sprintf("failed to get apiKeySecretRef: %v", err)
 			}

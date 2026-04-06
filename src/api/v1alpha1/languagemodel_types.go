@@ -41,10 +41,6 @@ type SecretReference struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// Namespace is the namespace of the secret (defaults to same namespace as LanguageModel)
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-
 	// Key is the key within the secret containing the value
 	// +kubebuilder:default="api-key"
 	// +optional

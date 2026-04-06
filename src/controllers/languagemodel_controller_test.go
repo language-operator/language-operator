@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
@@ -317,6 +319,66 @@ func TestLanguageModelController_MissingAPIKeySecret(t *testing.T) {
 	}
 	if readyCond.Reason != langopv1alpha1.ReasonSecretNotFound {
 		t.Errorf("Expected reason %q, got %q", langopv1alpha1.ReasonSecretNotFound, readyCond.Reason)
+	}
+}
+
+// TestLanguageModelController_APIKeySecretRefLookedUpInModelNamespace verifies that
+// the secret referenced by apiKeySecretRef is always looked up in the model's own
+// namespace. A secret in a different namespace must not satisfy the check — the
+// cluster gateway pod can only mount secrets from its own namespace, so cross-
+// namespace references would silently fail at runtime.
+func TestLanguageModelController_APIKeySecretRefLookedUpInModelNamespace(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	model := gen.LanguageModel("test-model-ns", "model-ns",
+		gen.SetModelProvider("anthropic"),
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+		gen.SetModelAPIKeySecretRef("my-api-key", "api-key"),
+	)
+	model.Generation = 1
+
+	// Secret exists only in "other-ns", not in "model-ns".
+	secretInOtherNS := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-api-key", Namespace: "other-ns"},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(model, secretInOtherNS).
+		WithStatusSubresource(model).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
+
+	// First reconcile adds finalizer and writes Pending.
+	_, _ = reconciler.Reconcile(ctx, req)
+
+	// Second reconcile should fail: secret is in "other-ns", not "model-ns".
+	_, err := reconciler.Reconcile(ctx, req)
+	if err == nil {
+		t.Fatal("Expected error: secret in other namespace should not satisfy apiKeySecretRef validation")
+	}
+
+	updated := &langopv1alpha1.LanguageModel{}
+	if fetchErr := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, updated); fetchErr != nil {
+		t.Fatalf("Failed to fetch model: %v", fetchErr)
+	}
+	if updated.Status.Phase != "Failed" {
+		t.Errorf("Expected phase 'Failed', got %q", updated.Status.Phase)
+	}
+	// Error message must name the model's namespace, not "other-ns".
+	if updated.Status.Message == "" {
+		t.Fatal("Expected non-empty status message")
+	}
+	if !strings.Contains(updated.Status.Message, "model-ns") {
+		t.Errorf("Expected error message to reference model namespace %q, got %q", "model-ns", updated.Status.Message)
 	}
 }
 
