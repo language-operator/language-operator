@@ -232,7 +232,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.SetStatus(codes.Error, "Failed to reconcile namespace")
 		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
-			"NamespaceError", err.Error(), cluster.Generation)
+			langopv1alpha1.ReasonNamespaceError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after namespace error")
 		}
@@ -255,7 +255,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
-			"RBACError", err.Error(), cluster.Generation)
+			langopv1alpha1.ReasonRBACError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after RBAC error")
 		}
@@ -298,7 +298,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		cluster.Status.Phase = events.PhaseStatusFailed
 		cluster.Status.GatewayReady = ptr.To(false)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
-			"GatewayError", err.Error(), cluster.Generation)
+			langopv1alpha1.ReasonGatewayError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after gateway error")
 		}
@@ -315,7 +315,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			cluster.Status.Phase = events.PhaseStatusFailed
 			cluster.Status.GatewayReady = ptr.To(false)
 			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
-				"GatewayIngressError", err.Error(), cluster.Generation)
+				langopv1alpha1.ReasonGatewayIngressError, err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after gateway ingress error")
 			}
@@ -343,7 +343,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.SetStatus(codes.Error, "Failed to reconcile capacity quota")
 		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionCapacityReady, metav1.ConditionFalse,
-			"CapacityError", err.Error(), cluster.Generation)
+			langopv1alpha1.ReasonCapacityError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after capacity error")
 		}
@@ -812,7 +812,7 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 			log.V(1).Info("Wildcard DNS not configured or not accessible",
 				"domain", domain, "test_host", testHost, "error", err.Error())
 			SetCondition(&fresh.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionFalse,
-				"WildcardDNSMissing",
+				langopv1alpha1.ReasonWildcardDNSMissing,
 				fmt.Sprintf("Wildcard DNS (*.%s) not configured or not accessible. See docs/dns.md for setup instructions.", domain),
 				clusterGen)
 			log.Info("DNS configuration notice",
@@ -822,7 +822,7 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 		} else {
 			log.V(1).Info("Wildcard DNS configured correctly", "domain", domain)
 			SetCondition(&fresh.Status.Conditions, langopv1alpha1.ConditionDNSConfigured, metav1.ConditionTrue,
-				"WildcardDNSReady",
+				langopv1alpha1.ReasonWildcardDNSReady,
 				fmt.Sprintf("Wildcard DNS (*.%s) is correctly configured", domain),
 				clusterGen)
 		}
