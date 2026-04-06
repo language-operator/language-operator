@@ -72,6 +72,41 @@ func reconcileClaudeCodeAgent(t *testing.T, agent *langopv1alpha1.LanguageAgent)
 	return reconciler, updated
 }
 
+func TestReconcileRuntimeSecret_ClaudeCode_DisabledConfig(t *testing.T) {
+	// claudeCode present but Enabled=false → no managed secret, no ANTHROPIC_API_KEY injected
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "cc-disabled", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Workspace: &langopv1alpha1.WorkspaceSpec{
+				Enabled: func() *bool { b := false; return &b }(),
+			},
+			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
+				Enabled: false,
+			},
+		},
+	}
+	reconciler, updated := reconcileClaudeCodeAgent(t, agent)
+
+	hasMR := func(kind, name string) bool {
+		for _, r := range updated.Status.ManagedResources {
+			if r.Kind == kind && r.Name == name {
+				return true
+			}
+		}
+		return false
+	}
+	assert.False(t, hasMR("Secret", "cc-disabled-runtime"), "no runtime Secret when Enabled=false")
+
+	// Direct call to reconcileRuntimeSecret must not inject ANTHROPIC_API_KEY
+	working := agent.DeepCopy()
+	err := reconciler.reconcileRuntimeSecret(context.Background(), agent, working)
+	require.NoError(t, err)
+	for _, e := range working.Spec.Deployment.Env {
+		assert.NotEqual(t, "ANTHROPIC_API_KEY", e.Name, "ANTHROPIC_API_KEY must not be injected when Enabled=false")
+	}
+}
+
 func TestReconcileRuntimeSecret_ClaudeCode_NilConfig(t *testing.T) {
 	// No claudeCode config → no managed secret, no ANTHROPIC_API_KEY
 	agent := &langopv1alpha1.LanguageAgent{
