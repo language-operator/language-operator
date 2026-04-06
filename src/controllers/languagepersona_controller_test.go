@@ -154,6 +154,71 @@ func TestLanguagePersonaController_StatusUpdates(t *testing.T) {
 	}
 }
 
+func TestLanguagePersonaController_PendingPhaseOnFirstReconcile(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	persona := gen.LanguagePersona("pending-persona", "default",
+		gen.SetPersonaPersonality("You are a helpful assistant."),
+	)
+	persona.Generation = 1
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(persona).
+		WithStatusSubresource(persona).
+		Build()
+
+	reconciler := &LanguagePersonaReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: persona.Name, Namespace: persona.Namespace}}
+
+	// First reconcile: writes Pending and adds finalizer
+	result, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	if !result.Requeue {
+		t.Error("Expected Requeue=true after first reconcile")
+	}
+
+	updatedPersona := &langopv1alpha1.LanguagePersona{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: persona.Name, Namespace: persona.Namespace}, updatedPersona); err != nil {
+		t.Fatalf("Failed to fetch persona after first reconcile: %v", err)
+	}
+
+	if updatedPersona.Status.Phase != "Pending" {
+		t.Errorf("Expected phase 'Pending' after first reconcile, got '%s'", updatedPersona.Status.Phase)
+	}
+	if updatedPersona.Status.ObservedGeneration != persona.Generation {
+		t.Errorf("Expected ObservedGeneration %d, got %d", persona.Generation, updatedPersona.Status.ObservedGeneration)
+	}
+	if !controllerutil.ContainsFinalizer(updatedPersona, FinalizerName) {
+		t.Error("Expected finalizer to be present after first reconcile")
+	}
+
+	var pendingCondition *metav1.Condition
+	for i := range updatedPersona.Status.Conditions {
+		if updatedPersona.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
+			pendingCondition = &updatedPersona.Status.Conditions[i]
+			break
+		}
+	}
+	if pendingCondition == nil {
+		t.Fatal("Ready condition not found after first reconcile")
+	}
+	if pendingCondition.Status != metav1.ConditionFalse {
+		t.Errorf("Expected condition status False during Pending, got %s", pendingCondition.Status)
+	}
+	if pendingCondition.Reason != langopv1alpha1.ReasonPending {
+		t.Errorf("Expected reason 'Pending', got '%s'", pendingCondition.Reason)
+	}
+}
+
 func TestLanguagePersonaController_NotFoundHandling(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
