@@ -31,6 +31,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -138,6 +139,7 @@ func defaultGatewayReadinessProbe() *corev1.Probe {
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=resourcequotas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop
 func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -301,6 +303,22 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			langopv1alpha1.ReasonGatewayError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update status after gateway error")
+		}
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile gateway HPA (create when autoscaling configured, delete when removed)
+	if err := r.reconcileGatewayHPA(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile gateway HPA")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile gateway HPA")
+		cluster.Status.Phase = events.PhaseStatusFailed
+		cluster.Status.GatewayReady = ptr.To(false)
+		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
+			langopv1alpha1.ReasonGatewayError, err.Error(), cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after gateway HPA error")
 		}
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -933,6 +951,18 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	// Determine replicas and resources from GatewaySpec
 	replicas := int32(1)
+	if gatewayDeploy.Replicas != nil {
+		replicas = *gatewayDeploy.Replicas
+	}
+	// When HPA is active, preserve the current replica count rather than overwriting it.
+	// The HPA controller owns spec.replicas; resetting it every reconcile prevents scaling.
+	deploymentReplicas := &replicas
+	if gatewayDeploy.Autoscaling != nil {
+		existing := &appsv1.Deployment{}
+		if err := r.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: namespace}, existing); err == nil && existing.Spec.Replicas != nil {
+			deploymentReplicas = existing.Spec.Replicas
+		}
+	}
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -945,9 +975,6 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	}
 	gatewaySvcType := corev1.ServiceTypeClusterIP
 	var gatewaySvcAnnotations map[string]string
-	if gatewayDeploy.Replicas != nil {
-		replicas = *gatewayDeploy.Replicas
-	}
 	if gatewayDeploy.Resources.Requests != nil || gatewayDeploy.Resources.Limits != nil {
 		resources = gatewayDeploy.Resources
 	}
@@ -987,7 +1014,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		maxUnavailable := intstr.FromInt(0)
 		maxSurge := intstr.FromInt(1)
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: deploymentReplicas,
 			Selector: &metav1.LabelSelector{MatchLabels: gatewayLabels},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -1081,6 +1108,71 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	log.Info("Reconciled shared gateway", "namespace", namespace, "models", len(modelList.Items))
 	return nil
+}
+
+// reconcileGatewayHPA creates a HorizontalPodAutoscaler for the gateway when autoscaling is
+// configured, and deletes any existing HPA when autoscaling is removed from the spec.
+func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	var gatewayDeploy langopv1alpha1.DeploymentSpec
+	if cluster.Spec.Gateway != nil {
+		gatewayDeploy = cluster.Spec.Gateway.Deployment
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gateway",
+			Namespace: cluster.Name,
+		},
+	}
+
+	if gatewayDeploy.Autoscaling == nil {
+		if err := r.Delete(ctx, hpa); err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete gateway HorizontalPodAutoscaler: %w", err)
+		}
+		return nil
+	}
+
+	as := gatewayDeploy.Autoscaling
+	labels := GetCommonLabels("language-operator", "gateway")
+	labels[LabelKeyK8sComponent] = "gateway"
+	labels[LabelKeyLangopCluster] = cluster.Name
+
+	metrics := as.Metrics
+	if len(metrics) == 0 {
+		// Default: 80% average CPU utilization
+		avgUtil := int32(80)
+		metrics = []autoscalingv2.MetricSpec{
+			{
+				Type: autoscalingv2.ResourceMetricSourceType,
+				Resource: &autoscalingv2.ResourceMetricSource{
+					Name: corev1.ResourceCPU,
+					Target: autoscalingv2.MetricTarget{
+						Type:               autoscalingv2.UtilizationMetricType,
+						AverageUtilization: &avgUtil,
+					},
+				},
+			},
+		}
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
+		if err := controllerutil.SetControllerReference(cluster, hpa, r.Scheme); err != nil {
+			return err
+		}
+		hpa.Labels = labels
+		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       "gateway",
+			},
+			MinReplicas: as.MinReplicas,
+			MaxReplicas: as.MaxReplicas,
+			Metrics:     metrics,
+		}
+		return nil
+	})
+	return err
 }
 
 // reconcileGatewayIngress creates an Ingress for gateway.<cluster.domain>.
@@ -1347,6 +1439,13 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 				Group: "networking.k8s.io", Kind: "Ingress", Name: "gateway", Namespace: ns,
 			})
 		}
+	}
+
+	// HPA is created when gateway autoscaling is configured.
+	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Deployment.Autoscaling != nil {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "autoscaling", Kind: "HorizontalPodAutoscaler", Name: "gateway", Namespace: ns,
+		})
 	}
 
 	// ResourceQuota is created when capacity limits are configured.
