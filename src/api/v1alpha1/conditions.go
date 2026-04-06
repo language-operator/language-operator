@@ -23,7 +23,6 @@ const (
 	ConditionRegistryValidated     = "RegistryValidated"
 	ConditionNetworkPolicyReady    = "NetworkPolicyReady"
 	ConditionNetworkPolicyEnforced = "NetworkPolicyEnforced"
-	ConditionWebhooksReady         = "WebhooksReady"
 	ConditionGatewayReady          = "GatewayReady"
 	ConditionDNSConfigured         = "DNSConfigured"
 	ConditionCapacityReady         = "CapacityReady"
