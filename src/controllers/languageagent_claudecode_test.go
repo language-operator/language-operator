@@ -82,7 +82,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_DisabledConfig(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: false,
+				Enabled: boolPtr(false),
 			},
 		},
 	}
@@ -142,7 +142,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_GatewayMode(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: true,
+				Enabled: boolPtr(true),
 			},
 		},
 	}
@@ -180,7 +180,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_InlineAPIKey(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: true,
+				Enabled: boolPtr(true),
 				APIKey:  "sk-ant-real-key-abc123",
 			},
 		},
@@ -206,7 +206,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled:   true,
+				Enabled:   boolPtr(true),
 				APIKeyRef: &langopv1alpha1.RuntimeSecretRef{Name: "my-anthropic-secret"},
 			},
 		},
@@ -246,7 +246,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_MaxTurns(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled:  true,
+				Enabled:  boolPtr(true),
 				MaxTurns: &maxTurns,
 			},
 		},

@@ -49,7 +49,7 @@ func reconcileSelfConfig(t *testing.T, r *LanguageAgentSelfConfigReconciler, nam
 func agentWithSelfConfigure(name, ns string, actions ...langopv1alpha1.SelfConfigAction) *langopv1alpha1.LanguageAgent {
 	return gen.LanguageAgent(name, ns, func(a *langopv1alpha1.LanguageAgent) {
 		a.Spec.SelfConfigure = &langopv1alpha1.SelfConfigureSpec{
-			Enabled:        true,
+			Enabled:        boolPtr(true),
 			AllowedActions: actions,
 		}
 	})

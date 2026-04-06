@@ -4589,7 +4589,7 @@ func TestLanguageAgentController_CustomPortService(t *testing.T) {
 
 	agent := gen.LanguageAgent("custom-port-agent", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		}),
 	)
 
@@ -4626,7 +4626,7 @@ func TestLanguageAgentController_CustomPortNetworkPolicy(t *testing.T) {
 
 	agent := gen.LanguageAgent("custom-port-np-agent", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 9090, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		}),
 	)
 
@@ -4669,14 +4669,14 @@ func TestAgentPorts_DefaultsTo8080(t *testing.T) {
 	require.Len(t, ports, 1)
 	assert.Equal(t, "http", ports[0].Name)
 	assert.Equal(t, int32(8080), ports[0].Port)
-	assert.True(t, ports[0].Expose)
+	assert.Equal(t, boolPtr(true), ports[0].Expose)
 }
 
 // TestAgentPorts_SpecPortsUsed verifies that spec.ports is returned as-is.
 func TestAgentPorts_SpecPortsUsed(t *testing.T) {
 	agent := gen.LanguageAgent("multi", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
 		}),
 	)
@@ -4692,7 +4692,7 @@ func TestAgentIngressPort_ExposeFlagWins(t *testing.T) {
 	agent := gen.LanguageAgent("expose-test", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
 			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
-			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		}),
 	)
 	assert.Equal(t, int32(3000), agentIngressPort(agent))
@@ -4716,7 +4716,7 @@ func TestLanguageAgentController_MultiPortService(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("multi-port-svc", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
 		}),
 	)
@@ -4750,7 +4750,7 @@ func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("multi-port-np", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 3000, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 			{Name: "ws", Port: 4000, Protocol: corev1.ProtocolTCP},
 		}),
 	)
@@ -4791,7 +4791,7 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("ingress-ns-agent", "default",
 		gen.SetAgentPorts([]langopv1alpha1.AgentPort{
-			{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		}),
 	)
 	fakeClient := fake.NewClientBuilder().

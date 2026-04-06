@@ -728,7 +728,7 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 		return err
 	}
 
-	if agent.Spec.Workspace.Retain {
+	if agent.Spec.Workspace.Retain != nil && *agent.Spec.Workspace.Retain {
 		agent.Status.WorkspacePVCName = GeneratePVCName(agent.Name)
 	}
 	return nil
@@ -1481,7 +1481,7 @@ func (r *LanguageAgentReconciler) cleanupResources(ctx context.Context, agent *l
 	// they must be deleted explicitly here.
 	if agent.Spec.Workspace != nil &&
 		(agent.Spec.Workspace.Enabled == nil || *agent.Spec.Workspace.Enabled) &&
-		agent.Spec.Workspace.Retain {
+		agent.Spec.Workspace.Retain != nil && *agent.Spec.Workspace.Retain {
 		if err := r.orphanWorkspacePVC(ctx, agent); err != nil {
 			return err
 		}
@@ -1542,7 +1542,7 @@ func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort 
 		return agent.Spec.Ports
 	}
 	return []langopv1alpha1.AgentPort{
-		{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: true},
+		{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 	}
 }
 
@@ -1551,7 +1551,7 @@ func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort 
 func agentIngressPort(agent *langopv1alpha1.LanguageAgent) int32 {
 	ports := agentPorts(agent)
 	for _, p := range ports {
-		if p.Expose {
+		if p.Expose != nil && *p.Expose {
 			return p.Port
 		}
 	}
@@ -2229,7 +2229,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		}
 		// When self-configure is enabled, grant the agent's SA permission to
 		// create LanguageAgentSelfConfig requests targeting itself.
-		if agent.Spec.SelfConfigure != nil && agent.Spec.SelfConfigure.Enabled {
+		if agent.Spec.SelfConfigure != nil && agent.Spec.SelfConfigure.Enabled != nil && *agent.Spec.SelfConfigure.Enabled {
 			role.Rules = append(role.Rules, rbacv1.PolicyRule{
 				APIGroups: []string{"langop.io"},
 				Resources: []string{"languageagentselfconfigs"},
@@ -2331,7 +2331,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 
 	// opencode inline credentials → managed secret
 	// Use workingAgent so runtime-provided config (e.g. spec.opencode from a LanguageAgentRuntime) is respected.
-	if workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled {
+	if workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled != nil && *workingAgent.Spec.Opencode.Enabled {
 		oc := workingAgent.Spec.Opencode
 		if oc.Password != "" {
 			username := oc.Username
@@ -2373,7 +2373,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// openclaw inline credentials → managed secret
-	if workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled {
+	if workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled != nil && *workingAgent.Spec.Openclaw.Enabled {
 		oc := workingAgent.Spec.Openclaw
 		if oc.Token != "" {
 			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(oc.Token)
@@ -2398,7 +2398,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// claude-code credentials → managed secret, ref envFrom, or gateway-routed placeholder
-	if workingAgent.Spec.ClaudeCode != nil && workingAgent.Spec.ClaudeCode.Enabled {
+	if workingAgent.Spec.ClaudeCode != nil && workingAgent.Spec.ClaudeCode.Enabled != nil && *workingAgent.Spec.ClaudeCode.Enabled {
 		cc := workingAgent.Spec.ClaudeCode
 		if cc.APIKey != "" {
 			secretData["ANTHROPIC_API_KEY"] = []byte(cc.APIKey)
@@ -2508,8 +2508,8 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 
 	// Runtime Secret is managed when opencode/openclaw is enabled and configured without a *Ref
 	// (i.e. credentials are inline or auto-generated rather than pointing at an existing Secret).
-	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled && workingAgent.Spec.Opencode.PasswordRef == nil) ||
-		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled && workingAgent.Spec.Openclaw.TokenRef == nil)
+	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled != nil && *workingAgent.Spec.Opencode.Enabled && workingAgent.Spec.Opencode.PasswordRef == nil) ||
+		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled != nil && *workingAgent.Spec.Openclaw.Enabled && workingAgent.Spec.Openclaw.TokenRef == nil)
 	if hasSecret {
 		resources = append(resources, langopv1alpha1.ManagedResource{
 			Kind: "Secret", Name: agent.Name + "-runtime", Namespace: ns,

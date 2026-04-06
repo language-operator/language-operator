@@ -203,7 +203,7 @@ func SetAgentWorkspaceRetain(retain bool) LanguageAgentModifier {
 			enabled := true
 			a.Spec.Workspace = &langopv1alpha1.WorkspaceSpec{Enabled: &enabled, Size: "10Gi"}
 		}
-		a.Spec.Workspace.Retain = retain
+		a.Spec.Workspace.Retain = &retain
 	}
 }
 

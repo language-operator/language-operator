@@ -227,7 +227,7 @@ func validateAgentPorts(ports []AgentPort) error {
 			return fmt.Errorf("ports[%d].port %d is not unique", i, p.Port)
 		}
 		nums[p.Port] = true
-		if p.Expose {
+		if p.Expose != nil && *p.Expose {
 			exposeCount++
 		}
 	}

@@ -80,6 +80,7 @@ spec:
                     - name
                     type: object
                   enabled:
+                    default: false
                     description: |-
                       Enabled activates claude-code credential management for this agent.
                       Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
@@ -6331,6 +6332,7 @@ spec:
                   When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.
                 properties:
                   enabled:
+                    default: false
                     description: |-
                       Enabled activates openclaw credential management for this agent.
                       Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
@@ -6361,6 +6363,7 @@ spec:
                   When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
                 properties:
                   enabled:
+                    default: false
                     description: |-
                       Enabled activates opencode credential management for this agent.
                       Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
@@ -6399,6 +6402,7 @@ spec:
                     container exposes.
                   properties:
                     expose:
+                      default: false
                       description: |-
                         Expose controls whether ingress/HTTPRoute routes to this port.
                         At most one port should have expose: true; if none, the first port is used.
@@ -6465,6 +6469,7 @@ spec:
                     description: MountPath is where the workspace is mounted in containers
                     type: string
                   retain:
+                    default: false
                     description: |-
                       Retain prevents the workspace PVC from being deleted when the agent is deleted.
                       When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC

@@ -43,8 +43,9 @@ const (
 type SelfConfigureSpec struct {
 	// Enabled gates all self-configuration. When false, any LanguageAgentSelfConfig
 	// targeting this agent is immediately Denied.
+	// +kubebuilder:default=false
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// AllowedActions is the allowlist of self-config categories the agent may request.
 	// If empty while Enabled=true, all actions are denied.

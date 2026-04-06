@@ -124,7 +124,7 @@ func (r *LanguageAgentSelfConfigReconciler) Reconcile(ctx context.Context, req c
 	}
 
 	// Gate: self-configure must be enabled on the parent.
-	if agent.Spec.SelfConfigure == nil || !agent.Spec.SelfConfigure.Enabled {
+	if agent.Spec.SelfConfigure == nil || agent.Spec.SelfConfigure.Enabled == nil || !*agent.Spec.SelfConfigure.Enabled {
 		return r.setTerminal(ctx, sc, langopv1alpha1.SelfConfigPhaseDenied,
 			"self-configure is not enabled on the target LanguageAgent")
 	}
