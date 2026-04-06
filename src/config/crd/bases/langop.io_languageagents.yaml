@@ -7162,6 +7162,7 @@ spec:
                 - Pending
                 - Running
                 - Failed
+                - Updating
                 - Degraded
                 type: string
               readyReplicas:

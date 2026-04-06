@@ -3617,6 +3617,7 @@ func TestLanguageAgentController_PhaseRunning(t *testing.T) {
 	}
 	deploy.Status.Replicas = 1
 	deploy.Status.ReadyReplicas = 1
+	deploy.Status.UpdatedReplicas = 1
 	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
 		t.Fatalf("Failed to update deployment status: %v", err)
 	}
@@ -3672,13 +3673,14 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	// Simulate pods crashing: Replicas>0 but ReadyReplicas=0 and DeploymentAvailable=False
+	// Simulate pods crashing: Replicas>0, rollout complete, but ReadyReplicas=0 and DeploymentAvailable=False
 	deploy := &appsv1.Deployment{}
 	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
 		t.Fatalf("Deployment not found: %v", err)
 	}
 	deploy.Status.Replicas = 1
 	deploy.Status.ReadyReplicas = 0
+	deploy.Status.UpdatedReplicas = 1
 	deploy.Status.Conditions = []appsv1.DeploymentCondition{
 		{
 			Type:   appsv1.DeploymentAvailable,
@@ -3700,6 +3702,70 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 	}
 	if updatedAgent.Status.Phase != events.PhaseStatusFailed {
 		t.Errorf("Expected phase %q, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
+	}
+}
+
+func TestLanguageAgentController_PhaseUpdating(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "phase-updating-agent",
+			Namespace: "default",
+		},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+
+	reconciler := &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
+
+	// Two reconciles to get past finalizer and create resources
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Second reconcile failed: %v", err)
+	}
+
+	// Simulate a rollout in progress: Replicas=1 but UpdatedReplicas=0
+	deploy := &appsv1.Deployment{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
+		t.Fatalf("Deployment not found: %v", err)
+	}
+	deploy.Status.Replicas = 1
+	deploy.Status.ReadyReplicas = 0
+	deploy.Status.UpdatedReplicas = 0
+	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
+		t.Fatalf("Failed to update deployment status: %v", err)
+	}
+
+	// Third reconcile reads the updated deployment status
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("Third reconcile failed: %v", err)
+	}
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
+		t.Fatalf("Failed to get agent: %v", err)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusUpdating {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusUpdating, updatedAgent.Status.Phase)
 	}
 }
 
@@ -4372,11 +4438,12 @@ func TestLanguageAgentController_DegradedPhase(t *testing.T) {
 	_, err := reconciler.Reconcile(ctx, req)
 	require.NoError(t, err)
 
-	// Seed the Deployment status to simulate ready pods.
+	// Seed the Deployment status to simulate ready pods (rollout complete).
 	deployment := &appsv1.Deployment{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
 	deployment.Status.Replicas = 1
 	deployment.Status.ReadyReplicas = 1
+	deployment.Status.UpdatedReplicas = 1
 	require.NoError(t, fakeClient.Status().Update(ctx, deployment))
 
 	// Second reconcile: NP still times out; deployment is running → Degraded phase.
