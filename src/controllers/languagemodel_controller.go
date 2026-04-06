@@ -18,12 +18,16 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -79,6 +83,17 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	span := result.Span
 	log := log.FromContext(ctx)
 
+	// Deferred status write — persists Phase: Failed on any error exit path.
+	defer func() {
+		if reconcileErr == nil || !model.DeletionTimestamp.IsZero() {
+			return
+		}
+		model.Status.ObservedGeneration = model.Generation
+		if updateErr := r.Status().Update(ctx, model); updateErr != nil && !apierrors.IsNotFound(updateErr) {
+			log.Error(updateErr, "Failed to update LanguageModel status on error path")
+		}
+	}()
+
 	// Add model-specific attributes to span
 	span.SetAttributes(
 		attribute.String("model.provider", model.Spec.Provider),
@@ -89,8 +104,16 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.handleDeletion(ctx, model)
 	}
 
-	// Add finalizer if it doesn't exist
+	// Add finalizer if it doesn't exist. Write Pending status first so
+	// `kubectl get lmodel` shows something meaningful before reconciliation completes.
 	if !controllerutil.ContainsFinalizer(model, FinalizerName) {
+		model.Status.Phase = events.PhaseStatusPending
+		model.Status.ObservedGeneration = model.Generation
+		if err := r.Status().Update(ctx, model); err != nil && !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to set Pending status")
+			// non-fatal: continue to add finalizer
+		}
+
 		controllerutil.AddFinalizer(model, FinalizerName)
 		if err := r.Update(ctx, model); err != nil {
 			log.Error(err, "Failed to add finalizer")
@@ -101,6 +124,30 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.EventManager.RecordModelCreated(model)
 		}
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Validate apiKeySecretRef if set — surface a missing Secret as Phase: Failed
+	// rather than letting the gateway fail silently at runtime.
+	if model.Spec.APIKeySecretRef != nil {
+		secretNS := model.Spec.APIKeySecretRef.Namespace
+		if secretNS == "" {
+			secretNS = model.Namespace
+		}
+		secret := &corev1.Secret{}
+		if err := r.Get(ctx, types.NamespacedName{Name: model.Spec.APIKeySecretRef.Name, Namespace: secretNS}, secret); err != nil {
+			var msg string
+			if apierrors.IsNotFound(err) {
+				msg = fmt.Sprintf("secret %q not found in namespace %q", model.Spec.APIKeySecretRef.Name, secretNS)
+			} else {
+				msg = fmt.Sprintf("failed to get apiKeySecretRef: %v", err)
+			}
+			log.Error(err, "apiKeySecretRef lookup failed", "secret", model.Spec.APIKeySecretRef.Name)
+			model.Status.Phase = events.PhaseStatusFailed
+			model.Status.Message = msg
+			SetCondition(&model.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonSecretNotFound, msg, model.Generation)
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Update status — model is managed by the cluster's shared gateway
@@ -117,6 +164,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
+		model.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}

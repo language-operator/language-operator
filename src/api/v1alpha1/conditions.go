@@ -69,4 +69,5 @@ const (
 	ReasonRuntimeApplied        = "RuntimeApplied"
 	ReasonWorkspaceSeedReady    = "WorkspaceSeedReady"
 	ReasonWorkspaceSeedError    = "WorkspaceSeedError"
+	ReasonSecretNotFound        = "SecretNotFound"
 )
