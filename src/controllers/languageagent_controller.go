@@ -2506,10 +2506,11 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 		})
 	}
 
-	// Runtime Secret is managed when opencode/openclaw is enabled and configured without a *Ref
-	// (i.e. credentials are inline or auto-generated rather than pointing at an existing Secret).
+	// Runtime Secret is managed when opencode/openclaw/claude-code is enabled and configured
+	// with inline credentials rather than a *Ref pointing at an existing Secret.
 	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled != nil && *workingAgent.Spec.Opencode.Enabled && workingAgent.Spec.Opencode.PasswordRef == nil) ||
-		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled != nil && *workingAgent.Spec.Openclaw.Enabled && workingAgent.Spec.Openclaw.TokenRef == nil)
+		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled != nil && *workingAgent.Spec.Openclaw.Enabled && workingAgent.Spec.Openclaw.TokenRef == nil) ||
+		(workingAgent.Spec.ClaudeCode != nil && workingAgent.Spec.ClaudeCode.Enabled != nil && *workingAgent.Spec.ClaudeCode.Enabled && workingAgent.Spec.ClaudeCode.APIKey != "")
 	if hasSecret {
 		resources = append(resources, langopv1alpha1.ManagedResource{
 			Kind: "Secret", Name: agent.Name + "-runtime", Namespace: ns,
