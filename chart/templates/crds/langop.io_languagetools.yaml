@@ -1,32 +1,43 @@
+{{- if .Values.crds.install }}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    "helm.sh/resource-policy": keep
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: languageagentruntimes.langop.io
+  name: languagetools.langop.io
 spec:
   group: langop.io
   names:
-    kind: LanguageAgentRuntime
-    listKind: LanguageAgentRuntimeList
-    plural: languageagentruntimes
+    kind: LanguageTool
+    listKind: LanguageToolList
+    plural: languagetools
     shortNames:
-    - laruntime
-    singular: languageagentruntime
-  scope: Cluster
+    - ltool
+    singular: languagetool
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.image
+      name: Image
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.endpoint
+      name: Endpoint
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: |-
-          LanguageAgentRuntime is the Schema for the languageagentruntimes API.
-          It defines a reusable preset for LanguageAgent deployments, analogous to an IngressClass.
-          Admins create runtimes; users reference them via spec.runtime on a LanguageAgent.
+        description: LanguageTool is the Schema for the languagetools API
         properties:
           apiVersion:
             description: |-
@@ -46,55 +57,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: |-
-              LanguageAgentRuntimeSpec defines a preset configuration for LanguageAgent deployments.
-              All fields are optional; unset fields leave the agent's own spec in effect.
-              When a LanguageAgent references a runtime, the runtime's fields are merged as defaults:
-              scalars fill in zeros/nils (agent wins if set), lists are runtime-first then agent-appended.
+            description: LanguageToolSpec defines the desired state of LanguageTool
             properties:
-              claudeCode:
-                description: |-
-                  ClaudeCode provides default claude-code credential configuration for agents using this runtime.
-                  When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.
-                properties:
-                  apiKey:
-                    description: |-
-                      APIKey is the Anthropic API key (inline).
-                      The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
-                      When omitted, the operator injects a gateway-routed placeholder so all LLM
-                      traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
-                      Mutually exclusive with APIKeyRef.
-                    type: string
-                  apiKeyRef:
-                    description: |-
-                      APIKeyRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain ANTHROPIC_API_KEY.
-                      Mutually exclusive with APIKey.
-                    properties:
-                      name:
-                        description: Name is the name of the Secret.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  enabled:
-                    description: |-
-                      Enabled activates claude-code credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
-                  maxTurns:
-                    description: |-
-                      MaxTurns limits the number of agentic turns per request.
-                      Sets CLAUDE_CODE_MAX_TURNS in the agent container.
-                    format: int32
-                    type: integer
-                type: object
               deployment:
-                description: |-
-                  Deployment provides default Kubernetes pod and container configuration.
-                  Scalars (args, command, resources, probes, etc.) are used when the agent has none set.
-                  Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.
+                description: Deployment groups Kubernetes-specific pod and container
+                  configuration.
                 properties:
                   affinity:
                     description: Affinity defines pod affinity and anti-affinity rules.
@@ -6318,189 +6285,535 @@ spec:
                       type: object
                     type: array
                 type: object
-              image:
+              deploymentMode:
+                default: service
                 description: |-
-                  Image is the default container image for agents using this runtime.
-                  Agents may override this. When a runtime is referenced, spec.image on the agent is optional.
+                  DeploymentMode specifies how this tool should be deployed
+                  - "service": Deployed as a standalone Deployment+Service (default, shared across agents)
+                  - "sidecar": Deployed as a sidecar container in each agent pod (dedicated, with workspace access)
+                enum:
+                - service
+                - sidecar
                 type: string
-              openclaw:
+              image:
+                description: Image is the container image to run for this tool
+                minLength: 1
+                type: string
+              networkPolicies:
                 description: |-
-                  Openclaw provides default openclaw credential configuration for agents using this runtime.
-                  When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.
+                  NetworkPolicies defines ingress and egress rules for this tool.
+                  Rules mirror the native Kubernetes NetworkPolicy shape.
                 properties:
-                  enabled:
-                    description: |-
-                      Enabled activates openclaw credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
-                  token:
-                    description: |-
-                      Token is the gateway authentication token (inline).
-                      The operator creates a managed Secret and injects it via envFrom.
-                      Mutually exclusive with TokenRef.
-                    type: string
-                  tokenRef:
-                    description: |-
-                      TokenRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain OPENCLAW_GATEWAY_TOKEN.
-                      Mutually exclusive with Token.
-                    properties:
-                      name:
-                        description: Name is the name of the Secret.
-                        type: string
-                    required:
-                    - name
-                    type: object
+                  egress:
+                    description: Egress rules — each entry allows traffic from the
+                      workload to the listed destinations.
+                    items:
+                      description: |-
+                        NetworkEgressRule is one egress rule: zero or more destination peers, zero or more ports.
+                        Mirrors networkingv1.NetworkPolicyEgressRule.
+                      properties:
+                        ports:
+                          description: Ports lists the destination ports to allow.
+                          items:
+                            description: NetworkPort defines a port and protocol
+                            properties:
+                              port:
+                                description: Port number
+                                format: int32
+                                maximum: 65535
+                                minimum: 1
+                                type: integer
+                              protocol:
+                                default: TCP
+                                description: Protocol (TCP, UDP, SCTP)
+                                enum:
+                                - TCP
+                                - UDP
+                                - SCTP
+                                type: string
+                            required:
+                            - port
+                            type: object
+                          type: array
+                        to:
+                          description: To lists the destinations this workload is
+                            allowed to reach.
+                          items:
+                            description: NetworkPeer defines the source/destination
+                              of network traffic
+                            properties:
+                              cidr:
+                                description: CIDR block
+                                type: string
+                              dns:
+                                description: |-
+                                  DNS names (supports wildcards with *)
+                                  Examples: "api.openai.com", "*.googleapis.com"
+                                items:
+                                  type: string
+                                type: array
+                              group:
+                                description: |-
+                                  Group selects pods with matching langop.io/group label
+                                  Used to allow communication with specific labeled resources
+                                type: string
+                              namespaceSelector:
+                                description: Namespace selector (for cross-namespace
+                                  rules)
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: |-
+                                        A label selector requirement is a selector that contains values, a key, and an operator that
+                                        relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: |-
+                                            operator represents a key's relationship to a set of values.
+                                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: |-
+                                            values is an array of string values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array is replaced during a strategic
+                                            merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              podSelector:
+                                description: Pod selector (within namespace)
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: |-
+                                        A label selector requirement is a selector that contains values, a key, and an operator that
+                                        relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: |-
+                                            operator represents a key's relationship to a set of values.
+                                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: |-
+                                            values is an array of string values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array is replaced during a strategic
+                                            merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              service:
+                                description: Kubernetes service reference
+                                properties:
+                                  name:
+                                    description: Service name
+                                    type: string
+                                  namespace:
+                                    description: Service namespace (defaults to same
+                                      namespace if omitted)
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                            type: object
+                          type: array
+                      type: object
+                    type: array
+                  ingress:
+                    description: Ingress rules — each entry allows traffic into the
+                      workload from the listed sources.
+                    items:
+                      description: |-
+                        NetworkIngressRule is one ingress rule: zero or more source peers, zero or more ports.
+                        Mirrors networkingv1.NetworkPolicyIngressRule.
+                      properties:
+                        from:
+                          description: From lists the sources allowed to send traffic
+                            to this workload.
+                          items:
+                            description: NetworkPeer defines the source/destination
+                              of network traffic
+                            properties:
+                              cidr:
+                                description: CIDR block
+                                type: string
+                              dns:
+                                description: |-
+                                  DNS names (supports wildcards with *)
+                                  Examples: "api.openai.com", "*.googleapis.com"
+                                items:
+                                  type: string
+                                type: array
+                              group:
+                                description: |-
+                                  Group selects pods with matching langop.io/group label
+                                  Used to allow communication with specific labeled resources
+                                type: string
+                              namespaceSelector:
+                                description: Namespace selector (for cross-namespace
+                                  rules)
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: |-
+                                        A label selector requirement is a selector that contains values, a key, and an operator that
+                                        relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: |-
+                                            operator represents a key's relationship to a set of values.
+                                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: |-
+                                            values is an array of string values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array is replaced during a strategic
+                                            merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              podSelector:
+                                description: Pod selector (within namespace)
+                                properties:
+                                  matchExpressions:
+                                    description: matchExpressions is a list of label
+                                      selector requirements. The requirements are
+                                      ANDed.
+                                    items:
+                                      description: |-
+                                        A label selector requirement is a selector that contains values, a key, and an operator that
+                                        relates the key and values.
+                                      properties:
+                                        key:
+                                          description: key is the label key that the
+                                            selector applies to.
+                                          type: string
+                                        operator:
+                                          description: |-
+                                            operator represents a key's relationship to a set of values.
+                                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                                          type: string
+                                        values:
+                                          description: |-
+                                            values is an array of string values. If the operator is In or NotIn,
+                                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                            the values array must be empty. This array is replaced during a strategic
+                                            merge patch.
+                                          items:
+                                            type: string
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                      required:
+                                      - key
+                                      - operator
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                  matchLabels:
+                                    additionalProperties:
+                                      type: string
+                                    description: |-
+                                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                    type: object
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              service:
+                                description: Kubernetes service reference
+                                properties:
+                                  name:
+                                    description: Service name
+                                    type: string
+                                  namespace:
+                                    description: Service namespace (defaults to same
+                                      namespace if omitted)
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                            type: object
+                          type: array
+                        ports:
+                          description: Ports lists the ports on which to allow incoming
+                            traffic.
+                          items:
+                            description: NetworkPort defines a port and protocol
+                            properties:
+                              port:
+                                description: Port number
+                                format: int32
+                                maximum: 65535
+                                minimum: 1
+                                type: integer
+                              protocol:
+                                default: TCP
+                                description: Protocol (TCP, UDP, SCTP)
+                                enum:
+                                - TCP
+                                - UDP
+                                - SCTP
+                                type: string
+                            required:
+                            - port
+                            type: object
+                          type: array
+                      type: object
+                    type: array
                 type: object
-              opencode:
-                description: |-
-                  Opencode provides default opencode credential configuration for agents using this runtime.
-                  When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
-                properties:
-                  enabled:
-                    description: |-
-                      Enabled activates opencode credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
-                  password:
-                    description: |-
-                      Password is the HTTP Basic Auth password (inline).
-                      The operator creates a managed Secret and injects it via envFrom.
-                      Mutually exclusive with PasswordRef.
-                    type: string
-                  passwordRef:
-                    description: |-
-                      PasswordRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
-                      Mutually exclusive with Password.
-                    properties:
-                      name:
-                        description: Name is the name of the Secret.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  username:
-                    description: |-
-                      Username for HTTP Basic Auth. Defaults to "opencode" if not set.
-                      Sets OPENCODE_SERVER_USERNAME in the agent container.
-                    type: string
-                type: object
-              ports:
-                description: |-
-                  Ports defines default ports for agents using this runtime.
-                  Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely.
+              port:
+                default: 8080
+                description: Port is the port the tool listens on
+                format: int32
+                maximum: 65535
+                minimum: 1
+                type: integer
+              type:
+                default: mcp
+                description: Type specifies the tool protocol type. Only "mcp" is
+                  currently implemented.
+                enum:
+                - mcp
+                type: string
+            required:
+            - image
+            type: object
+          status:
+            description: LanguageToolStatus defines the observed state of LanguageTool
+            properties:
+              availableReplicas:
+                description: AvailableReplicas is the number of pods targeted by this
+                  LanguageTool with at least one available condition
+                format: int32
+                type: integer
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the tool's state
                 items:
-                  description: AgentPort describes a single network port that an agent
-                    container exposes.
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
-                    expose:
+                    lastTransitionTime:
                       description: |-
-                        Expose controls whether ingress/HTTPRoute routes to this port.
-                        At most one port should have expose: true; if none, the first port is used.
-                      type: boolean
-                    name:
-                      description: |-
-                        Name uniquely identifies this port within the agent (e.g., "web", "ws").
-                        Used as the Service port name; must conform to Kubernetes port-name rules.
-                      maxLength: 15
-                      pattern: ^[a-z][a-z0-9-]*$
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
                       type: string
-                    port:
-                      description: Port is the port number the container listens on.
-                      format: int32
-                      maximum: 65535
-                      minimum: 1
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
                       type: integer
-                    protocol:
-                      default: TCP
-                      description: Protocol is the transport protocol. Defaults to
-                        TCP.
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
                       enum:
-                      - TCP
-                      - UDP
-                      - SCTP
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
                   required:
-                  - name
-                  - port
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:
-                - name
+                - type
                 x-kubernetes-list-type: map
-              workspace:
-                description: |-
-                  Workspace provides default size, storageClass, and mountPath for the agent's workspace.
-                  Workspace storage is always provisioned; this presets its parameters.
-                  Agents may override individual workspace fields.
-                properties:
-                  accessMode:
-                    default: ReadWriteOnce
-                    description: AccessMode defines the volume access mode
-                    enum:
-                    - ReadWriteOnce
-                    - ReadWriteMany
-                    type: string
-                  enabled:
-                    default: true
-                    description: |-
-                      Enabled controls whether to create a workspace volume.
-                      Defaults to true. Set to false to explicitly disable without removing the workspace config.
-                    type: boolean
-                  initialFiles:
-                    additionalProperties:
+              endpoint:
+                description: Endpoint is the service endpoint where the tool is accessible
+                type: string
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed LanguageTool
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase of the tool (Pending,
+                  Running, Failed, Updating, Degraded)
+                enum:
+                - Pending
+                - Running
+                - Failed
+                - Updating
+                - Degraded
+                type: string
+              readyReplicas:
+                description: ReadyReplicas is the number of pods ready and passing
+                  health checks
+                format: int32
+                type: integer
+              toolSchemas:
+                description: ToolSchemas contains the complete MCP tool schemas discovered
+                  from this service
+                items:
+                  description: ToolSchema represents the complete schema of an MCP
+                    tool
+                  properties:
+                    description:
+                      description: Description is a human-readable description of
+                        the tool
                       type: string
-                    description: |-
-                      InitialFiles are seeded into the workspace PVC on first boot only.
-                      Keys are filenames (must be valid ConfigMap keys: alphanumeric, '.', '-', '_').
-                      Files are not overwritten if they already exist on the PVC.
-                    type: object
-                  mountPath:
-                    default: /workspace
-                    description: MountPath is where the workspace is mounted in containers
-                    type: string
-                  retain:
-                    description: |-
-                      Retain prevents the workspace PVC from being deleted when the agent is deleted.
-                      When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC
-                      does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.
-                      Defaults to false.
-                    type: boolean
-                  seedConfigMapRef:
-                    description: |-
-                      SeedConfigMapRef references an external ConfigMap whose keys are filenames
-                      and values are file contents. Merged with InitialFiles; InitialFiles wins on collision.
-                    properties:
-                      name:
-                        default: ""
-                        description: |-
-                          Name of the referent.
-                          This field is effectively required, but due to backwards compatibility is
-                          allowed to be empty. Instances of this type with an empty value here are
-                          almost certainly wrong.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  size:
-                    default: 10Gi
-                    description: |-
-                      Size is the requested storage size (e.g., "10Gi", "1.5Ti", "500Mi")
-                      Supports integer and decimal quantities with standard Kubernetes suffixes
-                    minLength: 1
-                    pattern: ^([0-9]*\.?[0-9]+)(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K|m)?$
-                    type: string
-                  storageClassName:
-                    description: |-
-                      StorageClassName specifies the StorageClass for the PVC
-                      If not specified, uses the cluster default
-                    type: string
-                type: object
+                    inputSchema:
+                      description: InputSchema defines the parameters this tool accepts
+                      properties:
+                        properties:
+                          additionalProperties:
+                            description: ToolProperty defines an individual parameter
+                              or return field
+                            properties:
+                              description:
+                                description: Description explains what this property
+                                  represents
+                                type: string
+                              example:
+                                description: Example provides an example value as
+                                  a JSON string
+                                type: string
+                              type:
+                                description: Type is the JSON schema type (string,
+                                  integer, boolean, etc.)
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          description: 'Properties defines object properties (for
+                            type: object)'
+                          type: object
+                        required:
+                          description: 'Required lists required property names (for
+                            type: object)'
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          description: Type is the JSON schema type (object, array,
+                            string, etc.)
+                          type: string
+                      type: object
+                    name:
+                      description: Name is the tool identifier
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              unavailableReplicas:
+                description: UnavailableReplicas is the number of pods targeted by
+                  this LanguageTool that are unavailable
+                format: int32
+                type: integer
+              updatedReplicas:
+                description: UpdatedReplicas is the number of pods targeted by this
+                  LanguageTool that have the desired spec
+                format: int32
+                type: integer
             type: object
         type: object
     served: true
     storage: true
-    subresources: {}
+    subresources:
+      status: {}
+{{- end }}

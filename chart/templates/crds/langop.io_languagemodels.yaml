@@ -1,27 +1,29 @@
+{{- if .Values.crds.install }}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    "helm.sh/resource-policy": keep
     controller-gen.kubebuilder.io/version: v0.20.1
-  name: languagepersonas.langop.io
+  name: languagemodels.langop.io
 spec:
   group: langop.io
   names:
-    kind: LanguagePersona
-    listKind: LanguagePersonaList
-    plural: languagepersonas
+    kind: LanguageModel
+    listKind: LanguageModelList
+    plural: languagemodels
     shortNames:
-    - lpersona
-    singular: languagepersona
+    - lmodel
+    singular: languagemodel
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.personality
-      name: Personality
+    - jsonPath: .spec.provider
+      name: Provider
       type: string
-    - jsonPath: .spec.tone
-      name: Tone
+    - jsonPath: .spec.modelName
+      name: Model
       type: string
     - jsonPath: .status.phase
       name: Phase
@@ -32,7 +34,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: LanguagePersona is the Schema for the languagepersonas API
+        description: LanguageModel is the Schema for the languagemodels API
         properties:
           apiVersion:
             description: |-
@@ -52,30 +54,74 @@ spec:
           metadata:
             type: object
           spec:
-            description: LanguagePersonaSpec defines the desired state of LanguagePersona
+            description: LanguageModelSpec defines the desired state of LanguageModel
             properties:
-              expertise:
-                description: |-
-                  Expertise describes the agent's domain knowledge and skills
-                  e.g. "senior software engineer specialising in distributed systems and Go"
+              apiKeySecretRef:
+                description: APIKeySecretRef references a secret containing the API
+                  key
+                properties:
+                  key:
+                    default: api-key
+                    description: Key is the key within the secret containing the value
+                    type: string
+                  name:
+                    description: Name is the name of the secret
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the secret (defaults
+                      to same namespace as LanguageModel)
+                    type: string
+                required:
+                - name
+                type: object
+              endpoint:
+                description: Endpoint is the API endpoint URL (required for openai-compatible,
+                  azure, custom)
                 type: string
-              personality:
-                description: |-
-                  Personality describes the agent's character and behavioural traits
-                  e.g. "curious and methodical, always explains reasoning step by step"
+              modelName:
+                description: ModelName is the specific model identifier (e.g., "gpt-4",
+                  "claude-3-opus")
+                minLength: 1
                 type: string
-              tone:
-                description: |-
-                  Tone describes the agent's communication style
-                  e.g. "professional", "concise and direct", "warm and encouraging"
+              provider:
+                description: Provider specifies the LLM provider type
+                enum:
+                - openai
+                - anthropic
+                - openai-compatible
+                - azure
+                - bedrock
+                - vertex
+                - custom
                 type: string
+              rateLimits:
+                description: RateLimits defines rate limiting configuration
+                properties:
+                  requestsPerMinute:
+                    description: RequestsPerMinute limits requests per minute
+                    format: int32
+                    type: integer
+                  tokensPerMinute:
+                    description: TokensPerMinute limits tokens per minute
+                    format: int32
+                    type: integer
+                type: object
+              timeout:
+                default: 5m
+                description: Timeout specifies request timeout duration (e.g., "5m",
+                  "30s")
+                pattern: ^[0-9]+(ns|us|µs|ms|s|m|h)$
+                type: string
+            required:
+            - modelName
+            - provider
             type: object
           status:
-            description: LanguagePersonaStatus defines the observed state of LanguagePersona
+            description: LanguageModelStatus defines the observed state of LanguageModel
             properties:
               conditions:
                 description: Conditions represent the latest available observations
-                  of the persona's state
+                  of the model's state
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -134,13 +180,17 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              message:
+                description: Message provides human-readable details about the current
+                  state
+                type: string
               observedGeneration:
                 description: ObservedGeneration reflects the generation of the most
-                  recently observed LanguagePersona
+                  recently observed LanguageModel
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase
+                description: Phase represents the current phase of the model
                 enum:
                 - Ready
                 type: string
@@ -150,3 +200,4 @@ spec:
     storage: true
     subresources:
       status: {}
+{{- end }}

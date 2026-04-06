@@ -74,8 +74,14 @@ shell: ## Run interactive shell in container.
 # NOTE: To deploy the operator, use the Helm chart in ../chart/
 
 .PHONY: helm-crds
-helm-crds: manifests ## Generate CRDs and copy to chart/crds/ (run after changing api/v1alpha1 types)
-	cp config/crd/bases/*.yaml ../chart/crds/
+helm-crds: manifests ## Generate CRDs and copy to chart/templates/crds/ (run after changing api/v1alpha1 types)
+	mkdir -p ../chart/templates/crds
+	@for src in config/crd/bases/*.yaml; do \
+	  dest=../chart/templates/crds/$$(basename $$src); \
+	  printf '{{- if .Values.crds.install }}\n' > "$$dest"; \
+	  sed 's/    controller-gen.kubebuilder.io/    "helm.sh\/resource-policy": keep\n    controller-gen.kubebuilder.io/' "$$src" >> "$$dest"; \
+	  printf '{{- end }}\n' >> "$$dest"; \
+	done
 
 ##@ Build Dependencies
 
