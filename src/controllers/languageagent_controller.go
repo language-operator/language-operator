@@ -467,8 +467,20 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			statusChanged = true
 		}
 
+		// When HPA is active, desired count is managed by the HPA and stored in
+		// existingDeploy.Spec.Replicas. Use that so Updating reflects the full rollout.
+		desiredReplicas := int32(1)
+		if agent.Spec.Deployment.Autoscaling != nil && existingDeploy.Spec.Replicas != nil {
+			desiredReplicas = *existingDeploy.Spec.Replicas
+		} else if agent.Spec.Deployment.Replicas != nil {
+			desiredReplicas = *agent.Spec.Deployment.Replicas
+		}
+
 		newPhase := events.PhaseStatusPending
-		if existingDeploy.Status.ReadyReplicas > 0 {
+		if existingDeploy.Status.Replicas > 0 && existingDeploy.Status.UpdatedReplicas < desiredReplicas {
+			// Pods exist but rollout is in progress — distinct from Pending (no pods yet).
+			newPhase = events.PhaseStatusUpdating
+		} else if existingDeploy.Status.ReadyReplicas > 0 {
 			newPhase = events.PhaseStatusRunning
 		} else if existingDeploy.Status.Replicas > 0 {
 			// Pods exist but none ready — check Deployment conditions to distinguish
