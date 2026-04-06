@@ -187,11 +187,13 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	tests := []struct {
-		name              string
-		deploymentStatus  *appsv1.DeploymentStatus
-		expectedPhase     string
-		expectedCondition metav1.ConditionStatus
-		expectedReason    string
+		name                   string
+		deploymentStatus       *appsv1.DeploymentStatus
+		deploymentSpecReplicas *int32
+		autoscaling            *langopv1alpha1.AutoscalingSpec
+		expectedPhase          string
+		expectedCondition      metav1.ConditionStatus
+		expectedReason         string
 	}{
 		{
 			name: "Pending - no replicas yet",
@@ -241,6 +243,40 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 			expectedCondition: metav1.ConditionFalse,
 			expectedReason:    langopv1alpha1.ReasonUpdating,
 		},
+		{
+			// When HPA has scaled to 3, updatedReplicas=1 means only 1/3 pods updated.
+			// Without the fix, desiredReplicas defaults to 1 and the check passes early.
+			name: "Updating - HPA active, not all replicas updated",
+			autoscaling: &langopv1alpha1.AutoscalingSpec{
+				MaxReplicas: 5,
+			},
+			deploymentSpecReplicas: func() *int32 { r := int32(3); return &r }(),
+			deploymentStatus: &appsv1.DeploymentStatus{
+				ReadyReplicas:       1,
+				AvailableReplicas:   1,
+				UpdatedReplicas:     1,
+				UnavailableReplicas: 0,
+			},
+			expectedPhase:     langopv1alpha1.ReasonUpdating,
+			expectedCondition: metav1.ConditionFalse,
+			expectedReason:    langopv1alpha1.ReasonUpdating,
+		},
+		{
+			name: "Running - HPA active, all replicas updated",
+			autoscaling: &langopv1alpha1.AutoscalingSpec{
+				MaxReplicas: 5,
+			},
+			deploymentSpecReplicas: func() *int32 { r := int32(3); return &r }(),
+			deploymentStatus: &appsv1.DeploymentStatus{
+				ReadyReplicas:       3,
+				AvailableReplicas:   3,
+				UpdatedReplicas:     3,
+				UnavailableReplicas: 0,
+			},
+			expectedPhase:     "Running",
+			expectedCondition: metav1.ConditionTrue,
+			expectedReason:    langopv1alpha1.ReasonReconcileSuccess,
+		},
 	}
 
 	for _, tt := range tests {
@@ -251,14 +287,21 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				gen.SetToolPort(8080),
 			)
 			tool.Generation = 1
+			if tt.autoscaling != nil {
+				tool.Spec.Deployment.Autoscaling = tt.autoscaling
+			}
 
+			specReplicas := func() *int32 { r := int32(1); return &r }()
+			if tt.deploymentSpecReplicas != nil {
+				specReplicas = tt.deploymentSpecReplicas
+			}
 			deployment := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tool.Name,
 					Namespace: tool.Namespace,
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: func() *int32 { r := int32(1); return &r }(),
+					Replicas: specReplicas,
 				},
 				Status: *tt.deploymentStatus,
 			}
