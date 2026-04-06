@@ -388,9 +388,6 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcileWebhooks(ctx, workingAgent); err != nil {
 		// Log webhook errors but don't fail reconciliation if domain not configured
 		log.Info("Webhook reconciliation skipped or pending", "reason", err.Error())
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, err.Error(), agent.Generation)
-	} else {
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhooksReady, metav1.ConditionTrue, langopv1alpha1.ReasonConfigured, "Webhook routing configured", agent.Generation)
 	}
 
 	// Reconcile ServiceAccount for agent pods
