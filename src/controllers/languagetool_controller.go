@@ -874,9 +874,14 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	tool.Status.UpdatedReplicas = deployment.Status.UpdatedReplicas
 	tool.Status.UnavailableReplicas = deployment.Status.UnavailableReplicas
 
-	// Determine phase based on deployment status
+	// Determine phase based on deployment status.
+	// When HPA is active, the desired count is managed by the HPA and stored in
+	// deployment.Spec.Replicas. Use that instead of spec.deployment.replicas so
+	// the Updating phase reflects the full rollout, not just the first pod.
 	desiredReplicas := int32(1)
-	if tool.Spec.Deployment.Replicas != nil {
+	if tool.Spec.Deployment.Autoscaling != nil && deployment.Spec.Replicas != nil {
+		desiredReplicas = *deployment.Spec.Replicas
+	} else if tool.Spec.Deployment.Replicas != nil {
 		desiredReplicas = *tool.Spec.Deployment.Replicas
 	}
 
