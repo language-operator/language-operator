@@ -67,10 +67,6 @@ spec:
                   name:
                     description: Name is the name of the secret
                     type: string
-                  namespace:
-                    description: Namespace is the namespace of the secret (defaults
-                      to same namespace as LanguageModel)
-                    type: string
                 required:
                 - name
                 type: object
