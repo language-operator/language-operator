@@ -909,14 +909,14 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: secretName,
 					Items: []corev1.KeyToPath{
-						{Key: secretKey, Path: secretName + "/" + secretKey},
+						{Key: secretKey, Path: secretKey},
 					},
 				},
 			},
 		})
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      volName,
-			MountPath: "/etc/secrets",
+			MountPath: "/etc/secrets/" + secretName,
 			ReadOnly:  true,
 		})
 	}
