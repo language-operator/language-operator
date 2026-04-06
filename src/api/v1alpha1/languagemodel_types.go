@@ -68,8 +68,8 @@ type LanguageModelStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase represents the current phase of the model
-	// +kubebuilder:validation:Enum=Ready
+	// Phase represents the current phase of the model (Pending, Ready, Failed)
+	// +kubebuilder:validation:Enum=Pending;Ready;Failed
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
