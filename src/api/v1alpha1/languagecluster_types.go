@@ -412,6 +412,8 @@ type LanguageClusterStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="Gateway",type=string,JSONPath=`.status.gatewayEndpoint`
+//+kubebuilder:printcolumn:name="GatewayReady",type=boolean,JSONPath=`.status.gatewayReady`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageCluster is the Schema for the languageclusters API
