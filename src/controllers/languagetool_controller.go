@@ -15,9 +15,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -99,6 +100,7 @@ type MCPSchemaProperty struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -232,6 +234,20 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
+
+		// Reconcile HPA (create when autoscaling configured, delete when removed)
+		if err := r.reconcileHPA(ctx, tool); err != nil {
+			log.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile HorizontalPodAutoscaler")
+			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
+			tool.Status.Phase = events.PhaseStatusFailed
+			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
+				log.Error(updateErr, "Failed to update status after HPA failure")
+			}
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Reconcile NetworkPolicy for network isolation (if enabled)
@@ -330,6 +346,13 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		if tool.Spec.Deployment.Replicas != nil {
 			replicas = *tool.Spec.Deployment.Replicas
 		}
+		// When HPA is active, preserve the current replica count rather than overwriting it.
+		// The HPA controller owns spec.replicas; if we reset it every reconcile the
+		// Deployment will never scale.
+		deploymentReplicas := &replicas
+		if tool.Spec.Deployment.Autoscaling != nil && deployment.Spec.Replicas != nil {
+			deploymentReplicas = deployment.Spec.Replicas
+		}
 
 		// Merge user pod labels; operator labels take precedence to protect selector stability.
 		podLabels := make(map[string]string, len(labels)+len(tool.Spec.Deployment.PodLabels))
@@ -349,7 +372,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		shareProc := len(tool.Spec.Deployment.InitContainers) > 0
 
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: deploymentReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -367,6 +390,8 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 							Name:            "tool",
 							Image:           tool.Spec.Image,
 							ImagePullPolicy: tool.Spec.Deployment.ImagePullPolicy,
+							Command:         tool.Spec.Deployment.Command,
+							Args:            tool.Spec.Deployment.Args,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -466,6 +491,64 @@ func (r *LanguageToolReconciler) buildToolEnv(tool *langopv1alpha1.LanguageTool)
 	})
 
 	return env
+}
+
+// reconcileHPA creates a HorizontalPodAutoscaler for tools with autoscaling configured,
+// and deletes any existing HPA when autoscaling is removed from the spec.
+func (r *LanguageToolReconciler) reconcileHPA(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tool.Name,
+			Namespace: tool.Namespace,
+		},
+	}
+
+	if tool.Spec.Deployment.Autoscaling == nil {
+		if err := r.Delete(ctx, hpa); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete HorizontalPodAutoscaler: %w", err)
+		}
+		return nil
+	}
+
+	as := tool.Spec.Deployment.Autoscaling
+	labels := GetCommonLabels(tool.Name, "LanguageTool")
+
+	metrics := as.Metrics
+	if len(metrics) == 0 {
+		// Default: 80% average CPU utilization
+		avgUtil := int32(80)
+		metrics = []autoscalingv2.MetricSpec{
+			{
+				Type: autoscalingv2.ResourceMetricSourceType,
+				Resource: &autoscalingv2.ResourceMetricSource{
+					Name: corev1.ResourceCPU,
+					Target: autoscalingv2.MetricTarget{
+						Type:               autoscalingv2.UtilizationMetricType,
+						AverageUtilization: &avgUtil,
+					},
+				},
+			},
+		}
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
+		if err := controllerutil.SetControllerReference(tool, hpa, r.Scheme); err != nil {
+			return err
+		}
+		hpa.Labels = labels
+		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       tool.Name,
+			},
+			MinReplicas: as.MinReplicas,
+			MaxReplicas: as.MaxReplicas,
+			Metrics:     metrics,
+		}
+		return nil
+	})
+	return err
 }
 
 func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
@@ -776,7 +859,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	deployment := &appsv1.Deployment{}
 	err := r.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Deployment doesn't exist yet
 			tool.Status.Phase = events.PhaseStatusPending
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentNotFound, "Deployment not found", tool.Generation)

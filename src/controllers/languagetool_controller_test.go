@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -1661,4 +1662,129 @@ func TestLanguageToolController_Reconcile_NonMCPType_SkipsSchemaDiscovery(t *tes
 	}
 	require.NotNil(t, readyCond, "ConditionReady must be set")
 	assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
+}
+
+func TestLanguageToolController_CommandAndArgs(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	tool := gen.LanguageTool("cmd-tool", "default", gen.SetToolPort(8080))
+	tool.Spec.Deployment.Command = []string{"/bin/mytool"}
+	tool.Spec.Deployment.Args = []string{"--port", "8080"}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, deployment))
+	require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, []string{"/bin/mytool"}, container.Command)
+	assert.Equal(t, []string{"--port", "8080"}, container.Args)
+}
+
+func TestLanguageToolController_HPA_CreatedWhenAutoscalingSet(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	minReplicas := int32(2)
+	tool := gen.LanguageTool("hpa-tool", "default", gen.SetToolPort(8080))
+	tool.Spec.Deployment.Autoscaling = &langopv1alpha1.AutoscalingSpec{
+		MinReplicas: &minReplicas,
+		MaxReplicas: 10,
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, hpa))
+	require.NotNil(t, hpa.Spec.MinReplicas)
+	assert.Equal(t, int32(2), *hpa.Spec.MinReplicas)
+	assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
+	assert.Equal(t, "Deployment", hpa.Spec.ScaleTargetRef.Kind)
+	assert.Equal(t, tool.Name, hpa.Spec.ScaleTargetRef.Name)
+	// Default CPU metric injected when no metrics specified
+	require.Len(t, hpa.Spec.Metrics, 1)
+	assert.Equal(t, autoscalingv2.ResourceMetricSourceType, hpa.Spec.Metrics[0].Type)
+	assert.Equal(t, corev1.ResourceCPU, hpa.Spec.Metrics[0].Resource.Name)
+	assert.Equal(t, int32(80), *hpa.Spec.Metrics[0].Resource.Target.AverageUtilization)
+}
+
+func TestLanguageToolController_HPA_DeletedWhenAutoscalingRemoved(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	minReplicas := int32(2)
+	tool := gen.LanguageTool("rm-hpa-tool", "default", gen.SetToolPort(8080))
+	tool.Spec.Deployment.Autoscaling = &langopv1alpha1.AutoscalingSpec{
+		MinReplicas: &minReplicas,
+		MaxReplicas: 5,
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+
+	reconciler := &LanguageToolReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		RegistryManager: &mockRegistryManager{},
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, hpa), "HPA should exist after autoscaling reconcile")
+
+	// Remove autoscaling from the tool spec
+	current := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, current))
+	current.Spec.Deployment.Autoscaling = nil
+	require.NoError(t, fakeClient.Update(ctx, current))
+
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	err = fakeClient.Get(ctx, req.NamespacedName, hpa)
+	assert.True(t, errors.IsNotFound(err), "HPA must be deleted when autoscaling is removed")
 }
