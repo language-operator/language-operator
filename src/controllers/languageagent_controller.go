@@ -2331,7 +2331,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 
 	// opencode inline credentials → managed secret
 	// Use workingAgent so runtime-provided config (e.g. spec.opencode from a LanguageAgentRuntime) is respected.
-	if workingAgent.Spec.Opencode != nil {
+	if workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled {
 		oc := workingAgent.Spec.Opencode
 		if oc.Password != "" {
 			username := oc.Username
@@ -2373,7 +2373,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// openclaw inline credentials → managed secret
-	if workingAgent.Spec.Openclaw != nil {
+	if workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled {
 		oc := workingAgent.Spec.Openclaw
 		if oc.Token != "" {
 			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(oc.Token)
@@ -2398,7 +2398,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	}
 
 	// claude-code credentials → managed secret, ref envFrom, or gateway-routed placeholder
-	if workingAgent.Spec.ClaudeCode != nil {
+	if workingAgent.Spec.ClaudeCode != nil && workingAgent.Spec.ClaudeCode.Enabled {
 		cc := workingAgent.Spec.ClaudeCode
 		if cc.APIKey != "" {
 			secretData["ANTHROPIC_API_KEY"] = []byte(cc.APIKey)
@@ -2506,10 +2506,10 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 		})
 	}
 
-	// Runtime Secret is managed when opencode/openclaw is configured without a *Ref (i.e.
-	// credentials are inline or auto-generated rather than pointing at an existing Secret).
-	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.PasswordRef == nil) ||
-		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.TokenRef == nil)
+	// Runtime Secret is managed when opencode/openclaw is enabled and configured without a *Ref
+	// (i.e. credentials are inline or auto-generated rather than pointing at an existing Secret).
+	hasSecret := (workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled && workingAgent.Spec.Opencode.PasswordRef == nil) ||
+		(workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled && workingAgent.Spec.Openclaw.TokenRef == nil)
 	if hasSecret {
 		resources = append(resources, langopv1alpha1.ManagedResource{
 			Kind: "Secret", Name: agent.Name + "-runtime", Namespace: ns,
