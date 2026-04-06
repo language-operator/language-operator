@@ -142,9 +142,11 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase
+                description: Phase represents the current phase (Pending, Ready, Failed)
                 enum:
+                - Pending
                 - Ready
+                - Failed
                 type: string
             type: object
         type: object
