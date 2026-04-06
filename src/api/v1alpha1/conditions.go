@@ -70,4 +70,11 @@ const (
 	ReasonWorkspaceSeedReady    = "WorkspaceSeedReady"
 	ReasonWorkspaceSeedError    = "WorkspaceSeedError"
 	ReasonSecretNotFound        = "SecretNotFound"
+	ReasonNamespaceError        = "NamespaceError"
+	ReasonRBACError             = "RBACError"
+	ReasonGatewayError          = "GatewayError"
+	ReasonGatewayIngressError   = "GatewayIngressError"
+	ReasonCapacityError         = "CapacityError"
+	ReasonWildcardDNSMissing    = "WildcardDNSMissing"
+	ReasonWildcardDNSReady      = "WildcardDNSReady"
 )
