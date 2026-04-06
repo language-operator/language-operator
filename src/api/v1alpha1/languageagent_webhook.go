@@ -90,6 +90,10 @@ func (h *LanguageAgentWebhook) ValidateCreate(ctx context.Context, a *LanguageAg
 
 // ValidateUpdate implements admission.Validator
 func (h *LanguageAgentWebhook) ValidateUpdate(ctx context.Context, old, a *LanguageAgent) (admission.Warnings, error) {
+	// Skip spec validation during deletion — the operator is only removing the finalizer.
+	if a.DeletionTimestamp != nil {
+		return nil, nil
+	}
 	if err := h.validateClusterMembership(ctx, a.Namespace); err != nil {
 		return nil, err
 	}
