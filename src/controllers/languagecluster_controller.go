@@ -350,6 +350,8 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
+	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionCapacityReady, metav1.ConditionTrue,
+		langopv1alpha1.ReasonReconcileSuccess, "Capacity reconciled", cluster.Generation)
 
 	cluster.Status.Phase = events.PhaseStatusReady
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
