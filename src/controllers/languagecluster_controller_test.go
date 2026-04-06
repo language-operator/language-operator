@@ -517,6 +517,53 @@ func TestLanguageClusterController_CapacityQuota_Created(t *testing.T) {
 	assert.Equal(t, "8Gi", gotMemory.String())
 }
 
+func TestLanguageClusterController_CapacityReady_Condition_True_On_Success(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	maxAgents := int32(5)
+	cluster := gen.LanguageCluster("cond-cluster",
+		gen.SetClusterCapacity(&langopv1alpha1.ClusterCapacitySpec{
+			MaxAgents: &maxAgents,
+		}),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	// First reconcile adds finalizer
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	// Second reconcile creates resources and sets conditions
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	updated := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionCapacityReady {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNilf(t, cond, "expected condition %q to be set", langopv1alpha1.ConditionCapacityReady)
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonReconcileSuccess, cond.Reason)
+}
+
 func TestLanguageClusterController_CapacityQuota_Absent_When_SpecUnset(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
