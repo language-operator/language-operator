@@ -218,6 +218,108 @@ func TestLanguageModelController_Finalizer(t *testing.T) {
 	}
 }
 
+func TestLanguageModelController_PendingPhase(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	model := gen.LanguageModel("test-model-pending", "default",
+		gen.SetModelProvider("openai"),
+		gen.SetModelName("gpt-4"),
+	)
+	model.Generation = 1
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(model).
+		WithStatusSubresource(model).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
+
+	result, err := reconciler.Reconcile(ctx, req)
+	if err != nil {
+		t.Fatalf("First reconcile failed: %v", err)
+	}
+	if !result.Requeue {
+		t.Error("Expected requeue after first reconcile")
+	}
+
+	updated := &langopv1alpha1.LanguageModel{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, updated); err != nil {
+		t.Fatalf("Failed to fetch model: %v", err)
+	}
+	if updated.Status.Phase != "Pending" {
+		t.Errorf("Expected phase 'Pending' after first reconcile, got %q", updated.Status.Phase)
+	}
+}
+
+func TestLanguageModelController_MissingAPIKeySecret(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	model := gen.LanguageModel("test-model-secret", "default",
+		gen.SetModelProvider("anthropic"),
+		gen.SetModelName("claude-3-5-sonnet-20241022"),
+		gen.SetModelAPIKeySecretRef("my-api-key", "api-key"),
+	)
+	model.Generation = 1
+	// Secret is intentionally not created in fakeClient.
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(model).
+		WithStatusSubresource(model).
+		Build()
+
+	reconciler := &LanguageModelReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: model.Name, Namespace: model.Namespace}}
+
+	// First reconcile adds finalizer and writes Pending.
+	_, _ = reconciler.Reconcile(ctx, req)
+
+	// Second reconcile validates the secret and should fail.
+	_, err := reconciler.Reconcile(ctx, req)
+	if err == nil {
+		t.Fatal("Expected error when apiKeySecretRef secret is missing")
+	}
+
+	updated := &langopv1alpha1.LanguageModel{}
+	if fetchErr := fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: model.Namespace}, updated); fetchErr != nil {
+		t.Fatalf("Failed to fetch model: %v", fetchErr)
+	}
+
+	if updated.Status.Phase != "Failed" {
+		t.Errorf("Expected phase 'Failed' when secret missing, got %q", updated.Status.Phase)
+	}
+
+	var readyCond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionReady {
+			readyCond = &updated.Status.Conditions[i]
+		}
+	}
+	if readyCond == nil {
+		t.Fatal("Expected Ready condition to be set")
+	}
+	if readyCond.Status != metav1.ConditionFalse {
+		t.Errorf("Expected condition status False, got %s", readyCond.Status)
+	}
+	if readyCond.Reason != langopv1alpha1.ReasonSecretNotFound {
+		t.Errorf("Expected reason %q, got %q", langopv1alpha1.ReasonSecretNotFound, readyCond.Reason)
+	}
+}
+
 func TestLanguageModelController_Deletion(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
