@@ -86,8 +86,14 @@ func (r *LanguageAgentSelfConfigReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, RemoveFinalizer(ctx, r.Client, sc)
 	}
 
-	// Add finalizer on first pass
+	// Add finalizer on first pass. Write Pending status first so
+	// `kubectl get lasc` shows something meaningful before reconciliation completes.
 	if !controllerutil.ContainsFinalizer(sc, FinalizerName) {
+		sc.Status.Phase = langopv1alpha1.SelfConfigPhasePending
+		if err := r.Status().Update(ctx, sc); err != nil && !apierrors.IsNotFound(err) {
+			log.Error(err, "Failed to set Pending status")
+			// non-fatal: continue to add finalizer
+		}
 		controllerutil.AddFinalizer(sc, FinalizerName)
 		if err := r.Update(ctx, sc); err != nil {
 			log.Error(err, "Failed to add finalizer")
