@@ -2103,3 +2103,77 @@ func TestLanguageClusterController_ManagedResources(t *testing.T) {
 		assert.True(t, hasMR(updated.Status.ManagedResources, "NetworkPolicy", fmt.Sprintf("%s-agents", cluster.Name)))
 	})
 }
+
+// TestLanguageClusterController_GatewayDistinctSecretMountPaths verifies that two
+// LanguageModels with different apiKeySecretRef names each get a unique VolumeMount
+// path (/etc/secrets/<secretName>) so the gateway pod spec is valid.
+func TestLanguageClusterController_GatewayDistinctSecretMountPaths(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("secrets-cluster")
+	modelA := gen.LanguageModel("model-a", cluster.Name,
+		gen.SetModelAPIKeySecretRef("secret-a", "api-key"),
+	)
+	modelB := gen.LanguageModel("model-b", cluster.Name,
+		gen.SetModelAPIKeySecretRef("secret-b", "api-key"),
+	)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, modelA, modelB).
+		WithStatusSubresource(cluster).
+		Build()
+
+	r := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, dep))
+	require.NotEmpty(t, dep.Spec.Template.Spec.Containers)
+
+	// Collect all VolumeMount paths and Volume names.
+	var mountPaths []string
+	for _, m := range dep.Spec.Template.Spec.Containers[0].VolumeMounts {
+		mountPaths = append(mountPaths, m.MountPath)
+	}
+	var volNames []string
+	for _, v := range dep.Spec.Template.Spec.Volumes {
+		volNames = append(volNames, v.Name)
+	}
+
+	// Each secret must be mounted to its own unique subdirectory.
+	assert.Contains(t, mountPaths, "/etc/secrets/secret-a", "secret-a must have unique mount path")
+	assert.Contains(t, mountPaths, "/etc/secrets/secret-b", "secret-b must have unique mount path")
+
+	// Both volumes must be present.
+	assert.Contains(t, volNames, "secret-secret-a")
+	assert.Contains(t, volNames, "secret-secret-b")
+
+	// KeyToPath.Path must be just the key, not secretName/key.
+	for _, v := range dep.Spec.Template.Spec.Volumes {
+		if v.Secret == nil {
+			continue
+		}
+		for _, item := range v.Secret.Items {
+			assert.NotContains(t, item.Path, "/", "KeyToPath.Path must not contain a slash — subdirectory comes from MountPath")
+		}
+	}
+
+	// Mount paths must all be distinct (no duplicates).
+	seen := map[string]int{}
+	for _, p := range mountPaths {
+		seen[p]++
+	}
+	for p, count := range seen {
+		assert.Equal(t, 1, count, "mount path %q appears %d times — must be unique", p, count)
+	}
+}
