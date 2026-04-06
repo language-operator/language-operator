@@ -2409,11 +2409,15 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 				},
 			})
 		} else {
-			// Gateway-routed mode: inject placeholder so ANTHROPIC_API_KEY is always present.
-			// Real auth flows via ANTHROPIC_BASE_URL → LiteLLM gateway.
+			// Gateway-routed mode: inject placeholder key and route SDK traffic to the
+			// LiteLLM gateway via ANTHROPIC_BASE_URL so calls never reach api.anthropic.com.
 			extraEnv = append(extraEnv, corev1.EnvVar{
 				Name:  "ANTHROPIC_API_KEY",
 				Value: "sk-langop-proxy",
+			})
+			extraEnv = append(extraEnv, corev1.EnvVar{
+				Name:  "ANTHROPIC_BASE_URL",
+				Value: fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort),
 			})
 		}
 		if cc.MaxTurns != nil {
