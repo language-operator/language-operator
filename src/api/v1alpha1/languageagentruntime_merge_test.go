@@ -29,25 +29,25 @@ func TestApplyRuntimeDefaults_Ports_AgentEmpty(t *testing.T) {
 	agent := &LanguageAgentSpec{}
 	rt := &LanguageAgentRuntimeSpec{
 		Ports: []AgentPort{
-			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		},
 	}
 	ApplyRuntimeDefaults(agent, rt)
 	require.Len(t, agent.Ports, 1)
 	assert.Equal(t, int32(18789), agent.Ports[0].Port)
 	assert.Equal(t, "http", agent.Ports[0].Name)
-	assert.True(t, agent.Ports[0].Expose)
+	assert.Equal(t, boolPtr(true), agent.Ports[0].Expose)
 }
 
 func TestApplyRuntimeDefaults_Ports_AgentWins(t *testing.T) {
 	agent := &LanguageAgentSpec{
 		Ports: []AgentPort{
-			{Name: "api", Port: 9000, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "api", Port: 9000, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		},
 	}
 	rt := &LanguageAgentRuntimeSpec{
 		Ports: []AgentPort{
-			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: true},
+			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
 		},
 	}
 	ApplyRuntimeDefaults(agent, rt)

@@ -28,8 +28,9 @@ type AgentPort struct {
 
 	// Expose controls whether ingress/HTTPRoute routes to this port.
 	// At most one port should have expose: true; if none, the first port is used.
+	// +kubebuilder:default=false
 	// +optional
-	Expose bool `json:"expose,omitempty"`
+	Expose *bool `json:"expose,omitempty"`
 }
 
 // LanguageAgentSpec defines the desired state of LanguageAgent
@@ -268,8 +269,9 @@ type WorkspaceSpec struct {
 	// When true, the PVC's ownerReference is removed during cleanup so Kubernetes GC
 	// does not collect it. The orphaned PVC name is surfaced in status.workspacePVCName.
 	// Defaults to false.
+	// +kubebuilder:default=false
 	// +optional
-	Retain bool `json:"retain,omitempty"`
+	Retain *bool `json:"retain,omitempty"`
 
 	// InitialFiles are seeded into the workspace PVC on first boot only.
 	// Keys are filenames (must be valid ConfigMap keys: alphanumeric, '.', '-', '_').
@@ -289,8 +291,9 @@ type OpencodeConfig struct {
 	// Enabled activates opencode credential management for this agent.
 	// Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
 	// without requiring any explicit config on the LanguageAgent.
+	// +kubebuilder:default=false
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// Username for HTTP Basic Auth. Defaults to "opencode" if not set.
 	// Sets OPENCODE_SERVER_USERNAME in the agent container.
@@ -316,8 +319,9 @@ type OpenclawConfig struct {
 	// Enabled activates openclaw credential management for this agent.
 	// Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
 	// without requiring any explicit config on the LanguageAgent.
+	// +kubebuilder:default=false
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// Token is the gateway authentication token (inline).
 	// The operator creates a managed Secret and injects it via envFrom.
@@ -338,8 +342,9 @@ type ClaudeCodeConfig struct {
 	// Enabled activates claude-code credential management for this agent.
 	// Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
 	// without requiring any explicit config on the LanguageAgent.
+	// +kubebuilder:default=false
 	// +optional
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// APIKey is the Anthropic API key (inline).
 	// The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.

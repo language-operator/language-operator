@@ -687,3 +687,7 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 func protocolPtr(p corev1.Protocol) *corev1.Protocol {
 	return &p
 }
+
+func boolPtr(b bool) *bool {
+	return &b
+}
