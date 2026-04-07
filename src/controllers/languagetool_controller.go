@@ -323,11 +323,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
-		if err := controllerutil.SetControllerReference(tool, deployment, r.Scheme); err != nil {
-			return err
-		}
-
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, tool, deployment, func() error {
 		replicas := int32(1)
 		if tool.Spec.Deployment.Replicas != nil {
 			replicas = *tool.Spec.Deployment.Replicas
@@ -517,10 +513,7 @@ func (r *LanguageToolReconciler) reconcileHPA(ctx context.Context, tool *langopv
 		}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
-		if err := controllerutil.SetControllerReference(tool, hpa, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, tool, hpa, func() error {
 		hpa.Labels = labels
 		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
@@ -556,12 +549,7 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
-		// Set owner reference
-		if err := controllerutil.SetControllerReference(tool, service, r.Scheme); err != nil {
-			return err
-		}
-
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, tool, service, func() error {
 		// Set service spec
 		svcType := tool.Spec.Deployment.ServiceType
 		if svcType == "" {

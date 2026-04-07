@@ -692,11 +692,7 @@ func (r *LanguageAgentReconciler) reconcilePVC(ctx context.Context, agent *lango
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
-		if err := controllerutil.SetControllerReference(agent, pvc, r.Scheme); err != nil {
-			return err
-		}
-
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, pvc, func() error {
 		// Only set spec on creation (PVCs are immutable after creation)
 		if pvc.CreationTimestamp.IsZero() {
 			// Parse storage size safely to avoid controller panic
@@ -966,11 +962,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
-		if err := controllerutil.SetControllerReference(agent, deployment, r.Scheme); err != nil {
-			return err
-		}
-
+	err = CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, deployment, func() error {
 		replicas := int32(1)
 		if agent.Spec.Deployment.Replicas != nil {
 			replicas = *agent.Spec.Deployment.Replicas
@@ -1581,11 +1573,7 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
-		if err := controllerutil.SetControllerReference(agent, service, r.Scheme); err != nil {
-			return err
-		}
-
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, service, func() error {
 		svcType := agent.Spec.Deployment.ServiceType
 		if svcType == "" {
 			svcType = corev1.ServiceTypeClusterIP
@@ -1648,10 +1636,7 @@ func (r *LanguageAgentReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 	minAvailable := intstr.FromInt32(1)
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pdb, func() error {
-		if err := controllerutil.SetControllerReference(agent, pdb, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, pdb, func() error {
 		pdb.Labels = labels
 		pdb.Spec = policyv1.PodDisruptionBudgetSpec{
 			MinAvailable: &minAvailable,
@@ -1702,10 +1687,7 @@ func (r *LanguageAgentReconciler) reconcileHPA(ctx context.Context, agent *lango
 		}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
-		if err := controllerutil.SetControllerReference(agent, hpa, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, hpa, func() error {
 		hpa.Labels = labels
 		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
@@ -1772,10 +1754,7 @@ func (r *LanguageAgentReconciler) reconcileServiceMonitor(ctx context.Context, a
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	maps.Copy(labels, cfg.Labels)
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, sm, func() error {
-		if err := controllerutil.SetControllerReference(agent, sm, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, sm, func() error {
 		sm.SetLabels(labels)
 		return unstructured.SetNestedField(sm.Object, map[string]any{
 			"selector": map[string]any{
@@ -1857,10 +1836,7 @@ func (r *LanguageAgentReconciler) reconcilePrometheusRule(ctx context.Context, a
 
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, pr, func() error {
-		if err := controllerutil.SetControllerReference(agent, pr, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, pr, func() error {
 		pr.SetLabels(labels)
 		return unstructured.SetNestedField(pr.Object, map[string]any{
 			"groups": groups,
@@ -1950,11 +1926,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
-		if err := controllerutil.SetControllerReference(agent, ingress, r.Scheme); err != nil {
-			return err
-		}
-
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, ingress, func() error {
 		pathType := networkingv1.PathTypePrefix
 		ingress.Spec = networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
@@ -2424,9 +2396,9 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 				Namespace: agent.Namespace,
 			},
 		}
-		if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+		if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, secret, func() error {
 			secret.Data = secretData
-			return controllerutil.SetControllerReference(agent, secret, r.Scheme)
+			return nil
 		}); err != nil {
 			return fmt.Errorf("reconciling runtime secret %s/%s: %w", agent.Namespace, secretName, err)
 		}

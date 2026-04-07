@@ -299,6 +299,24 @@ func tryCreateOrUpdateNetworkPolicy(
 	return nil
 }
 
+// CreateOrUpdateOwned wraps controllerutil.CreateOrUpdate, setting the controller reference
+// on obj before invoking mutateFn. Callers only need to provide spec-level mutations.
+func CreateOrUpdateOwned(
+	ctx context.Context,
+	c client.Client,
+	scheme *runtime.Scheme,
+	owner, obj client.Object,
+	mutateFn func() error,
+) error {
+	_, err := controllerutil.CreateOrUpdate(ctx, c, obj, func() error {
+		if err := controllerutil.SetControllerReference(owner, obj, scheme); err != nil {
+			return err
+		}
+		return mutateFn()
+	})
+	return err
+}
+
 // CreateOrUpdateConfigMap creates or updates a ConfigMap with owner reference
 func CreateOrUpdateConfigMap(
 	ctx context.Context,
