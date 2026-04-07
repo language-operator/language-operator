@@ -22,6 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 )
 
 // CreateSecureAPIServerEgressRules creates egress rules for Kubernetes API server access
@@ -47,7 +49,7 @@ func createCiliumCompatibleAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "default",
+							langoplabels.LabelKeyMetadataName: "default",
 						},
 					},
 				},
@@ -142,14 +144,14 @@ func createGenericAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "default",
+							langoplabels.LabelKeyMetadataName: "default",
 						},
 					},
 				},
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"kubernetes.io/metadata.name": "kube-system",
+							langoplabels.LabelKeyMetadataName: "kube-system",
 						},
 					},
 				},

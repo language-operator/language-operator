@@ -10,6 +10,7 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -1071,9 +1072,9 @@ func TestLanguageAgentController_ConfigHashAnnotation(t *testing.T) {
 	}
 
 	annotations := deployment.Spec.Template.Annotations
-	hash, ok := annotations[LabelKeyLangopConfigHash]
+	hash, ok := annotations[langoplabels.LabelKeyLangopConfigHash]
 	if !ok || hash == "" {
-		t.Errorf("Expected pod annotation %q to be set, got annotations: %v", LabelKeyLangopConfigHash, annotations)
+		t.Errorf("Expected pod annotation %q to be set, got annotations: %v", langoplabels.LabelKeyLangopConfigHash, annotations)
 	}
 	// User annotations must still be present alongside the operator-managed hash.
 	if annotations["prometheus.io/scrape"] != "true" {

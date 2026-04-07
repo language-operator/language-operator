@@ -10,6 +10,7 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/language-operator/language-operator/pkg/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -168,7 +169,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_GatewayMode(t *testing.T) {
 		envMap[e.Name] = e.Value
 	}
 	assert.Equal(t, "sk-langop-proxy", envMap["ANTHROPIC_API_KEY"], "ANTHROPIC_API_KEY placeholder injected in gateway mode")
-	assert.Equal(t, fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort),
+	assert.Equal(t, fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, network.GatewayServicePort),
 		envMap["ANTHROPIC_BASE_URL"], "ANTHROPIC_BASE_URL injected in gateway mode")
 }
 

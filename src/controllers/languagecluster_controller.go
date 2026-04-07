@@ -52,6 +52,8 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
+	"github.com/language-operator/language-operator/pkg/network"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"k8s.io/utils/ptr"
 )
@@ -100,7 +102,7 @@ func defaultGatewayLivenessProbe() *corev1.Probe {
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/health/liveliness",
-				Port: intstr.FromInt(GatewayContainerPort),
+				Port: intstr.FromInt(network.GatewayContainerPort),
 			},
 		},
 		InitialDelaySeconds: 30,
@@ -114,7 +116,7 @@ func defaultGatewayReadinessProbe() *corev1.Probe {
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/health/readiness",
-				Port: intstr.FromInt(GatewayContainerPort),
+				Port: intstr.FromInt(network.GatewayContainerPort),
 			},
 		},
 		InitialDelaySeconds: 30,
@@ -338,7 +340,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonGatewayReady, "Shared LiteLLM gateway is ready", cluster.Generation)
-	cluster.Status.GatewayEndpoint = serviceURL("gateway", cluster.Name, GatewayServicePort)
+	cluster.Status.GatewayEndpoint = serviceURL("gateway", cluster.Name, network.GatewayServicePort)
 	cluster.Status.GatewayReady = ptr.To(true)
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
@@ -400,8 +402,8 @@ func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, clus
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cluster.Name,
 			Labels: map[string]string{
-				LabelKeyK8sManagedBy:  "language-operator",
-				LabelKeyLangopCluster: cluster.Name,
+				langoplabels.LabelKeyK8sManagedBy:  "language-operator",
+				langoplabels.LabelKeyLangopCluster: cluster.Name,
 			},
 		},
 	}
@@ -423,8 +425,8 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	log.V(1).Info("Reconciling agent RBAC", "cluster", cluster.Name, "namespace", namespace)
 
 	rbacLabels := GetCommonLabels("language-operator", "LanguageCluster")
-	rbacLabels[LabelKeyK8sComponent] = "agent-rbac"
-	rbacLabels[LabelKeyLangopCluster] = cluster.Name
+	rbacLabels[langoplabels.LabelKeyK8sComponent] = "agent-rbac"
+	rbacLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	agentsRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
@@ -491,8 +493,8 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	}
 
 	saLabels := GetCommonLabels("language-operator", "LanguageCluster")
-	saLabels[LabelKeyK8sComponent] = "gateway-sa"
-	saLabels[LabelKeyLangopCluster] = cluster.Name
+	saLabels[langoplabels.LabelKeyK8sComponent] = "gateway-sa"
+	saLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
@@ -517,8 +519,8 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	}
 
 	roleLabels := GetCommonLabels("language-operator", "LanguageCluster")
-	roleLabels[LabelKeyK8sComponent] = "gateway-rbac"
-	roleLabels[LabelKeyLangopCluster] = cluster.Name
+	roleLabels[langoplabels.LabelKeyK8sComponent] = "gateway-rbac"
+	roleLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
@@ -575,7 +577,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 					// Target the default namespace where the kubernetes service exists
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyMetadataName: "default",
+							langoplabels.LabelKeyMetadataName: "default",
 						},
 					},
 				},
@@ -593,7 +595,7 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyMetadataName: "kube-system",
+							langoplabels.LabelKeyMetadataName: "kube-system",
 						},
 					},
 				},
@@ -601,11 +603,11 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: &udpProtocol,
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.DNSPort},
 				},
 				{
 					Protocol: &tcpProtocol,
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.DNSPort},
 				},
 			},
 		},
@@ -627,12 +629,12 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 						ns = namespace
 					}
 					kpeer.NamespaceSelector = &metav1.LabelSelector{
-						MatchLabels: map[string]string{LabelKeyMetadataName: ns},
+						MatchLabels: map[string]string{langoplabels.LabelKeyMetadataName: ns},
 					}
 				}
 				if peer.Group != "" {
 					kpeer.PodSelector = &metav1.LabelSelector{
-						MatchLabels: map[string]string{LabelKeyLangopGroup: peer.Group},
+						MatchLabels: map[string]string{langoplabels.LabelKeyLangopGroup: peer.Group},
 					}
 				}
 				if peer.PodSelector != nil {
@@ -698,8 +700,8 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 	}
 
 	netpolLabels := GetCommonLabels("language-operator", "LanguageCluster")
-	netpolLabels[LabelKeyK8sComponent] = "agent-network-policy"
-	netpolLabels[LabelKeyLangopCluster] = cluster.Name
+	netpolLabels[langoplabels.LabelKeyK8sComponent] = "agent-network-policy"
+	netpolLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	// Create NetworkPolicy
 	networkPolicy := &networkingv1.NetworkPolicy{
@@ -711,8 +713,8 @@ func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, 
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					LabelKeyLangopCluster: cluster.Name,
-					LabelKeyLangopKind:    "LanguageAgent",
+					langoplabels.LabelKeyLangopCluster: cluster.Name,
+					langoplabels.LabelKeyLangopKind:    "LanguageAgent",
 				},
 			},
 			PolicyTypes: policyTypes,
@@ -958,8 +960,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	// Reconcile ConfigMap
 	gatewayLabels := GetCommonLabels("language-operator", GatewayResourceName)
-	gatewayLabels[LabelKeyK8sComponent] = GatewayResourceName
-	gatewayLabels[LabelKeyLangopCluster] = cluster.Name
+	gatewayLabels[langoplabels.LabelKeyK8sComponent] = GatewayResourceName
+	gatewayLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
 		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
 	}
@@ -1056,7 +1058,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	gatewaySvcAnnotations = gatewayDeploy.ServiceAnnotations
 
 	// Merge user pod annotations with the operator-managed config-hash annotation.
-	podAnnotations := map[string]string{LabelKeyLangopConfigHash: configHash}
+	podAnnotations := map[string]string{langoplabels.LabelKeyLangopConfigHash: configHash}
 	maps.Copy(podAnnotations, gatewayDeploy.PodAnnotations)
 
 	// Merge user pod labels with the operator-managed gateway labels.
@@ -1116,7 +1118,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
-								{Name: "http", ContainerPort: GatewayContainerPort, Protocol: corev1.ProtocolTCP},
+								{Name: "http", ContainerPort: network.GatewayContainerPort, Protocol: corev1.ProtocolTCP},
 							},
 							LivenessProbe:  livenessProbe,
 							ReadinessProbe: readinessProbe,
@@ -1162,8 +1164,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 				{
 					Name:       "http",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       GatewayServicePort,
-					TargetPort: intstr.FromInt(GatewayContainerPort),
+					Port:       network.GatewayServicePort,
+					TargetPort: intstr.FromInt(network.GatewayContainerPort),
 				},
 			},
 		}
@@ -1209,8 +1211,8 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 
 	as := gatewayDeploy.Autoscaling
 	labels := GetCommonLabels("language-operator", GatewayResourceName)
-	labels[LabelKeyK8sComponent] = GatewayResourceName
-	labels[LabelKeyLangopCluster] = cluster.Name
+	labels[langoplabels.LabelKeyK8sComponent] = GatewayResourceName
+	labels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	metrics := as.Metrics
 	if len(metrics) == 0 {
@@ -1283,7 +1285,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
 											Name: GatewayResourceName,
-											Port: networkingv1.ServiceBackendPort{Number: GatewayServicePort},
+											Port: networkingv1.ServiceBackendPort{Number: network.GatewayServicePort},
 										},
 									},
 								},
@@ -1402,8 +1404,8 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 	}
 
 	quotaLabels := GetCommonLabels("language-operator", "LanguageCluster")
-	quotaLabels[LabelKeyK8sComponent] = "capacity"
-	quotaLabels[LabelKeyLangopCluster] = cluster.Name
+	quotaLabels[langoplabels.LabelKeyK8sComponent] = "capacity"
+	quotaLabels[langoplabels.LabelKeyLangopCluster] = cluster.Name
 
 	quota := &corev1.ResourceQuota{
 		ObjectMeta: metav1.ObjectMeta{

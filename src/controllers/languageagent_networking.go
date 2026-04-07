@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/language-operator/language-operator/pkg/validation"
 )
 
@@ -102,7 +103,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyLangopComponent: "trigger",
+							langoplabels.LabelKeyLangopComponent: "trigger",
 						},
 					},
 				},
@@ -115,7 +116,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					PodSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyLangopKind: "LanguageAgent",
+							langoplabels.LabelKeyLangopKind: "LanguageAgent",
 						},
 					},
 				},
@@ -132,7 +133,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyMetadataName: r.IngressControllerNamespace,
+							langoplabels.LabelKeyMetadataName: r.IngressControllerNamespace,
 						},
 					},
 				},
@@ -156,7 +157,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 // reconcileService creates a Service for the agent
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labels[LabelKeyLangopComponent] = "agent" // Only route to agent pods, not trigger pods
+	labels[langoplabels.LabelKeyLangopComponent] = "agent" // Only route to agent pods, not trigger pods
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

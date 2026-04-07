@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 )
 
 // reconcileServiceMonitor creates or deletes a Prometheus Operator ServiceMonitor for the agent.
@@ -68,7 +69,7 @@ func (r *LanguageAgentReconciler) reconcileServiceMonitor(ctx context.Context, a
 		return unstructured.SetNestedField(sm.Object, map[string]any{
 			"selector": map[string]any{
 				"matchLabels": map[string]any{
-					LabelKeyK8sName: agent.Name,
+					langoplabels.LabelKeyK8sName: agent.Name,
 				},
 			},
 			"endpoints": []any{endpoint},
