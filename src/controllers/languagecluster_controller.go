@@ -437,10 +437,7 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	agentsRole := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, agentsRole, func() error {
-		if err := controllerutil.SetControllerReference(cluster, agentsRole, r.Scheme); err != nil {
-			return err
-		}
+	if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, agentsRole, func() error {
 		agentsRole.Labels = rbacLabels
 		agentsRole.Rules = []rbacv1.PolicyRule{
 			{
@@ -458,10 +455,7 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	agentsRoleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Name: "agents", Namespace: namespace},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, agentsRoleBinding, func() error {
-		if err := controllerutil.SetControllerReference(cluster, agentsRoleBinding, r.Scheme); err != nil {
-			return err
-		}
+	if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, agentsRoleBinding, func() error {
 		agentsRoleBinding.Labels = rbacLabels
 		agentsRoleBinding.Subjects = []rbacv1.Subject{
 			{
@@ -511,10 +505,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
-		if err := controllerutil.SetControllerReference(cluster, sa, r.Scheme); err != nil {
-			return err
-		}
+	if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, sa, func() error {
 		sa.Labels = saLabels
 		if len(gatewayDeploy.ServiceAccountAnnotations) > 0 {
 			if sa.Annotations == nil {
@@ -540,10 +531,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, role, func() error {
-		if err := controllerutil.SetControllerReference(cluster, role, r.Scheme); err != nil {
-			return err
-		}
+	if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, role, func() error {
 		role.Labels = roleLabels
 		role.Rules = gatewayDeploy.RoleRules
 		return nil
@@ -554,10 +542,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	rb := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
-		if err := controllerutil.SetControllerReference(cluster, rb, r.Scheme); err != nil {
-			return err
-		}
+	if err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, rb, func() error {
 		rb.Labels = roleLabels
 		rb.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -1106,10 +1091,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
-		if err := controllerutil.SetControllerReference(cluster, deployment, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, deployment, func() error {
 		deployment.Labels = gatewayLabels
 		maxUnavailable := intstr.FromInt(0)
 		maxSurge := intstr.FromInt(1)
@@ -1179,10 +1161,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
-		if err := controllerutil.SetControllerReference(cluster, svc, r.Scheme); err != nil {
-			return err
-		}
+	err = CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, svc, func() error {
 		svc.Labels = gatewayLabels
 		svc.Spec = corev1.ServiceSpec{
 			Selector: gatewayLabels,
@@ -1259,10 +1238,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 		}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, hpa, func() error {
-		if err := controllerutil.SetControllerReference(cluster, hpa, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, hpa, func() error {
 		hpa.Labels = labels
 		hpa.Spec = autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
@@ -1300,10 +1276,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
-		if err := controllerutil.SetControllerReference(cluster, ingress, r.Scheme); err != nil {
-			return err
-		}
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, ingress, func() error {
 		pathType := networkingv1.PathTypePrefix
 		ingress.Spec = networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
@@ -1447,9 +1420,9 @@ func (r *LanguageClusterReconciler) reconcileCapacity(ctx context.Context, clust
 			Labels:    quotaLabels,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, quota, func() error {
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, quota, func() error {
 		quota.Spec.Hard = hard
-		return controllerutil.SetControllerReference(cluster, quota, r.Scheme)
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("failed to reconcile resourcequota: %w", err)
