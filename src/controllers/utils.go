@@ -58,6 +58,7 @@ const (
 	LabelKeyK8sManagedBy = "app.kubernetes.io/managed-by"
 	LabelKeyK8sPartOf    = "app.kubernetes.io/part-of"
 
+	GatewayResourceName  = "gateway"
 	GatewayContainerPort = 4000 // port the LiteLLM process listens on inside the pod
 	GatewayServicePort   = 8000 // port exposed by the gateway Service (maps → GatewayContainerPort)
 	OTELGRPCPort         = 4317
