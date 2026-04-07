@@ -162,6 +162,26 @@ webhooks:
     resources:
     - languagepersonas
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "language-operator.fullname" . }}-webhook
+      namespace: {{ .Release.Namespace }}
+      path: /validate-langop-io-v1alpha1-languageagentselfconfig
+  failurePolicy: Fail
+  name: vlanguageagentselfconfig.kb.io
+  rules:
+  - apiGroups:
+    - langop.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - languageagentselfconfigs
+  sideEffects: None
 {{- if .Values.config.webhook.certManager.enabled }}
 ---
 apiVersion: cert-manager.io/v1
