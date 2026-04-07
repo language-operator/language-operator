@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 )
 
 // reconcileAgentServiceAccount ensures the ServiceAccount for agent pods exists with proper permissions
@@ -41,9 +42,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if serviceAccount.Labels == nil {
 			serviceAccount.Labels = make(map[string]string)
 		}
-		serviceAccount.Labels[LabelKeyK8sName] = saName
-		serviceAccount.Labels[LabelKeyK8sComponent] = "serviceaccount"
-		serviceAccount.Labels[LabelKeyK8sManagedBy] = "language-operator"
+		serviceAccount.Labels[langoplabels.LabelKeyK8sName] = saName
+		serviceAccount.Labels[langoplabels.LabelKeyK8sComponent] = "serviceaccount"
+		serviceAccount.Labels[langoplabels.LabelKeyK8sManagedBy] = "language-operator"
 
 		// Merge user-supplied annotations (e.g. IRSA, GCP WI, AKS WI)
 		if len(agent.Spec.Deployment.ServiceAccountAnnotations) > 0 {
@@ -72,9 +73,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if role.Labels == nil {
 			role.Labels = make(map[string]string)
 		}
-		role.Labels[LabelKeyK8sName] = saName
-		role.Labels[LabelKeyK8sComponent] = "role"
-		role.Labels[LabelKeyK8sManagedBy] = "language-operator"
+		role.Labels[langoplabels.LabelKeyK8sName] = saName
+		role.Labels[langoplabels.LabelKeyK8sComponent] = "role"
+		role.Labels[langoplabels.LabelKeyK8sManagedBy] = "language-operator"
 		role.Rules = []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{""},
@@ -116,9 +117,9 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		if roleBinding.Labels == nil {
 			roleBinding.Labels = make(map[string]string)
 		}
-		roleBinding.Labels[LabelKeyK8sName] = saName
-		roleBinding.Labels[LabelKeyK8sComponent] = "rolebinding"
-		roleBinding.Labels[LabelKeyK8sManagedBy] = "language-operator"
+		roleBinding.Labels[langoplabels.LabelKeyK8sName] = saName
+		roleBinding.Labels[langoplabels.LabelKeyK8sComponent] = "rolebinding"
+		roleBinding.Labels[langoplabels.LabelKeyK8sManagedBy] = "language-operator"
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",

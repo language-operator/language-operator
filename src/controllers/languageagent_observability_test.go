@@ -9,6 +9,7 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -84,7 +85,7 @@ func TestLanguageAgentController_ServiceMonitor_CreatedWhenEnabled(t *testing.T)
 	selector, ok, err := unstructuredPkg.NestedStringMap(sm.Object, "spec", "selector", "matchLabels")
 	require.NoError(t, err)
 	require.True(t, ok)
-	assert.Equal(t, agent.Name, selector[LabelKeyK8sName])
+	assert.Equal(t, agent.Name, selector[langoplabels.LabelKeyK8sName])
 }
 
 func TestLanguageAgentController_ServiceMonitor_PortDefaultsToFirstPort(t *testing.T) {

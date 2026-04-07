@@ -11,6 +11,7 @@ import (
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/cni"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -140,7 +141,7 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 		if peer.PodSelector == nil {
 			t.Fatal("expected PodSelector for Group-based From rule")
 		}
-		if peer.PodSelector.MatchLabels[LabelKeyLangopGroup] != "monitoring" {
+		if peer.PodSelector.MatchLabels[langoplabels.LabelKeyLangopGroup] != "monitoring" {
 			t.Errorf("expected langop.io/group=monitoring, got %v", peer.PodSelector.MatchLabels)
 		}
 		if len(last.Ports) == 0 || last.Ports[0].Port.IntVal != 9090 {

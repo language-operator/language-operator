@@ -39,141 +39,12 @@ import (
 
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
-	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/language-operator/language-operator/pkg/network"
 )
 
-const (
-	FinalizerName = "langop.io/finalizer"
-
-	LabelKeyLangopKind       = "langop.io/kind"
-	LabelKeyLangopGroup      = "langop.io/group"
-	LabelKeyLangopCluster    = "langop.io/cluster"
-	LabelKeyLangopComponent  = "langop.io/component"
-	LabelKeyLangopConfigHash = "langop.io/config-hash"
-	LabelKeyMetadataName     = "kubernetes.io/metadata.name"
-
-	LabelKeyK8sName      = "app.kubernetes.io/name"
-	LabelKeyK8sComponent = "app.kubernetes.io/component"
-	LabelKeyK8sManagedBy = "app.kubernetes.io/managed-by"
-	LabelKeyK8sPartOf    = "app.kubernetes.io/part-of"
-
-	GatewayResourceName  = "gateway"
-	GatewayContainerPort = 4000 // port the LiteLLM process listens on inside the pod
-	GatewayServicePort   = 8000 // port exposed by the gateway Service (maps → GatewayContainerPort)
-	OTELGRPCPort         = 4317
-	OTELHTTPPort         = 4318
-	DNSPort              = 53
-
-	// LangopUserID is the user ID for the langop user (matches Dockerfile)
-	LangopUserID = 1000
-	// LangopGroupID is the group ID for the langop group
-	LangopGroupID = 101
-)
-
-// RemoveFinalizer removes the operator finalizer from obj and updates it.
-func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
-	if controllerutil.ContainsFinalizer(obj, FinalizerName) {
-		controllerutil.RemoveFinalizer(obj, FinalizerName)
-		if err := c.Update(ctx, obj); err != nil {
-			log.FromContext(ctx).Error(err, "Failed to remove finalizer")
-			return err
-		}
-	}
-	return nil
-}
-
-// buildPodSecurityContext returns the operator-default pod-level security context.
-// Controllers may let users override this via spec.deployment.securityContext.
-func buildPodSecurityContext() *corev1.PodSecurityContext {
-	return &corev1.PodSecurityContext{
-		RunAsNonRoot: ptr.To(true),
-		RunAsUser:    ptr.To[int64](LangopUserID),
-		FSGroup:      ptr.To[int64](LangopGroupID),
-		SeccompProfile: &corev1.SeccompProfile{
-			Type: corev1.SeccompProfileTypeRuntimeDefault,
-		},
-	}
-}
-
-// buildContainerSecurityContext returns the operator-default container-level security context.
-func buildContainerSecurityContext() *corev1.SecurityContext {
-	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: ptr.To(false),
-		RunAsNonRoot:             ptr.To(true),
-		RunAsUser:                ptr.To[int64](LangopUserID),
-		ReadOnlyRootFilesystem:   ptr.To(true),
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{"ALL"},
-		},
-	}
-}
-
-// SetCondition updates or adds a condition to the conditions slice
-// Returns true if the condition was actually changed
-func SetCondition(conditions *[]metav1.Condition, conditionType string, status metav1.ConditionStatus, reason, message string, generation int64) bool {
-	now := metav1.Now()
-	condition := metav1.Condition{
-		Type:               conditionType,
-		Status:             status,
-		ObservedGeneration: generation,
-		LastTransitionTime: now,
-		Reason:             reason,
-		Message:            message,
-	}
-
-	// Find existing condition
-	for i, existing := range *conditions {
-		if existing.Type == conditionType {
-			// Check if anything actually changed
-			if existing.Status == status &&
-				existing.Reason == reason &&
-				existing.Message == message &&
-				existing.ObservedGeneration == generation {
-				// Nothing changed, don't update
-				return false
-			}
-
-			// Only update LastTransitionTime if status changed
-			if existing.Status != status {
-				(*conditions)[i] = condition
-			} else {
-				condition.LastTransitionTime = existing.LastTransitionTime
-				(*conditions)[i] = condition
-			}
-			return true
-		}
-	}
-
-	// Add new condition
-	*conditions = append(*conditions, condition)
-	return true
-}
-
-// SetPhase updates the status phase and records the observed generation.
-// Use this instead of setting Phase and ObservedGeneration separately.
-func SetPhase(phase *string, observedGeneration *int64, newPhase string, generation int64) {
-	*phase = newPhase
-	*observedGeneration = generation
-}
-
-// ValidateClusterReference validates that the LanguageCluster for this namespace exists and is ready.
-// By convention, namespace name == cluster name.
-func ValidateClusterReference(ctx context.Context, c client.Client, namespace string) error {
-	cluster := &langopv1alpha1.LanguageCluster{}
-	if err := c.Get(ctx, client.ObjectKey{Name: namespace}, cluster); err != nil {
-		return fmt.Errorf("failed to get cluster %s: %w", namespace, err)
-	}
-
-	if cluster.Status.Phase != events.PhaseStatusReady {
-		return fmt.Errorf("cluster %s is not ready yet (phase: %s)", namespace, cluster.Status.Phase)
-	}
-
-	return nil
-}
-
-// CreateOrUpdateNetworkPolicy creates or updates a NetworkPolicy with owner reference
-// Includes timeout and exponential backoff retry logic for slow CNI plugins
+// CreateOrUpdateNetworkPolicy creates or updates a NetworkPolicy with owner reference.
+// Includes timeout and exponential backoff retry logic for slow CNI plugins.
 func CreateOrUpdateNetworkPolicy(
 	ctx context.Context,
 	c client.Client,
@@ -184,7 +55,7 @@ func CreateOrUpdateNetworkPolicy(
 	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, c, scheme, owner, networkPolicy, 30*time.Second, 3)
 }
 
-// CreateOrUpdateNetworkPolicyWithTimeout creates or updates a NetworkPolicy with configurable timeout and retries
+// CreateOrUpdateNetworkPolicyWithTimeout creates or updates a NetworkPolicy with configurable timeout and retries.
 func CreateOrUpdateNetworkPolicyWithTimeout(
 	ctx context.Context,
 	c client.Client,
@@ -265,7 +136,7 @@ func CreateOrUpdateNetworkPolicyWithTimeout(
 	return fmt.Errorf("NetworkPolicy operation failed after %d attempts: %w", maxRetries+1, lastErr)
 }
 
-// tryCreateOrUpdateNetworkPolicy performs a single attempt to create or update a NetworkPolicy
+// tryCreateOrUpdateNetworkPolicy performs a single attempt to create or update a NetworkPolicy.
 func tryCreateOrUpdateNetworkPolicy(
 	ctx context.Context,
 	c client.Client,
@@ -299,170 +170,10 @@ func tryCreateOrUpdateNetworkPolicy(
 	return nil
 }
 
-// CreateOrUpdateOwned wraps controllerutil.CreateOrUpdate, setting the controller reference
-// on obj before invoking mutateFn. Callers only need to provide spec-level mutations.
-func CreateOrUpdateOwned(
-	ctx context.Context,
-	c client.Client,
-	scheme *runtime.Scheme,
-	owner, obj client.Object,
-	mutateFn func() error,
-) error {
-	_, err := controllerutil.CreateOrUpdate(ctx, c, obj, func() error {
-		if err := controllerutil.SetControllerReference(owner, obj, scheme); err != nil {
-			return err
-		}
-		return mutateFn()
-	})
-	return err
-}
-
-// CreateOrUpdateConfigMap creates or updates a ConfigMap with owner reference
-func CreateOrUpdateConfigMap(
-	ctx context.Context,
-	c client.Client,
-	scheme *runtime.Scheme,
-	owner client.Object,
-	name, namespace string,
-	data map[string]string,
-) error {
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
-		// Set owner reference
-		if err := controllerutil.SetControllerReference(owner, configMap, scheme); err != nil {
-			return err
-		}
-
-		// Update data
-		configMap.Data = data
-
-		return nil
-	})
-
-	return err
-}
-
-// DeleteConfigMap deletes a ConfigMap if it exists
-func DeleteConfigMap(ctx context.Context, c client.Client, name, namespace string) error {
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-
-	err := c.Delete(ctx, configMap)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	return nil
-}
-
-// GenerateConfigMapName generates a ConfigMap name for a resource
-func GenerateConfigMapName(resourceName, suffix string) string {
-	return fmt.Sprintf("%s-%s", resourceName, suffix)
-}
-
-// GenerateServiceAccountName returns the name of the operator-managed ServiceAccount for an agent.
-func GenerateServiceAccountName(agentName string) string {
-	return "language-agent-" + agentName
-}
-
-// GeneratePVCName returns the PVC name for an agent's workspace volume.
-func GeneratePVCName(agentName string) string {
-	return agentName + "-workspace"
-}
-
-// GenerateTLSSecretName returns the TLS secret name for an agent.
-func GenerateTLSSecretName(agentName string) string {
-	return agentName + "-tls"
-}
-
-// certManagerIssuerAnnotationSuffix returns the cert-manager annotation suffix for a given issuer kind.
-// cert-manager uses "issuer" for Issuer and "cluster-issuer" (hyphenated) for ClusterIssuer.
-func certManagerIssuerAnnotationSuffix(kind string) string {
-	if strings.EqualFold(kind, "ClusterIssuer") {
-		return "cluster-issuer"
-	}
-	return "issuer"
-}
-
-// GetCommonLabels returns common labels for resources
-func GetCommonLabels(resourceName, resourceKind string) map[string]string {
-	return map[string]string{
-		LabelKeyK8sName:      resourceName,
-		LabelKeyK8sManagedBy: "language-operator",
-		LabelKeyK8sPartOf:    "langop",
-		LabelKeyLangopKind:   resourceKind,
-	}
-}
-
-// resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks
-// Supports wildcards: *.example.com will resolve example.com and cache the result
-// Special case: "*" means allow all destinations (0.0.0.0/0)
-// Each lookup is bounded by a 3-second per-host timeout derived from ctx to avoid stalling
-// the reconcile worker goroutine.
-func resolveDNSToCIDRs(ctx context.Context, dnsNames []string) ([]string, error) {
-	var cidrs []string
-	seenIPs := make(map[string]bool)
-
-	for _, hostname := range dnsNames {
-		// Special case: "*" means any destination
-		if hostname == "*" {
-			return []string{"0.0.0.0/0"}, nil
-		}
-
-		// Handle wildcard domains by stripping the *. prefix
-		// Note: This is an approximation - we can't know all subdomains
-		// so we resolve the base domain
-		resolveHostname := hostname
-		if strings.HasPrefix(hostname, "*.") {
-			resolveHostname = hostname[2:] // Remove *.
-		}
-
-		// Resolve the hostname to IP addresses with a per-lookup timeout so a
-		// slow or unreachable DNS server cannot stall the reconcile worker.
-		lookupCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		addrs, err := (&net.Resolver{}).LookupIPAddr(lookupCtx, resolveHostname)
-		cancel()
-		if err != nil {
-			// Don't fail the entire policy if one DNS lookup fails
-			// Log and continue
-			continue
-		}
-
-		// Convert IPs to /32 (IPv4) or /128 (IPv6) CIDR blocks
-		for _, addr := range addrs {
-			ip := addr.IP
-			var cidr string
-			if ip.To4() != nil {
-				cidr = ip.String() + "/32"
-			} else {
-				cidr = ip.String() + "/128"
-			}
-
-			// Deduplicate
-			if !seenIPs[cidr] {
-				seenIPs[cidr] = true
-				cidrs = append(cidrs, cidr)
-			}
-		}
-	}
-
-	return cidrs, nil
-}
-
-// BuildEgressNetworkPolicy creates a NetworkPolicy for egress rules
-// Default policy: deny all external egress, allow internal cluster + DNS
-// DNS-based rules are resolved to IP addresses at policy creation time
-// If otelEndpoint is set, an egress rule is automatically generated for the OpenTelemetry collector
+// BuildEgressNetworkPolicy creates a NetworkPolicy for egress rules.
+// Default policy: deny all external egress, allow internal cluster + DNS.
+// DNS-based rules are resolved to IP addresses at policy creation time.
+// If otelEndpoint is set, an egress rule is automatically generated for the OpenTelemetry collector.
 func BuildEgressNetworkPolicy(
 	ctx context.Context,
 	client client.Client,
@@ -491,7 +202,7 @@ func BuildEgressNetworkPolicy(
 				{
 					NamespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							LabelKeyMetadataName: "kube-system",
+							langoplabels.LabelKeyMetadataName: "kube-system",
 						},
 					},
 					PodSelector: &metav1.LabelSelector{
@@ -504,11 +215,11 @@ func BuildEgressNetworkPolicy(
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
 					Protocol: ptr.To(corev1.ProtocolUDP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.DNSPort},
 				},
 				{
 					Protocol: ptr.To(corev1.ProtocolTCP),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
+					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.DNSPort},
 				},
 			},
 		},
@@ -543,7 +254,7 @@ func BuildEgressNetworkPolicy(
 							{
 								NamespaceSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										LabelKeyMetadataName: otelNamespace,
+										langoplabels.LabelKeyMetadataName: otelNamespace,
 									},
 								},
 							},
@@ -551,11 +262,11 @@ func BuildEgressNetworkPolicy(
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
 								Protocol: ptr.To(corev1.ProtocolTCP),
-								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELGRPCPort},
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.OTELGRPCPort},
 							},
 							{
 								Protocol: ptr.To(corev1.ProtocolTCP),
-								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELHTTPPort},
+								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: network.OTELHTTPPort},
 							},
 						},
 					})
@@ -614,7 +325,7 @@ func BuildEgressNetworkPolicy(
 				if peer.Group != "" {
 					policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
 						PodSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{LabelKeyLangopGroup: peer.Group},
+							MatchLabels: map[string]string{langoplabels.LabelKeyLangopGroup: peer.Group},
 						},
 					})
 				}
@@ -627,7 +338,7 @@ func BuildEgressNetworkPolicy(
 					}
 					policyRule.To = append(policyRule.To, networkingv1.NetworkPolicyPeer{
 						NamespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{LabelKeyMetadataName: ns},
+							MatchLabels: map[string]string{langoplabels.LabelKeyMetadataName: ns},
 						},
 					})
 				}
@@ -689,7 +400,7 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 	}
 	if peer.Group != "" {
 		p.PodSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{LabelKeyLangopGroup: peer.Group},
+			MatchLabels: map[string]string{langoplabels.LabelKeyLangopGroup: peer.Group},
 		}
 	}
 	if peer.Service != nil {
@@ -698,7 +409,7 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 			ns = namespace
 		}
 		p.NamespaceSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{LabelKeyMetadataName: ns},
+			MatchLabels: map[string]string{langoplabels.LabelKeyMetadataName: ns},
 		}
 	}
 	if peer.PodSelector != nil {
@@ -742,4 +453,59 @@ func buildNetworkPolicyIngressRules(
 		rules = append(rules, ingressRule)
 	}
 	return rules
+}
+
+// resolveDNSToCIDRs resolves DNS hostnames to IP addresses and returns CIDR blocks.
+// Supports wildcards: *.example.com will resolve example.com and cache the result.
+// Special case: "*" means allow all destinations (0.0.0.0/0).
+// Each lookup is bounded by a 3-second per-host timeout derived from ctx to avoid stalling
+// the reconcile worker goroutine.
+func resolveDNSToCIDRs(ctx context.Context, dnsNames []string) ([]string, error) {
+	var cidrs []string
+	seenIPs := make(map[string]bool)
+
+	for _, hostname := range dnsNames {
+		// Special case: "*" means any destination
+		if hostname == "*" {
+			return []string{"0.0.0.0/0"}, nil
+		}
+
+		// Handle wildcard domains by stripping the *. prefix
+		// Note: This is an approximation - we can't know all subdomains
+		// so we resolve the base domain
+		resolveHostname := hostname
+		if strings.HasPrefix(hostname, "*.") {
+			resolveHostname = hostname[2:] // Remove *.
+		}
+
+		// Resolve the hostname to IP addresses with a per-lookup timeout so a
+		// slow or unreachable DNS server cannot stall the reconcile worker.
+		lookupCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		addrs, err := (&net.Resolver{}).LookupIPAddr(lookupCtx, resolveHostname)
+		cancel()
+		if err != nil {
+			// Don't fail the entire policy if one DNS lookup fails
+			// Log and continue
+			continue
+		}
+
+		// Convert IPs to /32 (IPv4) or /128 (IPv6) CIDR blocks
+		for _, addr := range addrs {
+			ip := addr.IP
+			var cidr string
+			if ip.To4() != nil {
+				cidr = ip.String() + "/32"
+			} else {
+				cidr = ip.String() + "/128"
+			}
+
+			// Deduplicate
+			if !seenIPs[cidr] {
+				seenIPs[cidr] = true
+				cidrs = append(cidrs, cidr)
+			}
+		}
+	}
+
+	return cidrs, nil
 }

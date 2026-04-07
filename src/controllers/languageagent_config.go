@@ -18,6 +18,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/language-operator/language-operator/pkg/network"
 )
 
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
@@ -105,7 +106,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 
 	// Models — all served via the shared namespace gateway
-	gatewayURL := serviceURL("gateway", agent.Namespace, GatewayServicePort)
+	gatewayURL := serviceURL("gateway", agent.Namespace, network.GatewayServicePort)
 	for _, modelRef := range agent.Spec.Models {
 		model := &langopv1alpha1.LanguageModel{}
 		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
@@ -524,7 +525,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 			})
 			extraEnv = append(extraEnv, corev1.EnvVar{
 				Name:  "ANTHROPIC_BASE_URL",
-				Value: serviceURL("gateway", agent.Namespace, GatewayServicePort),
+				Value: serviceURL("gateway", agent.Namespace, network.GatewayServicePort),
 			})
 		}
 		if cc.MaxTurns != nil {

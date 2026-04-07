@@ -31,6 +31,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/validation"
 )
@@ -313,7 +314,7 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 		return err
 	}
 
-	labels[LabelKeyLangopCluster] = tool.Namespace
+	labels[langoplabels.LabelKeyLangopCluster] = tool.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -539,7 +540,7 @@ func (r *LanguageToolReconciler) reconcileService(ctx context.Context, tool *lan
 		return err
 	}
 
-	labels[LabelKeyLangopCluster] = tool.Namespace
+	labels[langoplabels.LabelKeyLangopCluster] = tool.Namespace
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

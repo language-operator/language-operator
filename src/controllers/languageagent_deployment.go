@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
+	"github.com/language-operator/language-operator/pkg/network"
 )
 
 func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent *langopv1alpha1.LanguageAgent, configHash string) error {
@@ -37,7 +39,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labels[LabelKeyLangopComponent] = "agent" // Distinguish from trigger pods
+	labels[langoplabels.LabelKeyLangopComponent] = "agent" // Distinguish from trigger pods
 
 	if err := ValidateClusterReference(ctx, r.Client, agent.Namespace); err != nil {
 		return err
@@ -48,7 +50,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return fmt.Errorf("failed to get cluster %s: %w", agent.Namespace, err)
 	}
 
-	labels[LabelKeyLangopCluster] = agent.Namespace
+	labels[langoplabels.LabelKeyLangopCluster] = agent.Namespace
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +132,7 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		}
 
 		// Seed pod annotations with the operator-managed config-hash, then overlay user annotations.
-		podAnnotations := map[string]string{LabelKeyLangopConfigHash: configHash}
+		podAnnotations := map[string]string{langoplabels.LabelKeyLangopConfigHash: configHash}
 		maps.Copy(podAnnotations, agent.Spec.Deployment.PodAnnotations)
 
 		deployment.Spec = appsv1.DeploymentSpec{
@@ -193,7 +195,7 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 
 		// All models in a cluster are served by the shared gateway
 		// in the cluster namespace. Deduplicate: only add the gateway URL once.
-		gatewayURL := serviceURL("gateway", agent.Namespace, GatewayServicePort)
+		gatewayURL := serviceURL("gateway", agent.Namespace, network.GatewayServicePort)
 		alreadyAdded := false
 		for _, u := range modelURLs {
 			if u == gatewayURL {

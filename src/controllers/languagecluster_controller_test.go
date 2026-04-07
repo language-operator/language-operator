@@ -11,6 +11,7 @@ import (
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -943,7 +944,7 @@ func TestLanguageClusterController_NetworkPolicy_FromRule(t *testing.T) {
 
 	peer := np.Spec.Ingress[0].From[0]
 	require.NotNil(t, peer.PodSelector, "expected PodSelector for Group-based From rule")
-	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels[LabelKeyLangopGroup])
+	assert.Equal(t, "external-readers", peer.PodSelector.MatchLabels[langoplabels.LabelKeyLangopGroup])
 	require.NotEmpty(t, np.Spec.Ingress[0].Ports)
 	assert.Equal(t, int32(8000), np.Spec.Ingress[0].Ports[0].Port.IntVal)
 }
@@ -997,7 +998,7 @@ func TestLanguageClusterController_NetworkPolicy_ServiceRule(t *testing.T) {
 		rule := &np.Spec.Egress[i]
 		for _, peer := range rule.To {
 			if peer.NamespaceSelector != nil {
-				if v, ok := peer.NamespaceSelector.MatchLabels[LabelKeyMetadataName]; ok && v == "other-ns" {
+				if v, ok := peer.NamespaceSelector.MatchLabels[langoplabels.LabelKeyMetadataName]; ok && v == "other-ns" {
 					userRule = rule
 					break
 				}
@@ -1539,7 +1540,7 @@ func TestLanguageClusterController_GatewayPodAnnotationsAndLabels(t *testing.T) 
 	})
 	// User annotation present alongside operator-managed config-hash.
 	assert.Equal(t, "true", dep.Spec.Template.Annotations["vault.hashicorp.com/agent-inject"])
-	assert.NotEmpty(t, dep.Spec.Template.Annotations[LabelKeyLangopConfigHash])
+	assert.NotEmpty(t, dep.Spec.Template.Annotations[langoplabels.LabelKeyLangopConfigHash])
 	// User label present alongside operator-managed gateway labels.
 	assert.Equal(t, "true", dep.Spec.Template.Labels["sidecar.istio.io/inject"])
 	assert.Equal(t, "gateway", dep.Spec.Template.Labels["app.kubernetes.io/component"])
