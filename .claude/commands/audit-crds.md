@@ -23,9 +23,17 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - Phase string literals written to `status.Phase`
 - TODO / FIXME comments
 
+**Runtime merge logic** — read `src/api/v1alpha1/languageagentruntime_merge.go`. This is where `LanguageAgentRuntimeSpec` fields are consumed via `ApplyRuntimeDefaults`. A field in `LanguageAgentRuntimeSpec.Deployment` is only dead if it appears in neither this file nor any controller. Pay special attention to fields in `DeploymentSpec` that `ApplyRuntimeDefaults` does **not** handle (e.g. `ServiceAccountAnnotations`, `RoleRules`) — these are potential dead fields when used via a runtime.
+
+**Phase constants** — read `src/pkg/events/manager.go`. Phase values are defined as constants here (`PhaseStatusPending`, `PhaseStatusRunning`, `PhaseStatusReady`, `PhaseStatusFailed`, `PhaseStatusUpdating`, `PhaseStatusDegraded`). Controllers reference these constants, not raw string literals. When cross-referencing phase values written vs. enum constraints on the type, look up these constants rather than searching for inline strings.
+
 **Component scripts** — also read `components/model-gateway/generate-config.py`. Some spec fields are consumed here rather than in Go controllers (e.g. `LanguageModel.Spec` fields flow through to LiteLLM config). A field is not dead just because no controller reads it if a component script does.
 
 **Shared types** — `DeploymentSpec` is used by LanguageAgent, LanguageTool, and LanguageCluster controllers. A field is only dead if *no* controller reads it. Check all three before marking a field dead.
+
+**Known intentional patterns** (do not flag these as bugs):
+- `LanguageAgentRuntime` has no `+kubebuilder:subresource:status` and no `Status` field. Its controller only manages a finalizer. This is by design — it is a cluster-scoped preset, not a reconciled workload.
+- `SelfConfigPhase` is a named Go type with an enum constraint on the type declaration rather than on the struct field. Controllers write all four values (Pending, Applied, Failed, Denied).
 
 ### Step 2 — Cross-reference for findings
 
@@ -34,8 +42,9 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - Enum values declared in the type that no controller ever writes (dead enum values inflate the schema and mislead users)
 
 **Dead spec fields**
-- Fields defined in Spec (including nested structs) that no controller or component script reads
+- Fields defined in Spec (including nested structs) that no controller, merge function, or component script reads
 - `bool` fields with `omitempty` and `+kubebuilder:default=true` anywhere in the type hierarchy — these must be `*bool` or the user can never set them to false
+- `DeploymentSpec` fields that appear in `LanguageAgentRuntimeSpec.Deployment` but are not merged by `ApplyRuntimeDefaults` — silently ignored at runtime despite being valid in `LanguageAgentSpec.Deployment`
 
 **Dead status fields and printcolumns**
 - Status fields that no controller ever writes
@@ -71,7 +80,7 @@ For each new finding, file a GitHub issue using `gh issue create --repo language
 - Label bugs (enum violations, type bugs, dead printcolumns) as `bug`
 - Label dead code and naming issues as `enhancement`
 - Label unimplemented features as `enhancement`
-- Title format: `fix:` for bugs, `clean:` for dead code/naming, `feat:` for missing implementations
+- Title format: `fix:` for bugs, `chore:` for dead code/naming, `feat:` for missing implementations
 - Body must include: the problem, affected file + line numbers, and a concrete fix or set of options
 - Group tightly related findings (same root cause, same struct) into one issue
 
