@@ -215,7 +215,7 @@ config:
   tls:
     # cert-manager issuer name for gateway and agent Ingress TLS certificates.
     # Set to "" to disable cert-manager integration (e.g. when supplying certificates manually).
-    certificateIssuerName: "letsencrypt-production"
+    certificateIssuerName: ""
     # Kind of the cert-manager issuer: ClusterIssuer (default) or Issuer.
     certificateIssuerKind: "ClusterIssuer"
 
