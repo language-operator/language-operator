@@ -92,6 +92,17 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 	if d.ServiceAccountName == "" {
 		d.ServiceAccountName = r.ServiceAccountName
 	}
+	// ServiceAccountAnnotations: merge key-by-key; agent keys win on collision.
+	if len(r.ServiceAccountAnnotations) > 0 {
+		if d.ServiceAccountAnnotations == nil {
+			d.ServiceAccountAnnotations = make(map[string]string, len(r.ServiceAccountAnnotations))
+		}
+		for k, v := range r.ServiceAccountAnnotations {
+			if _, exists := d.ServiceAccountAnnotations[k]; !exists {
+				d.ServiceAccountAnnotations[k] = v
+			}
+		}
+	}
 	if d.SecurityContext == nil && r.SecurityContext != nil {
 		sc := *r.SecurityContext
 		d.SecurityContext = &sc
@@ -182,5 +193,9 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 	}
 	if len(r.VolumeMounts) > 0 {
 		d.VolumeMounts = append(r.VolumeMounts, d.VolumeMounts...)
+	}
+	// RoleRules: runtime-first, agent-appended (same pattern as InitContainers, Env, Volumes).
+	if len(r.RoleRules) > 0 {
+		d.RoleRules = append(r.RoleRules, d.RoleRules...)
 	}
 }
