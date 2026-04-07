@@ -509,7 +509,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	saLabels[LabelKeyLangopCluster] = cluster.Name
 
 	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
 		if err := controllerutil.SetControllerReference(cluster, sa, r.Scheme); err != nil {
@@ -538,7 +538,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	roleLabels[LabelKeyLangopCluster] = cluster.Name
 
 	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, role, func() error {
 		if err := controllerutil.SetControllerReference(cluster, role, r.Scheme); err != nil {
@@ -552,7 +552,7 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 	}
 
 	rb := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
 		if err := controllerutil.SetControllerReference(cluster, rb, r.Scheme); err != nil {
@@ -562,12 +562,12 @@ func (r *LanguageClusterReconciler) reconcileGatewaySA(
 		rb.RoleRef = rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Role",
-			Name:     "gateway",
+			Name:     GatewayResourceName,
 		}
 		rb.Subjects = []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      "gateway",
+				Name:      GatewayResourceName,
 				Namespace: namespace,
 			},
 		}
@@ -980,8 +980,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	configHash := hex.EncodeToString(h.Sum(nil))[:16]
 
 	// Reconcile ConfigMap
-	gatewayLabels := GetCommonLabels("language-operator", "gateway")
-	gatewayLabels[LabelKeyK8sComponent] = "gateway"
+	gatewayLabels := GetCommonLabels("language-operator", GatewayResourceName)
+	gatewayLabels[LabelKeyK8sComponent] = GatewayResourceName
 	gatewayLabels[LabelKeyLangopCluster] = cluster.Name
 	if err := CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, cluster, "gateway-config", namespace, cmData); err != nil {
 		return fmt.Errorf("failed to reconcile gateway ConfigMap: %w", err)
@@ -1054,7 +1054,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	deploymentReplicas := &replicas
 	if gatewayDeploy.Autoscaling != nil {
 		existing := &appsv1.Deployment{}
-		if err := r.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: namespace}, existing); err == nil && existing.Spec.Replicas != nil {
+		if err := r.Get(ctx, types.NamespacedName{Name: GatewayResourceName, Namespace: namespace}, existing); err == nil && existing.Spec.Replicas != nil {
 			deploymentReplicas = existing.Spec.Replicas
 		}
 	}
@@ -1104,7 +1104,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	// Reconcile Deployment
 	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		if err := controllerutil.SetControllerReference(cluster, deployment, r.Scheme); err != nil {
@@ -1132,7 +1132,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 					InitContainers: gatewayDeploy.InitContainers,
 					Containers: []corev1.Container{
 						{
-							Name:            "gateway",
+							Name:            GatewayResourceName,
 							Image:           r.gatewayImage(),
 							Command:         gatewayDeploy.Command,
 							Args:            gatewayDeploy.Args,
@@ -1167,7 +1167,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		if gatewayDeploy.ServiceAccountName != "" {
 			podSpec.ServiceAccountName = gatewayDeploy.ServiceAccountName
 		} else {
-			podSpec.ServiceAccountName = "gateway"
+			podSpec.ServiceAccountName = GatewayResourceName
 		}
 		return nil
 	})
@@ -1177,7 +1177,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 
 	// Reconcile Service
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, svc, func() error {
 		if err := controllerutil.SetControllerReference(cluster, svc, r.Scheme); err != nil {
@@ -1224,7 +1224,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gateway",
+			Name:      GatewayResourceName,
 			Namespace: cluster.Name,
 		},
 	}
@@ -1237,8 +1237,8 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 	}
 
 	as := gatewayDeploy.Autoscaling
-	labels := GetCommonLabels("language-operator", "gateway")
-	labels[LabelKeyK8sComponent] = "gateway"
+	labels := GetCommonLabels("language-operator", GatewayResourceName)
+	labels[LabelKeyK8sComponent] = GatewayResourceName
 	labels[LabelKeyLangopCluster] = cluster.Name
 
 	metrics := as.Metrics
@@ -1268,7 +1268,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",
 				Kind:       "Deployment",
-				Name:       "gateway",
+				Name:       GatewayResourceName,
 			},
 			MinReplicas: as.MinReplicas,
 			MaxReplicas: as.MaxReplicas,
@@ -1298,7 +1298,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 	}
 
 	ingress := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
 		if err := controllerutil.SetControllerReference(cluster, ingress, r.Scheme); err != nil {
@@ -1317,7 +1317,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 									PathType: &pathType,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: "gateway",
+											Name: GatewayResourceName,
 											Port: networkingv1.ServiceBackendPort{Number: GatewayServicePort},
 										},
 									},
@@ -1528,19 +1528,19 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 
 	resources = append(resources,
 		langopv1alpha1.ManagedResource{Kind: "ConfigMap", Name: "gateway-config", Namespace: ns},
-		langopv1alpha1.ManagedResource{Group: "apps", Kind: "Deployment", Name: "gateway", Namespace: ns},
-		langopv1alpha1.ManagedResource{Kind: "Service", Name: "gateway", Namespace: ns},
+		langopv1alpha1.ManagedResource{Group: "apps", Kind: "Deployment", Name: GatewayResourceName, Namespace: ns},
+		langopv1alpha1.ManagedResource{Kind: "Service", Name: GatewayResourceName, Namespace: ns},
 	)
 
 	// Managed gateway SA — always created when serviceAccountName is not user-supplied.
 	if cluster.Spec.Gateway == nil || cluster.Spec.Gateway.Deployment.ServiceAccountName == "" {
 		resources = append(resources,
-			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: "gateway", Namespace: ns},
+			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: GatewayResourceName, Namespace: ns},
 		)
 		if cluster.Spec.Gateway != nil && len(cluster.Spec.Gateway.Deployment.RoleRules) > 0 {
 			resources = append(resources,
-				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "gateway", Namespace: ns},
-				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "gateway", Namespace: ns},
+				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: GatewayResourceName, Namespace: ns},
+				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: GatewayResourceName, Namespace: ns},
 			)
 		}
 	}
@@ -1553,7 +1553,7 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 		}
 		if ingressEnabled {
 			resources = append(resources, langopv1alpha1.ManagedResource{
-				Group: "networking.k8s.io", Kind: "Ingress", Name: "gateway", Namespace: ns,
+				Group: "networking.k8s.io", Kind: "Ingress", Name: GatewayResourceName, Namespace: ns,
 			})
 		}
 	}
@@ -1561,7 +1561,7 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 	// HPA is created when gateway autoscaling is configured.
 	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Deployment.Autoscaling != nil {
 		resources = append(resources, langopv1alpha1.ManagedResource{
-			Group: "autoscaling", Kind: "HorizontalPodAutoscaler", Name: "gateway", Namespace: ns,
+			Group: "autoscaling", Kind: "HorizontalPodAutoscaler", Name: GatewayResourceName, Namespace: ns,
 		})
 	}
 
