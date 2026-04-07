@@ -56,9 +56,7 @@ spec:
         - --health-probe-bind-address=:{{ .Values.config.health.port }}
         - --zap-log-level={{ .Values.config.logging.level }}
         - --zap-encoder={{ .Values.config.logging.format }}
-        {{- if .Values.config.logging.development }}
-        - --zap-devel
-        {{- end }}
+        - --zap-devel={{ .Values.config.logging.development }}
         {{- if .Values.config.controller.concurrency }}
         - --concurrency={{ .Values.config.controller.concurrency }}
         {{- end }}
