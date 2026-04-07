@@ -683,7 +683,3 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 	}
 	return p
 }
-
-func boolPtr(b bool) *bool {
-	return &b
-}

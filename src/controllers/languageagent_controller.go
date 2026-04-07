@@ -1552,7 +1552,7 @@ func agentPorts(agent *langopv1alpha1.LanguageAgent) []langopv1alpha1.AgentPort 
 		return agent.Spec.Ports
 	}
 	return []langopv1alpha1.AgentPort{
-		{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: boolPtr(true)},
+		{Name: "http", Port: 8080, Protocol: corev1.ProtocolTCP, Expose: ptr.To(true)},
 	}
 }
 

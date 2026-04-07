@@ -9,6 +9,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -49,7 +50,7 @@ func reconcileSelfConfig(t *testing.T, r *LanguageAgentSelfConfigReconciler, nam
 func agentWithSelfConfigure(name, ns string, actions ...langopv1alpha1.SelfConfigAction) *langopv1alpha1.LanguageAgent {
 	return gen.LanguageAgent(name, ns, func(a *langopv1alpha1.LanguageAgent) {
 		a.Spec.SelfConfigure = &langopv1alpha1.SelfConfigureSpec{
-			Enabled:        boolPtr(true),
+			Enabled:        ptr.To(true),
 			AllowedActions: actions,
 		}
 	})
