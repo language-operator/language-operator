@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -641,7 +642,7 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 					protocol = corev1.ProtocolTCP
 				}
 				ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
-					Protocol: protocolPtr(protocol),
+					Protocol: ptr.To(protocol),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
 				})
 			}

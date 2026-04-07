@@ -21,6 +21,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 // CreateSecureAPIServerEgressRules creates egress rules for Kubernetes API server access
@@ -53,11 +54,11 @@ func createCiliumCompatibleAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
 				},
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
 				},
 			},
@@ -84,11 +85,11 @@ func createCiliumCompatibleAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
 				},
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
 				},
 			},
@@ -120,11 +121,11 @@ func createCalicoCompatibleAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
 				},
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
 				},
 			},
@@ -155,19 +156,14 @@ func createGenericAPIEgress() []networkingv1.NetworkPolicyEgressRule {
 			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 443},
 				},
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: 6443},
 				},
 			},
 		},
 	}
-}
-
-// protocolPtr returns a pointer to the given protocol
-func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {
-	return &protocol
 }

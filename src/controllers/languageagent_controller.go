@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -1125,7 +1126,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		}
 		portCopy := intstr.FromInt32(ap.Port) // copy per iteration to avoid pointer aliasing
 		npPorts = append(npPorts, networkingv1.NetworkPolicyPort{
-			Protocol: protocolPtr(proto),
+			Protocol: ptr.To(proto),
 			Port:     &portCopy,
 		})
 	}
@@ -1190,7 +1191,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					protocol = corev1.ProtocolTCP
 				}
 				ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
-					Protocol: protocolPtr(protocol),
+					Protocol: ptr.To(protocol),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
 				})
 			}
