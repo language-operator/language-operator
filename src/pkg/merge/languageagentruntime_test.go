@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package merge
 
 import (
 	"testing"
@@ -25,12 +25,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 )
 
 func TestApplyRuntimeDefaults_Ports_AgentEmpty(t *testing.T) {
-	agent := &LanguageAgentSpec{}
-	rt := &LanguageAgentRuntimeSpec{
-		Ports: []AgentPort{
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Ports: []langopv1alpha1.AgentPort{
 			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: ptr.To(true)},
 		},
 	}
@@ -42,13 +44,13 @@ func TestApplyRuntimeDefaults_Ports_AgentEmpty(t *testing.T) {
 }
 
 func TestApplyRuntimeDefaults_Ports_AgentWins(t *testing.T) {
-	agent := &LanguageAgentSpec{
-		Ports: []AgentPort{
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Ports: []langopv1alpha1.AgentPort{
 			{Name: "api", Port: 9000, Protocol: corev1.ProtocolTCP, Expose: ptr.To(true)},
 		},
 	}
-	rt := &LanguageAgentRuntimeSpec{
-		Ports: []AgentPort{
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Ports: []langopv1alpha1.AgentPort{
 			{Name: "http", Port: 18789, Protocol: corev1.ProtocolTCP, Expose: ptr.To(true)},
 		},
 	}
@@ -60,16 +62,16 @@ func TestApplyRuntimeDefaults_Ports_AgentWins(t *testing.T) {
 }
 
 func TestApplyRuntimeDefaults_Ports_RuntimeEmpty(t *testing.T) {
-	agent := &LanguageAgentSpec{}
-	rt := &LanguageAgentRuntimeSpec{}
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{}
 	ApplyRuntimeDefaults(agent, rt)
 	assert.Empty(t, agent.Ports, "empty runtime should not inject any ports")
 }
 
 func TestApplyRuntimeDefaults_ServiceAccountAnnotations_AgentEmpty(t *testing.T) {
-	agent := &LanguageAgentSpec{}
-	rt := &LanguageAgentRuntimeSpec{
-		Deployment: DeploymentSpec{
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			ServiceAccountAnnotations: map[string]string{
 				"eks.amazonaws.com/role-arn": "arn:aws:iam::123:role/my-role",
 			},
@@ -81,16 +83,16 @@ func TestApplyRuntimeDefaults_ServiceAccountAnnotations_AgentEmpty(t *testing.T)
 }
 
 func TestApplyRuntimeDefaults_ServiceAccountAnnotations_AgentWins(t *testing.T) {
-	agent := &LanguageAgentSpec{
-		Deployment: DeploymentSpec{
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			ServiceAccountAnnotations: map[string]string{
 				"eks.amazonaws.com/role-arn": "arn:aws:iam::123:role/agent-role",
 				"agent-only-key":             "agent-value",
 			},
 		},
 	}
-	rt := &LanguageAgentRuntimeSpec{
-		Deployment: DeploymentSpec{
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			ServiceAccountAnnotations: map[string]string{
 				"eks.amazonaws.com/role-arn": "arn:aws:iam::123:role/runtime-role",
 				"runtime-only-key":           "runtime-value",
@@ -107,16 +109,16 @@ func TestApplyRuntimeDefaults_ServiceAccountAnnotations_AgentWins(t *testing.T) 
 }
 
 func TestApplyRuntimeDefaults_ServiceAccountAnnotations_RuntimeEmpty(t *testing.T) {
-	agent := &LanguageAgentSpec{}
-	rt := &LanguageAgentRuntimeSpec{}
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{}
 	ApplyRuntimeDefaults(agent, rt)
 	assert.Nil(t, agent.Deployment.ServiceAccountAnnotations, "empty runtime should not set ServiceAccountAnnotations")
 }
 
 func TestApplyRuntimeDefaults_RoleRules_RuntimeOnly(t *testing.T) {
-	agent := &LanguageAgentSpec{}
-	rt := &LanguageAgentRuntimeSpec{
-		Deployment: DeploymentSpec{
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			RoleRules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"get"}},
 			},
@@ -128,15 +130,15 @@ func TestApplyRuntimeDefaults_RoleRules_RuntimeOnly(t *testing.T) {
 }
 
 func TestApplyRuntimeDefaults_RoleRules_RuntimePrepended(t *testing.T) {
-	agent := &LanguageAgentSpec{
-		Deployment: DeploymentSpec{
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			RoleRules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"configmaps"}, Verbs: []string{"create"}},
 			},
 		},
 	}
-	rt := &LanguageAgentRuntimeSpec{
-		Deployment: DeploymentSpec{
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			RoleRules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"get"}},
 			},
@@ -151,14 +153,14 @@ func TestApplyRuntimeDefaults_RoleRules_RuntimePrepended(t *testing.T) {
 }
 
 func TestApplyRuntimeDefaults_RoleRules_AgentOnly(t *testing.T) {
-	agent := &LanguageAgentSpec{
-		Deployment: DeploymentSpec{
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
 			RoleRules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"configmaps"}, Verbs: []string{"create"}},
 			},
 		},
 	}
-	rt := &LanguageAgentRuntimeSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{}
 	ApplyRuntimeDefaults(agent, rt)
 	// Agent rules unchanged when runtime has none.
 	require.Len(t, agent.Deployment.RoleRules, 1)
