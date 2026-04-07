@@ -30,6 +30,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/cni"
 	"github.com/language-operator/language-operator/pkg/events"
+	"github.com/language-operator/language-operator/pkg/merge"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
@@ -179,7 +180,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, err
 		}
 		effectiveSpec := agent.Spec.DeepCopy()
-		langopv1alpha1.ApplyRuntimeDefaults(effectiveSpec, &rt.Spec)
+		merge.ApplyRuntimeDefaults(effectiveSpec, &rt.Spec)
 		workingAgent = agent.DeepCopy()
 		workingAgent.Spec = *effectiveSpec
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRuntimeResolved,

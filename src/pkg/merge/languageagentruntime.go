@@ -14,10 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package merge
 
 import (
+	"maps"
+
 	corev1 "k8s.io/api/core/v1"
+
+	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 )
 
 // ApplyRuntimeDefaults merges runtime defaults into an agent spec.
@@ -28,7 +32,7 @@ import (
 //   - Scalars: runtime value used only when the agent field is zero/nil (agent wins).
 //   - Maps: merged key-by-key; agent keys win on collision.
 //   - Lists: runtime items prepended, agent items appended (runtime-first ordering).
-func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec) {
+func ApplyRuntimeDefaults(agent *langopv1alpha1.LanguageAgentSpec, rt *langopv1alpha1.LanguageAgentRuntimeSpec) {
 	// --- Top-level scalar fields ---
 
 	if agent.Image == "" {
@@ -37,7 +41,7 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 	// Ports: replace semantics — runtime ports apply only when agent has none.
 	// Ports define the agent's network identity and must not be additively merged.
 	if len(agent.Ports) == 0 && len(rt.Ports) > 0 {
-		agent.Ports = make([]AgentPort, len(rt.Ports))
+		agent.Ports = make([]langopv1alpha1.AgentPort, len(rt.Ports))
 		copy(agent.Ports, rt.Ports)
 	}
 	// Workspace: whole-object replacement (agent wins if non-nil).
@@ -73,9 +77,7 @@ func ApplyRuntimeDefaults(agent *LanguageAgentSpec, rt *LanguageAgentRuntimeSpec
 	}
 	if len(d.NodeSelector) == 0 && len(r.NodeSelector) > 0 {
 		d.NodeSelector = make(map[string]string, len(r.NodeSelector))
-		for k, v := range r.NodeSelector {
-			d.NodeSelector[k] = v
-		}
+		maps.Copy(d.NodeSelector, r.NodeSelector)
 	}
 	if d.Affinity == nil && r.Affinity != nil {
 		a := *r.Affinity
