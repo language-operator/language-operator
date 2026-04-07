@@ -696,3 +696,32 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 func serviceURL(name, namespace string, port int32) string {
 	return fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", name, namespace, port)
 }
+
+// buildNetworkPolicyIngressRules converts user-defined ingress policies into
+// networkingv1.NetworkPolicyIngressRule slices, normalising missing protocol
+// values to TCP.
+func buildNetworkPolicyIngressRules(
+	policies []langopv1alpha1.NetworkIngressRule,
+	namespace string,
+) []networkingv1.NetworkPolicyIngressRule {
+	var rules []networkingv1.NetworkPolicyIngressRule
+	for _, rule := range policies {
+		ingressRule := networkingv1.NetworkPolicyIngressRule{}
+		for _, peer := range rule.From {
+			peer := peer
+			ingressRule.From = append(ingressRule.From, buildIngressPeerFromNetworkPeer(&peer, namespace))
+		}
+		for _, p := range rule.Ports {
+			protocol := corev1.Protocol(p.Protocol)
+			if protocol == "" {
+				protocol = corev1.ProtocolTCP
+			}
+			ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
+				Protocol: ptr.To(protocol),
+				Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
+			})
+		}
+		rules = append(rules, ingressRule)
+	}
+	return rules
+}
