@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -629,25 +628,7 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 
 	// Wire user-defined ingress rules from spec.networkPolicies.ingress
 	if tool.Spec.NetworkPolicies != nil {
-		var ingressRules []networkingv1.NetworkPolicyIngressRule
-		for _, rule := range tool.Spec.NetworkPolicies.Ingress {
-			ingressRule := networkingv1.NetworkPolicyIngressRule{}
-			for _, peer := range rule.From {
-				peer := peer
-				ingressRule.From = append(ingressRule.From, buildIngressPeerFromNetworkPeer(&peer, tool.Namespace))
-			}
-			for _, p := range rule.Ports {
-				protocol := corev1.Protocol(p.Protocol)
-				if protocol == "" {
-					protocol = corev1.ProtocolTCP
-				}
-				ingressRule.Ports = append(ingressRule.Ports, networkingv1.NetworkPolicyPort{
-					Protocol: ptr.To(protocol),
-					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: p.Port},
-				})
-			}
-			ingressRules = append(ingressRules, ingressRule)
-		}
+		ingressRules := buildNetworkPolicyIngressRules(tool.Spec.NetworkPolicies.Ingress, tool.Namespace)
 		if len(ingressRules) > 0 {
 			networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 			networkPolicy.Spec.Ingress = ingressRules
