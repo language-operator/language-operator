@@ -173,9 +173,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.EventManager != nil {
-			r.EventManager.RecordToolCreated(tool, tool.Spec.Type)
-		}
+		r.EventManager.RecordToolCreated(tool, tool.Spec.Type)
 	}
 
 	// Validate image registry against whitelist
@@ -183,9 +181,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
-		if r.EventManager != nil {
-			r.EventManager.RecordRegistryValidationFailed(tool, tool.Spec.Image)
-		}
+		r.EventManager.RecordRegistryValidationFailed(tool, tool.Spec.Image)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionFalse, langopv1alpha1.ReasonRegistryNotAllowed, err.Error(), tool.Generation)
 		tool.Status.Phase = events.PhaseStatusFailed
 		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
@@ -195,9 +191,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, langopv1alpha1.ReasonValidated, "Image registry is in whitelist", tool.Generation)
-	if r.EventManager != nil {
-		r.EventManager.RecordRegistryValidated(tool)
-	}
+	r.EventManager.RecordRegistryValidated(tool)
 
 	// Skip Deployment and Service for sidecar mode tools
 	// Sidecar tools are injected into agent pods directly
@@ -207,9 +201,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			log.Error(err, "Failed to reconcile Deployment")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile Deployment")
-			if r.EventManager != nil {
-				r.EventManager.RecordDeploymentFailed(tool, err)
-			}
+			r.EventManager.RecordDeploymentFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
@@ -224,9 +216,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			log.Error(err, "Failed to reconcile Service")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile Service")
-			if r.EventManager != nil {
-				r.EventManager.RecordServiceFailed(tool, err)
-			}
+			r.EventManager.RecordServiceFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), tool.Generation)
 			tool.Status.Phase = events.PhaseStatusFailed
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
@@ -270,17 +260,13 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					"error", err.Error())
 
 				// Record warning event
-				if r.EventManager != nil {
-					r.EventManager.RecordNetworkPolicyTimeout(tool)
-				}
+				r.EventManager.RecordNetworkPolicyTimeout(tool)
 
 				// Don't fail the entire reconciliation for timeout - continue with degraded state
 			} else {
 				// For non-timeout errors, fail the reconciliation
 				span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-				if r.EventManager != nil {
-					r.EventManager.RecordNetworkPolicyFailed(tool, err)
-				}
+				r.EventManager.RecordNetworkPolicyFailed(tool, err)
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
 				tool.Status.Phase = events.PhaseStatusFailed
