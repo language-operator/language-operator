@@ -145,7 +145,7 @@ func main() {
 		"Disable webhook server and all admission webhooks. Use when cert-manager is not installed.")
 
 	opts := zap.Options{
-		Development: true,
+		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
