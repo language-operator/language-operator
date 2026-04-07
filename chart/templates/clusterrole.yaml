@@ -170,14 +170,6 @@ rules:
 - apiGroups:
   - langop.io
   resources:
-  - languageagentruntimes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - langop.io
-  resources:
   - languageclusters
   verbs:
   - create
