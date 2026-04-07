@@ -250,9 +250,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Image registry validation failed")
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionFalse, langopv1alpha1.ReasonRegistryNotAllowed, err.Error(), agent.Generation)
-		if r.EventManager != nil {
-			r.EventManager.RecordRegistryValidationFailed(agent, agent.Spec.Image)
-		}
+		r.EventManager.RecordRegistryValidationFailed(agent, agent.Spec.Image)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -318,9 +316,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					"error", err.Error())
 
 				// Record warning event
-				if r.EventManager != nil {
-					r.EventManager.RecordNetworkPolicyTimeout(agent)
-				}
+				r.EventManager.RecordNetworkPolicyTimeout(agent)
 
 				// Don't fail the entire reconciliation for timeout - continue with degraded state
 			} else {
@@ -347,9 +343,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if !cniSupported {
 			message := fmt.Sprintf("NetworkPolicy created but may not be enforced. CNI plugin '%s' does not support NetworkPolicy. Consider installing Cilium, Calico, Weave Net, or Antrea for network isolation.", cniName)
 			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyEnforced, metav1.ConditionFalse, langopv1alpha1.ReasonCNINotSupported, message, agent.Generation)
-			if r.Recorder != nil {
-				r.EventManager.RecordNetworkPolicyUnsupported(agent, cniName)
-			}
+			r.EventManager.RecordNetworkPolicyUnsupported(agent, cniName)
 			log.Info("NetworkPolicy enforcement not supported", "cni", cniName)
 		} else {
 			message := fmt.Sprintf("NetworkPolicy enforcement active (CNI: %s)", cniName)

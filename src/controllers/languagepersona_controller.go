@@ -109,9 +109,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.EventManager != nil {
-			r.EventManager.RecordPersonaCreated(persona, persona.Name)
-		}
+		r.EventManager.RecordPersonaCreated(persona, persona.Name)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -119,9 +117,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetPhase(&persona.Status.Phase, &persona.Status.ObservedGeneration, events.PhaseStatusReady, persona.Generation)
 	SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "Persona configuration is ready", persona.Generation)
 
-	if r.EventManager != nil {
-		r.EventManager.RecordPersonaReady(persona, persona.Name)
-	}
+	r.EventManager.RecordPersonaReady(persona, persona.Name)
 
 	if err := r.Status().Update(ctx, persona); err != nil {
 		log.Error(err, "Failed to update status")

@@ -208,9 +208,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
-		if r.EventManager != nil {
-			r.EventManager.RecordClusterCreated(cluster)
-		}
+		r.EventManager.RecordClusterCreated(cluster)
 		// Requeue after adding finalizer
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -252,9 +250,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile agent RBAC")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile agent RBAC")
-		if r.EventManager != nil {
-			r.EventManager.RecordRBACFailed(cluster, err)
-		}
+		r.EventManager.RecordRBACFailed(cluster, err)
 		cluster.Status.Phase = events.PhaseStatusFailed
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonRBACError, err.Error(), cluster.Generation)
@@ -271,9 +267,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, "Failed to reconcile NetworkPolicy")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
-			if r.EventManager != nil {
-				r.EventManager.RecordNetworkPolicyFailed(cluster, err)
-			}
+			r.EventManager.RecordNetworkPolicyFailed(cluster, err)
 			cluster.Status.Phase = events.PhaseStatusFailed
 			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 				langopv1alpha1.ReasonNetworkPolicyError, err.Error(), cluster.Generation)
@@ -377,9 +371,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	cluster.Status.ManagedResources = r.buildClusterManagedResources(cluster)
 
-	if r.EventManager != nil {
-		r.EventManager.RecordClusterReady(cluster)
-	}
+	r.EventManager.RecordClusterReady(cluster)
 
 	if err := r.Status().Update(ctx, cluster); err != nil {
 		log.Error(err, "Failed to update status")
