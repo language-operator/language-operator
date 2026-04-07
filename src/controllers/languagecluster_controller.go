@@ -485,6 +485,101 @@ func (r *LanguageClusterReconciler) reconcileAgentRBAC(ctx context.Context, clus
 	return nil
 }
 
+// reconcileGatewaySA creates/updates the ServiceAccount (and optional Role/RoleBinding) for the
+// gateway pod when spec.gateway.deployment.serviceAccountName is not set. This allows users to
+// attach workload-identity annotations (IRSA, GCP WI, AKS WI) and extend gateway RBAC via
+// spec.gateway.deployment.serviceAccountAnnotations and spec.gateway.deployment.roleRules.
+// When serviceAccountName is explicitly set the function is a no-op; the referenced SA is
+// assumed to be managed externally.
+func (r *LanguageClusterReconciler) reconcileGatewaySA(
+	ctx context.Context,
+	cluster *langopv1alpha1.LanguageCluster,
+	namespace string,
+	gatewayDeploy langopv1alpha1.DeploymentSpec,
+) error {
+	log := log.FromContext(ctx)
+
+	// User supplied their own SA — nothing for us to manage.
+	if gatewayDeploy.ServiceAccountName != "" {
+		return nil
+	}
+
+	saLabels := GetCommonLabels("language-operator", "LanguageCluster")
+	saLabels[LabelKeyK8sComponent] = "gateway-sa"
+	saLabels[LabelKeyLangopCluster] = cluster.Name
+
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error {
+		if err := controllerutil.SetControllerReference(cluster, sa, r.Scheme); err != nil {
+			return err
+		}
+		sa.Labels = saLabels
+		if len(gatewayDeploy.ServiceAccountAnnotations) > 0 {
+			if sa.Annotations == nil {
+				sa.Annotations = make(map[string]string)
+			}
+			maps.Copy(sa.Annotations, gatewayDeploy.ServiceAccountAnnotations)
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create/update gateway ServiceAccount: %w", err)
+	}
+	log.V(1).Info("Reconciled gateway ServiceAccount", "namespace", namespace)
+
+	// Only create Role/RoleBinding when the user has supplied extra rules.
+	if len(gatewayDeploy.RoleRules) == 0 {
+		return nil
+	}
+
+	roleLabels := GetCommonLabels("language-operator", "LanguageCluster")
+	roleLabels[LabelKeyK8sComponent] = "gateway-rbac"
+	roleLabels[LabelKeyLangopCluster] = cluster.Name
+
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, role, func() error {
+		if err := controllerutil.SetControllerReference(cluster, role, r.Scheme); err != nil {
+			return err
+		}
+		role.Labels = roleLabels
+		role.Rules = gatewayDeploy.RoleRules
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create/update gateway Role: %w", err)
+	}
+
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
+		if err := controllerutil.SetControllerReference(cluster, rb, r.Scheme); err != nil {
+			return err
+		}
+		rb.Labels = roleLabels
+		rb.RoleRef = rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "gateway",
+		}
+		rb.Subjects = []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "gateway",
+				Namespace: namespace,
+			},
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to create/update gateway RoleBinding: %w", err)
+	}
+	log.V(1).Info("Reconciled gateway Role and RoleBinding", "namespace", namespace)
+
+	return nil
+}
+
 // reconcileNetworkPolicy ensures the NetworkPolicy for agent communication exists
 func (r *LanguageClusterReconciler) reconcileNetworkPolicy(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
@@ -1002,6 +1097,11 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		readinessProbe = gatewayDeploy.ReadinessProbe
 	}
 
+	// Reconcile gateway ServiceAccount (and optional Role/RoleBinding)
+	if err := r.reconcileGatewaySA(ctx, cluster, namespace, gatewayDeploy); err != nil {
+		return fmt.Errorf("failed to reconcile gateway ServiceAccount: %w", err)
+	}
+
 	// Reconcile Deployment
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: namespace},
@@ -1034,6 +1134,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 						{
 							Name:            "gateway",
 							Image:           r.gatewayImage(),
+							Command:         gatewayDeploy.Command,
+							Args:            gatewayDeploy.Args,
 							ImagePullPolicy: r.gatewayImagePullPolicy(cluster),
 							Resources:       resources,
 							Env:             gatewayDeploy.Env,
@@ -1064,6 +1166,8 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		}
 		if gatewayDeploy.ServiceAccountName != "" {
 			podSpec.ServiceAccountName = gatewayDeploy.ServiceAccountName
+		} else {
+			podSpec.ServiceAccountName = "gateway"
 		}
 		return nil
 	})
@@ -1427,6 +1531,19 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 		langopv1alpha1.ManagedResource{Group: "apps", Kind: "Deployment", Name: "gateway", Namespace: ns},
 		langopv1alpha1.ManagedResource{Kind: "Service", Name: "gateway", Namespace: ns},
 	)
+
+	// Managed gateway SA — always created when serviceAccountName is not user-supplied.
+	if cluster.Spec.Gateway == nil || cluster.Spec.Gateway.Deployment.ServiceAccountName == "" {
+		resources = append(resources,
+			langopv1alpha1.ManagedResource{Kind: "ServiceAccount", Name: "gateway", Namespace: ns},
+		)
+		if cluster.Spec.Gateway != nil && len(cluster.Spec.Gateway.Deployment.RoleRules) > 0 {
+			resources = append(resources,
+				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: "gateway", Namespace: ns},
+				langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: "gateway", Namespace: ns},
+			)
+		}
+	}
 
 	// Ingress is created when a domain is configured and not explicitly disabled.
 	if cluster.Spec.Domain != "" {

@@ -1625,6 +1625,118 @@ func TestLanguageClusterController_GatewayServiceAccountName(t *testing.T) {
 	assert.Equal(t, "litellm-sa", dep.Spec.Template.Spec.ServiceAccountName)
 }
 
+func TestLanguageClusterController_GatewayCommandAndArgs(t *testing.T) {
+	dep := reconcileGatewayCluster(t, "cmd-cluster", &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			Command: []string{"/bin/sh"},
+			Args:    []string{"-c", "litellm --config /etc/langop/config.yaml"},
+		},
+	})
+	c := dep.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, []string{"/bin/sh"}, c.Command)
+	assert.Equal(t, []string{"-c", "litellm --config /etc/langop/config.yaml"}, c.Args)
+}
+
+func TestLanguageClusterController_GatewayManagedSA(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("managed-sa-cluster")
+	// No ServiceAccountName set — operator should manage the gateway SA.
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := clusterRequest("managed-sa-cluster")
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Managed ServiceAccount must exist.
+	sa := &corev1.ServiceAccount{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: "managed-sa-cluster"}, sa))
+
+	// Deployment pod spec must reference the managed SA.
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: "managed-sa-cluster"}, dep))
+	assert.Equal(t, "gateway", dep.Spec.Template.Spec.ServiceAccountName)
+}
+
+func TestLanguageClusterController_GatewayServiceAccountAnnotations(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("sa-annot-cluster")
+	cluster.Spec.Gateway = &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			ServiceAccountAnnotations: map[string]string{
+				"eks.amazonaws.com/role-arn": "arn:aws:iam::123456789012:role/my-gateway-role",
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := clusterRequest("sa-annot-cluster")
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	sa := &corev1.ServiceAccount{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: "sa-annot-cluster"}, sa))
+	assert.Equal(t, "arn:aws:iam::123456789012:role/my-gateway-role", sa.Annotations["eks.amazonaws.com/role-arn"])
+}
+
+func TestLanguageClusterController_GatewayRoleRules(t *testing.T) {
+	extraRule := rbacv1.PolicyRule{
+		APIGroups: []string{""},
+		Resources: []string{"secrets"},
+		Verbs:     []string{"get"},
+	}
+
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("role-rules-cluster")
+	cluster.Spec.Gateway = &langopv1alpha1.GatewaySpec{
+		Deployment: langopv1alpha1.DeploymentSpec{
+			RoleRules: []rbacv1.PolicyRule{extraRule},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := clusterRequest("role-rules-cluster")
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	role := &rbacv1.Role{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: "role-rules-cluster"}, role))
+	require.Len(t, role.Rules, 1)
+	assert.Equal(t, extraRule, role.Rules[0])
+
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: "role-rules-cluster"}, rb))
+	assert.Equal(t, "gateway", rb.RoleRef.Name)
+	require.Len(t, rb.Subjects, 1)
+	assert.Equal(t, "gateway", rb.Subjects[0].Name)
+}
+
 func TestLanguageClusterController_GatewayVolumesAndMounts(t *testing.T) {
 	userVol := corev1.Volume{
 		Name: "custom-certs",
