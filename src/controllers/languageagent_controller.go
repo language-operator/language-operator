@@ -589,7 +589,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		if port == 0 {
 			port = 8080
 		}
-		endpoint := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, agent.Namespace, port)
+		endpoint := serviceURL(tool.Name, agent.Namespace, port)
 		if tool.Spec.DeploymentMode == "sidecar" {
 			endpoint = fmt.Sprintf("http://localhost:%d", port)
 		}
@@ -600,7 +600,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	}
 
 	// Models — all served via the shared namespace gateway
-	gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort)
+	gatewayURL := serviceURL("gateway", agent.Namespace, GatewayServicePort)
 	for _, modelRef := range agent.Spec.Models {
 		model := &langopv1alpha1.LanguageModel{}
 		if err := r.Get(ctx, types.NamespacedName{Name: modelRef.Name, Namespace: agent.Namespace}, model); err != nil {
@@ -1216,7 +1216,7 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 
 		// All models in a cluster are served by the shared gateway
 		// in the cluster namespace. Deduplicate: only add the gateway URL once.
-		gatewayURL := fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort)
+		gatewayURL := serviceURL("gateway", agent.Namespace, GatewayServicePort)
 		alreadyAdded := false
 		for _, u := range modelURLs {
 			if u == gatewayURL {
@@ -1359,9 +1359,8 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 		}
 
 		// Build MCP server URL (service mode)
-		// Format: http://<service-name>.<namespace>.svc.cluster.local:<port>
-		serviceURL := fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, agent.Namespace, port)
-		toolURLs = append(toolURLs, serviceURL)
+		mcpURL := serviceURL(tool.Name, agent.Namespace, port)
+		toolURLs = append(toolURLs, mcpURL)
 	}
 
 	return toolURLs, nil
@@ -2427,7 +2426,7 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 			})
 			extraEnv = append(extraEnv, corev1.EnvVar{
 				Name:  "ANTHROPIC_BASE_URL",
-				Value: fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", agent.Namespace, GatewayServicePort),
+				Value: serviceURL("gateway", agent.Namespace, GatewayServicePort),
 			})
 		}
 		if cc.MaxTurns != nil {
