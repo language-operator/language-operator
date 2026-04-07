@@ -344,7 +344,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonGatewayReady, "Shared LiteLLM gateway is ready", cluster.Generation)
-	cluster.Status.GatewayEndpoint = fmt.Sprintf("http://gateway.%s.svc.cluster.local:%d", cluster.Name, GatewayServicePort)
+	cluster.Status.GatewayEndpoint = serviceURL("gateway", cluster.Name, GatewayServicePort)
 	cluster.Status.GatewayReady = ptr.To(true)
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the

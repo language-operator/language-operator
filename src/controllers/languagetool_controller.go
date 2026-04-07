@@ -905,7 +905,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 			}
 		}
 		tool.Status.Phase = phase
-		tool.Status.Endpoint = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", tool.Name, tool.Namespace, tool.Spec.Port)
+		tool.Status.Endpoint = serviceURL(tool.Name, tool.Namespace, tool.Spec.Port)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageTool is ready", tool.Generation)
 
 		// Discover MCP tool schemas for service mode tools.

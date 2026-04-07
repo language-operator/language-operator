@@ -691,3 +691,8 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 	}
 	return p
 }
+
+// serviceURL returns the in-cluster HTTP URL for a Kubernetes service.
+func serviceURL(name, namespace string, port int32) string {
+	return fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", name, namespace, port)
+}
