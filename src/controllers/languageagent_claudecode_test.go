@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -83,7 +84,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_DisabledConfig(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: boolPtr(false),
+				Enabled: ptr.To(false),
 			},
 		},
 	}
@@ -143,7 +144,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_GatewayMode(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: boolPtr(true),
+				Enabled: ptr.To(true),
 			},
 		},
 	}
@@ -181,7 +182,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_InlineAPIKey(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled: boolPtr(true),
+				Enabled: ptr.To(true),
 				APIKey:  "sk-ant-real-key-abc123",
 			},
 		},
@@ -207,7 +208,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled:   boolPtr(true),
+				Enabled:   ptr.To(true),
 				APIKeyRef: &langopv1alpha1.RuntimeSecretRef{Name: "my-anthropic-secret"},
 			},
 		},
@@ -247,7 +248,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_MaxTurns(t *testing.T) {
 				Enabled: func() *bool { b := false; return &b }(),
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
-				Enabled:  boolPtr(true),
+				Enabled:  ptr.To(true),
 				MaxTurns: &maxTurns,
 			},
 		},

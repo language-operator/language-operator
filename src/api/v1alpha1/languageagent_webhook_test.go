@@ -23,9 +23,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
-
-func boolPtr(b bool) *bool { return &b }
 
 func TestLanguageAgentDefault(t *testing.T) {
 	tests := []struct {
@@ -50,7 +49,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 			},
 			expected: &WorkspaceSpec{
-				Enabled:    boolPtr(true),
+				Enabled:    ptr.To(true),
 				Size:       "10Gi",
 				AccessMode: "ReadWriteOnce",
 				MountPath:  "/workspace",
@@ -70,7 +69,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 					},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled:    boolPtr(false),
+						Enabled:    ptr.To(false),
 						Size:       "5Gi",
 						AccessMode: "ReadWriteMany",
 						MountPath:  "/custom",
@@ -78,7 +77,7 @@ func TestLanguageAgentDefault(t *testing.T) {
 				},
 			},
 			expected: &WorkspaceSpec{
-				Enabled:    boolPtr(false),
+				Enabled:    ptr.To(false),
 				Size:       "5Gi",
 				AccessMode: "ReadWriteMany",
 				MountPath:  "/custom",
@@ -345,7 +344,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: boolPtr(true),
+						Enabled: ptr.To(true),
 						Size:    "0Gi",
 					},
 				},
@@ -365,7 +364,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: boolPtr(true),
+						Enabled: ptr.To(true),
 						Size:    "invalid",
 					},
 				},
@@ -385,7 +384,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: boolPtr(true),
+						Enabled: ptr.To(true),
 						Size:    "",
 					},
 				},
@@ -405,7 +404,7 @@ func TestLanguageAgentValidateCreateWithWorkspace(t *testing.T) {
 					Models:       []ModelReference{{Name: "test-model"}},
 					Instructions: "test instructions",
 					Workspace: &WorkspaceSpec{
-						Enabled: boolPtr(false),
+						Enabled: ptr.To(false),
 						Size:    "", // Empty size should be fine when workspace is disabled
 					},
 				},
@@ -540,7 +539,7 @@ func TestLanguageAgentSecurityWarnings(t *testing.T) {
 			agent: func() *LanguageAgent {
 				a := baseAgent("myimage:v1.0.0")
 				a.Spec.Deployment.SecurityContext = &corev1.PodSecurityContext{
-					RunAsNonRoot: boolPtr(false),
+					RunAsNonRoot: ptr.To(false),
 				}
 				return a
 			}(),
@@ -551,7 +550,7 @@ func TestLanguageAgentSecurityWarnings(t *testing.T) {
 			agent: func() *LanguageAgent {
 				a := baseAgent("myimage:v1.0.0")
 				a.Spec.Deployment.SecurityContext = &corev1.PodSecurityContext{
-					RunAsNonRoot: boolPtr(true),
+					RunAsNonRoot: ptr.To(true),
 				}
 				return a
 			}(),
@@ -570,7 +569,7 @@ func TestLanguageAgentSecurityWarnings(t *testing.T) {
 					corev1.ResourceCPU: zeroQty,
 				}
 				a.Spec.Deployment.SecurityContext = &corev1.PodSecurityContext{
-					RunAsNonRoot: boolPtr(false),
+					RunAsNonRoot: ptr.To(false),
 				}
 				return a
 			}(),
@@ -796,7 +795,7 @@ func TestLanguageAgentValidateUpdate(t *testing.T) {
 					Image:        "test:latest",
 					Instructions: "test",
 					Workspace: &WorkspaceSpec{
-						Enabled:          boolPtr(false),
+						Enabled:          ptr.To(false),
 						Size:             "10Gi",
 						StorageClassName: strPtr("fast-ssd"),
 						AccessMode:       "ReadWriteOnce",
@@ -809,7 +808,7 @@ func TestLanguageAgentValidateUpdate(t *testing.T) {
 					Image:        "test:latest",
 					Instructions: "test",
 					Workspace: &WorkspaceSpec{
-						Enabled:          boolPtr(true),
+						Enabled:          ptr.To(true),
 						Size:             "10Gi",
 						StorageClassName: strPtr("standard"),
 						AccessMode:       "ReadWriteMany",
