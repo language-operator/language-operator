@@ -95,8 +95,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Add finalizer if it doesn't exist
 	if !controllerutil.ContainsFinalizer(persona, FinalizerName) {
-		persona.Status.Phase = events.PhaseStatusPending
-		persona.Status.ObservedGeneration = persona.Generation
+		SetPhase(&persona.Status.Phase, &persona.Status.ObservedGeneration, events.PhaseStatusPending, persona.Generation)
 		SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, "Persona initializing", persona.Generation)
 		if err := r.Status().Update(ctx, persona); err != nil {
 			log.Error(err, "Failed to write Pending status")
@@ -117,8 +116,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Update status
-	persona.Status.ObservedGeneration = persona.Generation
-	persona.Status.Phase = events.PhaseStatusReady
+	SetPhase(&persona.Status.Phase, &persona.Status.ObservedGeneration, events.PhaseStatusReady, persona.Generation)
 	SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "Persona configuration is ready", persona.Generation)
 
 	if r.EventManager != nil {

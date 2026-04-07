@@ -107,8 +107,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Add finalizer if it doesn't exist. Write Pending status first so
 	// `kubectl get lmodel` shows something meaningful before reconciliation completes.
 	if !controllerutil.ContainsFinalizer(model, FinalizerName) {
-		model.Status.Phase = events.PhaseStatusPending
-		model.Status.ObservedGeneration = model.Generation
+		SetPhase(&model.Status.Phase, &model.Status.ObservedGeneration, events.PhaseStatusPending, model.Generation)
 		if err := r.Status().Update(ctx, model); err != nil && !apierrors.IsNotFound(err) {
 			log.Error(err, "Failed to set Pending status")
 			// non-fatal: continue to add finalizer
@@ -147,8 +146,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Update status — model is managed by the cluster's shared gateway
-	model.Status.ObservedGeneration = model.Generation
-	model.Status.Phase = events.PhaseStatusReady
+	SetPhase(&model.Status.Phase, &model.Status.ObservedGeneration, events.PhaseStatusReady, model.Generation)
 	model.Status.Message = "Model is managed by the cluster shared gateway"
 	SetCondition(&model.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "Model spec registered with cluster gateway", model.Generation)
 

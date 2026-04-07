@@ -149,6 +149,13 @@ func SetCondition(conditions *[]metav1.Condition, conditionType string, status m
 	return true
 }
 
+// SetPhase updates the status phase and records the observed generation.
+// Use this instead of setting Phase and ObservedGeneration separately.
+func SetPhase(phase *string, observedGeneration *int64, newPhase string, generation int64) {
+	*phase = newPhase
+	*observedGeneration = generation
+}
+
 // ValidateClusterReference validates that the LanguageCluster for this namespace exists and is ready.
 // By convention, namespace name == cluster name.
 func ValidateClusterReference(ctx context.Context, c client.Client, namespace string) error {
