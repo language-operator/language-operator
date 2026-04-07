@@ -477,11 +477,11 @@ func BuildEgressNetworkPolicy(
 			},
 			Ports: []networkingv1.NetworkPolicyPort{
 				{
-					Protocol: protocolPtr(corev1.ProtocolUDP),
+					Protocol: ptr.To(corev1.ProtocolUDP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 				{
-					Protocol: protocolPtr(corev1.ProtocolTCP),
+					Protocol: ptr.To(corev1.ProtocolTCP),
 					Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: DNSPort},
 				},
 			},
@@ -524,11 +524,11 @@ func BuildEgressNetworkPolicy(
 						},
 						Ports: []networkingv1.NetworkPolicyPort{
 							{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELGRPCPort},
 							},
 							{
-								Protocol: protocolPtr(corev1.ProtocolTCP),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 								Port:     &intstr.IntOrString{Type: intstr.Int, IntVal: OTELHTTPPort},
 							},
 						},
@@ -682,10 +682,6 @@ func buildIngressPeerFromNetworkPeer(peer *langopv1alpha1.NetworkPeer, namespace
 		p.NamespaceSelector = peer.NamespaceSelector
 	}
 	return p
-}
-
-func protocolPtr(p corev1.Protocol) *corev1.Protocol {
-	return &p
 }
 
 func boolPtr(b bool) *bool {
