@@ -21,7 +21,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/language-operator/language-operator/pkg/labels"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestLanguageClusterValidateSpec(t *testing.T) {
@@ -193,5 +197,111 @@ func TestLanguageClusterWebhookValidateDelete(t *testing.T) {
 	_, err := h.ValidateDelete(context.Background(), lc)
 	if err != nil {
 		t.Errorf("ValidateDelete() unexpected error: %v", err)
+	}
+}
+
+func newFakeWebhook(objs ...runtime.Object) *LanguageClusterWebhook {
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	_ = AddToScheme(scheme)
+	b := fake.NewClientBuilder().WithScheme(scheme)
+	for _, o := range objs {
+		b = b.WithRuntimeObjects(o)
+	}
+	return &LanguageClusterWebhook{Client: b.Build()}
+}
+
+func TestLanguageClusterWebhookNamespaceConflict(t *testing.T) {
+	lc := &LanguageCluster{ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"}}
+
+	t.Run("no existing namespace — accepted", func(t *testing.T) {
+		h := newFakeWebhook()
+		_, err := h.ValidateCreate(context.Background(), lc)
+		if err != nil {
+			t.Errorf("ValidateCreate() unexpected error: %v", err)
+		}
+	})
+
+	t.Run("langop-owned namespace — accepted", func(t *testing.T) {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "my-cluster",
+				Labels: map[string]string{labels.LabelKeyLangopCluster: "my-cluster"},
+			},
+		}
+		h := newFakeWebhook(ns)
+		_, err := h.ValidateCreate(context.Background(), lc)
+		if err != nil {
+			t.Errorf("ValidateCreate() unexpected error: %v", err)
+		}
+	})
+
+	t.Run("unmanaged namespace with same name — rejected", func(t *testing.T) {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
+		}
+		h := newFakeWebhook(ns)
+		_, err := h.ValidateCreate(context.Background(), lc)
+		if err == nil {
+			t.Error("ValidateCreate() expected error for unmanaged namespace conflict, got nil")
+		} else if !strings.Contains(err.Error(), "already exists") {
+			t.Errorf("ValidateCreate() error = %q, want to contain %q", err.Error(), "already exists")
+		}
+	})
+
+	t.Run("namespace owned by different cluster — rejected", func(t *testing.T) {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "my-cluster",
+				Labels: map[string]string{labels.LabelKeyLangopCluster: "other-cluster"},
+			},
+		}
+		h := newFakeWebhook(ns)
+		_, err := h.ValidateCreate(context.Background(), lc)
+		if err == nil {
+			t.Error("ValidateCreate() expected error for namespace owned by different cluster, got nil")
+		}
+	})
+}
+
+func TestValidateNetworkPortPolicies(t *testing.T) {
+	mkIngress := func(port int32) *AgentNetworkPolicies {
+		return &AgentNetworkPolicies{
+			Ingress: []NetworkIngressRule{{
+				Ports: []NetworkPort{{Port: port}},
+			}},
+		}
+	}
+	mkEgress := func(port int32) *AgentNetworkPolicies {
+		return &AgentNetworkPolicies{
+			Egress: []NetworkEgressRule{{
+				Ports: []NetworkPort{{Port: port}},
+			}},
+		}
+	}
+
+	tests := []struct {
+		name     string
+		policies *AgentNetworkPolicies
+		wantErr  bool
+	}{
+		{"nil policies", nil, false},
+		{"no ports", &AgentNetworkPolicies{}, false},
+		{"ingress port 1 (min)", mkIngress(1), false},
+		{"ingress port 65535 (max)", mkIngress(65535), false},
+		{"ingress port 8080", mkIngress(8080), false},
+		{"egress port 443", mkEgress(443), false},
+		{"ingress port 0 — invalid", mkIngress(0), true},
+		{"ingress port -1 — invalid", mkIngress(-1), true},
+		{"egress port 65536 — invalid", mkEgress(65536), true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateNetworkPortPolicies(tt.policies)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateNetworkPortPolicies() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
