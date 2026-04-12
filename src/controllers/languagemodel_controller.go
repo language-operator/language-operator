@@ -135,7 +135,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				msg = fmt.Sprintf("failed to get apiKeySecretRef: %v", err)
 			}
 			log.Error(err, "apiKeySecretRef lookup failed", "secret", model.Spec.APIKeySecretRef.Name)
-			model.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&model.Status.Phase, &model.Status.ObservedGeneration, events.PhaseStatusFailed, model.Generation)
 			model.Status.Message = msg
 			SetCondition(&model.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonSecretNotFound, msg, model.Generation)
 			reconcileErr = err
@@ -154,7 +154,7 @@ func (r *LanguageModelReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
-		model.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&model.Status.Phase, &model.Status.ObservedGeneration, events.PhaseStatusFailed, model.Generation)
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}

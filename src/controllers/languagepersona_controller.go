@@ -123,7 +123,7 @@ func (r *LanguagePersonaReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to update status")
-		persona.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&persona.Status.Phase, &persona.Status.ObservedGeneration, events.PhaseStatusFailed, persona.Generation)
 		SetCondition(&persona.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), persona.Generation)
 		reconcileErr = err
 		return ctrl.Result{}, err
