@@ -13,6 +13,7 @@ import (
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -144,9 +145,10 @@ func buildScheme() *runtime.Scheme {
 // TestWebhookClusterMembership verifies that the admission webhook enforces
 // LanguageCluster namespace membership at create time.
 func TestWebhookClusterMembership(t *testing.T) {
-	// Cluster-managed namespace
+	// Cluster-managed namespace — label it so the new namespace-conflict webhook check accepts it
 	clusterNs := &corev1.Namespace{}
 	clusterNs.Name = "webhook-test-cluster"
+	clusterNs.Labels = map[string]string{langoplabels.LabelKeyLangopCluster: "webhook-test-cluster"}
 	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatalf("create cluster namespace: %v", err)
 	}
@@ -222,6 +224,7 @@ func TestWebhookClusterMembership(t *testing.T) {
 func TestWebhookClusterMembershipTool(t *testing.T) {
 	clusterNs := &corev1.Namespace{}
 	clusterNs.Name = "webhook-tool-cluster"
+	clusterNs.Labels = map[string]string{langoplabels.LabelKeyLangopCluster: "webhook-tool-cluster"}
 	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatalf("create cluster namespace: %v", err)
 	}
@@ -267,6 +270,7 @@ func TestWebhookClusterMembershipTool(t *testing.T) {
 func TestWebhookClusterMembershipModel(t *testing.T) {
 	clusterNs := &corev1.Namespace{}
 	clusterNs.Name = "webhook-model-cluster"
+	clusterNs.Labels = map[string]string{langoplabels.LabelKeyLangopCluster: "webhook-model-cluster"}
 	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatalf("create cluster namespace: %v", err)
 	}
@@ -312,6 +316,7 @@ func TestWebhookClusterMembershipModel(t *testing.T) {
 func TestWebhookClusterMembershipPersona(t *testing.T) {
 	clusterNs := &corev1.Namespace{}
 	clusterNs.Name = "webhook-persona-cluster"
+	clusterNs.Labels = map[string]string{langoplabels.LabelKeyLangopCluster: "webhook-persona-cluster"}
 	if err := k8sClient.Create(ctx, clusterNs); err != nil && !errors.IsAlreadyExists(err) {
 		t.Fatalf("create cluster namespace: %v", err)
 	}
