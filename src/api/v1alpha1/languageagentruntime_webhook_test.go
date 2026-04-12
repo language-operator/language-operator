@@ -21,13 +21,26 @@ import (
 	"strings"
 	"testing"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// mockRuntimeRegistryManager is a test double for RegistryManager.
+type mockRuntimeRegistryManager struct {
+	registries []string
+}
+
+func (m *mockRuntimeRegistryManager) GetRegistries() []string {
+	return m.registries
+}
+
 func TestLanguageAgentRuntimeValidateSpec(t *testing.T) {
+	h := &LanguageAgentRuntimeWebhook{}
+
 	t.Run("empty spec is valid", func(t *testing.T) {
 		rt := &LanguageAgentRuntime{ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"}}
-		if err := rt.validateSpec(); err != nil {
+		if err := h.validateSpec(rt); err != nil {
 			t.Errorf("validateSpec() unexpected error: %v", err)
 		}
 	})
@@ -37,7 +50,7 @@ func TestLanguageAgentRuntimeValidateSpec(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
 			Spec:       LanguageAgentRuntimeSpec{Image: "ghcr.io/test/agent:v1"},
 		}
-		if err := rt.validateSpec(); err != nil {
+		if err := h.validateSpec(rt); err != nil {
 			t.Errorf("validateSpec() unexpected error: %v", err)
 		}
 	})
@@ -82,13 +95,14 @@ func TestLanguageAgentRuntimeWorkspaceValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			h := &LanguageAgentRuntimeWebhook{}
 			rt := &LanguageAgentRuntime{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
 				Spec: LanguageAgentRuntimeSpec{
 					Workspace: &WorkspaceSpec{Size: tt.size},
 				},
 			}
-			err := rt.validateSpec()
+			err := h.validateSpec(rt)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateSpec() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -153,11 +167,12 @@ func TestLanguageAgentRuntimePortValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			h := &LanguageAgentRuntimeWebhook{}
 			rt := &LanguageAgentRuntime{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
 				Spec:       LanguageAgentRuntimeSpec{Ports: tt.ports},
 			}
-			err := rt.validateSpec()
+			err := h.validateSpec(rt)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateSpec() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -237,5 +252,141 @@ func TestLanguageAgentRuntimeWebhookValidateDelete(t *testing.T) {
 	_, err := h.ValidateDelete(context.Background(), rt)
 	if err != nil {
 		t.Errorf("ValidateDelete() unexpected error: %v", err)
+	}
+}
+
+func TestLanguageAgentRuntimeWebhook_RegistryValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		image       string
+		registries  []string
+		nilRM       bool
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:       "allowed registry accepted",
+			image:      "ghcr.io/language-operator/agent:v1",
+			registries: []string{"ghcr.io", "docker.io"},
+			wantErr:    false,
+		},
+		{
+			name:        "denied registry rejected",
+			image:       "private.example.com/agent:v1",
+			registries:  []string{"ghcr.io", "docker.io"},
+			wantErr:     true,
+			errContains: "spec.image",
+		},
+		{
+			name:       "empty registry list allows any image",
+			image:      "private.example.com/agent:v1",
+			registries: []string{},
+			wantErr:    false,
+		},
+		{
+			name:    "nil RegistryManager allows any image",
+			image:   "private.example.com/agent:v1",
+			nilRM:   true,
+			wantErr: false,
+		},
+		{
+			name:       "no image set skips registry check",
+			image:      "",
+			registries: []string{"ghcr.io"},
+			wantErr:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var rm RegistryManager
+			if !tt.nilRM {
+				rm = &mockRuntimeRegistryManager{registries: tt.registries}
+			}
+			h := &LanguageAgentRuntimeWebhook{RegistryManager: rm}
+			rt := &LanguageAgentRuntime{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
+				Spec:       LanguageAgentRuntimeSpec{Image: tt.image},
+			}
+			_, err := h.ValidateCreate(context.Background(), rt)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("ValidateCreate() error = %q, want to contain %q", err.Error(), tt.errContains)
+			}
+		})
+	}
+}
+
+func TestLanguageAgentRuntimeWebhook_ResourcesValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		resources   corev1.ResourceRequirements
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "valid requests and limits accepted",
+			resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:      "empty resources accepted",
+			resources: corev1.ResourceRequirements{},
+			wantErr:   false,
+		},
+		{
+			name: "zero CPU request rejected",
+			resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU: resource.MustParse("0"),
+				},
+			},
+			wantErr:     true,
+			errContains: "spec.deployment.resources.requests",
+		},
+		{
+			name: "zero memory limit rejected",
+			resources: corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("0"),
+				},
+			},
+			wantErr:     true,
+			errContains: "spec.deployment.resources.limits",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &LanguageAgentRuntimeWebhook{}
+			rt := &LanguageAgentRuntime{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
+				Spec: LanguageAgentRuntimeSpec{
+					Deployment: DeploymentSpec{
+						Resources: tt.resources,
+					},
+				},
+			}
+			_, err := h.ValidateCreate(context.Background(), rt)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("ValidateCreate() error = %q, want to contain %q", err.Error(), tt.errContains)
+			}
+		})
 	}
 }
