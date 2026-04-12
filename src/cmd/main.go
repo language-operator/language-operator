@@ -303,7 +303,6 @@ func main() {
 		Client:                  mgr.GetClient(),
 		Scheme:                  mgr.GetScheme(),
 		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageTool"),
-		RegistryManager:         registryManager,
 		Recorder:                mgr.GetEventRecorderFor("languagetool-controller"),
 		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languagetool-controller")),
 		NetworkIsolationEnabled: networkIsolationEnabled,

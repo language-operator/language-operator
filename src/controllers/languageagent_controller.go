@@ -32,12 +32,8 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/merge"
 	"github.com/language-operator/language-operator/pkg/reconciler"
+	"github.com/language-operator/language-operator/pkg/validation"
 )
-
-// RegistryManager interface for registry configuration management
-type RegistryManager interface {
-	GetRegistries() []string
-}
 
 // LanguageAgentReconciler reconciles a LanguageAgent object
 type LanguageAgentReconciler struct {
@@ -46,7 +42,7 @@ type LanguageAgentReconciler struct {
 	Log                        logr.Logger
 	Recorder                   record.EventRecorder
 	EventManager               *events.EventManager
-	RegistryManager            RegistryManager
+	RegistryManager            validation.RegistryManager
 	NetworkPolicyTimeout       time.Duration
 	NetworkPolicyRetries       int
 	NetworkIsolationEnabled    bool

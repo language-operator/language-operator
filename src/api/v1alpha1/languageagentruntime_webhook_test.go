@@ -24,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/language-operator/language-operator/pkg/validation"
 )
 
 // mockRuntimeRegistryManager is a test double for RegistryManager.
@@ -299,7 +301,7 @@ func TestLanguageAgentRuntimeWebhook_RegistryValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var rm RegistryManager
+			var rm validation.RegistryManager
 			if !tt.nilRM {
 				rm = &mockRuntimeRegistryManager{registries: tt.registries}
 			}
