@@ -415,7 +415,6 @@ type LanguageClusterStatus struct {
 //+kubebuilder:printcolumn:name="Gateway",type=string,JSONPath=`.status.gatewayEndpoint`
 //+kubebuilder:printcolumn:name="GatewayReady",type=boolean,JSONPath=`.status.gatewayReady`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-//+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languageclusters,verbs=create;update,versions=v1alpha1,name=vlanguagecluster.kb.io,admissionReviewVersions=v1
 
 // LanguageCluster is the Schema for the languageclusters API
 type LanguageCluster struct {
