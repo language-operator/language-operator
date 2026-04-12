@@ -443,6 +443,13 @@ func main() {
 			os.Exit(1)
 		}
 		setupLog.Info("LanguageCluster webhook registered")
+
+		// Setup LanguageAgentRuntime webhook
+		if err = langopv1alpha1.SetupLanguageAgentRuntimeWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgentRuntime")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageAgentRuntime webhook registered")
 	} else {
 		setupLog.Info("Webhooks disabled via --disable-webhooks flag")
 	}
