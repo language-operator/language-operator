@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/language-operator/language-operator/pkg/validation"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -30,13 +33,15 @@ import (
 // LanguageAgentRuntime is cluster-scoped, so no cluster-membership check is needed.
 //
 // +kubebuilder:object:generate=false
-type LanguageAgentRuntimeWebhook struct{}
+type LanguageAgentRuntimeWebhook struct {
+	RegistryManager RegistryManager
+}
 
 var _ admission.Validator[*LanguageAgentRuntime] = &LanguageAgentRuntimeWebhook{}
 
 // ValidateCreate implements admission.Validator
 func (h *LanguageAgentRuntimeWebhook) ValidateCreate(_ context.Context, rt *LanguageAgentRuntime) (admission.Warnings, error) {
-	return nil, rt.validateSpec()
+	return nil, h.validateSpec(rt)
 }
 
 // ValidateUpdate implements admission.Validator
@@ -44,7 +49,7 @@ func (h *LanguageAgentRuntimeWebhook) ValidateUpdate(_ context.Context, _, rt *L
 	if rt.DeletionTimestamp != nil {
 		return nil, nil
 	}
-	return nil, rt.validateSpec()
+	return nil, h.validateSpec(rt)
 }
 
 // ValidateDelete implements admission.Validator
@@ -52,8 +57,8 @@ func (h *LanguageAgentRuntimeWebhook) ValidateDelete(_ context.Context, _ *Langu
 	return nil, nil
 }
 
-// validateSpec performs pure spec validation (no API calls).
-func (rt *LanguageAgentRuntime) validateSpec() error {
+// validateSpec validates the LanguageAgentRuntime spec fields.
+func (h *LanguageAgentRuntimeWebhook) validateSpec(rt *LanguageAgentRuntime) error {
 	if rt.Spec.Workspace != nil {
 		if err := validateWorkspaceSize(rt.Spec.Workspace.Size); err != nil {
 			return fmt.Errorf("spec.workspace.size: %w", err)
@@ -66,12 +71,38 @@ func (rt *LanguageAgentRuntime) validateSpec() error {
 		}
 	}
 
+	if rt.Spec.Image != "" && h.RegistryManager != nil {
+		if regs := h.RegistryManager.GetRegistries(); len(regs) > 0 {
+			if err := validation.ValidateImageRegistry(rt.Spec.Image, regs); err != nil {
+				return fmt.Errorf("spec.image: %w", err)
+			}
+		}
+	}
+
+	if err := validateResourceList("spec.deployment.resources.requests", rt.Spec.Deployment.Resources.Requests); err != nil {
+		return err
+	}
+	if err := validateResourceList("spec.deployment.resources.limits", rt.Spec.Deployment.Resources.Limits); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateResourceList checks that each quantity in the list is positive.
+func validateResourceList(field string, list corev1.ResourceList) error {
+	zero := resource.MustParse("0")
+	for name, qty := range list {
+		if qty.Cmp(zero) <= 0 {
+			return fmt.Errorf("%s[%s]: must be a positive quantity, got %q", field, name, qty.String())
+		}
+	}
 	return nil
 }
 
 // SetupLanguageAgentRuntimeWebhookWithManager registers the LanguageAgentRuntime validating webhook.
-func SetupLanguageAgentRuntimeWebhookWithManager(mgr ctrl.Manager) error {
-	h := &LanguageAgentRuntimeWebhook{}
+func SetupLanguageAgentRuntimeWebhookWithManager(mgr ctrl.Manager, registryManager RegistryManager) error {
+	h := &LanguageAgentRuntimeWebhook{RegistryManager: registryManager}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageAgentRuntime{}).
 		WithValidator(h).
 		Complete()

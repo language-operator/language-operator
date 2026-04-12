@@ -445,7 +445,7 @@ func main() {
 		setupLog.Info("LanguageCluster webhook registered")
 
 		// Setup LanguageAgentRuntime webhook
-		if err = langopv1alpha1.SetupLanguageAgentRuntimeWebhookWithManager(mgr); err != nil {
+		if err = langopv1alpha1.SetupLanguageAgentRuntimeWebhookWithManager(mgr, registryManager); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageAgentRuntime")
 			os.Exit(1)
 		}
