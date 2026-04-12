@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// RegistryManager provides the current image registry allowlist.
+type RegistryManager interface {
+	GetRegistries() []string
+}
+
 // ValidateImageRegistry checks if the image registry is in the allowed list.
 // It handles docker.io defaults, short names, and cloud provider patterns.
 //

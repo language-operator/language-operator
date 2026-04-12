@@ -34,7 +34,7 @@ import (
 //
 // +kubebuilder:object:generate=false
 type LanguageAgentRuntimeWebhook struct {
-	RegistryManager RegistryManager
+	RegistryManager validation.RegistryManager
 }
 
 var _ admission.Validator[*LanguageAgentRuntime] = &LanguageAgentRuntimeWebhook{}
@@ -101,7 +101,7 @@ func validateResourceList(field string, list corev1.ResourceList) error {
 }
 
 // SetupLanguageAgentRuntimeWebhookWithManager registers the LanguageAgentRuntime validating webhook.
-func SetupLanguageAgentRuntimeWebhookWithManager(mgr ctrl.Manager, registryManager RegistryManager) error {
+func SetupLanguageAgentRuntimeWebhookWithManager(mgr ctrl.Manager, registryManager validation.RegistryManager) error {
 	h := &LanguageAgentRuntimeWebhook{RegistryManager: registryManager}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageAgentRuntime{}).
 		WithValidator(h).

@@ -40,7 +40,6 @@ type LanguageToolReconciler struct {
 	client.Client
 	Scheme                  *runtime.Scheme
 	Log                     logr.Logger
-	RegistryManager         RegistryManager
 	Recorder                record.EventRecorder
 	EventManager            *events.EventManager
 	NetworkIsolationEnabled bool

@@ -60,9 +60,8 @@ func TestLanguageToolController_SidecarMode(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -141,9 +140,8 @@ func TestLanguageToolController_ServiceMode(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -314,9 +312,8 @@ func TestLanguageToolController_StatusPhases(t *testing.T) {
 				Build()
 
 			reconciler := &LanguageToolReconciler{
-				Client:          fakeClient,
-				Scheme:          scheme,
-				RegistryManager: &mockRegistryManager{},
+				Client: fakeClient,
+				Scheme: scheme,
 			}
 
 			ctx := context.Background()
@@ -386,9 +383,8 @@ func TestLanguageToolController_NotFoundHandling(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -455,9 +451,8 @@ func TestLanguageToolController_ServiceTypeAndAnnotations(t *testing.T) {
 				Build()
 
 			reconciler := &LanguageToolReconciler{
-				Client:          fakeClient,
-				Scheme:          scheme,
-				RegistryManager: &mockRegistryManager{},
+				Client: fakeClient,
+				Scheme: scheme,
 			}
 
 			ctx := context.Background()
@@ -507,9 +502,8 @@ func TestLanguageToolController_SchedulingFields(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -608,9 +602,8 @@ func TestLanguageToolController_DeploymentSpec(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -703,9 +696,8 @@ func TestLanguageToolController_DefaultSecurityContext(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -766,9 +758,8 @@ func TestLanguageToolController_UserSecurityContextOverride(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -812,9 +803,8 @@ func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -878,9 +868,8 @@ func TestLanguageToolController_Deletion(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -917,9 +906,8 @@ func TestLanguageToolController_SidecarMode_NoRunningPod(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -1022,9 +1010,8 @@ func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 		// Use the test server's transport so requests reach the httptest server
 		HTTPClient: mcpServer.Client(),
 	}
@@ -1085,7 +1072,6 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionTrue(t *testing.
 	r := &LanguageToolReconciler{
 		Client:                  fakeClient,
 		Scheme:                  scheme,
-		RegistryManager:         &mockRegistryManager{},
 		NetworkIsolationEnabled: true,
 	}
 
@@ -1142,7 +1128,6 @@ func TestLanguageToolController_Reconcile_NetworkPolicyConditionError(t *testing
 	r := &LanguageToolReconciler{
 		Client:                  fakeClient,
 		Scheme:                  scheme,
-		RegistryManager:         &mockRegistryManager{},
 		NetworkIsolationEnabled: true,
 	}
 
@@ -1209,7 +1194,6 @@ func TestLanguageToolController_Reconcile_NetworkPolicyTimeout_Degraded(t *testi
 	r := &LanguageToolReconciler{
 		Client:                  fakeClient,
 		Scheme:                  scheme,
-		RegistryManager:         &mockRegistryManager{},
 		NetworkIsolationEnabled: true,
 	}
 
@@ -1384,9 +1368,8 @@ func TestDiscoverSidecarSchemas_NoPods(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
@@ -1423,9 +1406,8 @@ func TestDiscoverSidecarSchemas_PodNotRunning(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
@@ -1462,9 +1444,8 @@ func TestDiscoverSidecarSchemas_PodMissingIP(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
@@ -1517,10 +1498,9 @@ func TestDiscoverSidecarSchemas_RegularContainerFallback(t *testing.T) {
 		Build()
 
 	r := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
-		HTTPClient:      mcpServer.Client(),
+		Client:     fakeClient,
+		Scheme:     scheme,
+		HTTPClient: mcpServer.Client(),
 	}
 
 	schemas, err := r.discoverSidecarSchemas(context.Background(), tool)
@@ -1563,9 +1543,8 @@ func TestLanguageToolController_Reconcile_MCPType_SchemaDiscoveryErrorSwallowed(
 	// "http://http://mcp-tool.default.svc.cluster.local:8080/mcp" which fails immediately.
 	// The error must be swallowed: tool is still Running.
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -1621,9 +1600,8 @@ func TestLanguageToolController_Reconcile_NonMCPType_SkipsSchemaDiscovery(t *tes
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -1664,9 +1642,8 @@ func TestLanguageToolController_CommandAndArgs(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -1702,9 +1679,8 @@ func TestLanguageToolController_HPA_CreatedWhenAutoscalingSet(t *testing.T) {
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()
@@ -1746,9 +1722,8 @@ func TestLanguageToolController_HPA_DeletedWhenAutoscalingRemoved(t *testing.T) 
 		Build()
 
 	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{},
+		Client: fakeClient,
+		Scheme: scheme,
 	}
 
 	ctx := context.Background()

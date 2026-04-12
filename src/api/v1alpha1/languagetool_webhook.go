@@ -27,13 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// RegistryManager provides the current image registry allowlist.
-//
-// +kubebuilder:object:generate=false
-type RegistryManager interface {
-	GetRegistries() []string
-}
-
 //+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languagetool,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=mlanguagetool.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagetool,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=vlanguagetool.kb.io,admissionReviewVersions=v1
 
@@ -42,7 +35,7 @@ type RegistryManager interface {
 // +kubebuilder:object:generate=false
 type LanguageToolWebhook struct {
 	client.Client
-	RegistryManager RegistryManager
+	RegistryManager validation.RegistryManager
 }
 
 var _ admission.Defaulter[*LanguageTool] = &LanguageToolWebhook{}
@@ -103,7 +96,7 @@ func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, nam
 }
 
 // SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
-func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager, registryManager RegistryManager) error {
+func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager, registryManager validation.RegistryManager) error {
 	h := &LanguageToolWebhook{Client: mgr.GetClient(), RegistryManager: registryManager}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageTool{}).
 		WithDefaulter(h).
