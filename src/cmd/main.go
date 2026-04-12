@@ -436,6 +436,13 @@ func main() {
 			os.Exit(1)
 		}
 		setupLog.Info("LanguageAgentSelfConfig webhook registered")
+
+		// Setup LanguageCluster webhook
+		if err = langopv1alpha1.SetupLanguageClusterWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageCluster")
+			os.Exit(1)
+		}
+		setupLog.Info("LanguageCluster webhook registered")
 	} else {
 		setupLog.Info("Webhooks disabled via --disable-webhooks flag")
 	}
