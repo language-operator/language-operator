@@ -19,12 +19,20 @@ package v1alpha1
 import (
 	"context"
 
+	"github.com/language-operator/language-operator/pkg/validation"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+// RegistryManager provides the current image registry allowlist.
+//
+// +kubebuilder:object:generate=false
+type RegistryManager interface {
+	GetRegistries() []string
+}
 
 //+kubebuilder:webhook:path=/mutate-langop-io-v1alpha1-languagetool,mutating=true,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=mlanguagetool.kb.io,admissionReviewVersions=v1
 //+kubebuilder:webhook:path=/validate-langop-io-v1alpha1-languagetool,mutating=false,failurePolicy=fail,sideEffects=None,groups=langop.io,resources=languagetools,verbs=create;update,versions=v1alpha1,name=vlanguagetool.kb.io,admissionReviewVersions=v1
@@ -34,6 +42,7 @@ import (
 // +kubebuilder:object:generate=false
 type LanguageToolWebhook struct {
 	client.Client
+	RegistryManager RegistryManager
 }
 
 var _ admission.Defaulter[*LanguageTool] = &LanguageToolWebhook{}
@@ -62,7 +71,7 @@ func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, t *LanguageToo
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return nil, h.validateSpec(t)
 }
 
 // ValidateUpdate implements admission.Validator
@@ -70,7 +79,18 @@ func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, _, t *Language
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return nil, h.validateSpec(t)
+}
+
+func (h *LanguageToolWebhook) validateSpec(t *LanguageTool) error {
+	if h.RegistryManager == nil {
+		return nil
+	}
+	allowedRegistries := h.RegistryManager.GetRegistries()
+	if len(allowedRegistries) == 0 {
+		return nil
+	}
+	return validation.ValidateImageRegistry(t.Spec.Image, allowedRegistries)
 }
 
 // ValidateDelete implements admission.Validator
@@ -83,8 +103,8 @@ func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, nam
 }
 
 // SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
-func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager) error {
-	h := &LanguageToolWebhook{Client: mgr.GetClient()}
+func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager, registryManager RegistryManager) error {
+	h := &LanguageToolWebhook{Client: mgr.GetClient(), RegistryManager: registryManager}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageTool{}).
 		WithDefaulter(h).
 		WithValidator(h).

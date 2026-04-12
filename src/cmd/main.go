@@ -410,7 +410,7 @@ func main() {
 		setupLog.Info("LanguageAgent webhook registered")
 
 		// Setup LanguageTool webhook
-		if err = langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr); err != nil {
+		if err = langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr, registryManager); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LanguageTool")
 			os.Exit(1)
 		}

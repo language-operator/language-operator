@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 	if err := langopv1alpha1.SetupLanguageModelWebhookWithManager(mgr); err != nil {
 		panic("failed to setup LanguageModel webhook: " + err.Error())
 	}
-	if err := langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr); err != nil {
+	if err := langopv1alpha1.SetupLanguageToolWebhookWithManager(mgr, nil); err != nil {
 		panic("failed to setup LanguageTool webhook: " + err.Error())
 	}
 	if err := langopv1alpha1.SetupLanguagePersonaWebhookWithManager(mgr); err != nil {
