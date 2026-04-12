@@ -33,7 +33,6 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/language-operator/language-operator/pkg/reconciler"
-	"github.com/language-operator/language-operator/pkg/validation"
 )
 
 // LanguageToolReconciler reconciles a LanguageTool object
@@ -175,23 +174,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		r.EventManager.RecordToolCreated(tool, tool.Spec.Type)
 	}
-
-	// Validate image registry against whitelist
-	if err := r.validateImageRegistry(tool); err != nil {
-		log.Error(err, "Image registry validation failed", "image", tool.Spec.Image)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "Image registry validation failed")
-		r.EventManager.RecordRegistryValidationFailed(tool, tool.Spec.Image)
-		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionFalse, langopv1alpha1.ReasonRegistryNotAllowed, err.Error(), tool.Generation)
-		tool.Status.Phase = events.PhaseStatusFailed
-		if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-			log.Error(updateErr, "Failed to update status after registry validation failure")
-		}
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionRegistryValidated, metav1.ConditionTrue, langopv1alpha1.ReasonValidated, "Image registry is in whitelist", tool.Generation)
-	r.EventManager.RecordRegistryValidated(tool)
 
 	// Skip Deployment and Service for sidecar mode tools
 	// Sidecar tools are injected into agent pods directly
@@ -899,17 +881,6 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
 	// Resources will be cleaned up automatically via owner references
 	return nil
-}
-
-// validateImageRegistry validates that the tool's container image registry is in the whitelist
-func (r *LanguageToolReconciler) validateImageRegistry(tool *langopv1alpha1.LanguageTool) error {
-	// Skip validation if no whitelist configured
-	allowedRegistries := r.RegistryManager.GetRegistries()
-	if len(allowedRegistries) == 0 {
-		return nil
-	}
-
-	return validation.ValidateImageRegistry(tool.Spec.Image, allowedRegistries)
 }
 
 // SetupWithManager sets up the controller with the Manager.

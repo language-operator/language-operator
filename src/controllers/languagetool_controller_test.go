@@ -789,64 +789,6 @@ func TestLanguageToolController_UserSecurityContextOverride(t *testing.T) {
 	}
 }
 
-func TestLanguageToolController_PhaseFailedOnRegistryError(t *testing.T) {
-	scheme := testutil.SetupTestScheme(t)
-
-	// Image uses ghcr.io but registry whitelist only allows docker.io → validation fails
-	tool := &langopv1alpha1.LanguageTool{
-		ObjectMeta: metav1.ObjectMeta{Name: "blocked-tool", Namespace: "default"},
-		Spec: langopv1alpha1.LanguageToolSpec{
-			Image: "ghcr.io/language-operator/tool:latest",
-		},
-	}
-
-	fakeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(tool).
-		WithStatusSubresource(tool).
-		Build()
-
-	reconciler := &LanguageToolReconciler{
-		Client:          fakeClient,
-		Scheme:          scheme,
-		RegistryManager: &mockRegistryManager{registries: []string{"docker.io"}},
-	}
-
-	ctx := context.Background()
-	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
-
-	// Single reconcile: finalizer added then registry check fires immediately → error
-	_, err := reconciler.Reconcile(ctx, req)
-	if err == nil {
-		t.Fatal("Expected reconcile error from registry validation, got nil")
-	}
-
-	updatedTool := &langopv1alpha1.LanguageTool{}
-	if err := fakeClient.Get(ctx, req.NamespacedName, updatedTool); err != nil {
-		t.Fatalf("Failed to get tool: %v", err)
-	}
-	if updatedTool.Status.Phase != events.PhaseStatusFailed {
-		t.Errorf("Expected phase %q after registry rejection, got %q", events.PhaseStatusFailed, updatedTool.Status.Phase)
-	}
-
-	var regCond *metav1.Condition
-	for i := range updatedTool.Status.Conditions {
-		if updatedTool.Status.Conditions[i].Type == langopv1alpha1.ConditionRegistryValidated {
-			regCond = &updatedTool.Status.Conditions[i]
-			break
-		}
-	}
-	if regCond == nil {
-		t.Fatal("Expected RegistryValidated condition to be set")
-	}
-	if regCond.Status != metav1.ConditionFalse {
-		t.Errorf("Expected RegistryValidated status %q, got %q", metav1.ConditionFalse, regCond.Status)
-	}
-	if regCond.Reason != langopv1alpha1.ReasonRegistryNotAllowed {
-		t.Errorf("Expected RegistryValidated reason %q, got %q", langopv1alpha1.ReasonRegistryNotAllowed, regCond.Reason)
-	}
-}
-
 func TestLanguageToolController_NetworkPolicy_FromRule(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
