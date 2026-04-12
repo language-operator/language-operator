@@ -94,6 +94,9 @@ func TestMain(m *testing.M) {
 	if err := langopv1alpha1.SetupLanguageClusterWebhookWithManager(mgr); err != nil {
 		panic("failed to setup LanguageCluster webhook: " + err.Error())
 	}
+	if err := langopv1alpha1.SetupLanguageAgentRuntimeWebhookWithManager(mgr); err != nil {
+		panic("failed to setup LanguageAgentRuntime webhook: " + err.Error())
+	}
 
 	go func() {
 		if err := mgr.Start(ctx); err != nil {
