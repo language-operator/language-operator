@@ -1,0 +1,75 @@
+{{- if .Values.rbac.create -}}
+# langop-admin — cluster-wide admin for human operators and the dashboard admin SA.
+# Grants full CRUD on all langop.io resources across all namespaces.
+# The language-operator-dashboard chart binds its admin SA to this role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: langop-admin
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+rules:
+- apiGroups: ["langop.io"]
+  resources:
+  - languageclusters
+  - languageagents
+  - languagemodels
+  - languagetools
+  - languagepersonas
+  - languageagentruntimes
+  - languageagentselfconfigs
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+---
+# langop-cluster-admin — namespace-scoped admin for a single cluster's namespace.
+# Created as a RoleBinding (not ClusterRoleBinding) by the operator when provisioning a cluster,
+# scoped to the cluster's own namespace (named after the cluster).
+# Grants full CRUD on the per-cluster sub-resources: agents, models, tools, personas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: langop-cluster-admin
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+rules:
+- apiGroups: ["langop.io"]
+  resources:
+  - languageagents
+  - languagemodels
+  - languagetools
+  - languagepersonas
+  - languageagentselfconfigs
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+---
+# langop-cluster-viewer — namespace-scoped read-only access for a single cluster's namespace.
+# Created as a RoleBinding by the operator, scoped to the cluster's namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: langop-cluster-viewer
+  labels:
+    {{- include "language-operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rbac
+rules:
+- apiGroups: ["langop.io"]
+  resources:
+  - languageagents
+  - languagemodels
+  - languagetools
+  - languagepersonas
+  - languageagentselfconfigs
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+{{- end }}
