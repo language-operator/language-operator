@@ -26,6 +26,9 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings"]
+  verbs: ["get", "list", "watch", "create", "delete"]
 ---
 # langop-cluster-admin — namespace-scoped admin for a single cluster's namespace.
 # Created as a RoleBinding (not ClusterRoleBinding) by the operator when provisioning a cluster,
