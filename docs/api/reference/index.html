@@ -3671,6 +3671,12 @@ spec.selfConfigure allowlist before patching.</p>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>adoptExistingNamespace</code> <em>boolean</em></td>
+<td>AdoptExistingNamespace, when true, allows the LanguageCluster to adopt a<br />pre-existing namespace rather than creating one. The operator adds its<br />management labels to the existing namespace and does not delete it when<br />the cluster is removed. This field is immutable after creation.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languageclusterstatus">LanguageClusterStatus<a class="headerlink" href="#languageclusterstatus" title="Permanent link">&para;</a></h4>
