@@ -204,7 +204,7 @@ app.post('/', async (req, res) => {
           }
         } else if (sdkMessage.type === 'result') {
           if (sdkMessage.subtype === 'success') {
-            const finalText = outputParts.join('\n') || sdkMessage.result ?? ''
+            const finalText = outputParts.join('\n') || (sdkMessage.result ?? '')
             artifactEvent(res, taskId, 'response', finalText)
             task.status = { state: 'completed' }
             saveTask(task)
