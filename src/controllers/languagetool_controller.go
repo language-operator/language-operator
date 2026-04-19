@@ -184,7 +184,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile Deployment")
 			r.EventManager.RecordDeploymentFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
-			tool.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after Deployment failure")
 			}
@@ -199,7 +199,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile Service")
 			r.EventManager.RecordServiceFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), tool.Generation)
-			tool.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after Service failure")
 			}
@@ -213,7 +213,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile HorizontalPodAutoscaler")
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
-			tool.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 				log.Error(updateErr, "Failed to update status after HPA failure")
 			}
@@ -250,7 +250,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				r.EventManager.RecordNetworkPolicyFailed(tool, err)
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
-				tool.Status.Phase = events.PhaseStatusFailed
+				SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 				if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
 					log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
 				}
@@ -773,7 +773,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 	// For sidecar mode tools, discover schemas from a running agent pod
 	if tool.Spec.DeploymentMode == "sidecar" {
-		tool.Status.Phase = events.PhaseStatusRunning
+		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusRunning, tool.Generation)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageTool is ready", tool.Generation)
 
 		schemas, err := r.discoverSidecarSchemas(ctx, tool)
@@ -799,7 +799,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Deployment doesn't exist yet
-			tool.Status.Phase = events.PhaseStatusPending
+			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusPending, tool.Generation)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentNotFound, "Deployment not found", tool.Generation)
 			return r.Status().Update(ctx, tool)
 		}
@@ -825,7 +825,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 
 	// Check if deployment is updating
 	if deployment.Status.UpdatedReplicas < desiredReplicas {
-		tool.Status.Phase = events.PhaseStatusUpdating
+		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusUpdating, tool.Generation)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonUpdating, "Deployment is updating", tool.Generation)
 		return r.Status().Update(ctx, tool)
 	}
@@ -841,7 +841,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 				break
 			}
 		}
-		tool.Status.Phase = phase
+		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, phase, tool.Generation)
 		tool.Status.Endpoint = serviceURL(tool.Name, tool.Namespace, tool.Spec.Port)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonReconcileSuccess, "LanguageTool is ready", tool.Generation)
 
@@ -866,13 +866,13 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	// No pods ready - check if deployment has been created recently
 	if deployment.Status.AvailableReplicas == 0 && deployment.Status.UnavailableReplicas > 0 {
 		// Pods exist but none are ready - likely CrashLoopBackOff or similar
-		tool.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPodsNotReady, "No pods are ready", tool.Generation)
 		return r.Status().Update(ctx, tool)
 	}
 
 	// Deployment exists but no replicas yet
-	tool.Status.Phase = events.PhaseStatusPending
+	SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusPending, tool.Generation)
 	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, "Waiting for pods to be scheduled", tool.Generation)
 	return r.Status().Update(ctx, tool)
 }

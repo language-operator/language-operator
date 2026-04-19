@@ -171,7 +171,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					metav1.ConditionFalse, langopv1alpha1.ReasonRuntimeNotFound,
 					fmt.Sprintf("LanguageAgentRuntime %q not found", agent.Spec.Runtime), agent.Generation)
 			}
-			agent.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, events.PhaseStatusFailed, agent.Generation)
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -271,7 +271,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				// For non-timeout errors, fail the reconciliation
 				span.SetStatus(codes.Error, "NetworkPolicy reconciliation failed")
 				SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), agent.Generation)
-				agent.Status.Phase = events.PhaseStatusFailed
+				SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, events.PhaseStatusFailed, agent.Generation)
 				reconcileErr = err
 				return ctrl.Result{}, err
 			}
@@ -445,12 +445,12 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 		}
 		if agent.Status.Phase != newPhase {
-			agent.Status.Phase = newPhase
+			SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, newPhase, agent.Generation)
 			statusChanged = true
 		}
 	} else if apierrors.IsNotFound(err) {
 		if agent.Status.Phase != events.PhaseStatusPending {
-			agent.Status.Phase = events.PhaseStatusPending
+			SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, events.PhaseStatusPending, agent.Generation)
 			statusChanged = true
 		}
 	}

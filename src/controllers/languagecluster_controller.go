@@ -221,7 +221,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Mark Pending on first real reconcile so kubectl get shows something meaningful
 	// before resources are fully provisioned.
 	if cluster.Status.Phase == "" {
-		cluster.Status.Phase = events.PhaseStatusPending
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusPending, cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
 			log.Error(updateErr, "Failed to update cluster phase to Pending")
 		}
@@ -232,7 +232,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile namespace")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile namespace")
-		cluster.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonNamespaceError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -253,7 +253,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile agent RBAC")
 		r.EventManager.RecordRBACFailed(cluster, err)
-		cluster.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonRBACError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -270,7 +270,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile NetworkPolicy")
 			r.EventManager.RecordNetworkPolicyFailed(cluster, err)
-			cluster.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse,
 				langopv1alpha1.ReasonNetworkPolicyError, err.Error(), cluster.Generation)
 			if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -293,7 +293,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile gateway")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile gateway")
-		cluster.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 		cluster.Status.GatewayReady = ptr.To(false)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonGatewayError, err.Error(), cluster.Generation)
@@ -309,7 +309,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile gateway HPA")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile gateway HPA")
-		cluster.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 		cluster.Status.GatewayReady = ptr.To(false)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonGatewayError, err.Error(), cluster.Generation)
@@ -326,7 +326,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			log.Error(err, "Failed to reconcile gateway ingress")
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "Failed to reconcile gateway ingress")
-			cluster.Status.Phase = events.PhaseStatusFailed
+			SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 			cluster.Status.GatewayReady = ptr.To(false)
 			SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionGatewayReady, metav1.ConditionFalse,
 				langopv1alpha1.ReasonGatewayIngressError, err.Error(), cluster.Generation)
@@ -355,7 +355,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "Failed to reconcile capacity quota")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "Failed to reconcile capacity quota")
-		cluster.Status.Phase = events.PhaseStatusFailed
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
 		SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionCapacityReady, metav1.ConditionFalse,
 			langopv1alpha1.ReasonCapacityError, err.Error(), cluster.Generation)
 		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
@@ -367,7 +367,7 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionCapacityReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonReconcileSuccess, "Capacity reconciled", cluster.Generation)
 
-	cluster.Status.Phase = events.PhaseStatusReady
+	SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusReady, cluster.Generation)
 	SetCondition(&cluster.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue,
 		langopv1alpha1.ReasonReconcileSuccess, "LanguageCluster is ready", cluster.Generation)
 
