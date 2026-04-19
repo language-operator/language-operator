@@ -27,6 +27,7 @@ const AGENT_NAME = process.env.AGENT_NAME ?? 'claude-code-agent'
 const MAX_TURNS = process.env.CLAUDE_CODE_MAX_TURNS
   ? parseInt(process.env.CLAUDE_CODE_MAX_TURNS, 10)
   : undefined
+const STARTUP_PROMPT = process.env.STARTUP_PROMPT ?? ''
 
 mkdirSync(TASK_STORE_DIR, { recursive: true })
 
@@ -261,5 +262,23 @@ app.listen(PORT, () => {
   console.log(`Workspace: ${WORKSPACE}`)
   if (MAX_TURNS !== undefined) {
     console.log(`Max turns: ${MAX_TURNS}`)
+  }
+  if (STARTUP_PROMPT) {
+    console.log(`Startup prompt: ${STARTUP_PROMPT.slice(0, 80)}`)
+    ;(async () => {
+      try {
+        const opts = { cwd: WORKSPACE, ...(MAX_TURNS !== undefined ? { maxTurns: MAX_TURNS } : {}) }
+        for await (const msg of query({ prompt: STARTUP_PROMPT, options: opts })) {
+          if (msg.type === 'assistant') {
+            for (const block of msg.message?.content ?? []) {
+              if (block.type === 'text') process.stdout.write(block.text)
+            }
+          }
+        }
+        console.log('\nStartup task complete.')
+      } catch (err) {
+        console.error('Startup task error:', err.message)
+      }
+    })()
   }
 })
