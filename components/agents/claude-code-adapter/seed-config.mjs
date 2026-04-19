@@ -70,23 +70,26 @@ if (modelId) {
 if (gatewayEndpoint) {
   // Claude Code expects /anthropic path on the base URL so the SDK hits
   // gateway/anthropic/v1/messages — LiteLLM routes this to real Anthropic.
+  // A placeholder API key is required to satisfy SDK validation; the gateway
+  // substitutes the real credential so the value sent here doesn't matter.
   const base = gatewayEndpoint.replace(/\/+$/, '')
-  settings.env = { ANTHROPIC_BASE_URL: `${base}/anthropic` }
+  settings.env = {
+    ANTHROPIC_BASE_URL: `${base}/anthropic`,
+    ANTHROPIC_API_KEY: 'sk-langop-proxy',
+  }
   console.log(`Configured ANTHROPIC_BASE_URL → ${settings.env.ANTHROPIC_BASE_URL}`)
 } else {
-  console.warn('No MODEL_ENDPOINT or config.yaml models — skipping ANTHROPIC_BASE_URL')
-}
-
-// Translate the operator's canonical secret key ("api-key") to the env var
-// Claude Code expects. Accepts ANTHROPIC_API_KEY directly as a fallback so
-// the adapter works regardless of how the secret was constructed.
-const apiKey = process.env['api-key'] ?? process.env.ANTHROPIC_API_KEY ?? ''
-if (apiKey) {
-  if (!settings.env) settings.env = {}
-  settings.env.ANTHROPIC_API_KEY = apiKey
-  console.log('Configured ANTHROPIC_API_KEY from secret')
-} else {
-  console.warn('No api-key or ANTHROPIC_API_KEY found — Claude Code will need credentials another way')
+  // No gateway — use a directly-injected API key if available.
+  // The operator injects claudeCode.apiKeyRef secrets via envFrom on the main
+  // container; for direct-API mode without a gateway, pass the key as an
+  // explicit env var named ANTHROPIC_API_KEY on the agent's deployment.env.
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? ''
+  if (apiKey) {
+    settings.env = { ANTHROPIC_API_KEY: apiKey }
+    console.log('Configured ANTHROPIC_API_KEY for direct API access')
+  } else {
+    console.warn('No gateway and no ANTHROPIC_API_KEY — Claude Code will need credentials another way')
+  }
 }
 
 writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify(settings, null, 2))
