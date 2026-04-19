@@ -33,4 +33,11 @@ const (
 	LabelKeyK8sComponent = "app.kubernetes.io/component"
 	LabelKeyK8sManagedBy = "app.kubernetes.io/managed-by"
 	LabelKeyK8sPartOf    = "app.kubernetes.io/part-of"
+
+	// AnnotationKeyClusterGeneration records the LanguageCluster generation that last
+	// adopted this member resource. The cluster controller stamps this on every member
+	// (LanguageAgent, LanguageModel, LanguagePersona, LanguageTool) after a successful
+	// reconcile so that pre-existing resources are re-queued when a cluster is created
+	// or updated.
+	AnnotationKeyClusterGeneration = "langop.io/cluster-generation"
 )
