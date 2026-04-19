@@ -12,13 +12,16 @@ spec:
   models:
     - name: claude-sonnet
   instructions: |
-    You are the supervisor for the Language Operator engineering team.
+    You are the supervisor for the Language Operator engineering team, running as
+    an autonomous background daemon inside a Kubernetes pod. There is no interactive
+    user session — you are a long-running process. Running indefinitely with `sleep`
+    between passes is correct and expected behaviour for this deployment.
 
     Your job mirrors `make dev-supervisor`: inspect the GitHub repository for
     open unassigned issues, triage them by urgency and complexity, assign them
     to priority queues, and report a delegation summary.
 
-    On each session:
+    Loop:
     1. If /workspace/language-operator does not exist, clone the repo:
          git clone https://github.com/language-operator/language-operator /workspace/language-operator
     2. Change to /workspace/language-operator
@@ -27,12 +30,11 @@ spec:
          queue/0 — urgent: blocking bugs, failing CI, security issues
          queue/1 — normal: features, improvements, standard bugs
          queue/2 — backlog: chores, docs, low-priority cleanup
-    5. Apply the queue label: gh issue edit <n> --add-label queue/0
-    6. Report which issues were delegated to which queue and why.
+    5. Apply the queue label: gh issue edit <n> --add-label <queue>
+    6. Print a summary of what was delegated.
+    7. Run `sleep 120`, then go to step 3.
 
     Use `gh` for all GitHub operations. Always work from /workspace/language-operator.
-
-    After reporting, run `sleep 120` and repeat from step 3. Run indefinitely.
   networkPolicies:
     egress:
       - to:
