@@ -14,7 +14,7 @@ Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bun
 1. Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
 2. Click **Create Key**, give it a name, and copy the key (`sk-ant-...`)
 
-Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. `claude-sonnet-4-5`).
+Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. `claude-sonnet-4-6`).
 
 ### Create a Cluster
 
@@ -99,38 +99,7 @@ Streaming task responses use Server-Sent Events (`tasks/sendSubscribe`). Use `ta
 
 ## Using the Shared Gateway Instead
 
-If you'd rather route Claude Code traffic through the shared LiteLLM gateway (e.g. to centralise billing or use a different provider), configure a `LanguageModel` instead of an `apiKeyRef`:
-
-```bash
-kubectl create secret generic anthropic-credentials \
-  --from-literal=api-key=sk-ant-your-key-here
-
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageModel
-metadata:
-  name: claude-sonnet
-spec:
-  provider: anthropic
-  modelName: claude-sonnet-4-5
-  apiKeySecretRef:
-    name: anthropic-credentials
-    key: api-key
----
-apiVersion: langop.io/v1alpha1
-kind: LanguageAgent
-metadata:
-  name: code-agent
-spec:
-  runtime: claude-code
-  instructions: |
-    You are an expert software engineer.
-  models:
-    - name: claude-sonnet
-EOF
-```
-
-The adapter will set `ANTHROPIC_BASE_URL` to the shared gateway and the operator injects a placeholder key. No `claudeCode.apiKeyRef` is needed.
+> **Not currently supported.** Claude Code 2.x sends `Authorization: Bearer` (OAuth format) when `ANTHROPIC_BASE_URL` is set. Anthropic's API rejects OAuth authentication, so routing through the LiteLLM gateway fails at the model-call level. Use `claudeCode.apiKeyRef` (or `spec.deployment.env`) to supply a real API key and let Claude Code call Anthropic directly.
 
 ## Configuration Reference
 
@@ -147,6 +116,6 @@ The adapter will set `ANTHROPIC_BASE_URL` to the shared gateway and the operator
 |----------|------|---------|
 | Deployment | `code-agent` | Runs the Claude Code server container |
 | Service | `code-agent` | ClusterIP on port 8080 |
-| NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace |
+| NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `api.anthropic.com` and other public APIs. |
 | PVC | `code-agent-workspace` | 10Gi persistent workspace; task store at `/workspace/.a2a/` |
 | ConfigMap | `code-agent-agent` | Injected at `/etc/agent/config.yaml` |
