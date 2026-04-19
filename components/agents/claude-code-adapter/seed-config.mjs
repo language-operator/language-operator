@@ -77,6 +77,18 @@ if (gatewayEndpoint) {
   console.warn('No MODEL_ENDPOINT or config.yaml models — skipping ANTHROPIC_BASE_URL')
 }
 
+// Translate the operator's canonical secret key ("api-key") to the env var
+// Claude Code expects. Accepts ANTHROPIC_API_KEY directly as a fallback so
+// the adapter works regardless of how the secret was constructed.
+const apiKey = process.env['api-key'] ?? process.env.ANTHROPIC_API_KEY ?? ''
+if (apiKey) {
+  if (!settings.env) settings.env = {}
+  settings.env.ANTHROPIC_API_KEY = apiKey
+  console.log('Configured ANTHROPIC_API_KEY from secret')
+} else {
+  console.warn('No api-key or ANTHROPIC_API_KEY found — Claude Code will need credentials another way')
+}
+
 writeFileSync(join(claudeDir, 'settings.json'), JSON.stringify(settings, null, 2))
 console.log(`Wrote settings.json to ${claudeDir}/settings.json`)
 
