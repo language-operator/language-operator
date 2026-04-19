@@ -31,6 +31,8 @@ spec:
     6. Report which issues were delegated to which queue and why.
 
     Use `gh` for all GitHub operations. Always work from /workspace/language-operator.
+
+    After reporting, run `sleep 120` and repeat from step 3. Run indefinitely.
   networkPolicies:
     egress:
       - to:
@@ -56,6 +58,6 @@ spec:
             key: token
       - name: STARTUP_PROMPT
         value: >-
-          Run your delegation pass: check for open unassigned GitHub issues,
+          Run your delegation loop: check for open unassigned GitHub issues,
           triage them into queue/0 (urgent), queue/1 (normal), queue/2 (backlog),
-          and report what was delegated.
+          report what was delegated, sleep 120 seconds, and repeat indefinitely.
