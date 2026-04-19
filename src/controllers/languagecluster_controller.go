@@ -375,6 +375,11 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	r.EventManager.RecordClusterReady(cluster)
 
+	// Touch all member resources in the namespace so their controllers re-reconcile.
+	// This handles the adoption case: resources that existed before the cluster was
+	// created (or before a prior reconcile completed) are discovered and re-queued.
+	r.adoptPreExistingMembers(ctx, cluster)
+
 	if err := r.Status().Update(ctx, cluster); err != nil {
 		log.Error(err, "Failed to update status")
 		span.RecordError(err)
@@ -385,6 +390,58 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 	return ctrl.Result{}, nil
+}
+
+// adoptPreExistingMembers stamps langop.io/cluster-generation on every member resource
+// (LanguageAgent, LanguageModel, LanguagePersona, LanguageTool) in the cluster namespace.
+// The annotation change triggers each resource's controller to re-reconcile, which
+// handles the case where members existed before the cluster was created. The method is
+// best-effort: individual list or patch failures are logged and ignored.
+func (r *LanguageClusterReconciler) adoptPreExistingMembers(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) {
+	log := log.FromContext(ctx)
+	ns := cluster.Name
+	gen := fmt.Sprintf("%d", cluster.Generation)
+
+	touch := func(obj client.Object) {
+		anns := obj.GetAnnotations()
+		if anns != nil && anns[langoplabels.AnnotationKeyClusterGeneration] == gen {
+			return
+		}
+		base := obj.DeepCopyObject().(client.Object)
+		if anns == nil {
+			anns = map[string]string{}
+		}
+		anns[langoplabels.AnnotationKeyClusterGeneration] = gen
+		obj.SetAnnotations(anns)
+		if err := r.Patch(ctx, obj, client.MergeFrom(base)); err != nil && !errors.IsNotFound(err) {
+			log.V(1).Info("adoptPreExistingMembers: patch failed", "name", obj.GetName(), "err", err)
+		}
+	}
+
+	agents := &langopv1alpha1.LanguageAgentList{}
+	if err := r.List(ctx, agents, client.InNamespace(ns)); err == nil {
+		for i := range agents.Items {
+			touch(&agents.Items[i])
+		}
+	}
+	models := &langopv1alpha1.LanguageModelList{}
+	if err := r.List(ctx, models, client.InNamespace(ns)); err == nil {
+		for i := range models.Items {
+			touch(&models.Items[i])
+		}
+	}
+	personas := &langopv1alpha1.LanguagePersonaList{}
+	if err := r.List(ctx, personas, client.InNamespace(ns)); err == nil {
+		for i := range personas.Items {
+			touch(&personas.Items[i])
+		}
+	}
+	tools := &langopv1alpha1.LanguageToolList{}
+	if err := r.List(ctx, tools, client.InNamespace(ns)); err == nil {
+		for i := range tools.Items {
+			touch(&tools.Items[i])
+		}
+	}
 }
 
 // reconcileNamespace ensures a namespace named cluster.Name exists.

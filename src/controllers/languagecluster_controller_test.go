@@ -2512,3 +2512,61 @@ func TestLanguageClusterController_AdoptNamespace_NotDeletedOnCleanup(t *testing
 	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, survivingNs)
 	require.NoError(t, err, "adopted namespace must not be deleted on cluster removal")
 }
+
+func TestLanguageClusterReconciler_AdoptsPreExistingMembers(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	ns := "adopt-test"
+
+	cluster := gen.LanguageCluster(ns)
+	agent := gen.LanguageAgent("agent-1", ns)
+	model := gen.LanguageModel("model-1", ns)
+	persona := gen.LanguagePersona("persona-1", ns)
+	tool := gen.LanguageTool("tool-1", ns)
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, agent, model, persona, tool).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(ns)
+
+	// First reconcile: adds finalizer
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Second reconcile: runs to completion and calls adoptPreExistingMembers
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	// Verify cluster reached Ready
+	updatedCluster := &langopv1alpha1.LanguageCluster{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: ns}, updatedCluster))
+	assert.Equal(t, events.PhaseStatusReady, updatedCluster.Status.Phase)
+
+	// Every member resource must have the cluster-generation annotation stamped.
+	wantAnnotation := fmt.Sprintf("%d", updatedCluster.Generation)
+
+	updatedAgent := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "agent-1", Namespace: ns}, updatedAgent))
+	assert.Equal(t, wantAnnotation, updatedAgent.Annotations[langoplabels.AnnotationKeyClusterGeneration], "LanguageAgent should be adopted")
+
+	updatedModel := &langopv1alpha1.LanguageModel{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "model-1", Namespace: ns}, updatedModel))
+	assert.Equal(t, wantAnnotation, updatedModel.Annotations[langoplabels.AnnotationKeyClusterGeneration], "LanguageModel should be adopted")
+
+	updatedPersona := &langopv1alpha1.LanguagePersona{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "persona-1", Namespace: ns}, updatedPersona))
+	assert.Equal(t, wantAnnotation, updatedPersona.Annotations[langoplabels.AnnotationKeyClusterGeneration], "LanguagePersona should be adopted")
+
+	updatedTool := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "tool-1", Namespace: ns}, updatedTool))
+	assert.Equal(t, wantAnnotation, updatedTool.Annotations[langoplabels.AnnotationKeyClusterGeneration], "LanguageTool should be adopted")
+}
