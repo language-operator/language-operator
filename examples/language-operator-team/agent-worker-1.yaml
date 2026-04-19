@@ -31,10 +31,24 @@ spec:
          f. Open a PR: gh pr create --title "..." --body "Closes #<n>"
          g. Remove the queue label: gh issue edit <n> --remove-label queue/1
     5. Repeat until no issues remain in queue/1. Report a summary when done.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
   workspace:
     size: 10Gi
   deployment:
     env:
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
       - name: GITHUB_TOKEN
         valueFrom:
           secretKeyRef:

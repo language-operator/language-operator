@@ -31,6 +31,38 @@ const STARTUP_PROMPT = process.env.STARTUP_PROMPT ?? ''
 
 mkdirSync(TASK_STORE_DIR, { recursive: true })
 
+// Build a clean env for Claude Code subprocess:
+//   - Real API key from container env (operator injects sk-langop-proxy; deployment.env overrides with secret)
+//   - No ANTHROPIC_BASE_URL: Claude Code 2.x sends Authorization: Bearer (OAuth) when a base URL is
+//     set, which LiteLLM passes through to Anthropic raw — Anthropic rejects OAuth auth. Direct access
+//     via x-api-key is the only path that works without gateway-side header translation.
+const REAL_API_KEY = process.env.ANTHROPIC_API_KEY ?? ''
+const CLAUDE_ENV = Object.fromEntries(
+  Object.entries(process.env).filter(([k]) => k !== 'ANTHROPIC_BASE_URL')
+)
+if (REAL_API_KEY) CLAUDE_ENV.ANTHROPIC_API_KEY = REAL_API_KEY
+// gh CLI reads GH_TOKEN; ensure it gets the token regardless of which name the
+// agent spec uses.
+if (process.env.GITHUB_TOKEN && !CLAUDE_ENV.GH_TOKEN) CLAUDE_ENV.GH_TOKEN = process.env.GITHUB_TOKEN
+
+// Also patch settings.json so the API key embedded there matches
+;(() => {
+  if (!REAL_API_KEY) return
+  const settingsPath = join(HOME, '.claude', 'settings.json')
+  if (!existsSync(settingsPath)) return
+  try {
+    const s = JSON.parse(readFileSync(settingsPath, 'utf8'))
+    if (s.env?.ANTHROPIC_API_KEY) {
+      s.env.ANTHROPIC_API_KEY = REAL_API_KEY
+      delete s.env.ANTHROPIC_BASE_URL
+      writeFileSync(settingsPath, JSON.stringify(s, null, 2))
+      console.log('Patched settings.json: real API key, direct Anthropic access')
+    }
+  } catch (err) {
+    console.warn('Failed to patch settings.json:', err.message)
+  }
+})()
+
 // -------------------------------------------------------------------
 // Agent card — loaded from adapter-written config if present
 // -------------------------------------------------------------------
@@ -186,6 +218,9 @@ app.post('/', async (req, res) => {
         abortController: new AbortController(),
         options: {
           cwd: WORKSPACE,
+          env: CLAUDE_ENV,
+          permissionMode: 'bypassPermissions',
+          ...(process.env.LLM_MODEL ? { model: process.env.LLM_MODEL } : {}),
           ...(MAX_TURNS !== undefined ? { maxTurns: MAX_TURNS } : {}),
         },
       }
@@ -267,7 +302,13 @@ app.listen(PORT, () => {
     console.log(`Startup prompt: ${STARTUP_PROMPT.slice(0, 80)}`)
     ;(async () => {
       try {
-        const opts = { cwd: WORKSPACE, ...(MAX_TURNS !== undefined ? { maxTurns: MAX_TURNS } : {}) }
+        const opts = {
+          cwd: WORKSPACE,
+          env: CLAUDE_ENV,
+          permissionMode: 'bypassPermissions',
+          ...(process.env.LLM_MODEL ? { model: process.env.LLM_MODEL } : {}),
+          ...(MAX_TURNS !== undefined ? { maxTurns: MAX_TURNS } : {}),
+        }
         for await (const msg of query({ prompt: STARTUP_PROMPT, options: opts })) {
           if (msg.type === 'assistant') {
             for (const block of msg.message?.content ?? []) {

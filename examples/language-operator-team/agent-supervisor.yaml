@@ -31,10 +31,24 @@ spec:
     6. Report which issues were delegated to which queue and why.
 
     Use `gh` for all GitHub operations. Always work from /workspace/language-operator.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
   workspace:
     size: 5Gi
   deployment:
     env:
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
       - name: GITHUB_TOKEN
         valueFrom:
           secretKeyRef:
