@@ -246,8 +246,14 @@ func TestLanguageClusterController_DeletionWithoutDependents(t *testing.T) {
 	cluster.Finalizers = []string{FinalizerName}
 	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
+	isController := true
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: cluster.Name},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cluster.Name,
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: "LanguageCluster", Name: cluster.Name, Controller: &isController},
+			},
+		},
 	}
 
 	fakeClient := fake.NewClientBuilder().
@@ -2446,7 +2452,6 @@ func TestLanguageClusterController_AdoptNamespace_Labels(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	cluster := gen.LanguageCluster("adopt-cluster")
-	cluster.Spec.AdoptExistingNamespace = true
 
 	// Pre-existing namespace with no operator labels
 	existingNs := &corev1.Namespace{
@@ -2483,10 +2488,10 @@ func TestLanguageClusterController_AdoptNamespace_NotDeletedOnCleanup(t *testing
 	scheme := testutil.SetupTestScheme(t)
 
 	cluster := gen.LanguageCluster("adopt-delete-cluster")
-	cluster.Spec.AdoptExistingNamespace = true
 	cluster.Finalizers = []string{FinalizerName}
 	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 
+	// Namespace has no owner reference — simulates an adopted (pre-existing) namespace.
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: cluster.Name},
 	}

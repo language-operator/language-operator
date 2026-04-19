@@ -96,13 +96,6 @@ type LanguageClusterSpec struct {
 	// When unset, any existing "langop-quota" is deleted.
 	// +optional
 	Capacity *ClusterCapacitySpec `json:"capacity,omitempty"`
-
-	// AdoptExistingNamespace, when true, allows the LanguageCluster to adopt a
-	// pre-existing namespace rather than creating one. The operator adds its
-	// management labels to the existing namespace and does not delete it when
-	// the cluster is removed. This field is immutable after creation.
-	// +optional
-	AdoptExistingNamespace bool `json:"adoptExistingNamespace,omitempty"`
 }
 
 // DeploymentSpec groups Kubernetes deployment configuration that is common across

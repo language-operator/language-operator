@@ -236,16 +236,14 @@ func TestLanguageClusterWebhookNamespaceConflict(t *testing.T) {
 		}
 	})
 
-	t.Run("unmanaged namespace with same name — rejected", func(t *testing.T) {
+	t.Run("unmanaged namespace with same name — accepted (auto-adopted)", func(t *testing.T) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
 		}
 		h := newFakeWebhook(ns)
 		_, err := h.ValidateCreate(context.Background(), lc)
-		if err == nil {
-			t.Error("ValidateCreate() expected error for unmanaged namespace conflict, got nil")
-		} else if !strings.Contains(err.Error(), "already exists") {
-			t.Errorf("ValidateCreate() error = %q, want to contain %q", err.Error(), "already exists")
+		if err != nil {
+			t.Errorf("ValidateCreate() unexpected error for unmanaged namespace (should auto-adopt): %v", err)
 		}
 	})
 
@@ -265,35 +263,22 @@ func TestLanguageClusterWebhookNamespaceConflict(t *testing.T) {
 }
 
 func TestLanguageClusterWebhookAdoptNamespace(t *testing.T) {
-	adopting := &LanguageCluster{
+	lc := &LanguageCluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
-		Spec:       LanguageClusterSpec{AdoptExistingNamespace: true},
 	}
 
-	t.Run("adoptExistingNamespace=true with unmanaged namespace — accepted", func(t *testing.T) {
+	t.Run("unmanaged namespace — accepted", func(t *testing.T) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
 		}
 		h := newFakeWebhook(ns)
-		_, err := h.ValidateCreate(context.Background(), adopting)
+		_, err := h.ValidateCreate(context.Background(), lc)
 		if err != nil {
 			t.Errorf("ValidateCreate() unexpected error: %v", err)
 		}
 	})
 
-	t.Run("adoptExistingNamespace=false with unmanaged namespace — rejected", func(t *testing.T) {
-		ns := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
-		}
-		notAdopting := &LanguageCluster{ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"}}
-		h := newFakeWebhook(ns)
-		_, err := h.ValidateCreate(context.Background(), notAdopting)
-		if err == nil {
-			t.Error("ValidateCreate() expected error when adopt flag is false, got nil")
-		}
-	})
-
-	t.Run("adoptExistingNamespace=true with namespace owned by different cluster — rejected", func(t *testing.T) {
+	t.Run("namespace owned by different cluster — rejected", func(t *testing.T) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   "my-cluster",
@@ -301,28 +286,11 @@ func TestLanguageClusterWebhookAdoptNamespace(t *testing.T) {
 			},
 		}
 		h := newFakeWebhook(ns)
-		_, err := h.ValidateCreate(context.Background(), adopting)
+		_, err := h.ValidateCreate(context.Background(), lc)
 		if err == nil {
 			t.Error("ValidateCreate() expected error when namespace is owned by a different cluster, got nil")
 		}
 	})
-}
-
-func TestLanguageClusterWebhookAdoptImmutable(t *testing.T) {
-	old := &LanguageCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-cluster"},
-		Spec:       LanguageClusterSpec{AdoptExistingNamespace: false},
-	}
-	updated := old.DeepCopy()
-	updated.Spec.AdoptExistingNamespace = true
-
-	h := newFakeWebhook()
-	_, err := h.ValidateUpdate(context.Background(), old, updated)
-	if err == nil {
-		t.Error("ValidateUpdate() expected error when changing adoptExistingNamespace, got nil")
-	} else if !strings.Contains(err.Error(), "immutable") {
-		t.Errorf("ValidateUpdate() error = %q, want to contain %q", err.Error(), "immutable")
-	}
 }
 
 func TestValidateNetworkPortPolicies(t *testing.T) {
