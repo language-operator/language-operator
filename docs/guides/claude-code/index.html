@@ -1477,7 +1477,7 @@
 <li>Go to <a href="https://console.anthropic.com/settings/keys">console.anthropic.com/settings/keys</a></li>
 <li>Click <strong>Create Key</strong>, give it a name, and copy the key (<code>sk-ant-...</code>)</li>
 </ol>
-<p>Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. <code>claude-sonnet-4-5</code>).</p>
+<p>Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. <code>claude-sonnet-4-6</code>).</p>
 <h3 id="create-a-cluster">Create a Cluster<a class="headerlink" href="#create-a-cluster" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
@@ -1541,35 +1541,9 @@
 </code></pre></div>
 <p>Streaming task responses use Server-Sent Events (<code>tasks/sendSubscribe</code>). Use <code>tasks/get</code> to poll task status by ID.</p>
 <h2 id="using-the-shared-gateway-instead">Using the Shared Gateway Instead<a class="headerlink" href="#using-the-shared-gateway-instead" title="Permanent link">&para;</a></h2>
-<p>If you'd rather route Claude Code traffic through the shared LiteLLM gateway (e.g. to centralise billing or use a different provider), configure a <code>LanguageModel</code> instead of an <code>apiKeyRef</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">kind: LanguageModel</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">metadata:</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">  name: claude-sonnet</span>
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">spec:</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">  provider: anthropic</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">  modelName: claude-sonnet-4-5</span>
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">  apiKeySecretRef:</span>
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">    name: anthropic-credentials</span>
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">    key: api-key</span>
-<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="s">---</span>
-<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
-<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="s">kind: LanguageAgent</span>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="s">metadata:</span>
-<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="s">  name: code-agent</span>
-<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="s">spec:</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="s">  runtime: claude-code</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="s">  instructions: |</span>
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="s">    You are an expert software engineer.</span>
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="s">  models:</span>
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="s">    - name: claude-sonnet</span>
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="s">EOF</span>
-</code></pre></div>
-<p>The adapter will set <code>ANTHROPIC_BASE_URL</code> to the shared gateway and the operator injects a placeholder key. No <code>claudeCode.apiKeyRef</code> is needed.</p>
+<blockquote>
+<p><strong>Not currently supported.</strong> Claude Code 2.x sends <code>Authorization: Bearer</code> (OAuth format) when <code>ANTHROPIC_BASE_URL</code> is set. Anthropic's API rejects OAuth authentication, so routing through the LiteLLM gateway fails at the model-call level. Use <code>claudeCode.apiKeyRef</code> (or <code>spec.deployment.env</code>) to supply a real API key and let Claude Code call Anthropic directly.</p>
+</blockquote>
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1620,7 +1594,7 @@
 <tr>
 <td>NetworkPolicy</td>
 <td><code>code-agent</code></td>
-<td>Allows inbound from other agents in this namespace</td>
+<td>Allows inbound from other agents in this namespace. Add <code>spec.networkPolicies.egress</code> with <code>cidr: 0.0.0.0/0</code> on port 443 to reach <code>api.anthropic.com</code> and other public APIs.</td>
 </tr>
 <tr>
 <td>PVC</td>
