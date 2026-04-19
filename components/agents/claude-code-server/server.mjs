@@ -17,7 +17,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { v4 as uuidv4 } from 'uuid'
-import { query } from '@anthropic-ai/claude-code'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10)
 const HOME = process.env.HOME ?? homedir()
