@@ -133,6 +133,20 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	span := result.Span
 	log := log.FromContext(ctx)
 
+	// Deferred status write — flushes whatever phase/conditions have been set on any return path.
+	defer func() {
+		if !tool.DeletionTimestamp.IsZero() {
+			return
+		}
+		tool.Status.ObservedGeneration = tool.Generation
+		if updateErr := r.Status().Update(ctx, tool); updateErr != nil && !apierrors.IsNotFound(updateErr) {
+			log.Error(updateErr, "Failed to update LanguageTool status")
+			if reconcileErr == nil {
+				reconcileErr = updateErr
+			}
+		}
+	}()
+
 	// Add tool-specific attributes to span
 	span.SetAttributes(
 		attribute.String("tool.type", tool.Spec.Type),
@@ -185,9 +199,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.EventManager.RecordDeploymentFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
 			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
-			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after Deployment failure")
-			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -200,9 +211,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			r.EventManager.RecordServiceFailed(tool, err)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonServiceError, err.Error(), tool.Generation)
 			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
-			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after Service failure")
-			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -214,9 +222,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			span.SetStatus(codes.Error, "Failed to reconcile HorizontalPodAutoscaler")
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), tool.Generation)
 			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
-			if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-				log.Error(updateErr, "Failed to update status after HPA failure")
-			}
 			reconcileErr = err
 			return ctrl.Result{}, err
 		}
@@ -251,9 +256,6 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
 				SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionFalse, langopv1alpha1.ReasonNetworkPolicyError, err.Error(), tool.Generation)
 				SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
-				if updateErr := r.Status().Update(ctx, tool); updateErr != nil {
-					log.Error(updateErr, "Failed to update status after NetworkPolicy failure")
-				}
 				reconcileErr = err
 				return ctrl.Result{}, err
 			}
@@ -769,8 +771,6 @@ func isSidecarContainerReady(statuses []corev1.ContainerStatus, name string) boo
 }
 
 func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
-	tool.Status.ObservedGeneration = tool.Generation
-
 	// For sidecar mode tools, discover schemas from a running agent pod
 	if tool.Spec.DeploymentMode == "sidecar" {
 		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusRunning, tool.Generation)
@@ -790,7 +790,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionFalse, langopv1alpha1.ReasonNoRunningAgentPod, "No running agent pod with this sidecar found; schemas will populate once an agent pod is ready", tool.Generation)
 		}
 
-		return r.Status().Update(ctx, tool)
+		return nil
 	}
 
 	// For service mode tools, check deployment status
@@ -798,10 +798,9 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	err := r.Get(ctx, types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}, deployment)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Deployment doesn't exist yet
 			SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusPending, tool.Generation)
 			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentNotFound, "Deployment not found", tool.Generation)
-			return r.Status().Update(ctx, tool)
+			return nil
 		}
 		return err
 	}
@@ -827,7 +826,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 	if deployment.Status.UpdatedReplicas < desiredReplicas {
 		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusUpdating, tool.Generation)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonUpdating, "Deployment is updating", tool.Generation)
-		return r.Status().Update(ctx, tool)
+		return nil
 	}
 
 	// Check if any pods are ready
@@ -860,7 +859,7 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 			}
 		}
 
-		return r.Status().Update(ctx, tool)
+		return nil
 	}
 
 	// No pods ready - check if deployment has been created recently
@@ -868,13 +867,13 @@ func (r *LanguageToolReconciler) updateToolStatus(ctx context.Context, tool *lan
 		// Pods exist but none are ready - likely CrashLoopBackOff or similar
 		SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusFailed, tool.Generation)
 		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPodsNotReady, "No pods are ready", tool.Generation)
-		return r.Status().Update(ctx, tool)
+		return nil
 	}
 
 	// Deployment exists but no replicas yet
 	SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusPending, tool.Generation)
 	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonPending, "Waiting for pods to be scheduled", tool.Generation)
-	return r.Status().Update(ctx, tool)
+	return nil
 }
 
 func (r *LanguageToolReconciler) cleanupResources(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
