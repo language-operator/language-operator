@@ -52,11 +52,17 @@ func (h *LanguageClusterWebhook) ValidateCreate(ctx context.Context, lc *Languag
 }
 
 // ValidateUpdate implements admission.Validator
-func (h *LanguageClusterWebhook) ValidateUpdate(_ context.Context, _, lc *LanguageCluster) (admission.Warnings, error) {
+func (h *LanguageClusterWebhook) ValidateUpdate(_ context.Context, oldObj, lc *LanguageCluster) (admission.Warnings, error) {
 	if lc.DeletionTimestamp != nil {
 		return nil, nil
 	}
-	return nil, lc.validateSpec()
+	if err := lc.validateSpec(); err != nil {
+		return nil, err
+	}
+	if oldObj.Spec.AdoptExistingNamespace != lc.Spec.AdoptExistingNamespace {
+		return nil, fmt.Errorf("spec.adoptExistingNamespace is immutable")
+	}
+	return nil, nil
 }
 
 // ValidateDelete implements admission.Validator
@@ -102,6 +108,7 @@ func validateNetworkPortPolicies(policies *AgentNetworkPolicies) error {
 // validateNamespaceNotClaimed rejects a new LanguageCluster if a namespace with the same name
 // already exists but is not managed by language-operator. This prevents the operator from
 // silently taking over pre-existing namespaces.
+// When spec.adoptExistingNamespace is true, an unmanaged namespace is allowed.
 func (h *LanguageClusterWebhook) validateNamespaceNotClaimed(ctx context.Context, lc *LanguageCluster) error {
 	if h.Client == nil {
 		return nil
@@ -114,11 +121,20 @@ func (h *LanguageClusterWebhook) validateNamespaceNotClaimed(ctx context.Context
 	if err != nil {
 		return fmt.Errorf("failed to check namespace %q: %w", lc.Name, err)
 	}
+	// Already owned by this cluster — nothing to do.
 	if v, ok := ns.Labels[labels.LabelKeyLangopCluster]; ok && v == lc.Name {
 		return nil
 	}
+	// Namespace is claimed by a different cluster — always reject.
+	if v, ok := ns.Labels[labels.LabelKeyLangopCluster]; ok && v != lc.Name {
+		return fmt.Errorf("namespace %q already exists and is managed by a different LanguageCluster %q", lc.Name, v)
+	}
+	// Namespace exists and is unmanaged. Allow only when adoption is requested.
+	if lc.Spec.AdoptExistingNamespace {
+		return nil
+	}
 	return fmt.Errorf("namespace %q already exists and is not managed by language-operator; "+
-		"choose a different name or delete the existing namespace first", lc.Name)
+		"set spec.adoptExistingNamespace: true to adopt it, or choose a different name", lc.Name)
 }
 
 // SetupLanguageClusterWebhookWithManager registers the LanguageCluster validating webhook.

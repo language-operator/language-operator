@@ -387,13 +387,31 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-// reconcileNamespace ensures a namespace named cluster.Name exists
+// reconcileNamespace ensures a namespace named cluster.Name exists.
+// When spec.adoptExistingNamespace is true, the operator labels a pre-existing
+// namespace rather than creating one and does not set an owner reference.
 func (r *LanguageClusterReconciler) reconcileNamespace(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 	ns := &corev1.Namespace{}
 	err := r.Get(ctx, client.ObjectKey{Name: cluster.Name}, ns)
 	if err == nil {
-		return nil // already exists
+		if cluster.Spec.AdoptExistingNamespace {
+			// Ensure our labels are present on the adopted namespace.
+			if ns.Labels[langoplabels.LabelKeyLangopCluster] == cluster.Name {
+				return nil // already labelled
+			}
+			patch := client.MergeFrom(ns.DeepCopy())
+			if ns.Labels == nil {
+				ns.Labels = map[string]string{}
+			}
+			ns.Labels[langoplabels.LabelKeyK8sManagedBy] = "language-operator"
+			ns.Labels[langoplabels.LabelKeyLangopCluster] = cluster.Name
+			if err := r.Patch(ctx, ns, patch); err != nil {
+				return fmt.Errorf("failed to label adopted namespace %s: %w", cluster.Name, err)
+			}
+			log.Info("Adopted existing namespace", "namespace", cluster.Name)
+		}
+		return nil
 	}
 	if !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to get namespace %s: %w", cluster.Name, err)
@@ -829,15 +847,19 @@ func (r *LanguageClusterReconciler) cleanupDependentResources(ctx context.Contex
 		return errChildrenDraining
 	}
 
-	// Delete the namespace for this cluster
-	ns := &corev1.Namespace{}
-	if err := r.Get(ctx, client.ObjectKey{Name: clusterName}, ns); err == nil {
-		log.Info("Deleting namespace", "namespace", clusterName)
-		if err := r.Delete(ctx, ns); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete namespace %s: %w", clusterName, err)
+	// Delete the namespace for this cluster, unless it was adopted (not created by the operator).
+	if cluster.Spec.AdoptExistingNamespace {
+		log.Info("Skipping namespace deletion — namespace was adopted, not created", "namespace", clusterName)
+	} else {
+		ns := &corev1.Namespace{}
+		if err := r.Get(ctx, client.ObjectKey{Name: clusterName}, ns); err == nil {
+			log.Info("Deleting namespace", "namespace", clusterName)
+			if err := r.Delete(ctx, ns); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("failed to delete namespace %s: %w", clusterName, err)
+			}
+		} else if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get namespace %s: %w", clusterName, err)
 		}
-	} else if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get namespace %s: %w", clusterName, err)
 	}
 
 	log.Info("Completed cleanup of dependent resources", "cluster", clusterName)

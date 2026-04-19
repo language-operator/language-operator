@@ -2441,3 +2441,74 @@ func TestLanguageClusterController_GatewayHPA_ReplicaCountPreserved(t *testing.T
 	require.NotNil(t, updated.Spec.Replicas)
 	assert.Equal(t, int32(5), *updated.Spec.Replicas, "HPA-managed replica count must be preserved")
 }
+
+func TestLanguageClusterController_AdoptNamespace_Labels(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("adopt-cluster")
+	cluster.Spec.AdoptExistingNamespace = true
+
+	// Pre-existing namespace with no operator labels
+	existingNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: cluster.Name},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, existingNs).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+
+	ns := &corev1.Namespace{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, ns))
+
+	assert.Equal(t, cluster.Name, ns.Labels[langoplabels.LabelKeyLangopCluster], "adopted namespace must have cluster label")
+	assert.Equal(t, "language-operator", ns.Labels[langoplabels.LabelKeyK8sManagedBy], "adopted namespace must have managed-by label")
+	assert.Empty(t, ns.OwnerReferences, "adopted namespace must not have an owner reference")
+}
+
+func TestLanguageClusterController_AdoptNamespace_NotDeletedOnCleanup(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	cluster := gen.LanguageCluster("adopt-delete-cluster")
+	cluster.Spec.AdoptExistingNamespace = true
+	cluster.Finalizers = []string{FinalizerName}
+	cluster.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: cluster.Name},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster, ns).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client: fakeClient,
+		Scheme: scheme,
+		Log:    logr.Discard(),
+	}
+
+	ctx := context.Background()
+	_, err := reconciler.Reconcile(ctx, clusterRequest(cluster.Name))
+	require.NoError(t, err)
+
+	// Namespace must still exist — it was adopted, not created
+	survivingNs := &corev1.Namespace{}
+	err = fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, survivingNs)
+	require.NoError(t, err, "adopted namespace must not be deleted on cluster removal")
+}
