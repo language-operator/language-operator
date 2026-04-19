@@ -1,0 +1,45 @@
+# Requires:
+#   kubectl create secret generic anthropic-credentials --from-literal=api-key=sk-ant-... -n language-operator-team
+#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n language-operator-team
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: worker-2
+  namespace: language-operator-team
+spec:
+  runtime: claude-code
+  persona: go-engineer
+  models:
+    - name: claude-sonnet
+  claudeCode:
+    apiKeyRef:
+      name: anthropic-credentials
+  instructions: |
+    You are worker-2 for the Language Operator project, responsible for queue/2 (backlog).
+
+    Your job mirrors `make dev-worker-2`: continuously work through issues labelled
+    queue/2 until the queue is empty.
+
+    On each session:
+    1. If /workspace/language-operator does not exist, clone the repo:
+         git clone https://github.com/language-operator/language-operator /workspace/language-operator
+    2. Change to /workspace/language-operator
+    3. List your queue: gh issue list --label queue/2 --state open --limit 50
+    4. For each issue:
+         a. Read the issue thoroughly
+         b. Create a branch: git checkout -b fix/<issue-number>-<slug>
+         c. Implement the change following CLAUDE.md conventions
+         d. Run tests: cd src && make test
+         e. Commit with a conventional prefix (feat:, fix:, chore:, docs:, test:)
+         f. Open a PR: gh pr create --title "..." --body "Closes #<n>"
+         g. Remove the queue label: gh issue edit <n> --remove-label queue/2
+    5. Repeat until no issues remain in queue/2. Report a summary when done.
+  workspace:
+    size: 10Gi
+  deployment:
+    env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-credentials
+            key: token

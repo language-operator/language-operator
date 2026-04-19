@@ -1,0 +1,14 @@
+# Requires: kubectl create secret generic anthropic-credentials \
+#   --from-literal=ANTHROPIC_API_KEY=sk-ant-... -n language-operator-team
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+  namespace: language-operator-team
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-6
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key
+  timeout: "10m"

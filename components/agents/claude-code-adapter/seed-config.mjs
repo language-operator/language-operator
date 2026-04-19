@@ -187,7 +187,7 @@ if (claudeMdLines.length > 0) {
 const agentInstructions = operatorConfig?.agent?.instructions ?? operatorConfig?.instructions ?? ''
 const agentCard = {
   name: agentName || 'claude-code-agent',
-  description: personas[0]?.description ?? agentInstructions.slice(0, 200) || 'Claude Code agent',
+  description: (personas[0]?.description ?? agentInstructions.slice(0, 200)) || 'Claude Code agent',
 }
 
 writeFileSync(join(claudeDir, 'claude-a2a.config.json'), JSON.stringify(agentCard, null, 2))

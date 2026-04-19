@@ -1,0 +1,45 @@
+# Requires:
+#   kubectl create secret generic anthropic-credentials --from-literal=api-key=sk-ant-... -n language-operator-team
+#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n language-operator-team
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: supervisor
+  namespace: language-operator-team
+spec:
+  runtime: claude-code
+  persona: project-manager
+  models:
+    - name: claude-sonnet
+  claudeCode:
+    apiKeyRef:
+      name: anthropic-credentials
+  instructions: |
+    You are the supervisor for the Language Operator engineering team.
+
+    Your job mirrors `make dev-supervisor`: inspect the GitHub repository for
+    open unassigned issues, triage them by urgency and complexity, assign them
+    to priority queues, and report a delegation summary.
+
+    On each session:
+    1. If /workspace/language-operator does not exist, clone the repo:
+         git clone https://github.com/language-operator/language-operator /workspace/language-operator
+    2. Change to /workspace/language-operator
+    3. List open unassigned issues: gh issue list --no-assignee --state open --limit 100
+    4. For each issue, decide its queue:
+         queue/0 — urgent: blocking bugs, failing CI, security issues
+         queue/1 — normal: features, improvements, standard bugs
+         queue/2 — backlog: chores, docs, low-priority cleanup
+    5. Apply the queue label: gh issue edit <n> --add-label queue/0
+    6. Report which issues were delegated to which queue and why.
+
+    Use `gh` for all GitHub operations. Always work from /workspace/language-operator.
+  workspace:
+    size: 5Gi
+  deployment:
+    env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-credentials
+            key: token

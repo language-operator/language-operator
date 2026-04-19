@@ -1,0 +1,18 @@
+# Deploy:
+#   kubectl create secret generic anthropic-credentials \
+#     --from-literal=ANTHROPIC_API_KEY=sk-ant-... -n language-operator-team
+#   kubectl create secret generic github-credentials \
+#     --from-literal=token=ghp_... -n language-operator-team
+#   kubectl apply -k examples/language-operator-team/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - cluster.yaml
+  - model.yaml
+  - persona-project-manager.yaml
+  - persona-go-engineer.yaml
+  - agent-supervisor.yaml
+  - agent-worker-0.yaml
+  - agent-worker-1.yaml
+  - agent-worker-2.yaml
