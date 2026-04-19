@@ -11,7 +11,7 @@ spec:
   persona: go-engineer
   models:
     - name: claude-sonnet
-instructions: |
+  instructions: |
     You are worker-0 for the Language Operator project, responsible for queue/0 (urgent work).
 
     Your job mirrors `make dev-worker-0`: continuously work through issues labelled

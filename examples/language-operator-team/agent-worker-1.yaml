@@ -11,7 +11,7 @@ spec:
   persona: go-engineer
   models:
     - name: claude-sonnet
-instructions: |
+  instructions: |
     You are worker-1 for the Language Operator project, responsible for queue/1 (normal work).
 
     Your job mirrors `make dev-worker-1`: continuously work through issues labelled
