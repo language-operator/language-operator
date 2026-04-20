@@ -17,7 +17,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { v4 as uuidv4 } from 'uuid'
-import { query } from '@anthropic-ai/claude-code'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10)
 const HOME = process.env.HOME ?? homedir()
@@ -31,23 +31,31 @@ const STARTUP_PROMPT = process.env.STARTUP_PROMPT ?? ''
 
 mkdirSync(TASK_STORE_DIR, { recursive: true })
 
-// Build a clean env for Claude Code subprocess:
-//   - Real API key from container env (operator injects sk-langop-proxy; deployment.env overrides with secret)
-//   - No ANTHROPIC_BASE_URL: Claude Code 2.x sends Authorization: Bearer (OAuth) when a base URL is
-//     set, which LiteLLM passes through to Anthropic raw — Anthropic rejects OAuth auth. Direct access
-//     via x-api-key is the only path that works without gateway-side header translation.
+// Build a clean env for Claude Code subprocess.
+// OAuth mode: when .credentials.json exists, drop both ANTHROPIC_API_KEY and
+// ANTHROPIC_BASE_URL so the SDK authenticates via the stored OAuth token.
+// Direct API key mode: keep ANTHROPIC_API_KEY but drop ANTHROPIC_BASE_URL
+// (Claude Code 2.x sends Authorization: Bearer when a base URL is set, which
+// Anthropic rejects — direct x-api-key is the only working path).
+const CREDENTIALS_PATH = join(HOME, '.claude', '.credentials.json')
+const OAUTH_MODE = existsSync(CREDENTIALS_PATH)
 const REAL_API_KEY = process.env.ANTHROPIC_API_KEY ?? ''
 const CLAUDE_ENV = Object.fromEntries(
-  Object.entries(process.env).filter(([k]) => k !== 'ANTHROPIC_BASE_URL')
+  Object.entries(process.env).filter(([k]) => {
+    if (k === 'ANTHROPIC_BASE_URL') return false
+    if (k === 'ANTHROPIC_API_KEY' && OAUTH_MODE) return false
+    return true
+  })
 )
-if (REAL_API_KEY) CLAUDE_ENV.ANTHROPIC_API_KEY = REAL_API_KEY
+if (REAL_API_KEY && !OAUTH_MODE) CLAUDE_ENV.ANTHROPIC_API_KEY = REAL_API_KEY
 // gh CLI reads GH_TOKEN; ensure it gets the token regardless of which name the
 // agent spec uses.
 if (process.env.GITHUB_TOKEN && !CLAUDE_ENV.GH_TOKEN) CLAUDE_ENV.GH_TOKEN = process.env.GITHUB_TOKEN
 
-// Also patch settings.json so the API key embedded there matches
+// In direct API key mode, patch settings.json so the embedded key matches.
+// Skipped in OAuth mode — the SDK reads credentials from .credentials.json.
 ;(() => {
-  if (!REAL_API_KEY) return
+  if (OAUTH_MODE || !REAL_API_KEY) return
   const settingsPath = join(HOME, '.claude', 'settings.json')
   if (!existsSync(settingsPath)) return
   try {

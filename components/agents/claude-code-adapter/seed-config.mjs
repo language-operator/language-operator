@@ -196,6 +196,22 @@ if (claudeMdLines.length > 0) {
 }
 
 // -------------------------------------------------------------------
+// $HOME/.claude/.credentials.json — OAuth credentials for subscription billing
+// Written when CLAUDE_OAUTH_CREDENTIALS env var is set (JSON blob from secret).
+// When present, the SDK uses OAuth flow instead of ANTHROPIC_API_KEY.
+// -------------------------------------------------------------------
+const oauthCredentials = process.env.CLAUDE_OAUTH_CREDENTIALS ?? ''
+if (oauthCredentials) {
+  try {
+    JSON.parse(oauthCredentials) // validate before writing
+    writeFileSync(join(claudeDir, '.credentials.json'), oauthCredentials)
+    console.log('Wrote .credentials.json for OAuth subscription billing')
+  } catch (err) {
+    console.warn(`Failed to write .credentials.json: ${err.message}`)
+  }
+}
+
+// -------------------------------------------------------------------
 // $HOME/.claude/claude-a2a.config.json — agent card for A2A server
 // Always overwrite — operator-managed.
 // -------------------------------------------------------------------

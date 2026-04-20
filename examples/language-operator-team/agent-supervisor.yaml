@@ -1,6 +1,8 @@
 # Requires:
 #   kubectl create secret generic anthropic-credentials --from-literal=api-key=sk-ant-... -n language-operator-team
 #   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n language-operator-team
+#   kubectl create secret generic claude-oauth-credentials \
+#     --from-literal=credentials="$(cat ~/.claude/.credentials.json)" -n language-operator-team
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
@@ -50,3 +52,8 @@ spec:
           secretKeyRef:
             name: github-credentials
             key: token
+      - name: CLAUDE_OAUTH_CREDENTIALS
+        valueFrom:
+          secretKeyRef:
+            name: claude-oauth-credentials
+            key: credentials
