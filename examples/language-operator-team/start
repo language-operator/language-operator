@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAMESPACE=${NAMESPACE:-language-operator-team}
+INTERVAL=${INTERVAL:-120}
+LOCAL_PORT=18080
+
+kubectl port-forward -n "$NAMESPACE" svc/supervisor "$LOCAL_PORT":8080 &
+PF_PID=$!
+trap 'kill $PF_PID 2>/dev/null; exit' EXIT INT TERM
+sleep 2  # wait for port-forward to be ready
+
+print_sse_text() {
+  python3 - <<'EOF'
+import sys, json
+for line in sys.stdin:
+    line = line.rstrip()
+    if not line.startswith('data:'):
+        continue
+    try:
+        d = json.loads(line[5:])
+        for p in (d.get('artifact', {}).get('parts') or []):
+            if p.get('type') == 'text':
+                sys.stdout.write(p['text'])
+                sys.stdout.flush()
+        msg = d.get('status', {}).get('message', {})
+        state = d.get('status', {}).get('state', '')
+        for p in (msg.get('parts') or []):
+            if p.get('type') == 'text' and state != 'working':
+                sys.stdout.write(p['text'] + '\n')
+                sys.stdout.flush()
+    except Exception:
+        pass
+EOF
+}
+
+while true; do
+  echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) — delegation pass ==="
+  curl -sN -X POST "http://localhost:$LOCAL_PORT/" \
+    -H 'Content-Type: application/json' \
+    -d '{"jsonrpc":"2.0","method":"tasks/send","params":{"message":{"parts":[{"type":"text","text":"Run your delegation pass."}]}}}' \
+  | print_sse_text
+  echo ""
+  echo "=== sleeping ${INTERVAL}s ==="
+  sleep "$INTERVAL"
+done
