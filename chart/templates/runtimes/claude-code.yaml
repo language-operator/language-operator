@@ -37,20 +37,24 @@ spec:
           - name: workspace
             mountPath: /workspace
 
-    livenessProbe:
-      httpGet:
-        path: /healthz
+    startupProbe:
+      tcpSocket:
         port: 8080
-      initialDelaySeconds: 10
+      initialDelaySeconds: 5
+      periodSeconds: 2
+      timeoutSeconds: 2
+      failureThreshold: 30
+
+    livenessProbe:
+      tcpSocket:
+        port: 8080
       periodSeconds: 15
       timeoutSeconds: 3
       failureThreshold: 3
 
     readinessProbe:
-      httpGet:
-        path: /healthz
+      tcpSocket:
         port: 8080
-      initialDelaySeconds: 5
       periodSeconds: 10
       timeoutSeconds: 3
       successThreshold: 1

@@ -1,8 +1,0 @@
-{
-  "type": "module",
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.2.113",
-    "express": "^4.21.2",
-    "uuid": "^11.1.0"
-  }
-}

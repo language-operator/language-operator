@@ -1,6 +1,6 @@
 # Deploying Claude Code
 
-Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes the [A2A (Agent-to-Agent) protocol](https://google.github.io/A2A/), so any A2A-compatible orchestrator or agent can call it directly.
+Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via [ttyd](https://github.com/tsl0922/ttyd), so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.
 
 ## Prerequisites
 
@@ -69,33 +69,15 @@ kubectl get pods -w
 
 Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
-### Interact via A2A
+### Connect to the Terminal
 
-The agent exposes the A2A protocol at its service endpoint. Submit a task:
+The agent exposes a WebSocket terminal on port 8080. Port-forward to access it locally:
 
 ```bash
-# Get the in-cluster service address
-SVC=$(kubectl get svc code-agent -o jsonpath='{.spec.clusterIP}')
-
-# Check the agent card
-curl http://$SVC:8080/.well-known/agent-card | jq .
-
-# Submit a task
-curl -X POST http://$SVC:8080/ \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tasks/send",
-    "params": {
-      "message": {
-        "role": "user",
-        "parts": [{"type": "text", "text": "List the files in /workspace"}]
-      }
-    }
-  }'
+kubectl port-forward svc/code-agent 8080:8080
 ```
 
-Streaming task responses use Server-Sent Events (`tasks/sendSubscribe`). Use `tasks/get` to poll task status by ID.
+Then open `http://localhost:8080` in your browser. You'll see Claude Code's interactive CLI running inside the pod.
 
 ## Using the Shared Gateway Instead
 
@@ -107,15 +89,14 @@ Streaming task responses use Server-Sent Events (`tasks/sendSubscribe`). Use `ta
 |-------|-------------|
 | `spec.claudeCode.apiKeyRef.name` | Secret containing `ANTHROPIC_API_KEY`. Recommended for direct Anthropic access. |
 | `spec.claudeCode.apiKey` | Inline API key (stored in a managed Secret). Use `apiKeyRef` instead if the key is already in a Secret. |
-| `spec.claudeCode.maxTurns` | Max agentic turns per request. Sets `CLAUDE_CODE_MAX_TURNS`. |
 | `spec.claudeCode.enabled` | Set automatically by the `claude-code` runtime. No need to set this manually. |
 
 ## What the Operator Created
 
 | Resource | Name | Purpose |
 |----------|------|---------|
-| Deployment | `code-agent` | Runs the Claude Code server container |
-| Service | `code-agent` | ClusterIP on port 8080 |
+| Deployment | `code-agent` | Runs the Claude Code ttyd terminal container |
+| Service | `code-agent` | ClusterIP on port 8080 (ttyd WebSocket terminal) |
 | NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `api.anthropic.com` and other public APIs. |
-| PVC | `code-agent-workspace` | 10Gi persistent workspace; task store at `/workspace/.a2a/` |
+| PVC | `code-agent-workspace` | 10Gi persistent workspace at `/workspace` |
 | ConfigMap | `code-agent-agent` | Injected at `/etc/agent/config.yaml` |
