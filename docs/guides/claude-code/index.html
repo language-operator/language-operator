@@ -1019,10 +1019,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interact-via-a2a" class="md-nav__link">
+  <a href="#connect-to-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Interact via A2A
+        Connect to the Terminal
       
     </span>
   </a>
@@ -1396,10 +1396,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interact-via-a2a" class="md-nav__link">
+  <a href="#connect-to-the-terminal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Interact via A2A
+        Connect to the Terminal
       
     </span>
   </a>
@@ -1465,7 +1465,7 @@
 
 
 <h1 id="deploying-claude-code">Deploying Claude Code<a class="headerlink" href="#deploying-claude-code" title="Permanent link">&para;</a></h1>
-<p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes the <a href="https://google.github.io/A2A/">A2A (Agent-to-Agent) protocol</a>, so any A2A-compatible orchestrator or agent can call it directly.</p>
+<p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via <a href="https://github.com/tsl0922/ttyd">ttyd</a>, so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Language Operator <a href="../../getting-started/installation/">installed</a></li>
@@ -1517,29 +1517,11 @@
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <p>Wait for the pod to reach <code>Running</code> and the LanguageAgent to show <code>Ready=True</code>.</p>
-<h3 id="interact-via-a2a">Interact via A2A<a class="headerlink" href="#interact-via-a2a" title="Permanent link">&para;</a></h3>
-<p>The agent exposes the A2A protocol at its service endpoint. Submit a task:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Get the in-cluster service address</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">SVC</span><span class="o">=</span><span class="k">$(</span>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>code-agent<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.clusterIP}&#39;</span><span class="k">)</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Check the agent card</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>curl<span class="w"> </span>http://<span class="nv">$SVC</span>:8080/.well-known/agent-card<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Submit a task</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://<span class="nv">$SVC</span>:8080/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s1">    &quot;jsonrpc&quot;: &quot;2.0&quot;,</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="s1">    &quot;method&quot;: &quot;tasks/send&quot;,</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="s1">    &quot;params&quot;: {</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="s1">      &quot;message&quot;: {</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="s1">        &quot;role&quot;: &quot;user&quot;,</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="s1">        &quot;parts&quot;: [{&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;List the files in /workspace&quot;}]</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="s1">      }</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="s1">    }</span>
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="s1">  }&#39;</span>
+<h3 id="connect-to-the-terminal">Connect to the Terminal<a class="headerlink" href="#connect-to-the-terminal" title="Permanent link">&para;</a></h3>
+<p>The agent exposes a WebSocket terminal on port 8080. Port-forward to access it locally:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/code-agent<span class="w"> </span><span class="m">8080</span>:8080
 </code></pre></div>
-<p>Streaming task responses use Server-Sent Events (<code>tasks/sendSubscribe</code>). Use <code>tasks/get</code> to poll task status by ID.</p>
+<p>Then open <code>http://localhost:8080</code> in your browser. You'll see Claude Code's interactive CLI running inside the pod.</p>
 <h2 id="using-the-shared-gateway-instead">Using the Shared Gateway Instead<a class="headerlink" href="#using-the-shared-gateway-instead" title="Permanent link">&para;</a></h2>
 <blockquote>
 <p><strong>Not currently supported.</strong> Claude Code 2.x sends <code>Authorization: Bearer</code> (OAuth format) when <code>ANTHROPIC_BASE_URL</code> is set. Anthropic's API rejects OAuth authentication, so routing through the LiteLLM gateway fails at the model-call level. Use <code>claudeCode.apiKeyRef</code> (or <code>spec.deployment.env</code>) to supply a real API key and let Claude Code call Anthropic directly.</p>
@@ -1562,10 +1544,6 @@
 <td>Inline API key (stored in a managed Secret). Use <code>apiKeyRef</code> instead if the key is already in a Secret.</td>
 </tr>
 <tr>
-<td><code>spec.claudeCode.maxTurns</code></td>
-<td>Max agentic turns per request. Sets <code>CLAUDE_CODE_MAX_TURNS</code>.</td>
-</tr>
-<tr>
 <td><code>spec.claudeCode.enabled</code></td>
 <td>Set automatically by the <code>claude-code</code> runtime. No need to set this manually.</td>
 </tr>
@@ -1584,12 +1562,12 @@
 <tr>
 <td>Deployment</td>
 <td><code>code-agent</code></td>
-<td>Runs the Claude Code server container</td>
+<td>Runs the Claude Code ttyd terminal container</td>
 </tr>
 <tr>
 <td>Service</td>
 <td><code>code-agent</code></td>
-<td>ClusterIP on port 8080</td>
+<td>ClusterIP on port 8080 (ttyd WebSocket terminal)</td>
 </tr>
 <tr>
 <td>NetworkPolicy</td>
@@ -1599,7 +1577,7 @@
 <tr>
 <td>PVC</td>
 <td><code>code-agent-workspace</code></td>
-<td>10Gi persistent workspace; task store at <code>/workspace/.a2a/</code></td>
+<td>10Gi persistent workspace at <code>/workspace</code></td>
 </tr>
 <tr>
 <td>ConfigMap</td>
