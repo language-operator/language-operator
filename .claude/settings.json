@@ -36,7 +36,9 @@
       "WebFetch(domain:monitoring.theryans.io)",
       "mcp__signoz__*",
       "mcp__context7__*",
-      "mcp__playwright__*"
+      "mcp__playwright__*",
+      "Read(//home/james/workspace/ttyd/**)",
+      "Read(//home/james/workspace/**)"
     ],
     "deny": []
   },
