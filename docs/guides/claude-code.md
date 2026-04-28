@@ -36,7 +36,7 @@ kubectl config set-context --current --namespace=demo-cluster
 
 ```bash
 kubectl create secret generic anthropic-credentials \
-  --from-literal=ANTHROPIC_API_KEY=sk-ant-your-key-here
+  --from-literal=api-key=sk-ant-your-key-here
 ```
 
 ### Deploy Claude Code
@@ -58,7 +58,7 @@ spec:
 EOF
 ```
 
-The `apiKeyRef` tells the operator to inject `ANTHROPIC_API_KEY` from your secret directly into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.
+The `apiKeyRef` tells the operator to read the `api-key` key from your secret and inject it as `ANTHROPIC_API_KEY` into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.
 
 ### Verify
 
@@ -87,7 +87,8 @@ Then open `http://localhost:8080` in your browser. You'll see Claude Code's inte
 
 | Field | Description |
 |-------|-------------|
-| `spec.claudeCode.apiKeyRef.name` | Secret containing `ANTHROPIC_API_KEY`. Recommended for direct Anthropic access. |
+| `spec.claudeCode.apiKeyRef.name` | Secret name containing the API key. The operator reads the key specified by `apiKeyRef.key` (default `api-key`) and injects it as `ANTHROPIC_API_KEY`. Recommended for direct Anthropic access. |
+| `spec.claudeCode.apiKeyRef.key` | Key within the secret (default: `api-key`). Override if your secret uses a different key name. |
 | `spec.claudeCode.apiKey` | Inline API key (stored in a managed Secret). Use `apiKeyRef` instead if the key is already in a Secret. |
 | `spec.claudeCode.enabled` | Set automatically by the `claude-code` runtime. No need to set this manually. |
 

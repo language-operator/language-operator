@@ -354,11 +354,12 @@ type ClaudeCodeConfig struct {
 	// +optional
 	APIKey string `json:"apiKey,omitempty"`
 
-	// APIKeyRef references a Secret whose keys are injected via envFrom.
-	// The Secret must contain ANTHROPIC_API_KEY.
+	// APIKeyRef references a Secret containing the Anthropic API key.
+	// The operator reads the key specified by apiKeyRef.key (default "api-key")
+	// and injects it as ANTHROPIC_API_KEY into the agent container.
 	// Mutually exclusive with APIKey.
 	// +optional
-	APIKeyRef *RuntimeSecretRef `json:"apiKeyRef,omitempty"`
+	APIKeyRef *SecretReference `json:"apiKeyRef,omitempty"`
 
 	// MaxTurns limits the number of agentic turns per request.
 	// Sets CLAUDE_CODE_MAX_TURNS in the agent container.

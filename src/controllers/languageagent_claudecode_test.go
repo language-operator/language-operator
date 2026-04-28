@@ -200,7 +200,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_InlineAPIKey(t *testing.T) {
 }
 
 func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef(t *testing.T) {
-	// claudeCode.apiKeyRef → envFrom reference added, no managed secret
+	// claudeCode.apiKeyRef → ANTHROPIC_API_KEY injected via secretKeyRef, no managed secret
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "cc-ref", Namespace: "default"},
 		Spec: langopv1alpha1.LanguageAgentSpec{
@@ -210,7 +210,7 @@ func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef(t *testing.T) {
 			},
 			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
 				Enabled:   ptr.To(true),
-				APIKeyRef: &langopv1alpha1.RuntimeSecretRef{Name: "my-anthropic-secret"},
+				APIKeyRef: &langopv1alpha1.SecretReference{Name: "my-anthropic-secret"},
 			},
 		},
 	}
@@ -224,18 +224,56 @@ func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef(t *testing.T) {
 	}, secret)
 	assert.True(t, err != nil, "no managed runtime Secret when using APIKeyRef")
 
-	// envFrom reference is injected into workingAgent
+	// ANTHROPIC_API_KEY is injected via secretKeyRef with default key "api-key"
 	working := agent.DeepCopy()
 	err = reconciler.reconcileRuntimeSecret(context.Background(), agent, working)
 	require.NoError(t, err)
 
 	var found bool
-	for _, ef := range working.Spec.Deployment.EnvFrom {
-		if ef.SecretRef != nil && ef.SecretRef.Name == "my-anthropic-secret" {
+	for _, e := range working.Spec.Deployment.Env {
+		if e.Name == "ANTHROPIC_API_KEY" &&
+			e.ValueFrom != nil &&
+			e.ValueFrom.SecretKeyRef != nil &&
+			e.ValueFrom.SecretKeyRef.Name == "my-anthropic-secret" &&
+			e.ValueFrom.SecretKeyRef.Key == "api-key" {
 			found = true
 		}
 	}
-	assert.True(t, found, "envFrom references the APIKeyRef secret")
+	assert.True(t, found, "ANTHROPIC_API_KEY injected via secretKeyRef with default key 'api-key'")
+}
+
+func TestReconcileRuntimeSecret_ClaudeCode_APIKeyRef_CustomKey(t *testing.T) {
+	// claudeCode.apiKeyRef with explicit key → secretKeyRef uses that key
+	agent := &langopv1alpha1.LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "cc-ref-custom", Namespace: "default"},
+		Spec: langopv1alpha1.LanguageAgentSpec{
+			Image: "ghcr.io/language-operator/agent:latest",
+			Workspace: &langopv1alpha1.WorkspaceSpec{
+				Enabled: func() *bool { b := false; return &b }(),
+			},
+			ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
+				Enabled:   ptr.To(true),
+				APIKeyRef: &langopv1alpha1.SecretReference{Name: "my-anthropic-secret", Key: "ANTHROPIC_API_KEY"},
+			},
+		},
+	}
+
+	working := agent.DeepCopy()
+	reconciler, _ := reconcileClaudeCodeAgent(t, agent)
+	err := reconciler.reconcileRuntimeSecret(context.Background(), agent, working)
+	require.NoError(t, err)
+
+	var found bool
+	for _, e := range working.Spec.Deployment.Env {
+		if e.Name == "ANTHROPIC_API_KEY" &&
+			e.ValueFrom != nil &&
+			e.ValueFrom.SecretKeyRef != nil &&
+			e.ValueFrom.SecretKeyRef.Name == "my-anthropic-secret" &&
+			e.ValueFrom.SecretKeyRef.Key == "ANTHROPIC_API_KEY" {
+			found = true
+		}
+	}
+	assert.True(t, found, "ANTHROPIC_API_KEY injected via secretKeyRef with explicit key")
 }
 
 func TestReconcileRuntimeSecret_ClaudeCode_MaxTurns(t *testing.T) {

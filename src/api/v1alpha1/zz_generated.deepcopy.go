@@ -163,7 +163,7 @@ func (in *ClaudeCodeConfig) DeepCopyInto(out *ClaudeCodeConfig) {
 	}
 	if in.APIKeyRef != nil {
 		in, out := &in.APIKeyRef, &out.APIKeyRef
-		*out = new(RuntimeSecretRef)
+		*out = new(SecretReference)
 		**out = **in
 	}
 	if in.MaxTurns != nil {

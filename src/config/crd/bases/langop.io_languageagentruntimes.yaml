@@ -67,12 +67,18 @@ spec:
                     type: string
                   apiKeyRef:
                     description: |-
-                      APIKeyRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain ANTHROPIC_API_KEY.
+                      APIKeyRef references a Secret containing the Anthropic API key.
+                      The operator reads the key specified by apiKeyRef.key (default "api-key")
+                      and injects it as ANTHROPIC_API_KEY into the agent container.
                       Mutually exclusive with APIKey.
                     properties:
+                      key:
+                        default: api-key
+                        description: Key is the key within the secret containing the
+                          value
+                        type: string
                       name:
-                        description: Name is the name of the Secret.
+                        description: Name is the name of the secret
                         type: string
                     required:
                     - name
