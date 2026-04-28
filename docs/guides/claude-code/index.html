@@ -1493,7 +1493,7 @@
 </code></pre></div>
 <h3 id="store-your-api-key">Store Your API Key<a class="headerlink" href="#store-your-api-key" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-your-key-here
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
 </code></pre></div>
 <h3 id="deploy-claude-code">Deploy Claude Code<a class="headerlink" href="#deploy-claude-code" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
@@ -1511,7 +1511,7 @@
 <a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="s">      name: anthropic-credentials</span>
 <a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>The <code>apiKeyRef</code> tells the operator to inject <code>ANTHROPIC_API_KEY</code> from your secret directly into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.</p>
+<p>The <code>apiKeyRef</code> tells the operator to read the <code>api-key</code> key from your secret and inject it as <code>ANTHROPIC_API_KEY</code> into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.</p>
 <h3 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
@@ -1537,7 +1537,11 @@
 <tbody>
 <tr>
 <td><code>spec.claudeCode.apiKeyRef.name</code></td>
-<td>Secret containing <code>ANTHROPIC_API_KEY</code>. Recommended for direct Anthropic access.</td>
+<td>Secret name containing the API key. The operator reads the key specified by <code>apiKeyRef.key</code> (default <code>api-key</code>) and injects it as <code>ANTHROPIC_API_KEY</code>. Recommended for direct Anthropic access.</td>
+</tr>
+<tr>
+<td><code>spec.claudeCode.apiKeyRef.key</code></td>
+<td>Key within the secret (default: <code>api-key</code>). Override if your secret uses a different key name.</td>
 </tr>
 <tr>
 <td><code>spec.claudeCode.apiKey</code></td>
