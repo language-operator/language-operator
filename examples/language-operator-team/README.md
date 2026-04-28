@@ -63,7 +63,7 @@ All four agents should reach `Ready=True` within a few minutes.
 
 ## Running the Supervisor Loop
 
-The `start` script port-forwards the supervisor's A2A endpoint and sends a delegation pass on a configurable interval:
+The `start` script port-forwards the supervisor's service and sends a delegation pass on a configurable interval:
 
 ```bash
 # Default: one delegation pass every 120 seconds
