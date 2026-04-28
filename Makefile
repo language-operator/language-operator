@@ -20,26 +20,26 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
-	helm upgrade --install language-operator chart \
+	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
-		--values chart/values.local.yaml \
+		--values charts/language-operator/values.local.yaml \
 		--set image.repository=docker.io/library/language-operator \
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
 		--wait --timeout 2m
 
-# Install the Helm chart using chart/values.local.yaml
+# Install the Helm chart using charts/language-operator/values.local.yaml
 install:
-	@cd chart && $(MAKE) install
+	@cd charts/language-operator && $(MAKE) install
 
-# Upgrade the Helm release using chart/values.local.yaml
+# Upgrade the Helm release using charts/language-operator/values.local.yaml
 upgrade:
-	@cd chart && $(MAKE) upgrade
+	@cd charts/language-operator && $(MAKE) upgrade
 
 # Uninstall the Helm release
 uninstall:
-	@cd chart && $(MAKE) uninstall
+	@cd charts/language-operator && $(MAKE) uninstall
 
 # Wipe everything — delete all CRs, uninstall the chart, delete CRDs and namespace.
 # Use this to get back to a clean cluster state.
@@ -80,7 +80,7 @@ help:
 	@echo "  test         - Run Go test suite"
 	@echo "  dev          - Build, load into k3s, and upgrade (inner loop)"
 	@echo "  setup-hooks  - Install git pre-commit hooks"
-	@echo "  install      - Install Helm chart (chart/values.local.yaml)"
+	@echo "  install      - Install Helm chart (charts/language-operator/values.local.yaml)"
 	@echo "  upgrade      - Upgrade Helm release"
 	@echo "  uninstall    - Uninstall Helm release"
 	@echo "  wipe         - Delete all CRs, CRDs, chart, and namespace (start from scratch)"

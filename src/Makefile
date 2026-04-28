@@ -71,13 +71,13 @@ shell: ## Run interactive shell in container.
 	docker run --rm -it ${IMG} /bin/sh
 
 ##@ Helm Chart Support
-# NOTE: To deploy the operator, use the Helm chart in ../chart/
+# NOTE: To deploy the operator, use the Helm chart in ../charts/language-operator/
 
 .PHONY: helm-crds
-helm-crds: manifests ## Generate CRDs and copy to chart/templates/crds/ (run after changing api/v1alpha1 types)
-	mkdir -p ../chart/templates/crds
+helm-crds: manifests ## Generate CRDs and copy to charts/language-operator/templates/crds/ (run after changing api/v1alpha1 types)
+	mkdir -p ../charts/language-operator/templates/crds
 	@for src in config/crd/bases/*.yaml; do \
-	  dest=../chart/templates/crds/$$(basename $$src); \
+	  dest=../charts/language-operator/templates/crds/$$(basename $$src); \
 	  printf '{{- if .Values.crds.install }}\n' > "$$dest"; \
 	  sed 's/    controller-gen.kubebuilder.io/    "helm.sh\/resource-policy": keep\n    controller-gen.kubebuilder.io/' "$$src" >> "$$dest"; \
 	  printf '{{- end }}\n' >> "$$dest"; \
