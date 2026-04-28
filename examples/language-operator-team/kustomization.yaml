@@ -3,7 +3,14 @@
 #     --from-literal=api-key=sk-ant-... -n language-operator-team
 #   kubectl create secret generic github-credentials \
 #     --from-literal=token=ghp_... -n language-operator-team
+#   kubectl create secret generic claude-oauth-credentials \
+#     --from-literal=credentials="$(cat ~/.claude/.credentials.json)" -n language-operator-team
 #   kubectl apply -k examples/language-operator-team/
+#
+# Note: OAuth credentials take precedence over the API key. When claude-oauth-credentials
+# is present, the adapter writes it to $HOME/.claude/.credentials.json and the SDK
+# authenticates via OAuth, bypassing ANTHROPIC_API_KEY. Provide one or both — if only
+# using API key authentication, skip the claude-oauth-credentials secret.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
