@@ -28,6 +28,9 @@ dev:
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
 		--wait --timeout 2m
+	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
+		--namespace language-operator \
+		--wait --timeout 2m
 
 # Install the Helm chart using charts/language-operator/values.local.yaml
 install:

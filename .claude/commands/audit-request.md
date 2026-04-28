@@ -59,6 +59,12 @@ For each issue:
    - Determine: is this criterion actually satisfied in the current state of the repo?
    - Note any that are unmet, partially met, or cannot be verified without running the cluster
 
+3. **Run the commands — do not just read the source.** For any criterion phrased as "X succeeds", "X passes", or "X works", execute that command and observe the actual output. Static file inspection is not a substitute for execution.
+   - `helm lint` / `helm template` — run them
+   - `cd src && make test` — run it for Go changes
+   - `make <target>` that would deploy to a cluster — use `--dry-run` or an equivalent flag; if no dry-run exists, note the criterion as **unverified** rather than **pass**
+   - Never mark an execution criterion as passing without having run it
+
 3. **Check test coverage** — does the implementation include tests for the new behavior?
    - Controller changes: unit tests in `src/controllers/` and/or integration tests
    - CRD type changes: webhook validation tests if applicable
