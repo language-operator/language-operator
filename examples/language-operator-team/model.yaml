@@ -1,5 +1,5 @@
 # Requires: kubectl create secret generic anthropic-credentials \
-#   --from-literal=ANTHROPIC_API_KEY=sk-ant-... -n language-operator-team
+#   --from-literal=api-key=sk-ant-... -n language-operator-team
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:

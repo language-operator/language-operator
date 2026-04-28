@@ -1,6 +1,6 @@
 # Deploy:
 #   kubectl create secret generic anthropic-credentials \
-#     --from-literal=ANTHROPIC_API_KEY=sk-ant-... -n language-operator-team
+#     --from-literal=api-key=sk-ant-... -n language-operator-team
 #   kubectl create secret generic github-credentials \
 #     --from-literal=token=ghp_... -n language-operator-team
 #   kubectl apply -k examples/language-operator-team/
