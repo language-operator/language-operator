@@ -82,7 +82,7 @@ After changing types in `src/api/v1alpha1/`:
 ```bash
 cd src
 make generate   # regenerate zz_generated.deepcopy.go
-make helm-crds  # regenerate CRD YAMLs and copy to chart/crds/
+make helm-crds  # regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/
 ```
 
 **Important:** Always stage generated files together with type changes:
@@ -90,7 +90,7 @@ make helm-crds  # regenerate CRD YAMLs and copy to chart/crds/
 ```bash
 git add src/api/v1alpha1/zz_generated.deepcopy.go
 git add src/config/crd/bases/
-git add chart/crds/
+git add charts/language-operator/templates/crds/
 ```
 
 The pre-commit hook enforces this.
@@ -98,9 +98,17 @@ The pre-commit hook enforces this.
 ## Helm Chart Validation
 
 ```bash
-cd chart
+cd charts/language-operator
 helm lint .
 helm template language-operator . --debug
+```
+
+To validate the runtimes chart:
+
+```bash
+cd charts/language-operator-runtimes
+helm lint .
+helm template language-operator-runtimes . --debug
 ```
 
 ## Documentation
@@ -139,7 +147,7 @@ k3d cluster create langop-dev \
 From source:
 
 ```bash
-cd chart
+cd charts/language-operator
 helm install language-operator . \
   --create-namespace \
   --namespace language-operator \

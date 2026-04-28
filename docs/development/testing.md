@@ -252,7 +252,7 @@ After modifying CRD types:
 
 2. **Reinstall CRDs:**
    ```bash
-   kubectl apply -f chart/crds/
+   kubectl apply -f charts/language-operator/templates/crds/
    ```
 
 3. **Test with sample resources**

@@ -28,20 +28,31 @@ produces the same Deployment as if the agent had explicitly specified the OpenCl
 
 ## Bundled Runtimes
 
-The Helm chart installs two runtimes automatically:
+Three runtimes are shipped via the `language-operator-runtimes` Helm chart, installed independently after the operator:
 
 | Name | Image | Port | Interface |
 |------|-------|------|-----------|
 | `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | WebSocket gateway |
 | `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | HTTP / browser UI |
+| `claude-code` | `ghcr.io/language-operator/claude-code-server:latest` | 8080 | HTTP / ttyd terminal |
 
-Both can be disabled in `values.yaml`:
+Install them with:
+
+```bash
+helm install language-operator-runtimes \
+  language-operator/language-operator-runtimes \
+  --namespace language-operator
+```
+
+Any runtime can be disabled at install time via its `values.yaml` key:
 
 ```yaml
 runtimes:
-  opencode:
+  claudeCode:
     enabled: false
 ```
+
+See [Installation](../getting-started/installation.md#3-install-the-runtimes) for the full install sequence.
 
 ## Merge Semantics
 

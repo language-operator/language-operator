@@ -24,6 +24,15 @@ See the [Kubernetes guide](../guides/cluster-setup.md) for instructions on insta
 
 ## Install via Helm
 
+Language Operator ships as two separate Helm charts:
+
+| Chart | Purpose |
+|-------|---------|
+| `language-operator/language-operator` | Operator, CRDs, RBAC, webhooks |
+| `language-operator/language-operator-runtimes` | Bundled `LanguageAgentRuntime` presets (openclaw, opencode, claude-code) |
+
+Install the operator chart first, then the runtimes chart.
+
 ### 1. Add the Helm Repository
 
 ```bash
@@ -52,9 +61,31 @@ helm install language-operator \
 !!! note "Values vary by cluster"
     Replace `traefik` with your ingress class (e.g. `nginx`, `alb`), `local-path` with your StorageClass, and the TLS issuer with the name of your cert-manager `ClusterIssuer` or `Issuer`. All of these can also be set in a values file with `helm install -f values.yaml`.
 
-See the [complete `values.yaml`](https://github.com/language-operator/language-operator/blob/main/chart/values.yaml) for all available configuration options.
+See the [complete `values.yaml`](https://github.com/language-operator/language-operator/blob/main/charts/language-operator/values.yaml) for all available configuration options.
 
-### 3. Verify Installation
+### 3. Install the Runtimes
+
+The `language-operator-runtimes` chart installs the bundled `LanguageAgentRuntime` presets (openclaw, opencode, and claude-code). These are cluster-scoped resources — install once and reference from any namespace.
+
+```bash
+helm install language-operator-runtimes \
+  language-operator/language-operator-runtimes \
+  --namespace language-operator
+```
+
+!!! note "Operator must be installed first"
+    The runtimes chart requires the CRDs installed by the operator chart. Always install `language-operator` before `language-operator-runtimes`.
+
+You can selectively disable runtimes you don't need:
+
+```bash
+helm install language-operator-runtimes \
+  language-operator/language-operator-runtimes \
+  --namespace language-operator \
+  --set runtimes.claudeCode.enabled=false
+```
+
+### 4. Verify Installation
 
 Check that the operator pod is running:
 
@@ -86,6 +117,21 @@ languagepersonas.langop.io
 languagetools.langop.io
 ```
 
+Check runtimes are installed:
+
+```bash
+kubectl get languageagentruntimes
+```
+
+Expected output:
+
+```
+NAME          AGE
+claude-code   30s
+openclaw      30s
+opencode      30s
+```
+
 ## Upgrade
 
 Upgrade the operator to the latest version:
@@ -96,25 +142,33 @@ helm upgrade language-operator language-operator/language-operator \
   --namespace language-operator
 ```
 
+Upgrade runtimes separately:
+
+```bash
+helm upgrade language-operator-runtimes language-operator/language-operator-runtimes \
+  --namespace language-operator
+```
+
 !!! note "CRD schema changes"
     Helm does not update CRDs automatically on `helm upgrade`. When upgrading to a version that includes CRD changes, apply the updated CRDs first:
 
     ```bash
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagents.yaml
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageagentruntimes.yaml
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languageclusters.yaml
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagemodels.yaml
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagepersonas.yaml
-    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/chart/crds/langop.io_languagetools.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagents.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagentruntimes.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageclusters.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagemodels.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagepersonas.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagetools.yaml
     ```
 
     Check the release notes before upgrading to see if CRD changes are included.
 
 ## Uninstall
 
-Remove the operator (CRDs and custom resources will be deleted):
+Remove the runtimes chart first, then the operator:
 
 ```bash
+helm uninstall language-operator-runtimes --namespace language-operator
 helm uninstall language-operator --namespace language-operator
 ```
 
