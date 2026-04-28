@@ -3,10 +3,10 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-04-28T00:35:07.786774621Z"
+    created: "2026-04-28T00:38:18.564452762Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: ea67acf1abebb52ce4342faf4d21e96c0c3965918050b315d8bb90a4bd82d86a
+    digest: fe6cef246e23892c0d98292694e3a066684584c452818d5b62c2194440dd8676
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -24,4 +24,27 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-0.1.129.tgz
     version: 0.1.129
-generated: "2026-04-28T00:35:07.778865325Z"
+  language-operator-runtimes:
+  - apiVersion: v2
+    appVersion: 0.1.129
+    created: "2026-04-28T00:38:18.564707125Z"
+    description: Bundled LanguageAgentRuntime CRs for the Language Operator (openclaw,
+      opencode, claude-code)
+    digest: 7ac86932570a5981de0f49c171d32b662cb08a0123a7ff6bee388b552a90e96c
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
+    version: 0.1.129
+generated: "2026-04-28T00:38:18.557965693Z"
