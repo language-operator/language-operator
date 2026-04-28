@@ -41,6 +41,23 @@ upgrade:
 uninstall:
 	@cd charts/language-operator && $(MAKE) uninstall
 
+# Install the runtimes chart (requires language-operator chart with CRDs installed first)
+install-runtimes:
+	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
+		--namespace language-operator \
+		--create-namespace \
+		--wait --timeout 2m
+
+# Upgrade the runtimes release
+upgrade-runtimes:
+	helm upgrade language-operator-runtimes charts/language-operator-runtimes \
+		--namespace language-operator \
+		--wait --timeout 2m
+
+# Uninstall the runtimes release
+uninstall-runtimes:
+	helm uninstall language-operator-runtimes --namespace language-operator
+
 # Wipe everything — delete all CRs, uninstall the chart, delete CRDs and namespace.
 # Use this to get back to a clean cluster state.
 wipe:

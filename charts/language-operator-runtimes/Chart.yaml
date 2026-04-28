@@ -1,0 +1,17 @@
+apiVersion: v2
+name: language-operator-runtimes
+description: Bundled LanguageAgentRuntime CRs for the Language Operator (openclaw, opencode, claude-code)
+type: application
+version: 0.1.129
+appVersion: "0.1.129"
+keywords:
+  - ai
+  - llm
+  - language-models
+  - agents
+home: https://github.com/language-operator/language-operator
+sources:
+  - https://github.com/language-operator/language-operator
+maintainers:
+  - name: James Ryan
+    email: james@theryans.io

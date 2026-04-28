@@ -39,7 +39,13 @@ Helm chart validation:
 ```bash
 cd charts/language-operator && helm lint .
 cd charts/language-operator && helm template . --debug
+cd charts/language-operator-runtimes && helm lint .
+cd charts/language-operator-runtimes && helm template . --debug
 ```
+
+Two charts live under `charts/`:
+- `charts/language-operator/` — operator workload (CRDs, Deployment, RBAC, webhooks). Install this first.
+- `charts/language-operator-runtimes/` — bundled `LanguageAgentRuntime` CRs (openclaw, opencode, claude-code). Requires the operator chart's CRDs to be present. Managed independently so runtimes can be upgraded without touching the operator.
 
 Documentation:
 ```bash

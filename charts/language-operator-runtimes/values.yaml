@@ -1,0 +1,13 @@
+# Standard runtimes bundled with the operator.
+# LanguageAgentRuntime resources are cluster-scoped; install once, use from any namespace.
+# Requires the language-operator chart (with CRDs) to be installed first.
+runtimes:
+  openclaw:
+    # Install the openclaw LanguageAgentRuntime.
+    enabled: true
+  opencode:
+    # Install the opencode LanguageAgentRuntime.
+    enabled: true
+  claudeCode:
+    # Install the claude-code LanguageAgentRuntime.
+    enabled: true

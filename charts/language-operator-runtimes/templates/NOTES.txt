@@ -1,0 +1,18 @@
+Language Operator Runtimes installed.
+
+Prerequisites: the `language-operator` chart must be installed first (it provides the
+LanguageAgentRuntime CRD). Installing this chart against a cluster without the CRD will fail.
+
+Enabled runtimes:
+{{- if .Values.runtimes.openclaw.enabled }}
+  - openclaw  (ghcr.io/openclaw/openclaw:latest)
+{{- end }}
+{{- if .Values.runtimes.opencode.enabled }}
+  - opencode  (ghcr.io/anomalyco/opencode:latest)
+{{- end }}
+{{- if .Values.runtimes.claudeCode.enabled }}
+  - claude-code  (ghcr.io/language-operator/claude-code-server:latest)
+{{- end }}
+
+LanguageAgentRuntime resources are cluster-scoped and can be referenced by LanguageAgents
+in any namespace via spec.runtime.
