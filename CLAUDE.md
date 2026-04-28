@@ -30,15 +30,15 @@ cd src && go test -tags integration -v ./controllers/...  # integration tests on
 After modifying any type in `src/api/v1alpha1/`:
 ```bash
 cd src && make generate   # regenerate zz_generated.deepcopy.go
-cd src && make helm-crds  # regenerate CRD YAMLs and copy to chart/templates/crds/
+cd src && make helm-crds  # regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/
 ```
 
-**The pre-commit hook will fail if generated files are modified but not staged.** Always stage `zz_generated.deepcopy.go`, `src/config/crd/bases/`, and `chart/templates/crds/` together with type changes.
+**The pre-commit hook will fail if generated files are modified but not staged.** Always stage `zz_generated.deepcopy.go`, `src/config/crd/bases/`, and `charts/language-operator/templates/crds/` together with type changes.
 
 Helm chart validation:
 ```bash
-cd chart && helm lint .
-cd chart && helm template . --debug
+cd charts/language-operator && helm lint .
+cd charts/language-operator && helm template . --debug
 ```
 
 Documentation:

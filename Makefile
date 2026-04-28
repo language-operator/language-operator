@@ -1,7 +1,7 @@
 GIT_SHA   := $(shell git rev-parse --short HEAD)
 DEV_IMAGE := language-operator:$(GIT_SHA)
 
-.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status agent-supervisor
+.PHONY: help build test dev setup-hooks install upgrade uninstall install-runtimes upgrade-runtimes uninstall-runtimes wipe k8s-status agent-supervisor
 
 # Build the operator binary
 build:
@@ -20,26 +20,38 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
-	helm upgrade --install language-operator chart \
+	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
-		--values chart/values.local.yaml \
+		--values charts/language-operator/values.local.yaml \
 		--set image.repository=docker.io/library/language-operator \
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
 		--wait --timeout 2m
 
-# Install the Helm chart using chart/values.local.yaml
+# Install the operator chart using charts/language-operator/values.local.yaml
 install:
-	@cd chart && $(MAKE) install
+	@cd charts/language-operator && $(MAKE) install
 
-# Upgrade the Helm release using chart/values.local.yaml
+# Upgrade the operator Helm release
 upgrade:
-	@cd chart && $(MAKE) upgrade
+	@cd charts/language-operator && $(MAKE) upgrade
 
-# Uninstall the Helm release
+# Uninstall the operator Helm release
 uninstall:
-	@cd chart && $(MAKE) uninstall
+	@cd charts/language-operator && $(MAKE) uninstall
+
+# Install the runtimes chart
+install-runtimes:
+	@cd charts/language-operator-runtimes && $(MAKE) install
+
+# Upgrade the runtimes Helm release
+upgrade-runtimes:
+	@cd charts/language-operator-runtimes && $(MAKE) upgrade
+
+# Uninstall the runtimes Helm release
+uninstall-runtimes:
+	@cd charts/language-operator-runtimes && $(MAKE) uninstall
 
 # Wipe everything — delete all CRs, uninstall the chart, delete CRDs and namespace.
 # Use this to get back to a clean cluster state.
@@ -80,9 +92,12 @@ help:
 	@echo "  test         - Run Go test suite"
 	@echo "  dev          - Build, load into k3s, and upgrade (inner loop)"
 	@echo "  setup-hooks  - Install git pre-commit hooks"
-	@echo "  install      - Install Helm chart (chart/values.local.yaml)"
-	@echo "  upgrade      - Upgrade Helm release"
-	@echo "  uninstall    - Uninstall Helm release"
+	@echo "  install      - Install operator chart"
+	@echo "  upgrade      - Upgrade operator Helm release"
+	@echo "  uninstall    - Uninstall operator Helm release"
+	@echo "  install-runtimes   - Install runtimes chart (after operator)"
+	@echo "  upgrade-runtimes   - Upgrade runtimes Helm release"
+	@echo "  uninstall-runtimes - Uninstall runtimes Helm release"
 	@echo "  wipe         - Delete all CRs, CRDs, chart, and namespace (start from scratch)"
 	@echo "  k8s-status   - Check status of all language resources"
 	@echo "  dev-supervisor   - Run the supervisor agent (triage issues into queues)"

@@ -1,0 +1,14 @@
+language-operator-runtimes installed.
+
+Runtimes enabled:
+{{- if .Values.runtimes.openclaw.enabled }}
+  - openclaw
+{{- end }}
+{{- if .Values.runtimes.opencode.enabled }}
+  - opencode
+{{- end }}
+{{- if .Values.runtimes.claudeCode.enabled }}
+  - claude-code
+{{- end }}
+
+NOTE: The language-operator chart (with CRDs) must be installed before this chart.

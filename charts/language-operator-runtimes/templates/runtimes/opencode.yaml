@@ -4,11 +4,7 @@ kind: LanguageAgentRuntime
 metadata:
   name: opencode
   labels:
-    {{- include "language-operator.labels" . | nindent 4 }}
-  annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-weight: "0"
-    helm.sh/hook-delete-policy: before-hook-creation
+    {{- include "language-operator-runtimes.labels" . | nindent 4 }}
 spec:
   image: ghcr.io/anomalyco/opencode:latest
 

@@ -94,7 +94,7 @@ Include:
 ```bash
 cd src
 make generate    # regenerate zz_generated.deepcopy.go
-make helm-crds   # regenerate CRD YAMLs and copy to chart/crds/
+make helm-crds   # regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/
 ```
 
 **Stage all generated files together:**
@@ -102,7 +102,7 @@ make helm-crds   # regenerate CRD YAMLs and copy to chart/crds/
 ```bash
 git add src/api/v1alpha1/zz_generated.deepcopy.go
 git add src/config/crd/bases/
-git add chart/crds/
+git add charts/language-operator/templates/crds/
 ```
 
 **The pre-commit hook will fail if generated files are modified but not staged.**
