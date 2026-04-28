@@ -1565,7 +1565,7 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 				Image: "ghcr.io/language-operator/agent:latest",
 				ClaudeCode: &langopv1alpha1.ClaudeCodeConfig{
 					Enabled:   &enabled,
-					APIKeyRef: &langopv1alpha1.RuntimeSecretRef{Name: "my-anthropic-secret"},
+					APIKeyRef: &langopv1alpha1.SecretReference{Name: "my-anthropic-secret"},
 				},
 			},
 		}

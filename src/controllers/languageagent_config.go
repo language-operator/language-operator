@@ -511,9 +511,17 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 		if cc.APIKey != "" {
 			secretData["ANTHROPIC_API_KEY"] = []byte(cc.APIKey)
 		} else if cc.APIKeyRef != nil {
-			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
-				SecretRef: &corev1.SecretEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: cc.APIKeyRef.Name},
+			key := cc.APIKeyRef.Key
+			if key == "" {
+				key = "api-key"
+			}
+			extraEnv = append(extraEnv, corev1.EnvVar{
+				Name: "ANTHROPIC_API_KEY",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: cc.APIKeyRef.Name},
+						Key:                  key,
+					},
 				},
 			})
 		} else {
