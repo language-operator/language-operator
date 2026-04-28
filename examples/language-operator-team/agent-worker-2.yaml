@@ -42,13 +42,11 @@ spec:
             protocol: TCP
   workspace:
     size: 10Gi
+  claudeCode:
+    apiKeyRef:
+      name: anthropic-credentials
   deployment:
     env:
-      - name: ANTHROPIC_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: anthropic-credentials
-            key: api-key
       - name: GITHUB_TOKEN
         valueFrom:
           secretKeyRef:
