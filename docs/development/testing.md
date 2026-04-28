@@ -219,7 +219,7 @@ go tool cover -html=coverage.out
 
 2. **Install operator from source:**
    ```bash
-   cd chart
+   cd charts/language-operator
    helm install language-operator . \
      --namespace language-operator \
      --create-namespace
