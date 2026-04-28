@@ -3,10 +3,10 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-04-28T00:53:05.466934342Z"
+    created: "2026-04-28T01:57:12.709553109Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 8cb827cea14672fad43167a118e86305fcd42324e63b734cffe0310f955783cc
+    digest: 96b29ee5c9f6c9382ea8b12988dd78145064c41e27692e6c641a24cbc0388754
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -27,10 +27,10 @@ entries:
   language-operator-runtimes:
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-04-28T00:53:05.467173178Z"
+    created: "2026-04-28T01:57:12.709807991Z"
     description: Bundled LanguageAgentRuntime CRs for the Language Operator (openclaw,
       opencode, claude-code)
-    digest: 9d0c71b8c5d33a678331caa7c0e3d471a1bee1be90f6c00aa3d571f9c132101c
+    digest: 391b19f99b61e3812be8432493f25451f81ecce5017500e1ab1f73c335c94fa7
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -47,4 +47,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
     version: 0.1.129
-generated: "2026-04-28T00:53:05.460727153Z"
+generated: "2026-04-28T01:57:12.703127357Z"
