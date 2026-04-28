@@ -34,10 +34,12 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Package Helm chart
+      - name: Package Helm charts
         run: |
           mkdir -p .helm-packages
-          helm package charts/language-operator -d .helm-packages
+          for chart in charts/language-operator charts/language-operator-runtimes; do
+            helm package "$chart" -d .helm-packages
+          done
 
       - name: Generate Helm index
         run: |
