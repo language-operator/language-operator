@@ -1834,78 +1834,83 @@
 <p>After changing types in <code>src/api/v1alpha1/</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>src
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>make<span class="w"> </span>generate<span class="w">   </span><span class="c1"># regenerate zz_generated.deepcopy.go</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>make<span class="w"> </span>helm-crds<span class="w">  </span><span class="c1"># regenerate CRD YAMLs and copy to chart/crds/</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>make<span class="w"> </span>helm-crds<span class="w">  </span><span class="c1"># regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/</span>
 </code></pre></div>
 <p><strong>Important:</strong> Always stage generated files together with type changes:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>add<span class="w"> </span>src/api/v1alpha1/zz_generated.deepcopy.go
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>git<span class="w"> </span>add<span class="w"> </span>src/config/crd/bases/
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>add<span class="w"> </span>chart/crds/
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>add<span class="w"> </span>charts/language-operator/templates/crds/
 </code></pre></div>
 <p>The pre-commit hook enforces this.</p>
 <h2 id="helm-chart-validation">Helm Chart Validation<a class="headerlink" href="#helm-chart-validation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>chart
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">cd</span><span class="w"> </span>charts/language-operator
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>helm<span class="w"> </span>lint<span class="w"> </span>.
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>helm<span class="w"> </span>template<span class="w"> </span>language-operator<span class="w"> </span>.<span class="w"> </span>--debug
 </code></pre></div>
+<p>To validate the runtimes chart:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>charts/language-operator-runtimes
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>helm<span class="w"> </span>lint<span class="w"> </span>.
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>helm<span class="w"> </span>template<span class="w"> </span>language-operator-runtimes<span class="w"> </span>.<span class="w"> </span>--debug
+</code></pre></div>
 <h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
 <h3 id="generate-crd-documentation">Generate CRD Documentation<a class="headerlink" href="#generate-crd-documentation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>src
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>make<span class="w"> </span>docs<span class="w">   </span><span class="c1"># generates src/docs/api-reference.md (local inspection only; CI generates docs/api/reference.md)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>src
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>make<span class="w"> </span>docs<span class="w">   </span><span class="c1"># generates src/docs/api-reference.md (local inspection only; CI generates docs/api/reference.md)</span>
 </code></pre></div>
 <h3 id="preview-documentation-site">Preview Documentation Site<a class="headerlink" href="#preview-documentation-site" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Install MkDocs (one time)</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs-material<span class="w"> </span>mkdocs-awesome-pages-plugin
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Serve locally</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>mkdocs<span class="w"> </span>serve
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Install MkDocs (one time)</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs-material<span class="w"> </span>mkdocs-awesome-pages-plugin
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Serve locally</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>mkdocs<span class="w"> </span>serve
 </code></pre></div>
 <p>Open <a href="http://localhost:8000">http://localhost:8000</a></p>
 <h2 id="local-kubernetes-testing">Local Kubernetes Testing<a class="headerlink" href="#local-kubernetes-testing" title="Permanent link">&para;</a></h2>
 <h3 id="create-a-k3d-cluster">Create a k3d Cluster<a class="headerlink" href="#create-a-k3d-cluster" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>k3d<span class="w"> </span>cluster<span class="w"> </span>create<span class="w"> </span>langop-dev<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--agents<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--k3s-arg<span class="w"> </span><span class="s2">&quot;--disable=traefik@server:0&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>k3d<span class="w"> </span>cluster<span class="w"> </span>create<span class="w"> </span>langop-dev<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--agents<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--k3s-arg<span class="w"> </span><span class="s2">&quot;--disable=traefik@server:0&quot;</span>
 </code></pre></div>
 <h3 id="install-the-operator">Install the Operator<a class="headerlink" href="#install-the-operator" title="Permanent link">&para;</a></h3>
 <p>From source:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">cd</span><span class="w"> </span>chart
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--set<span class="w"> </span>image.tag<span class="o">=</span>dev
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">cd</span><span class="w"> </span>charts/language-operator
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span>--set<span class="w"> </span>image.tag<span class="o">=</span>dev
 </code></pre></div>
 <h3 id="build-and-load-images">Build and Load Images<a class="headerlink" href="#build-and-load-images" title="Permanent link">&para;</a></h3>
 <p>For local development:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Build operator image</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>language-operator:dev<span class="w"> </span>.
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Import into k3d</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>k3d<span class="w"> </span>image<span class="w"> </span>import<span class="w"> </span>language-operator:dev<span class="w"> </span>-c<span class="w"> </span>langop-dev
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Build operator image</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>language-operator:dev<span class="w"> </span>.
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Import into k3d</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>k3d<span class="w"> </span>image<span class="w"> </span>import<span class="w"> </span>language-operator:dev<span class="w"> </span>-c<span class="w"> </span>langop-dev
 </code></pre></div>
 <p>For the model proxy:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nb">cd</span><span class="w"> </span>components/model-gateway
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>make<span class="w"> </span>dev<span class="w">  </span><span class="c1"># builds and imports into k3s</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nb">cd</span><span class="w"> </span>components/model-gateway
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>make<span class="w"> </span>dev<span class="w">  </span><span class="c1"># builds and imports into k3s</span>
 </code></pre></div>
 <h3 id="watch-logs">Watch Logs<a class="headerlink" href="#watch-logs" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--follow
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>language-operator<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>--follow
 </code></pre></div>
 <h2 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
 <ol>
 <li>
 <p><strong>Create a feature branch</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/your-feature
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/your-feature
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>Make changes and test</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nb">cd</span><span class="w"> </span>src<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="nb">test</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nb">cd</span><span class="w"> </span>src<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span><span class="nb">test</span>
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>Commit with conventional commits</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new capability&quot;</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add new capability&quot;</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -1920,11 +1925,11 @@
 <li>Verify you're using the same Go version as CI</li>
 </ul>
 <h3 id="integration-tests-fail">Integration Tests Fail<a class="headerlink" href="#integration-tests-fail" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Install setup-envtest</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>go<span class="w"> </span>install<span class="w"> </span>sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Run with verbose output</span>
-<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="nb">cd</span><span class="w"> </span>src<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-tags<span class="w"> </span>integration<span class="w"> </span>-v<span class="w"> </span>./controllers/...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Install setup-envtest</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>go<span class="w"> </span>install<span class="w"> </span>sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Run with verbose output</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="nb">cd</span><span class="w"> </span>src<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>go<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-tags<span class="w"> </span>integration<span class="w"> </span>-v<span class="w"> </span>./controllers/...
 </code></pre></div>
 <h3 id="pre-commit-hook-fails">Pre-commit Hook Fails<a class="headerlink" href="#pre-commit-hook-fails" title="Permanent link">&para;</a></h3>
 <p>The hook checks:</p>

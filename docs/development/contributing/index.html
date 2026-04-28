@@ -1709,12 +1709,12 @@
 <p><strong>After modifying CRD types</strong> (<code>src/api/v1alpha1/*.go</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">cd</span><span class="w"> </span>src
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>make<span class="w"> </span>generate<span class="w">    </span><span class="c1"># regenerate zz_generated.deepcopy.go</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>make<span class="w"> </span>helm-crds<span class="w">   </span><span class="c1"># regenerate CRD YAMLs and copy to chart/crds/</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>make<span class="w"> </span>helm-crds<span class="w">   </span><span class="c1"># regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/</span>
 </code></pre></div>
 <p><strong>Stage all generated files together:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>git<span class="w"> </span>add<span class="w"> </span>src/api/v1alpha1/zz_generated.deepcopy.go
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>add<span class="w"> </span>src/config/crd/bases/
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>add<span class="w"> </span>chart/crds/
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>add<span class="w"> </span>charts/language-operator/templates/crds/
 </code></pre></div>
 <p><strong>The pre-commit hook will fail if generated files are modified but not staged.</strong></p>
 <h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
