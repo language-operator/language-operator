@@ -9,7 +9,6 @@
  *   $HOME/.claude.json          — MCP server entries; merge-safe with existing
  *   $HOME/.claude/settings.json — model and ANTHROPIC_BASE_URL; always overwrite
  *   /workspace/CLAUDE.md        — persona/instructions as markdown; always overwrite
- *   $HOME/.claude/claude-a2a.config.json — agent card for A2A server; always overwrite
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
@@ -215,15 +214,3 @@ if (oauthCredentials) {
   }
 }
 
-// -------------------------------------------------------------------
-// $HOME/.claude/claude-a2a.config.json — agent card for A2A server
-// Always overwrite — operator-managed.
-// -------------------------------------------------------------------
-const agentInstructions = operatorConfig?.agent?.instructions ?? operatorConfig?.instructions ?? ''
-const agentCard = {
-  name: agentName || 'claude-code-agent',
-  description: (personas[0]?.description ?? agentInstructions.slice(0, 200)) || 'Claude Code agent',
-}
-
-writeFileSync(join(claudeDir, 'claude-a2a.config.json'), JSON.stringify(agentCard, null, 2))
-console.log(`Wrote claude-a2a.config.json for agent '${agentCard.name}'`)

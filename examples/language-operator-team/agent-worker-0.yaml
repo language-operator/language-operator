@@ -52,5 +52,3 @@ spec:
           secretKeyRef:
             name: github-credentials
             key: token
-      - name: STARTUP_PROMPT
-        value: "Work through your queue until it is empty."

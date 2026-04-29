@@ -61,19 +61,16 @@ kubectl get pods -n language-operator-team -w
 
 All four agents should reach `Ready=True` within a few minutes.
 
-## Running the Supervisor Loop
+## Connecting to an Agent
 
-The `start` script port-forwards the supervisor's service and sends a delegation pass on a configurable interval:
+All agents expose an interactive Claude Code terminal via ttyd on port 8080. Connect to any agent with:
 
 ```bash
-# Default: one delegation pass every 120 seconds
-./examples/language-operator-team/start
-
-# Custom interval
-INTERVAL=300 ./examples/language-operator-team/start
+kubectl port-forward -n language-operator-team svc/supervisor 8080:8080
+# then open http://localhost:8080 in your browser
 ```
 
-The script sends a JSON-RPC `tasks/send` message to the supervisor on each tick and streams the response via SSE. Workers run autonomously — they pick up queue items whenever their `STARTUP_PROMPT` fires.
+Type your prompt in the terminal to trigger a delegation pass. Use the same pattern to connect to `worker-0`, `worker-1`, or `worker-2`.
 
 ## Authentication
 
