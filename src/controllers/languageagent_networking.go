@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -147,22 +145,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		})
 	}
 
-	// Allow oauth2-proxy pod to reach the agent (when auth is enabled the ingress routes to
-	// oauth2-proxy first, which then proxies upstream to the agent port).
-	networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
-		From: []networkingv1.NetworkPolicyPeer{
-			{
-				PodSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						langoplabels.LabelKeyK8sComponent: "oauth2-proxy",
-						langoplabels.LabelKeyK8sName:      agent.Name,
-					},
-				},
-			},
-		},
-		Ports: npPorts,
-	})
-
 	// Append user-defined ingress rules from spec.networkPolicies.ingress
 	if agent.Spec.NetworkPolicies != nil {
 		networkPolicy.Spec.Ingress = append(
@@ -179,6 +161,10 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 	labels[langoplabels.LabelKeyLangopComponent] = "agent" // Only route to agent pods, not trigger pods
+
+	// Try to fetch the cluster to determine if auth (and the oauth2-proxy sidecar) is enabled.
+	cluster := &langopv1alpha1.LanguageCluster{}
+	clusterFetched := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster) == nil
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -204,6 +190,15 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 				Port:       ap.Port,
 				TargetPort: intstr.FromInt32(ap.Port),
 				Protocol:   proto,
+			})
+		}
+		// Expose the oauth2-proxy sidecar port so the Ingress can route to 4180.
+		if clusterFetched && agentAuthEnabled(agent, cluster) {
+			svcPorts = append(svcPorts, corev1.ServicePort{
+				Name:       "oauth2-proxy",
+				Port:       OAuth2ProxyPort,
+				TargetPort: intstr.FromInt32(OAuth2ProxyPort),
+				Protocol:   corev1.ProtocolTCP,
 			})
 		}
 		service.Spec = corev1.ServiceSpec{
@@ -314,14 +309,12 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, ingress, func() error {
 		pathType := networkingv1.PathTypePrefix
 
-		// Route to oauth2-proxy when auth is enabled; directly to the agent otherwise.
-		var backendName string
+		// Route to the oauth2-proxy sidecar port when auth is enabled; directly to the agent port otherwise.
+		// Both use the same Service (the sidecar port 4180 is added when auth is active).
 		var backendPort int32
 		if agentAuthEnabled(agent, cluster) {
-			backendName = agent.Name + OAuth2ProxySuffix
 			backendPort = OAuth2ProxyPort
 		} else {
-			backendName = agent.Name
 			backendPort = agentIngressPort(agent)
 		}
 
@@ -337,7 +330,7 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 									PathType: &pathType,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
-											Name: backendName,
+											Name: agent.Name,
 											Port: networkingv1.ServiceBackendPort{
 												Number: backendPort,
 											},
@@ -435,186 +428,105 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 	return false, "Ingress load balancer assigned but no IP or hostname available", nil
 }
 
-// reconcileOAuthProxy creates or deletes the oauth2-proxy Deployment and Service for
-// an agent whose ingress route should be protected by OIDC authentication.
+// reconcileOAuthProxy ensures the per-agent cookie secret exists when auth is enabled.
+// The oauth2-proxy itself runs as a sidecar in the agent pod (see buildOAuthProxySidecar).
 func (r *LanguageAgentReconciler) reconcileOAuthProxy(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster) error {
 	if !agentAuthEnabled(agent, cluster) {
-		return r.cleanupOAuthProxy(ctx, agent)
+		return nil
+	}
+	_, err := r.reconcileOAuthCookieSecret(ctx, agent)
+	return err
+}
+
+// buildOAuthProxySidecar returns an oauth2-proxy container to inject into the agent pod when
+// auth is enabled, or nil if auth is not active. The sidecar upstream is localhost so no extra
+// Service, NetworkPolicy rule, or cross-pod network hop is required.
+func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*corev1.Container, error) {
+	cluster := &langopv1alpha1.LanguageCluster{}
+	if err := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if !agentAuthEnabled(agent, cluster) {
+		return nil, nil
 	}
 
-	// Resolve the OIDC issuer URL and client credentials.
 	issuerURL := dexIssuerURL(cluster)
 	if issuerURL == "" {
-		return fmt.Errorf("cannot deploy oauth2-proxy: auth is enabled but no OIDC issuer URL could be determined (set spec.domain or spec.auth.oidc.externalIssuerURL)")
+		return nil, fmt.Errorf("cannot build oauth2-proxy sidecar: auth is enabled but no OIDC issuer URL could be determined (set spec.domain or spec.auth.oidc.externalIssuerURL)")
 	}
 	clientID := oauth2ProxyClientID(cluster)
 
-	// Read the shared client secret from the cluster namespace.
 	clientSecretVal, err := r.readOAuthClientSecret(ctx, cluster)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Ensure a per-agent cookie secret exists.
 	cookieSecret, err := r.reconcileOAuthCookieSecret(ctx, agent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Build the oauth2-proxy upstream (the agent's own Service).
-	upstream := fmt.Sprintf("http://%s:%d", agent.Name, agentIngressPort(agent))
-
-	// Build the redirect URL.
+	// Upstream is localhost — no network hop, no NetworkPolicy needed.
+	upstream := fmt.Sprintf("http://localhost:%d", agentIngressPort(agent))
 	hostname := fmt.Sprintf("%s.%s", agent.Name, cluster.Spec.Domain)
 	redirectURL := fmt.Sprintf("https://%s/oauth2/callback", hostname)
 
-	// Email domain allowlist.
 	emailDomain := "*"
 	if cluster.Spec.Auth.OIDC != nil && cluster.Spec.Auth.OIDC.EmailDomain != "" {
 		emailDomain = cluster.Spec.Auth.OIDC.EmailDomain
 	}
 
-	if err := r.reconcileOAuthProxyDeployment(ctx, agent, cluster, issuerURL, clientID, clientSecretVal, cookieSecret, upstream, redirectURL, emailDomain); err != nil {
-		return err
-	}
-	return r.reconcileOAuthProxyService(ctx, agent)
-}
-
-// reconcileOAuthProxyDeployment creates or updates the oauth2-proxy Deployment for an agent.
-func (r *LanguageAgentReconciler) reconcileOAuthProxyDeployment(
-	ctx context.Context,
-	agent *langopv1alpha1.LanguageAgent,
-	cluster *langopv1alpha1.LanguageCluster,
-	issuerURL, clientID, clientSecret, cookieSecret, upstream, redirectURL, emailDomain string,
-) error {
-	name := agent.Name + OAuth2ProxySuffix
-	// Intentionally omit langop.io/kind=LanguageAgent so the agent's NetworkPolicy
-	// (which restricts ingress to port 8080) does not apply to the oauth2-proxy pod.
-	labels := map[string]string{
-		langoplabels.LabelKeyK8sName:      agent.Name,
-		langoplabels.LabelKeyK8sManagedBy: "language-operator",
-		langoplabels.LabelKeyK8sPartOf:    "langop",
-		langoplabels.LabelKeyK8sComponent: "oauth2-proxy",
-	}
-
-	replicas := int32(1)
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: agent.Namespace},
-	}
-	return CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, deployment, func() error {
-		deployment.Labels = labels
-		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{MatchLabels: labels},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: labels},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "oauth2-proxy",
-							Image: r.oauth2ProxyImage(),
-							Args: []string{
-								"--provider=oidc",
-								// Use the public issuer URL for iss-claim validation and browser redirects,
-								// but skip OIDC discovery and wire internal endpoints directly so
-								// oauth2-proxy never needs to reach the public ingress from inside the cluster.
-								"--oidc-issuer-url=" + issuerURL,
-								"--skip-oidc-discovery=true",
-								"--oidc-jwks-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/keys", DexResourceName, cluster.Name, DexPort),
-								"--login-url=" + issuerURL + "/auth",
-								"--redeem-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/token", DexResourceName, cluster.Name, DexPort),
-								"--client-id=" + clientID,
-								"--client-secret=" + clientSecret,
-								"--cookie-secret=" + cookieSecret,
-								"--upstream=" + upstream,
-								"--redirect-url=" + redirectURL,
-								"--cookie-domain=." + cluster.Spec.Domain,
-								"--email-domain=" + emailDomain,
-								fmt.Sprintf("--http-address=0.0.0.0:%d", OAuth2ProxyPort),
-								"--skip-provider-button=true",
-								"--skip-auth-regex=^/oauth2/",
-							},
-							Ports: []corev1.ContainerPort{
-								{Name: "http", ContainerPort: OAuth2ProxyPort, Protocol: corev1.ProtocolTCP},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("25m"),
-									corev1.ResourceMemory: resource.MustParse("32Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/ping",
-										Port: intstr.FromInt32(OAuth2ProxyPort),
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       10,
-							},
-						},
-					},
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: ptr.To(true),
-					},
+	return &corev1.Container{
+		Name:  "oauth2-proxy",
+		Image: r.oauth2ProxyImage(),
+		Args: []string{
+			"--provider=oidc",
+			// Use the public issuer URL for iss-claim validation and browser redirects,
+			// but skip OIDC discovery and wire internal endpoints directly so
+			// oauth2-proxy never needs to reach the public ingress from inside the cluster.
+			"--oidc-issuer-url=" + issuerURL,
+			"--skip-oidc-discovery=true",
+			"--oidc-jwks-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/keys", DexResourceName, cluster.Name, DexPort),
+			"--login-url=" + issuerURL + "/auth",
+			"--redeem-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/token", DexResourceName, cluster.Name, DexPort),
+			"--client-id=" + clientID,
+			"--client-secret=" + clientSecretVal,
+			"--cookie-secret=" + cookieSecret,
+			"--upstream=" + upstream,
+			"--redirect-url=" + redirectURL,
+			"--cookie-domain=." + cluster.Spec.Domain,
+			"--email-domain=" + emailDomain,
+			fmt.Sprintf("--http-address=0.0.0.0:%d", OAuth2ProxyPort),
+			"--skip-provider-button=true",
+			"--skip-auth-regex=^/oauth2/",
+		},
+		Ports: []corev1.ContainerPort{
+			{Name: "http", ContainerPort: OAuth2ProxyPort, Protocol: corev1.ProtocolTCP},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("25m"),
+				corev1.ResourceMemory: resource.MustParse("32Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+		},
+		ReadinessProbe: &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/ping",
+					Port: intstr.FromInt32(OAuth2ProxyPort),
 				},
 			},
-		}
-		return nil
-	})
-}
-
-// reconcileOAuthProxyService creates or updates the ClusterIP Service for the agent's oauth2-proxy.
-func (r *LanguageAgentReconciler) reconcileOAuthProxyService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	name := agent.Name + OAuth2ProxySuffix
-	labels := map[string]string{
-		langoplabels.LabelKeyK8sName:      agent.Name,
-		langoplabels.LabelKeyK8sManagedBy: "language-operator",
-		langoplabels.LabelKeyK8sPartOf:    "langop",
-		langoplabels.LabelKeyK8sComponent: "oauth2-proxy",
-	}
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: agent.Namespace},
-	}
-	return CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, svc, func() error {
-		svc.Labels = labels
-		svc.Spec = corev1.ServiceSpec{
-			Selector: labels,
-			Type:     corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       OAuth2ProxyPort,
-					TargetPort: intstr.FromInt32(OAuth2ProxyPort),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-		}
-		return nil
-	})
-}
-
-// cleanupOAuthProxy deletes the oauth2-proxy Deployment and Service when auth is disabled.
-// Resources created via CreateOrUpdateOwned have owner references and are also GC'd on agent
-// deletion, but this ensures they are removed promptly when auth is toggled off.
-func (r *LanguageAgentReconciler) cleanupOAuthProxy(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
-	name := agent.Name + OAuth2ProxySuffix
-	toDelete := []client.Object{
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: agent.Namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: agent.Namespace}},
-	}
-	for _, obj := range toDelete {
-		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete oauth2-proxy resource %s: %w", obj.GetName(), err)
-		}
-	}
-	return nil
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+		},
+	}, nil
 }
 
 // readOAuthClientSecret reads the shared oauth2-proxy client secret from the cluster namespace.

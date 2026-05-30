@@ -957,20 +957,14 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// 2 built-in rules + 1 ingress-controller rule + 1 oauth2-proxy rule
-	require.Len(t, np.Spec.Ingress, 4, "expected 4 ingress rules (2 built-in + ingress controller + oauth2-proxy)")
+	// 2 built-in rules + 1 ingress-controller rule; no oauth2-proxy rule (sidecar uses localhost)
+	require.Len(t, np.Spec.Ingress, 3, "expected 3 ingress rules (2 built-in + ingress controller)")
 	ingressNsRule := np.Spec.Ingress[2]
 	require.Len(t, ingressNsRule.From, 1)
 	require.NotNil(t, ingressNsRule.From[0].NamespaceSelector)
 	assert.Equal(t, "traefik", ingressNsRule.From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
 	require.Len(t, ingressNsRule.Ports, 1)
 	assert.Equal(t, int32(8080), ingressNsRule.Ports[0].Port.IntVal)
-	// oauth2-proxy rule allows the proxy sidecar to reach the agent
-	oauthRule := np.Spec.Ingress[3]
-	require.Len(t, oauthRule.From, 1)
-	require.NotNil(t, oauthRule.From[0].PodSelector)
-	assert.Equal(t, "oauth2-proxy", oauthRule.From[0].PodSelector.MatchLabels["app.kubernetes.io/component"])
-	assert.Equal(t, agent.Name, oauthRule.From[0].PodSelector.MatchLabels["app.kubernetes.io/name"])
 }
 
 // TestLanguageAgentController_NoIngressControllerNamespace verifies that without
@@ -999,8 +993,8 @@ func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// 2 built-in rules + 1 oauth2-proxy rule (always present; harmless when auth is disabled)
-	assert.Len(t, np.Spec.Ingress, 3, "expected 3 ingress rules (2 built-in + oauth2-proxy)")
+	// 2 built-in rules only; no oauth2-proxy rule (sidecar uses localhost, no NetworkPolicy needed)
+	assert.Len(t, np.Spec.Ingress, 2, "expected 2 ingress rules (trigger + agent-to-agent)")
 }
 
 // --- oauth2-proxy reconciliation ---
@@ -1040,7 +1034,7 @@ func seedDexSecret(t *testing.T, fc client.Client, namespace string) {
 	require.NoError(t, fc.Create(context.Background(), secret))
 }
 
-func TestReconcileOAuthProxy_CreatesDeploymentAndService(t *testing.T) {
+func TestReconcileOAuthProxy_CreatesCookieSecret(t *testing.T) {
 	cluster := authEnabledCluster("default")
 	agent := gen.LanguageAgent("my-agent", "default")
 	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
@@ -1049,15 +1043,14 @@ func TestReconcileOAuthProxy_CreatesDeploymentAndService(t *testing.T) {
 
 	require.NoError(t, r.reconcileOAuthProxy(ctx, agent, cluster))
 
-	dep := &appsv1.Deployment{}
-	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix, Namespace: "default"}, dep))
-	assert.Equal(t, "oauth2-proxy", dep.Labels["app.kubernetes.io/component"])
-	assert.NotContains(t, dep.Labels, "langop.io/kind", "oauth2-proxy pod must not carry langop.io/kind label")
-
-	svc := &corev1.Service{}
-	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix, Namespace: "default"}, svc))
-	require.Len(t, svc.Spec.Ports, 1)
-	assert.Equal(t, OAuth2ProxyPort, svc.Spec.Ports[0].Port)
+	// reconcileOAuthProxy now only manages the cookie secret; the proxy itself is a sidecar.
+	secret := &corev1.Secret{}
+	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix + "-cookie", Namespace: "default"}, secret))
+	val := secret.StringData[OAuth2ProxyCookieSecretKey]
+	if val == "" {
+		val = string(secret.Data[OAuth2ProxyCookieSecretKey])
+	}
+	assert.NotEmpty(t, val, "cookie secret must be non-empty")
 }
 
 func TestReconcileOAuthProxy_SkipsWhenAuthDisabled(t *testing.T) {
@@ -1068,13 +1061,14 @@ func TestReconcileOAuthProxy_SkipsWhenAuthDisabled(t *testing.T) {
 
 	require.NoError(t, r.reconcileOAuthProxy(ctx, agent, cluster))
 
-	dep := &appsv1.Deployment{}
-	err := fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix, Namespace: "default"}, dep)
-	require.Error(t, err, "oauth2-proxy Deployment must not exist when auth is disabled")
+	// When auth is disabled, no cookie secret should be created.
+	secret := &corev1.Secret{}
+	err := fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix + "-cookie", Namespace: "default"}, secret)
+	require.Error(t, err, "cookie secret must not exist when auth is disabled")
 }
 
-func TestReconcileOAuthProxy_UsesInternalDexURLs(t *testing.T) {
-	// The oauth2-proxy must use cluster-internal URLs for token exchange to avoid
+func TestBuildOAuthProxySidecar_UsesInternalDexURLs(t *testing.T) {
+	// The oauth2-proxy sidecar must use cluster-internal URLs for token exchange to avoid
 	// external DNS dependency inside the cluster.
 	cluster := authEnabledCluster("mycluster")
 	agent := gen.LanguageAgent("my-agent", "mycluster")
@@ -1082,12 +1076,10 @@ func TestReconcileOAuthProxy_UsesInternalDexURLs(t *testing.T) {
 	seedDexSecret(t, fc, "mycluster")
 	ctx := context.Background()
 
-	require.NoError(t, r.reconcileOAuthProxy(ctx, agent, cluster))
-
-	dep := &appsv1.Deployment{}
-	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: "my-agent" + OAuth2ProxySuffix, Namespace: "mycluster"}, dep))
-	args := dep.Spec.Template.Spec.Containers[0].Args
-	argsStr := strings.Join(args, " ")
+	sidecar, err := r.buildOAuthProxySidecar(ctx, agent)
+	require.NoError(t, err)
+	require.NotNil(t, sidecar, "sidecar must be non-nil when auth is enabled")
+	argsStr := strings.Join(sidecar.Args, " ")
 	assert.Contains(t, argsStr, "--skip-oidc-discovery=true")
 	assert.Contains(t, argsStr, "svc.cluster.local")
 	assert.NotContains(t, argsStr, "https://auth.example.com/keys", "JWKS URL must use internal cluster URL, not public domain")
@@ -1104,7 +1096,7 @@ func TestReconcileIngress_BackendIsOAuth2ProxyWhenAuthEnabled(t *testing.T) {
 	ing := &networkingv1.Ingress{}
 	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: "default"}, ing))
 	backend := ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service
-	assert.Equal(t, "my-agent"+OAuth2ProxySuffix, backend.Name)
+	assert.Equal(t, "my-agent", backend.Name, "sidecar: Ingress uses same Service as the agent, not a separate oauth2-proxy Service")
 	assert.Equal(t, OAuth2ProxyPort, backend.Port.Number)
 }
 
@@ -1121,4 +1113,54 @@ func TestReconcileIngress_BackendIsAgentDirectWhenAuthDisabled(t *testing.T) {
 	backend := ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service
 	assert.Equal(t, "my-agent", backend.Name)
 	assert.Equal(t, int32(8080), backend.Port.Number)
+}
+
+// TestReconcileDeployment_OAuthProxySidecarPresent verifies that when auth is enabled,
+// reconcileDeployment injects an oauth2-proxy sidecar with upstream pointing to localhost.
+func TestReconcileDeployment_OAuthProxySidecarPresent(t *testing.T) {
+	cluster := authEnabledCluster("default")
+	agent := gen.LanguageAgent("my-agent", "default")
+	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	seedDexSecret(t, fc, "default")
+	ctx := context.Background()
+
+	require.NoError(t, r.reconcileDeployment(ctx, agent, "abc123"))
+
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: "default"}, dep))
+
+	names := make([]string, 0, len(dep.Spec.Template.Spec.Containers))
+	for _, c := range dep.Spec.Template.Spec.Containers {
+		names = append(names, c.Name)
+	}
+	assert.Contains(t, names, "agent")
+	assert.Contains(t, names, "oauth2-proxy")
+
+	var oauthC *corev1.Container
+	for i := range dep.Spec.Template.Spec.Containers {
+		if dep.Spec.Template.Spec.Containers[i].Name == "oauth2-proxy" {
+			oauthC = &dep.Spec.Template.Spec.Containers[i]
+			break
+		}
+	}
+	require.NotNil(t, oauthC)
+	argsStr := strings.Join(oauthC.Args, " ")
+	assert.Contains(t, argsStr, "--http-address=0.0.0.0:4180")
+	assert.Contains(t, argsStr, "--upstream=http://localhost:8080")
+}
+
+// TestReconcileDeployment_OAuthProxySidecarAbsent verifies that when auth is disabled,
+// the agent Deployment has exactly one container (no oauth2-proxy sidecar).
+func TestReconcileDeployment_OAuthProxySidecarAbsent(t *testing.T) {
+	cluster := gen.ReadyCluster("default")
+	agent := gen.LanguageAgent("my-agent", "default")
+	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	ctx := context.Background()
+
+	require.NoError(t, r.reconcileDeployment(ctx, agent, "abc123"))
+
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: "default"}, dep))
+	assert.Len(t, dep.Spec.Template.Spec.Containers, 1, "expected only agent container when auth is disabled")
+	assert.Equal(t, "agent", dep.Spec.Template.Spec.Containers[0].Name)
 }

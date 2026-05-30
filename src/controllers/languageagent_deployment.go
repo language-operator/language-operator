@@ -36,6 +36,12 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return fmt.Errorf("failed to resolve sidecar tools: %w", err)
 	}
 
+	// Build the oauth2-proxy sidecar when auth is enabled for this agent's cluster.
+	oauthSidecar, err := r.buildOAuthProxySidecar(ctx, agent)
+	if err != nil {
+		return fmt.Errorf("building oauth2-proxy sidecar: %w", err)
+	}
+
 	// Determine target namespace and labels
 	targetNamespace := agent.Namespace
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
@@ -89,6 +95,9 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 				StartupProbe:    agent.Spec.Deployment.StartupProbe,
 				Ports:           buildAgentContainerPorts(agentPorts(agent)),
 			},
+		}
+		if oauthSidecar != nil {
+			containers = append(containers, *oauthSidecar)
 		}
 
 		// Inject operator-managed env vars and volume mounts into user-specified init containers.
