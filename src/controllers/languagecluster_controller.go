@@ -72,6 +72,8 @@ type LanguageClusterReconciler struct {
 	NetworkIsolationEnabled bool
 	GatewayImage            string
 	GatewayImagePullPolicy  corev1.PullPolicy
+	DexImage                string
+	OAuth2ProxyImage        string
 	DefaultIngressClassName string
 	DefaultTLSIssuerName    string
 	DefaultTLSIssuerKind    string
@@ -88,6 +90,25 @@ func (r *LanguageClusterReconciler) gatewayImage() string {
 		return r.GatewayImage
 	}
 	return "ghcr.io/language-operator/model-gateway:latest"
+}
+
+// gatewayEnv merges user-supplied env vars with operator-managed ones.
+// When spec.auth.enabled, LITELLM_JWT_PUBLIC_KEY_URL is injected so that the
+// model gateway enables LiteLLM JWT auth pointed at the cluster's Dex instance.
+func (r *LanguageClusterReconciler) gatewayEnv(cluster *langopv1alpha1.LanguageCluster, userEnv []corev1.EnvVar) []corev1.EnvVar {
+	issuer := dexIssuerURL(cluster)
+	if cluster.Spec.Auth == nil || !cluster.Spec.Auth.Enabled || issuer == "" {
+		return userEnv
+	}
+	jwtKeyURL := issuer + "/keys"
+	managed := corev1.EnvVar{Name: "LITELLM_JWT_PUBLIC_KEY_URL", Value: jwtKeyURL}
+	// User env takes precedence — don't override if they set it explicitly.
+	for _, e := range userEnv {
+		if e.Name == "LITELLM_JWT_PUBLIC_KEY_URL" {
+			return userEnv
+		}
+	}
+	return append([]corev1.EnvVar{managed}, userEnv...)
 }
 
 func (r *LanguageClusterReconciler) gatewayImagePullPolicy(cluster *langopv1alpha1.LanguageCluster) corev1.PullPolicy {
@@ -138,6 +159,7 @@ func defaultGatewayReadinessProbe() *corev1.Probe {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=resourcequotas,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;create;update;patch;delete
@@ -342,6 +364,18 @@ func (r *LanguageClusterReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		langopv1alpha1.ReasonGatewayReady, "Shared LiteLLM gateway is ready", cluster.Generation)
 	cluster.Status.GatewayEndpoint = serviceURL("gateway", cluster.Name, network.GatewayServicePort)
 	cluster.Status.GatewayReady = ptr.To(true)
+
+	// Reconcile Dex OIDC provider (created when spec.auth.enabled and no external issuer)
+	if err := r.reconcileDex(ctx, cluster); err != nil {
+		log.Error(err, "Failed to reconcile Dex OIDC provider")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "Failed to reconcile Dex OIDC provider")
+		SetPhase(&cluster.Status.Phase, &cluster.Status.ObservedGeneration, events.PhaseStatusFailed, cluster.Generation)
+		if updateErr := r.Status().Update(ctx, cluster); updateErr != nil {
+			log.Error(updateErr, "Failed to update status after Dex error")
+		}
+		return ctrl.Result{}, err
+	}
 
 	// Populate status.capacity with observed usage. Runs before reconcileCapacity so the
 	// field is always written even if ResourceQuota management fails (e.g. RBAC not yet applied).
@@ -1200,7 +1234,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 							Args:            gatewayDeploy.Args,
 							ImagePullPolicy: r.gatewayImagePullPolicy(cluster),
 							Resources:       resources,
-							Env:             gatewayDeploy.Env,
+							Env:             r.gatewayEnv(cluster, gatewayDeploy.Env),
 							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
@@ -1436,6 +1470,14 @@ func (r *LanguageClusterReconciler) SetupWithManager(mgr ctrl.Manager, concurren
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(
 			func(ctx context.Context, obj client.Object) []reconcile.Request {
 				// Re-reconcile the LanguageCluster whose namespace matches the model's namespace
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}},
+				}
+			},
+		)).
+		Watches(&langopv1alpha1.LanguageAgent{}, handler.EnqueueRequestsFromMapFunc(
+			func(ctx context.Context, obj client.Object) []reconcile.Request {
+				// Re-reconcile when agents change so Dex redirect URIs stay current
 				return []reconcile.Request{
 					{NamespacedName: types.NamespacedName{Name: obj.GetNamespace()}},
 				}

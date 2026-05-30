@@ -31,6 +31,8 @@ dev:
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
 		--wait --timeout 2m
+	kubectl rollout restart deployment language-operator -n language-operator
+	kubectl rollout status deployment language-operator -n language-operator --timeout=2m
 
 # Install the Helm chart using charts/language-operator/values.local.yaml
 install:

@@ -212,6 +212,16 @@ config:
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
 
+  auth:
+    dex:
+      # Image for the Dex OIDC provider deployed per LanguageCluster when spec.auth.enabled is true.
+      # Defaults to ghcr.io/dexidp/dex:latest when empty.
+      image: ""
+    oauth2Proxy:
+      # Image for oauth2-proxy deployed per LanguageAgent when auth is enabled.
+      # Defaults to quay.io/oauth2-proxy/oauth2-proxy:v7.6.0 when empty.
+      image: ""
+
   tls:
     # cert-manager issuer name for gateway and agent Ingress TLS certificates.
     # Set to "" to disable cert-manager integration (e.g. when supplying certificates manually).

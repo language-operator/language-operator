@@ -516,6 +516,7 @@ func TestLanguageAgentController_UUIDAssignmentRaceCondition(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-uuid-agent",
 			Namespace: "default",
+			UID:       "aaaabbbb-cccc-dddd-eeee-ffffgggghhhh",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image: "ghcr.io/language-operator/agent:latest",
@@ -605,6 +606,7 @@ func TestLanguageAgentController_UUIDConflictHandling(t *testing.T) {
 			Name:       "test-conflict-agent",
 			Namespace:  "default",
 			Generation: 1,
+			UID:        "11112222-3333-4444-5555-666677778888",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
 			Image: "ghcr.io/language-operator/agent:latest",

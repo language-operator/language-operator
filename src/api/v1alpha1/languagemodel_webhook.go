@@ -31,6 +31,7 @@ import (
 // +kubebuilder:object:generate=false
 type LanguageModelWebhook struct {
 	client.Client
+	reader client.Reader
 }
 
 var _ admission.Validator[*LanguageModel] = &LanguageModelWebhook{}
@@ -57,12 +58,16 @@ func (h *LanguageModelWebhook) ValidateDelete(_ context.Context, _ *LanguageMode
 }
 
 func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
-	return validateClusterMembership(ctx, h.Client, namespace)
+	r := client.Reader(h.reader)
+	if r == nil {
+		r = h.Client
+	}
+	return validateClusterMembership(ctx, r, namespace)
 }
 
 // SetupLanguageModelWebhookWithManager registers the LanguageModel validating webhook.
 func SetupLanguageModelWebhookWithManager(mgr ctrl.Manager) error {
-	h := &LanguageModelWebhook{Client: mgr.GetClient()}
+	h := &LanguageModelWebhook{Client: mgr.GetClient(), reader: mgr.GetAPIReader()}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageModel{}).
 		WithValidator(h).
 		Complete()

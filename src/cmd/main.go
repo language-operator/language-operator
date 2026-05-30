@@ -90,6 +90,8 @@ func main() {
 	var gatewayIngressClassName string
 	var gatewayImage string
 	var gatewayImagePullPolicy string
+	var dexImage string
+	var oauth2ProxyImage string
 	var webhookPort int
 	var webhookCertDir string
 	var disableWebhooks bool
@@ -131,6 +133,10 @@ func main() {
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model-gateway:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
+	flag.StringVar(&dexImage, "dex-image", "",
+		"Image for the Dex OIDC provider deployed per LanguageCluster. Defaults to ghcr.io/dexidp/dex:v2.41.1.")
+	flag.StringVar(&oauth2ProxyImage, "oauth2-proxy-image", "",
+		"Image for oauth2-proxy deployed per LanguageAgent. Defaults to quay.io/oauth2-proxy/oauth2-proxy:v7.6.0.")
 	var tlsIssuerName string
 	flag.StringVar(&tlsIssuerName, "tls-issuer-name", "",
 		"cert-manager issuer name used to provision TLS certificates for gateway and agent Ingress resources. Empty disables cert-manager integration.")
@@ -340,6 +346,7 @@ func main() {
 		DefaultTLSIssuerName:       tlsIssuerName,
 		DefaultTLSIssuerKind:       tlsIssuerKind,
 		IngressControllerNamespace: ingressControllerNamespace,
+		OAuth2ProxyImage:           oauth2ProxyImage,
 		CNICapabilities:            cniCaps,
 	}
 
@@ -392,6 +399,8 @@ func main() {
 		NetworkIsolationEnabled: networkIsolationEnabled,
 		GatewayImage:            gatewayImage,
 		GatewayImagePullPolicy:  corev1.PullPolicy(gatewayImagePullPolicy),
+		DexImage:                dexImage,
+		OAuth2ProxyImage:        oauth2ProxyImage,
 		DefaultIngressClassName: gatewayIngressClassName,
 		DefaultTLSIssuerName:    tlsIssuerName,
 		DefaultTLSIssuerKind:    tlsIssuerKind,

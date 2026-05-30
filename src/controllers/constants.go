@@ -35,6 +35,23 @@ const (
 	LangopUserID = 1000
 	// LangopGroupID is the group ID for the langop group.
 	LangopGroupID = 101
+
+	// DexResourceName is the name used for Dex OIDC provider resources.
+	DexResourceName = "auth"
+	// DexConfigMapName is the name of the Dex configuration ConfigMap.
+	DexConfigMapName = "auth-dex-config"
+	// DexClientSecretName is the name of the Secret holding the shared oauth2-proxy client secret.
+	DexClientSecretName = "auth-client-secret"
+	// DexClientSecretKey is the key within auth-client-secret holding the secret value.
+	DexClientSecretKey = "secret"
+	// DexPort is the port Dex listens on inside the pod.
+	DexPort = int32(5556)
+	// OAuth2ProxySuffix is the suffix appended to agent names for oauth2-proxy resources.
+	OAuth2ProxySuffix = "-oauth2-proxy"
+	// OAuth2ProxyPort is the port oauth2-proxy listens on.
+	OAuth2ProxyPort = int32(4180)
+	// OAuth2ProxyCookieSecretKey is the key within the per-agent cookie-secret Secret.
+	OAuth2ProxyCookieSecretKey = "cookie-secret"
 )
 
 // RemoveFinalizer removes the operator finalizer from obj and updates it.

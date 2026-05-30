@@ -35,6 +35,7 @@ import (
 // +kubebuilder:object:generate=false
 type LanguageToolWebhook struct {
 	client.Client
+	reader          client.Reader
 	RegistryManager validation.RegistryManager
 }
 
@@ -92,12 +93,16 @@ func (h *LanguageToolWebhook) ValidateDelete(_ context.Context, _ *LanguageTool)
 }
 
 func (h *LanguageToolWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
-	return validateClusterMembership(ctx, h.Client, namespace)
+	r := client.Reader(h.reader)
+	if r == nil {
+		r = h.Client
+	}
+	return validateClusterMembership(ctx, r, namespace)
 }
 
 // SetupLanguageToolWebhookWithManager registers the LanguageTool mutating and validating webhooks.
 func SetupLanguageToolWebhookWithManager(mgr ctrl.Manager, registryManager validation.RegistryManager) error {
-	h := &LanguageToolWebhook{Client: mgr.GetClient(), RegistryManager: registryManager}
+	h := &LanguageToolWebhook{Client: mgr.GetClient(), reader: mgr.GetAPIReader(), RegistryManager: registryManager}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageTool{}).
 		WithDefaulter(h).
 		WithValidator(h).

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/codes"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -51,6 +50,7 @@ type LanguageAgentReconciler struct {
 	DefaultTLSIssuerName       string
 	DefaultTLSIssuerKind       string
 	IngressControllerNamespace string
+	OAuth2ProxyImage           string
 	CNICapabilities            *cni.CNICapabilities
 }
 
@@ -307,13 +307,9 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.V(1).Info("Network isolation disabled - skipping NetworkPolicy creation")
 	}
 
-	// Ensure agent has a UUID for webhook routing; persisted by the end-of-reconcile status write.
-	if agent.Status.UUID == "" {
-		agent.Status.UUID = uuid.New().String()
-		log.Info("Generated UUID for agent", "uuid", agent.Status.UUID)
-	}
-	// Propagate to workingAgent so AGENT_UUID is correct in the first Deployment on agents
-	// that use a runtime (workingAgent is a DeepCopy made before the UUID was generated).
+	// Use the agent's Kubernetes UID as the stable agent UUID — it's assigned at creation,
+	// never changes, and is always available without a status round-trip.
+	agent.Status.UUID = string(agent.UID)
 	workingAgent.Status.UUID = agent.Status.UUID
 
 	// Reconcile Service for agent webhook server

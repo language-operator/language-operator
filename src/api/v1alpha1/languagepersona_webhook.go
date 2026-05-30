@@ -31,6 +31,7 @@ import (
 // +kubebuilder:object:generate=false
 type LanguagePersonaWebhook struct {
 	client.Client
+	reader client.Reader
 }
 
 var _ admission.Validator[*LanguagePersona] = &LanguagePersonaWebhook{}
@@ -57,12 +58,16 @@ func (h *LanguagePersonaWebhook) ValidateDelete(_ context.Context, _ *LanguagePe
 }
 
 func (h *LanguagePersonaWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
-	return validateClusterMembership(ctx, h.Client, namespace)
+	r := client.Reader(h.reader)
+	if r == nil {
+		r = h.Client
+	}
+	return validateClusterMembership(ctx, r, namespace)
 }
 
 // SetupLanguagePersonaWebhookWithManager registers the LanguagePersona validating webhook.
 func SetupLanguagePersonaWebhookWithManager(mgr ctrl.Manager) error {
-	h := &LanguagePersonaWebhook{Client: mgr.GetClient()}
+	h := &LanguagePersonaWebhook{Client: mgr.GetClient(), reader: mgr.GetAPIReader()}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguagePersona{}).
 		WithValidator(h).
 		Complete()

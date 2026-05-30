@@ -214,7 +214,17 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
     if merged_settings:
         config["litellm_settings"] = merged_settings
 
-    config["general_settings"] = {"background_health_checks": False}
+    general_settings: Dict[str, Any] = {"background_health_checks": False}
+
+    # Enable JWT auth when an OIDC public key URL is provided.
+    # Set LITELLM_JWT_PUBLIC_KEY_URL to the JWKS endpoint of your OIDC provider
+    # (e.g. https://auth.my-cluster.example.com/keys for an embedded Dex instance).
+    jwt_key_url = os.environ.get("LITELLM_JWT_PUBLIC_KEY_URL", "").strip()
+    if jwt_key_url:
+        general_settings["enable_jwt_auth"] = True
+        general_settings["jwt_public_key_url"] = jwt_key_url
+
+    config["general_settings"] = general_settings
 
     return config
 

@@ -84,6 +84,12 @@ spec:
         {{- if .Values.config.gateway.imagePullPolicy }}
         - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}
+        {{- if .Values.config.auth.dex.image }}
+        - --dex-image={{ .Values.config.auth.dex.image }}
+        {{- end }}
+        {{- if .Values.config.auth.oauth2Proxy.image }}
+        - --oauth2-proxy-image={{ .Values.config.auth.oauth2Proxy.image }}
+        {{- end }}
         {{- if .Values.config.tls.certificateIssuerName }}
         - --tls-issuer-name={{ .Values.config.tls.certificateIssuerName }}
         {{- end }}

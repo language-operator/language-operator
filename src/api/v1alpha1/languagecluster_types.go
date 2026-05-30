@@ -96,6 +96,12 @@ type LanguageClusterSpec struct {
 	// When unset, any existing "langop-quota" is deleted.
 	// +optional
 	Capacity *ClusterCapacitySpec `json:"capacity,omitempty"`
+
+	// Auth configures OIDC authentication for agent ingress routes in this cluster.
+	// When enabled, a Dex OIDC provider is deployed alongside the gateway and each
+	// LanguageAgent with auth enabled gets an oauth2-proxy in front of its ingress.
+	// +optional
+	Auth *ClusterAuthSpec `json:"auth,omitempty"`
 }
 
 // DeploymentSpec groups Kubernetes deployment configuration that is common across
@@ -237,6 +243,109 @@ type AutoscalingSpec struct {
 	// Defaults to 80% average CPU utilization if not specified.
 	// +optional
 	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
+}
+
+// ClusterAuthSpec configures OIDC authentication for a LanguageCluster.
+type ClusterAuthSpec struct {
+	// Enabled controls whether OIDC authentication is active for this cluster.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// OIDC configures the OIDC provider (embedded Dex or external).
+	// +optional
+	OIDC *ClusterOIDCSpec `json:"oidc,omitempty"`
+}
+
+// ClusterOIDCSpec configures the OIDC provider for the cluster.
+type ClusterOIDCSpec struct {
+	// Dex configures the embedded Dex OIDC provider.
+	// When set (and ExternalIssuerURL is not), the controller deploys Dex alongside the gateway.
+	// +optional
+	Dex *DexSpec `json:"dex,omitempty"`
+
+	// ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.
+	// Mutually exclusive with dex.
+	// Example: "https://accounts.google.com"
+	// +optional
+	ExternalIssuerURL string `json:"externalIssuerURL,omitempty"`
+
+	// ClientID is the OAuth2 client ID when using an external OIDC provider.
+	// Ignored when dex is configured (the operator manages the client ID).
+	// +optional
+	ClientID string `json:"clientID,omitempty"`
+
+	// ClientSecretRef references a Secret containing the OAuth2 client secret.
+	// Ignored when dex is configured (the operator manages the client secret).
+	// +optional
+	ClientSecretRef *SecretReference `json:"clientSecretRef,omitempty"`
+
+	// EmailDomain restricts login to users with this email domain.
+	// Set to "*" to allow all email domains (default).
+	// +optional
+	EmailDomain string `json:"emailDomain,omitempty"`
+}
+
+// DexSpec configures the embedded Dex OIDC provider.
+type DexSpec struct {
+	// Connectors configures upstream identity providers (GitHub, Google, OIDC, etc.).
+	// +optional
+	Connectors []DexConnector `json:"connectors,omitempty"`
+
+	// EnablePasswordDB enables Dex's built-in local password store.
+	// When true, Dex presents a username/password login form backed by StaticPasswords.
+	// This is independent of connectors — both can be active simultaneously.
+	// +optional
+	EnablePasswordDB bool `json:"enablePasswordDB,omitempty"`
+
+	// StaticPasswords defines local user accounts for Dex's built-in password store.
+	// Only used when EnablePasswordDB is true.
+	// +optional
+	StaticPasswords []DexStaticPassword `json:"staticPasswords,omitempty"`
+
+	// Image overrides the Dex container image.
+	// Defaults to the operator Helm chart's config.auth.dex.image value.
+	// +optional
+	Image string `json:"image,omitempty"`
+}
+
+// DexStaticPassword defines a local user account in Dex's built-in password store.
+type DexStaticPassword struct {
+	// Email is the user's login email address.
+	// +kubebuilder:validation:Required
+	Email string `json:"email"`
+
+	// Hash is the bcrypt hash of the user's password.
+	// Generate with: htpasswd -nbBC 10 "" <password> | tr -d ':\n' | sed 's/$2y/$2a/'
+	// +kubebuilder:validation:Required
+	Hash string `json:"hash"`
+
+	// Username is the display name shown after login.
+	// +optional
+	Username string `json:"username,omitempty"`
+
+	// UserID is a stable unique identifier for this user.
+	// +optional
+	UserID string `json:"userID,omitempty"`
+}
+
+// DexConnector configures a Dex upstream identity provider connector.
+type DexConnector struct {
+	// Type is the connector type: "github", "google", "oidc", "ldap", "microsoft", "saml", etc.
+	// See https://dexidp.io/docs/connectors/ for the full list.
+	// +kubebuilder:validation:Required
+	Type string `json:"type"`
+
+	// ID is the connector's unique identifier.
+	// +kubebuilder:validation:Required
+	ID string `json:"id"`
+
+	// Name is the human-readable display name shown on the Dex login page.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Config contains connector-specific configuration key/value pairs.
+	// +optional
+	Config map[string]string `json:"config,omitempty"`
 }
 
 // GatewaySpec configures the shared LiteLLM gateway deployed per LanguageCluster.

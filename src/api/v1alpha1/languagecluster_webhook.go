@@ -77,6 +77,36 @@ func (lc *LanguageCluster) validateSpec() error {
 	if err := validateNetworkPortPolicies(lc.Spec.NetworkPolicies); err != nil {
 		return err
 	}
+	if err := lc.validateAuth(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateAuth validates spec.auth configuration.
+func (lc *LanguageCluster) validateAuth() error {
+	auth := lc.Spec.Auth
+	if auth == nil || !auth.Enabled {
+		return nil
+	}
+	if lc.Spec.Domain == "" {
+		return fmt.Errorf("spec.auth.enabled requires spec.domain to be set (Dex needs a hostname)")
+	}
+	if auth.OIDC == nil {
+		return nil
+	}
+	oidc := auth.OIDC
+	if oidc.Dex != nil && oidc.ExternalIssuerURL != "" {
+		return fmt.Errorf("spec.auth.oidc.dex and spec.auth.oidc.externalIssuerURL are mutually exclusive")
+	}
+	if oidc.ExternalIssuerURL != "" {
+		if oidc.ClientID == "" {
+			return fmt.Errorf("spec.auth.oidc.clientID is required when externalIssuerURL is set")
+		}
+		if oidc.ClientSecretRef == nil {
+			return fmt.Errorf("spec.auth.oidc.clientSecretRef is required when externalIssuerURL is set")
+		}
+	}
 	return nil
 }
 

@@ -112,6 +112,19 @@ type LanguageAgentSpec struct {
 	// Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.
 	// +optional
 	Monitoring *AgentMonitoringSpec `json:"monitoring,omitempty"`
+
+	// Auth controls whether OIDC authentication is applied to this agent's ingress route.
+	// When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.
+	// +optional
+	Auth *AgentAuthSpec `json:"auth,omitempty"`
+}
+
+// AgentAuthSpec controls OIDC authentication for a LanguageAgent's ingress route.
+type AgentAuthSpec struct {
+	// Enabled explicitly enables or disables OIDC authentication for this agent.
+	// When nil, the agent inherits the cluster-level auth.enabled setting.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.

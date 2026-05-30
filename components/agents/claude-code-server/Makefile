@@ -3,7 +3,7 @@ IMAGE     := $(REGISTRY)/claude-code-server
 GIT_SHA   := $(shell git rev-parse --short HEAD)
 TAG       ?= $(GIT_SHA)
 
-.PHONY: build publish test
+.PHONY: build publish test run
 
 build:
 	docker build -t $(IMAGE):$(TAG) -t $(IMAGE):latest .
@@ -14,3 +14,6 @@ publish: build
 
 test: build
 	docker run --rm --entrypoint sh $(IMAGE):$(TAG) /app/test.sh
+
+run: build
+	docker run --rm -it -p 8080:8080 $(IMAGE):$(TAG)

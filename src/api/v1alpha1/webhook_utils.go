@@ -28,11 +28,10 @@ import (
 // validateClusterMembership verifies a LanguageCluster exists for the given namespace.
 // Used by all resource webhooks to enforce namespace membership.
 //
-// The check is existence-only, not readiness-based: a LanguageCluster that was just
-// admitted but has not yet reconciled satisfies this check. This allows atomic apply
-// (kubectl apply -k .) — LanguageCluster and member resources in a single bundle
-// succeed as long as the LanguageCluster object is admitted before member objects.
-func validateClusterMembership(ctx context.Context, c client.Client, namespace string) error {
+// The check is existence-only, not readiness-based. Callers must pass an uncached
+// client.Reader (mgr.GetAPIReader()) so that a LanguageCluster admitted in the same
+// kubectl apply -k bundle is visible immediately, without waiting for cache sync.
+func validateClusterMembership(ctx context.Context, c client.Reader, namespace string) error {
 	cluster := &LanguageCluster{}
 	err := c.Get(ctx, types.NamespacedName{Name: namespace}, cluster)
 	if err == nil {

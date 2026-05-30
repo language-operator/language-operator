@@ -57,6 +57,17 @@ spec:
           spec:
             description: LanguageAgentSpec defines the desired state of LanguageAgent
             properties:
+              auth:
+                description: |-
+                  Auth controls whether OIDC authentication is applied to this agent's ingress route.
+                  When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.
+                properties:
+                  enabled:
+                    description: |-
+                      Enabled explicitly enables or disables OIDC authentication for this agent.
+                      When nil, the agent inherits the cluster-level auth.enabled setting.
+                    type: boolean
+                type: object
               claudeCode:
                 description: |-
                   ClaudeCode holds configuration specific to the claude-code runtime.

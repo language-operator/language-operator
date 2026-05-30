@@ -39,6 +39,7 @@ import (
 // +kubebuilder:object:generate=false
 type LanguageAgentWebhook struct {
 	client.Client
+	reader client.Reader
 }
 
 var _ admission.Defaulter[*LanguageAgent] = &LanguageAgentWebhook{}
@@ -183,7 +184,11 @@ func (h *LanguageAgentWebhook) ValidateDelete(_ context.Context, _ *LanguageAgen
 }
 
 func (h *LanguageAgentWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
-	return validateClusterMembership(ctx, h.Client, namespace)
+	r := client.Reader(h.reader)
+	if r == nil {
+		r = h.Client
+	}
+	return validateClusterMembership(ctx, r, namespace)
 }
 
 // validateSpec performs pure spec validation (no API calls)
@@ -278,7 +283,7 @@ func (a *LanguageAgent) validateModelReferences() error {
 
 // SetupWebhookWithManager registers the LanguageAgent mutating and validating webhooks.
 func SetupLanguageAgentWebhookWithManager(mgr ctrl.Manager) error {
-	h := &LanguageAgentWebhook{Client: mgr.GetClient()}
+	h := &LanguageAgentWebhook{Client: mgr.GetClient(), reader: mgr.GetAPIReader()}
 	return ctrl.NewWebhookManagedBy(mgr, &LanguageAgent{}).
 		WithDefaulter(h).
 		WithValidator(h).
