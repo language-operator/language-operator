@@ -1038,6 +1038,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#agentauthspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentAuthSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#agentmonitoringspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1104,6 +1115,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clusterauthspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterAuthSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#clustercapacityspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1126,10 +1148,54 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clusteroidcspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterOIDCSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deploymentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
         DeploymentSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexconnector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexConnector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexstaticpassword" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexStaticPassword
       
     </span>
   </a>
@@ -1867,6 +1933,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#agentauthspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentAuthSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#agentmonitoringspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1933,6 +2010,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clusterauthspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterAuthSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#clustercapacityspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1955,10 +2043,54 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#clusteroidcspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ClusterOIDCSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deploymentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
         DeploymentSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexconnector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexConnector
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dexstaticpassword" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexStaticPassword
       
     </span>
   </a>
@@ -2518,6 +2650,28 @@
 <li><a href="#languagepersona">LanguagePersona</a></li>
 <li><a href="#languagetool">LanguageTool</a></li>
 </ul>
+<h4 id="agentauthspec">AgentAuthSpec<a class="headerlink" href="#agentauthspec" title="Permanent link">&para;</a></h4>
+<p>AgentAuthSpec controls OIDC authentication for a LanguageAgent's ingress route.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled explicitly enables or disables OIDC authentication for this agent.<br />When nil, the agent inherits the cluster-level auth.enabled setting.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="agentmonitoringspec">AgentMonitoringSpec<a class="headerlink" href="#agentmonitoringspec" title="Permanent link">&para;</a></h4>
 <p>AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.</p>
 <p><em>Appears in:</em>
@@ -2747,6 +2901,34 @@ Effective only when spec.runtime is "claude-code".</p>
 </tr>
 </tbody>
 </table>
+<h4 id="clusterauthspec">ClusterAuthSpec<a class="headerlink" href="#clusterauthspec" title="Permanent link">&para;</a></h4>
+<p>ClusterAuthSpec configures OIDC authentication for a LanguageCluster.</p>
+<p><em>Appears in:</em>
+- <a href="#languageclusterspec">LanguageClusterSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled controls whether OIDC authentication is active for this cluster.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>oidc</code> <em><a href="#clusteroidcspec">ClusterOIDCSpec</a></em></td>
+<td>OIDC configures the OIDC provider (embedded Dex or external).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="clustercapacityspec">ClusterCapacitySpec<a class="headerlink" href="#clustercapacityspec" title="Permanent link">&para;</a></h4>
 <p>ClusterCapacitySpec declares hard limits enforced via a ResourceQuota in the cluster's namespace.</p>
 <p><em>Appears in:</em>
@@ -2846,6 +3028,52 @@ Effective only when spec.runtime is "claude-code".</p>
 <tr>
 <td><code>totalMemoryLimits</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#quantity-resource-api">Quantity</a></em></td>
 <td>TotalMemoryLimits is the sum of limits.memory across all agent pod specs.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="clusteroidcspec">ClusterOIDCSpec<a class="headerlink" href="#clusteroidcspec" title="Permanent link">&para;</a></h4>
+<p>ClusterOIDCSpec configures the OIDC provider for the cluster.</p>
+<p><em>Appears in:</em>
+- <a href="#clusterauthspec">ClusterAuthSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dex</code> <em><a href="#dexspec">DexSpec</a></em></td>
+<td>Dex configures the embedded Dex OIDC provider.<br />When set (and ExternalIssuerURL is not), the controller deploys Dex alongside the gateway.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>externalIssuerURL</code> <em>string</em></td>
+<td>ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.<br />Mutually exclusive with dex.<br />Example: "https://accounts.google.com"</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>clientID</code> <em>string</em></td>
+<td>ClientID is the OAuth2 client ID when using an external OIDC provider.<br />Ignored when dex is configured (the operator manages the client ID).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>clientSecretRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
+<td>ClientSecretRef references a Secret containing the OAuth2 client secret.<br />Ignored when dex is configured (the operator manages the client secret).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>emailDomain</code> <em>string</em></td>
+<td>EmailDomain restricts login to users with this email domain.<br />Set to "*" to allow all email domains (default).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3029,6 +3257,126 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tr>
 <td><code>autoscaling</code> <em><a href="#autoscalingspec">AutoscalingSpec</a></em></td>
 <td>Autoscaling enables and configures a HorizontalPodAutoscaler for this deployment.<br />When set, the HPA manages the replica count; spec.deployment.replicas is used as<br />the initial desired count only and is no longer written on each reconcile.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="dexconnector">DexConnector<a class="headerlink" href="#dexconnector" title="Permanent link">&para;</a></h4>
+<p>DexConnector configures a Dex upstream identity provider connector.</p>
+<p><em>Appears in:</em>
+- <a href="#dexspec">DexSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code> <em>string</em></td>
+<td>Type is the connector type: "github", "google", "oidc", "ldap", "microsoft", "saml", etc.<br />See https://dexidp.io/docs/connectors/ for the full list.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>id</code> <em>string</em></td>
+<td>ID is the connector's unique identifier.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the human-readable display name shown on the Dex login page.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>config</code> <em>object (keys:string, values:string)</em></td>
+<td>Config contains connector-specific configuration key/value pairs.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="dexspec">DexSpec<a class="headerlink" href="#dexspec" title="Permanent link">&para;</a></h4>
+<p>DexSpec configures the embedded Dex OIDC provider.</p>
+<p><em>Appears in:</em>
+- <a href="#clusteroidcspec">ClusterOIDCSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connectors</code> <em><a href="#dexconnector">DexConnector</a> array</em></td>
+<td>Connectors configures upstream identity providers (GitHub, Google, OIDC, etc.).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>enablePasswordDB</code> <em>boolean</em></td>
+<td>EnablePasswordDB enables Dex's built-in local password store.<br />When true, Dex presents a username/password login form backed by StaticPasswords.<br />This is independent of connectors — both can be active simultaneously.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>staticPasswords</code> <em><a href="#dexstaticpassword">DexStaticPassword</a> array</em></td>
+<td>StaticPasswords defines local user accounts for Dex's built-in password store.<br />Only used when EnablePasswordDB is true.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>image</code> <em>string</em></td>
+<td>Image overrides the Dex container image.<br />Defaults to the operator Helm chart's config.auth.dex.image value.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="dexstaticpassword">DexStaticPassword<a class="headerlink" href="#dexstaticpassword" title="Permanent link">&para;</a></h4>
+<p>DexStaticPassword defines a local user account in Dex's built-in password store.</p>
+<p><em>Appears in:</em>
+- <a href="#dexspec">DexSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email</code> <em>string</em></td>
+<td>Email is the user's login email address.</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>hash</code> <em>string</em></td>
+<td>Hash is the bcrypt hash of the user's password.<br />Generate with: htpasswd -nbBC 10 "" <password> | tr -d ':\n' | sed 's/$2y/$2a/'</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>username</code> <em>string</em></td>
+<td>Username is the display name shown after login.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>userID</code> <em>string</em></td>
+<td>UserID is a stable unique identifier for this user.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3511,6 +3859,12 @@ spec.selfConfigure allowlist before patching.</p>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
+<tr>
+<td><code>auth</code> <em><a href="#agentauthspec">AgentAuthSpec</a></em></td>
+<td>Auth controls whether OIDC authentication is applied to this agent's ingress route.<br />When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
 </tbody>
 </table>
 <h4 id="languageagentstatus">LanguageAgentStatus<a class="headerlink" href="#languageagentstatus" title="Permanent link">&para;</a></h4>
@@ -3668,6 +4022,12 @@ spec.selfConfigure allowlist before patching.</p>
 <tr>
 <td><code>capacity</code> <em><a href="#clustercapacityspec">ClusterCapacitySpec</a></em></td>
 <td>Capacity declares hard limits enforced via a ResourceQuota in the cluster's namespace.<br />When set, the controller creates a ResourceQuota named "langop-quota".<br />When unset, any existing "langop-quota" is deleted.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>auth</code> <em><a href="#clusterauthspec">ClusterAuthSpec</a></em></td>
+<td>Auth configures OIDC authentication for agent ingress routes in this cluster.<br />When enabled, a Dex OIDC provider is deployed alongside the gateway and each<br />LanguageAgent with auth enabled gets an oauth2-proxy in front of its ingress.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -4582,6 +4942,7 @@ All keys in the Secret are injected as env vars via envFrom.</p>
 <p>SecretReference references a Kubernetes Secret</p>
 <p><em>Appears in:</em>
 - <a href="#claudecodeconfig">ClaudeCodeConfig</a>
+- <a href="#clusteroidcspec">ClusterOIDCSpec</a>
 - <a href="#languagemodelspec">LanguageModelSpec</a></p>
 <table>
 <thead>
