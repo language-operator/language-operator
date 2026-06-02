@@ -11,3 +11,6 @@ runtimes:
   claudeCode:
     # Install the claude-code LanguageAgentRuntime.
     enabled: true
+    # imagePullPolicy for the claude-code-adapter and claude-code-server images.
+    # Set to Never in local development (values.local.yaml) to use locally imported images.
+    imagePullPolicy: ""

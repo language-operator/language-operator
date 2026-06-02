@@ -1,11 +1,13 @@
 # Requires:
-#   kubectl create secret generic anthropic-credentials --from-literal=api-key=sk-ant-... -n language-operator-team
-#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n language-operator-team
+#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n development-team
+#
+# After deploy, open the agent terminal and run `/login` inside Claude Code to authenticate.
+# Credentials persist on the workspace PVC across restarts.
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: worker-1
-  namespace: language-operator-team
+  namespace: development-team
 spec:
   runtime: claude-code
   persona: go-engineer
@@ -42,9 +44,6 @@ spec:
             protocol: TCP
   workspace:
     size: 10Gi
-  claudeCode:
-    apiKeyRef:
-      name: anthropic-credentials
   deployment:
     env:
       - name: GITHUB_TOKEN

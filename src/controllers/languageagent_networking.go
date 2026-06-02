@@ -130,7 +130,20 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 
 	// Allow ingress controller pods to reach agent ports (needed when an Ingress routes external
 	// traffic to the agent). Only added when the ingress controller namespace is configured.
+	// When auth is enabled the ingress routes to the oauth2-proxy sidecar (4180), not the agent
+	// port directly, so we use OAuth2ProxyPort in that case.
 	if r.IngressControllerNamespace != "" {
+		cluster := &langopv1alpha1.LanguageCluster{}
+		clusterFetched := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster) == nil
+
+		ingressPorts := npPorts
+		if clusterFetched && agentAuthEnabled(agent, cluster) {
+			oauthPort := intstr.FromInt32(OAuth2ProxyPort)
+			ingressPorts = []networkingv1.NetworkPolicyPort{
+				{Protocol: ptr.To(corev1.ProtocolTCP), Port: &oauthPort},
+			}
+		}
+
 		networkPolicy.Spec.Ingress = append(networkPolicy.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
 			From: []networkingv1.NetworkPolicyPeer{
 				{
@@ -141,7 +154,7 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 					},
 				},
 			},
-			Ports: npPorts,
+			Ports: ingressPorts,
 		})
 	}
 

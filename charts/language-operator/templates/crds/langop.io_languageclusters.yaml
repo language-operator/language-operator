@@ -104,25 +104,8 @@ spec:
                                 config:
                                   additionalProperties:
                                     type: string
-                                  description: |-
-                                    Config contains connector-specific configuration key/value pairs.
-                                    String values only; use ConfigSecretRef for sensitive values.
-                                  type: object
-                                configSecretRef:
-                                  description: |-
-                                    ConfigSecretRef references a Secret whose keys are merged into the connector config.
-                                    Use this for sensitive values like clientID, clientSecret, etc.
-                                  properties:
-                                    key:
-                                      default: api-key
-                                      description: Key is the key within the secret
-                                        containing the value
-                                      type: string
-                                    name:
-                                      description: Name is the name of the secret
-                                      type: string
-                                  required:
-                                  - name
+                                  description: Config contains connector-specific
+                                    configuration key/value pairs.
                                   type: object
                                 id:
                                   description: ID is the connector's unique identifier.

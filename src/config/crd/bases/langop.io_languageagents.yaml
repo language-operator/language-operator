@@ -73,39 +73,6 @@ spec:
                   ClaudeCode holds configuration specific to the claude-code runtime.
                   Only effective when spec.runtime is "claude-code".
                 properties:
-                  apiKey:
-                    description: |-
-                      APIKey is the Anthropic API key (inline).
-                      The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
-                      When omitted, the operator injects a gateway-routed placeholder so all LLM
-                      traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
-                      Mutually exclusive with APIKeyRef.
-                    type: string
-                  apiKeyRef:
-                    description: |-
-                      APIKeyRef references a Secret containing the Anthropic API key.
-                      The operator reads the key specified by apiKeyRef.key (default "api-key")
-                      and injects it as ANTHROPIC_API_KEY into the agent container.
-                      Mutually exclusive with APIKey.
-                    properties:
-                      key:
-                        default: api-key
-                        description: Key is the key within the secret containing the
-                          value
-                        type: string
-                      name:
-                        description: Name is the name of the secret
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  enabled:
-                    default: false
-                    description: |-
-                      Enabled activates claude-code credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
                   maxTurns:
                     description: |-
                       MaxTurns limits the number of agentic turns per request.

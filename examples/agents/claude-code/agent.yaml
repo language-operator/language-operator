@@ -1,0 +1,18 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: ${AGENT_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: claude-code
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
+  workspace:
+    size: ${WORKSPACE_SIZE}

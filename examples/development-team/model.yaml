@@ -1,0 +1,9 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+  namespace: development-team
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-6
+  timeout: "10m"

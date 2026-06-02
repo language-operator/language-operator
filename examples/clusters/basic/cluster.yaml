@@ -1,0 +1,16 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  domain: ${DOMAIN}
+  auth:
+    enabled: true
+    oidc:
+      dex:
+        enablePasswordDB: true
+        staticPasswords:
+          - email: ${ADMIN_EMAIL}
+            hash: "${ADMIN_PASSWORD_HASH}"
+            username: ${ADMIN_USERNAME}
+            userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"

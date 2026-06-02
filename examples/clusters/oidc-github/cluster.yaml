@@ -1,0 +1,18 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  domain: ${DOMAIN}
+  auth:
+    enabled: true
+    oidc:
+      dex:
+        enablePasswordDB: false
+        connectors:
+          - type: github
+            id: github
+            name: GitHub
+            config:
+              clientID: ${GITHUB_CLIENT_ID}
+              clientSecret: ${GITHUB_CLIENT_SECRET}

@@ -350,30 +350,9 @@ type OpenclawConfig struct {
 }
 
 // ClaudeCodeConfig holds configuration specific to the claude-code runtime.
-// Effective only when spec.runtime is "claude-code".
+// Effective only when spec.runtime is "claude-code". Authentication is interactive
+// (run `/login` inside the agent terminal); credentials persist on the workspace PVC.
 type ClaudeCodeConfig struct {
-	// Enabled activates claude-code credential management for this agent.
-	// Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection
-	// without requiring any explicit config on the LanguageAgent.
-	// +kubebuilder:default=false
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// APIKey is the Anthropic API key (inline).
-	// The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.
-	// When omitted, the operator injects a gateway-routed placeholder so all LLM
-	// traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.
-	// Mutually exclusive with APIKeyRef.
-	// +optional
-	APIKey string `json:"apiKey,omitempty"`
-
-	// APIKeyRef references a Secret containing the Anthropic API key.
-	// The operator reads the key specified by apiKeyRef.key (default "api-key")
-	// and injects it as ANTHROPIC_API_KEY into the agent container.
-	// Mutually exclusive with APIKey.
-	// +optional
-	APIKeyRef *SecretReference `json:"apiKeyRef,omitempty"`
-
 	// MaxTurns limits the number of agentic turns per request.
 	// Sets CLAUDE_CODE_MAX_TURNS in the agent container.
 	// +optional

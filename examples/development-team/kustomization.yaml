@@ -1,0 +1,19 @@
+# Deploy:
+#   kubectl create secret generic github-credentials \
+#     --from-literal=token=ghp_... -n development-team
+#   kubectl apply -k examples/development-team/
+#
+# After deploy, open each agent's terminal and run `/login` inside Claude Code to
+# authenticate. Credentials persist on each agent's workspace PVC across restarts.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - cluster.yaml
+  - model.yaml
+  - persona-project-manager.yaml
+  - persona-go-engineer.yaml
+  - agent-supervisor.yaml
+  - agent-worker-0.yaml
+  - agent-worker-1.yaml
+  - agent-worker-2.yaml

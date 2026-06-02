@@ -2,19 +2,14 @@
 
 Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via [ttyd](https://github.com/tsl0922/ttyd), so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.
 
+Authentication is interactive. After deploying, open the agent terminal and run `/login` inside Claude Code. Credentials are written to `/workspace/.claude/.credentials.json` and persist on the workspace PVC, so subsequent pod restarts don't re-prompt.
+
 ## Prerequisites
 
 - Language Operator [installed](../getting-started/installation.md)
-- An Anthropic API key ([get one here](https://console.anthropic.com/settings/keys))
+- A Claude account (Pro, Max, Team, or Enterprise)
 
 ## Instructions
-
-### Get an API Key
-
-1. Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
-2. Click **Create Key**, give it a name, and copy the key (`sk-ant-...`)
-
-Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. `claude-sonnet-4-6`).
 
 ### Create a Cluster
 
@@ -32,13 +27,6 @@ kubectl wait languagecluster/demo-cluster --for=condition=Ready --timeout=60s
 kubectl config set-context --current --namespace=demo-cluster
 ```
 
-### Store Your API Key
-
-```bash
-kubectl create secret generic anthropic-credentials \
-  --from-literal=api-key=sk-ant-your-key-here
-```
-
 ### Deploy Claude Code
 
 ```bash
@@ -52,13 +40,8 @@ spec:
   instructions: |
     You are an expert software engineer. Help with code review,
     debugging, and implementation tasks.
-  claudeCode:
-    apiKeyRef:
-      name: anthropic-credentials
 EOF
 ```
-
-The `apiKeyRef` tells the operator to read the `api-key` key from your secret and inject it as `ANTHROPIC_API_KEY` into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.
 
 ### Verify
 
@@ -79,18 +62,15 @@ kubectl port-forward svc/code-agent 8080:8080
 
 Then open `http://localhost:8080` in your browser. You'll see Claude Code's interactive CLI running inside the pod.
 
-## Using the Shared Gateway Instead
+### First-time Login
 
-> **Not currently supported.** Claude Code 2.x sends `Authorization: Bearer` (OAuth format) when `ANTHROPIC_BASE_URL` is set. Anthropic's API rejects OAuth authentication, so routing through the LiteLLM gateway fails at the model-call level. Use `claudeCode.apiKeyRef` (or `spec.deployment.env`) to supply a real API key and let Claude Code call Anthropic directly.
+Inside the terminal, run `/login` and complete the Claude.ai browser flow. The credentials are saved to `/workspace/.claude/.credentials.json` and survive pod restarts.
 
 ## Configuration Reference
 
 | Field | Description |
 |-------|-------------|
-| `spec.claudeCode.apiKeyRef.name` | Secret name containing the API key. The operator reads the key specified by `apiKeyRef.key` (default `api-key`) and injects it as `ANTHROPIC_API_KEY`. Recommended for direct Anthropic access. |
-| `spec.claudeCode.apiKeyRef.key` | Key within the secret (default: `api-key`). Override if your secret uses a different key name. |
-| `spec.claudeCode.apiKey` | Inline API key (stored in a managed Secret). Use `apiKeyRef` instead if the key is already in a Secret. |
-| `spec.claudeCode.enabled` | Set automatically by the `claude-code` runtime. No need to set this manually. |
+| `spec.claudeCode.maxTurns` | Cap on the number of agentic turns per request (sets `CLAUDE_CODE_MAX_TURNS`). |
 
 ## What the Operator Created
 
@@ -98,6 +78,6 @@ Then open `http://localhost:8080` in your browser. You'll see Claude Code's inte
 |----------|------|---------|
 | Deployment | `code-agent` | Runs the Claude Code ttyd terminal container |
 | Service | `code-agent` | ClusterIP on port 8080 (ttyd WebSocket terminal) |
-| NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `api.anthropic.com` and other public APIs. |
-| PVC | `code-agent-workspace` | 10Gi persistent workspace at `/workspace` |
+| NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `claude.ai`, `api.anthropic.com`, and other public APIs. |
+| PVC | `code-agent-workspace` | 10Gi persistent workspace at `/workspace` (also holds Claude config) |
 | ConfigMap | `code-agent-agent` | Injected at `/etc/agent/config.yaml` |

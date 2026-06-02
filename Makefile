@@ -20,6 +20,10 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
+	@cd components/agents/claude-code-adapter && $(MAKE) build
+	docker save ghcr.io/language-operator/claude-code-adapter:latest | sudo k3s ctr images import -
+	@cd components/agents/claude-code-server && $(MAKE) build
+	docker save ghcr.io/language-operator/claude-code-server:latest | sudo k3s ctr images import -
 	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
@@ -30,6 +34,7 @@ dev:
 		--wait --timeout 2m
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
+		--values charts/language-operator-runtimes/values.local.yaml \
 		--wait --timeout 2m
 	kubectl rollout restart deployment language-operator -n language-operator
 	kubectl rollout status deployment language-operator -n language-operator --timeout=2m

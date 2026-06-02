@@ -505,43 +505,11 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 		}
 	}
 
-	// claude-code credentials → managed secret, ref envFrom, or gateway-routed placeholder
-	if workingAgent.Spec.ClaudeCode != nil && workingAgent.Spec.ClaudeCode.Enabled != nil && *workingAgent.Spec.ClaudeCode.Enabled {
-		cc := workingAgent.Spec.ClaudeCode
-		if cc.APIKey != "" {
-			secretData["ANTHROPIC_API_KEY"] = []byte(cc.APIKey)
-		} else if cc.APIKeyRef != nil {
-			key := cc.APIKeyRef.Key
-			if key == "" {
-				key = "api-key"
-			}
-			extraEnv = append(extraEnv, corev1.EnvVar{
-				Name: "ANTHROPIC_API_KEY",
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: cc.APIKeyRef.Name},
-						Key:                  key,
-					},
-				},
-			})
-		} else {
-			// Gateway-routed mode: inject placeholder key and route SDK traffic to the
-			// LiteLLM gateway via ANTHROPIC_BASE_URL so calls never reach api.anthropic.com.
-			extraEnv = append(extraEnv, corev1.EnvVar{
-				Name:  "ANTHROPIC_API_KEY",
-				Value: "sk-langop-proxy",
-			})
-			extraEnv = append(extraEnv, corev1.EnvVar{
-				Name:  "ANTHROPIC_BASE_URL",
-				Value: serviceURL("gateway", agent.Namespace, network.GatewayServicePort),
-			})
-		}
-		if cc.MaxTurns != nil {
-			extraEnv = append(extraEnv, corev1.EnvVar{
-				Name:  "CLAUDE_CODE_MAX_TURNS",
-				Value: fmt.Sprintf("%d", *cc.MaxTurns),
-			})
-		}
+	if cc := workingAgent.Spec.ClaudeCode; cc != nil && cc.MaxTurns != nil {
+		extraEnv = append(extraEnv, corev1.EnvVar{
+			Name:  "CLAUDE_CODE_MAX_TURNS",
+			Value: fmt.Sprintf("%d", *cc.MaxTurns),
+		})
 	}
 
 	if len(secretData) > 0 {

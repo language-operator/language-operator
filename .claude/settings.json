@@ -38,7 +38,8 @@
       "mcp__context7__*",
       "mcp__playwright__*",
       "Read(//home/james/workspace/ttyd/**)",
-      "Read(//home/james/workspace/**)"
+      "Read(//home/james/workspace/**)",
+      "Bash(CLUSTER_NAME=my-cluster bash examples/agents/claude-code/install.sh --dry-run)"
     ],
     "deny": []
   },
