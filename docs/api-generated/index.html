@@ -2092,7 +2092,8 @@ verbatim from real NetworkPolicy manifests.</p>
 </table>
 <h4 id="claudecodeconfig">ClaudeCodeConfig<a class="headerlink" href="#claudecodeconfig" title="Permanent link">&para;</a></h4>
 <p>ClaudeCodeConfig holds configuration specific to the claude-code runtime.
-Effective only when spec.runtime is "claude-code".</p>
+Effective only when spec.runtime is "claude-code". Authentication is interactive
+(run <code>/login</code> inside the agent terminal); credentials persist on the workspace PVC.</p>
 <p><em>Appears in:</em>
 - <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
 - <a href="#languageagentspec">LanguageAgentSpec</a></p>
@@ -2106,24 +2107,6 @@ Effective only when spec.runtime is "claude-code".</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled activates claude-code credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger ANTHROPIC_API_KEY injection<br />without requiring any explicit config on the LanguageAgent.</td>
-<td>false</td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>apiKey</code> <em>string</em></td>
-<td>APIKey is the Anthropic API key (inline).<br />The operator creates a managed Secret and injects it as ANTHROPIC_API_KEY.<br />When omitted, the operator injects a gateway-routed placeholder so all LLM<br />traffic flows through ANTHROPIC_BASE_URL → LiteLLM gateway.<br />Mutually exclusive with APIKeyRef.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>apiKeyRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
-<td>APIKeyRef references a Secret containing the Anthropic API key.<br />The operator reads the key specified by apiKeyRef.key (default "api-key")<br />and injects it as ANTHROPIC_API_KEY into the agent container.<br />Mutually exclusive with APIKey.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
 <tr>
 <td><code>maxTurns</code> <em>integer</em></td>
 <td>MaxTurns limits the number of agentic turns per request.<br />Sets CLAUDE_CODE_MAX_TURNS in the agent container.</td>
@@ -4172,7 +4155,6 @@ All keys in the Secret are injected as env vars via envFrom.</p>
 <h4 id="secretreference">SecretReference<a class="headerlink" href="#secretreference" title="Permanent link">&para;</a></h4>
 <p>SecretReference references a Kubernetes Secret</p>
 <p><em>Appears in:</em>
-- <a href="#claudecodeconfig">ClaudeCodeConfig</a>
 - <a href="#clusteroidcspec">ClusterOIDCSpec</a>
 - <a href="#languagemodelspec">LanguageModelSpec</a></p>
 <table>

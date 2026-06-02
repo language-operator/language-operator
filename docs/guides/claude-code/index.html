@@ -964,32 +964,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-an-api-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get an API Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#create-a-cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
         Create a Cluster
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-api-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Store Your API Key
       
     </span>
   </a>
@@ -1029,19 +1007,19 @@
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-the-shared-gateway-instead" class="md-nav__link">
+          <li class="md-nav__item">
+  <a href="#first-time-login" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Using the Shared Gateway Instead
+        First-time Login
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1341,32 +1319,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-an-api-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Get an API Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#create-a-cluster" class="md-nav__link">
     <span class="md-ellipsis">
       
         Create a Cluster
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-api-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Store Your API Key
       
     </span>
   </a>
@@ -1406,19 +1362,19 @@
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-the-shared-gateway-instead" class="md-nav__link">
+          <li class="md-nav__item">
+  <a href="#first-time-login" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Using the Shared Gateway Instead
+        First-time Login
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1466,18 +1422,13 @@
 
 <h1 id="deploying-claude-code">Deploying Claude Code<a class="headerlink" href="#deploying-claude-code" title="Permanent link">&para;</a></h1>
 <p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via <a href="https://github.com/tsl0922/ttyd">ttyd</a>, so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.</p>
+<p>Authentication is interactive. After deploying, open the agent terminal and run <code>/login</code> inside Claude Code. Credentials are written to <code>/workspace/.claude/.credentials.json</code> and persist on the workspace PVC, so subsequent pod restarts don't re-prompt.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Language Operator <a href="../../getting-started/installation/">installed</a></li>
-<li>An Anthropic API key (<a href="https://console.anthropic.com/settings/keys">get one here</a>)</li>
+<li>A Claude account (Pro, Max, Team, or Enterprise)</li>
 </ul>
 <h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
-<h3 id="get-an-api-key">Get an API Key<a class="headerlink" href="#get-an-api-key" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Go to <a href="https://console.anthropic.com/settings/keys">console.anthropic.com/settings/keys</a></li>
-<li>Click <strong>Create Key</strong>, give it a name, and copy the key (<code>sk-ant-...</code>)</li>
-</ol>
-<p>Claude Code makes direct API calls to Anthropic, so you need an API key with access to the model you want to use (e.g. <code>claude-sonnet-4-6</code>).</p>
 <h3 id="create-a-cluster">Create a Cluster<a class="headerlink" href="#create-a-cluster" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
@@ -1491,41 +1442,31 @@
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>languagecluster/demo-cluster<span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Ready<span class="w"> </span>--timeout<span class="o">=</span>60s
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>demo-cluster
 </code></pre></div>
-<h3 id="store-your-api-key">Store Your API Key<a class="headerlink" href="#store-your-api-key" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-your-key-here
-</code></pre></div>
 <h3 id="deploy-claude-code">Deploy Claude Code<a class="headerlink" href="#deploy-claude-code" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s">kind: LanguageAgent</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s">  name: code-agent</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s">spec:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s">  runtime: claude-code</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s">  instructions: |</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="s">    You are an expert software engineer. Help with code review,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="s">    debugging, and implementation tasks.</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="s">  claudeCode:</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="s">    apiKeyRef:</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="s">      name: anthropic-credentials</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="s">EOF</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="s">kind: LanguageAgent</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s">  name: code-agent</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s">spec:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="s">  runtime: claude-code</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="s">    You are an expert software engineer. Help with code review,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s">    debugging, and implementation tasks.</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="s">EOF</span>
 </code></pre></div>
-<p>The <code>apiKeyRef</code> tells the operator to read the <code>api-key</code> key from your secret and inject it as <code>ANTHROPIC_API_KEY</code> into the pod — traffic goes straight to Anthropic, bypassing the shared gateway.</p>
 <h3 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <p>Wait for the pod to reach <code>Running</code> and the LanguageAgent to show <code>Ready=True</code>.</p>
 <h3 id="connect-to-the-terminal">Connect to the Terminal<a class="headerlink" href="#connect-to-the-terminal" title="Permanent link">&para;</a></h3>
 <p>The agent exposes a WebSocket terminal on port 8080. Port-forward to access it locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/code-agent<span class="w"> </span><span class="m">8080</span>:8080
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/code-agent<span class="w"> </span><span class="m">8080</span>:8080
 </code></pre></div>
 <p>Then open <code>http://localhost:8080</code> in your browser. You'll see Claude Code's interactive CLI running inside the pod.</p>
-<h2 id="using-the-shared-gateway-instead">Using the Shared Gateway Instead<a class="headerlink" href="#using-the-shared-gateway-instead" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Not currently supported.</strong> Claude Code 2.x sends <code>Authorization: Bearer</code> (OAuth format) when <code>ANTHROPIC_BASE_URL</code> is set. Anthropic's API rejects OAuth authentication, so routing through the LiteLLM gateway fails at the model-call level. Use <code>claudeCode.apiKeyRef</code> (or <code>spec.deployment.env</code>) to supply a real API key and let Claude Code call Anthropic directly.</p>
-</blockquote>
+<h3 id="first-time-login">First-time Login<a class="headerlink" href="#first-time-login" title="Permanent link">&para;</a></h3>
+<p>Inside the terminal, run <code>/login</code> and complete the Claude.ai browser flow. The credentials are saved to <code>/workspace/.claude/.credentials.json</code> and survive pod restarts.</p>
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1536,20 +1477,8 @@
 </thead>
 <tbody>
 <tr>
-<td><code>spec.claudeCode.apiKeyRef.name</code></td>
-<td>Secret name containing the API key. The operator reads the key specified by <code>apiKeyRef.key</code> (default <code>api-key</code>) and injects it as <code>ANTHROPIC_API_KEY</code>. Recommended for direct Anthropic access.</td>
-</tr>
-<tr>
-<td><code>spec.claudeCode.apiKeyRef.key</code></td>
-<td>Key within the secret (default: <code>api-key</code>). Override if your secret uses a different key name.</td>
-</tr>
-<tr>
-<td><code>spec.claudeCode.apiKey</code></td>
-<td>Inline API key (stored in a managed Secret). Use <code>apiKeyRef</code> instead if the key is already in a Secret.</td>
-</tr>
-<tr>
-<td><code>spec.claudeCode.enabled</code></td>
-<td>Set automatically by the <code>claude-code</code> runtime. No need to set this manually.</td>
+<td><code>spec.claudeCode.maxTurns</code></td>
+<td>Cap on the number of agentic turns per request (sets <code>CLAUDE_CODE_MAX_TURNS</code>).</td>
 </tr>
 </tbody>
 </table>
@@ -1576,12 +1505,12 @@
 <tr>
 <td>NetworkPolicy</td>
 <td><code>code-agent</code></td>
-<td>Allows inbound from other agents in this namespace. Add <code>spec.networkPolicies.egress</code> with <code>cidr: 0.0.0.0/0</code> on port 443 to reach <code>api.anthropic.com</code> and other public APIs.</td>
+<td>Allows inbound from other agents in this namespace. Add <code>spec.networkPolicies.egress</code> with <code>cidr: 0.0.0.0/0</code> on port 443 to reach <code>claude.ai</code>, <code>api.anthropic.com</code>, and other public APIs.</td>
 </tr>
 <tr>
 <td>PVC</td>
 <td><code>code-agent-workspace</code></td>
-<td>10Gi persistent workspace at <code>/workspace</code></td>
+<td>10Gi persistent workspace at <code>/workspace</code> (also holds Claude config)</td>
 </tr>
 <tr>
 <td>ConfigMap</td>
