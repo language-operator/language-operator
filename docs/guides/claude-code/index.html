@@ -1421,7 +1421,7 @@
 
 
 <h1 id="deploying-claude-code">Deploying Claude Code<a class="headerlink" href="#deploying-claude-code" title="Permanent link">&para;</a></h1>
-<p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via <a href="https://github.com/tsl0922/ttyd">ttyd</a>, so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.</p>
+<p>Claude Code is Anthropic's agentic coding tool. The <code>claude-code</code> runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes Claude Code's interactive CLI as a WebSocket terminal (xterm.js in the browser, node-pty on the server) so you can connect directly from any browser.</p>
 <p>Authentication is interactive. After deploying, open the agent terminal and run <code>/login</code> inside Claude Code. Credentials are written to <code>/workspace/.claude/.credentials.json</code> and persist on the workspace PVC, so subsequent pod restarts don't re-prompt.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1465,6 +1465,8 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/code-agent<span class="w"> </span><span class="m">8080</span>:8080
 </code></pre></div>
 <p>Then open <code>http://localhost:8080</code> in your browser. You'll see Claude Code's interactive CLI running inside the pod.</p>
+<p>To copy text, drag to select (hold <strong>Shift</strong> while dragging if Claude is in a mouse-tracking prompt), then <strong>Ctrl+C</strong> (smart copy: copies when there is a selection, otherwise passes through as <code>SIGINT</code>). <strong>Ctrl+Insert</strong> also works. On Mac: <strong>Cmd+C</strong>. Paste with <strong>Ctrl+Shift+V</strong>, <strong>Shift+Insert</strong>, or <strong>Cmd+V</strong> on Mac.</p>
+<p>The terminal session persists across page reloads and is shared across multiple browser tabs to the same agent — close your laptop, reopen, and you're back where you left off. The session is cleared when Claude exits (e.g. <code>/exit</code>) or when the agent pod restarts.</p>
 <h3 id="first-time-login">First-time Login<a class="headerlink" href="#first-time-login" title="Permanent link">&para;</a></h3>
 <p>Inside the terminal, run <code>/login</code> and complete the Claude.ai browser flow. The credentials are saved to <code>/workspace/.claude/.credentials.json</code> and survive pod restarts.</p>
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
@@ -1495,12 +1497,12 @@
 <tr>
 <td>Deployment</td>
 <td><code>code-agent</code></td>
-<td>Runs the Claude Code ttyd terminal container</td>
+<td>Runs the Claude Code WebSocket terminal container</td>
 </tr>
 <tr>
 <td>Service</td>
 <td><code>code-agent</code></td>
-<td>ClusterIP on port 8080 (ttyd WebSocket terminal)</td>
+<td>ClusterIP on port 8080 (WebSocket terminal)</td>
 </tr>
 <tr>
 <td>NetworkPolicy</td>
