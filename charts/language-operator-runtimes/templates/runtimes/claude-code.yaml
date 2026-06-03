@@ -19,6 +19,9 @@ spec:
     mountPath: /workspace
 
   deployment:
+    {{- if .Values.runtimes.claudeCode.imagePullPolicy }}
+    imagePullPolicy: {{ .Values.runtimes.claudeCode.imagePullPolicy }}
+    {{- end }}
     initContainers:
       - name: claude-code-adapter
         image: ghcr.io/language-operator/claude-code-adapter:latest

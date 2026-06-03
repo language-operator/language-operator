@@ -1,6 +1,6 @@
 # Deploying Claude Code
 
-Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes a WebSocket terminal via [ttyd](https://github.com/tsl0922/ttyd), so you can connect directly to Claude Code's interactive CLI from any browser or WebSocket client.
+Claude Code is Anthropic's agentic coding tool. The `claude-code` runtime is bundled with Language Operator and installed automatically with the Helm chart. It exposes Claude Code's interactive CLI as a WebSocket terminal (xterm.js in the browser, node-pty on the server) so you can connect directly from any browser.
 
 Authentication is interactive. After deploying, open the agent terminal and run `/login` inside Claude Code. Credentials are written to `/workspace/.claude/.credentials.json` and persist on the workspace PVC, so subsequent pod restarts don't re-prompt.
 
@@ -62,6 +62,10 @@ kubectl port-forward svc/code-agent 8080:8080
 
 Then open `http://localhost:8080` in your browser. You'll see Claude Code's interactive CLI running inside the pod.
 
+To copy text, drag to select (hold **Shift** while dragging if Claude is in a mouse-tracking prompt), then **Ctrl+C** (smart copy: copies when there is a selection, otherwise passes through as `SIGINT`). **Ctrl+Insert** also works. On Mac: **Cmd+C**. Paste with **Ctrl+Shift+V**, **Shift+Insert**, or **Cmd+V** on Mac.
+
+The terminal session persists across page reloads and is shared across multiple browser tabs to the same agent — close your laptop, reopen, and you're back where you left off. The session is cleared when Claude exits (e.g. `/exit`) or when the agent pod restarts.
+
 ### First-time Login
 
 Inside the terminal, run `/login` and complete the Claude.ai browser flow. The credentials are saved to `/workspace/.claude/.credentials.json` and survive pod restarts.
@@ -76,8 +80,8 @@ Inside the terminal, run `/login` and complete the Claude.ai browser flow. The c
 
 | Resource | Name | Purpose |
 |----------|------|---------|
-| Deployment | `code-agent` | Runs the Claude Code ttyd terminal container |
-| Service | `code-agent` | ClusterIP on port 8080 (ttyd WebSocket terminal) |
+| Deployment | `code-agent` | Runs the Claude Code WebSocket terminal container |
+| Service | `code-agent` | ClusterIP on port 8080 (WebSocket terminal) |
 | NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `claude.ai`, `api.anthropic.com`, and other public APIs. |
 | PVC | `code-agent-workspace` | 10Gi persistent workspace at `/workspace` (also holds Claude config) |
 | ConfigMap | `code-agent-agent` | Injected at `/etc/agent/config.yaml` |
