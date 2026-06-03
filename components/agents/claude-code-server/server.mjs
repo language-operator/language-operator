@@ -51,12 +51,16 @@ wss.on('connection', (ws, req) => {
   // inside it) keeps running, ready for the next reconnect. When claude itself
   // exits, tmux's default `remain-on-exit off` destroys the session, so the
   // next reconnect starts a fresh claude.
+  //
+  // `launch-claude` is a thin wrapper that injects AGENT_PERSONA via
+  // --append-system-prompt and runs AGENT_INSTRUCTIONS as the initial user
+  // message, so agent instructions execute immediately on session start.
   const sessionName = process.env.TMUX_SESSION || 'claude';
   const term = pty.spawn('tmux', [
     '-f', '/etc/tmux.conf',
     'new-session', '-A',
     '-s', sessionName,
-    'claude',
+    'launch-claude',
   ], {
     name: 'xterm-256color',
     cols: 80,

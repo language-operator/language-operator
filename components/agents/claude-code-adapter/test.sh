@@ -67,12 +67,7 @@ assert ".claude.json created"           "[ -f /tmp/t1/home/.claude.json ]"
 assert "mcpServers present"             "grep -q 'mcpServers' /tmp/t1/home/.claude.json"
 assert "tool endpoint in .claude.json"  "grep -q 'my-tool.default.svc' /tmp/t1/home/.claude.json"
 assert "MCP type is http"               "grep -q '\"type\": \"http\"' /tmp/t1/home/.claude.json"
-assert "CLAUDE.md created"              "[ -f /workspace/CLAUDE.md ]"
-assert "CLAUDE.md has agent name"       "grep -q 'test-agent' /workspace/CLAUDE.md"
-assert "CLAUDE.md has systemPrompt"     "grep -q 'You are a test agent' /workspace/CLAUDE.md"
-assert "CLAUDE.md has instructions"     "grep -q 'Do the thing' /workspace/CLAUDE.md"
-assert "CLAUDE.md has capabilities"     "grep -q 'research' /workspace/CLAUDE.md"
-assert "CLAUDE.md has limitations"      "grep -q 'No speculation' /workspace/CLAUDE.md"
+assert "CLAUDE.md NOT written"          "[ ! -f /workspace/CLAUDE.md ]"
 
 # ---------------------------------------------------------------------------
 # Test 2: MCP servers merge-safe (existing .claude.json preserved)

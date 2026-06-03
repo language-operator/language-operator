@@ -358,6 +358,18 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		})
 	}
 
+	// AGENT_PERSONA is the role context — the runtime launcher passes it to the
+	// agent CLI via --append-system-prompt. Looked up here (not in the adapter)
+	// so the operator stays the single source of truth for env injection.
+	if persona, err := r.fetchPersona(ctx, agent); err == nil && persona != nil {
+		if text := formatPersona(persona); text != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  "AGENT_PERSONA",
+				Value: text,
+			})
+		}
+	}
+
 	// Model gateway URLs and names (comma-separated)
 	if len(modelURLs) > 0 {
 		env = append(env, corev1.EnvVar{
@@ -404,6 +416,26 @@ func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *lango
 	}
 
 	return persona, nil
+}
+
+// formatPersona renders a LanguagePersona's tone/personality/expertise into a
+// plain-text paragraph suitable for use as a system-prompt append. Empty fields
+// are skipped; if all fields are empty, returns "".
+func formatPersona(persona *langopv1alpha1.LanguagePersona) string {
+	if persona == nil {
+		return ""
+	}
+	var lines []string
+	if t := strings.TrimSpace(persona.Spec.Tone); t != "" {
+		lines = append(lines, "Tone: "+t+".")
+	}
+	if p := strings.TrimSpace(persona.Spec.Personality); p != "" {
+		lines = append(lines, "Personality: "+p+".")
+	}
+	if e := strings.TrimSpace(persona.Spec.Expertise); e != "" {
+		lines = append(lines, "Expertise: "+e+".")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // generateCredential returns a cryptographically random 32-byte hex string.

@@ -91,6 +91,7 @@ COPY tmux.conf /etc/tmux.conf
 RUN mkdir -p /workspace && chown node:node /workspace
 
 COPY --chmod=755 entrypoint.sh /entrypoint.sh
+COPY --chmod=755 launch-claude.sh /usr/local/bin/launch-claude
 COPY --chmod=755 test.sh /app/test.sh
 
 USER node

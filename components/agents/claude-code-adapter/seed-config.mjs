@@ -3,16 +3,19 @@
  *
  * Bridges the language-operator config injection model to Claude Code's native
  * config format. Reads /etc/agent/config.yaml (injected by the operator) and
- * translates models, tools, and personas into the files Claude Code expects.
+ * translates models and tools into the files Claude Code expects.
  *
  * Writes (merge-safe with existing files on the PVC):
  *   $CLAUDE_CONFIG_DIR/settings.json — model selection
- *   $CLAUDE_CONFIG_DIR/.claude.json  — mcpServers entries
- *   /workspace/CLAUDE.md             — persona/instructions as markdown
+ *   $CLAUDE_CONFIG_DIR/.claude.json  — mcpServers + onboarding/trust markers
  *
- * Authentication is interactive — users run `/login` inside the agent terminal.
- * Credentials live in $CLAUDE_CONFIG_DIR/.credentials.json (written by Claude
- * Code itself) and persist on the workspace PVC.
+ * Persona and instructions are NOT written here — the operator injects them as
+ * AGENT_PERSONA and AGENT_INSTRUCTIONS env vars, which the runtime's launcher
+ * (launch-claude in claude-code-server) passes to claude on startup.
+ *
+ * Authentication is interactive — users run `/login` inside the agent terminal,
+ * OR provide CLAUDE_CODE_OAUTH_TOKEN for headless auth. Credentials live in
+ * $CLAUDE_CONFIG_DIR/.credentials.json and persist on the workspace PVC.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
@@ -114,59 +117,47 @@ if (Object.keys(mcpServers).length > 0) {
   delete claudeJson.mcpServers
 }
 
-writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2))
-
-// -------------------------------------------------------------------
-// /workspace/CLAUDE.md — persona instructions and agent context
-// Always overwrite — operator-managed, persona changes reflected on restart.
-// -------------------------------------------------------------------
-const personas = operatorConfig?.personas ?? []
-const instructions = operatorConfig?.agent?.instructions ?? operatorConfig?.instructions ?? null
-
-const claudeMdLines = []
-
-if (agentName) {
-  claudeMdLines.push(`# ${agentName}`)
-  claudeMdLines.push('')
+// Pre-trust /workspace so Claude Code doesn't prompt on first invocation. The
+// trust check walks up the directory tree, so trusting /workspace covers any
+// subdirectory the agent cd's into (e.g. /workspace/<repo> for the dev-team).
+// In the operator model, the workspace was provisioned for this agent by the
+// user who deployed the LanguageAgent — trust is implicit.
+claudeJson.projects = claudeJson.projects ?? {}
+claudeJson.projects['/workspace'] = {
+  ...(claudeJson.projects['/workspace'] ?? {}),
+  hasTrustDialogAccepted: true,
+  hasCompletedProjectOnboarding: true,
 }
 
-if (instructions) {
-  claudeMdLines.push(instructions)
-  claudeMdLines.push('')
-}
-
-if (personas.length > 0) {
-  for (const persona of personas) {
-    if (persona.systemPrompt) {
-      claudeMdLines.push(persona.systemPrompt)
-      claudeMdLines.push('')
+// Pre-clear Claude Code's first-run wizard for headless agents. When
+// CLAUDE_CODE_OAUTH_TOKEN authenticates (no /login flow ever runs), Claude Code's
+// UI still treats the agent as "not onboarded" because .claude.json has no
+// `oauthAccount` block. Seed both markers so the wizard skips and Claude drops
+// straight into the prompt. The stubbed values are placeholders — Claude uses
+// them for telemetry/display only; the real authentication is the OAuth token.
+if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+  claudeJson.hasCompletedOnboarding = true
+  if (!claudeJson.oauthAccount) {
+    const now = new Date().toISOString()
+    claudeJson.oauthAccount = {
+      accountUuid: '00000000-0000-0000-0000-000000000000',
+      emailAddress: `${agentName || 'agent'}@language-operator.local`,
+      organizationUuid: '00000000-0000-0000-0000-000000000000',
+      hasExtraUsageEnabled: false,
+      billingType: 'stripe_subscription',
+      accountCreatedAt: now,
+      subscriptionCreatedAt: now,
+      ccOnboardingFlags: {},
+      claudeCodeTrialEndsAt: null,
+      claudeCodeTrialDurationDays: null,
+      seatTier: null,
+      displayName: agentName || 'agent',
+      organizationRole: 'admin',
+      workspaceRole: null,
+      organizationName: agentName || 'agent',
     }
-    if (persona.instructions?.length) {
-      claudeMdLines.push('## Instructions')
-      for (const instruction of persona.instructions) {
-        claudeMdLines.push(`- ${instruction}`)
-      }
-      claudeMdLines.push('')
-    }
-    if (persona.capabilities?.length) {
-      claudeMdLines.push('## Capabilities')
-      for (const capability of persona.capabilities) {
-        claudeMdLines.push(`- ${capability}`)
-      }
-      claudeMdLines.push('')
-    }
-    if (persona.limitations?.length) {
-      claudeMdLines.push('## Limitations')
-      for (const limitation of persona.limitations) {
-        claudeMdLines.push(`- ${limitation}`)
-      }
-      claudeMdLines.push('')
-    }
+    console.log('Seeded oauthAccount stub to skip onboarding wizard (CLAUDE_CODE_OAUTH_TOKEN auth)')
   }
 }
 
-if (claudeMdLines.length > 0) {
-  mkdirSync('/workspace', { recursive: true })
-  writeFileSync('/workspace/CLAUDE.md', claudeMdLines.join('\n'))
-  console.log('Wrote /workspace/CLAUDE.md from persona/instructions configuration')
-}
+writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2))

@@ -1,38 +1,75 @@
-# Requires:
-#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n development-team
-#
-# After deploy, open the agent terminal and run `/login` inside Claude Code to authenticate.
-# Credentials persist on the workspace PVC across restarts.
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: worker-1
-  namespace: development-team
+  namespace: ${CLUSTER_NAME}
 spec:
   runtime: claude-code
   persona: go-engineer
-  models:
-    - name: claude-sonnet
   instructions: |
-    You are worker-1 for the Language Operator project, responsible for queue/1 (normal work).
+    You are worker-1 for the ${PROJECT_NAME} engineering team, responsible for
+    queue/1 (normal work). You mirror the `/iterate` command
+    (.claude/commands/iterate.md in the project repo).
 
-    Your job mirrors `make dev-worker-1`: continuously work through issues labelled
-    queue/1 until the queue is empty.
+    Setup (first run only):
+      cd /workspace
+      git clone https://github.com/${PROJECT_REPOSITORY}
+      cd ${PROJECT_REPO_NAME}
 
-    On each session:
-    1. If /workspace/language-operator does not exist, clone the repo:
-         git clone https://github.com/language-operator/language-operator /workspace/language-operator
-    2. Change to /workspace/language-operator
-    3. List your queue: gh issue list --label queue/1 --state open --limit 50
-    4. For each issue:
-         a. Read the issue thoroughly
-         b. Create a branch: git checkout -b fix/<issue-number>-<slug>
-         c. Implement the change following CLAUDE.md conventions
-         d. Run tests: cd src && make test
-         e. Commit with a conventional prefix (feat:, fix:, chore:, docs:, test:)
-         f. Open a PR: gh pr create --title "..." --body "Closes #<n>"
-         g. Remove the queue label: gh issue edit <n> --remove-label queue/1
-    5. Repeat until no issues remain in queue/1. Report a summary when done.
+    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+
+    1. Read for context (if present):
+       - requirements/personas/go-engineer.md
+       - .claude/MEMORY.md
+
+    2. Fetch the next issue in queue/1:
+         gh issue list --label "queue/1" --state open --json number,title,labels --limit 1
+       If empty, report idle and stop.
+
+    3. Read the issue thoroughly:
+         gh issue view <N> --comments
+
+    4. Investigate whether the issue is valid. If invalid (misuse of a feature,
+       duplicate, out of date), comment with the rationale and close it.
+       Otherwise continue.
+
+    5. Label in-progress and create a worktree (slug = 2-4 word kebab-case
+       summary of the title):
+         bash .claude/commands/iterate/start-issue.sh <N> <slug> 1
+       The script prints `worktree:<path>` — cd into that path. All subsequent
+       work happens inside this worktree.
+
+    6. Implement the change. Follow project conventions in CLAUDE.md if present.
+
+    7. Run tests (consult CLAUDE.md or README for the project's test command).
+       Add new tests as appropriate.
+
+    8. Commit with a conventional one-line message (feat:, fix:, chore:, etc.)
+       and push:
+         git commit -m "<one-line message>"
+         bash .claude/commands/iterate/push-branch.sh <branch-name>
+
+    9. Open a PR:
+         gh pr create --title "<commit message>" --body "Closes #<N>"
+
+    10. Poll CI until all checks complete:
+          gh pr checks <PR-number> --watch
+        Push fixups until green.
+
+    11. Merge:
+          gh pr merge <PR-number> --squash --delete-branch
+
+    12. Clean up the worktree (run from inside it):
+          bash .claude/commands/iterate/remove-worktree.sh
+
+    13. Remove in-progress, comment with resolution, close:
+          gh issue edit <N> --remove-label "in-progress"
+          gh issue comment <N> --body "<resolution>"
+          gh issue close <N>
+
+    14. Loop: go back to step 2 until queue/1 is empty.
+
+    15. Update .claude/MEMORY.md if anything is worth remembering for next run.
   networkPolicies:
     egress:
       - to:
@@ -51,3 +88,15 @@ spec:
           secretKeyRef:
             name: github-credentials
             key: token
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true

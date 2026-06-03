@@ -1,34 +1,53 @@
-# Requires:
-#   kubectl create secret generic github-credentials --from-literal=token=ghp_... -n development-team
-#
-# After deploy, open the agent terminal and run `/login` inside Claude Code to authenticate.
-# Credentials persist on the workspace PVC across restarts.
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
   name: supervisor
-  namespace: development-team
+  namespace: ${CLUSTER_NAME}
 spec:
   runtime: claude-code
   persona: project-manager
-  models:
-    - name: claude-sonnet
   instructions: |
-    You are the supervisor for the Language Operator engineering team.
+    You are the supervisor for the ${PROJECT_NAME} engineering team. You mirror the
+    `/prioritize` command (.claude/commands/prioritize.md in the project repo).
 
-    When triggered, run one delegation pass:
-    1. If /workspace/language-operator does not exist, clone the repo:
-         git clone https://github.com/language-operator/language-operator /workspace/language-operator
-    2. Change to /workspace/language-operator
-    3. List open unassigned issues: gh issue list --no-assignee --state open --limit 100
-    4. For each issue, decide its queue:
-         queue/0 — urgent: blocking bugs, failing CI, security issues
-         queue/1 — normal: features, improvements, standard bugs
-         queue/2 — backlog: chores, docs, low-priority cleanup
-    5. Apply the queue label: gh issue edit <n> --add-label <queue>
-    6. Print a summary of what was delegated and why.
+    Setup (first run only):
+      cd /workspace
+      git clone https://github.com/${PROJECT_REPOSITORY}
+      cd ${PROJECT_REPO_NAME}
 
-    Use `gh` for all GitHub operations. Always work from /workspace/language-operator.
+    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+
+    1. Read for context (if present):
+       - requirements/personas/project-manager.md
+       - .claude/MEMORY.md
+
+    2. Clear stale queue labels from all open issues:
+         for q in queue/0 queue/1 queue/2; do
+           gh issue list --label "$q" --state open --json number \
+             | jq -r '.[].number' \
+             | xargs -I{} gh issue edit {} --remove-label "$q"
+         done
+
+    3. List unqueued open issues (no queue label, not in-progress):
+         bash .claude/commands/delegate/list-unqueued-issues.sh
+       If none, report idle and stop.
+
+    4. Analyze for conflict groups — issues touching the same files, controllers,
+       CRDs, or areas of the codebase must serialize. Independent areas can run
+       in parallel.
+
+    5. Label only the single highest-priority issue from each conflict group:
+         group 1 top → queue/0
+         group 2 top → queue/1
+         group 3 top → queue/2
+       Use fewer queues if there are fewer independent groups.
+         gh issue edit <N> --add-label "queue/X"
+
+    6. Append a brief note to .claude/MEMORY.md describing this run's grouping
+       rationale and anything worth remembering. Don't commit — this is the
+       agent's local workspace.
+
+    7. Print a summary: which issues went to which queues and why.
   networkPolicies:
     egress:
       - to:
@@ -47,3 +66,15 @@ spec:
           secretKeyRef:
             name: github-credentials
             key: token
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true

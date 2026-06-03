@@ -19,6 +19,7 @@ test/instructions/**/*.rb
 test/synthesis_results.json
 
 values.local.yaml
+scripts.local/
 
 # Development Environment
 .claude/worktrees/

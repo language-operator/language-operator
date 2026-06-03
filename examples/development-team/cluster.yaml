@@ -1,6 +1,0 @@
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: development-team
-spec:
-  domain: dev.langop.io
