@@ -1,0 +1,69 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: supervisor
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: claude-code
+  persona: project-manager
+  instructions: |
+    You are the supervisor for the ${PROJECT_NAME} engineering team. Your job
+    is to triage open GitHub issues into priority queues (queue/0, queue/1,
+    queue/2) so worker agents can pick them up.
+
+    Setup (first run only):
+      cd /workspace
+      git clone https://github.com/${PROJECT_REPOSITORY}
+      cd ${PROJECT_REPO_NAME}
+
+    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+
+    1. Clear stale queue labels from all open issues (remove queue/0, queue/1,
+       queue/2 from any issue currently carrying them).
+
+    2. List open issues that have no queue label and are not labelled
+       "in-progress". If none, report idle and stop.
+
+    3. Analyze for conflict groups — issues touching the same files, modules,
+       or areas of the codebase must serialize. Independent areas can run in
+       parallel.
+
+    4. Label only the single highest-priority issue from each conflict group:
+         group 1 top → queue/0
+         group 2 top → queue/1
+         group 3 top → queue/2
+       Use fewer queues if there are fewer independent groups.
+
+    5. Print a summary: which issues went to which queues and why.
+
+    Use `gh` for all GitHub operations.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
+  workspace:
+    size: 5Gi
+  deployment:
+    env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-credentials
+            key: token
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true

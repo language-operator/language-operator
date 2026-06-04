@@ -2,9 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - persona-project-manager.yaml
-  - persona-go-engineer.yaml
-  - agent-supervisor.yaml
-  # - agent-worker-0.yaml
-  # - agent-worker-1.yaml
-  # - agent-worker-2.yaml
+  - languagepersona.project-manager.yaml
+  - languagepersona.engineer.yaml
+  - languageagent.supervisor.yaml
+  - languageagent.worker-0.yaml
+  - languageagent.worker-1.yaml
+  - languageagent.worker-2.yaml

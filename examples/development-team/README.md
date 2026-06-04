@@ -2,15 +2,13 @@
 
 Deploys a self-managing AI engineering team into an existing LanguageCluster, pointed at any GitHub repository: one supervisor agent triages open issues into priority queues; three worker agents continuously implement changes, run tests, and open pull requests.
 
-The supervisor mirrors the `/prioritize` slash command; each worker mirrors `/iterate`. Drop the team into a repo that has equivalent `.claude/commands/prioritize.md` and `.claude/commands/iterate.md` (with the helper scripts in `.claude/commands/{delegate,iterate}/`) and the agents will use them.
-
 ```
 supervisor (project-manager persona)
   └─ reads open issues → assigns queue/0, queue/1, queue/2 labels
 
-worker-0 (go-engineer persona)  ← queue/0: urgent (bugs, failing CI, security)
-worker-1 (go-engineer persona)  ← queue/1: normal (features, improvements)
-worker-2 (go-engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
+worker-0 (engineer persona)  ← queue/0: urgent (bugs, failing CI, security)
+worker-1 (engineer persona)  ← queue/1: normal (features, improvements)
+worker-2 (engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
 ```
 
 Authentication is interactive: after deploying, open each agent's terminal and run `/login`. Credentials persist on each agent's workspace PVC across pod restarts.
@@ -77,7 +75,7 @@ kubectl port-forward -n my-cluster svc/worker-0 8080:8080
 - `Secret/anthropic-credentials` — Anthropic API key (only if `ANTHROPIC_API_KEY` was set)
 - `Secret/claude-code-oauth` — Claude Code OAuth token (only if `CLAUDE_CODE_OAUTH_TOKEN` was set)
 - `LanguagePersona/project-manager` — supervisor behavioral config
-- `LanguagePersona/go-engineer` — worker behavioral config
+- `LanguagePersona/engineer` — worker behavioral config
 - `LanguageAgent/supervisor` — triages issues; 5Gi workspace
 - `LanguageAgent/worker-0` — queue/0 (urgent); 10Gi workspace
 - `LanguageAgent/worker-1` — queue/1 (normal); 10Gi workspace

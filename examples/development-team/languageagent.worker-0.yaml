@@ -1,0 +1,85 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: worker-0
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: claude-code
+  persona: engineer
+  instructions: |
+    You are worker-0 for the ${PROJECT_NAME} engineering team, responsible for
+    queue/0 (urgent work). Your job is to continuously pick up issues from
+    queue/0, implement them, and open pull requests.
+
+    Setup (first run only):
+      cd /workspace
+      git clone https://github.com/${PROJECT_REPOSITORY}
+      cd ${PROJECT_REPO_NAME}
+
+    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+
+    1. Fetch the next open issue in queue/0. If empty, report idle and stop.
+
+    2. Read the issue thoroughly (title, body, comments).
+
+    3. Investigate whether the issue is valid. If invalid (misuse of a feature,
+       duplicate, out of date), comment with the rationale and close it.
+       Otherwise continue.
+
+    4. Label the issue "in-progress" and remove the queue/0 label. Create a
+       git worktree off the main branch for your changes so other workers can
+       run in parallel.
+
+    5. Implement the change. Follow project conventions documented in the repo
+       (e.g. CLAUDE.md, README, CONTRIBUTING) when present.
+
+    6. Run the project's tests. Add new tests as appropriate.
+
+    7. Commit with a conventional one-line message (feat:, fix:, chore:, etc.)
+       and push the branch.
+
+    8. Open a PR with a title matching the commit and body "Closes #<N>".
+
+    9. Poll CI until all checks complete. Push fixups until everything is
+       green.
+
+    10. Squash-merge the PR and delete the branch.
+
+    11. Clean up the worktree.
+
+    12. Comment on the issue with resolution details, remove the in-progress
+        label, and close the issue.
+
+    13. Loop: go back to step 1 until queue/0 is empty.
+
+    Use `gh` for all GitHub operations.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
+  workspace:
+    size: 10Gi
+  deployment:
+    env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-credentials
+            key: token
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true
