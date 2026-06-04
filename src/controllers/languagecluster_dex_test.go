@@ -353,3 +353,122 @@ func TestReconcileDex_ImageFallsBackToDefault(t *testing.T) {
 	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, dep))
 	assert.NotEmpty(t, dep.Spec.Template.Spec.Containers[0].Image)
 }
+
+// --- branded Dex templates ---
+
+func TestBuildDexConfigYAML_FrontendPointsAtMountedTemplates(t *testing.T) {
+	r := newDexReconciler(t)
+	cluster := authCluster("mycluster")
+	yaml, err := r.buildDexConfigYAML(cluster, "secret", nil)
+	require.NoError(t, err)
+	assert.Contains(t, yaml, "frontend:")
+	assert.Contains(t, yaml, "dir: "+DexTemplatesMountPath)
+	assert.Contains(t, yaml, "issuer: Language Operator")
+	// Cluster name is surfaced to templates via frontend.extra so the login
+	// header can render an environment chip ({{ extra "clusterName" }}).
+	assert.Contains(t, yaml, "clusterName: mycluster")
+}
+
+func TestDexWebAssets_RequiredFilesAreEmbedded(t *testing.T) {
+	// The required set mirrors what Dex's loader insists on at startup (see
+	// dex/server/templates.go requiredTmpls + the static/themes/robots.txt
+	// directory contract). If any of these go missing the Dex pod won't start.
+	required := []string{
+		"templates/header.html",
+		"templates/footer.html",
+		"templates/login.html",
+		"templates/password.html",
+		"templates/approval.html",
+		"templates/oob.html",
+		"templates/error.html",
+		"templates/device.html",
+		"templates/device_success.html",
+		"templates/totp_verify.html",
+		"templates/webauthn_verify.html",
+		"templates/home.html",
+		"templates/logout.html",
+		"static/main.css",
+		"static/img/logo.svg",
+		"static/img/favicon.svg",
+		"themes/light/styles.css",
+		"robots.txt",
+	}
+	for _, rel := range required {
+		key := strings.ReplaceAll(rel, "/", dexWebPathSeparator)
+		assert.NotEmpty(t, dexWebData[key], "embedded asset %q must be present and non-empty", rel)
+	}
+	assert.NotEmpty(t, dexWebHash, "asset hash must be computed at init")
+}
+
+func TestReconcileDex_CreatesTemplatesConfigMap(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := authCluster("mycluster")
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+	require.NoError(t, r.reconcileDex(context.Background(), cluster))
+
+	cm := &corev1.ConfigMap{}
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexTemplatesConfigMapName, Namespace: cluster.Name}, cm))
+
+	loginKey := strings.ReplaceAll("templates/login.html", "/", dexWebPathSeparator)
+	cssKey := strings.ReplaceAll("static/main.css", "/", dexWebPathSeparator)
+	assert.Contains(t, cm.Data[loginKey], "Sign in to")
+	assert.Contains(t, cm.Data[cssKey], "Marfa")
+}
+
+func TestReconcileDex_DeploymentMountsTemplatesVolume(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := authCluster("mycluster")
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+	require.NoError(t, r.reconcileDex(context.Background(), cluster))
+
+	dep := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, dep))
+
+	assert.NotEmpty(t, dep.Spec.Template.Annotations["langop.io/dex-templates-hash"], "pod template must carry templates hash so assets roll out")
+
+	require.Len(t, dep.Spec.Template.Spec.Containers, 1)
+	mounts := dep.Spec.Template.Spec.Containers[0].VolumeMounts
+	var sawTemplatesMount bool
+	for _, m := range mounts {
+		if m.Name == "templates" && m.MountPath == DexTemplatesMountPath && m.ReadOnly {
+			sawTemplatesMount = true
+		}
+	}
+	assert.True(t, sawTemplatesMount, "dex container must mount the templates ConfigMap read-only at %s", DexTemplatesMountPath)
+
+	var templatesVol *corev1.Volume
+	for i := range dep.Spec.Template.Spec.Volumes {
+		v := &dep.Spec.Template.Spec.Volumes[i]
+		if v.Name == "templates" {
+			templatesVol = v
+		}
+	}
+	require.NotNil(t, templatesVol, "templates volume must be defined on the pod")
+	require.NotNil(t, templatesVol.ConfigMap, "templates volume must be backed by a ConfigMap")
+	assert.Equal(t, DexTemplatesConfigMapName, templatesVol.ConfigMap.Name)
+	// Items recreate the templates/static/themes subdirectory tree under the mount.
+	assert.NotEmpty(t, templatesVol.ConfigMap.Items, "items must remap ConfigMap keys back to relative paths")
+}
+
+func TestCleanupDexResources_DeletesTemplatesConfigMap(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := authCluster("mycluster")
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+
+	require.NoError(t, r.reconcileDex(ctx, cluster))
+
+	// Sanity check: templates CM exists before cleanup.
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: DexTemplatesConfigMapName, Namespace: cluster.Name}, &corev1.ConfigMap{}))
+
+	require.NoError(t, r.cleanupDexResources(ctx, cluster.Name))
+
+	err := fakeClient.Get(ctx, types.NamespacedName{Name: DexTemplatesConfigMapName, Namespace: cluster.Name}, &corev1.ConfigMap{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}

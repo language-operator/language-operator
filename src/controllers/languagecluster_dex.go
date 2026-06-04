@@ -45,11 +45,22 @@ type dexConfig struct {
 	Issuer           string              `yaml:"issuer"`
 	Storage          dexStorage          `yaml:"storage"`
 	Web              dexWeb              `yaml:"web"`
+	Frontend         *dexFrontend        `yaml:"frontend,omitempty"`
 	Connectors       []dexConnector      `yaml:"connectors,omitempty"`
 	EnablePasswordDB bool                `yaml:"enablePasswordDB,omitempty"`
 	StaticPasswords  []dexStaticPassword `yaml:"staticPasswords,omitempty"`
 	StaticClients    []dexStaticClient   `yaml:"staticClients"`
 	OAuth2           dexOAuth2           `yaml:"oauth2"`
+}
+
+// dexFrontend points Dex at the branded Language Operator web asset bundle
+// mounted into the pod by the operator. Extra values are exposed to templates
+// via the {{ extra "key" }} helper.
+type dexFrontend struct {
+	Dir    string            `yaml:"dir,omitempty"`
+	Issuer string            `yaml:"issuer,omitempty"`
+	Theme  string            `yaml:"theme,omitempty"`
+	Extra  map[string]string `yaml:"extra,omitempty"`
 }
 
 type dexStorage struct {
@@ -126,18 +137,25 @@ func (r *LanguageClusterReconciler) reconcileDex(ctx context.Context, cluster *l
 		return fmt.Errorf("failed to reconcile dex ConfigMap: %w", err)
 	}
 
-	// 4. Reconcile Dex Deployment (pass config hash so a pod rollout fires when URIs change).
-	cfgHash := fmt.Sprintf("%x", sha256.Sum256([]byte(cfgYAML)))
-	if err := r.reconcileDexDeployment(ctx, cluster, namespace, auth, cfgHash); err != nil {
+	// 4. Reconcile the branded Language Operator web asset ConfigMap that
+	//    Dex mounts via frontend.dir for templates, css, and provider icons.
+	templatesHash, err := r.reconcileDexTemplatesConfigMap(ctx, cluster, namespace)
+	if err != nil {
 		return err
 	}
 
-	// 5. Reconcile Dex Service.
+	// 5. Reconcile Dex Deployment (pass config hash so a pod rollout fires when URIs change).
+	cfgHash := fmt.Sprintf("%x", sha256.Sum256([]byte(cfgYAML)))
+	if err := r.reconcileDexDeployment(ctx, cluster, namespace, auth, cfgHash, templatesHash); err != nil {
+		return err
+	}
+
+	// 6. Reconcile Dex Service.
 	if err := r.reconcileDexService(ctx, cluster, namespace); err != nil {
 		return err
 	}
 
-	// 6. Reconcile Dex Ingress at auth.<domain>.
+	// 7. Reconcile Dex Ingress at auth.<domain>.
 	if cluster.Spec.Domain != "" {
 		if err := r.reconcileDexIngress(ctx, cluster, namespace); err != nil {
 			return err
@@ -196,7 +214,12 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 		Issuer:  issuer,
 		Storage: dexStorage{Type: "memory"},
 		Web:     dexWeb{HTTP: fmt.Sprintf("0.0.0.0:%d", DexPort)},
-		OAuth2:  dexOAuth2{SkipApprovalScreen: true},
+		Frontend: &dexFrontend{
+			Dir:    DexTemplatesMountPath,
+			Issuer: "Language Operator",
+			Extra:  map[string]string{"clusterName": cluster.Name},
+		},
+		OAuth2: dexOAuth2{SkipApprovalScreen: true},
 		StaticClients: []dexStaticClient{
 			{
 				ID:           "langop-agents",
@@ -236,7 +259,7 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 }
 
 // reconcileDexDeployment creates or updates the Dex Deployment.
-func (r *LanguageClusterReconciler) reconcileDexDeployment(ctx context.Context, cluster *langopv1alpha1.LanguageCluster, namespace string, auth *langopv1alpha1.ClusterAuthSpec, cfgHash string) error {
+func (r *LanguageClusterReconciler) reconcileDexDeployment(ctx context.Context, cluster *langopv1alpha1.LanguageCluster, namespace string, auth *langopv1alpha1.ClusterAuthSpec, cfgHash, templatesHash string) error {
 	image := r.DexImage
 	if auth.OIDC != nil && auth.OIDC.Dex != nil && auth.OIDC.Dex.Image != "" {
 		image = auth.OIDC.Dex.Image
@@ -258,8 +281,11 @@ func (r *LanguageClusterReconciler) reconcileDexDeployment(ctx context.Context, 
 			Selector: &metav1.LabelSelector{MatchLabels: labels},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      labels,
-					Annotations: map[string]string{"langop.io/dex-config-hash": cfgHash},
+					Labels: labels,
+					Annotations: map[string]string{
+						"langop.io/dex-config-hash":    cfgHash,
+						"langop.io/dex-templates-hash": templatesHash,
+					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -276,6 +302,7 @@ func (r *LanguageClusterReconciler) reconcileDexDeployment(ctx context.Context, 
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "config", MountPath: "/etc/dex", ReadOnly: true},
+								{Name: "templates", MountPath: DexTemplatesMountPath, ReadOnly: true},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -315,6 +342,18 @@ func (r *LanguageClusterReconciler) reconcileDexDeployment(ctx context.Context, 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{Name: DexConfigMapName},
+								},
+							},
+						},
+						{
+							Name: "templates",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: DexTemplatesConfigMapName},
+									// Items recreates the templates/, static/, themes/ subdirectory
+									// structure that Dex expects under frontend.dir; ConfigMap keys
+									// flatten paths because Kubernetes disallows '/' in keys.
+									Items: dexWebItems,
 								},
 							},
 						},
@@ -432,6 +471,7 @@ func (r *LanguageClusterReconciler) cleanupDexResources(ctx context.Context, nam
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: DexResourceName, Namespace: namespace}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DexResourceName, Namespace: namespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: DexConfigMapName, Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: DexTemplatesConfigMapName, Namespace: namespace}},
 	}
 	for _, obj := range toDelete {
 		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {

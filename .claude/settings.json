@@ -39,7 +39,11 @@
       "mcp__playwright__*",
       "Read(//home/james/workspace/ttyd/**)",
       "Read(//home/james/workspace/**)",
-      "Bash(CLUSTER_NAME=my-cluster bash examples/agents/claude-code/install.sh --dry-run)"
+      "Bash(CLUSTER_NAME=my-cluster bash examples/agents/claude-code/install.sh --dry-run)",
+      "Bash(CLUSTER_NAME=my-cluster GITHUB_TOKEN=fake PROJECT_REPOSITORY=acme/widget bash /home/james/workspace/language-operator/language-operator/examples/development-team/install.sh --dry-run)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(mkdir -p /tmp/dex-upstream)",
+      "Read(//tmp/dex-upstream/**)"
     ],
     "deny": []
   },

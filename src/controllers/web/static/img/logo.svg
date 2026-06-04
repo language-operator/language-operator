@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 22" role="img" aria-label="Language Operator">
+  <title>Language Operator</title>
+  <style>
+    .fg { fill: hsl(24 10% 10%); }
+    .cursor {
+      fill: hsl(24 10% 10%);
+      animation: langopPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @media (prefers-color-scheme: dark) {
+      .fg { fill: hsl(24 6% 83%); }
+      .cursor { fill: hsl(43 96% 56%); }
+    }
+    @keyframes langopPulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+  </style>
+  <!--
+    textLength + lengthAdjust forces the rendered text to occupy exactly the
+    width we expect, regardless of the platform's system font (SF Pro on macOS,
+    Segoe UI on Windows, etc.), so the trailing cursor never collides with the
+    final glyph.
+  -->
+  <text class="fg" x="0" y="16"
+        textLength="180" lengthAdjust="spacingAndGlyphs"
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        font-size="13"
+        font-weight="300"
+        text-rendering="geometricPrecision">LANGUAGE OPERATOR</text>
+  <rect class="cursor" x="186" y="5" width="6" height="14"/>
+</svg>

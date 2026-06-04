@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <style>
+    .mark { fill: hsl(24 10% 10%); }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: hsl(43 96% 56%); }
+    }
+  </style>
+  <rect class="mark" x="5" y="1" width="6" height="14"/>
+</svg>

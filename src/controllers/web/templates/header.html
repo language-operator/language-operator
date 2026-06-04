@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>{{ issuer }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{ url .ReqPath "static/main.css" }}" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url .ReqPath "static/img/favicon.svg" }}">
+  </head>
+
+  <body class="langop-body">
+    <header class="langop-navbar">
+      <div class="langop-wordmark">
+        <img class="langop-logo" src="{{ url .ReqPath "static/img/logo.svg" }}" alt="Language Operator">
+      </div>
+      {{ if extra "clusterName" }}
+      <span class="langop-cluster" aria-label="Cluster">{{ extra "clusterName" }}</span>
+      {{ end }}
+    </header>
+
+    <main class="langop-container">

@@ -40,6 +40,13 @@ const (
 	DexResourceName = "auth"
 	// DexConfigMapName is the name of the Dex configuration ConfigMap.
 	DexConfigMapName = "auth-dex-config"
+	// DexTemplatesConfigMapName is the name of the ConfigMap holding the
+	// branded Language Operator web assets (templates, css, svg) mounted into
+	// the Dex pod.
+	DexTemplatesConfigMapName = "auth-dex-templates"
+	// DexTemplatesMountPath is the in-pod path where the branded web assets
+	// are mounted and where Dex's `frontend.dir` config points.
+	DexTemplatesMountPath = "/etc/dex-web"
 	// DexClientSecretName is the name of the Secret holding the shared oauth2-proxy client secret.
 	DexClientSecretName = "auth-client-secret"
 	// DexClientSecretKey is the key within auth-client-secret holding the secret value.
