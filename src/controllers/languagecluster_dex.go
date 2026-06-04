@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -199,6 +200,21 @@ func (r *LanguageClusterReconciler) reconcileDexClientSecret(ctx context.Context
 	return secret, nil
 }
 
+// dexFrontendExtra returns the key/value map exposed to Dex templates via the
+// {{ extra "key" }} helper. Currently surfaces the cluster name and (when the
+// operator pod has it) the deployed Helm chart version — both rendered in the
+// branded login page's navbar so users can tell which cluster + which build
+// they are authenticating against.
+func dexFrontendExtra(cluster *langopv1alpha1.LanguageCluster) map[string]string {
+	extra := map[string]string{
+		"clusterName": cluster.Name,
+	}
+	if v := os.Getenv("OPERATOR_CHART_VERSION"); v != "" {
+		extra["operatorVersion"] = v
+	}
+	return extra
+}
+
 // buildDexConfigYAML returns the Dex configuration YAML for the given cluster.
 func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.LanguageCluster, clientSecret string, redirectURIs []string) (string, error) {
 	scheme := "https"
@@ -217,7 +233,7 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 		Frontend: &dexFrontend{
 			Dir:    DexTemplatesMountPath,
 			Issuer: "Language Operator",
-			Extra:  map[string]string{"clusterName": cluster.Name},
+			Extra:  dexFrontendExtra(cluster),
 		},
 		OAuth2: dexOAuth2{SkipApprovalScreen: true},
 		StaticClients: []dexStaticClient{

@@ -150,6 +150,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        # Surfaces the deployed Helm chart version to controllers — e.g., the
+        # Dex login page renders it as a build stamp in the navbar.
+        - name: OPERATOR_CHART_VERSION
+          value: {{ .Chart.Version | quote }}
         {{- if .Values.config.networkPolicy }}
         # NetworkPolicy configuration for agent pods
         {{- if .Values.config.networkPolicy.apiServerCIDRs }}

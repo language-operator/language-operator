@@ -369,6 +369,28 @@ func TestBuildDexConfigYAML_FrontendPointsAtMountedTemplates(t *testing.T) {
 	assert.Contains(t, yaml, "clusterName: mycluster")
 }
 
+func TestBuildDexConfigYAML_FrontendExposesChartVersion(t *testing.T) {
+	t.Setenv("OPERATOR_CHART_VERSION", "0.1.142")
+	r := newDexReconciler(t)
+	cluster := authCluster("mycluster")
+	yaml, err := r.buildDexConfigYAML(cluster, "secret", nil)
+	require.NoError(t, err)
+	// Helm chart version flows through OPERATOR_CHART_VERSION → frontend.extra
+	// → {{ extra "operatorVersion" }} in the login header.
+	assert.Contains(t, yaml, "operatorVersion: 0.1.142")
+}
+
+func TestBuildDexConfigYAML_FrontendOmitsVersionWhenEnvUnset(t *testing.T) {
+	t.Setenv("OPERATOR_CHART_VERSION", "")
+	r := newDexReconciler(t)
+	cluster := authCluster("mycluster")
+	yaml, err := r.buildDexConfigYAML(cluster, "secret", nil)
+	require.NoError(t, err)
+	// When the env var isn't set (e.g., local `go run`), the key is omitted
+	// and the {{ if extra "operatorVersion" }} guard hides the chip.
+	assert.NotContains(t, yaml, "operatorVersion")
+}
+
 func TestDexWebAssets_RequiredFilesAreEmbedded(t *testing.T) {
 	// The required set mirrors what Dex's loader insists on at startup (see
 	// dex/server/templates.go requiredTmpls + the static/themes/robots.txt
@@ -388,7 +410,6 @@ func TestDexWebAssets_RequiredFilesAreEmbedded(t *testing.T) {
 		"templates/home.html",
 		"templates/logout.html",
 		"static/main.css",
-		"static/img/logo.svg",
 		"static/img/favicon.svg",
 		"themes/light/styles.css",
 		"robots.txt",

@@ -11,12 +11,17 @@
 
   <body class="langop-body">
     <header class="langop-navbar">
-      <div class="langop-wordmark">
-        <img class="langop-logo" src="{{ url .ReqPath "static/img/logo.svg" }}" alt="Language Operator">
+      <h1 class="langop-wordmark">
+        Language Operator<span class="langop-cursor" aria-hidden="true"></span>
+      </h1>
+      <div class="langop-meta">
+        {{ if extra "operatorVersion" }}
+        <span class="langop-version" aria-label="Operator version">{{ extra "operatorVersion" }}</span>
+        {{ end }}
+        {{ if extra "clusterName" }}
+        <span class="langop-cluster" aria-label="Cluster">{{ extra "clusterName" }}</span>
+        {{ end }}
       </div>
-      {{ if extra "clusterName" }}
-      <span class="langop-cluster" aria-label="Cluster">{{ extra "clusterName" }}</span>
-      {{ end }}
     </header>
 
     <main class="langop-container">

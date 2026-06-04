@@ -110,9 +110,46 @@ body {
   padding: 1.25rem 2rem;
 }
 
+/*
+ * Wordmark: native HTML text + a small pulsing cursor bar. Avoids the SVG
+ * textLength-stretch artifact and renders crisply in whatever system font
+ * the platform ships (SF Pro, Segoe UI, etc.).
+ */
 .langop-wordmark {
+  margin: 0;
   display: flex;
   align-items: center;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.langop-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  background-color: var(--foreground);
+  animation: langopPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .langop-cursor { background-color: var(--accent); }
+}
+
+@keyframes langopPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+.langop-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .langop-cluster {
@@ -126,10 +163,13 @@ body {
   white-space: nowrap;
 }
 
-.langop-logo {
-  height: 22px;
-  width: auto;
-  display: block;
+/* Build stamp — small monospace, native casing, low contrast. */
+.langop-version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 .langop-container {
