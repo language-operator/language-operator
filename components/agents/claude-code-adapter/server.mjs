@@ -105,5 +105,5 @@ wss.on('connection', (ws, req) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`claude-code-server listening on :${PORT} (cwd=${WORKDIR})`);
+  console.log(`claude-code-adapter listening on :${PORT} (cwd=${WORKDIR})`);
 });

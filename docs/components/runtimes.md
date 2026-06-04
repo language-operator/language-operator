@@ -34,7 +34,7 @@ Three runtimes are shipped via the `language-operator-runtimes` Helm chart, inst
 |------|-------|------|-----------|
 | `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | WebSocket gateway |
 | `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | HTTP / browser UI |
-| `claude-code` | `ghcr.io/language-operator/claude-code-server:latest` | 8080 | HTTP / WebSocket terminal |
+| `claude-code` | `ghcr.io/language-operator/claude-code-adapter:latest` | 8080 | HTTP / WebSocket terminal |
 
 Install them with:
 

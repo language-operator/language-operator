@@ -11,7 +11,7 @@ Enabled runtimes:
   - opencode  (ghcr.io/anomalyco/opencode:latest)
 {{- end }}
 {{- if .Values.runtimes.claudeCode.enabled }}
-  - claude-code  (ghcr.io/language-operator/claude-code-server:latest)
+  - claude-code  (ghcr.io/language-operator/claude-code-adapter:latest)
 {{- end }}
 
 LanguageAgentRuntime resources are cluster-scoped and can be referenced by LanguageAgents

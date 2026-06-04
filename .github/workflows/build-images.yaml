@@ -160,7 +160,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build the claude-code adapter init container
+  # Build the combined claude-code runtime image. Used as both the init
+  # container (running seed-config.mjs to translate the operator's
+  # /etc/agent/config.yaml into Claude Code's native settings) and the main
+  # container (running server.mjs — the xterm.js / tmux WebSocket terminal).
   build-claude-code-adapter:
     runs-on: ubuntu-latest
     permissions:
@@ -200,52 +203,6 @@ jobs:
         with:
           context: ./components/agents/claude-code-adapter
           file: ./components/agents/claude-code-adapter/Dockerfile
-          push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # Build the claude-code A2A runtime server
-  build-claude-code-server:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/claude-code-server
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push claude-code-server image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./components/agents/claude-code-server
-          file: ./components/agents/claude-code-server/Dockerfile
           push: ${{ github.event_name != 'pull_request' && (github.event.inputs.push != 'false') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

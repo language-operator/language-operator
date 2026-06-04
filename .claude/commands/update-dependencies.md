@@ -50,7 +50,6 @@ Run in parallel for each component that has a `package.json`:
 cd components/agents/openclaw-adapter  && npm update && npm install
 cd components/agents/opencode-adapter  && npm update && npm install
 cd components/agents/claude-code-adapter && npm update && npm install
-cd components/agents/claude-code-server  && npm update && npm install
 cd .claude/hooks                         && npm update && npm install
 ```
 
@@ -164,7 +163,6 @@ git add src/go.mod src/go.sum
 git add components/agents/openclaw-adapter/package-lock.json
 git add components/agents/opencode-adapter/package-lock.json
 git add components/agents/claude-code-adapter/package-lock.json
-git add components/agents/claude-code-server/package-lock.json
 git add .claude/hooks/package-lock.json
 ```
 

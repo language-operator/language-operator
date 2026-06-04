@@ -11,7 +11,7 @@
  *
  * Persona and instructions are NOT written here — the operator injects them as
  * AGENT_PERSONA and AGENT_INSTRUCTIONS env vars, which the runtime's launcher
- * (launch-claude in claude-code-server) passes to claude on startup.
+ * (launch-claude) passes to claude on startup.
  *
  * Authentication is interactive — users run `/login` inside the agent terminal,
  * OR provide CLAUDE_CODE_OAUTH_TOKEN for headless auth. Credentials live in

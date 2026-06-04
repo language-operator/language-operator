@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "language-operator-runtimes.labels" . | nindent 4 }}
 spec:
-  image: ghcr.io/language-operator/claude-code-server:latest
+  # Single combined image used by both the init container (seed-config.mjs)
+  # and the main container (server.mjs WebSocket terminal).
+  image: ghcr.io/language-operator/claude-code-adapter:latest
 
   ports:
     - name: http
@@ -28,8 +30,10 @@ spec:
         {{- if .Values.runtimes.claudeCode.imagePullPolicy }}
         imagePullPolicy: {{ .Values.runtimes.claudeCode.imagePullPolicy }}
         {{- end }}
-        # MODEL_ENDPOINT and LLM_MODEL are injected by the operator.
-        # AGENT_NAME is injected by the operator for agent card identity.
+        # Override the image's default entrypoint (which runs the server)
+        # so this init container runs seed-config.mjs once and exits.
+        # MODEL_ENDPOINT, LLM_MODEL, and AGENT_NAME are injected by the operator.
+        command: ["node", "/app/seed-config.mjs"]
         volumeMounts:
           - name: workspace
             mountPath: /workspace

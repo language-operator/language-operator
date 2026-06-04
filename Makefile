@@ -22,8 +22,6 @@ dev:
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
 	@cd components/agents/claude-code-adapter && $(MAKE) build
 	docker save ghcr.io/language-operator/claude-code-adapter:latest | sudo k3s ctr images import -
-	@cd components/agents/claude-code-server && $(MAKE) build
-	docker save ghcr.io/language-operator/claude-code-server:latest | sudo k3s ctr images import -
 	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
