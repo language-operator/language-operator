@@ -470,7 +470,7 @@ func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, ag
 	if issuerURL == "" {
 		return nil, fmt.Errorf("cannot build oauth2-proxy sidecar: auth is enabled but no OIDC issuer URL could be determined (set spec.domain or spec.auth.oidc.externalIssuerURL)")
 	}
-	clientID := oauth2ProxyClientID(cluster)
+	clientID := oauth2ProxyClientID(cluster, agent.Name)
 
 	clientSecretVal, err := r.readOAuthClientSecret(ctx, cluster)
 	if err != nil {
