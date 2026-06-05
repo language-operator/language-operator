@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Claude Code</title>
+  <title>__AGENT_NAME__</title>
   <link rel="stylesheet" href="/xterm.css" />
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
@@ -97,6 +97,19 @@
     term.open(document.getElementById('terminal'));
     fit.fit();
 
+    // Window title: '<agent>' idle, '✦ <agent>' when claude wants user input.
+    // Claude Code rings BEL when it finishes responding and is ready for input
+    // (see Terminal#onBell), so bell == waiting-on-user. Any keypress flips
+    // back to idle since the user is now driving claude again.
+    const AGENT_NAME = '__AGENT_NAME__';
+    const GLYPH_WAITING = '✦';
+    let waiting = false;
+    function renderTitle() {
+      document.title = waiting ? `${GLYPH_WAITING} ${AGENT_NAME}` : AGENT_NAME;
+    }
+    renderTitle();
+    term.onBell(() => { waiting = true; renderTitle(); });
+
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const ws = new WebSocket(`${proto}://${location.host}/ws`);
     ws.binaryType = 'arraybuffer';
@@ -121,6 +134,7 @@
     };
 
     term.onData((data) => {
+      if (waiting) { waiting = false; renderTitle(); }
       if (ws.readyState === WebSocket.OPEN) ws.send(data);
     });
 

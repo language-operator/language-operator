@@ -14,16 +14,29 @@ const clipboardDir = path.dirname(require.resolve('@xterm/addon-clipboard/packag
 
 const PORT = Number(process.env.PORT) || 8080;
 const WORKDIR = process.env.CLAUDE_CWD || '/workspace';
+const AGENT_NAME = process.env.AGENT_NAME || 'agent';
 
+const INDEX_PATH = path.join(appDir, 'index.html');
 const STATIC = {
-  '/': { file: path.join(appDir, 'index.html'), type: 'text/html; charset=utf-8' },
   '/xterm.js': { file: path.join(xtermDir, 'lib/xterm.js'), type: 'application/javascript; charset=utf-8' },
   '/xterm.css': { file: path.join(xtermDir, 'css/xterm.css'), type: 'text/css; charset=utf-8' },
   '/addon-fit.js': { file: path.join(fitDir, 'lib/addon-fit.js'), type: 'application/javascript; charset=utf-8' },
   '/addon-clipboard.js': { file: path.join(clipboardDir, 'lib/addon-clipboard.js'), type: 'application/javascript; charset=utf-8' },
 };
 
+// Templated once at startup. AGENT_NAME is the operator-injected agent name —
+// RFC 1123 in practice (lowercase alphanumeric + hyphens), but we still HTML-escape
+// it as defense-in-depth in case the constraint ever loosens.
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const htmlEscape = (s) => s.replace(/[&<>"']/g, (c) => ESC[c]);
+const INDEX_HTML = fs.readFileSync(INDEX_PATH, 'utf8')
+  .replaceAll('__AGENT_NAME__', htmlEscape(AGENT_NAME));
+
 const server = http.createServer((req, res) => {
+  if (req.url === '/') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(INDEX_HTML);
+    return;
+  }
   const entry = STATIC[req.url];
   if (!entry) {
     res.writeHead(404, { 'content-type': 'text/plain' }).end('not found');

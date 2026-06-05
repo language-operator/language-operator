@@ -74,6 +74,14 @@ if (modelId) {
 } else {
   delete settings.model
 }
+
+// Force terminal_bell notifications so claude emits BEL (\x07) when waiting
+// for input. The xterm.js web terminal listens for BEL via term.onBell to
+// prefix the browser tab title with a ✦ glyph. Without this, claude's default
+// 'auto' channel emits no signal in our headless TTY and the title indicator
+// never updates.
+settings.preferredNotifChannel = 'terminal_bell'
+
 writeFileSync(settingsPath, JSON.stringify(settings, null, 2))
 
 // -------------------------------------------------------------------
