@@ -118,14 +118,31 @@ func TestBuildDexConfigYAML_Issuer(t *testing.T) {
 func TestBuildDexConfigYAML_RedirectURIs(t *testing.T) {
 	r := newDexReconciler(t)
 	cluster := authCluster("test")
-	uris := []string{
-		"https://agent1.example.com/oauth2/callback",
-		"https://agent2.example.com/oauth2/callback",
+	agents := []langopv1alpha1.LanguageAgent{
+		*gen.LanguageAgent("agent1", "test"),
+		*gen.LanguageAgent("agent2", "test"),
 	}
-	yaml, err := r.buildDexConfigYAML(cluster, "secret", uris)
+	yaml, err := r.buildDexConfigYAML(cluster, "secret", agents)
 	require.NoError(t, err)
 	assert.Contains(t, yaml, "https://agent1.example.com/oauth2/callback")
 	assert.Contains(t, yaml, "https://agent2.example.com/oauth2/callback")
+}
+
+func TestBuildDexConfigYAML_PerAgentClientName(t *testing.T) {
+	r := newDexReconciler(t)
+	cluster := authCluster("test")
+	agents := []langopv1alpha1.LanguageAgent{
+		*gen.LanguageAgent("supervisor", "test"),
+		*gen.LanguageAgent("worker", "test"),
+	}
+	yaml, err := r.buildDexConfigYAML(cluster, "secret", agents)
+	require.NoError(t, err)
+	// Each agent appears as a separate Dex static client so the grant page
+	// shows the agent name instead of the generic "Language Operator" label.
+	assert.Contains(t, yaml, "id: supervisor")
+	assert.Contains(t, yaml, "name: supervisor")
+	assert.Contains(t, yaml, "id: worker")
+	assert.Contains(t, yaml, "name: worker")
 }
 
 func TestBuildDexConfigYAML_EnablePasswordDB(t *testing.T) {
@@ -151,7 +168,8 @@ func TestBuildDexConfigYAML_NoPasswordDB(t *testing.T) {
 func TestBuildDexConfigYAML_ClientSecret(t *testing.T) {
 	r := newDexReconciler(t)
 	cluster := authCluster("test")
-	yaml, err := r.buildDexConfigYAML(cluster, "my-secret-value", nil)
+	agents := []langopv1alpha1.LanguageAgent{*gen.LanguageAgent("agent1", "test")}
+	yaml, err := r.buildDexConfigYAML(cluster, "my-secret-value", agents)
 	require.NoError(t, err)
 	assert.Contains(t, yaml, "my-secret-value")
 }

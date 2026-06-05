@@ -116,21 +116,21 @@ func (r *LanguageClusterReconciler) reconcileDex(ctx context.Context, cluster *l
 		return err
 	}
 
-	// 2. Collect redirect URIs from all auth-enabled LanguageAgents in this namespace.
+	// 2. Collect auth-enabled LanguageAgents in this namespace.
 	agentList := &langopv1alpha1.LanguageAgentList{}
 	if err := r.List(ctx, agentList, client.InNamespace(namespace)); err != nil {
-		return fmt.Errorf("failed to list agents for dex redirect URIs: %w", err)
+		return fmt.Errorf("failed to list agents for dex clients: %w", err)
 	}
-	var redirectURIs []string
+	var authAgents []langopv1alpha1.LanguageAgent
 	for i := range agentList.Items {
 		agent := &agentList.Items[i]
 		if agentAuthEnabled(agent, cluster) {
-			redirectURIs = append(redirectURIs, fmt.Sprintf("https://%s.%s/oauth2/callback", agent.Name, cluster.Spec.Domain))
+			authAgents = append(authAgents, *agent)
 		}
 	}
 
 	// 3. Build and reconcile the Dex ConfigMap.
-	cfgYAML, err := r.buildDexConfigYAML(cluster, clientSecret, redirectURIs)
+	cfgYAML, err := r.buildDexConfigYAML(cluster, clientSecret, authAgents)
 	if err != nil {
 		return fmt.Errorf("failed to build dex config: %w", err)
 	}
@@ -216,7 +216,9 @@ func dexFrontendExtra(cluster *langopv1alpha1.LanguageCluster) map[string]string
 }
 
 // buildDexConfigYAML returns the Dex configuration YAML for the given cluster.
-func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.LanguageCluster, clientSecret string, redirectURIs []string) (string, error) {
+// Each auth-enabled agent gets its own static client so the grant page displays
+// the agent name rather than a generic "Language Operator" label.
+func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.LanguageCluster, clientSecret string, agents []langopv1alpha1.LanguageAgent) (string, error) {
 	scheme := "https"
 	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil &&
 		cluster.Spec.Ingress.TLS.Enabled != nil && !*cluster.Spec.Ingress.TLS.Enabled {
@@ -224,8 +226,20 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 	}
 	issuer := fmt.Sprintf("%s://auth.%s", scheme, cluster.Spec.Domain)
 
-	// The client secret in the Dex config is the literal value — the ConfigMap is
-	// namespace-scoped so access is already gated by RBAC.
+	// Build one static client per agent so the OAuth grant page displays the
+	// agent name instead of "Language Operator". The client secret is shared
+	// across all agents (the ConfigMap is namespace-scoped, access gated by RBAC).
+	staticClients := make([]dexStaticClient, 0, len(agents))
+	for _, agent := range agents {
+		redirectURI := fmt.Sprintf("https://%s.%s/oauth2/callback", agent.Name, cluster.Spec.Domain)
+		staticClients = append(staticClients, dexStaticClient{
+			ID:           agent.Name,
+			Secret:       clientSecret,
+			RedirectURIs: []string{redirectURI},
+			Name:         agent.Name,
+		})
+	}
+
 	cfg := dexConfig{
 		Issuer:  issuer,
 		Storage: dexStorage{Type: "memory"},
@@ -235,15 +249,8 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 			Issuer: "Language Operator",
 			Extra:  dexFrontendExtra(cluster),
 		},
-		OAuth2: dexOAuth2{SkipApprovalScreen: true},
-		StaticClients: []dexStaticClient{
-			{
-				ID:           "langop-agents",
-				Secret:       clientSecret,
-				RedirectURIs: redirectURIs,
-				Name:         "Language Operator",
-			},
-		},
+		OAuth2:        dexOAuth2{SkipApprovalScreen: true},
+		StaticClients: staticClients,
 	}
 
 	if cluster.Spec.Auth.OIDC != nil && cluster.Spec.Auth.OIDC.Dex != nil {
@@ -538,14 +545,12 @@ func dexIssuerURL(cluster *langopv1alpha1.LanguageCluster) string {
 }
 
 // oauth2ProxyClientID returns the OIDC client ID to use for oauth2-proxy.
-// For embedded Dex this is always "langop-agents"; for external OIDC it is
-// taken from spec.auth.oidc.clientID.
-func oauth2ProxyClientID(cluster *langopv1alpha1.LanguageCluster) string {
-	if cluster.Spec.Auth == nil || cluster.Spec.Auth.OIDC == nil {
-		return "langop-agents"
-	}
-	if cluster.Spec.Auth.OIDC.ExternalIssuerURL != "" && cluster.Spec.Auth.OIDC.ClientID != "" {
+// For embedded Dex, each agent has its own client whose ID matches the agent
+// name. For external OIDC the cluster-level clientID is used instead.
+func oauth2ProxyClientID(cluster *langopv1alpha1.LanguageCluster, agentName string) string {
+	if cluster.Spec.Auth != nil && cluster.Spec.Auth.OIDC != nil &&
+		cluster.Spec.Auth.OIDC.ExternalIssuerURL != "" && cluster.Spec.Auth.OIDC.ClientID != "" {
 		return cluster.Spec.Auth.OIDC.ClientID
 	}
-	return "langop-agents"
+	return agentName
 }
