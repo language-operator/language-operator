@@ -1,4 +1,5 @@
 ARG GH_VERSION=2.65.0
+ARG GO_VERSION=1.26.4
 
 # -----------------------------------------------------------------------------
 # Builder stage: compile native deps (node-pty has no Linux prebuilds), then
@@ -26,6 +27,7 @@ RUN npm ci --omit=dev --no-audit --no-fund
 # -----------------------------------------------------------------------------
 FROM node:24-slim
 ARG GH_VERSION
+ARG GO_VERSION
 
 # UTF-8 everywhere. node:24-slim ships `C.UTF-8` already; we just need to
 # select it. Without this, the default locale is POSIX and TUIs like claude
@@ -66,6 +68,17 @@ RUN ARCH=$(dpkg --print-architecture) && \
     tar -xzf /tmp/gh.tar.gz -C /tmp && \
     mv "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh && \
     rm -rf /tmp/gh.tar.gz "/tmp/gh_${GH_VERSION}_linux_${ARCH}"
+
+# -----------------------------------------------------------------------------
+# Go toolchain
+# Installed from the official tarball — the Debian repo version lags releases.
+# -----------------------------------------------------------------------------
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget -qO /tmp/go.tar.gz \
+        "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" && \
+    tar -xzf /tmp/go.tar.gz -C /usr/local && \
+    rm /tmp/go.tar.gz
+ENV PATH=/usr/local/go/bin:$PATH
 
 # -----------------------------------------------------------------------------
 # Claude Code CLI
