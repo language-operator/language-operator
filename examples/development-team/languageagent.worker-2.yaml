@@ -65,6 +65,16 @@ spec:
   workspace:
     size: 10Gi
   deployment:
+    # Workers compile and test arbitrary repos — go build / go test peak
+    # in the multi-GiB range and want several cores. Defaults (2Gi/1cpu)
+    # OOM-killed worker-0 during a build.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 4000m
+        memory: 6Gi
     env:
       - name: GITHUB_TOKEN
         valueFrom:
