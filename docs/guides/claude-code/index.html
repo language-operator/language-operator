@@ -1470,20 +1470,14 @@
 <h3 id="first-time-login">First-time Login<a class="headerlink" href="#first-time-login" title="Permanent link">&para;</a></h3>
 <p>Inside the terminal, run <code>/login</code> and complete the Claude.ai browser flow. The credentials are saved to <code>/workspace/.claude/.credentials.json</code> and survive pod restarts.</p>
 <h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>spec.claudeCode.maxTurns</code></td>
-<td>Cap on the number of agentic turns per request (sets <code>CLAUDE_CODE_MAX_TURNS</code>).</td>
-</tr>
-</tbody>
-</table>
+<p>The <code>claude-code</code> runtime is configured through plain environment variables on the agent's <code>spec.deployment.env</code>. For example, to cap the number of agentic turns per request, set <code>CLAUDE_CODE_MAX_TURNS</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-code</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">deployment</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CLAUDE_CODE_MAX_TURNS</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10&quot;</span>
+</code></pre></div>
 <h2 id="what-the-operator-created">What the Operator Created<a class="headerlink" href="#what-the-operator-created" title="Permanent link">&para;</a></h2>
 <table>
 <thead>

@@ -1174,10 +1174,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#automatic-credential-generation" class="md-nav__link">
+  <a href="#credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Automatic Credential Generation
+        Credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication
       
     </span>
   </a>
@@ -1335,31 +1346,57 @@
 <td>Default deployment settings (resources, probes, initContainers, env, …)</td>
 </tr>
 <tr>
-<td><code>openclaw</code></td>
-<td><code>OpenclawConfig</code></td>
-<td>When <code>openclaw.enabled: true</code>, the operator auto-generates <code>OPENCLAW_GATEWAY_TOKEN</code> for every agent referencing this runtime (without the agent needing <code>spec.openclaw</code>)</td>
+<td><code>credentials</code></td>
+<td><code>[]Credential</code></td>
+<td>Credentials provisioned for every agent referencing this runtime; see below</td>
 </tr>
 <tr>
-<td><code>opencode</code></td>
-<td><code>OpencodeConfig</code></td>
-<td>When <code>opencode.enabled: true</code>, the operator auto-generates <code>OPENCODE_SERVER_PASSWORD</code> for every agent referencing this runtime</td>
+<td><code>auth</code></td>
+<td><code>RuntimeAuth</code></td>
+<td>Gates whether agents using this runtime sit behind the cluster's OIDC proxy; see <a href="#authentication">Authentication</a></td>
 </tr>
 </tbody>
 </table>
-<h3 id="automatic-credential-generation">Automatic Credential Generation<a class="headerlink" href="#automatic-credential-generation" title="Permanent link">&para;</a></h3>
-<p>Setting <code>spec.openclaw.enabled: true</code> or <code>spec.opencode.enabled: true</code> on a runtime causes the operator to create a <code>{agent-name}-runtime</code> Secret and inject the generated credential env var into every agent that references the runtime. This is how the bundled runtimes enable auto-credential management without requiring each <code>LanguageAgent</code> to configure credentials manually.</p>
-<p>Custom runtimes can use the same mechanism:</p>
+<h3 id="credentials">Credentials<a class="headerlink" href="#credentials" title="Permanent link">&para;</a></h3>
+<p>A runtime declares the credentials its image needs through the generic <code>credentials</code> list. Each entry's <code>name</code> is both the environment variable name and the key in the operator-managed Secret. Entries are resolved in priority order:</p>
+<ul>
+<li><strong><code>valueFrom</code> set</strong> — the referenced Secret's keys are injected via <code>envFrom</code>; the operator creates no Secret of its own.</li>
+<li><strong><code>value</code> set</strong> — the literal is stored in an operator-managed Secret named <code>{agent}-runtime</code> and injected via <code>envFrom</code>.</li>
+<li><strong>neither set</strong> — the operator auto-generates a random value once, persists it in the <code>{agent}-runtime</code> Secret, and preserves it across reconciles (it is never rotated).</li>
+</ul>
+<p>Runtime-declared entries are merged ahead of any entries the agent adds in its own <code>spec.credentials</code>; entries are deduplicated by <code>name</code>, with the agent's entry winning on a collision. This is how the bundled runtimes provision credentials without requiring each <code>LanguageAgent</code> to configure them manually:</p>
+<ul>
+<li><code>openclaw</code> declares <code>OPENCLAW_GATEWAY_TOKEN</code> (auto-generated).</li>
+<li><code>opencode</code> declares <code>OPENCODE_SERVER_PASSWORD</code> (auto-generated) and sets <code>OPENCODE_SERVER_USERNAME=opencode</code> as a plain <code>deployment.env</code> variable.</li>
+<li><code>claude-code</code> declares no credentials — its authentication is interactive via <code>/login</code>.</li>
+</ul>
+<p>Custom runtimes use the same mechanism:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgentRuntime</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">metadata</span><span class="p">:</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-runtime</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/my-org/my-agent:latest</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">openclaw</span><span class="p">:</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># auto-generates OPENCLAW_GATEWAY_TOKEN for all agents using this runtime</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">credentials</span><span class="p">:</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MY_RUNTIME_TOKEN</span><span class="w">   </span><span class="c1"># auto-generated for every agent using this runtime</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
+</code></pre></div>
+<h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
+<p><code>spec.auth.enabled</code> (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> its runtime has <code>auth.enabled: true</code>. An agent with no runtime, or whose runtime does not enable auth, is never proxied.</p>
+<p>The three bundled runtimes (<code>openclaw</code>, <code>opencode</code>, <code>claude-code</code>) all set <code>auth.enabled: true</code>, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the <code>LanguageCluster</code> — see <a href="../../components/clusters/#authentication">Clusters</a>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgentRuntime</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-runtime</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/my-org/my-agent:latest</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">auth</span><span class="p">:</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># agents using this runtime sit behind the cluster OIDC proxy</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
 </code></pre></div>
 <h2 id="merge-semantics">Merge Semantics<a class="headerlink" href="#merge-semantics" title="Permanent link">&para;</a></h2>
 <table>
@@ -1379,6 +1416,10 @@
 <td><strong>Replace semantics</strong> — runtime ports apply only when the agent defines no ports of its own</td>
 </tr>
 <tr>
+<td><code>credentials</code></td>
+<td>Runtime entries merged first, then agent entries appended; deduplicated by <code>name</code>, agent wins on collision</td>
+</tr>
+<tr>
 <td>Other lists (<code>env</code>, <code>envFrom</code>, <code>volumes</code>, <code>volumeMounts</code>, <code>initContainers</code>)</td>
 <td>Runtime entries prepended; agent entries appended</td>
 </tr>
@@ -1386,10 +1427,10 @@
 </table>
 <h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">&para;</a></h2>
 <p><code>LanguageAgentRuntime</code> has no status subresource. It is a static configuration object — the operator reads it at reconcile time but does not track its health.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># NAME       AGE</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># openclaw   5m</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># opencode   5m</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># NAME       AGE</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># openclaw   5m</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># opencode   5m</span>
 </code></pre></div>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>

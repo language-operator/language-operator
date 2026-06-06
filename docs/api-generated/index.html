@@ -1164,17 +1164,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agentauthspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        AgentAuthSpec
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#agentmonitoringspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1230,17 +1219,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#claudecodeconfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClaudeCodeConfig
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#clusterauthspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1278,6 +1256,17 @@
     <span class="md-ellipsis">
       
         ClusterOIDCSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credentialspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CredentialSpec
       
     </span>
   </a>
@@ -1648,28 +1637,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#openclawconfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpenclawConfig
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#opencodeconfig" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        OpencodeConfig
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#prometheusalertingrule" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1696,6 +1663,17 @@
     <span class="md-ellipsis">
       
         RateLimitSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtimeauthspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RuntimeAuthSpec
       
     </span>
   </a>
@@ -1881,28 +1859,6 @@
 <li><a href="#languagepersona">LanguagePersona</a></li>
 <li><a href="#languagetool">LanguageTool</a></li>
 </ul>
-<h4 id="agentauthspec">AgentAuthSpec<a class="headerlink" href="#agentauthspec" title="Permanent link">&para;</a></h4>
-<p>AgentAuthSpec controls OIDC authentication for a LanguageAgent's ingress route.</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled explicitly enables or disables OIDC authentication for this agent.<br />When nil, the agent inherits the cluster-level auth.enabled setting.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="agentmonitoringspec">AgentMonitoringSpec<a class="headerlink" href="#agentmonitoringspec" title="Permanent link">&para;</a></h4>
 <p>AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.</p>
 <p><em>Appears in:</em>
@@ -2090,31 +2046,6 @@ verbatim from real NetworkPolicy manifests.</p>
 </tr>
 </tbody>
 </table>
-<h4 id="claudecodeconfig">ClaudeCodeConfig<a class="headerlink" href="#claudecodeconfig" title="Permanent link">&para;</a></h4>
-<p>ClaudeCodeConfig holds configuration specific to the claude-code runtime.
-Effective only when spec.runtime is "claude-code". Authentication is interactive
-(run <code>/login</code> inside the agent terminal); credentials persist on the workspace PVC.</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>maxTurns</code> <em>integer</em></td>
-<td>MaxTurns limits the number of agentic turns per request.<br />Sets CLAUDE_CODE_MAX_TURNS in the agent container.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="clusterauthspec">ClusterAuthSpec<a class="headerlink" href="#clusterauthspec" title="Permanent link">&para;</a></h4>
 <p>ClusterAuthSpec configures OIDC authentication for a LanguageCluster.</p>
 <p><em>Appears in:</em>
@@ -2288,6 +2219,43 @@ Effective only when spec.runtime is "claude-code". Authentication is interactive
 <tr>
 <td><code>emailDomain</code> <em>string</em></td>
 <td>EmailDomain restricts login to users with this email domain.<br />Set to "*" to allow all email domains (default).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="credentialspec">CredentialSpec<a class="headerlink" href="#credentialspec" title="Permanent link">&para;</a></h4>
+<p>CredentialSpec declares an environment variable backed by a Secret value.
+The operator resolves it once and injects it into the agent container.
+Source priority: ValueFrom (existing Secret) &gt; Value (inline) &gt; auto-generate.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the environment variable name and the key within the operator-managed<br />Secret (e.g. OPENCLAW_GATEWAY_TOKEN, OPENCODE_SERVER_PASSWORD).</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>value</code> <em>string</em></td>
+<td>Value, when set, is stored verbatim in the managed Secret instead of<br />generating a random credential. Mutually exclusive with ValueFrom.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>valueFrom</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
+<td>ValueFrom references an existing Secret whose keys are injected via envFrom.<br />When set, the operator does not create or manage a Secret for this entry.<br />Mutually exclusive with Value.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -2806,20 +2774,14 @@ scalars fill in zeros/nils (agent wins if set), lists are runtime-first then age
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
-<td>Openclaw provides default openclaw credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.</td>
+<td><code>credentials</code> <em><a href="#credentialspec">CredentialSpec</a> array</em></td>
+<td>Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into agents using this runtime. Each entry is<br />auto-generated, set inline, or sourced from an existing Secret. Merged into the<br />agent's effective spec runtime-first; agent entries override by name.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>opencode</code> <em><a href="#opencodeconfig">OpencodeConfig</a></em></td>
-<td>Opencode provides default opencode credential configuration for agents using this runtime.<br />When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>claudeCode</code> <em><a href="#claudecodeconfig">ClaudeCodeConfig</a></em></td>
-<td>ClaudeCode provides default claude-code credential configuration for agents using this runtime.<br />When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.</td>
+<td><code>auth</code> <em><a href="#runtimeauthspec">RuntimeAuthSpec</a></em></td>
+<td>Auth gates whether agents using this runtime sit behind the cluster OIDC proxy.<br />Effective only when the cluster has auth enabled (which provisions the OIDC<br />infrastructure). The OIDC connection itself is configured cluster-wide.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3044,20 +3006,8 @@ spec.selfConfigure allowlist before patching.</p>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
-<td><code>opencode</code> <em><a href="#opencodeconfig">OpencodeConfig</a></em></td>
-<td>Opencode holds configuration specific to the opencode runtime.<br />Only effective when spec.runtime is "opencode".</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>openclaw</code> <em><a href="#openclawconfig">OpenclawConfig</a></em></td>
-<td>Openclaw holds configuration specific to the openclaw runtime.<br />Only effective when spec.runtime is "openclaw".</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>claudeCode</code> <em><a href="#claudecodeconfig">ClaudeCodeConfig</a></em></td>
-<td>ClaudeCode holds configuration specific to the claude-code runtime.<br />Only effective when spec.runtime is "claude-code".</td>
+<td><code>credentials</code> <em><a href="#credentialspec">CredentialSpec</a> array</em></td>
+<td>Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into the agent container. Typically supplied by<br />the referenced LanguageAgentRuntime; agents may add or override entries by name.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3070,12 +3020,6 @@ spec.selfConfigure allowlist before patching.</p>
 <tr>
 <td><code>monitoring</code> <em><a href="#agentmonitoringspec">AgentMonitoringSpec</a></em></td>
 <td>Monitoring configures Prometheus Operator integration for this agent.<br />When set, the operator creates a ServiceMonitor and/or PrometheusRule resource.<br />Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>auth</code> <em><a href="#agentauthspec">AgentAuthSpec</a></em></td>
-<td>Auth controls whether OIDC authentication is applied to this agent's ingress route.<br />When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
@@ -3936,84 +3880,6 @@ Mirrors networkingv1.NetworkPolicyIngressRule.</p>
 </tr>
 </tbody>
 </table>
-<h4 id="openclawconfig">OpenclawConfig<a class="headerlink" href="#openclawconfig" title="Permanent link">&para;</a></h4>
-<p>OpenclawConfig holds configuration specific to the openclaw runtime.
-Effective only when spec.runtime is "openclaw".</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled activates openclaw credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN<br />without requiring any explicit config on the LanguageAgent.</td>
-<td>false</td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>token</code> <em>string</em></td>
-<td>Token is the gateway authentication token (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with TokenRef.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>tokenRef</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
-<td>TokenRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCLAW_GATEWAY_TOKEN.<br />Mutually exclusive with Token.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
-<h4 id="opencodeconfig">OpencodeConfig<a class="headerlink" href="#opencodeconfig" title="Permanent link">&para;</a></h4>
-<p>OpencodeConfig holds configuration specific to the opencode runtime.
-Effective only when spec.runtime is "opencode".</p>
-<p><em>Appears in:</em>
-- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a>
-- <a href="#languageagentspec">LanguageAgentSpec</a></p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-<th>Default</th>
-<th>Validation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled activates opencode credential management for this agent.<br />Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials<br />without requiring any explicit config on the LanguageAgent.</td>
-<td>false</td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>username</code> <em>string</em></td>
-<td>Username for HTTP Basic Auth. Defaults to "opencode" if not set.<br />Sets OPENCODE_SERVER_USERNAME in the agent container.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>password</code> <em>string</em></td>
-<td>Password is the HTTP Basic Auth password (inline).<br />The operator creates a managed Secret and injects it via envFrom.<br />Mutually exclusive with PasswordRef.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-<tr>
-<td><code>passwordRef</code> <em><a href="#runtimesecretref">RuntimeSecretRef</a></em></td>
-<td>PasswordRef references a Secret whose keys are injected via envFrom.<br />The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).<br />Mutually exclusive with Password.</td>
-<td></td>
-<td>Optional: {} <br /></td>
-</tr>
-</tbody>
-</table>
 <h4 id="prometheusalertingrule">PrometheusAlertingRule<a class="headerlink" href="#prometheusalertingrule" title="Permanent link">&para;</a></h4>
 <p>PrometheusAlertingRule defines a single Prometheus alerting or recording rule.</p>
 <p><em>Appears in:</em>
@@ -4128,12 +3994,33 @@ Effective only when spec.runtime is "opencode".</p>
 </tr>
 </tbody>
 </table>
+<h4 id="runtimeauthspec">RuntimeAuthSpec<a class="headerlink" href="#runtimeauthspec" title="Permanent link">&para;</a></h4>
+<p>RuntimeAuthSpec gates OIDC authentication for agents using a runtime.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentruntimespec">LanguageAgentRuntimeSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code> <em>boolean</em></td>
+<td>Enabled puts agents using this runtime behind the cluster OIDC proxy.<br />Has no effect unless the cluster has auth enabled.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="runtimesecretref">RuntimeSecretRef<a class="headerlink" href="#runtimesecretref" title="Permanent link">&para;</a></h4>
 <p>RuntimeSecretRef references a Secret in the same namespace.
 All keys in the Secret are injected as env vars via envFrom.</p>
 <p><em>Appears in:</em>
-- <a href="#openclawconfig">OpenclawConfig</a>
-- <a href="#opencodeconfig">OpencodeConfig</a></p>
+- <a href="#credentialspec">CredentialSpec</a></p>
 <table>
 <thead>
 <tr>

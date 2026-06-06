@@ -797,10 +797,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#auto-generated-credentials" class="md-nav__link">
+  <a href="#credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Auto-Generated Credentials
+        Credentials
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication
       
     </span>
   </a>
@@ -1290,10 +1301,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#auto-generated-credentials" class="md-nav__link">
+  <a href="#credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Auto-Generated Credentials
+        Credentials
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication
       
     </span>
   </a>
@@ -1427,10 +1449,22 @@
 </tbody>
 </table>
 <p><strong>Example:</strong> An OpenClaw runtime defines an init container that adapts <code>/etc/agent/config.yaml</code> into OpenClaw's native format. An agent using <code>runtime: openclaw</code> can add its own init containers; they run after the runtime's adapter.</p>
-<h2 id="auto-generated-credentials">Auto-Generated Credentials<a class="headerlink" href="#auto-generated-credentials" title="Permanent link">&para;</a></h2>
-<p>Runtimes can instruct the operator to auto-generate credentials for every agent that uses them. Setting <code>spec.openclaw.enabled: true</code> or <code>spec.opencode.enabled: true</code> on a runtime causes the operator to create a <code>{agent-name}-runtime</code> Secret containing the generated credential and inject it into the agent via <code>envFrom</code> — no manual <code>kubectl create secret</code> needed.</p>
-<p>The bundled runtimes use this mechanism. OpenClaw generates <code>OPENCLAW_GATEWAY_TOKEN</code>; OpenCode generates <code>OPENCODE_SERVER_PASSWORD</code>.</p>
-<p>An agent can still override with its own <code>spec.openclaw.token</code> or <code>spec.openclaw.tokenRef</code> — the per-agent value takes precedence.</p>
+<h2 id="credentials">Credentials<a class="headerlink" href="#credentials" title="Permanent link">&para;</a></h2>
+<p>Runtimes provision credentials for every agent that uses them through the generic <code>credentials</code> list. Each entry's <code>name</code> is both the environment variable name and the key in the operator-managed Secret. Entries are resolved in priority order:</p>
+<ul>
+<li><strong><code>valueFrom</code> set</strong> — the referenced Secret's keys are injected via <code>envFrom</code>; the operator creates no Secret of its own.</li>
+<li><strong><code>value</code> set</strong> — the literal is stored in an operator-managed Secret named <code>{agent-name}-runtime</code> and injected via <code>envFrom</code>.</li>
+<li><strong>neither set</strong> — the operator auto-generates a random value once, persists it in the <code>{agent-name}-runtime</code> Secret, and preserves it across reconciles (it is never rotated).</li>
+</ul>
+<p>The bundled runtimes declare the credentials their images need:</p>
+<ul>
+<li><code>openclaw</code> declares <code>OPENCLAW_GATEWAY_TOKEN</code> (auto-generated).</li>
+<li><code>opencode</code> declares <code>OPENCODE_SERVER_PASSWORD</code> (auto-generated) and sets <code>OPENCODE_SERVER_USERNAME=opencode</code> as a plain <code>deployment.env</code> variable.</li>
+<li><code>claude-code</code> declares no credentials — authentication is interactive via <code>/login</code>.</li>
+</ul>
+<p>Runtime-declared entries merge first, then any entries the agent adds in its own <code>spec.credentials</code>; entries are deduplicated by <code>name</code>, with the agent's entry winning on a collision.</p>
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
+<p>Authentication is a runtime trait, not an agent setting. A runtime's <code>spec.auth.enabled: true</code> gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> its runtime has <code>auth.enabled: true</code>. The three bundled runtimes all enable auth since they serve web UIs. See <a href="../clusters/#authentication">Clusters</a> for the cluster-side configuration.</p>
 <h2 id="custom-runtimes">Custom Runtimes<a class="headerlink" href="#custom-runtimes" title="Permanent link">&para;</a></h2>
 <p>Any container image can be packaged as a runtime:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
