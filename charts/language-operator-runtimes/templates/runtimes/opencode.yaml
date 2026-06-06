@@ -8,7 +8,13 @@ metadata:
 spec:
   image: ghcr.io/anomalyco/opencode:latest
 
-  opencode:
+  # Auto-generate the HTTP Basic Auth password per agent and inject it as
+  # OPENCODE_SERVER_PASSWORD. The username is a static env var (see deployment.env).
+  credentials:
+    - name: OPENCODE_SERVER_PASSWORD
+
+  # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster enables auth).
+  auth:
     enabled: true
 
   ports:
@@ -55,6 +61,9 @@ spec:
       failureThreshold: 3
 
     env:
+      # HTTP Basic Auth username (the password is auto-generated; see spec.credentials)
+      - name: OPENCODE_SERVER_USERNAME
+        value: opencode
       # The image sets WorkingDir=/ with no HOME; redirect all writable paths to /workspace
       - name: HOME
         value: /workspace

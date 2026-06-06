@@ -72,6 +72,27 @@ spec:
 
 See [LanguageCluster API Reference](../api/languagecluster.md#network-isolation) for the full `NetworkPeer` field reference.
 
+## Authentication
+
+`LanguageCluster.spec.auth` is the cluster-wide authentication switch. Setting `auth.enabled: true` provisions the OIDC infrastructure (Dex) for the namespace, and `auth.oidc.*` holds the connection config — issuer, Dex connectors, client ID, and email domain:
+
+```yaml
+spec:
+  auth:
+    enabled: true
+    oidc:
+      issuer: https://dex.agents.example.com
+      clientID: language-operator
+      emailDomain: example.com
+      connectors:
+        - type: github
+          # ...connector config
+```
+
+Enabling auth on the cluster does not, by itself, put any agent behind the proxy. An agent is placed behind the OIDC proxy **only when both** the cluster has `auth.enabled: true` **and** the agent's runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied — there is no per-agent auth override.
+
+The three bundled runtimes (`openclaw`, `opencode`, `claude-code`) all set `auth.enabled: true` because they serve web UIs, so once the cluster enables auth they are automatically proxied. See [Runtimes](runtimes.md#authentication) for the runtime side of this gate.
+
 ## Capacity Limits
 
 Enforce hard limits on how many resources can be created in the namespace:

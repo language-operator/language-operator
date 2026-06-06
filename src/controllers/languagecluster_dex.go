@@ -124,7 +124,11 @@ func (r *LanguageClusterReconciler) reconcileDex(ctx context.Context, cluster *l
 	var authAgents []langopv1alpha1.LanguageAgent
 	for i := range agentList.Items {
 		agent := &agentList.Items[i]
-		if agentAuthEnabled(agent, cluster) {
+		enabled, err := agentAuthEnabled(ctx, r.Client, agent, cluster)
+		if err != nil {
+			return fmt.Errorf("resolving auth for agent %s: %w", agent.Name, err)
+		}
+		if enabled {
 			authAgents = append(authAgents, *agent)
 		}
 	}
@@ -515,13 +519,24 @@ func (r *LanguageClusterReconciler) dexLabels(cluster *langopv1alpha1.LanguageCl
 }
 
 // agentAuthEnabled reports whether OIDC auth is active for the given agent.
-// The agent's own spec.auth.enabled takes precedence; when nil, it inherits
-// the cluster-level setting from spec.auth.enabled.
-func agentAuthEnabled(agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster) bool {
-	if agent.Spec.Auth != nil && agent.Spec.Auth.Enabled != nil {
-		return *agent.Spec.Auth.Enabled
+// Auth requires both halves: the cluster must have auth enabled (which provisions
+// the OIDC infrastructure) and the agent's runtime must opt in via spec.auth.enabled.
+// Agents without a runtime, or whose runtime does not enable auth, are not proxied.
+func agentAuthEnabled(ctx context.Context, c client.Client, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster) (bool, error) {
+	if cluster.Spec.Auth == nil || !cluster.Spec.Auth.Enabled {
+		return false, nil
 	}
-	return cluster.Spec.Auth != nil && cluster.Spec.Auth.Enabled
+	if agent.Spec.Runtime == "" {
+		return false, nil
+	}
+	rt := &langopv1alpha1.LanguageAgentRuntime{}
+	if err := c.Get(ctx, types.NamespacedName{Name: agent.Spec.Runtime}, rt); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return rt.Spec.Auth != nil && rt.Spec.Auth.Enabled != nil && *rt.Spec.Auth.Enabled, nil
 }
 
 // dexIssuerURL returns the Dex OIDC issuer URL for the given cluster.

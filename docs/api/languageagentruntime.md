@@ -65,14 +65,24 @@ spec:
 | `ports` | `[]AgentPort` | Default port list; see merge semantics below |
 | `workspace` | `WorkspaceSpec` | Default workspace configuration (size, mountPath) |
 | `deployment` | `DeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
-| `openclaw` | `OpenclawConfig` | When `openclaw.enabled: true`, the operator auto-generates `OPENCLAW_GATEWAY_TOKEN` for every agent referencing this runtime (without the agent needing `spec.openclaw`) |
-| `opencode` | `OpencodeConfig` | When `opencode.enabled: true`, the operator auto-generates `OPENCODE_SERVER_PASSWORD` for every agent referencing this runtime |
+| `credentials` | `[]Credential` | Credentials provisioned for every agent referencing this runtime; see below |
+| `auth` | `RuntimeAuth` | Gates whether agents using this runtime sit behind the cluster's OIDC proxy; see [Authentication](#authentication) |
 
-### Automatic Credential Generation
+### Credentials
 
-Setting `spec.openclaw.enabled: true` or `spec.opencode.enabled: true` on a runtime causes the operator to create a `{agent-name}-runtime` Secret and inject the generated credential env var into every agent that references the runtime. This is how the bundled runtimes enable auto-credential management without requiring each `LanguageAgent` to configure credentials manually.
+A runtime declares the credentials its image needs through the generic `credentials` list. Each entry's `name` is both the environment variable name and the key in the operator-managed Secret. Entries are resolved in priority order:
 
-Custom runtimes can use the same mechanism:
+- **`valueFrom` set** — the referenced Secret's keys are injected via `envFrom`; the operator creates no Secret of its own.
+- **`value` set** — the literal is stored in an operator-managed Secret named `{agent}-runtime` and injected via `envFrom`.
+- **neither set** — the operator auto-generates a random value once, persists it in the `{agent}-runtime` Secret, and preserves it across reconciles (it is never rotated).
+
+Runtime-declared entries are merged ahead of any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision. This is how the bundled runtimes provision credentials without requiring each `LanguageAgent` to configure them manually:
+
+- `openclaw` declares `OPENCLAW_GATEWAY_TOKEN` (auto-generated).
+- `opencode` declares `OPENCODE_SERVER_PASSWORD` (auto-generated) and sets `OPENCODE_SERVER_USERNAME=opencode` as a plain `deployment.env` variable.
+- `claude-code` declares no credentials — its authentication is interactive via `/login`.
+
+Custom runtimes use the same mechanism:
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -81,8 +91,28 @@ metadata:
   name: my-runtime
 spec:
   image: ghcr.io/my-org/my-agent:latest
-  openclaw:
-    enabled: true   # auto-generates OPENCLAW_GATEWAY_TOKEN for all agents using this runtime
+  credentials:
+    - name: MY_RUNTIME_TOKEN   # auto-generated for every agent using this runtime
+  ports:
+    - name: http
+      port: 8080
+```
+
+### Authentication
+
+`spec.auth.enabled` (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied.
+
+The three bundled runtimes (`openclaw`, `opencode`, `claude-code`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgentRuntime
+metadata:
+  name: my-runtime
+spec:
+  image: ghcr.io/my-org/my-agent:latest
+  auth:
+    enabled: true   # agents using this runtime sit behind the cluster OIDC proxy
   ports:
     - name: http
       port: 8080
@@ -94,6 +124,7 @@ spec:
 |------------|-----------|
 | Scalars (`image`, `resources`, probes) | Runtime provides default; agent overrides if set |
 | `ports` | **Replace semantics** — runtime ports apply only when the agent defines no ports of its own |
+| `credentials` | Runtime entries merged first, then agent entries appended; deduplicated by `name`, agent wins on collision |
 | Other lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
 
 ## Status

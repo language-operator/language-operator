@@ -164,19 +164,20 @@ func ApplyRuntimeDefaults(agent *langopv1alpha1.LanguageAgentSpec, rt *langopv1a
 		}
 	}
 
-	// --- Runtime-specific credential configs (agent wins if non-nil) ---
+	// --- Credentials: runtime-first, agent-appended, deduped by Name (agent wins) ---
 
-	if agent.Openclaw == nil && rt.Openclaw != nil {
-		oc := *rt.Openclaw
-		agent.Openclaw = &oc
-	}
-	if agent.Opencode == nil && rt.Opencode != nil {
-		oc := *rt.Opencode
-		agent.Opencode = &oc
-	}
-	if agent.ClaudeCode == nil && rt.ClaudeCode != nil {
-		cc := *rt.ClaudeCode
-		agent.ClaudeCode = &cc
+	if len(rt.Credentials) > 0 {
+		seen := make(map[string]struct{}, len(agent.Credentials))
+		for _, c := range agent.Credentials {
+			seen[c.Name] = struct{}{}
+		}
+		merged := make([]langopv1alpha1.CredentialSpec, 0, len(rt.Credentials)+len(agent.Credentials))
+		for _, c := range rt.Credentials {
+			if _, exists := seen[c.Name]; !exists {
+				merged = append(merged, *c.DeepCopy())
+			}
+		}
+		agent.Credentials = append(merged, agent.Credentials...)
 	}
 
 	// --- DeploymentSpec list fields (runtime-first, agent-appended) ---

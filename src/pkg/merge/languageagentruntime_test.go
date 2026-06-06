@@ -166,3 +166,50 @@ func TestApplyRuntimeDefaults_RoleRules_AgentOnly(t *testing.T) {
 	require.Len(t, agent.Deployment.RoleRules, 1)
 	assert.Equal(t, []string{"configmaps"}, agent.Deployment.RoleRules[0].Resources)
 }
+
+func TestApplyRuntimeDefaults_Credentials_RuntimeOnly(t *testing.T) {
+	agent := &langopv1alpha1.LanguageAgentSpec{}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Credentials: []langopv1alpha1.CredentialSpec{
+			{Name: "OPENCLAW_GATEWAY_TOKEN"},
+		},
+	}
+	ApplyRuntimeDefaults(agent, rt)
+	require.Len(t, agent.Credentials, 1)
+	assert.Equal(t, "OPENCLAW_GATEWAY_TOKEN", agent.Credentials[0].Name)
+}
+
+func TestApplyRuntimeDefaults_Credentials_RuntimePrepended(t *testing.T) {
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Credentials: []langopv1alpha1.CredentialSpec{
+			{Name: "AGENT_ONLY"},
+		},
+	}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Credentials: []langopv1alpha1.CredentialSpec{
+			{Name: "RUNTIME_ONLY"},
+		},
+	}
+	ApplyRuntimeDefaults(agent, rt)
+	require.Len(t, agent.Credentials, 2)
+	// Runtime-first ordering.
+	assert.Equal(t, "RUNTIME_ONLY", agent.Credentials[0].Name)
+	assert.Equal(t, "AGENT_ONLY", agent.Credentials[1].Name)
+}
+
+func TestApplyRuntimeDefaults_Credentials_AgentWinsByName(t *testing.T) {
+	agent := &langopv1alpha1.LanguageAgentSpec{
+		Credentials: []langopv1alpha1.CredentialSpec{
+			{Name: "TOKEN", Value: "agent-value"},
+		},
+	}
+	rt := &langopv1alpha1.LanguageAgentRuntimeSpec{
+		Credentials: []langopv1alpha1.CredentialSpec{
+			{Name: "TOKEN", Value: "runtime-value"},
+		},
+	}
+	ApplyRuntimeDefaults(agent, rt)
+	// Deduped by name; the agent entry wins, no duplicate.
+	require.Len(t, agent.Credentials, 1)
+	assert.Equal(t, "agent-value", agent.Credentials[0].Value)
+}

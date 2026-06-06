@@ -16,6 +16,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -44,32 +45,64 @@ func authCluster(name string, mods ...gen.LanguageClusterModifier) *langopv1alph
 
 // --- agentAuthEnabled ---
 
-func TestAgentAuthEnabled_InheritsFromCluster(t *testing.T) {
+// authResolverClient builds a fake client seeded with the given runtime (if non-nil),
+// for exercising agentAuthEnabled's runtime resolution.
+func authResolverClient(t *testing.T, rt *langopv1alpha1.LanguageAgentRuntime) client.Client {
+	t.Helper()
+	scheme := testutil.SetupTestScheme(t)
+	b := fake.NewClientBuilder().WithScheme(scheme)
+	if rt != nil {
+		b = b.WithObjects(rt)
+	}
+	return b.Build()
+}
+
+// runtimeWithAuth returns a runtime named "rt" with auth gated as specified.
+func runtimeWithAuth(enabled *bool) *langopv1alpha1.LanguageAgentRuntime {
+	rt := gen.LanguageAgentRuntime("rt")
+	rt.Spec.Auth = &langopv1alpha1.RuntimeAuthSpec{Enabled: enabled}
+	return rt
+}
+
+func TestAgentAuthEnabled_ClusterAndRuntimeEnabled(t *testing.T) {
 	cluster := authCluster("test")
+	rt := runtimeWithAuth(ptr.To(true))
 	agent := gen.LanguageAgent("a", "test")
-	assert.True(t, agentAuthEnabled(agent, cluster))
+	agent.Spec.Runtime = "rt"
+	got, err := agentAuthEnabled(context.Background(), authResolverClient(t, rt), agent, cluster)
+	require.NoError(t, err)
+	assert.True(t, got)
 }
 
 func TestAgentAuthEnabled_ClusterDisabled(t *testing.T) {
+	// runtime opts in, but cluster auth is off — the infra switch wins.
 	cluster := gen.ReadyCluster("test")
+	rt := runtimeWithAuth(ptr.To(true))
 	agent := gen.LanguageAgent("a", "test")
-	assert.False(t, agentAuthEnabled(agent, cluster))
+	agent.Spec.Runtime = "rt"
+	got, err := agentAuthEnabled(context.Background(), authResolverClient(t, rt), agent, cluster)
+	require.NoError(t, err)
+	assert.False(t, got)
 }
 
-func TestAgentAuthEnabled_AgentOverrideTrue(t *testing.T) {
-	// cluster has auth disabled but agent forces it on
-	cluster := gen.ReadyCluster("test")
+func TestAgentAuthEnabled_RuntimeNotEnabled(t *testing.T) {
+	// cluster auth on, but the runtime does not opt in.
+	cluster := authCluster("test")
+	rt := runtimeWithAuth(ptr.To(false))
 	agent := gen.LanguageAgent("a", "test")
-	agent.Spec.Auth = &langopv1alpha1.AgentAuthSpec{Enabled: ptr.To(true)}
-	assert.True(t, agentAuthEnabled(agent, cluster))
+	agent.Spec.Runtime = "rt"
+	got, err := agentAuthEnabled(context.Background(), authResolverClient(t, rt), agent, cluster)
+	require.NoError(t, err)
+	assert.False(t, got)
 }
 
-func TestAgentAuthEnabled_AgentOverrideFalse(t *testing.T) {
-	// cluster has auth enabled but agent opts out
+func TestAgentAuthEnabled_NoRuntime(t *testing.T) {
+	// cluster auth on, but the agent has no runtime — nothing to gate behind the proxy.
 	cluster := authCluster("test")
 	agent := gen.LanguageAgent("a", "test")
-	agent.Spec.Auth = &langopv1alpha1.AgentAuthSpec{Enabled: ptr.To(false)}
-	assert.False(t, agentAuthEnabled(agent, cluster))
+	got, err := agentAuthEnabled(context.Background(), authResolverClient(t, nil), agent, cluster)
+	require.NoError(t, err)
+	assert.False(t, got)
 }
 
 // --- dexIssuerURL ---
@@ -242,10 +275,11 @@ func TestReconcileDex_CreatesConfigMap(t *testing.T) {
 func TestReconcileDex_ConfigMapContainsAgentRedirectURIs(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	cluster := authCluster("mycluster")
+	rt := runtimeWithAuth(ptr.To(true))
 	agent := gen.LanguageAgent("my-agent", "mycluster")
-	// auth is inherited from cluster (enabled)
+	agent.Spec.Runtime = "rt" // auth gated on via the runtime
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(cluster, agent).
+		WithObjects(cluster, rt, agent).
 		WithStatusSubresource(cluster).
 		Build()
 	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
@@ -260,10 +294,11 @@ func TestReconcileDex_ConfigMapContainsAgentRedirectURIs(t *testing.T) {
 func TestReconcileDex_OptedOutAgentNotInRedirectURIs(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	cluster := authCluster("mycluster")
+	rt := runtimeWithAuth(ptr.To(false)) // runtime does not opt into auth
 	agent := gen.LanguageAgent("opted-out", "mycluster")
-	agent.Spec.Auth = &langopv1alpha1.AgentAuthSpec{Enabled: ptr.To(false)}
+	agent.Spec.Runtime = "rt"
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(cluster, agent).
+		WithObjects(cluster, rt, agent).
 		WithStatusSubresource(cluster).
 		Build()
 	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
@@ -299,13 +334,17 @@ func TestReconcileDex_ConfigHashChangesOnURIUpdate(t *testing.T) {
 	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
 	ctx := context.Background()
 
+	rt := runtimeWithAuth(ptr.To(true))
+	require.NoError(t, fakeClient.Create(ctx, rt))
+
 	require.NoError(t, r.reconcileDex(ctx, cluster))
 	dep1 := &appsv1.Deployment{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, dep1))
 	hash1 := dep1.Spec.Template.Annotations["langop.io/dex-config-hash"]
 
-	// Add an agent that will be included in redirect URIs.
+	// Add an auth-enabled agent that will be included in redirect URIs.
 	agent := gen.LanguageAgent("new-agent", "mycluster")
+	agent.Spec.Runtime = "rt"
 	require.NoError(t, fakeClient.Create(ctx, agent))
 
 	require.NoError(t, r.reconcileDex(ctx, cluster))

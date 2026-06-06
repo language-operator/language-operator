@@ -1008,6 +1008,20 @@ func authEnabledCluster(name string) *langopv1alpha1.LanguageCluster {
 	return c
 }
 
+// authRuntime returns a cluster-scoped runtime that opts agents into the OIDC proxy.
+func authRuntime() *langopv1alpha1.LanguageAgentRuntime {
+	rt := gen.LanguageAgentRuntime("authrt")
+	rt.Spec.Auth = &langopv1alpha1.RuntimeAuthSpec{Enabled: ptr.To(true)}
+	return rt
+}
+
+// authAgent returns an agent wired to the authRuntime (so auth resolves on when the cluster enables it).
+func authAgent(name, namespace string) *langopv1alpha1.LanguageAgent {
+	agent := gen.LanguageAgent(name, namespace)
+	agent.Spec.Runtime = "authrt"
+	return agent
+}
+
 func newAgentReconcilerForAuth(t *testing.T, objs ...client.Object) (*LanguageAgentReconciler, client.Client) {
 	t.Helper()
 	scheme := testutil.SetupTestScheme(t)
@@ -1036,8 +1050,8 @@ func seedDexSecret(t *testing.T, fc client.Client, namespace string) {
 
 func TestReconcileOAuthProxy_CreatesCookieSecret(t *testing.T) {
 	cluster := authEnabledCluster("default")
-	agent := gen.LanguageAgent("my-agent", "default")
-	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	agent := authAgent("my-agent", "default")
+	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
 	seedDexSecret(t, fc, "default")
 	ctx := context.Background()
 
@@ -1071,8 +1085,8 @@ func TestBuildOAuthProxySidecar_UsesInternalDexURLs(t *testing.T) {
 	// The oauth2-proxy sidecar must use cluster-internal URLs for token exchange to avoid
 	// external DNS dependency inside the cluster.
 	cluster := authEnabledCluster("mycluster")
-	agent := gen.LanguageAgent("my-agent", "mycluster")
-	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	agent := authAgent("my-agent", "mycluster")
+	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
 	seedDexSecret(t, fc, "mycluster")
 	ctx := context.Background()
 
@@ -1087,8 +1101,8 @@ func TestBuildOAuthProxySidecar_UsesInternalDexURLs(t *testing.T) {
 
 func TestReconcileIngress_BackendIsOAuth2ProxyWhenAuthEnabled(t *testing.T) {
 	cluster := authEnabledCluster("default")
-	agent := gen.LanguageAgent("my-agent", "default")
-	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	agent := authAgent("my-agent", "default")
+	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
 	ctx := context.Background()
 
 	require.NoError(t, r.reconcileIngress(ctx, agent, cluster, "my-agent.example.com"))
@@ -1119,8 +1133,8 @@ func TestReconcileIngress_BackendIsAgentDirectWhenAuthDisabled(t *testing.T) {
 // reconcileDeployment injects an oauth2-proxy sidecar with upstream pointing to localhost.
 func TestReconcileDeployment_OAuthProxySidecarPresent(t *testing.T) {
 	cluster := authEnabledCluster("default")
-	agent := gen.LanguageAgent("my-agent", "default")
-	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
+	agent := authAgent("my-agent", "default")
+	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
 	seedDexSecret(t, fc, "default")
 	ctx := context.Background()
 

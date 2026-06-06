@@ -49,20 +49,28 @@ type LanguageAgentRuntimeSpec struct {
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 
-	// Openclaw provides default openclaw credential configuration for agents using this runtime.
-	// When set, the operator auto-generates OPENCLAW_GATEWAY_TOKEN per agent unless overridden.
+	// Credentials declares environment variables backed by Secret values that the
+	// operator resolves and injects into agents using this runtime. Each entry is
+	// auto-generated, set inline, or sourced from an existing Secret. Merged into the
+	// agent's effective spec runtime-first; agent entries override by name.
 	// +optional
-	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	Credentials []CredentialSpec `json:"credentials,omitempty"`
 
-	// Opencode provides default opencode credential configuration for agents using this runtime.
-	// When set, the operator auto-generates OPENCODE_SERVER_PASSWORD per agent unless overridden.
+	// Auth gates whether agents using this runtime sit behind the cluster OIDC proxy.
+	// Effective only when the cluster has auth enabled (which provisions the OIDC
+	// infrastructure). The OIDC connection itself is configured cluster-wide.
 	// +optional
-	Opencode *OpencodeConfig `json:"opencode,omitempty"`
+	Auth *RuntimeAuthSpec `json:"auth,omitempty"`
+}
 
-	// ClaudeCode provides default claude-code credential configuration for agents using this runtime.
-	// When set, the operator injects ANTHROPIC_API_KEY per agent unless overridden.
+// RuntimeAuthSpec gates OIDC authentication for agents using a runtime.
+type RuntimeAuthSpec struct {
+	// Enabled puts agents using this runtime behind the cluster OIDC proxy.
+	// Has no effect unless the cluster has auth enabled.
 	// +optional
-	ClaudeCode *ClaudeCodeConfig `json:"claudeCode,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // +kubebuilder:object:root=true

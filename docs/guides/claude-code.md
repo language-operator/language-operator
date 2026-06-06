@@ -72,9 +72,16 @@ Inside the terminal, run `/login` and complete the Claude.ai browser flow. The c
 
 ## Configuration Reference
 
-| Field | Description |
-|-------|-------------|
-| `spec.claudeCode.maxTurns` | Cap on the number of agentic turns per request (sets `CLAUDE_CODE_MAX_TURNS`). |
+The `claude-code` runtime is configured through plain environment variables on the agent's `spec.deployment.env`. For example, to cap the number of agentic turns per request, set `CLAUDE_CODE_MAX_TURNS`:
+
+```yaml
+spec:
+  runtime: claude-code
+  deployment:
+    env:
+      - name: CLAUDE_CODE_MAX_TURNS
+        value: "10"
+```
 
 ## What the Operator Created
 

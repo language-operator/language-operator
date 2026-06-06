@@ -447,11 +447,14 @@ func generateCredential() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// reconcileRuntimeSecret creates or updates a managed Secret containing credentials for
-// runtime-specific configuration (opencode, openclaw). When inline values are provided,
-// the operator owns the Secret and GC's it on agent deletion. When *Ref variants are used,
-// the referenced Secret is injected into workingAgent's envFrom directly. When neither is
-// set, credentials are auto-generated once and preserved on subsequent reconciles.
+// reconcileRuntimeSecret resolves workingAgent's declared credentials into env vars.
+// Each CredentialSpec injects an env var named after the credential:
+//   - ValueFrom: the referenced Secret's keys are injected via envFrom directly.
+//   - Value: the literal is stored in an operator-managed Secret, GC'd on agent deletion.
+//   - neither: a value is auto-generated once and preserved on subsequent reconciles.
+//
+// Credentials typically originate from the referenced LanguageAgentRuntime and are
+// merged into workingAgent.Spec by ApplyRuntimeDefaults before this runs.
 func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 	ctx context.Context,
 	agent *langopv1alpha1.LanguageAgent,
@@ -459,7 +462,6 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 ) error {
 	secretName := agent.Name + "-runtime"
 	secretData := map[string][]byte{}
-	var extraEnv []corev1.EnvVar
 	var refEnvFrom []corev1.EnvFromSource
 
 	// Load existing secret so auto-generated values can be preserved across reconciles.
@@ -469,79 +471,29 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 		existingData = existing.Data
 	}
 
-	// opencode inline credentials → managed secret
-	// Use workingAgent so runtime-provided config (e.g. spec.opencode from a LanguageAgentRuntime) is respected.
-	if workingAgent.Spec.Opencode != nil && workingAgent.Spec.Opencode.Enabled != nil && *workingAgent.Spec.Opencode.Enabled {
-		oc := workingAgent.Spec.Opencode
-		if oc.Password != "" {
-			username := oc.Username
-			if username == "" {
-				username = "opencode"
-			}
-			secretData["OPENCODE_SERVER_USERNAME"] = []byte(username)
-			secretData["OPENCODE_SERVER_PASSWORD"] = []byte(oc.Password)
-		} else if oc.PasswordRef != nil {
-			// Username as literal env var if specified alongside a ref
-			if oc.Username != "" {
-				extraEnv = append(extraEnv, corev1.EnvVar{
-					Name:  "OPENCODE_SERVER_USERNAME",
-					Value: oc.Username,
-				})
-			}
+	for _, c := range workingAgent.Spec.Credentials {
+		switch {
+		case c.ValueFrom != nil:
+			// Inject the referenced Secret's keys directly.
 			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
 				SecretRef: &corev1.SecretEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: oc.PasswordRef.Name},
+					LocalObjectReference: corev1.LocalObjectReference{Name: c.ValueFrom.Name},
 				},
 			})
-		} else {
+		case c.Value != "":
+			secretData[c.Name] = []byte(c.Value)
+		default:
 			// Auto-generate: preserve existing value if present, otherwise generate new.
-			password := string(existingData["OPENCODE_SERVER_PASSWORD"])
-			if password == "" {
+			value := string(existingData[c.Name])
+			if value == "" {
 				var err error
-				password, err = generateCredential()
+				value, err = generateCredential()
 				if err != nil {
-					return fmt.Errorf("generating opencode password: %w", err)
+					return fmt.Errorf("generating credential %q: %w", c.Name, err)
 				}
 			}
-			username := oc.Username
-			if username == "" {
-				username = "opencode"
-			}
-			secretData["OPENCODE_SERVER_USERNAME"] = []byte(username)
-			secretData["OPENCODE_SERVER_PASSWORD"] = []byte(password)
+			secretData[c.Name] = []byte(value)
 		}
-	}
-
-	// openclaw inline credentials → managed secret
-	if workingAgent.Spec.Openclaw != nil && workingAgent.Spec.Openclaw.Enabled != nil && *workingAgent.Spec.Openclaw.Enabled {
-		oc := workingAgent.Spec.Openclaw
-		if oc.Token != "" {
-			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(oc.Token)
-		} else if oc.TokenRef != nil {
-			refEnvFrom = append(refEnvFrom, corev1.EnvFromSource{
-				SecretRef: &corev1.SecretEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: oc.TokenRef.Name},
-				},
-			})
-		} else {
-			// Auto-generate: preserve existing value if present, otherwise generate new.
-			token := string(existingData["OPENCLAW_GATEWAY_TOKEN"])
-			if token == "" {
-				var err error
-				token, err = generateCredential()
-				if err != nil {
-					return fmt.Errorf("generating openclaw token: %w", err)
-				}
-			}
-			secretData["OPENCLAW_GATEWAY_TOKEN"] = []byte(token)
-		}
-	}
-
-	if cc := workingAgent.Spec.ClaudeCode; cc != nil && cc.MaxTurns != nil {
-		extraEnv = append(extraEnv, corev1.EnvVar{
-			Name:  "CLAUDE_CODE_MAX_TURNS",
-			Value: fmt.Sprintf("%d", *cc.MaxTurns),
-		})
 	}
 
 	if len(secretData) > 0 {
@@ -577,8 +529,6 @@ func (r *LanguageAgentReconciler) reconcileRuntimeSecret(
 
 	// Append ref-based envFrom entries
 	workingAgent.Spec.Deployment.EnvFrom = append(workingAgent.Spec.Deployment.EnvFrom, refEnvFrom...)
-	// Prepend any literal env vars (e.g. username alongside a passwordRef)
-	workingAgent.Spec.Deployment.Env = append(extraEnv, workingAgent.Spec.Deployment.Env...)
 
 	return nil
 }

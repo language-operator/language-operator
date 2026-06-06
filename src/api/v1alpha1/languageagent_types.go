@@ -86,20 +86,13 @@ type LanguageAgentSpec struct {
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 
-	// Opencode holds configuration specific to the opencode runtime.
-	// Only effective when spec.runtime is "opencode".
+	// Credentials declares environment variables backed by Secret values that the
+	// operator resolves and injects into the agent container. Typically supplied by
+	// the referenced LanguageAgentRuntime; agents may add or override entries by name.
 	// +optional
-	Opencode *OpencodeConfig `json:"opencode,omitempty"`
-
-	// Openclaw holds configuration specific to the openclaw runtime.
-	// Only effective when spec.runtime is "openclaw".
-	// +optional
-	Openclaw *OpenclawConfig `json:"openclaw,omitempty"`
-
-	// ClaudeCode holds configuration specific to the claude-code runtime.
-	// Only effective when spec.runtime is "claude-code".
-	// +optional
-	ClaudeCode *ClaudeCodeConfig `json:"claudeCode,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	Credentials []CredentialSpec `json:"credentials,omitempty"`
 
 	// SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig
 	// requests to modify its own spec at runtime. When enabled, the operator grants
@@ -112,19 +105,6 @@ type LanguageAgentSpec struct {
 	// Requires prometheus-operator to be installed in the cluster; silently skipped otherwise.
 	// +optional
 	Monitoring *AgentMonitoringSpec `json:"monitoring,omitempty"`
-
-	// Auth controls whether OIDC authentication is applied to this agent's ingress route.
-	// When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.
-	// +optional
-	Auth *AgentAuthSpec `json:"auth,omitempty"`
-}
-
-// AgentAuthSpec controls OIDC authentication for a LanguageAgent's ingress route.
-type AgentAuthSpec struct {
-	// Enabled explicitly enables or disables OIDC authentication for this agent.
-	// When nil, the agent inherits the cluster-level auth.enabled setting.
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // AgentMonitoringSpec defines Prometheus Operator integration for a LanguageAgent.
@@ -298,65 +278,25 @@ type WorkspaceSpec struct {
 	SeedConfigMapRef *corev1.LocalObjectReference `json:"seedConfigMapRef,omitempty"`
 }
 
-// OpencodeConfig holds configuration specific to the opencode runtime.
-// Effective only when spec.runtime is "opencode".
-type OpencodeConfig struct {
-	// Enabled activates opencode credential management for this agent.
-	// Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
-	// without requiring any explicit config on the LanguageAgent.
-	// +kubebuilder:default=false
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+// CredentialSpec declares an environment variable backed by a Secret value.
+// The operator resolves it once and injects it into the agent container.
+// Source priority: ValueFrom (existing Secret) > Value (inline) > auto-generate.
+type CredentialSpec struct {
+	// Name is the environment variable name and the key within the operator-managed
+	// Secret (e.g. OPENCLAW_GATEWAY_TOKEN, OPENCODE_SERVER_PASSWORD).
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
 
-	// Username for HTTP Basic Auth. Defaults to "opencode" if not set.
-	// Sets OPENCODE_SERVER_USERNAME in the agent container.
+	// Value, when set, is stored verbatim in the managed Secret instead of
+	// generating a random credential. Mutually exclusive with ValueFrom.
 	// +optional
-	Username string `json:"username,omitempty"`
+	Value string `json:"value,omitempty"`
 
-	// Password is the HTTP Basic Auth password (inline).
-	// The operator creates a managed Secret and injects it via envFrom.
-	// Mutually exclusive with PasswordRef.
+	// ValueFrom references an existing Secret whose keys are injected via envFrom.
+	// When set, the operator does not create or manage a Secret for this entry.
+	// Mutually exclusive with Value.
 	// +optional
-	Password string `json:"password,omitempty"`
-
-	// PasswordRef references a Secret whose keys are injected via envFrom.
-	// The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
-	// Mutually exclusive with Password.
-	// +optional
-	PasswordRef *RuntimeSecretRef `json:"passwordRef,omitempty"`
-}
-
-// OpenclawConfig holds configuration specific to the openclaw runtime.
-// Effective only when spec.runtime is "openclaw".
-type OpenclawConfig struct {
-	// Enabled activates openclaw credential management for this agent.
-	// Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
-	// without requiring any explicit config on the LanguageAgent.
-	// +kubebuilder:default=false
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// Token is the gateway authentication token (inline).
-	// The operator creates a managed Secret and injects it via envFrom.
-	// Mutually exclusive with TokenRef.
-	// +optional
-	Token string `json:"token,omitempty"`
-
-	// TokenRef references a Secret whose keys are injected via envFrom.
-	// The Secret must contain OPENCLAW_GATEWAY_TOKEN.
-	// Mutually exclusive with Token.
-	// +optional
-	TokenRef *RuntimeSecretRef `json:"tokenRef,omitempty"`
-}
-
-// ClaudeCodeConfig holds configuration specific to the claude-code runtime.
-// Effective only when spec.runtime is "claude-code". Authentication is interactive
-// (run `/login` inside the agent terminal); credentials persist on the workspace PVC.
-type ClaudeCodeConfig struct {
-	// MaxTurns limits the number of agentic turns per request.
-	// Sets CLAUDE_CODE_MAX_TURNS in the agent container.
-	// +optional
-	MaxTurns *int32 `json:"maxTurns,omitempty"`
+	ValueFrom *RuntimeSecretRef `json:"valueFrom,omitempty"`
 }
 
 // RuntimeSecretRef references a Secret in the same namespace.

@@ -57,29 +57,46 @@ spec:
           spec:
             description: LanguageAgentSpec defines the desired state of LanguageAgent
             properties:
-              auth:
+              credentials:
                 description: |-
-                  Auth controls whether OIDC authentication is applied to this agent's ingress route.
-                  When nil, the agent inherits the cluster-level auth setting from its LanguageCluster.
-                properties:
-                  enabled:
-                    description: |-
-                      Enabled explicitly enables or disables OIDC authentication for this agent.
-                      When nil, the agent inherits the cluster-level auth.enabled setting.
-                    type: boolean
-                type: object
-              claudeCode:
-                description: |-
-                  ClaudeCode holds configuration specific to the claude-code runtime.
-                  Only effective when spec.runtime is "claude-code".
-                properties:
-                  maxTurns:
-                    description: |-
-                      MaxTurns limits the number of agentic turns per request.
-                      Sets CLAUDE_CODE_MAX_TURNS in the agent container.
-                    format: int32
-                    type: integer
-                type: object
+                  Credentials declares environment variables backed by Secret values that the
+                  operator resolves and injects into the agent container. Typically supplied by
+                  the referenced LanguageAgentRuntime; agents may add or override entries by name.
+                items:
+                  description: |-
+                    CredentialSpec declares an environment variable backed by a Secret value.
+                    The operator resolves it once and injects it into the agent container.
+                    Source priority: ValueFrom (existing Secret) > Value (inline) > auto-generate.
+                  properties:
+                    name:
+                      description: |-
+                        Name is the environment variable name and the key within the operator-managed
+                        Secret (e.g. OPENCLAW_GATEWAY_TOKEN, OPENCODE_SERVER_PASSWORD).
+                      type: string
+                    value:
+                      description: |-
+                        Value, when set, is stored verbatim in the managed Secret instead of
+                        generating a random credential. Mutually exclusive with ValueFrom.
+                      type: string
+                    valueFrom:
+                      description: |-
+                        ValueFrom references an existing Secret whose keys are injected via envFrom.
+                        When set, the operator does not create or manage a Secret for this entry.
+                        Mutually exclusive with Value.
+                      properties:
+                        name:
+                          description: Name is the name of the Secret.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               deployment:
                 description: Deployment groups Kubernetes-specific pod and container
                   configuration.
@@ -6789,73 +6806,6 @@ spec:
                           type: array
                       type: object
                     type: array
-                type: object
-              openclaw:
-                description: |-
-                  Openclaw holds configuration specific to the openclaw runtime.
-                  Only effective when spec.runtime is "openclaw".
-                properties:
-                  enabled:
-                    default: false
-                    description: |-
-                      Enabled activates openclaw credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger auto-generation of OPENCLAW_GATEWAY_TOKEN
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
-                  token:
-                    description: |-
-                      Token is the gateway authentication token (inline).
-                      The operator creates a managed Secret and injects it via envFrom.
-                      Mutually exclusive with TokenRef.
-                    type: string
-                  tokenRef:
-                    description: |-
-                      TokenRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain OPENCLAW_GATEWAY_TOKEN.
-                      Mutually exclusive with Token.
-                    properties:
-                      name:
-                        description: Name is the name of the Secret.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                type: object
-              opencode:
-                description: |-
-                  Opencode holds configuration specific to the opencode runtime.
-                  Only effective when spec.runtime is "opencode".
-                properties:
-                  enabled:
-                    default: false
-                    description: |-
-                      Enabled activates opencode credential management for this agent.
-                      Set to true in a LanguageAgentRuntime to trigger auto-generation of credentials
-                      without requiring any explicit config on the LanguageAgent.
-                    type: boolean
-                  password:
-                    description: |-
-                      Password is the HTTP Basic Auth password (inline).
-                      The operator creates a managed Secret and injects it via envFrom.
-                      Mutually exclusive with PasswordRef.
-                    type: string
-                  passwordRef:
-                    description: |-
-                      PasswordRef references a Secret whose keys are injected via envFrom.
-                      The Secret must contain OPENCODE_SERVER_PASSWORD (and optionally OPENCODE_SERVER_USERNAME).
-                      Mutually exclusive with Password.
-                    properties:
-                      name:
-                        description: Name is the name of the Secret.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  username:
-                    description: |-
-                      Username for HTTP Basic Auth. Defaults to "opencode" if not set.
-                      Sets OPENCODE_SERVER_USERNAME in the agent container.
-                    type: string
                 type: object
               persona:
                 description: Persona is the name of a LanguagePersona this agent uses

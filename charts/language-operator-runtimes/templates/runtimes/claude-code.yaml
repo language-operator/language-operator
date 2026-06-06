@@ -10,6 +10,11 @@ spec:
   # and the main container (server.mjs WebSocket terminal).
   image: ghcr.io/language-operator/claude-code-adapter:latest
 
+  # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster enables auth).
+  # Claude Code authentication itself is interactive (run /login in the terminal); no credentials here.
+  auth:
+    enabled: true
+
   ports:
     - name: http
       port: 8080
