@@ -45,7 +45,14 @@ cd charts/language-operator-runtimes && helm template . --debug
 
 Two charts live under `charts/`:
 - `charts/language-operator/` — operator workload (CRDs, Deployment, RBAC, webhooks). Install this first.
-- `charts/language-operator-runtimes/` — bundled `LanguageAgentRuntime` CRs (openclaw, opencode, claude-code). Requires the operator chart's CRDs to be present. Managed independently so runtimes can be upgraded without touching the operator.
+- `charts/language-operator-runtimes/` — umbrella chart that pulls the three runtimes (openclaw, opencode, claude-code) as subcharts from `oci://ghcr.io/language-operator/charts`. Requires the operator chart's CRDs to be present. Run `helm dependency build charts/language-operator-runtimes` before packaging/installing (CI and the `make` targets do this). `Chart.lock` is committed; pulled `charts/*.tgz` are gitignored.
+
+Each runtime now lives in its **own repository** (image source **and** self-contained chart), not in this repo:
+- `language-operator/claude-code-adapter` — combined terminal image + `claude-code` runtime chart
+- `language-operator/openclaw-adapter` — adapter init image + `openclaw` runtime chart
+- `language-operator/opencode-adapter` — adapter init image + `opencode` runtime chart
+
+The umbrella's values are keyed by subchart name (e.g. `claude-code.enabled`, `claude-code.image.pullPolicy`), forwarded to each subchart.
 
 Documentation:
 ```bash

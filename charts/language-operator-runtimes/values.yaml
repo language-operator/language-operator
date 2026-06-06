@@ -1,17 +1,27 @@
-# Standard runtimes bundled with the operator.
-# LanguageAgentRuntime resources are cluster-scoped; install once, use from any namespace.
-# Requires the language-operator chart (with CRDs) to be installed first.
-runtimes:
-  openclaw:
-    # Install the openclaw LanguageAgentRuntime.
-    enabled: true
-  opencode:
-    # Install the opencode LanguageAgentRuntime.
-    enabled: true
-  claudeCode:
-    # Install the claude-code LanguageAgentRuntime.
-    enabled: true
-    # imagePullPolicy for the claude-code-adapter image (used by both the init
-    # and main containers). Set to Never in local development
-    # (values.local.yaml) to use locally imported images.
-    imagePullPolicy: ""
+# Umbrella chart aggregating the standard Language Operator runtimes.
+# Each runtime is a subchart pulled from oci://ghcr.io/language-operator/charts.
+# LanguageAgentRuntime resources are cluster-scoped; install once, use from any
+# namespace. Requires the language-operator chart (with CRDs) installed first.
+#
+# Values under each runtime key are forwarded to that subchart. See the subchart
+# repos for the full set of overridable values:
+#   - https://github.com/language-operator/claude-code-adapter
+#   - https://github.com/language-operator/openclaw-adapter
+#   - https://github.com/language-operator/opencode-adapter
+
+claude-code:
+  # Install the claude-code LanguageAgentRuntime.
+  enabled: true
+  image:
+    # pullPolicy for the claude-code-adapter image (used by both the init and
+    # main containers). Set to Never in local development (values.local.yaml)
+    # to use locally imported images.
+    pullPolicy: ""
+
+openclaw:
+  # Install the openclaw LanguageAgentRuntime.
+  enabled: true
+
+opencode:
+  # Install the opencode LanguageAgentRuntime.
+  enabled: true
