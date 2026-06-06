@@ -64,13 +64,25 @@ See [Installation](../getting-started/installation.md#3-install-the-runtimes) fo
 
 **Example:** An OpenClaw runtime defines an init container that adapts `/etc/agent/config.yaml` into OpenClaw's native format. An agent using `runtime: openclaw` can add its own init containers; they run after the runtime's adapter.
 
-## Auto-Generated Credentials
+## Credentials
 
-Runtimes can instruct the operator to auto-generate credentials for every agent that uses them. Setting `spec.openclaw.enabled: true` or `spec.opencode.enabled: true` on a runtime causes the operator to create a `{agent-name}-runtime` Secret containing the generated credential and inject it into the agent via `envFrom` — no manual `kubectl create secret` needed.
+Runtimes provision credentials for every agent that uses them through the generic `credentials` list. Each entry's `name` is both the environment variable name and the key in the operator-managed Secret. Entries are resolved in priority order:
 
-The bundled runtimes use this mechanism. OpenClaw generates `OPENCLAW_GATEWAY_TOKEN`; OpenCode generates `OPENCODE_SERVER_PASSWORD`.
+- **`valueFrom` set** — the referenced Secret's keys are injected via `envFrom`; the operator creates no Secret of its own.
+- **`value` set** — the literal is stored in an operator-managed Secret named `{agent-name}-runtime` and injected via `envFrom`.
+- **neither set** — the operator auto-generates a random value once, persists it in the `{agent-name}-runtime` Secret, and preserves it across reconciles (it is never rotated).
 
-An agent can still override with its own `spec.openclaw.token` or `spec.openclaw.tokenRef` — the per-agent value takes precedence.
+The bundled runtimes declare the credentials their images need:
+
+- `openclaw` declares `OPENCLAW_GATEWAY_TOKEN` (auto-generated).
+- `opencode` declares `OPENCODE_SERVER_PASSWORD` (auto-generated) and sets `OPENCODE_SERVER_USERNAME=opencode` as a plain `deployment.env` variable.
+- `claude-code` declares no credentials — authentication is interactive via `/login`.
+
+Runtime-declared entries merge first, then any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision.
+
+## Authentication
+
+Authentication is a runtime trait, not an agent setting. A runtime's `spec.auth.enabled: true` gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. The three bundled runtimes all enable auth since they serve web UIs. See [Clusters](clusters.md#authentication) for the cluster-side configuration.
 
 ## Custom Runtimes
 

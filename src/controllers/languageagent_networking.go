@@ -137,7 +137,15 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		clusterFetched := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster) == nil
 
 		ingressPorts := npPorts
-		if clusterFetched && agentAuthEnabled(agent, cluster) {
+		authEnabled := false
+		if clusterFetched {
+			var err error
+			authEnabled, err = agentAuthEnabled(ctx, r.Client, agent, cluster)
+			if err != nil {
+				return err
+			}
+		}
+		if authEnabled {
 			oauthPort := intstr.FromInt32(OAuth2ProxyPort)
 			ingressPorts = []networkingv1.NetworkPolicyPort{
 				{Protocol: ptr.To(corev1.ProtocolTCP), Port: &oauthPort},
@@ -178,6 +186,14 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 	// Try to fetch the cluster to determine if auth (and the oauth2-proxy sidecar) is enabled.
 	cluster := &langopv1alpha1.LanguageCluster{}
 	clusterFetched := r.Get(ctx, types.NamespacedName{Name: agent.Namespace}, cluster) == nil
+	authEnabled := false
+	if clusterFetched {
+		var err error
+		authEnabled, err = agentAuthEnabled(ctx, r.Client, agent, cluster)
+		if err != nil {
+			return err
+		}
+	}
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -206,7 +222,7 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 			})
 		}
 		// Expose the oauth2-proxy sidecar port so the Ingress can route to 4180.
-		if clusterFetched && agentAuthEnabled(agent, cluster) {
+		if authEnabled {
 			svcPorts = append(svcPorts, corev1.ServicePort{
 				Name:       "oauth2-proxy",
 				Port:       OAuth2ProxyPort,
@@ -311,6 +327,11 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, hostname string) error {
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
 
+	authEnabled, err := agentAuthEnabled(ctx, r.Client, agent, cluster)
+	if err != nil {
+		return err
+	}
+
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      agent.Name,
@@ -319,13 +340,13 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 		},
 	}
 
-	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, ingress, func() error {
+	err = CreateOrUpdateOwned(ctx, r.Client, r.Scheme, agent, ingress, func() error {
 		pathType := networkingv1.PathTypePrefix
 
 		// Route to the oauth2-proxy sidecar port when auth is enabled; directly to the agent port otherwise.
 		// Both use the same Service (the sidecar port 4180 is added when auth is active).
 		var backendPort int32
-		if agentAuthEnabled(agent, cluster) {
+		if authEnabled {
 			backendPort = OAuth2ProxyPort
 		} else {
 			backendPort = agentIngressPort(agent)
@@ -444,10 +465,14 @@ func (r *LanguageAgentReconciler) checkIngressReadiness(ctx context.Context, nam
 // reconcileOAuthProxy ensures the per-agent cookie secret exists when auth is enabled.
 // The oauth2-proxy itself runs as a sidecar in the agent pod (see buildOAuthProxySidecar).
 func (r *LanguageAgentReconciler) reconcileOAuthProxy(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster) error {
-	if !agentAuthEnabled(agent, cluster) {
+	enabled, err := agentAuthEnabled(ctx, r.Client, agent, cluster)
+	if err != nil {
+		return err
+	}
+	if !enabled {
 		return nil
 	}
-	_, err := r.reconcileOAuthCookieSecret(ctx, agent)
+	_, err = r.reconcileOAuthCookieSecret(ctx, agent)
 	return err
 }
 
@@ -462,7 +487,9 @@ func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, ag
 		}
 		return nil, err
 	}
-	if !agentAuthEnabled(agent, cluster) {
+	if enabled, err := agentAuthEnabled(ctx, r.Client, agent, cluster); err != nil {
+		return nil, err
+	} else if !enabled {
 		return nil, nil
 	}
 

@@ -130,10 +130,10 @@ kubectl get pods -w
 
 === "OpenCode"
 
-    Retrieve the auto-generated credentials:
+    Retrieve the auto-generated password (the username is `opencode`, set by the runtime as a plain env var):
 
     ```bash
-    USERNAME=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_USERNAME}' | base64 -d)
+    USERNAME=opencode
     PASSWORD=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
     echo "username: $USERNAME  password: $PASSWORD"
     ```

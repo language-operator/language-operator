@@ -8,7 +8,12 @@ metadata:
 spec:
   image: ghcr.io/openclaw/openclaw:latest
 
-  openclaw:
+  # Auto-generate the gateway auth token per agent and inject it as OPENCLAW_GATEWAY_TOKEN.
+  credentials:
+    - name: OPENCLAW_GATEWAY_TOKEN
+
+  # Agents using this runtime sit behind the cluster OIDC proxy (when the cluster enables auth).
+  auth:
     enabled: true
 
   ports:

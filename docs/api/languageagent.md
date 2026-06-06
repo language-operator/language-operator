@@ -21,8 +21,6 @@ metadata:
   namespace: my-cluster
 spec:
   runtime: openclaw       # use a bundled LanguageAgentRuntime
-  openclaw:
-    token: changeme       # operator creates the credential Secret automatically
   models:
     - name: claude-sonnet
   workspace:
@@ -61,32 +59,33 @@ spec:
 
 The standard runtimes (`openclaw`, `opencode`) are bundled with the Helm chart. See [LanguageAgentRuntime](languageagentruntime.md) for details.
 
-### Runtime-Specific Configuration
+### Credentials
 
-Each standard runtime has a corresponding config block for inline credential injection. The operator creates a managed Secret and injects it via `envFrom` — no manual `kubectl create secret` needed.
-
-**OpenClaw:**
+Agents inject credentials through the generic `spec.credentials` list. Each entry's `name` is both the environment variable name and the key in the operator-managed Secret:
 
 ```yaml
 spec:
   runtime: openclaw
-  openclaw:
-    token: changeme           # inline — operator creates {agent}-runtime Secret
-    # tokenRef:               # or reference a pre-existing Secret
-    #   name: my-secret       # must contain OPENCLAW_GATEWAY_TOKEN
+  credentials:
+    - name: OPENCLAW_GATEWAY_TOKEN     # auto-generated once, persisted, never rotated
+    - name: MY_API_KEY
+      value: "literal-value"           # stored in the {agent}-runtime Secret
+    - name: SHARED_SECRET
+      valueFrom:
+        name: my-existing-secret       # all keys injected via envFrom; operator manages nothing
 ```
 
-**OpenCode:**
+Each entry is resolved in priority order:
 
-```yaml
-spec:
-  runtime: opencode
-  opencode:
-    username: demo            # sets OPENCODE_SERVER_USERNAME (default: "opencode")
-    password: changeme        # inline — operator creates {agent}-runtime Secret
-    # passwordRef:            # or reference a pre-existing Secret
-    #   name: my-secret       # must contain OPENCODE_SERVER_PASSWORD
-```
+- **`valueFrom` set** — the referenced Secret's keys are injected via `envFrom`; the operator creates no Secret of its own.
+- **`value` set** — the literal is stored in an operator-managed Secret named `{agent}-runtime` and injected via `envFrom`.
+- **neither set** — the operator auto-generates a random value once, persists it in the `{agent}-runtime` Secret, and preserves it across reconciles (it is never rotated).
+
+Entries declared by the agent's runtime are merged first, then the agent's own entries are appended. Entries are deduplicated by `name`, with the agent's entry winning on a collision. Runtimes typically declare the credentials their image needs (for example, the `openclaw` runtime declares `OPENCLAW_GATEWAY_TOKEN`), so most agents need no `credentials` block at all.
+
+### Authentication
+
+Agents cannot configure authentication directly. Whether an agent sits behind the cluster's OIDC proxy is determined by its runtime's `auth.enabled` setting combined with the cluster's `auth.enabled` setting. See [LanguageAgentRuntime](languageagentruntime.md#authentication) and [Clusters](../components/clusters.md#authentication) for the effective model.
 
 ### Execution Modes
 

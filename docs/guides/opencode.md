@@ -142,11 +142,10 @@ Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
 ### Get Credentials
 
-Retrieve the auto-generated credentials:
+Retrieve the auto-generated password. The username is `opencode`, set by the runtime as a plain `deployment.env` variable (`OPENCODE_SERVER_USERNAME`); override it by setting that env var on your agent:
 
 ```bash
-USERNAME=$(kubectl get secret opencode-runtime \
-  -o jsonpath='{.data.OPENCODE_SERVER_USERNAME}' | base64 -d)
+USERNAME=opencode
 PASSWORD=$(kubectl get secret opencode-runtime \
   -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
 
@@ -169,7 +168,7 @@ opencode attach https://opencode.demo-cluster.<your-domain> \
 | Namespace | `demo-cluster` | Isolated workload namespace |
 | Deployment | `opencode` | Runs the OpenCode container |
 | Service | `opencode` | ClusterIP on port 3000 |
-| Secret | `opencode-runtime` | Auto-generated username and password |
+| Secret | `opencode-runtime` | Auto-generated password (`OPENCODE_SERVER_PASSWORD`) |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
 | ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |
