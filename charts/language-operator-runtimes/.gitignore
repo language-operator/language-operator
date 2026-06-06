@@ -1,0 +1,2 @@
+# Pulled subchart tarballs — resolved via `helm dependency build` (Chart.lock is committed)
+charts/

@@ -6,6 +6,22 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+**Breaking Changes**
+- Extract the claude-code, openclaw, and opencode runtimes into their own
+  repositories (image source + self-contained chart). `language-operator-runtimes`
+  is now an umbrella chart that pulls each runtime as a subchart from
+  `oci://ghcr.io/language-operator/charts`. Its values are now keyed by subchart
+  name — `runtimes.claudeCode.enabled` → `claude-code.enabled`,
+  `runtimes.claudeCode.imagePullPolicy` → `claude-code.image.pullPolicy`,
+  `runtimes.openclaw.enabled` → `openclaw.enabled`,
+  `runtimes.opencode.enabled` → `opencode.enabled`. Run
+  `helm dependency build charts/language-operator-runtimes` before installing or
+  packaging the umbrella chart.
+
+**Chores**
+- Remove `components/agents/*` adapter source and their build jobs from this repo;
+  each runtime now builds and publishes its own image and chart via its own CI.
+
 ---
 
 ## v0.1.129 — 2026-04-03

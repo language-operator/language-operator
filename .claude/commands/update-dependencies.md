@@ -7,9 +7,11 @@ Bring all packages, Docker base images, and adapter dependencies up to date.
 | Area | Files | Tool |
 |------|-------|------|
 | Go modules | `src/go.mod`, `src/go.sum` | `go get -u`, `go mod tidy` |
-| Node — adapters | `components/agents/*/package.json` | `npm update` |
 | Node — hooks | `.claude/hooks/package.json` | `npm update` |
 | Docker base images | `Dockerfile`, `components/*/Dockerfile` | manual edit |
+
+> Runtime adapters (claude-code, openclaw, opencode) now live in their own
+> repositories and manage their own dependencies — they are out of scope here.
 | Go build tools | `src/Makefile` vars | manual edit |
 | GitHub Actions | `.github/workflows/*.yaml` | manual edit |
 
@@ -22,7 +24,7 @@ Run in parallel:
 ```bash
 cd src && grep -E '^(go |require)' go.mod | head -5
 grep 'CONTROLLER_TOOLS_VERSION\|CRD_REF_DOCS_VERSION\|ENVTEST_K8S_VERSION' src/Makefile
-grep '^FROM' Dockerfile components/agents/*/Dockerfile components/model-gateway/Dockerfile
+grep '^FROM' Dockerfile components/model-gateway/Dockerfile
 grep -rh 'uses:' .github/workflows/*.yaml | sort -u
 ```
 
@@ -47,10 +49,7 @@ cd src && go mod tidy
 Run in parallel for each component that has a `package.json`:
 
 ```bash
-cd components/agents/openclaw-adapter  && npm update && npm install
-cd components/agents/opencode-adapter  && npm update && npm install
-cd components/agents/claude-code-adapter && npm update && npm install
-cd .claude/hooks                         && npm update && npm install
+cd .claude/hooks && npm update && npm install
 ```
 
 The `npm update` command upgrades packages within semver range declared in `package.json`. It will not cross major version boundaries. If any package was bumped to a new version, note it.
@@ -62,7 +61,7 @@ The `npm update` command upgrades packages within semver range declared in `pack
 Read and display the current `FROM` lines:
 
 ```bash
-grep '^FROM' Dockerfile components/agents/*/Dockerfile components/model-gateway/Dockerfile
+grep '^FROM' Dockerfile components/model-gateway/Dockerfile
 ```
 
 For each base image, check the latest available patch/minor version by pulling the image manifest:
@@ -80,7 +79,7 @@ docker pull --quiet python:3.11-slim 2>&1 | tail -1 || true
 
 **What to look for:**
 - `golang:1.25` — if Go released a new 1.x minor (e.g. 1.26), update `Dockerfile` builder stage AND `go.mod` `go` directive, AND `src/Makefile` envtest version, AND `.github/workflows/docs.yaml` `go-version`.
-- `node:24-alpine` — if Node 24 is no longer LTS or a new LTS major is released (e.g. Node 26), update all four adapter Dockerfiles.
+- `node:24-alpine` — if Node 24 is no longer LTS or a new LTS major is released (e.g. Node 26), note it (only the model-gateway Dockerfile uses a Node base in this repo; adapter Dockerfiles live in their own repos).
 - `python:3.11-slim` — if a newer 3.x patch is available, note it (image tag `3.11-slim` auto-tracks patches, so no change needed unless bumping minor).
 - `gcr.io/distroless/static:nonroot` — no change needed; `nonroot` tag always tracks latest.
 
@@ -160,9 +159,6 @@ Stage only the files modified by automated updates (Go modules + npm lock files)
 
 ```bash
 git add src/go.mod src/go.sum
-git add components/agents/openclaw-adapter/package-lock.json
-git add components/agents/opencode-adapter/package-lock.json
-git add components/agents/claude-code-adapter/package-lock.json
 git add .claude/hooks/package-lock.json
 ```
 

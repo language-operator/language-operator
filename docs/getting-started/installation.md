@@ -82,7 +82,7 @@ You can selectively disable runtimes you don't need:
 helm install language-operator-runtimes \
   language-operator/language-operator-runtimes \
   --namespace language-operator \
-  --set runtimes.claudeCode.enabled=false
+  --set claude-code.enabled=false
 ```
 
 ### 4. Verify Installation

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: language-operator-runtimes
-description: Bundled LanguageAgentRuntime CRs for the Language Operator (openclaw, opencode, claude-code)
+description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code) as subcharts
 type: application
 version: 0.1.129
 appVersion: "0.1.129"
@@ -15,3 +15,20 @@ sources:
 maintainers:
   - name: James Ryan
     email: james@theryans.io
+
+# Each runtime now lives in its own repository and publishes a self-contained
+# chart to oci://ghcr.io/language-operator/charts. This chart simply aggregates
+# them; toggle individual runtimes via the `<runtime>.enabled` values.
+dependencies:
+  - name: claude-code
+    version: "0.1.0"
+    repository: oci://ghcr.io/language-operator/charts
+    condition: claude-code.enabled
+  - name: openclaw
+    version: "0.1.0"
+    repository: oci://ghcr.io/language-operator/charts
+    condition: openclaw.enabled
+  - name: opencode
+    version: "0.1.0"
+    repository: oci://ghcr.io/language-operator/charts
+    condition: opencode.enabled

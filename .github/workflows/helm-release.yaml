@@ -34,6 +34,14 @@ jobs:
         with:
           version: 'latest'
 
+      - name: Log in to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Resolve runtimes subchart dependencies
+        run: helm dependency build charts/language-operator-runtimes
+
       - name: Package Helm charts
         run: |
           mkdir -p .helm-packages

@@ -20,7 +20,7 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
-	@cd components/agents/claude-code-adapter && $(MAKE) build
+	docker pull ghcr.io/language-operator/claude-code-adapter:latest
 	docker save ghcr.io/language-operator/claude-code-adapter:latest | sudo k3s ctr images import -
 	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
@@ -30,6 +30,7 @@ dev:
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
 		--wait --timeout 2m
+	helm dependency build charts/language-operator-runtimes
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
 		--values charts/language-operator-runtimes/values.local.yaml \
@@ -51,6 +52,7 @@ uninstall:
 
 # Install the runtimes chart (requires language-operator chart with CRDs installed first)
 install-runtimes:
+	helm dependency build charts/language-operator-runtimes
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
 		--create-namespace \
@@ -58,6 +60,7 @@ install-runtimes:
 
 # Upgrade the runtimes release
 upgrade-runtimes:
+	helm dependency build charts/language-operator-runtimes
 	helm upgrade language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
 		--wait --timeout 2m

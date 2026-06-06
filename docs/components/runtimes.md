@@ -28,15 +28,15 @@ produces the same Deployment as if the agent had explicitly specified the OpenCl
 
 ## Bundled Runtimes
 
-Three runtimes are shipped via the `language-operator-runtimes` Helm chart, installed independently after the operator:
+Three runtimes are shipped via the `language-operator-runtimes` umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from `oci://ghcr.io/language-operator/charts`:
 
-| Name | Image | Port | Interface |
-|------|-------|------|-----------|
-| `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | WebSocket gateway |
-| `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | HTTP / browser UI |
-| `claude-code` | `ghcr.io/language-operator/claude-code-adapter:latest` | 8080 | HTTP / WebSocket terminal |
+| Name | Image | Port | Interface | Repository |
+|------|-------|------|-----------|------------|
+| `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | WebSocket gateway | [openclaw-adapter](https://github.com/language-operator/openclaw-adapter) |
+| `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | HTTP / browser UI | [opencode-adapter](https://github.com/language-operator/opencode-adapter) |
+| `claude-code` | `ghcr.io/language-operator/claude-code-adapter:latest` | 8080 | HTTP / WebSocket terminal | [claude-code-adapter](https://github.com/language-operator/claude-code-adapter) |
 
-Install them with:
+Install them all with the umbrella chart:
 
 ```bash
 helm install language-operator-runtimes \
@@ -44,12 +44,19 @@ helm install language-operator-runtimes \
   --namespace language-operator
 ```
 
-Any runtime can be disabled at install time via its `values.yaml` key:
+Or install a single runtime directly from its OCI chart:
+
+```bash
+helm install claude-code \
+  oci://ghcr.io/language-operator/charts/claude-code \
+  --namespace language-operator
+```
+
+Any runtime can be disabled at install time via its top-level `values.yaml` key (which matches the subchart name):
 
 ```yaml
-runtimes:
-  claudeCode:
-    enabled: false
+claude-code:
+  enabled: false
 ```
 
 See [Installation](../getting-started/installation.md#3-install-the-runtimes) for the full install sequence.

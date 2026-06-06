@@ -250,7 +250,7 @@ All operator reconciliation loops emit OpenTelemetry spans. Configure an externa
 
 ## Extensibility
 
-**Custom agent runtimes**: Any container image works. The operator is runtime-agnostic — Python, Node.js, Go, or anything else. Use init containers to bridge operator config injection to native runtime config formats (see `components/agents/openclaw-adapter/` for an example).
+**Custom agent runtimes**: Any container image works. The operator is runtime-agnostic — Python, Node.js, Go, or anything else. Use init containers to bridge operator config injection to native runtime config formats (see the [openclaw-adapter](https://github.com/language-operator/openclaw-adapter) repository for an example).
 
 **Custom tools**: Any service that implements the tool contract ([`spec/tools.md`](../spec/tools.md)) — MCP protocol on a Kubernetes Service — can be registered as a `LanguageTool`.
 
