@@ -1,7 +1,7 @@
 GIT_SHA   := $(shell git rev-parse --short HEAD)
 DEV_IMAGE := language-operator:$(GIT_SHA)
 
-.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status agent-supervisor
+.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status agent-supervisor docs-serve docs-build
 
 # Build the operator binary
 build:
@@ -20,8 +20,6 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
-	docker pull ghcr.io/language-operator/claude-code-adapter:latest
-	docker save ghcr.io/language-operator/claude-code-adapter:latest | sudo k3s ctr images import -
 	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
@@ -101,6 +99,14 @@ dev-supervisor:
 dev-worker-%:
 	claude "/watch $*"
 
+# Preview the documentation site locally (http://localhost:8000)
+docs-serve:
+	@uv run mkdocs serve
+
+# Build the documentation site (strict — fails on broken links/nav)
+docs-build:
+	@uv run mkdocs build --strict
+
 # Show help
 help:
 	@echo "Targets:"
@@ -113,5 +119,7 @@ help:
 	@echo "  uninstall    - Uninstall Helm release"
 	@echo "  wipe         - Delete all CRs, CRDs, chart, and namespace (start from scratch)"
 	@echo "  k8s-status   - Check status of all language resources"
+	@echo "  docs-serve   - Preview the docs site locally (uv run mkdocs serve)"
+	@echo "  docs-build   - Build the docs site strictly (uv run mkdocs build)"
 	@echo "  dev-supervisor   - Run the supervisor agent (triage issues into queues)"
 	@echo "  dev-worker-N     - Run worker agent for queue N (0, 1, or 2)"

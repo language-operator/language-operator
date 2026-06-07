@@ -38,3 +38,4 @@ docs/api-generated.md
 
 # Python
 __pycache__
+.venv/

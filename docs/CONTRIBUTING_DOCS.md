@@ -18,16 +18,12 @@ docs/
 
 ### Prerequisites
 
-Install Python dependencies:
+Docs dependencies are managed with [uv](https://docs.astral.sh/uv/) (`pyproject.toml` + `uv.lock`).
+`uv run` provisions the environment automatically — no manual install step is required. To materialize
+the virtualenv explicitly:
 
 ```bash
-pip install -r requirements-docs.txt
-```
-
-Or use the individual packages:
-
-```bash
-pip install mkdocs-material mkdocs-awesome-pages-plugin
+uv sync
 ```
 
 ### Generate CRD Documentation
@@ -50,7 +46,7 @@ This creates `src/docs/api-reference.md` for **local inspection only**. In CI, `
 Start a local development server:
 
 ```bash
-mkdocs serve
+make docs-serve   # or: uv run mkdocs serve
 ```
 
 Open [http://localhost:8000](http://localhost:8000) in your browser. The site auto-reloads when you edit markdown files.
@@ -60,7 +56,7 @@ Open [http://localhost:8000](http://localhost:8000) in your browser. The site au
 Build the complete static site:
 
 ```bash
-mkdocs build
+make docs-build   # or: uv run mkdocs build --strict
 ```
 
 Output is in `site/` (git-ignored).
@@ -153,7 +149,7 @@ For CRD documentation changes:
 
 Check for:
 
-- Missing dependencies: `pip install -r requirements-docs.txt`
+- Missing dependencies: `uv sync` (or just use `uv run mkdocs ...`)
 - Invalid markdown syntax
 - Broken internal links
 

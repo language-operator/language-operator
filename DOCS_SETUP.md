@@ -71,20 +71,25 @@ docs/
 1. Install `crd-ref-docs` (Go tool)
 2. Generate complete API reference from `src/api/v1alpha1/`
 3. Split generated docs into individual CRD pages
-4. Install MkDocs Material
-5. Build static site
+4. Set up uv (`astral-sh/setup-uv`)
+5. Build static site (`uv run mkdocs build --strict`)
 6. Deploy to GitHub Pages under `docs/` directory
 7. Keep Helm repository files in place (`keep_files: true`)
 
 ### 4. Python Requirements
 
-**File:** `requirements-docs.txt`
+**Files:** `pyproject.toml` + `uv.lock` (managed with [uv](https://docs.astral.sh/uv/))
 
+```toml
+[project]
+dependencies = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "mkdocs-awesome-pages-plugin>=2.9",
+]
 ```
-mkdocs==1.5.3
-mkdocs-material==9.5.3
-mkdocs-awesome-pages-plugin==2.9.2
-```
+
+`uv.lock` pins exact versions for reproducible builds. Run `uv lock --upgrade` to refresh.
 
 ### 5. Updated .gitignore
 
@@ -100,16 +105,19 @@ docs/api-generated.md
 Added documentation commands:
 ```bash
 cd src && make docs              # generate API reference markdown
-mkdocs serve                     # preview docs site
-mkdocs build                     # build static site
+make docs-serve                  # preview docs site (uv run mkdocs serve)
+make docs-build                  # build static site (uv run mkdocs build --strict)
 ```
 
 ## Local Development
 
 ### Install Dependencies
 
+Docs dependencies are managed with [uv](https://docs.astral.sh/uv/); `uv run` provisions them
+automatically. To materialize the virtualenv explicitly:
+
 ```bash
-pip install -r requirements-docs.txt
+uv sync
 ```
 
 ### Generate CRD Documentation
@@ -125,7 +133,7 @@ cd src && make docs
 ### Preview Locally
 
 ```bash
-mkdocs serve
+make docs-serve   # or: uv run mkdocs serve
 ```
 
 Open http://localhost:8000
@@ -133,7 +141,7 @@ Open http://localhost:8000
 ### Build Static Site
 
 ```bash
-mkdocs build
+make docs-build   # or: uv run mkdocs build --strict
 ```
 
 Output in `site/` directory.

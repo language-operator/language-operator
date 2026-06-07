@@ -123,11 +123,8 @@ make docs   # generates src/docs/api-reference.md (local inspection only; CI gen
 ### Preview Documentation Site
 
 ```bash
-# Install MkDocs (one time)
-pip install mkdocs-material mkdocs-awesome-pages-plugin
-
-# Serve locally
-mkdocs serve
+# Serve locally (uv provisions the docs dependencies automatically)
+make docs-serve   # or: uv run mkdocs serve
 ```
 
 Open [http://localhost:8000](http://localhost:8000)

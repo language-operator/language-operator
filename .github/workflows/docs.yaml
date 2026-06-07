@@ -56,18 +56,12 @@ jobs:
           # Update navigation to use the complete reference
           # Individual CRD pages will link to sections in the full reference
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install MkDocs and dependencies
-        run: |
-          pip install mkdocs-material mkdocs-awesome-pages-plugin
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Build MkDocs site
         run: |
-          mkdocs build --strict
+          uv run mkdocs build --strict
 
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
