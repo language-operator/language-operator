@@ -106,14 +106,23 @@ spec:
 
 ### External Access
 
-Configure `spec.domain` to expose the proxy externally:
+By default the gateway is **in-cluster only** — agents reach it via its Service at
+`gateway.<namespace>.svc.cluster.local:8000` and no external Ingress is created. To expose the
+proxy externally, set `spec.domain` **and** opt in with `spec.ingress.enabled: true`:
 
 ```yaml
 spec:
   domain: agents.example.com
+  ingress:
+    enabled: true
 ```
 
 Creates an Ingress/HTTPRoute at `gateway.agents.example.com` for external model access.
+
+!!! note "Behavior change"
+    Earlier versions created this Ingress automatically whenever `spec.domain` was set. The gateway
+    is now opt-in for external exposure; set `spec.ingress.enabled: true` to restore an external
+    Ingress on upgrade.
 
 ### Gateway Deployment Configuration
 
@@ -175,7 +184,7 @@ spec:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `enabled` | *bool | Enable or disable Ingress creation (default: true when `spec.domain` is set) |
+| `enabled` | *bool | Create an external Ingress for the gateway (default: false — gateway is in-cluster only; requires `spec.domain` when set to true) |
 | `className` | string | IngressClass name — per-cluster override of `config.gateway.ingressClassName` |
 | `tls` | *IngressTLSConfig | TLS configuration (see below) |
 
