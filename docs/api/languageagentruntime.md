@@ -79,7 +79,7 @@ A runtime declares the credentials its image needs through the generic `credenti
 Runtime-declared entries are merged ahead of any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision. This is how the bundled runtimes provision credentials without requiring each `LanguageAgent` to configure them manually:
 
 - `openclaw` declares `OPENCLAW_GATEWAY_TOKEN` (auto-generated).
-- `opencode` declares `OPENCODE_SERVER_PASSWORD` (auto-generated) and sets `OPENCODE_SERVER_USERNAME=opencode` as a plain `deployment.env` variable.
+- `opencode` declares no credentials — access is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `claude-code` declares no credentials — its authentication is interactive via `/login`.
 
 Custom runtimes use the same mechanism:

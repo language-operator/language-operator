@@ -130,33 +130,23 @@ kubectl get pods -w
 
 === "OpenCode"
 
-    Retrieve the auto-generated password (the username is `opencode`, set by the runtime as a plain env var):
+    Access is gated by the cluster OIDC proxy — there is no separate opencode password.
 
-    ```bash
-    USERNAME=opencode
-    PASSWORD=$(kubectl get secret opencode-runtime -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
-    echo "username: $USERNAME  password: $PASSWORD"
-    ```
+    If you have a domain and [auth enabled](../components/clusters.md#authentication) on your `LanguageCluster`, open `https://opencode.<cluster-domain>` and sign in through the cluster's OIDC provider.
 
-    If you have a domain configured on your `LanguageCluster`, open `https://opencode.<cluster-domain>` and sign in with the credentials above.
-
-    To attach the TUI (OpenCode v1.0.10+):
-
-    ```bash
-    opencode attach https://opencode.<cluster-domain> --username "$USERNAME" --password "$PASSWORD"
-    ```
-
-    Otherwise, port-forward for local access:
+    Otherwise, port-forward for local access (this bypasses the proxy, so no login is required):
 
     ```bash
     kubectl port-forward svc/opencode 3000:3000
     ```
 
-    Then open `http://localhost:3000` or attach the TUI:
+    Then open `http://localhost:3000` or attach the TUI (OpenCode v1.0.10+):
 
     ```bash
-    opencode attach http://localhost:3000 --username "$USERNAME" --password "$PASSWORD"
+    opencode attach http://localhost:3000
     ```
+
+    Note: `opencode attach` against the `https://opencode.<cluster-domain>` URL won't work — the OIDC proxy needs a browser session. Attach via the port-forwarded `http://localhost:3000` instead. opencode has no built-in auth, so enable cluster auth to protect it.
 
 ## What Just Happened?
 

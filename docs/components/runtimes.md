@@ -82,7 +82,7 @@ Runtimes provision credentials for every agent that uses them through the generi
 The bundled runtimes declare the credentials their images need:
 
 - `openclaw` declares `OPENCLAW_GATEWAY_TOKEN` (auto-generated).
-- `opencode` declares `OPENCODE_SERVER_PASSWORD` (auto-generated) and sets `OPENCODE_SERVER_USERNAME=opencode` as a plain `deployment.env` variable.
+- `opencode` declares no credentials — access is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `claude-code` declares no credentials — authentication is interactive via `/login`.
 
 Runtime-declared entries merge first, then any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision.

@@ -7,6 +7,6 @@ dependencies:
   version: 0.1.0
 - name: opencode
   repository: oci://ghcr.io/language-operator/charts
-  version: 0.1.0
-digest: sha256:b74f0655fb3b51902538055c91c95f0cb74d7236793e8702dab8f40937dc20c7
-generated: "2026-06-05T21:37:24.912047815-05:00"
+  version: 0.1.1
+digest: sha256:1df7137f4efad29774496fafadc3f4315b456d148cf19ec3589169387a3d8a5e
+generated: "2026-06-06T20:42:17.282606485-05:00"
