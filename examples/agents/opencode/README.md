@@ -1,12 +1,15 @@
 # agents/opencode
 
-Deploys a single OpenCode coding agent with a persistent workspace and unrestricted egress, wired to
-an Anthropic-backed `LanguageModel` — a good starting point for browser-based AI pair programming.
+Deploys a single OpenCode coding agent with a persistent workspace and unrestricted egress,
+wired to a `LanguageModel` already registered in the cluster — a good starting point for
+browser-based AI pair programming.
 
-Unlike Claude Code, OpenCode talks to an LLM through the cluster gateway, so this example bundles a
-`LanguageModel` (Anthropic by default) and creates its API-key secret for you. Access to the OpenCode
-web UI is gated by the cluster's OIDC proxy when the cluster has auth enabled — there is no separate
-opencode password.
+Unlike Claude Code, OpenCode talks to an LLM through the cluster gateway, so it needs a
+`LanguageModel` to exist in the namespace. This example references one by name (`claude-sonnet`
+by default) rather than bundling it — register the model separately first (see
+[models/anthropic](../../models/anthropic/), which registers `claude-sonnet` on the latest
+Sonnet plus `claude-opus`). Access to the OpenCode web UI is gated by the cluster's OIDC proxy
+when the cluster has auth enabled — there is no separate opencode password.
 
 ## Prerequisites
 
@@ -15,26 +18,30 @@ opencode password.
 - `kubectl` configured for your cluster
 - `envsubst` (`brew install gettext` on macOS, pre-installed on most Linux distros)
 - A `LanguageCluster` already applied in the target namespace (see [clusters/basic](../../clusters/basic/))
-- An Anthropic API key
+- A `LanguageModel` named `claude-sonnet` registered in that namespace (see [models/anthropic](../../models/anthropic/))
 
 ## Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CLUSTER_NAME` | yes | — | Namespace of the target LanguageCluster |
-| `ANTHROPIC_API_KEY` | yes | — | Anthropic API key (used to create the `anthropic-credentials` secret) |
 | `AGENT_NAME` | no | `opencode` | Name of the LanguageAgent |
-| `MODEL_NAME` | no | `claude-sonnet` | Name of the LanguageModel CR the agent references |
-| `MODEL_ID` | no | `claude-sonnet-4-5` | Provider model identifier |
+| `MODEL_NAME` | no | `claude-sonnet` | Name of the LanguageModel CR the agent references (must already exist) |
 | `WORKSPACE_SIZE` | no | `10Gi` | Persistent workspace PVC size |
 
 ## Install
 
+Register a model first, then deploy the agent:
+
 ```bash
-CLUSTER_NAME=my-cluster ANTHROPIC_API_KEY=sk-ant-... bash examples/agents/opencode/install.sh
+# 1. register the model (latest Sonnet + Opus) and its credentials secret
+CLUSTER_NAME=my-cluster ANTHROPIC_API_KEY=sk-ant-... bash examples/models/anthropic/install.sh
+
+# 2. deploy the agent
+CLUSTER_NAME=my-cluster bash examples/agents/opencode/install.sh
 ```
 
-Dry-run (prints rendered YAML, no API key needed):
+Dry-run (prints rendered YAML):
 ```bash
 CLUSTER_NAME=my-cluster bash examples/agents/opencode/install.sh --dry-run
 ```
@@ -51,8 +58,6 @@ OIDC provider.
 
 ## What's created
 
-- `LanguageModel/claude-sonnet` — Anthropic model the agent uses
-- `Secret/anthropic-credentials` — holds the Anthropic API key
 - `LanguageAgent/opencode` — the agent CR
 - `Deployment/opencode` — runs the opencode container on port 3000
 - `Service/opencode` — exposes the web UI
@@ -84,6 +89,7 @@ opencode attach http://localhost:3000
 
 ```bash
 kubectl delete languageagent opencode -n my-cluster
-kubectl delete languagemodel claude-sonnet -n my-cluster
-kubectl delete secret anthropic-credentials -n my-cluster
 ```
+
+The referenced `LanguageModel` and its secret are managed separately — tear them down with
+[models/anthropic](../../models/anthropic/) if you no longer need them.

@@ -1,11 +1,11 @@
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: ${MODEL_NAME}
+  name: ${OPUS_NAME}
   namespace: ${CLUSTER_NAME}
 spec:
   provider: anthropic
-  modelName: ${MODEL_ID}
+  modelName: ${OPUS_MODEL_ID}
   apiKeySecretRef:
     name: anthropic-credentials
     key: api-key
