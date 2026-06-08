@@ -1,0 +1,18 @@
+# Documentation toolchain only — this repo is primarily Go. Managed with uv:
+#   uv sync         # create .venv with the docs dependencies
+#   uv run mkdocs serve   # preview at http://localhost:8000
+#   uv run mkdocs build --strict
+[project]
+name = "language-operator-docs"
+version = "0"
+description = "Documentation build dependencies for Language Operator"
+requires-python = ">=3.11"
+dependencies = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "mkdocs-awesome-pages-plugin>=2.9",
+]
+
+# Not an installable package — just a dependency set for building the docs site.
+[tool.uv]
+package = false

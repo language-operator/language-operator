@@ -140,26 +140,25 @@ kubectl get pods -w
 
 Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
-### Get Credentials
-
-Retrieve the auto-generated password. The username is `opencode`, set by the runtime as a plain `deployment.env` variable (`OPENCODE_SERVER_USERNAME`); override it by setting that env var on your agent:
-
-```bash
-USERNAME=opencode
-PASSWORD=$(kubectl get secret opencode-runtime \
-  -o jsonpath='{.data.OPENCODE_SERVER_PASSWORD}' | base64 -d)
-
-echo "Username: $USERNAME\nPassword: $PASSWORD"
-```
-
 ### Connect
 
-Log in at https://opencode.demo-cluster.\<your-domain\> with the credentials above, or attach the TUI:
+Access is gated by the cluster's OIDC proxy — there is no separate opencode password.
+
+If your `LanguageCluster` has a domain and [auth enabled](../components/clusters.md#authentication),
+open https://opencode.demo-cluster.\<your-domain\> and sign in through the cluster's OIDC provider.
+
+For local access, port-forward the service (this bypasses the proxy, so no login is required):
 
 ```bash
-opencode attach https://opencode.demo-cluster.<your-domain> \
-  --username "$USERNAME" --password "$PASSWORD"
+kubectl port-forward svc/opencode 3000:3000
+# open http://localhost:3000, or attach the TUI:
+opencode attach http://localhost:3000
 ```
+
+!!! warning
+
+    opencode has no built-in authentication. When the cluster does **not** enable auth, opencode is
+    exposed unauthenticated on its ingress. Enable cluster auth to protect it.
 
 ## What the Operator Created
 
@@ -168,7 +167,6 @@ opencode attach https://opencode.demo-cluster.<your-domain> \
 | Namespace | `demo-cluster` | Isolated workload namespace |
 | Deployment | `opencode` | Runs the OpenCode container |
 | Service | `opencode` | ClusterIP on port 3000 |
-| Secret | `opencode-runtime` | Auto-generated password (`OPENCODE_SERVER_PASSWORD`) |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
 | ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |

@@ -50,6 +50,16 @@ func SetClusterIngressClassName(className string) LanguageClusterModifier {
 	}
 }
 
+// SetClusterIngressEnabled sets spec.ingress.enabled.
+func SetClusterIngressEnabled(enabled bool) LanguageClusterModifier {
+	return func(c *langopv1alpha1.LanguageCluster) {
+		if c.Spec.Ingress == nil {
+			c.Spec.Ingress = &langopv1alpha1.IngressConfig{}
+		}
+		c.Spec.Ingress.Enabled = &enabled
+	}
+}
+
 // SetClusterIngressTLS sets spec.ingress.tls.
 func SetClusterIngressTLS(tls *langopv1alpha1.IngressTLSConfig) LanguageClusterModifier {
 	return func(c *langopv1alpha1.LanguageCluster) {

@@ -357,8 +357,9 @@ type GatewaySpec struct {
 
 // IngressConfig defines ingress configuration
 type IngressConfig struct {
-	// Enabled controls whether an Ingress is created for the gateway.
-	// Defaults to true when cluster.spec.domain is set.
+	// Enabled controls whether an external Ingress is created for the shared gateway.
+	// Defaults to false — the gateway is reachable in-cluster via its Service. Set to
+	// true to expose it externally at gateway.<spec.domain>.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 

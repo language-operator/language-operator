@@ -1239,7 +1239,7 @@ func TestLanguageClusterController_GatewayEndpoint(t *testing.T) {
 
 func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
-	cluster := gen.LanguageCluster("ingress-cluster", gen.SetClusterDomain("example.com"))
+	cluster := gen.LanguageCluster("ingress-cluster", gen.SetClusterDomain("example.com"), gen.SetClusterIngressEnabled(true))
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(cluster).WithStatusSubresource(cluster).Build()
 	dnsUnblock := make(chan struct{})
@@ -1276,7 +1276,7 @@ func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
 
 func TestLanguageClusterController_GatewayIngressError(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
-	cluster := gen.LanguageCluster("ingress-err-cluster", gen.SetClusterDomain("example.com"))
+	cluster := gen.LanguageCluster("ingress-err-cluster", gen.SetClusterDomain("example.com"), gen.SetClusterIngressEnabled(true))
 
 	// Use a stateful interceptor: allow first Create (finalizer Update), fail Ingress Creates.
 	failIngress := false
@@ -1970,6 +1970,8 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 
 	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, rOpts ...func(*LanguageClusterReconciler)) *networkingv1.Ingress {
 		t.Helper()
+		// Gateway ingress is opt-in; these tests exercise its rendering so enable it.
+		gen.SetClusterIngressEnabled(true)(cluster)
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(cluster).
@@ -2060,6 +2062,8 @@ func TestLanguageClusterController_GatewayIngressClassName(t *testing.T) {
 
 	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, defaultIngressClassName string) *networkingv1.Ingress {
 		t.Helper()
+		// Gateway ingress is opt-in; these tests exercise its rendering so enable it.
+		gen.SetClusterIngressEnabled(true)(cluster)
 		fakeClient := fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithObjects(cluster).
@@ -2114,6 +2118,66 @@ func TestLanguageClusterController_GatewayIngressClassName(t *testing.T) {
 		cluster := gen.LanguageCluster("ingress-class-none", gen.SetClusterDomain(domain))
 		ing := reconcileCluster(t, cluster, "")
 		assert.Nil(t, ing.Spec.IngressClassName)
+	})
+}
+
+func TestLanguageClusterController_GatewayIngressEnabled(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	const domain = "example.com"
+
+	reconcile := func(t *testing.T, objs ...client.Object) client.Client {
+		t.Helper()
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(objs...).
+			WithStatusSubresource(objs[0]).
+			Build()
+		dnsUnblock := make(chan struct{})
+		t.Cleanup(func() { close(dnsUnblock) })
+		r := &LanguageClusterReconciler{
+			Client: fakeClient, Scheme: scheme, Log: logr.Discard(),
+			DNSLookup: func(ctx context.Context, host string) error {
+				select {
+				case <-dnsUnblock:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}
+		ctx := context.Background()
+		req := clusterRequest(objs[0].GetName())
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		return fakeClient
+	}
+
+	t.Run("not_created_by_default", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-default-off", gen.SetClusterDomain(domain))
+		fakeClient := reconcile(t, cluster)
+		ing := &networkingv1.Ingress{}
+		err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ing)
+		assert.True(t, errors.IsNotFound(err), "gateway ingress must not be created when enabled is unset")
+	})
+
+	t.Run("created_when_enabled", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-on", gen.SetClusterDomain(domain), gen.SetClusterIngressEnabled(true))
+		fakeClient := reconcile(t, cluster)
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ing))
+	})
+
+	t.Run("deleted_when_disabled", func(t *testing.T) {
+		cluster := gen.LanguageCluster("ingress-stale", gen.SetClusterDomain(domain), gen.SetClusterIngressEnabled(false))
+		stale := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: cluster.Name},
+		}
+		fakeClient := reconcile(t, cluster, stale)
+		ing := &networkingv1.Ingress{}
+		err := fakeClient.Get(context.Background(), types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ing)
+		assert.True(t, errors.IsNotFound(err), "stale gateway ingress must be deleted when disabled")
 	})
 }
 
@@ -2189,8 +2253,17 @@ func TestLanguageClusterController_ManagedResources(t *testing.T) {
 		}
 	})
 
-	t.Run("domain_adds_ingress", func(t *testing.T) {
+	t.Run("domain_alone_no_ingress", func(t *testing.T) {
 		cluster := gen.LanguageCluster("mr-cluster-domain", gen.SetClusterDomain("ai.example.com"))
+		updated := reconcileClusterMR(t, cluster, false)
+		assert.False(t, hasMR(updated.Status.ManagedResources, "Ingress", "gateway"),
+			"gateway ingress is opt-in; a domain alone must not add it")
+	})
+
+	t.Run("ingress_enabled_adds_ingress", func(t *testing.T) {
+		cluster := gen.LanguageCluster("mr-cluster-ing",
+			gen.SetClusterDomain("ai.example.com"),
+			gen.SetClusterIngressEnabled(true))
 		updated := reconcileClusterMR(t, cluster, false)
 		assert.True(t, hasMR(updated.Status.ManagedResources, "Ingress", "gateway"))
 	})

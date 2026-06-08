@@ -1373,10 +1373,12 @@ func (r *LanguageClusterReconciler) reconcileGatewayHPA(ctx context.Context, clu
 func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
 
-	// Skip if gateway ingress explicitly disabled
-	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil && !*cluster.Spec.Ingress.Enabled {
-		log.V(1).Info("Gateway ingress disabled, skipping")
-		return nil
+	// Gateway ingress is opt-in. Create it only when explicitly enabled; otherwise
+	// make sure any previously-created ingress is removed (upgrade or runtime toggle-off).
+	enabled := cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil && *cluster.Spec.Ingress.Enabled
+	if !enabled {
+		log.V(1).Info("Gateway ingress not enabled, ensuring absent")
+		return r.deleteGatewayIngress(ctx, cluster)
 	}
 
 	hostname := cluster.Spec.Domain
@@ -1454,6 +1456,18 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 		return fmt.Errorf("failed to reconcile gateway Ingress: %w", err)
 	}
 	log.Info("Reconciled gateway Ingress", "hostname", hostname)
+	return nil
+}
+
+// deleteGatewayIngress removes the gateway Ingress if it exists. Used when the gateway
+// ingress is not enabled, to clean up an ingress left over from a prior reconcile.
+func (r *LanguageClusterReconciler) deleteGatewayIngress(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: cluster.Name},
+	}
+	if err := r.Delete(ctx, ingress); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete gateway Ingress: %w", err)
+	}
 	return nil
 }
 
@@ -1640,12 +1654,9 @@ func (r *LanguageClusterReconciler) buildClusterManagedResources(
 		}
 	}
 
-	// Ingress is created when a domain is configured and not explicitly disabled.
+	// Ingress is opt-in: created only when a domain is configured and explicitly enabled.
 	if cluster.Spec.Domain != "" {
-		ingressEnabled := true
-		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil {
-			ingressEnabled = *cluster.Spec.Ingress.Enabled
-		}
+		ingressEnabled := cluster.Spec.Ingress != nil && cluster.Spec.Ingress.Enabled != nil && *cluster.Spec.Ingress.Enabled
 		if ingressEnabled {
 			resources = append(resources, langopv1alpha1.ManagedResource{
 				Group: "networking.k8s.io", Kind: "Ingress", Name: GatewayResourceName, Namespace: ns,

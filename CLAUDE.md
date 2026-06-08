@@ -57,9 +57,11 @@ The umbrella's values are keyed by subchart name (e.g. `claude-code.enabled`, `c
 Documentation:
 ```bash
 cd src && make docs              # generate API reference markdown
-mkdocs serve                     # preview docs site at http://localhost:8000
-mkdocs build                     # build static site to site/
+make docs-serve                  # preview docs site at http://localhost:8000 (uv run mkdocs serve)
+make docs-build                  # build static site to site/ (uv run mkdocs build --strict)
 ```
+
+Docs dependencies are managed with [uv](https://docs.astral.sh/uv/) via `pyproject.toml` + `uv.lock`. `uv run` provisions the environment automatically; run `uv sync` to materialize `.venv` explicitly.
 
 ## Architecture
 
