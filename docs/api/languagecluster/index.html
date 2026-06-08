@@ -1407,11 +1407,21 @@
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
 </code></pre></div>
 <h3 id="external-access">External Access<a class="headerlink" href="#external-access" title="Permanent link">&para;</a></h3>
-<p>Configure <code>spec.domain</code> to expose the proxy externally:</p>
+<p>By default the gateway is <strong>in-cluster only</strong> — agents reach it via its Service at
+<code>gateway.&lt;namespace&gt;.svc.cluster.local:8000</code> and no external Ingress is created. To expose the
+proxy externally, set <code>spec.domain</code> <strong>and</strong> opt in with <code>spec.ingress.enabled: true</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>Creates an Ingress/HTTPRoute at <code>gateway.agents.example.com</code> for external model access.</p>
+<div class="admonition note">
+<p class="admonition-title">Behavior change</p>
+<p>Earlier versions created this Ingress automatically whenever <code>spec.domain</code> was set. The gateway
+is now opt-in for external exposure; set <code>spec.ingress.enabled: true</code> to restore an external
+Ingress on upgrade.</p>
+</div>
 <h3 id="gateway-deployment-configuration">Gateway Deployment Configuration<a class="headerlink" href="#gateway-deployment-configuration" title="Permanent link">&para;</a></h3>
 <p>Use <code>spec.gateway.deployment</code> to customize the shared LiteLLM gateway pod. All fields are optional.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
@@ -1536,7 +1546,7 @@
 <tr>
 <td><code>enabled</code></td>
 <td>*bool</td>
-<td>Enable or disable Ingress creation (default: true when <code>spec.domain</code> is set)</td>
+<td>Create an external Ingress for the gateway (default: false — gateway is in-cluster only; requires <code>spec.domain</code> when set to true)</td>
 </tr>
 <tr>
 <td><code>className</code></td>

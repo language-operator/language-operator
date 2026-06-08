@@ -3349,7 +3349,7 @@ All fields are optional; controllers only read the fields relevant to their reso
 <tbody>
 <tr>
 <td><code>enabled</code> <em>boolean</em></td>
-<td>Enabled controls whether an Ingress is created for the gateway.<br />Defaults to true when cluster.spec.domain is set.</td>
+<td>Enabled controls whether an external Ingress is created for the shared gateway.<br />Defaults to false — the gateway is reachable in-cluster via its Service. Set to<br />true to expose it externally at gateway.<spec.domain>.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>

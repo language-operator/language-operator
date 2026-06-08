@@ -1388,30 +1388,29 @@
 </code></pre></div>
 <h2 id="building-locally">Building Locally<a class="headerlink" href="#building-locally" title="Permanent link">&para;</a></h2>
 <h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
-<p>Install Python dependencies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements-docs.txt
-</code></pre></div>
-<p>Or use the individual packages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>mkdocs-material<span class="w"> </span>mkdocs-awesome-pages-plugin
+<p>Docs dependencies are managed with <a href="https://docs.astral.sh/uv/">uv</a> (<code>pyproject.toml</code> + <code>uv.lock</code>).
+<code>uv run</code> provisions the environment automatically — no manual install step is required. To materialize
+the virtualenv explicitly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>sync
 </code></pre></div>
 <h3 id="generate-crd-documentation">Generate CRD Documentation<a class="headerlink" href="#generate-crd-documentation" title="Permanent link">&para;</a></h3>
 <p>The CRD API reference is auto-generated from Go types:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Install crd-ref-docs (one time)</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/elastic/crd-ref-docs@latest
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Generate API docs</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">cd</span><span class="w"> </span>src
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>make<span class="w"> </span>docs
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Install crd-ref-docs (one time)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/elastic/crd-ref-docs@latest
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Generate API docs</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nb">cd</span><span class="w"> </span>src
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>make<span class="w"> </span>docs
 </code></pre></div>
 <p>This creates <code>src/docs/api-reference.md</code> for <strong>local inspection only</strong>. In CI, <code>crd-ref-docs</code> is run separately with <code>--output-path=../docs/api-generated.md</code>, and that file is copied to <code>docs/api/reference.md</code> to produce the single reference page on the docs site.</p>
 <h3 id="preview-the-site">Preview the Site<a class="headerlink" href="#preview-the-site" title="Permanent link">&para;</a></h3>
 <p>Start a local development server:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>mkdocs<span class="w"> </span>serve
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>docs-serve<span class="w">   </span><span class="c1"># or: uv run mkdocs serve</span>
 </code></pre></div>
 <p>Open <a href="http://localhost:8000">http://localhost:8000</a> in your browser. The site auto-reloads when you edit markdown files.</p>
 <h3 id="build-static-site">Build Static Site<a class="headerlink" href="#build-static-site" title="Permanent link">&para;</a></h3>
 <p>Build the complete static site:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>mkdocs<span class="w"> </span>build
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>docs-build<span class="w">   </span><span class="c1"># or: uv run mkdocs build --strict</span>
 </code></pre></div>
 <p>Output is in <code>site/</code> (git-ignored).</p>
 <h2 id="automatic-deployment">Automatic Deployment<a class="headerlink" href="#automatic-deployment" title="Permanent link">&para;</a></h2>
@@ -1429,20 +1428,20 @@
 <li>Use clear, concise language</li>
 <li>Include code examples for complex concepts</li>
 <li>Use admonitions for warnings/notes:
-  <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>!!! warning &quot;Important&quot;
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    This is a warning message.
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>!!! warning &quot;Important&quot;
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    This is a warning message.
 </code></pre></div></li>
 </ul>
 <h3 id="code-blocks">Code Blocks<a class="headerlink" href="#code-blocks" title="Permanent link">&para;</a></h3>
 <p>Always specify the language:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="sb">```yaml</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="sb">```</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="sb">```yaml</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="sb">```</span>
 </code></pre></div>
 <h3 id="internal-links">Internal Links<a class="headerlink" href="#internal-links" title="Permanent link">&para;</a></h3>
 <p>Use relative links to other docs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>See [<span class="nt">Installation Guide</span>](<span class="na">getting-started/installation.md</span>)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>See [<span class="nt">Installation Guide</span>](<span class="na">getting-started/installation.md</span>)
 </code></pre></div>
 <h3 id="api-reference-pages">API Reference Pages<a class="headerlink" href="#api-reference-pages" title="Permanent link">&para;</a></h3>
 <p>The individual CRD reference pages in <code>api/</code> are auto-generated during CI. Don't edit them manually—edit the Go type comments in <code>src/api/v1alpha1/</code> instead.</p>
@@ -1480,7 +1479,7 @@
 <h3 id="mkdocs-build-fails">MkDocs build fails<a class="headerlink" href="#mkdocs-build-fails" title="Permanent link">&para;</a></h3>
 <p>Check for:</p>
 <ul>
-<li>Missing dependencies: <code>pip install -r requirements-docs.txt</code></li>
+<li>Missing dependencies: <code>uv sync</code> (or just use <code>uv run mkdocs ...</code>)</li>
 <li>Invalid markdown syntax</li>
 <li>Broken internal links</li>
 </ul>

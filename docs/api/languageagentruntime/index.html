@@ -1367,7 +1367,7 @@
 <p>Runtime-declared entries are merged ahead of any entries the agent adds in its own <code>spec.credentials</code>; entries are deduplicated by <code>name</code>, with the agent's entry winning on a collision. This is how the bundled runtimes provision credentials without requiring each <code>LanguageAgent</code> to configure them manually:</p>
 <ul>
 <li><code>openclaw</code> declares <code>OPENCLAW_GATEWAY_TOKEN</code> (auto-generated).</li>
-<li><code>opencode</code> declares <code>OPENCODE_SERVER_PASSWORD</code> (auto-generated) and sets <code>OPENCODE_SERVER_USERNAME=opencode</code> as a plain <code>deployment.env</code> variable.</li>
+<li><code>opencode</code> declares no credentials — access is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 <li><code>claude-code</code> declares no credentials — its authentication is interactive via <code>/login</code>.</li>
 </ul>
 <p>Custom runtimes use the same mechanism:</p>
