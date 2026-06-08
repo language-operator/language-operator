@@ -11,7 +11,8 @@
 
 ## Context
 
-- Version source of truth: `chart/Chart.yaml` fields `version` and `appVersion` (must stay in sync)
+- Version source of truth: the `version` and `appVersion` fields of **both** umbrella charts — `charts/language-operator/Chart.yaml` and `charts/language-operator-runtimes/Chart.yaml`. All four fields must stay in sync; treat `charts/language-operator/Chart.yaml` as canonical when reading the current version.
+- Runtime **subchart** pins (`claude-code`, `openclaw`, `opencode`) inside `charts/language-operator-runtimes/Chart.yaml` are versioned independently and are **not** touched here — use `/update-runtimes` for those.
 - Release trigger: pushing a `v*` git tag kicks off CI to build all Docker images and create a GitHub release with the packaged Helm chart as an asset
 - CHANGELOG: `CHANGELOG.md` has an `## Unreleased` section at the top; on release, move its content into a new `## v{version} — {date}` section
 
@@ -42,7 +43,13 @@ git rev-list HEAD..origin/main --count
 Read the current version:
 
 ```bash
-grep '^version:' chart/Chart.yaml | awk '{print $2}'
+grep '^version:' charts/language-operator/Chart.yaml | awk '{print $2}'
+```
+
+Sanity-check that the runtimes chart is currently in sync (it should print the same version):
+
+```bash
+grep '^version:' charts/language-operator-runtimes/Chart.yaml | awk '{print $2}'
 ```
 
 Parse the three semver components (MAJOR.MINOR.PATCH) and apply the bump from `$ARGUMENTS`:
@@ -98,8 +105,9 @@ Release plan:
   Git tag         : v{new_version}
 
 Changes that will be made:
-  • chart/Chart.yaml   version + appVersion → {new_version}
-  • CHANGELOG.md       ## Unreleased → ## v{new_version} — {today}
+  • charts/language-operator/Chart.yaml            version + appVersion → {new_version}
+  • charts/language-operator-runtimes/Chart.yaml   version + appVersion → {new_version}
+  • CHANGELOG.md                                   ## Unreleased → ## v{new_version} — {today}
   • git commit         chore: release v{new_version}
   • git tag            v{new_version} (annotated)
   • git push           origin main + tag
@@ -115,11 +123,15 @@ Proceed? (yes/no)
 
 Wait for the user to confirm before proceeding. If they say no, abort cleanly.
 
-### Step 5 — Update `chart/Chart.yaml`
+### Step 5 — Update both umbrella `Chart.yaml` files
 
-Use the Edit tool to replace both `version:` and `appVersion:` lines:
+Use the Edit tool to replace both `version:` and `appVersion:` lines in **each** of
+`charts/language-operator/Chart.yaml` **and** `charts/language-operator-runtimes/Chart.yaml`:
 - `version: {current}` → `version: {new_version}`
 - `appVersion: "{current}"` → `appVersion: "{new_version}"`
+
+Do **not** touch the `dependencies[].version` pins in the runtimes chart — those are the
+runtime subchart versions and are managed by `/update-runtimes`.
 
 ### Step 6 — Update `CHANGELOG.md`
 
@@ -145,10 +157,10 @@ Use today's date in `YYYY-MM-DD` format (available via `currentDate` in context)
 
 ### Step 7 — Commit the changes
 
-Stage only the two modified files:
+Stage only the modified files:
 
 ```bash
-git add chart/Chart.yaml CHANGELOG.md
+git add charts/language-operator/Chart.yaml charts/language-operator-runtimes/Chart.yaml CHANGELOG.md
 ```
 
 Commit with a conventional commit message:
