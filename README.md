@@ -6,14 +6,14 @@ A [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/op
 
 Language Operator provides a purpose-built set of CRDs for deploying and managing agents in Kubernetes:
 
-| Resource | Purpose |
-|----------|---------|
-| [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Configures a managed namespace for agents |
-| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploy a goal-directed agent |
-| [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Presets for popular vendors (Claude, OpenClaw, OpenCode) |
-| [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Model configuration (proxied through LiteLLM) |
-| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | MCP-compatible tool server |
-| [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Reusable behaviors and expertise |
+| Resource | Status | Purpose |
+|----------|--------|---------|
+| [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Alpha | Configures a managed namespace for agents |
+| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Alpha | Deploy a goal-directed agent |
+| [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Alpha | Presets for popular vendors (Claude, OpenClaw, OpenCode) |
+| [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Alpha | Model configuration (proxied through LiteLLM) |
+| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | Development | MCP-compatible tool server |
+| [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Development | Reusable behaviors and expertise |
 
 
 ## Getting Started
