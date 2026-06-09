@@ -8,12 +8,12 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 | Resource | Purpose |
 |----------|---------|
-| [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Configures a managed namespace and domain for agents |
-| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploys arbitrary agents like OpenClaw or OpenCode |
-| [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Defines agent runtime presets |
-| [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Defines an LLM configuration (proxied through LiteLLM) |
-| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | Deploys an MCP-compatible server |
-| [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Defines tone, personality and expertise |
+| [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Configures a managed namespace for agents |
+| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploy agents with pre-defined instructions |
+| [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Presets for popular vendors (Claude, OpenClaw, OpenCode) |
+| [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Model configuration (proxied through LiteLLM) |
+| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | MCP-compatible tool server |
+| [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Reusable behaviors and expertise |
 
 
 ## Getting Started
