@@ -11,8 +11,6 @@ worker-1 (engineer persona)  ← queue/1: normal (features, improvements)
 worker-2 (engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
 ```
 
-Authentication is interactive: after deploying, open each agent's terminal and run `/login`. Credentials persist on each agent's workspace PVC across pod restarts.
-
 ## Prerequisites
 
 - Language Operator [installed](https://langop.io/docs/getting-started/installation/)
