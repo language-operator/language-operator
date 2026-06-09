@@ -9,7 +9,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 | Resource | Purpose |
 |----------|---------|
 | [`LanguageCluster`](https://langop.io/docs/api/reference/#languagecluster) | Configures a managed namespace for agents |
-| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploy agents with pre-defined instructions |
+| [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Deploy a goal-directed agent |
 | [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Presets for popular vendors (Claude, OpenClaw, OpenCode) |
 | [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Model configuration (proxied through LiteLLM) |
 | [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | MCP-compatible tool server |
