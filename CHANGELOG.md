@@ -6,7 +6,162 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+---
+
+## v0.1.130 — 2026-06-12
+
 **Breaking Changes**
+- make gateway ingress opt-in instead of created by default (#856)
+- extract runtime adapters into their own repos (#855)
+- make runtime CRs dictate credentials and auth gating (#854)
+
+**Features**
+- transport-aware MCP tools with operator-injected stdio bridge (#857)
+- make gateway ingress opt-in instead of created by default (#856)
+- install Go toolchain in claude-code-adapter image
+- per-agent window title with bell-driven attention indicator
+- show operator chart version in Dex login navbar and inline the wordmark
+- brand the Dex login page with embedded Marfa templates
+- auto-execute agent instructions on Claude startup, refactor dev-team
+- rewrite claude-code runtime with custom xterm.js terminal, tmux persistence, and clipboard support
+- add OIDC auth to LanguageAgent ingress via Dex and oauth2-proxy
+- fix claudeCode.apiKeyRef to honour api-key secret key convention (#848)
+- add /request and /audit-request slash commands
+- replace A2A server with ttyd WebSocket terminal for claude-code runtime
+- OAuth credentials support for Claude Code subscription billing
+- passive supervisor + start script for delegation loop
+- run supervisor delegation in a continuous loop via sleep
+- wire up autonomous agent startup end-to-end
+- add STARTUP_PROMPT to claude-code-server for autonomous agent startup
+- LanguageCluster adopts pre-existing member resources on reconcile (#823)
+- allow LanguageCluster to adopt existing namespaces (#822)
+- add namespace conflict and port range validation to LanguageCluster webhook (#817)
+- add image registry and resource quantity validation to LanguageAgentRuntime webhook (#816)
+- add admission webhook for LanguageAgentRuntime (#815)
+- add admission webhook for LanguageCluster (#812)
+- wire gateway command/args and implement managed gateway ServiceAccount (#776)
+- add Updating phase to LanguageAgent status during rolling updates (#767)
+- HorizontalPodAutoscaler support for LanguageCluster gateway (#757)
+- implement Command, Args, and Autoscaling for LanguageTool spec.deployment (#756)
+- implement Pending and Failed phase writes in LanguagePersona controller (#745)
+- implement Pending and Failed phase writes in LanguageModel controller (#744)
+- add Gateway and GatewayReady printcolumns to LanguageCluster (#743)
+- claude-code runtime with A2A protocol support (#731)
+- per-agent ServiceMonitor and PrometheusRule for Prometheus Operator integration (#730)
+- add LanguageAgentSelfConfig CRD for agent self-modification at runtime (#729)
+- per-agent ServiceAccount with annotations and custom RBAC rules (#728)
+- workspace file seeding with seed-once semantics (#727)
+- add Degraded phase to LanguageAgent and LanguageTool status (#726)
+- HorizontalPodAutoscaler support for LanguageAgent (#725)
+- create PodDisruptionBudget for multi-replica LanguageAgent deployments (#723)
+- add status.managedResources inventory to LanguageAgent and LanguageCluster (#722)
+- add workspace PVC retain policy to prevent data loss on agent deletion (#720)
+- add webhook security warnings for dangerous agent configurations (#719)
+
+**Bug Fixes**
+- display agent name on OAuth grant page instead of "Language Operator" (#853)
+- use pre-built ttyd binaries instead of building from source
+- skip gateway env vars in settings.json when OAuth credentials present
+- tell supervisor it's a daemon so it runs the sleep loop
+- restore instructions indentation in example agents
+- adapter writes placeholder API key when routing through gateway
+- translate api-key secret to ANTHROPIC_API_KEY in claude-code-adapter
+- pin @anthropic-ai/claude-code to 2.0.23 — last version with SDK query() export
+- parenthesise nullish-coalescing/OR chain in claude-code-server
+- parenthesise nullish-coalescing/OR chain in claude-code-adapter agent card
+- restore crds.keep conditional and crds.annotations in LanguageCluster CRD template (#827)
+- remove adoptExistingNamespace field — LanguageCluster auto-adopts unmanaged namespaces (#826)
+- grant langop-admin rolebinding CRUD for dashboard Access page
+- move LanguageTool image registry validation from controller to webhook (#813)
+- wire crds.keep and crds.annotations values into CRD templates (#799)
+- set certificateIssuerName default to empty string, matching binary default (#794)
+- always pass --zap-devel flag explicitly so chart value is honoured (#792)
+- merge ServiceAccountAnnotations and RoleRules from LanguageAgentRuntime (#774)
+- use HPA-managed replica count for LanguageTool Updating phase detection (#765)
+- inject ANTHROPIC_BASE_URL in claude-code gateway mode (#764)
+- include claude-code runtime Secret in status.managedResources (#763)
+- remove Namespace field from SecretReference — cross-namespace secrets not supported (#754)
+- mount each apiKeySecretRef secret to unique /etc/secrets/<name> subdirectory (#753)
+- write Pending phase on first LanguageAgentSelfConfig reconcile (#752)
+- expand LanguageModel and LanguagePersona Phase enum to include Pending and Failed (#740)
+- respect Enabled field in OpencodeConfig/OpenclawConfig/ClaudeCodeConfig (#739)
+- set ConditionCapacityReady True on reconcileCapacity success (#738)
+- add missing RBAC rules and skip webhook validation on deletion
+- prevent DNS goroutine race in GatewayIngressClassName test
+- prevent DNS goroutine race in GatewayIngressClassName test
+- update hardcoded controller-gen and envtest versions in CI
+- validate immutable workspace fields (storageClassName, accessMode) on update (#721)
+- inject config-hash annotation into agent pod template to trigger rolling updates (#718)
+
+**Refactoring**
+- extract runtime adapters into their own repos (#855)
+- make runtime CRs dictate credentials and auth gating (#854)
+- merge claude-code-server into claude-code-adapter (single image)
+- rename dev-team manifests and swap to generic engineer persona
+- restructure examples and switch claude-code to interactive auth
+- run oauth2-proxy as agent sidecar instead of separate Deployment
+
+**Documentation**
+- fix start script description in language-operator-team README
+- write README for examples/language-operator-team (#850)
+- fix stale chart/ path in testing.md (#838)
+- update installation and development docs for /charts split
+- correct claude-code guide — gateway unsupported, model name, egress note
+- add claude-code runtime guide
+
+**Tests**
+- add unit tests for LanguageAgentRuntime controller (#811)
+
+**Chores**
+- update commands
+- update runtime subchart pins
+- bump worker resource limits for go build/test
+- remove A2A leftovers from language-operator-team example (#851)
+- simplify examples to use spec.claudeCode.apiKeyRef (#849)
+- add OAuth credentials setup to kustomization.yaml deploy instructions (#845)
+- fix secret creation command to use api-key literal in examples (#844)
+- install runtimes chart in make dev and strengthen audit-request
+- update CI helm-release workflow to publish both Helm charts (#837)
+- create /charts/language-operator-runtimes chart for bundled LanguageAgentRuntime CRs (#835)
+- move /chart → /charts/language-operator and strip runtime templates (#834)
+- migrate claude-code-server to @anthropic-ai/claude-agent-sdk
+- consolidate LanguageTool status updates into single deferred write (#819)
+- normalize SetCondition + Phase mutation — use SetPhase everywhere (#814)
+- add roles
+- consolidate RegistryManager interface into pkg/validation and remove dead field (#818)
+- docs
+- move ApplyRuntimeDefaults to pkg/merge — out of api/v1alpha1 (#803)
+- reorganize controllers/utils.go — split by domain, move constants to pkg/ (#802)
+- split languageagent_controller_test.go into domain-focused files
+- split languageagent_controller.go into domain-focused files (#801)
+- remove over-permissioned languageagentruntimes/status ClusterRole rule (#800)
+- add CreateOrUpdateOwned helper and eliminate SetControllerReference boilerplate (22 sites) (#793)
+- make EventManager methods nil-safe, remove 17 guard blocks from controllers (#791)
+- extract buildNetworkPolicyIngressRules helper to deduplicate NetworkPolicy reconcilers (#790)
+- extract serviceURL helper to replace repeated svc.cluster.local format strings (#780)
+- define GatewayResourceName constant to replace 25 hardcoded "gateway" strings (#784)
+- extract SetPhase helper to eliminate Status boilerplate in model and persona controllers (#783)
+- replace boolPtr helper with ptr.To — extend #770 cleanup (#779)
+- replace duplicate protocolPtr helpers with ptr.To from k8s.io/utils (#775)
+- remove redundant ConditionWebhooksReady — superseded by WebhookRouteCreated/Ready (#766)
+- add missing condition reason constants for LanguageCluster controller (#747)
+- replace plain bool omitempty with *bool for enablement flags in agent types (#746)
+- update CLAUDE.md to reference chart/templates/crds/
+- move CRDs to chart/templates/ for proper Helm upgrade handling
+- update build tools, actions, and fix security vulnerability
+- update go and npm dependencies
+- add claude-code-adapter and claude-code-server to build pipeline
+- tweak iterate command
+
+**Other**
+- Update README.md
+- Update README.md
+- Update README.md
+- Update README.md
+- revert: back to @anthropic-ai/claude-code 2.0.23
+- chart: add missing LanguageAgentSelfConfig ValidatingWebhookConfiguration entry (#798)
+
+**Migration Notes**
 - Extract the claude-code, openclaw, and opencode runtimes into their own
   repositories (image source + self-contained chart). `language-operator-runtimes`
   is now an umbrella chart that pulls each runtime as a subchart from
@@ -17,8 +172,6 @@ This document tracks releases of the Language Operator project.
   `runtimes.opencode.enabled` → `opencode.enabled`. Run
   `helm dependency build charts/language-operator-runtimes` before installing or
   packaging the umbrella chart.
-
-**Chores**
 - Remove `components/agents/*` adapter source and their build jobs from this repo;
   each runtime now builds and publishes its own image and chart via its own CI.
 
