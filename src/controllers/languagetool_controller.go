@@ -1,11 +1,9 @@
 package controllers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -32,6 +30,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
 	langoplabels "github.com/language-operator/language-operator/pkg/labels"
+	"github.com/language-operator/language-operator/pkg/mcp"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 )
 
@@ -45,54 +44,13 @@ type LanguageToolReconciler struct {
 	NetworkIsolationEnabled bool
 	// HTTPClient is used for MCP schema discovery requests. When nil, http.DefaultClient is used.
 	HTTPClient *http.Client
-}
-
-// MCPRequest represents an MCP JSON-RPC request
-type MCPRequest struct {
-	JSONRpc string      `json:"jsonrpc"`
-	ID      int         `json:"id"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params,omitempty"`
-}
-
-// MCPResponse represents an MCP JSON-RPC response
-type MCPResponse struct {
-	JSONRpc string          `json:"jsonrpc"`
-	ID      int             `json:"id"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *MCPError       `json:"error,omitempty"`
-}
-
-// MCPError represents an MCP JSON-RPC error
-type MCPError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-// MCPToolsListResult represents the result of tools/list MCP method
-type MCPToolsListResult struct {
-	Tools []MCPTool `json:"tools"`
-}
-
-// MCPTool represents an MCP tool definition
-type MCPTool struct {
-	Name        string              `json:"name"`
-	Description string              `json:"description,omitempty"`
-	InputSchema *MCPToolInputSchema `json:"inputSchema,omitempty"`
-}
-
-// MCPToolInputSchema represents the input schema for an MCP tool
-type MCPToolInputSchema struct {
-	Type       string                       `json:"type,omitempty"`
-	Properties map[string]MCPSchemaProperty `json:"properties,omitempty"`
-	Required   []string                     `json:"required,omitempty"`
-}
-
-// MCPSchemaProperty represents a property in an MCP schema
-type MCPSchemaProperty struct {
-	Type        string   `json:"type"`
-	Description string   `json:"description,omitempty"`
-	Examples    []string `json:"examples,omitempty"`
+	// MCPBridgeImage is the stdio→Streamable-HTTP bridge image injected for transport=stdio
+	// tools. When empty, langopv1alpha1.DefaultMCPBridgeImage is used.
+	MCPBridgeImage string
+	// MCPBridgeImagePullPolicy is the pull policy for the injected bridge image.
+	MCPBridgeImagePullPolicy corev1.PullPolicy
+	// MCPDiscoveryTimeout bounds an MCP schema-discovery handshake. When zero, 30s is used.
+	MCPDiscoveryTimeout time.Duration
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languagetools,verbs=get;list;watch;create;update;patch;delete
@@ -337,6 +295,9 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 
 		shareProc := len(tool.Spec.Deployment.InitContainers) > 0
 
+		// The container (and any volumes it needs) varies by transport — see buildToolContainer.
+		toolContainer, extraVolumes := r.buildToolContainer(tool)
+
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas: deploymentReplicas,
 			Selector: &metav1.LabelSelector{
@@ -348,34 +309,12 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 					Annotations: tool.Spec.Deployment.PodAnnotations,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName:    tool.Spec.Deployment.ServiceAccountName,
-					ShareProcessNamespace: &shareProc,
-					InitContainers:        tool.Spec.Deployment.InitContainers,
-					Containers: []corev1.Container{
-						{
-							Name:            "tool",
-							Image:           tool.Spec.Image,
-							ImagePullPolicy: tool.Spec.Deployment.ImagePullPolicy,
-							Command:         tool.Spec.Deployment.Command,
-							Args:            tool.Spec.Deployment.Args,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: tool.Spec.Port,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							Env:            r.buildToolEnv(tool),
-							EnvFrom:        tool.Spec.Deployment.EnvFrom,
-							Resources:      tool.Spec.Deployment.Resources,
-							VolumeMounts:   tool.Spec.Deployment.VolumeMounts,
-							LivenessProbe:  tool.Spec.Deployment.LivenessProbe,
-							ReadinessProbe: tool.Spec.Deployment.ReadinessProbe,
-							StartupProbe:   tool.Spec.Deployment.StartupProbe,
-						},
-					},
+					ServiceAccountName:        tool.Spec.Deployment.ServiceAccountName,
+					ShareProcessNamespace:     &shareProc,
+					InitContainers:            tool.Spec.Deployment.InitContainers,
+					Containers:                []corev1.Container{toolContainer},
 					SecurityContext:           podSecCtx,
-					Volumes:                   tool.Spec.Deployment.Volumes,
+					Volumes:                   append(append([]corev1.Volume{}, tool.Spec.Deployment.Volumes...), extraVolumes...),
 					ImagePullSecrets:          tool.Spec.Deployment.ImagePullSecrets,
 					NodeSelector:              tool.Spec.Deployment.NodeSelector,
 					Tolerations:               tool.Spec.Deployment.Tolerations,
@@ -385,12 +324,51 @@ func (r *LanguageToolReconciler) reconcileDeployment(ctx context.Context, tool *
 			},
 		}
 
-		deployment.Spec.Template.Spec.Containers[0].SecurityContext = buildContainerSecurityContext()
-
 		return nil
 	})
 
 	return err
+}
+
+// buildToolContainer constructs the tool's main container and any extra pod volumes it needs.
+// For transport=stdio the operator injects a persistent stdio→Streamable-HTTP bridge (image,
+// command, args) plus writable cache + /tmp volumes so npx/uvx can run under the hardened,
+// read-only-root securityContext. For streamable-http/sse the tool image is run directly.
+func (r *LanguageToolReconciler) buildToolContainer(tool *langopv1alpha1.LanguageTool) (corev1.Container, []corev1.Volume) {
+	container := corev1.Container{
+		Name: "tool",
+		Ports: []corev1.ContainerPort{
+			{Name: "http", ContainerPort: tool.Spec.Port, Protocol: corev1.ProtocolTCP},
+		},
+		Env:             r.buildToolEnv(tool),
+		EnvFrom:         tool.Spec.Deployment.EnvFrom,
+		Resources:       tool.Spec.Deployment.Resources,
+		VolumeMounts:    tool.Spec.Deployment.VolumeMounts,
+		LivenessProbe:   tool.Spec.Deployment.LivenessProbe,
+		ReadinessProbe:  tool.Spec.Deployment.ReadinessProbe,
+		StartupProbe:    tool.Spec.Deployment.StartupProbe,
+		SecurityContext: buildContainerSecurityContext(),
+	}
+
+	if !isStdioTool(tool) {
+		container.Image = tool.Spec.Image
+		container.ImagePullPolicy = tool.Spec.Deployment.ImagePullPolicy
+		container.Command = tool.Spec.Deployment.Command
+		container.Args = tool.Spec.Deployment.Args
+		return container, nil
+	}
+
+	// transport=stdio: wrap the stdio command in the operator-controlled persistent bridge.
+	container.Image = resolveMCPBridgeImage(r.MCPBridgeImage)
+	container.ImagePullPolicy = r.MCPBridgeImagePullPolicy
+	container.Command = bridgeContainerCommand()
+	container.Args = buildBridgeArgs(stdioCommandOf(tool), tool.Spec.Port)
+	container.Env = append(container.Env, bridgeCacheEnv()...)
+	container.VolumeMounts = append(container.VolumeMounts, bridgeVolumeMounts(mcpBridgeVolumePrefix)...)
+	if container.ReadinessProbe == nil {
+		container.ReadinessProbe = defaultBridgeReadinessProbe(tool.Spec.Port)
+	}
+	return container, bridgeVolumes(mcpBridgeVolumePrefix)
 }
 
 func (r *LanguageToolReconciler) buildToolEnv(tool *langopv1alpha1.LanguageTool) []corev1.EnvVar {
@@ -597,111 +575,59 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, tool, networkPolicy)
 }
 
-// discoverMCPToolSchemas queries an MCP server to discover available tools and their schemas
+// discoveryTimeout returns the bound for an MCP schema-discovery handshake.
+func (r *LanguageToolReconciler) discoveryTimeout() time.Duration {
+	if r.MCPDiscoveryTimeout > 0 {
+		return r.MCPDiscoveryTimeout
+	}
+	return 30 * time.Second
+}
+
+// discoverMCPToolSchemas queries an MCP server (over Streamable HTTP, with a proper
+// initialize → tools/list handshake and a legacy fallback) to discover its tools and schemas.
+// endpoint is "host:port" (no scheme or path).
 func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
 	log := log.FromContext(ctx)
 
-	// Use injected client (for tests) or create a default one.
-	// The client Timeout is a safety net; the context deadline is the primary bound.
-	client := r.HTTPClient
-	if client == nil {
-		client = &http.Client{
-			Timeout: 5 * time.Second,
-		}
-	}
+	// Bound the handshake; the context deadline is the primary bound (interruptible on
+	// operator shutdown or reconcile deadline).
+	ctx, cancel := context.WithTimeout(ctx, r.discoveryTimeout())
+	defer cancel()
 
-	// Create MCP tools/list request
-	request := MCPRequest{
-		JSONRpc: "2.0",
-		ID:      1,
-		Method:  "tools/list",
-	}
-
-	reqBody, err := json.Marshal(request)
+	client := &mcp.Client{HTTP: r.HTTPClient}
+	tools, err := client.ListTools(ctx, "http://"+endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal MCP request: %w", err)
+		return nil, err
 	}
 
-	// Make HTTP POST request to MCP server, bound to the reconcile context so that
-	// context cancellation (e.g. operator shutdown or reconcile deadline) interrupts
-	// the in-flight call instead of waiting for the client Timeout.
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		fmt.Sprintf("http://%s/mcp", endpoint), bytes.NewBuffer(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create MCP request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Accept", "application/json, text/event-stream")
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call MCP server at %s: %w", endpoint, err)
-	}
-	defer resp.Body.Close()
+	schemas := toolSchemasFromMCP(tools)
+	log.Info("Successfully discovered MCP tool schemas", "endpoint", endpoint, "toolCount", len(schemas))
+	return schemas, nil
+}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("MCP server returned status %d", resp.StatusCode)
-	}
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read MCP response: %w", err)
-	}
-
-	// Parse MCP response
-	var mcpResp MCPResponse
-	if err := json.Unmarshal(respBody, &mcpResp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal MCP response: %w", err)
-	}
-
-	if mcpResp.Error != nil {
-		return nil, fmt.Errorf("MCP server error: %s (code %d)", mcpResp.Error.Message, mcpResp.Error.Code)
-	}
-
-	// Parse tools list result
-	var toolsResult MCPToolsListResult
-	if err := json.Unmarshal(mcpResp.Result, &toolsResult); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal tools list: %w", err)
-	}
-
-	// Convert MCP tools to LanguageOperator ToolSchema format
-	var schemas []langopv1alpha1.ToolSchema
-	for _, mcpTool := range toolsResult.Tools {
-		schema := langopv1alpha1.ToolSchema{
-			Name:        mcpTool.Name,
-			Description: mcpTool.Description,
-		}
-
-		// Convert input schema if present
-		if mcpTool.InputSchema != nil {
+// toolSchemasFromMCP converts discovered MCP tools into the operator's ToolSchema status shape.
+func toolSchemasFromMCP(tools []mcp.Tool) []langopv1alpha1.ToolSchema {
+	schemas := make([]langopv1alpha1.ToolSchema, 0, len(tools))
+	for _, t := range tools {
+		schema := langopv1alpha1.ToolSchema{Name: t.Name, Description: t.Description}
+		if t.InputSchema != nil {
 			schema.InputSchema = &langopv1alpha1.ToolSchemaDefinition{
-				Type:       mcpTool.InputSchema.Type,
-				Required:   mcpTool.InputSchema.Required,
+				Type:       t.InputSchema.Type,
+				Required:   t.InputSchema.Required,
 				Properties: make(map[string]langopv1alpha1.ToolProperty),
 			}
-
-			// Convert properties
-			for propName, mcpProp := range mcpTool.InputSchema.Properties {
-				prop := langopv1alpha1.ToolProperty{
-					Type:        mcpProp.Type,
-					Description: mcpProp.Description,
-				}
-
-				// Convert first example if available
-				if len(mcpProp.Examples) > 0 {
-					exampleBytes, _ := json.Marshal(mcpProp.Examples[0])
+			for propName, p := range t.InputSchema.Properties {
+				prop := langopv1alpha1.ToolProperty{Type: p.Type, Description: p.Description}
+				if len(p.Examples) > 0 {
+					exampleBytes, _ := json.Marshal(p.Examples[0])
 					prop.Example = string(exampleBytes)
 				}
-
 				schema.InputSchema.Properties[propName] = prop
 			}
 		}
-
 		schemas = append(schemas, schema)
 	}
-
-	log.Info("Successfully discovered MCP tool schemas", "endpoint", endpoint, "toolCount", len(schemas))
-	return schemas, nil
+	return schemas
 }
 
 // discoverSidecarSchemas finds a running agent pod that carries this sidecar tool container

@@ -6294,7 +6294,10 @@ spec:
                 - sidecar
                 type: string
               image:
-                description: Image is the container image to run for this tool
+                description: |-
+                  Image is the container image to run for this tool. For transport=stdio it is ignored —
+                  the operator injects the MCP bridge image instead — and may be omitted (the defaulting
+                  webhook fills it).
                 minLength: 1
                 type: string
               networkPolicies:
@@ -6641,6 +6644,37 @@ spec:
                 maximum: 65535
                 minimum: 1
                 type: integer
+              stdio:
+                description: |-
+                  Stdio configures the stdio MCP server when transport=stdio. Required for that transport,
+                  ignored otherwise.
+                properties:
+                  command:
+                    description: |-
+                      Command is the full argv of the stdio MCP server, e.g.
+                      ["npx","-y","@upstash/context7-mcp"] or ["uvx","mcp-server-git","--repository","/workspace"].
+                      The operator passes it to the bridge as a single stdio command. Environment for the
+                      child comes from spec.deployment.env / spec.deployment.envFrom.
+                    items:
+                      type: string
+                    minItems: 1
+                    type: array
+                required:
+                - command
+                type: object
+              transport:
+                default: streamable-http
+                description: |-
+                  Transport selects how the operator exposes this tool's MCP endpoint.
+                  - "streamable-http" (default): spec.image already serves Streamable HTTP at /mcp.
+                  - "sse": spec.image already serves the (legacy) MCP HTTP+SSE transport.
+                  - "stdio": the user supplies a stdio MCP command in spec.stdio; the operator injects a
+                    pinned, persistent stdio→Streamable-HTTP bridge that serves /mcp and /health on spec.port.
+                enum:
+                - streamable-http
+                - sse
+                - stdio
+                type: string
               type:
                 default: mcp
                 description: Type specifies the tool protocol type. Only "mcp" is

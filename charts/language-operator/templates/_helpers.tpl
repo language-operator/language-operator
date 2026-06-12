@@ -70,6 +70,16 @@ Create the image name
 {{- end }}
 
 {{/*
+MCP bridge image (stdio→Streamable-HTTP bridge injected for transport=stdio tools).
+Tag defaults to the chart appVersion, mirroring the operator image so the bridge is pinned
+per chart release rather than tracking a floating tag.
+*/}}
+{{- define "language-operator.mcpBridgeImage" -}}
+{{- $tag := .Values.config.mcpBridge.tag | default .Chart.AppVersion }}
+{{- printf "%s:%s" .Values.config.mcpBridge.repository $tag }}
+{{- end }}
+
+{{/*
 Create the metrics bind address
 */}}
 {{- define "language-operator.metricsBindAddress" -}}

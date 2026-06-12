@@ -30,8 +30,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		return fmt.Errorf("failed to resolve tools: %w", err)
 	}
 
-	// Resolve sidecar tools
-	sidecarContainers, err := r.resolveSidecarTools(ctx, agent)
+	// Resolve sidecar tools (and any scratch volumes their bridges need)
+	sidecarContainers, sidecarVolumes, err := r.resolveSidecarTools(ctx, agent)
 	if err != nil {
 		return fmt.Errorf("failed to resolve sidecar tools: %w", err)
 	}
@@ -176,6 +176,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
 		// Append seed ConfigMap volumes (not mounted in main container; used by workspace-seeder init container).
 		volumes = append(volumes, buildWorkspaceSeedVolumes(agent)...)
+		// Append scratch volumes for stdio sidecar bridges (mounted only in their sidecar containers).
+		volumes = append(volumes, sidecarVolumes...)
 		volumes = append(volumes, agent.Spec.Deployment.Volumes...)
 		volumeMounts = append(volumeMounts, agent.Spec.Deployment.VolumeMounts...)
 		if len(volumes) > 0 {
@@ -225,8 +227,9 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 	return modelURLs, modelNames, nil
 }
 
-func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, error) {
+func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, []corev1.Volume, error) {
 	var sidecarContainers []corev1.Container
+	var sidecarVolumes []corev1.Volume
 
 	for _, toolRef := range agent.Spec.Tools {
 		// Skip tools explicitly disabled by the user
@@ -237,7 +240,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
 		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
-			return nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
+			return nil, nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
 		}
 
 		// Only process sidecar tools
@@ -251,13 +254,11 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 			port = 8080 // Default MCP port
 		}
 
-		// Use native sidecar support (Kubernetes 1.28+)
-		// Sidecars with restartPolicy: Always will terminate automatically
-		// when the main container completes
+		// Use native sidecar support (Kubernetes 1.28+).
+		// Sidecars with restartPolicy: Always terminate automatically when the main container completes.
 		restartPolicy := corev1.ContainerRestartPolicyAlways
 		container := corev1.Container{
 			Name:          fmt.Sprintf("tool-%s", tool.Name),
-			Image:         tool.Spec.Image,
 			RestartPolicy: &restartPolicy,
 			Ports: []corev1.ContainerPort{
 				{
@@ -267,7 +268,24 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 				},
 			},
 			Env: tool.Spec.Deployment.Env,
-			ReadinessProbe: &corev1.Probe{
+		}
+
+		if isStdioTool(tool) {
+			// transport=stdio: wrap the stdio command in the operator-controlled persistent
+			// bridge. The volume prefix is the (pod-unique) container name so multiple stdio
+			// sidecars don't collide on scratch volume names.
+			prefix := container.Name
+			container.Image = resolveMCPBridgeImage(r.MCPBridgeImage)
+			container.ImagePullPolicy = r.MCPBridgeImagePullPolicy
+			container.Command = bridgeContainerCommand()
+			container.Args = buildBridgeArgs(stdioCommandOf(tool), port)
+			container.Env = append(container.Env, bridgeCacheEnv()...)
+			container.VolumeMounts = append(container.VolumeMounts, bridgeVolumeMounts(prefix)...)
+			container.ReadinessProbe = defaultBridgeReadinessProbe(port)
+			sidecarVolumes = append(sidecarVolumes, bridgeVolumes(prefix)...)
+		} else {
+			container.Image = tool.Spec.Image
+			container.ReadinessProbe = &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					TCPSocket: &corev1.TCPSocketAction{
 						Port: intstr.FromInt(int(port)),
@@ -278,7 +296,7 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 				TimeoutSeconds:      1,
 				SuccessThreshold:    1,
 				FailureThreshold:    3,
-			},
+			}
 		}
 
 		// Add resource requirements if specified, otherwise use sensible defaults for tool containers
@@ -304,18 +322,16 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 				mountPath = "/workspace"
 			}
 
-			container.VolumeMounts = []corev1.VolumeMount{
-				{
-					Name:      "workspace",
-					MountPath: mountPath,
-				},
-			}
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      "workspace",
+				MountPath: mountPath,
+			})
 		}
 
 		sidecarContainers = append(sidecarContainers, container)
 	}
 
-	return sidecarContainers, nil
+	return sidecarContainers, sidecarVolumes, nil
 }
 
 func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {

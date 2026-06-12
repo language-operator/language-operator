@@ -582,7 +582,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		r := &LanguageAgentReconciler{Client: fakeClient,
 			Scheme: scheme, Log: logr.Discard()}
 
-		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		containers, _, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -591,6 +591,53 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		}
 		if containers[0].Image != "my-tool:v1" {
 			t.Errorf("expected image 'my-tool:v1', got %q", containers[0].Image)
+		}
+	})
+
+	t.Run("stdio_sidecar_injects_bridge", func(t *testing.T) {
+		tool := gen.LanguageTool("my-stdio-sidecar", "default",
+			gen.SetToolDeploymentMode("sidecar"),
+			gen.SetToolPort(8080),
+			gen.SetToolTransport("stdio"),
+			gen.SetToolStdioCommand("npx", "-y", "@upstash/context7-mcp"),
+		)
+		agent := &langopv1alpha1.LanguageAgent{
+			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+			Spec: langopv1alpha1.LanguageAgentSpec{
+				Tools: []langopv1alpha1.ToolReference{{Name: "my-stdio-sidecar"}},
+			},
+		}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build()
+		r := &LanguageAgentReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+		containers, volumes, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 1 {
+			t.Fatalf("expected 1 container, got %d", len(containers))
+		}
+		c := containers[0]
+		if c.Image != langopv1alpha1.DefaultMCPBridgeImage {
+			t.Errorf("sidecar image = %q, want bridge %q", c.Image, langopv1alpha1.DefaultMCPBridgeImage)
+		}
+		if len(c.Command) != 1 || c.Command[0] != "supergateway" {
+			t.Errorf("command = %v, want [supergateway]", c.Command)
+		}
+		if c.ReadinessProbe == nil || c.ReadinessProbe.HTTPGet == nil || c.ReadinessProbe.HTTPGet.Path != "/health" {
+			t.Errorf("expected /health httpGet readiness probe, got %+v", c.ReadinessProbe)
+		}
+		// Per-tool (pod-unique) scratch volume names, returned for the agent pod.
+		wantCache := "tool-my-stdio-sidecar-cache"
+		var haveCache bool
+		for _, v := range volumes {
+			if v.Name == wantCache {
+				haveCache = true
+			}
+		}
+		if !haveCache {
+			t.Errorf("expected sidecar volume %q in %v", wantCache, volumes)
 		}
 	})
 
@@ -609,7 +656,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		r := &LanguageAgentReconciler{Client: fakeClient,
 			Scheme: scheme, Log: logr.Discard()}
 
-		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		containers, _, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -633,7 +680,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		r := &LanguageAgentReconciler{Client: fakeClient,
 			Scheme: scheme, Log: logr.Discard()}
 
-		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		containers, _, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -662,7 +709,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 		r := &LanguageAgentReconciler{Client: fakeClient,
 			Scheme: scheme, Log: logr.Discard()}
 
-		containers, err := r.resolveSidecarTools(context.Background(), agent)
+		containers, _, err := r.resolveSidecarTools(context.Background(), agent)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

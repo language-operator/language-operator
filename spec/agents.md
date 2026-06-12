@@ -62,7 +62,7 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINT` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
-| `MCP_SERVERS` | Comma-separated MCP tool server URLs for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>`; sidecar-mode tools use `http://localhost:<port>`. Only injected when at least one tool is resolved. |
+| `MCP_SERVERS` | Comma-separated MCP tool server URLs for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>`; sidecar-mode tools use `http://localhost:<port>`. The runtime speaks Streamable HTTP MCP to `<url>/mcp` regardless of the tool's `spec.transport` (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured; enables agent-side OTEL tracing |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |

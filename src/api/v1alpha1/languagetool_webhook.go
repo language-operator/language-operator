@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/language-operator/language-operator/pkg/validation"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +45,17 @@ var _ admission.Validator[*LanguageTool] = &LanguageToolWebhook{}
 
 // Default implements admission.Defaulter
 func (h *LanguageToolWebhook) Default(ctx context.Context, t *LanguageTool) error {
+	if t.Spec.Transport == "" {
+		t.Spec.Transport = "streamable-http"
+	}
+
+	// stdio tools supply a command, not an image — the operator injects the bridge image at
+	// deploy time. Fill the required Image field so structural schema validation passes; the
+	// tool controller ignores spec.image for stdio.
+	if t.Spec.Transport == "stdio" && t.Spec.Image == "" {
+		t.Spec.Image = DefaultMCPBridgeImage
+	}
+
 	if t.Spec.Deployment.Resources.Requests == nil && t.Spec.Deployment.Resources.Limits == nil {
 		t.Spec.Deployment.Resources = corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -65,7 +77,7 @@ func (h *LanguageToolWebhook) ValidateCreate(ctx context.Context, t *LanguageToo
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, h.validateSpec(t)
+	return h.validateSpec(t)
 }
 
 // ValidateUpdate implements admission.Validator
@@ -73,10 +85,36 @@ func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, _, t *Language
 	if err := h.validateClusterMembership(ctx, t.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, h.validateSpec(t)
+	return h.validateSpec(t)
 }
 
-func (h *LanguageToolWebhook) validateSpec(t *LanguageTool) error {
+func (h *LanguageToolWebhook) validateSpec(t *LanguageTool) (admission.Warnings, error) {
+	var warnings admission.Warnings
+
+	// Transport/stdio consistency.
+	if t.Spec.Transport == "stdio" {
+		if t.Spec.Stdio == nil || len(t.Spec.Stdio.Command) == 0 {
+			return nil, fmt.Errorf("spec.stdio.command is required when spec.transport=stdio")
+		}
+		if t.Spec.Image != "" && t.Spec.Image != DefaultMCPBridgeImage {
+			warnings = append(warnings, "spec.image is ignored when spec.transport=stdio; the operator injects the MCP bridge image")
+		}
+	} else if t.Spec.Stdio != nil {
+		return nil, fmt.Errorf("spec.stdio is only valid when spec.transport=stdio")
+	}
+
+	// The registry allowlist governs user-supplied images. For stdio the image is the
+	// operator-controlled bridge (set via --mcp-bridge-image), so skip the check.
+	if t.Spec.Transport != "stdio" {
+		if err := h.validateImageRegistry(t); err != nil {
+			return nil, err
+		}
+	}
+
+	return warnings, nil
+}
+
+func (h *LanguageToolWebhook) validateImageRegistry(t *LanguageTool) error {
 	if h.RegistryManager == nil {
 		return nil
 	}
