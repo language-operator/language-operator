@@ -2,11 +2,11 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.1.129
-    created: "2026-06-12T02:35:02.616764132Z"
+    appVersion: 0.1.130
+    created: "2026-06-12T02:54:43.250698692Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 2d6b97fad0983bf8d6ada8c6ff69b4d0afbfa1c7b0dc9c02eee95c07c3b77390
+    digest: 4bbeee29e99697fa02fb705d66baea995250713e4ea7b406ecd30c2bb280c2b4
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -22,12 +22,12 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.1.129.tgz
-    version: 0.1.129
+    - https://language-operator.github.io/language-operator/language-operator-0.1.130.tgz
+    version: 0.1.130
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.1.129
-    created: "2026-06-12T02:35:02.617603123Z"
+    appVersion: 0.1.130
+    created: "2026-06-12T02:54:43.251512756Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -43,7 +43,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code) as subcharts
-    digest: a0bcf018719c5f82db7063af69184736019dea95a99beb8883aea601b161ba67
+    digest: e9c361e0fd1fbf70a54496a10022f83affba8c059bf3258b5f0cee9e6d332f26
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -58,6 +58,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
-    version: 0.1.129
-generated: "2026-06-12T02:35:02.609785136Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.130.tgz
+    version: 0.1.130
+generated: "2026-06-12T02:54:43.243473372Z"
