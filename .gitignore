@@ -28,6 +28,9 @@ components/dashboard/.kube/
 .claude/hooks/node_modules/
 .claude/hooks/package-lock.json
 .claude/scheduled_tasks.lock
+# Local Claude Code settings/permissions (machine-specific; keep out of this public repo)
+.claude/settings.json
+.claude/settings.local.json
 
 # Node.js
 node_modules/
