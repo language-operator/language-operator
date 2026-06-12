@@ -1758,6 +1758,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#stdioserverspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StdioServerSpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#toolproperty" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3557,7 +3568,7 @@ spec.selfConfigure allowlist before patching.</p>
 <tbody>
 <tr>
 <td><code>image</code> <em>string</em></td>
-<td>Image is the container image to run for this tool</td>
+<td>Image is the container image to run for this tool. For transport=stdio it is ignored —<br />the operator injects the MCP bridge image instead — and may be omitted (the defaulting<br />webhook fills it).</td>
 <td></td>
 <td>MinLength: 1 <br />Required: {} <br /></td>
 </tr>
@@ -3566,6 +3577,18 @@ spec.selfConfigure allowlist before patching.</p>
 <td>Type specifies the tool protocol type. Only "mcp" is currently implemented.</td>
 <td>mcp</td>
 <td>Enum: [mcp] <br /></td>
+</tr>
+<tr>
+<td><code>transport</code> <em>string</em></td>
+<td>Transport selects how the operator exposes this tool's MCP endpoint.<br />- "streamable-http" (default): spec.image already serves Streamable HTTP at /mcp.<br />- "sse": spec.image already serves the (legacy) MCP HTTP+SSE transport.<br />- "stdio": the user supplies a stdio MCP command in spec.stdio; the operator injects a<br />  pinned, persistent stdio→Streamable-HTTP bridge that serves /mcp and /health on spec.port.</td>
+<td>streamable-http</td>
+<td>Enum: [streamable-http sse stdio] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>stdio</code> <em><a href="#stdioserverspec">StdioServerSpec</a></em></td>
+<td>Stdio configures the stdio MCP server when transport=stdio. Required for that transport,<br />ignored otherwise.</td>
+<td></td>
+<td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>deploymentMode</code> <em>string</em></td>
@@ -4221,6 +4244,29 @@ requests to modify its own spec at runtime.</p>
 <td>Service namespace (defaults to same namespace if omitted)</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="stdioserverspec">StdioServerSpec<a class="headerlink" href="#stdioserverspec" title="Permanent link">&para;</a></h4>
+<p>StdioServerSpec describes a stdio-based MCP server the operator wraps with a persistent
+stdio→Streamable-HTTP bridge.</p>
+<p><em>Appears in:</em>
+- <a href="#languagetoolspec">LanguageToolSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>command</code> <em>string array</em></td>
+<td>Command is the full argv of the stdio MCP server, e.g.<br />["npx","-y","@upstash/context7-mcp"] or ["uvx","mcp-server-git","--repository","/workspace"].<br />The operator passes it to the bridge as a single stdio command. Environment for the<br />child comes from spec.deployment.env / spec.deployment.envFrom.</td>
+<td></td>
+<td>MinItems: 1 <br />Required: {} <br /></td>
 </tr>
 </tbody>
 </table>
