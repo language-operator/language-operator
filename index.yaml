@@ -3,7 +3,7 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.1.130
-    created: "2026-06-12T02:54:43.250698692Z"
+    created: "2026-06-12T02:54:43.26398028Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 4bbeee29e99697fa02fb705d66baea995250713e4ea7b406ecd30c2bb280c2b4
@@ -27,7 +27,7 @@ entries:
   language-operator-runtimes:
   - apiVersion: v2
     appVersion: 0.1.130
-    created: "2026-06-12T02:54:43.251512756Z"
+    created: "2026-06-12T02:54:43.265206913Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -60,4 +60,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.130.tgz
     version: 0.1.130
-generated: "2026-06-12T02:54:43.243473372Z"
+generated: "2026-06-12T02:54:43.256835312Z"
