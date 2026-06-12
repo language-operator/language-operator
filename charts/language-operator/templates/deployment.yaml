@@ -84,6 +84,13 @@ spec:
         {{- if .Values.config.gateway.imagePullPolicy }}
         - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}
+        - --mcp-bridge-image={{ include "language-operator.mcpBridgeImage" . }}
+        {{- if .Values.config.mcpBridge.imagePullPolicy }}
+        - --mcp-bridge-image-pull-policy={{ .Values.config.mcpBridge.imagePullPolicy }}
+        {{- end }}
+        {{- if .Values.config.mcpBridge.discoveryTimeout }}
+        - --mcp-discovery-timeout={{ .Values.config.mcpBridge.discoveryTimeout }}
+        {{- end }}
         {{- if .Values.config.auth.dex.image }}
         - --dex-image={{ .Values.config.auth.dex.image }}
         {{- end }}

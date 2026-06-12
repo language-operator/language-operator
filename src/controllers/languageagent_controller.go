@@ -52,6 +52,11 @@ type LanguageAgentReconciler struct {
 	IngressControllerNamespace string
 	OAuth2ProxyImage           string
 	CNICapabilities            *cni.CNICapabilities
+	// MCPBridgeImage is the stdio→Streamable-HTTP bridge image injected for transport=stdio
+	// sidecar tools. When empty, langopv1alpha1.DefaultMCPBridgeImage is used.
+	MCPBridgeImage string
+	// MCPBridgeImagePullPolicy is the pull policy for the injected bridge image.
+	MCPBridgeImagePullPolicy corev1.PullPolicy
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete

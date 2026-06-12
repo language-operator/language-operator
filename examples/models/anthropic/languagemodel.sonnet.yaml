@@ -1,0 +1,11 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: ${SONNET_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  provider: anthropic
+  modelName: ${SONNET_MODEL_ID}
+  apiKeySecretRef:
+    name: anthropic-credentials
+    key: api-key

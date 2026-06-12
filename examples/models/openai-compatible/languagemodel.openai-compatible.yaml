@@ -1,0 +1,10 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: ${MODEL_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  provider: openai-compatible
+  endpoint: ${ENDPOINT}
+  modelName: ${MODEL_ID}
+${API_KEY_BLOCK}

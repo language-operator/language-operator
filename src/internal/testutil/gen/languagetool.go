@@ -85,3 +85,17 @@ func SetToolNetworkPolicies(policies *langopv1alpha1.AgentNetworkPolicies) Langu
 		t.Spec.NetworkPolicies = policies
 	}
 }
+
+// SetToolTransport sets spec.transport.
+func SetToolTransport(transport string) LanguageToolModifier {
+	return func(t *langopv1alpha1.LanguageTool) {
+		t.Spec.Transport = transport
+	}
+}
+
+// SetToolStdioCommand sets spec.stdio.command (and implies transport=stdio at the caller).
+func SetToolStdioCommand(command ...string) LanguageToolModifier {
+	return func(t *langopv1alpha1.LanguageTool) {
+		t.Spec.Stdio = &langopv1alpha1.StdioServerSpec{Command: command}
+	}
+}

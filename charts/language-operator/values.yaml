@@ -212,6 +212,22 @@ config:
     # Example: "traefik", "nginx", "alb"
     ingressClassName: ""
 
+  mcpBridge:
+    # Image for the stdio→Streamable-HTTP bridge the operator injects for LanguageTools with
+    # spec.transport=stdio. The bridge runs the tool's stdio command as one persistent child and
+    # serves Streamable HTTP at /mcp. The first-party image bundles Node + Python/uv so both npx
+    # and uvx stdio servers work. Override repository to use a different bridge (e.g. the upstream
+    # Node-only ghcr.io/supercorp-ai/supergateway).
+    repository: ghcr.io/language-operator/mcp-bridge
+    # Bridge image tag; defaults to the chart appVersion when empty (pinned per release, like the
+    # operator image).
+    tag: ""
+    # ImagePullPolicy for the injected MCP bridge image (Always, IfNotPresent, Never).
+    imagePullPolicy: ""
+    # Timeout for an MCP tool schema-discovery handshake. Increase for tools with slow cold
+    # starts (e.g. servers that npx/uvx-fetch their package on first boot).
+    discoveryTimeout: "30s"
+
   auth:
     dex:
       # Image for the Dex OIDC provider deployed per LanguageCluster when spec.auth.enabled is true.

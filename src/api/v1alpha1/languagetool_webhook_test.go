@@ -121,3 +121,77 @@ func TestLanguageToolWebhook_ValidateUpdate_RegistryAllowed(t *testing.T) {
 		t.Errorf("expected no error for allowed registry on update, got: %v", err)
 	}
 }
+
+func TestLanguageToolWebhook_Default_TransportAndStdioImage(t *testing.T) {
+	h := newToolWebhook(t, nil)
+
+	// Empty transport defaults to streamable-http.
+	tool := makeTool("ghcr.io/x/y:1")
+	if err := h.Default(context.Background(), tool); err != nil {
+		t.Fatalf("Default: %v", err)
+	}
+	if tool.Spec.Transport != "streamable-http" {
+		t.Errorf("transport = %q, want streamable-http", tool.Spec.Transport)
+	}
+
+	// stdio with no image gets the bridge image filled so the required field is satisfied.
+	stdio := &LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "default"},
+		Spec:       LanguageToolSpec{Transport: "stdio", Stdio: &StdioServerSpec{Command: []string{"npx", "-y", "x"}}},
+	}
+	if err := h.Default(context.Background(), stdio); err != nil {
+		t.Fatalf("Default stdio: %v", err)
+	}
+	if stdio.Spec.Image != DefaultMCPBridgeImage {
+		t.Errorf("stdio image = %q, want default bridge %q", stdio.Spec.Image, DefaultMCPBridgeImage)
+	}
+}
+
+func TestLanguageToolWebhook_Validate_StdioRequiresCommand(t *testing.T) {
+	h := newToolWebhook(t, nil)
+	tool := &LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "default"},
+		Spec:       LanguageToolSpec{Image: DefaultMCPBridgeImage, Transport: "stdio"},
+	}
+	if _, err := h.ValidateCreate(context.Background(), tool); err == nil {
+		t.Error("expected error when transport=stdio without stdio.command, got nil")
+	}
+}
+
+func TestLanguageToolWebhook_Validate_StdioConfigOnNonStdio(t *testing.T) {
+	h := newToolWebhook(t, nil)
+	tool := makeTool("ghcr.io/x/y:1")
+	tool.Spec.Transport = "streamable-http"
+	tool.Spec.Stdio = &StdioServerSpec{Command: []string{"npx", "x"}}
+	if _, err := h.ValidateCreate(context.Background(), tool); err == nil {
+		t.Error("expected error when spec.stdio is set on a non-stdio transport, got nil")
+	}
+}
+
+func TestLanguageToolWebhook_Validate_StdioSkipsRegistryAndWarnsOnImage(t *testing.T) {
+	// Registry allowlist excludes ghcr.io; a stdio tool should still pass because the user
+	// supplies a command, not an image.
+	h := newToolWebhook(t, []string{"docker.io"})
+
+	tool := &LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "default"},
+		Spec: LanguageToolSpec{
+			Image:     DefaultMCPBridgeImage, // ghcr.io — would be denied for a non-stdio tool
+			Transport: "stdio",
+			Stdio:     &StdioServerSpec{Command: []string{"npx", "-y", "x"}},
+		},
+	}
+	if _, err := h.ValidateCreate(context.Background(), tool); err != nil {
+		t.Errorf("stdio tool should skip registry validation, got: %v", err)
+	}
+
+	// A user-set custom image on a stdio tool produces a warning (it is ignored).
+	tool.Spec.Image = "myregistry.example.com/custom:1"
+	warnings, err := h.ValidateCreate(context.Background(), tool)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if len(warnings) == 0 {
+		t.Error("expected a warning that spec.image is ignored for stdio tools")
+	}
+}

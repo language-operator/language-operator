@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
-# Usage: CLUSTER_NAME=my-cluster bash install.sh [--dry-run]
-#
-# Requires a LanguageModel named "$MODEL_NAME" to already exist in the cluster
-# namespace — deploy one first, e.g. examples/models/anthropic (registers
-# claude-sonnet / claude-opus and their credentials secret).
+# Usage: CLUSTER_NAME=my-cluster GITHUB_TOKEN=ghp_... bash install.sh [--dry-run]
 set -euo pipefail
 
 : "${CLUSTER_NAME:?CLUSTER_NAME is required — set it to the name of your LanguageCluster}"
-export AGENT_NAME="${AGENT_NAME:-opencode}"
 export CLUSTER_NAME
-export MODEL_NAME="${MODEL_NAME:-claude-sonnet}"
-export WORKSPACE_SIZE="${WORKSPACE_SIZE:-10Gi}"
+export TOOL_NAME="${TOOL_NAME:-github}"
 
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
+
+# The token is only needed when actually applying to a cluster.
+if ! $DRY_RUN; then
+    : "${GITHUB_TOKEN:?GITHUB_TOKEN is required — a GitHub PAT for the MCP server to use}"
+fi
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMPDIR="$(mktemp -d)"
@@ -27,5 +26,10 @@ if $DRY_RUN; then
     kubectl kustomize "$TMPDIR"
     exit 0
 fi
+
+kubectl create secret generic github-mcp-credentials \
+    --from-literal=token="$GITHUB_TOKEN" \
+    --namespace "$CLUSTER_NAME" \
+    --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl kustomize "$TMPDIR" | kubectl apply -f -

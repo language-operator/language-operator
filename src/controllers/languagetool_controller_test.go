@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -957,16 +956,11 @@ func TestLanguageToolController_SidecarMode_SchemasDiscoveredViaPod(t *testing.T
 
 	// Start a mock MCP server that returns two tools
 	mcpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := MCPResponse{
-			JSONRpc: "2.0",
-			ID:      1,
-			Result: json.RawMessage(`{"tools":[
-				{"name":"read_file","description":"Read a file"},
-				{"name":"write_file","description":"Write a file"}
-			]}`),
-		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[
+			{"name":"read_file","description":"Read a file"},
+			{"name":"write_file","description":"Write a file"}
+		]}}`))
 	}))
 	defer mcpServer.Close()
 
@@ -1457,13 +1451,8 @@ func TestDiscoverSidecarSchemas_RegularContainerFallback(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	mcpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := MCPResponse{
-			JSONRpc: "2.0",
-			ID:      1,
-			Result:  json.RawMessage(`{"tools":[{"name":"do_thing","description":"Does a thing"}]}`),
-		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"do_thing","description":"Does a thing"}]}}`))
 	}))
 	defer mcpServer.Close()
 

@@ -1,0 +1,37 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: ${TOOL_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  # The Postgres MCP server ships as a stdio program. transport=stdio tells the operator to run
+  # it under a pinned, persistent stdio→Streamable-HTTP bridge that serves /mcp on spec.port.
+  transport: stdio
+  port: 8080
+  stdio:
+    # The server takes its connection URL as an argument. The bridge runs the stdio command via
+    # a shell, so $DATABASE_URL is interpolated from the secret-backed env var at runtime — the
+    # connection string never appears in this manifest.
+    command:
+      - npx
+      - -y
+      - "@modelcontextprotocol/server-postgres"
+      - "$DATABASE_URL"
+  deployment:
+    env:
+      - name: DATABASE_URL
+        valueFrom:
+          secretKeyRef:
+            name: postgres-mcp-credentials
+            key: url
+  # The operator's default tool policy denies external egress. npx fetches the server package
+  # over HTTPS (443), and the server connects to Postgres (5432 by default — adjust to your DB).
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 5432
+            protocol: TCP

@@ -90,6 +90,9 @@ func main() {
 	var gatewayIngressClassName string
 	var gatewayImage string
 	var gatewayImagePullPolicy string
+	var mcpBridgeImage string
+	var mcpBridgeImagePullPolicy string
+	var mcpDiscoveryTimeout time.Duration
 	var dexImage string
 	var oauth2ProxyImage string
 	var webhookPort int
@@ -133,6 +136,12 @@ func main() {
 		"Image for the shared LiteLLM gateway. Defaults to ghcr.io/language-operator/model-gateway:latest.")
 	flag.StringVar(&gatewayImagePullPolicy, "gateway-image-pull-policy", "",
 		"ImagePullPolicy for the shared LiteLLM gateway (Always, IfNotPresent, Never).")
+	flag.StringVar(&mcpBridgeImage, "mcp-bridge-image", "",
+		"Image for the stdio→Streamable-HTTP MCP bridge injected for transport=stdio tools. Defaults to "+langopv1alpha1.DefaultMCPBridgeImage+".")
+	flag.StringVar(&mcpBridgeImagePullPolicy, "mcp-bridge-image-pull-policy", "",
+		"ImagePullPolicy for the injected MCP bridge image (Always, IfNotPresent, Never).")
+	flag.DurationVar(&mcpDiscoveryTimeout, "mcp-discovery-timeout", 30*time.Second,
+		"Timeout for an MCP tool schema-discovery handshake. Increase for tools with slow cold starts.")
 	flag.StringVar(&dexImage, "dex-image", "",
 		"Image for the Dex OIDC provider deployed per LanguageCluster. Defaults to ghcr.io/dexidp/dex:v2.41.1.")
 	flag.StringVar(&oauth2ProxyImage, "oauth2-proxy-image", "",
@@ -306,12 +315,15 @@ func main() {
 
 	// Setup LanguageTool controller
 	if err = (&controllers.LanguageToolReconciler{
-		Client:                  mgr.GetClient(),
-		Scheme:                  mgr.GetScheme(),
-		Log:                     ctrl.Log.WithName("controllers").WithName("LanguageTool"),
-		Recorder:                mgr.GetEventRecorderFor("languagetool-controller"),
-		EventManager:            events.NewEventManager(mgr.GetEventRecorderFor("languagetool-controller")),
-		NetworkIsolationEnabled: networkIsolationEnabled,
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		Log:                      ctrl.Log.WithName("controllers").WithName("LanguageTool"),
+		Recorder:                 mgr.GetEventRecorderFor("languagetool-controller"),
+		EventManager:             events.NewEventManager(mgr.GetEventRecorderFor("languagetool-controller")),
+		NetworkIsolationEnabled:  networkIsolationEnabled,
+		MCPBridgeImage:           mcpBridgeImage,
+		MCPBridgeImagePullPolicy: corev1.PullPolicy(mcpBridgeImagePullPolicy),
+		MCPDiscoveryTimeout:      mcpDiscoveryTimeout,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageTool")
 		os.Exit(1)
@@ -348,6 +360,8 @@ func main() {
 		IngressControllerNamespace: ingressControllerNamespace,
 		OAuth2ProxyImage:           oauth2ProxyImage,
 		CNICapabilities:            cniCaps,
+		MCPBridgeImage:             mcpBridgeImage,
+		MCPBridgeImagePullPolicy:   corev1.PullPolicy(mcpBridgeImagePullPolicy),
 	}
 
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {
