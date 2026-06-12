@@ -3,10 +3,10 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-06-09T15:56:17.102686006Z"
+    created: "2026-06-12T02:35:02.616764132Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 077af9b8051521eb7fe479c6b5126a769f6635c457f6cedb95066c5086a4f7e7
+    digest: 2d6b97fad0983bf8d6ada8c6ff69b4d0afbfa1c7b0dc9c02eee95c07c3b77390
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -27,7 +27,7 @@ entries:
   language-operator-runtimes:
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-06-09T15:56:17.104312681Z"
+    created: "2026-06-12T02:35:02.617603123Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -43,7 +43,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code) as subcharts
-    digest: 6e0cd20c91fe8a46a7bd9595bf4b00cd6e07e03fd3da30bb40822cbdd8b4ddbb
+    digest: a0bcf018719c5f82db7063af69184736019dea95a99beb8883aea601b161ba67
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -60,4 +60,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
     version: 0.1.129
-generated: "2026-06-09T15:56:17.095821711Z"
+generated: "2026-06-12T02:35:02.609785136Z"
