@@ -49,6 +49,23 @@ initContainers:
         mountPath: /workspace
 ```
 
+### Repository Cloning
+
+When `spec.repository` is set, the operator injects a `repository` init container (image `alpine/git:latest`) that runs after the `workspace-seeder` and clones the configured git repository into the workspace before the agent container starts:
+
+| Path | Content |
+|------|---------|
+| `AGENT_REPO_DIR` (`<workspace mountPath>/<spec.repository.path or repo name>`) | The cloned git repository, on the read-write workspace volume |
+
+Key behaviors a runtime can rely on:
+
+- **Clone-once.** The init container clones only when the target directory does not already contain a `.git` directory. On subsequent restarts the existing checkout — including any agent edits and commits — is left untouched.
+- **Working directory.** The operator sets the agent container's working directory to `AGENT_REPO_DIR`, and injects the same path as an env var into every container. A compliant runtime should open and operate inside this directory.
+- **Workspace required.** The clone lands on the workspace volume, so configuring a repository implies a workspace PVC; the operator defaults `spec.workspace.enabled` to `true` when a repository is set.
+- **Credentials.** For private repositories, `spec.repository.secretRef` names a Secret mounted read-only into the `repository` init container at `/git-secret`. The operator never reads it; the init container selects SSH (`ssh-privatekey` key) or HTTPS (`token`, or `username` + `password` keys) authentication based on which keys are present.
+
+The clone uses `spec.repository.ref` for the branch/tag/commit and `spec.repository.depth` for an optional shallow clone. See the [LanguageAgent API reference](../docs/api/languageagent.md#repository) for the full field reference and a private-repo example.
+
 ### Environment Variables
 
 The operator injects the following environment variables into every agent container and all init containers:
@@ -64,6 +81,7 @@ The operator injects the following environment variables into every agent contai
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated full MCP tool URLs (each already includes the `/mcp` path) for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>/mcp`; sidecar-mode tools use `http://localhost:<port>/mcp`. The runtime connects to each URL directly as a Streamable HTTP MCP server (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
+| `AGENT_REPO_DIR` | Absolute path to the repository cloned from `spec.repository`. Only injected when a repository is configured. The operator also sets the agent container's working directory to this path, so a compliant runtime should operate inside it. See [Repository Cloning](#repository-cloning). |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured; enables agent-side OTEL tracing |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
 | `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment when set (conditional on `OTEL_EXPORTER_OTLP_ENDPOINT`) |
