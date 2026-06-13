@@ -354,7 +354,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		if len(urls) != 1 {
 			t.Fatalf("expected 1 URL, got %d", len(urls))
 		}
-		expected := "http://my-tool.default.svc.cluster.local:8080"
+		expected := "http://my-tool.default.svc.cluster.local:8080/mcp"
 		if urls[0] != expected {
 			t.Errorf("expected %q, got %q", expected, urls[0])
 		}
@@ -383,7 +383,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		if len(urls) != 1 {
 			t.Fatalf("expected 1 URL, got %d", len(urls))
 		}
-		expected := "http://localhost:9090"
+		expected := "http://localhost:9090/mcp"
 		if urls[0] != expected {
 			t.Errorf("expected %q, got %q", expected, urls[0])
 		}
@@ -426,7 +426,7 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		expected := "http://port-tool.default.svc.cluster.local:9999"
+		expected := "http://port-tool.default.svc.cluster.local:9999/mcp"
 		if len(urls) != 1 || urls[0] != expected {
 			t.Errorf("expected %q, got %v", expected, urls)
 		}

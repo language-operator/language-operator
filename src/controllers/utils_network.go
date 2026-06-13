@@ -426,6 +426,20 @@ func serviceURL(name, namespace string, port int32) string {
 	return fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", name, namespace, port)
 }
 
+// mcpToolEndpoint returns the Streamable HTTP MCP URL an agent uses to reach a tool, including
+// the /mcp path so the value is directly usable by an MCP client (no path-appending required).
+// Sidecar-mode tools are reached over localhost; service-mode tools via the in-cluster Service.
+func mcpToolEndpoint(tool *langopv1alpha1.LanguageTool, namespace string) string {
+	port := tool.Spec.Port
+	if port == 0 {
+		port = 8080 // Default MCP port
+	}
+	if tool.Spec.DeploymentMode == "sidecar" {
+		return fmt.Sprintf("http://localhost:%d/mcp", port)
+	}
+	return serviceURL(tool.Name, namespace, port) + "/mcp"
+}
+
 // buildNetworkPolicyIngressRules converts user-defined ingress policies into
 // networkingv1.NetworkPolicyIngressRule slices, normalising missing protocol
 // values to TCP.

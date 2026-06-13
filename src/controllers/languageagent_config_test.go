@@ -204,7 +204,7 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 			envMap[e.Name] = e.Value
 		}
 		// Default port is 0 → resolved to 8080 in resolveTools
-		assert.Equal(t, "http://mem0.default.svc.cluster.local:8080", envMap["MCP_SERVERS"])
+		assert.Equal(t, "http://mem0.default.svc.cluster.local:8080/mcp", envMap["MCP_SERVERS"])
 	})
 
 	t.Run("AGENT_INSTRUCTIONS absent when spec.instructions is empty", func(t *testing.T) {
@@ -587,7 +587,7 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 
 		require.Contains(t, cfg.Tools, "search-tool", "config.yaml missing tool entry")
 		tool_cfg := cfg.Tools["search-tool"]
-		assert.Equal(t, "http://search-tool.default.svc.cluster.local:8080", tool_cfg.Endpoint)
+		assert.Equal(t, "http://search-tool.default.svc.cluster.local:8080/mcp", tool_cfg.Endpoint)
 		assert.Equal(t, "mcp", tool_cfg.Protocol)
 	})
 
@@ -601,7 +601,7 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
 
 		require.Contains(t, cfg.Tools, "sidecar-tool", "config.yaml missing sidecar tool entry")
-		assert.Equal(t, "http://localhost:8080", cfg.Tools["sidecar-tool"].Endpoint)
+		assert.Equal(t, "http://localhost:8080/mcp", cfg.Tools["sidecar-tool"].Endpoint)
 		assert.Equal(t, "mcp", cfg.Tools["sidecar-tool"].Protocol)
 	})
 

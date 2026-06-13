@@ -29,7 +29,8 @@ can run under the hardened, read-only-root pod securityContext. You don't manage
 ## What the operator provides
 
 1. Creates and manages the tool's Deployment and Service (for `deploymentMode: service`).
-2. Resolves the endpoint: `http://<service-name>.<namespace>.svc.cluster.local:<port>`.
+2. Resolves the tool's MCP endpoint — the full Streamable HTTP URL including the `/mcp` path:
+   `http://<service-name>.<namespace>.svc.cluster.local:<port>/mcp`.
 3. Discovers the tool's schema by performing an MCP handshake against `/mcp` (see below) and
    records it in `status.toolSchemas`.
 4. Injects the resolved endpoint into each referencing agent via `MCP_SERVERS` and the `tools:`
@@ -134,19 +135,20 @@ spec:
 
 The operator injects tool endpoints into each referencing agent two ways:
 
-1. **`MCP_SERVERS` env var** — a comma-separated list of tool endpoint URLs (e.g.
-   `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080`)
+1. **`MCP_SERVERS` env var** — a comma-separated list of full tool MCP URLs (e.g.
+   `http://mem0-memory.language-operator-myapp.svc.cluster.local:8080/mcp`)
 2. **`/etc/agent/config.yaml`** — a `tools:` map keyed by tool name:
 
 ```yaml
 tools:
   mem0-memory:
-    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080
+    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080/mcp
     protocol: mcp
 ```
 
-The endpoint is identical regardless of transport — agents always speak Streamable HTTP MCP to
-`<endpoint>/mcp`.
+The endpoint is the full Streamable HTTP MCP URL (it already includes `/mcp`) regardless of
+transport — MCP clients connect to it directly, no path-appending required. (The tool's
+`status.endpoint` records the base Service URL without `/mcp`.)
 
 ## Compliance checklist
 
