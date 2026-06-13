@@ -100,6 +100,11 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			containers = append(containers, *oauthSidecar)
 		}
 
+		// Open the runtime inside the cloned repository, when one is configured.
+		if repoDir := repositoryDir(agent); repoDir != "" {
+			containers[0].WorkingDir = repoDir
+		}
+
 		// Inject operator-managed env vars and volume mounts into user-specified init containers.
 		// Per spec/agents.md, all contracted env vars must be present in every
 		// container including init containers. The agent-config volume mount is also
@@ -117,9 +122,14 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 			userInitContainers[i].VolumeMounts = append([]corev1.VolumeMount{agentConfigMount}, userInitContainers[i].VolumeMounts...)
 		}
 
-		// Prepend the workspace-seeder init container so the workspace is populated
-		// before any user init containers or sidecar tools run.
+		// Prepend the repository-clone init container (right before user init
+		// containers), then the workspace-seeder ahead of it, so the final order is
+		// [workspace-seeder, repository, ...userInit, ...sidecars]. The workspace is
+		// populated and the repo cloned before any user init containers or tools run.
 		allInitContainers := userInitContainers
+		if repoContainer := buildRepositoryInitContainer(agent); repoContainer != nil {
+			allInitContainers = append([]corev1.Container{*repoContainer}, allInitContainers...)
+		}
 		if seedContainer := buildWorkspaceSeedInitContainer(agent); seedContainer != nil {
 			allInitContainers = append([]corev1.Container{*seedContainer}, allInitContainers...)
 		}
@@ -176,6 +186,8 @@ func (r *LanguageAgentReconciler) reconcileDeployment(ctx context.Context, agent
 		volumes, volumeMounts := r.buildVolumes(ctx, agent)
 		// Append seed ConfigMap volumes (not mounted in main container; used by workspace-seeder init container).
 		volumes = append(volumes, buildWorkspaceSeedVolumes(agent)...)
+		// Append git credential volume (mounted only in the repository init container).
+		volumes = append(volumes, buildRepositoryVolumes(agent)...)
 		// Append scratch volumes for stdio sidecar bridges (mounted only in their sidecar containers).
 		volumes = append(volumes, sidecarVolumes...)
 		volumes = append(volumes, agent.Spec.Deployment.Volumes...)
