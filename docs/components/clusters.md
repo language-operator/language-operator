@@ -74,19 +74,38 @@ See [LanguageCluster API Reference](../api/languagecluster.md#network-isolation)
 
 ## Authentication
 
-`LanguageCluster.spec.auth` is the cluster-wide authentication switch. Setting `auth.enabled: true` provisions the OIDC infrastructure (Dex) for the namespace, and `auth.oidc.*` holds the connection config — issuer, Dex connectors, client ID, and email domain:
+`LanguageCluster.spec.auth` is the cluster-wide authentication switch. Setting `auth.enabled: true` provisions OIDC authentication for the namespace. There are two mutually exclusive paths under `auth.oidc`:
+
+**Embedded Dex** — the operator deploys a Dex instance alongside the gateway. Connectors go under `oidc.dex.connectors`:
 
 ```yaml
 spec:
   auth:
     enabled: true
     oidc:
-      issuer: https://dex.agents.example.com
-      clientID: language-operator
       emailDomain: example.com
-      connectors:
-        - type: github
-          # ...connector config
+      dex:
+        connectors:
+          - type: github
+            id: github
+            name: GitHub
+            config:
+              clientID: my-github-app-client-id
+              clientSecret: my-github-app-client-secret
+```
+
+**External OIDC provider** — skip Dex and point at an existing issuer directly. Use `oidc.externalIssuerURL` together with `clientID` and `clientSecretRef`:
+
+```yaml
+spec:
+  auth:
+    enabled: true
+    oidc:
+      externalIssuerURL: https://accounts.google.com
+      clientID: language-operator
+      clientSecretRef:
+        name: oidc-client-secret
+      emailDomain: example.com
 ```
 
 Enabling auth on the cluster does not, by itself, put any agent behind the proxy. An agent is placed behind the OIDC proxy **only when both** the cluster has `auth.enabled: true` **and** the agent's runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied — there is no per-agent auth override.
