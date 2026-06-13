@@ -1,0 +1,38 @@
+# Demo schema seeded into the bundled Postgres on first initialization, so an agent attached to
+# the postgres tool has something real to inspect and query immediately. Mounted at
+# /docker-entrypoint-initdb.d in the StatefulSet; runs once, when the data dir is empty.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${TOOL_NAME}-db-initdb
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-db
+data:
+  init.sql: |
+    CREATE TABLE customers (
+        id         SERIAL PRIMARY KEY,
+        name       TEXT        NOT NULL,
+        email      TEXT        NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE orders (
+        id          SERIAL PRIMARY KEY,
+        customer_id INTEGER     NOT NULL REFERENCES customers(id),
+        total_cents INTEGER     NOT NULL,
+        status      TEXT        NOT NULL DEFAULT 'pending',
+        placed_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    INSERT INTO customers (name, email) VALUES
+        ('Ada Lovelace',    'ada@example.com'),
+        ('Alan Turing',     'alan@example.com'),
+        ('Grace Hopper',    'grace@example.com');
+
+    INSERT INTO orders (customer_id, total_cents, status) VALUES
+        (1, 1299, 'shipped'),
+        (1, 4500, 'pending'),
+        (2,  799, 'shipped'),
+        (3, 2350, 'cancelled'),
+        (3,  150, 'shipped');

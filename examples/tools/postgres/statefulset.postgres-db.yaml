@@ -1,0 +1,93 @@
+# Self-contained Postgres for the postgres MCP tool. This is a plain StatefulSet — not a
+# LanguageTool — so the operator applies no NetworkPolicy to it; in-cluster pods (including the
+# tool's stdio bridge in the same namespace) can reach it on 5432.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${TOOL_NAME}-db
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-db
+spec:
+  clusterIP: None  # headless — stable per-pod DNS for the StatefulSet
+  selector:
+    app: ${TOOL_NAME}-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ${TOOL_NAME}-db
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-db
+spec:
+  serviceName: ${TOOL_NAME}-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${TOOL_NAME}-db
+  template:
+    metadata:
+      labels:
+        app: ${TOOL_NAME}-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            # Credentials come from the same secret the LanguageTool's DATABASE_URL is built from,
+            # so the database and the tool can never drift out of sync.
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-mcp-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-mcp-credentials
+                  key: password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-mcp-credentials
+                  key: dbname
+            # Initialize into a subdirectory so the volume's lost+found doesn't look like an
+            # existing (non-empty) data dir to initdb.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            # init.sql runs only on first initialization of an empty data dir — seed-once.
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      volumes:
+        - name: initdb
+          configMap:
+            name: ${TOOL_NAME}-db-initdb
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

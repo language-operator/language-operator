@@ -19,19 +19,20 @@ spec:
       - "$DATABASE_URL"
   deployment:
     env:
+      # install.sh builds this DSN to point at the bundled in-cluster Postgres StatefulSet
+      # (statefulset.postgres-db.yaml) and writes it to the secret's "url" key.
       - name: DATABASE_URL
         valueFrom:
           secretKeyRef:
             name: postgres-mcp-credentials
             key: url
-  # The operator's default tool policy denies external egress. npx fetches the server package
-  # over HTTPS (443), and the server connects to Postgres (5432 by default — adjust to your DB).
+  # The operator's default tool policy denies external egress but already allows all same-namespace
+  # traffic, so reaching the bundled Postgres (same namespace, 5432) needs no rule here. The only
+  # external egress required is HTTPS (443) for npx to fetch the server package from the registry.
   networkPolicies:
     egress:
       - to:
           - cidr: "0.0.0.0/0"
         ports:
           - port: 443
-            protocol: TCP
-          - port: 5432
             protocol: TCP
