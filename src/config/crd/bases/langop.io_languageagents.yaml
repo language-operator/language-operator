@@ -6856,6 +6856,50 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              repository:
+                description: |-
+                  Repository declares a git repository to clone into the agent's workspace.
+                  When set, the operator ensures a workspace PVC is provisioned (defaulting it on
+                  if not explicitly configured) so the clone has somewhere to land.
+                properties:
+                  depth:
+                    description: Depth, when > 0, performs a shallow clone with this
+                      history depth.
+                    minimum: 0
+                    type: integer
+                  path:
+                    description: |-
+                      Path is the subdirectory under the workspace mountPath to clone into.
+                      Defaults to the repository name derived from the URL. Must be a relative path
+                      (no leading "/", no ".." segments).
+                    type: string
+                  ref:
+                    description: Ref is the branch, tag, or commit SHA to check out.
+                      Defaults to the default branch.
+                    type: string
+                  secretRef:
+                    description: |-
+                      SecretRef references a Secret with git credentials for private repos.
+                      Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH).
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  url:
+                    description: URL is the git repository to clone (https://... or
+                      git@... SSH).
+                    type: string
+                required:
+                - url
+                type: object
               runtime:
                 description: |-
                   Runtime is the name of a LanguageAgentRuntime that provides preset configuration

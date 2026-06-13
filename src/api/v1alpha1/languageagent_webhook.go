@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,9 +49,10 @@ var _ admission.Validator[*LanguageAgent] = &LanguageAgentWebhook{}
 
 // Default implements admission.Defaulter
 func (h *LanguageAgentWebhook) Default(ctx context.Context, a *LanguageAgent) error {
-	// Default workspace only when no runtime is set.
-	// When a runtime is referenced, its workspace preset takes effect at reconcile time.
-	if a.Spec.Workspace == nil && a.Spec.Runtime == "" {
+	// Default workspace when no runtime is set, or whenever a repository is declared
+	// (the clone needs a PVC to land in, even if a runtime would otherwise supply the
+	// workspace preset at reconcile time).
+	if a.Spec.Workspace == nil && (a.Spec.Runtime == "" || a.Spec.Repository != nil) {
 		enabled := true
 		a.Spec.Workspace = &WorkspaceSpec{
 			Enabled:    &enabled,
@@ -216,7 +219,65 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
+	if a.Spec.Repository != nil {
+		if err := validateRepository(a.Spec.Repository, a.Spec.Workspace); err != nil {
+			return fmt.Errorf("spec.repository: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// scpLikeURL matches the scp-like SSH syntax git uses, e.g. "git@github.com:org/repo.git".
+var scpLikeURL = regexp.MustCompile(`^[^@/]+@[^:/]+:.+$`)
+
+// validateRepository validates a RepositorySpec: the URL must be a git-cloneable
+// http(s)/ssh reference, the path (if set) must be relative, and a repository may not be
+// declared when the workspace is explicitly disabled (the clone needs a PVC to land in).
+func validateRepository(r *RepositorySpec, ws *WorkspaceSpec) error {
+	if ws != nil && ws.Enabled != nil && !*ws.Enabled {
+		return fmt.Errorf("cannot be set when spec.workspace.enabled is false (a workspace is required to clone into)")
+	}
+
+	if strings.TrimSpace(r.URL) == "" {
+		return fmt.Errorf("url cannot be empty")
+	}
+	if err := validateRepositoryURL(r.URL); err != nil {
+		return fmt.Errorf("url: %w", err)
+	}
+
+	if r.Path != "" {
+		if strings.HasPrefix(r.Path, "/") {
+			return fmt.Errorf("path %q must be relative (no leading '/')", r.Path)
+		}
+		for _, seg := range strings.Split(r.Path, "/") {
+			if seg == ".." {
+				return fmt.Errorf("path %q must not contain '..' segments", r.Path)
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateRepositoryURL accepts http(s)/ssh URLs and the scp-like SSH form.
+func validateRepositoryURL(raw string) error {
+	if scpLikeURL.MatchString(raw) {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("%q is not a valid URL", raw)
+	}
+	switch u.Scheme {
+	case "http", "https", "ssh":
+		if u.Host == "" {
+			return fmt.Errorf("%q is missing a host", raw)
+		}
+		return nil
+	default:
+		return fmt.Errorf("%q must use http, https, or ssh (or the git@host:path SSH form)", raw)
+	}
 }
 
 func validateAgentPorts(ports []AgentPort) error {
