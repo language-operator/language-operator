@@ -1670,6 +1670,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#repositoryspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RepositorySpec
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#runtimeauthspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2999,6 +3010,12 @@ spec.selfConfigure allowlist before patching.</p>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
+<td><code>repository</code> <em><a href="#repositoryspec">RepositorySpec</a></em></td>
+<td>Repository declares a git repository to clone into the agent's workspace.<br />When set, the operator ensures a workspace PVC is provisioned (defaulting it on<br />if not explicitly configured) so the clone has somewhere to land.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
 <td><code>networkPolicies</code> <em><a href="#agentnetworkpolicies">AgentNetworkPolicies</a></em></td>
 <td>NetworkPolicies defines ingress and egress rules for this agent.<br />Rules mirror the native Kubernetes NetworkPolicy shape.</td>
 <td></td>
@@ -4012,6 +4029,54 @@ Mirrors networkingv1.NetworkPolicyIngressRule.</p>
 <tr>
 <td><code>tokensPerMinute</code> <em>integer</em></td>
 <td>TokensPerMinute limits tokens per minute</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="repositoryspec">RepositorySpec<a class="headerlink" href="#repositoryspec" title="Permanent link">&para;</a></h4>
+<p>RepositorySpec declares a git repository to clone into the agent's workspace.
+The clone is performed by the operator at pod startup; this type defines only the
+desired source. Follows the WorkspaceSpec/CredentialSpec conventions.</p>
+<p><em>Appears in:</em>
+- <a href="#languageagentspec">LanguageAgentSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL is the git repository to clone (https://... or git@... SSH).</td>
+<td></td>
+<td>Required: {} <br /></td>
+</tr>
+<tr>
+<td><code>ref</code> <em>string</em></td>
+<td>Ref is the branch, tag, or commit SHA to check out. Defaults to the default branch.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>path</code> <em>string</em></td>
+<td>Path is the subdirectory under the workspace mountPath to clone into.<br />Defaults to the repository name derived from the URL. Must be a relative path<br />(no leading "/", no ".." segments).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>depth</code> <em>integer</em></td>
+<td>Depth, when &gt; 0, performs a shallow clone with this history depth.</td>
+<td></td>
+<td>Minimum: 0 <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>secretRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a></em></td>
+<td>SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH).</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
