@@ -12,11 +12,6 @@
 claude-code:
   # Install the claude-code LanguageAgentRuntime.
   enabled: true
-  image:
-    # pullPolicy for the claude-code-adapter image (used by both the init and
-    # main containers). Set to Never in local development (values.local.yaml)
-    # to use locally imported images.
-    pullPolicy: ""
 
 openclaw:
   # Install the openclaw LanguageAgentRuntime.
