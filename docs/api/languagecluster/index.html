@@ -1246,6 +1246,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#capacity-and-quotas" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1623,6 +1634,153 @@ Ingress on upgrade.</p>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </code></pre></div>
+<h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
+<p>Use <code>spec.auth</code> to enable OIDC authentication for the cluster. See <a href="../../components/clusters/#authentication">Authentication</a> in the clusters guide for full usage examples.</p>
+<p><strong><code>spec.auth</code> fields (<code>ClusterAuthSpec</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>bool</td>
+<td>Enable OIDC authentication for the cluster (default: false)</td>
+</tr>
+<tr>
+<td><code>oidc</code></td>
+<td>*ClusterOIDCSpec</td>
+<td>OIDC provider configuration (embedded Dex or external)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.auth.oidc</code> fields (<code>ClusterOIDCSpec</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dex</code></td>
+<td>*DexSpec</td>
+<td>Embedded Dex configuration. When set, the operator deploys Dex alongside the gateway. Mutually exclusive with <code>externalIssuerURL</code>.</td>
+</tr>
+<tr>
+<td><code>externalIssuerURL</code></td>
+<td>string</td>
+<td>Skip deploying Dex and use this issuer URL directly (e.g. <code>"https://accounts.google.com"</code>). Mutually exclusive with <code>dex</code>.</td>
+</tr>
+<tr>
+<td><code>clientID</code></td>
+<td>string</td>
+<td>OAuth2 client ID. Only used with <code>externalIssuerURL</code>; ignored when <code>dex</code> is set (the operator manages the client ID).</td>
+</tr>
+<tr>
+<td><code>clientSecretRef</code></td>
+<td>*SecretReference</td>
+<td>Reference to a Secret containing the OAuth2 client secret. Only used with <code>externalIssuerURL</code>; ignored when <code>dex</code> is set.</td>
+</tr>
+<tr>
+<td><code>emailDomain</code></td>
+<td>string</td>
+<td>Restrict logins to this email domain. Set to <code>"*"</code> to allow all domains (default).</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.auth.oidc.dex</code> fields (<code>DexSpec</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>connectors</code></td>
+<td>[]DexConnector</td>
+<td>Upstream identity provider connectors (GitHub, Google, OIDC, LDAP, etc.)</td>
+</tr>
+<tr>
+<td><code>enablePasswordDB</code></td>
+<td>bool</td>
+<td>Enable Dex's built-in local password store (default: false)</td>
+</tr>
+<tr>
+<td><code>staticPasswords</code></td>
+<td>[]DexStaticPassword</td>
+<td>Local user accounts for the built-in password store. Only used when <code>enablePasswordDB</code> is true.</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>string</td>
+<td>Override the Dex container image. Defaults to the operator Helm chart's <code>config.auth.dex.image</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.auth.oidc.dex.connectors[]</code> fields (<code>DexConnector</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td>string</td>
+<td>Connector type: <code>"github"</code>, <code>"google"</code>, <code>"oidc"</code>, <code>"ldap"</code>, <code>"microsoft"</code>, <code>"saml"</code>, etc. See <a href="https://dexidp.io/docs/connectors/">Dex connector docs</a>.</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Unique identifier for this connector</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Human-readable display name shown on the Dex login page</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>map[string]string</td>
+<td>Connector-specific configuration key/value pairs</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.auth.oidc.clientSecretRef</code> fields (<code>SecretReference</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Name of the Kubernetes Secret</td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td>string</td>
+<td>Key within the Secret containing the client secret value (default: <code>"api-key"</code>)</td>
+</tr>
+</tbody>
+</table>
 <h3 id="capacity-and-quotas">Capacity and Quotas<a class="headerlink" href="#capacity-and-quotas" title="Permanent link">&para;</a></h3>
 <p>Use <code>spec.capacity</code> to enforce hard resource limits on the cluster's namespace. When set, the operator creates a <code>ResourceQuota</code> named <code>langop-quota</code> in the namespace. When removed, the quota is deleted.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
