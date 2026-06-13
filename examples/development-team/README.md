@@ -11,6 +11,10 @@ worker-1 (engineer persona)  ← queue/1: normal (features, improvements)
 worker-2 (engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
 ```
 
+The three workers reference the [`context7`](../tools/context7/) `LanguageTool`, giving them
+up-to-date, version-specific library documentation over MCP so they stop coding against stale or
+hallucinated APIs.
+
 ## Prerequisites
 
 - Language Operator [installed](https://langop.io/docs/getting-started/installation/)
@@ -31,6 +35,7 @@ worker-2 (engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
 | `PROJECT_NAME` | no | basename of `PROJECT_REPOSITORY` | Human-readable project name used in agent prompts (e.g. `Language Operator`) |
 | `ANTHROPIC_API_KEY` | no | — | If set, written to `anthropic-credentials/api-key` and injected as `ANTHROPIC_API_KEY` on every agent (API-key billing). |
 | `CLAUDE_CODE_OAUTH_TOKEN` | no | — | Long-lived subscription token from `claude setup-token`. Written to `claude-code-oauth/token` and injected as `CLAUDE_CODE_OAUTH_TOKEN` (subscription billing, headless — no `/login` needed). |
+| `CONTEXT7_API_KEY` | no | — | [Context7 API key](https://context7.com/dashboard) for higher rate limits. Written to `context7-mcp-credentials/api-key`. The `context7` tool works without it at a lower rate limit. |
 
 If neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set, agents authenticate interactively via `/login` in each terminal.
 
@@ -72,12 +77,14 @@ kubectl port-forward -n my-cluster svc/worker-0 8080:8080
 - `Secret/github-credentials` — GitHub PAT
 - `Secret/anthropic-credentials` — Anthropic API key (only if `ANTHROPIC_API_KEY` was set)
 - `Secret/claude-code-oauth` — Claude Code OAuth token (only if `CLAUDE_CODE_OAUTH_TOKEN` was set)
+- `Secret/context7-mcp-credentials` — Context7 API key (only if `CONTEXT7_API_KEY` was set)
 - `LanguagePersona/project-manager` — supervisor behavioral config
 - `LanguagePersona/engineer` — worker behavioral config
+- `LanguageTool/context7` — Context7 MCP tool referenced by the workers; the operator generates its `Deployment` and `Service`
 - `LanguageAgent/supervisor` — triages issues; 5Gi workspace
-- `LanguageAgent/worker-0` — queue/0 (urgent); 10Gi workspace
-- `LanguageAgent/worker-1` — queue/1 (normal); 10Gi workspace
-- `LanguageAgent/worker-2` — queue/2 (backlog); 10Gi workspace
+- `LanguageAgent/worker-0` — queue/0 (urgent); 10Gi workspace; uses `context7`
+- `LanguageAgent/worker-1` — queue/1 (normal); 10Gi workspace; uses `context7`
+- `LanguageAgent/worker-2` — queue/2 (backlog); 10Gi workspace; uses `context7`
 
 Each `LanguageAgent` also produces a `Deployment`, `Service`, `NetworkPolicy`, `PersistentVolumeClaim`, and `ConfigMap`.
 
@@ -107,5 +114,5 @@ Type a prompt in the terminal to trigger a delegation pass. Use the same pattern
 
 ```bash
 kubectl delete -k examples/development-team/ -n my-cluster
-kubectl delete secret github-credentials anthropic-credentials claude-code-oauth -n my-cluster --ignore-not-found
+kubectl delete secret github-credentials anthropic-credentials claude-code-oauth context7-mcp-credentials -n my-cluster --ignore-not-found
 ```

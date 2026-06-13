@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - languagepersona.project-manager.yaml
   - languagepersona.engineer.yaml
+  - languagetool.context7.yaml
   - languageagent.supervisor.yaml
   - languageagent.worker-0.yaml
   - languageagent.worker-1.yaml
