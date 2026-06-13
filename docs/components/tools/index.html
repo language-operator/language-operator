@@ -1551,7 +1551,7 @@
 <p>The operator writes each tool's endpoint into the referencing agent's <code>/etc/agent/config.yaml</code> under the <code>tools:</code> key:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">tools</span><span class="p">:</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">mem0-memory</span><span class="p">:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://mem0-memory.language-operator-myapp.svc.cluster.local:8080</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://mem0-memory.language-operator-myapp.svc.cluster.local:8080/mcp</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mcp</span>
 </code></pre></div>
 <p>Runtime adapters (like <code>openclaw-adapter</code> and <code>opencode-adapter</code>) read this file and translate it into their runtime's native tool configuration before the agent starts.</p>
