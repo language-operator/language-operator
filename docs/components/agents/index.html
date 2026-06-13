@@ -685,6 +685,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#networking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1301,6 +1312,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#networking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1450,6 +1472,10 @@
 <td>Content of <code>spec.instructions</code>; only set when non-empty</td>
 </tr>
 <tr>
+<td><code>AGENT_REPO_DIR</code></td>
+<td>Absolute path to the cloned repository; also the agent's working directory. Only injected when <code>spec.repository</code> is set</td>
+</tr>
+<tr>
 <td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
 <td>Propagated from the operator when configured</td>
 </tr>
@@ -1514,6 +1540,46 @@
 </tbody>
 </table>
 <p>The volume is named <code>workspace</code> in the pod spec. Init containers that need to pre-seed it should mount it by that name.</p>
+<h2 id="repository">Repository<a class="headerlink" href="#repository" title="Permanent link">&para;</a></h2>
+<p>When <code>spec.repository</code> is set, the operator adds a <code>repository</code> init container (image <code>alpine/git:latest</code>) that runs after the workspace seeder and clones a git repository into the workspace. The agent container's working directory is set to the clone path, and <code>AGENT_REPO_DIR</code> is injected into every container.</p>
+<p>The clone is <strong>clone-once</strong>: it is skipped when the target directory already contains a <code>.git</code> directory, so the agent's edits and commits survive pod restarts. Declaring <code>spec.repository</code> defaults <code>spec.workspace.enabled</code> to <code>true</code>, since the clone needs the workspace PVC to land in.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spec.repository.url</code></td>
+<td>—</td>
+<td>Git repository to clone — HTTPS (<code>https://...</code>) or SSH (<code>git@host:org/repo.git</code>). Required</td>
+</tr>
+<tr>
+<td><code>spec.repository.ref</code></td>
+<td>default branch</td>
+<td>Branch, tag, or commit SHA to check out</td>
+</tr>
+<tr>
+<td><code>spec.repository.path</code></td>
+<td>repo name from URL</td>
+<td>Subdirectory under the workspace <code>mountPath</code> to clone into (relative path only)</td>
+</tr>
+<tr>
+<td><code>spec.repository.depth</code></td>
+<td><code>0</code></td>
+<td>When &gt; 0, shallow-clone to this history depth</td>
+</tr>
+<tr>
+<td><code>spec.repository.secretRef</code></td>
+<td>—</td>
+<td>Secret with git credentials for private repos. Keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH)</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>secretRef</code> is set, the Secret is mounted read-only into the <code>repository</code> init container at <code>/git-secret</code>; the operator never reads its contents. The init container picks SSH or HTTPS authentication based on which keys are present. See the <a href="../../api/languageagent/#repository">LanguageAgent API reference</a> for a full private-repo example.</p>
 <h2 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h2>
 <p>The operator creates:</p>
 <ul>
