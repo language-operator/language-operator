@@ -1207,17 +1207,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#execution-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Execution Modes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#model-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1384,13 +1373,6 @@
 <p>Entries declared by the agent's runtime are merged first, then the agent's own entries are appended. Entries are deduplicated by <code>name</code>, with the agent's entry winning on a collision. Runtimes typically declare the credentials their image needs (for example, the <code>openclaw</code> runtime declares <code>OPENCLAW_GATEWAY_TOKEN</code>), so most agents need no <code>credentials</code> block at all.</p>
 <h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
 <p>Agents cannot configure authentication directly. Whether an agent sits behind the cluster's OIDC proxy is determined by its runtime's <code>auth.enabled</code> setting combined with the cluster's <code>auth.enabled</code> setting. See <a href="../languageagentruntime/#authentication">LanguageAgentRuntime</a> and <a href="../../components/clusters/#authentication">Clusters</a> for the effective model.</p>
-<h3 id="execution-modes">Execution Modes<a class="headerlink" href="#execution-modes" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>autonomous</code> - Continuously running agent</li>
-<li><code>scheduled</code> - Cron-based execution</li>
-<li><code>interactive</code> - User-triggered execution</li>
-<li><code>event-driven</code> - Responds to Kubernetes events</li>
-</ul>
 <h3 id="model-references">Model References<a class="headerlink" href="#model-references" title="Permanent link">&para;</a></h3>
 <p>Each entry in <code>spec.models</code> is a <code>ModelReference</code> with the following fields:</p>
 <table>
