@@ -87,6 +87,28 @@ Entries declared by the agent's runtime are merged first, then the agent's own e
 
 Agents cannot configure authentication directly. Whether an agent sits behind the cluster's OIDC proxy is determined by its runtime's `auth.enabled` setting combined with the cluster's `auth.enabled` setting. See [LanguageAgentRuntime](languageagentruntime.md#authentication) and [Clusters](../components/clusters.md#authentication) for the effective model.
 
+### Self-Configuration
+
+`spec.selfConfigure` controls whether the agent pod may submit [`LanguageAgentSelfConfig`](languageagentselfconfig.md) requests to modify its own spec at runtime. When enabled, the operator grants the agent's ServiceAccount permission to create `LanguageAgentSelfConfig` resources in the same namespace.
+
+```yaml
+spec:
+  selfConfigure:
+    enabled: true
+    allowedActions:
+      - tools
+      - envVars
+```
+
+**`spec.selfConfigure` fields (`SelfConfigureSpec`):**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | *bool | `false` | Gate for all self-configuration. When `false`, any `LanguageAgentSelfConfig` targeting this agent is immediately denied. |
+| `allowedActions` | []string | `[]` | Allowlist of self-config categories. When `enabled` is `true` but this list is empty, all actions are denied. Valid values: `tools`, `models`, `envVars`, `instructions`, `roleRules`. |
+
+See [LanguageAgentSelfConfig](languageagentselfconfig.md) for the full self-config request API.
+
 ### Model References
 
 Each entry in `spec.models` is a `ModelReference` with the following fields:
@@ -216,5 +238,6 @@ Agents are deployed as standard Kubernetes Deployments with:
 - [LanguageModel](languagemodel.md) - Configure LLM access
 - [LanguageTool](languagetool.md) - Add tool capabilities
 - [LanguagePersona](languagepersona.md) - Define behavioral templates
+- [LanguageAgentSelfConfig](languageagentselfconfig.md) - Runtime self-modification requests
 - [Agent Runtime Contract](../components/agents.md) - What the operator injects
 
