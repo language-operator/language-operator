@@ -1285,12 +1285,17 @@
 <td>3000</td>
 <td>AI coding assistant (HTTP/browser UI)</td>
 </tr>
+<tr>
+<td><code>claude-code</code></td>
+<td><code>ghcr.io/language-operator/claude-code-adapter:latest</code></td>
+<td>8080</td>
+<td>AI coding assistant (HTTP/WebSocket terminal)</td>
+</tr>
 </tbody>
 </table>
 <p>Disable a bundled runtime in <code>values.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">runtimes</span><span class="p">:</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">opencode</span><span class="p">:</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">opencode</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </code></pre></div>
 <h2 id="custom-runtimes">Custom Runtimes<a class="headerlink" href="#custom-runtimes" title="Permanent link">&para;</a></h2>
 <p>Create your own runtime for any agent image:</p>
