@@ -8,6 +8,30 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.1.131 — 2026-06-12
+
+**Features**
+- make tools/postgres example deploy a self-contained Postgres
+
+**Bug Fixes**
+- inject full /mcp URL for tool endpoints so MCP clients connect directly (#858)
+
+**Documentation**
+- document spec.monitoring and advanced spec.workspace fields for LanguageAgent (#876)
+- document LanguageTool transport modes and operator-injected stdio bridge (#875)
+- document LanguageAgentSelfConfig CRD and spec.selfConfigure (#874)
+- remove non-existent issuerRef field from LanguageCluster TLS docs (#873)
+- fix persona field list and add Degraded phase to LanguageTool status table (#872)
+- fix LanguageCluster OIDC example and add spec.auth API reference (#871)
+- add claude-code to bundled-runtimes table and fix disable-runtime key (#870)
+- add /mcp suffix to tool endpoint examples in components pages (#869)
+- remove non-existent agent execution mode and AGENT_MODE references (#868)
+
+**Chores**
+- update iterate command
+
+---
+
 ## v0.1.130 — 2026-06-12
 
 **Breaking Changes**
