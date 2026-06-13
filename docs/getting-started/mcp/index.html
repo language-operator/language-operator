@@ -594,6 +594,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-a-stdio-mcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a stdio MCP server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#whats-next" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1312,6 +1323,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-a-stdio-mcp-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using a stdio MCP server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#whats-next" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1467,9 +1489,40 @@ operator-injected <code>config.yaml</code>. Confirm the k8s server was registere
 <li>Rolled the agent pod to pick up the new configuration</li>
 </ol>
 <p>On pod start, each runtime's adapter init container reads <code>config.yaml</code> and writes the tool endpoints into the runtime's native config before the agent starts — no agent code changes required.</p>
+<h2 id="using-a-stdio-mcp-server">Using a stdio MCP server<a class="headerlink" href="#using-a-stdio-mcp-server" title="Permanent link">&para;</a></h2>
+<p>Many MCP servers ship as stdio programs (npm packages, Python scripts) rather than HTTP servers. The operator wraps them with a persistent bridge — no custom image required. Set <code>transport: stdio</code> and provide the command argv in <code>spec.stdio.command</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="s">kind: LanguageTool</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="s">  name: context7</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="s">spec:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="s">  transport: stdio</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="s">  port: 8080</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="s">  stdio:</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="s">    command:</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="s">      - npx</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="s">      - -y</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="s">      - &quot;@upstash/context7-mcp&quot;</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="s">  networkPolicies:</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="s">    egress:</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="s">      - to:</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="s">          - cidr: &quot;0.0.0.0/0&quot;</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="s">        ports:</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="s">          - port: 443</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="s">            protocol: TCP</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="s">EOF</span>
+</code></pre></div>
+<p>The bridge (<code>ghcr.io/language-operator/mcp-bridge</code>) bundles Node and Python+uv, so both <code>npx</code> and <code>uvx</code> commands work. The egress rule is required because <code>npx</code> fetches the package from the npm registry on first boot.</p>
+<p>Attach it to an agent the same way as any other tool:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">context7</span>
+</code></pre></div>
+<p>The endpoint injected into <code>config.yaml</code> and <code>MCP_SERVERS</code> is the same Streamable HTTP URL (<code>http://context7.&lt;namespace&gt;.svc.cluster.local:8080/mcp</code>) — agents don't need to know the underlying transport.</p>
 <h2 id="whats-next">What's Next?<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../components/tools/">Tools reference</a> — sidecar mode, network policies, and writing your own tool server</li>
+<li><a href="../../components/tools/">Tools reference</a> — transports, sidecar mode, network policies, and writing your own tool server</li>
 <li><a href="../../api/languagetool/">LanguageTool API reference</a> — full spec field documentation</li>
 </ul>
 
