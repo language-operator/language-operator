@@ -235,3 +235,24 @@ func SetAgentServiceAccountName(name string) LanguageAgentModifier {
 		a.Spec.Deployment.ServiceAccountName = name
 	}
 }
+
+// SetAgentRepository sets spec.repository. Empty ref/path/secretRef are left unset.
+func SetAgentRepository(url, ref, path, secretRef string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		repo := &langopv1alpha1.RepositorySpec{URL: url, Ref: ref, Path: path}
+		if secretRef != "" {
+			repo.SecretRef = &corev1.LocalObjectReference{Name: secretRef}
+		}
+		a.Spec.Repository = repo
+	}
+}
+
+// SetAgentRepositoryDepth sets spec.repository.depth, initialising the repository if needed.
+func SetAgentRepositoryDepth(depth int) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Repository == nil {
+			a.Spec.Repository = &langopv1alpha1.RepositorySpec{}
+		}
+		a.Spec.Repository.Depth = depth
+	}
+}

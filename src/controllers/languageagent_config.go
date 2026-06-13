@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -288,6 +289,157 @@ fi`, mountPath)
 	}
 }
 
+// repositoryImage is the git client image used by the repository init container.
+const repositoryImage = "alpine/git:latest"
+
+// workspaceMountPath returns the path the workspace PVC is mounted at, defaulting
+// to /workspace when the workspace is enabled without an explicit mountPath.
+func workspaceMountPath(agent *langopv1alpha1.LanguageAgent) string {
+	if agent.Spec.Workspace != nil && agent.Spec.Workspace.MountPath != "" {
+		return agent.Spec.Workspace.MountPath
+	}
+	return "/workspace"
+}
+
+// agentHasRepository reports whether a git repository clone is configured.
+func agentHasRepository(agent *langopv1alpha1.LanguageAgent) bool {
+	return agent.Spec.Repository != nil && strings.TrimSpace(agent.Spec.Repository.URL) != ""
+}
+
+// deriveRepoName extracts a repository directory name from a git URL, stripping a
+// trailing slash and ".git" suffix. Handles both URL forms (https://host/foo/bar.git)
+// and the scp-like SSH form (git@host:foo/bar.git), yielding "bar" in both cases.
+func deriveRepoName(rawURL string) string {
+	s := strings.TrimSuffix(strings.TrimRight(rawURL, "/"), ".git")
+	if i := strings.LastIndexAny(s, "/:"); i >= 0 {
+		s = s[i+1:]
+	}
+	if s == "" {
+		return "repository"
+	}
+	return s
+}
+
+// repositoryDir returns the absolute path the repository is cloned into:
+// <workspace mountPath>/<spec.repository.path or derived repo name>. Empty when
+// no repository is configured.
+func repositoryDir(agent *langopv1alpha1.LanguageAgent) string {
+	if !agentHasRepository(agent) {
+		return ""
+	}
+	sub := agent.Spec.Repository.Path
+	if sub == "" {
+		sub = deriveRepoName(agent.Spec.Repository.URL)
+	}
+	return filepath.Join(workspaceMountPath(agent), sub)
+}
+
+// buildRepositoryVolumes returns the pod-level volume holding git credentials when
+// spec.repository.secretRef is set. The Secret is mounted read-only into the
+// repository init container; the operator never reads its contents.
+func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume {
+	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
+		return nil
+	}
+	mode := int32(0o400)
+	return []corev1.Volume{
+		{
+			Name: "repository-credentials",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  agent.Spec.Repository.SecretRef.Name,
+					DefaultMode: &mode,
+				},
+			},
+		},
+	}
+}
+
+// buildRepositoryInitContainer returns the "repository" init container that clones
+// spec.repository into the workspace, or nil when no repository is configured. The
+// clone uses clone-once semantics (skipped when the target already contains a .git
+// directory), so agent edits and commits survive pod restarts — mirroring the
+// workspace-seeder's seed-once behavior.
+//
+// Credentials are detected at runtime from the mounted Secret (the operator does not
+// read the Secret): an ssh-privatekey key configures GIT_SSH_COMMAND, otherwise a
+// token or username+password pair configures a GIT_ASKPASS helper for HTTPS.
+func buildRepositoryInitContainer(agent *langopv1alpha1.LanguageAgent) *corev1.Container {
+	if !agentHasRepository(agent) {
+		return nil
+	}
+
+	repo := agent.Spec.Repository
+	target := repositoryDir(agent)
+	mountPath := workspaceMountPath(agent)
+
+	depthFlag := ""
+	if repo.Depth > 0 {
+		depthFlag = fmt.Sprintf("--depth %d", repo.Depth)
+	}
+
+	script := fmt.Sprintf(`set -e
+TARGET=%q
+URL=%q
+REF=%q
+if [ -d "$TARGET/.git" ]; then
+  echo "repository already present at $TARGET, skipping clone"
+  exit 0
+fi
+SECRET_DIR=/git-secret
+if [ -d "$SECRET_DIR" ]; then
+  if [ -f "$SECRET_DIR/ssh-privatekey" ]; then
+    install -m 600 "$SECRET_DIR/ssh-privatekey" /tmp/git-ssh-key
+    export GIT_SSH_COMMAND="ssh -i /tmp/git-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+  else
+    cat > /tmp/git-askpass <<'ASKPASS'
+#!/bin/sh
+case "$1" in
+  Username*) if [ -f /git-secret/username ]; then cat /git-secret/username; else echo "x-access-token"; fi ;;
+  Password*) if [ -f /git-secret/password ]; then cat /git-secret/password; else cat /git-secret/token; fi ;;
+esac
+ASKPASS
+    chmod +x /tmp/git-askpass
+    export GIT_ASKPASS=/tmp/git-askpass
+    export GIT_TERMINAL_PROMPT=0
+  fi
+fi
+if [ -n "$REF" ]; then
+  git clone %s --branch "$REF" "$URL" "$TARGET" 2>/dev/null || {
+    rm -rf "$TARGET"
+    git clone "$URL" "$TARGET"
+    git -C "$TARGET" checkout "$REF"
+  }
+else
+  git clone %s "$URL" "$TARGET"
+fi
+echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFlag)
+
+	mounts := []corev1.VolumeMount{
+		{
+			Name:      "workspace",
+			MountPath: mountPath,
+		},
+	}
+	if repo.SecretRef != nil {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      "repository-credentials",
+			MountPath: "/git-secret",
+			ReadOnly:  true,
+		})
+	}
+
+	return &corev1.Container{
+		Name:         "repository",
+		Image:        repositoryImage,
+		Command:      []string{"/bin/sh", "-c", script},
+		VolumeMounts: mounts,
+		Env: []corev1.EnvVar{
+			{Name: "HOME", Value: "/tmp"},
+		},
+	}
+}
+
 func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, modelURLs []string, modelNames []string, toolURLs []string) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
@@ -310,6 +462,15 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Name:  "AGENT_CLUSTER_UUID",
 			Value: string(cluster.UID),
 		},
+	}
+
+	// AGENT_REPO_DIR points at the cloned repository so the runtime (and any init
+	// containers) can open inside it. Injected into every container per spec/agents.md.
+	if dir := repositoryDir(agent); dir != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "AGENT_REPO_DIR",
+			Value: dir,
+		})
 	}
 
 	// Pass through OpenTelemetry collector endpoint from operator environment.

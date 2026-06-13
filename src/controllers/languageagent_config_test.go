@@ -895,6 +895,182 @@ func TestLanguageAgentController_WorkspaceSeed_ConditionSet(t *testing.T) {
 	assert.Equal(t, langopv1alpha1.ReasonWorkspaceSeedReady, seededCond.Reason)
 }
 
+// findInitContainer returns the named init container from a deployment, or nil.
+func findInitContainer(deployment *appsv1.Deployment, name string) *corev1.Container {
+	for i := range deployment.Spec.Template.Spec.InitContainers {
+		if deployment.Spec.Template.Spec.InitContainers[i].Name == name {
+			return &deployment.Spec.Template.Spec.InitContainers[i]
+		}
+	}
+	return nil
+}
+
+func TestDeriveRepoName(t *testing.T) {
+	cases := map[string]string{
+		"https://github.com/foo/bar.git":  "bar",
+		"https://github.com/foo/bar":      "bar",
+		"https://github.com/foo/bar.git/": "bar",
+		"git@github.com:foo/bar.git":      "bar",
+		"git@github.com:bar.git":          "bar",
+		"ssh://git@host/foo/baz":          "baz",
+	}
+	for url, want := range cases {
+		assert.Equal(t, want, deriveRepoName(url), "deriveRepoName(%q)", url)
+	}
+}
+
+func TestLanguageAgentController_Repository_InitContainerAndWorkingDir(t *testing.T) {
+	agent := gen.LanguageAgent("repo-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "main", "", ""),
+		gen.SetAgentRepositoryDepth(1),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	repo := findInitContainer(deployment, "repository")
+	require.NotNil(t, repo, "expected repository init container")
+	assert.Equal(t, "alpine/git:latest", repo.Image)
+
+	// Clone-once semantics and ref/depth reflected in the script.
+	require.Len(t, repo.Command, 3)
+	script := repo.Command[2]
+	assert.Contains(t, script, `if [ -d "$TARGET/.git" ]; then`, "clone-once guard must be present")
+	assert.Contains(t, script, "/workspace/bar", "target dir derived from repo name")
+	assert.Contains(t, script, "--branch", "ref must be honored")
+	assert.Contains(t, script, "--depth 1", "depth must be honored")
+
+	// Must mount the workspace PVC.
+	var hasWorkspace bool
+	for _, vm := range repo.VolumeMounts {
+		if vm.Name == "workspace" {
+			hasWorkspace = true
+		}
+	}
+	assert.True(t, hasWorkspace, "repository init container must mount workspace")
+
+	// Main container opens inside the cloned repo.
+	assert.Equal(t, "/workspace/bar", deployment.Spec.Template.Spec.Containers[0].WorkingDir)
+
+	// Init container order: workspace-seeder is absent (no seed), repository runs first.
+	require.NotEmpty(t, deployment.Spec.Template.Spec.InitContainers)
+	assert.Equal(t, "repository", deployment.Spec.Template.Spec.InitContainers[0].Name)
+}
+
+func TestLanguageAgentController_Repository_AgentRepoDirInjected(t *testing.T) {
+	agent := gen.LanguageAgent("repo-env-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentWorkspaceMountPath("/data"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "src/app", ""),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	hasRepoDir := func(env []corev1.EnvVar) bool {
+		for _, e := range env {
+			if e.Name == "AGENT_REPO_DIR" {
+				assert.Equal(t, "/data/src/app", e.Value)
+				return true
+			}
+		}
+		return false
+	}
+
+	assert.True(t, hasRepoDir(deployment.Spec.Template.Spec.Containers[0].Env), "AGENT_REPO_DIR must be set on the main container")
+	repo := findInitContainer(deployment, "repository")
+	require.NotNil(t, repo)
+	// Explicit path overrides the derived name for WorkingDir too.
+	assert.Equal(t, "/data/src/app", deployment.Spec.Template.Spec.Containers[0].WorkingDir)
+}
+
+func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "git-creds", Namespace: "default"},
+		Data:       map[string][]byte{"token": []byte("abc")},
+	}
+	agent := gen.LanguageAgent("repo-secret-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "", "git-creds"),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), secret)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	repo := findInitContainer(deployment, "repository")
+	require.NotNil(t, repo)
+	var hasCredMount bool
+	for _, vm := range repo.VolumeMounts {
+		if vm.Name == "repository-credentials" {
+			assert.Equal(t, "/git-secret", vm.MountPath)
+			hasCredMount = true
+		}
+	}
+	assert.True(t, hasCredMount, "repository init container must mount git credentials")
+
+	// Pod volume must reference the Secret.
+	var credVol *corev1.Volume
+	for i := range deployment.Spec.Template.Spec.Volumes {
+		if deployment.Spec.Template.Spec.Volumes[i].Name == "repository-credentials" {
+			credVol = &deployment.Spec.Template.Spec.Volumes[i]
+		}
+	}
+	require.NotNil(t, credVol, "pod volumes must include repository-credentials")
+	require.NotNil(t, credVol.Secret)
+	assert.Equal(t, "git-creds", credVol.Secret.SecretName)
+}
+
+func TestLanguageAgentController_Repository_AbsentWhenNoRepository(t *testing.T) {
+	agent := gen.LanguageAgent("no-repo-agent", "default", gen.SetAgentWorkspace("5Gi"))
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+
+	assert.Nil(t, findInitContainer(deployment, "repository"), "no repository init container without spec.repository")
+	assert.Empty(t, deployment.Spec.Template.Spec.Containers[0].WorkingDir, "WorkingDir must be unset without a repository")
+	for _, e := range deployment.Spec.Template.Spec.Containers[0].Env {
+		assert.NotEqual(t, "AGENT_REPO_DIR", e.Name, "AGENT_REPO_DIR must not be injected without a repository")
+	}
+}
+
+func TestLanguageAgentController_Repository_ConditionSet(t *testing.T) {
+	agent := gen.LanguageAgent("repo-cond-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "", ""),
+	)
+	agent.Generation = 1
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	ctx := context.Background()
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+
+	var cond *metav1.Condition
+	for i := range updated.Status.Conditions {
+		if updated.Status.Conditions[i].Type == langopv1alpha1.ConditionRepositoryCloned {
+			cond = &updated.Status.Conditions[i]
+			break
+		}
+	}
+	require.NotNil(t, cond, "RepositoryCloned condition must be set")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, langopv1alpha1.ReasonRepositoryConfigured, cond.Reason)
+}
+
 // parseAgentConfigMap reconciles the agent once and returns the parsed config.yaml from the agent ConfigMap.
 func parseAgentConfigMap(t *testing.T, scheme *runtime.Scheme, objects ...client.Object) agentConfigYAML {
 	t.Helper()

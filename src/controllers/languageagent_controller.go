@@ -247,6 +247,13 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWorkspaceSeeded, metav1.ConditionTrue, langopv1alpha1.ReasonWorkspaceSeedReady, "Workspace seed ConfigMap reconciled", agent.Generation)
 	}
 
+	// Repository clone is performed in-pod by the "repository" init container (clone-once).
+	// The condition reflects that the clone is configured, mirroring WorkspaceSeeded.
+	if agentHasRepository(workingAgent) {
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionRepositoryCloned, metav1.ConditionTrue, langopv1alpha1.ReasonRepositoryConfigured,
+			fmt.Sprintf("Repository clone configured: %s", workingAgent.Spec.Repository.URL), agent.Generation)
+	}
+
 	// Reconcile NetworkPolicy for network isolation (if enabled)
 	if r.NetworkIsolationEnabled {
 		if err := r.reconcileNetworkPolicy(ctx, workingAgent); err != nil {
