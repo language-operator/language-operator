@@ -216,6 +216,7 @@ Environment variables injected into every agent container and all init container
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs (only injected when at least one tool is resolved) |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty |
+| `AGENT_REPO_DIR` | Absolute path to the cloned repository (the agent container's working directory). Only injected when `spec.repository` is set. See [Repository](#repository). |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
 | `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment (conditional on OTEL endpoint) |
@@ -242,6 +243,55 @@ When `spec.workspace.enabled` is true (the default), the operator provisions a P
 | `seedConfigMapRef` | *LocalObjectReference | — | External ConfigMap whose keys are filenames and values are file contents. Merged with `initialFiles`; `initialFiles` wins on key collision. |
 
 When `retain` is `true` and the agent is deleted, `status.workspacePVCName` records the name of the orphaned PVC so it can be located and reattached later.
+
+### Repository
+
+When `spec.repository` is set, the operator adds a `repository` init container that clones a git repository into the workspace before the agent starts. The agent container's working directory is set to the clone path, and `AGENT_REPO_DIR` is injected into every container so the runtime can locate it.
+
+The clone is **clone-once**: if the target directory already contains a `.git` directory the clone is skipped, so edits and commits made by the agent survive pod restarts. Because the clone lands in the workspace, declaring `spec.repository` automatically defaults `spec.workspace.enabled` to `true`; declaring a repository while `spec.workspace.enabled` is explicitly `false` is rejected by the webhook.
+
+**`spec.repository` fields (`RepositorySpec`):**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `url` | string | — | Git repository to clone, either HTTPS (`https://...`) or SSH (`git@host:org/repo.git`). **Required.** |
+| `ref` | string | default branch | Branch, tag, or commit SHA to check out. |
+| `path` | string | repo name from URL | Subdirectory under the workspace `mountPath` to clone into. Must be relative (no leading `/`, no `..` segments). |
+| `depth` | int | `0` (full clone) | When > 0, performs a shallow clone with this history depth. |
+| `secretRef` | *LocalObjectReference | — | Secret holding git credentials for private repositories. Recognized keys: `token`, or `username` + `password` (HTTPS); `ssh-privatekey` (SSH). |
+
+The clone target is `<workspace mountPath>/<path>` — e.g. with the default `mountPath: /workspace` and `path: app`, the repository is cloned to `/workspace/app` and `AGENT_REPO_DIR` is set to `/workspace/app`. When `path` is omitted, the directory name is derived from the URL (e.g. `https://github.com/org/repo.git` → `/workspace/repo`).
+
+The operator never reads the credentials Secret; it is mounted read-only into the `repository` init container, which selects SSH or HTTPS auth based on which keys are present.
+
+**Private repository example (HTTPS token):**
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: code-agent
+  namespace: default
+spec:
+  image: myregistry/agent-runtime:latest
+  repository:
+    url: https://github.com/myorg/private-repo.git
+    ref: main
+    path: app
+    depth: 1
+    secretRef:
+      name: git-credentials
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: git-credentials
+  namespace: default
+type: Opaque
+stringData:
+  token: ghp_xxxxxxxxxxxxxxxxxxxx   # a personal access token (HTTPS)
+  # For SSH instead, provide an ssh-privatekey key and a git@host:... url.
+```
 
 ### Resource Management
 
