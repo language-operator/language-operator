@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Usage: CLUSTER_NAME=my-cluster GITHUB_TOKEN=ghp_... PROJECT_REPOSITORY=owner/repo bash install.sh [--dry-run]
+# Usage: CLUSTER_NAME=my-cluster GITHUB_TOKEN=ghp_... PROJECT_REPOSITORY=https://github.com/owner/repo.git bash install.sh [--dry-run]
 set -euo pipefail
 
 : "${CLUSTER_NAME:?CLUSTER_NAME is required — set it to the name of your LanguageCluster}"
 : "${GITHUB_TOKEN:?GITHUB_TOKEN is required (gh PAT with repo, issues scopes)}"
-: "${PROJECT_REPOSITORY:?PROJECT_REPOSITORY is required (owner/repo, e.g. language-operator/language-operator)}"
+: "${PROJECT_REPOSITORY:?PROJECT_REPOSITORY is required (clone URL, e.g. https://github.com/language-operator/language-operator.git)}"
 export CLUSTER_NAME
 export PROJECT_REPOSITORY
-export PROJECT_REPO_NAME="${PROJECT_REPOSITORY##*/}"
-export PROJECT_NAME="${PROJECT_NAME:-$PROJECT_REPO_NAME}"
+# Derive a human-readable default project name from the URL basename (strip trailing slash and .git).
+_repo_base="${PROJECT_REPOSITORY%/}"; _repo_base="${_repo_base##*/}"; _repo_base="${_repo_base%.git}"
+export PROJECT_NAME="${PROJECT_NAME:-$_repo_base}"
 
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -17,8 +18,10 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
+# Restrict substitution to our install vars so literal shell references in agent
+# instructions (e.g. $AGENT_REPO_DIR, injected by the operator at runtime) survive.
 for f in "$DIR"/*.yaml; do
-    envsubst < "$f" > "$TMPDIR/$(basename "$f")"
+    envsubst '${CLUSTER_NAME} ${PROJECT_NAME} ${PROJECT_REPOSITORY}' < "$f" > "$TMPDIR/$(basename "$f")"
 done
 
 if $DRY_RUN; then

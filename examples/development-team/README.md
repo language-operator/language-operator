@@ -1,6 +1,8 @@
 # development-team
 
-Deploys a self-managing AI engineering team into an existing LanguageCluster, pointed at any GitHub repository: one supervisor agent triages open issues into priority queues; three worker agents continuously implement changes, run tests, and open pull requests.
+Deploys a self-managing AI engineering team into an existing LanguageCluster, pointed at any git repository: one supervisor agent triages open issues into priority queues; three worker agents continuously implement changes, run tests, and open pull requests.
+
+Each agent declares the project repo via `spec.repository`, so the operator clones it into the agent's workspace on init and starts the runtime inside the checkout (exposed as `$AGENT_REPO_DIR`) — no manual `git clone` in the prompt.
 
 ```
 supervisor (project-manager persona)
@@ -23,16 +25,16 @@ hallucinated APIs.
 - `envsubst` (`brew install gettext` on macOS, pre-installed on most Linux distros)
 - A `LanguageCluster` already applied in the target namespace (see [clusters/basic](../clusters/basic/))
 - A Claude account (Pro, Max, Team, or Enterprise)
-- A GitHub personal access token with `repo` and `issues` scopes
+- A GitHub personal access token with `repo` and `issues` scopes — used both to authenticate the clone (`spec.repository.secretRef`) and for the agents' `gh` operations
 
 ## Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CLUSTER_NAME` | yes | — | Namespace of the target LanguageCluster |
-| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to `github-credentials/token` secret |
-| `PROJECT_REPOSITORY` | yes | — | `owner/repo` slug for the GitHub project the team will work on |
-| `PROJECT_NAME` | no | basename of `PROJECT_REPOSITORY` | Human-readable project name used in agent prompts (e.g. `Language Operator`) |
+| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to `github-credentials/token` secret; used for the clone and for `gh` |
+| `PROJECT_REPOSITORY` | yes | — | Clone URL of the project the team will work on (e.g. `https://github.com/language-operator/language-operator.git`). Cloned into each agent's workspace via `spec.repository`. |
+| `PROJECT_NAME` | no | repo basename (minus `.git`) | Human-readable project name used in agent prompts (e.g. `Language Operator`) |
 | `ANTHROPIC_API_KEY` | no | — | If set, written to `anthropic-credentials/api-key` and injected as `ANTHROPIC_API_KEY` on every agent (API-key billing). |
 | `CLAUDE_CODE_OAUTH_TOKEN` | no | — | Long-lived subscription token from `claude setup-token`. Written to `claude-code-oauth/token` and injected as `CLAUDE_CODE_OAUTH_TOKEN` (subscription billing, headless — no `/login` needed). |
 | `CONTEXT7_API_KEY` | no | — | [Context7 API key](https://context7.com/dashboard) for higher rate limits. Written to `context7-mcp-credentials/api-key`. The `context7` tool works without it at a lower rate limit. |
@@ -44,7 +46,7 @@ If neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set, agents auth
 ```bash
 CLUSTER_NAME=my-cluster \
   GITHUB_TOKEN=ghp_... \
-  PROJECT_REPOSITORY=language-operator/language-operator \
+  PROJECT_REPOSITORY=https://github.com/language-operator/language-operator.git \
   PROJECT_NAME="Language Operator" \
   bash examples/development-team/install.sh
 ```
@@ -53,7 +55,7 @@ Dry-run (prints rendered YAML, skips secret creation):
 ```bash
 CLUSTER_NAME=my-cluster \
   GITHUB_TOKEN=ghp_... \
-  PROJECT_REPOSITORY=language-operator/language-operator \
+  PROJECT_REPOSITORY=https://github.com/language-operator/language-operator.git \
   bash examples/development-team/install.sh --dry-run
 ```
 
@@ -86,7 +88,7 @@ kubectl port-forward -n my-cluster svc/worker-0 8080:8080
 - `LanguageAgent/worker-1` — queue/1 (normal); 10Gi workspace; uses `context7`
 - `LanguageAgent/worker-2` — queue/2 (backlog); 10Gi workspace; uses `context7`
 
-Each `LanguageAgent` also produces a `Deployment`, `Service`, `NetworkPolicy`, `PersistentVolumeClaim`, and `ConfigMap`.
+Each `LanguageAgent` also produces a `Deployment`, `Service`, `NetworkPolicy`, `PersistentVolumeClaim`, and `ConfigMap`. Because each agent sets `spec.repository`, the operator injects a `repository` init container that clones `PROJECT_REPOSITORY` into the workspace (authenticated with `github-credentials`) and points the runtime's working directory at the checkout via `$AGENT_REPO_DIR`.
 
 ## Access
 

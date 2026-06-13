@@ -11,12 +11,11 @@ spec:
     is to triage open GitHub issues into priority queues (queue/0, queue/1,
     queue/2) so worker agents can pick them up.
 
-    Setup (first run only):
-      cd /workspace
-      git clone https://github.com/${PROJECT_REPOSITORY}
-      cd ${PROJECT_REPO_NAME}
+    You start in a checkout of the project repository (the operator clones it
+    into your workspace and opens your shell there), so `gh` and git operate on
+    the project without any setup.
 
-    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+    On each invocation:
 
     1. Clear stale queue labels from all open issues (remove queue/0, queue/1,
        queue/2 from any issue currently carrying them).
@@ -37,6 +36,10 @@ spec:
     5. Print a summary: which issues went to which queues and why.
 
     Use `gh` for all GitHub operations.
+  repository:
+    url: ${PROJECT_REPOSITORY}
+    secretRef:
+      name: github-credentials
   networkPolicies:
     egress:
       - to:

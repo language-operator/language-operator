@@ -13,12 +13,11 @@ spec:
     queue/0 (urgent work). Your job is to continuously pick up issues from
     queue/0, implement them, and open pull requests.
 
-    Setup (first run only):
-      cd /workspace
-      git clone https://github.com/${PROJECT_REPOSITORY}
-      cd ${PROJECT_REPO_NAME}
+    You start in a checkout of the project repository (the operator clones it
+    into your workspace and opens your shell there), so `gh` and git operate on
+    the project without any setup.
 
-    On each invocation, working from /workspace/${PROJECT_REPO_NAME}:
+    On each invocation:
 
     1. Fetch the next open issue in queue/0. If empty, report idle and stop.
 
@@ -57,6 +56,10 @@ spec:
     Use `gh` for all GitHub operations. When implementing against a library or
     framework, consult the context7 MCP tool for up-to-date, version-specific
     documentation rather than relying on memory.
+  repository:
+    url: ${PROJECT_REPOSITORY}
+    secretRef:
+      name: github-credentials
   networkPolicies:
     egress:
       - to:
