@@ -45,4 +45,13 @@ if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
         --dry-run=client -o yaml | kubectl apply -f -
 fi
 
+# Context7 API key is optional — the tool works without it at a lower rate limit
+# and references the secret with optional:true, so the pod starts either way.
+if [[ -n "${CONTEXT7_API_KEY:-}" ]]; then
+    kubectl create secret generic context7-mcp-credentials \
+        --from-literal=api-key="$CONTEXT7_API_KEY" \
+        --namespace "$CLUSTER_NAME" \
+        --dry-run=client -o yaml | kubectl apply -f -
+fi
+
 kubectl kustomize "$TMPDIR" | kubectl apply -f -

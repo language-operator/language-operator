@@ -91,18 +91,11 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 			l.Error(err, "Failed to get tool for config.yaml, skipping", "tool", toolRef.Name)
 			continue
 		}
-		port := tool.Spec.Port
-		if port == 0 {
-			port = 8080
-		}
-		endpoint := serviceURL(tool.Name, agent.Namespace, port)
-		if tool.Spec.DeploymentMode == "sidecar" {
-			endpoint = fmt.Sprintf("http://localhost:%d", port)
-		}
 		if cfg.Tools == nil {
 			cfg.Tools = make(map[string]toolConfigYAML)
 		}
-		cfg.Tools[tool.Name] = toolConfigYAML{Endpoint: endpoint, Protocol: "mcp"}
+		// Full Streamable HTTP MCP URL (includes /mcp) so MCP clients can use it directly.
+		cfg.Tools[tool.Name] = toolConfigYAML{Endpoint: mcpToolEndpoint(tool, agent.Namespace), Protocol: "mcp"}
 	}
 
 	// Models — all served via the shared namespace gateway

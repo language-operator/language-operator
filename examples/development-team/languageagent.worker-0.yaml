@@ -6,6 +6,8 @@ metadata:
 spec:
   runtime: claude-code
   persona: engineer
+  tools:
+    - name: context7
   instructions: |
     You are worker-0 for the ${PROJECT_NAME} engineering team, responsible for
     queue/0 (urgent work). Your job is to continuously pick up issues from
@@ -52,7 +54,9 @@ spec:
 
     13. Loop: go back to step 1 until queue/0 is empty.
 
-    Use `gh` for all GitHub operations.
+    Use `gh` for all GitHub operations. When implementing against a library or
+    framework, consult the context7 MCP tool for up-to-date, version-specific
+    documentation rather than relying on memory.
   networkPolicies:
     egress:
       - to:

@@ -349,22 +349,8 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 			return nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
 		}
 
-		port := tool.Spec.Port
-		if port == 0 {
-			port = 8080 // Default MCP port
-		}
-
-		// Sidecar tools use localhost URLs
-		if tool.Spec.DeploymentMode == "sidecar" {
-			// Format: http://localhost:<port>
-			localhostURL := fmt.Sprintf("http://localhost:%d", port)
-			toolURLs = append(toolURLs, localhostURL)
-			continue
-		}
-
-		// Build MCP server URL (service mode)
-		mcpURL := serviceURL(tool.Name, agent.Namespace, port)
-		toolURLs = append(toolURLs, mcpURL)
+		// Full Streamable HTTP MCP URL (includes /mcp); sidecar tools resolve to localhost.
+		toolURLs = append(toolURLs, mcpToolEndpoint(tool, agent.Namespace))
 	}
 
 	return toolURLs, nil
