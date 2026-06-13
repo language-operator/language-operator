@@ -68,6 +68,12 @@ type LanguageAgentSpec struct {
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
 
+	// Repository declares a git repository to clone into the agent's workspace.
+	// When set, the operator ensures a workspace PVC is provisioned (defaulting it on
+	// if not explicitly configured) so the clone has somewhere to land.
+	// +optional
+	Repository *RepositorySpec `json:"repository,omitempty"`
+
 	// NetworkPolicies defines ingress and egress rules for this agent.
 	// Rules mirror the native Kubernetes NetworkPolicy shape.
 	// +optional
@@ -276,6 +282,35 @@ type WorkspaceSpec struct {
 	// and values are file contents. Merged with InitialFiles; InitialFiles wins on collision.
 	// +optional
 	SeedConfigMapRef *corev1.LocalObjectReference `json:"seedConfigMapRef,omitempty"`
+}
+
+// RepositorySpec declares a git repository to clone into the agent's workspace.
+// The clone is performed by the operator at pod startup; this type defines only the
+// desired source. Follows the WorkspaceSpec/CredentialSpec conventions.
+type RepositorySpec struct {
+	// URL is the git repository to clone (https://... or git@... SSH).
+	// +kubebuilder:validation:Required
+	URL string `json:"url"`
+
+	// Ref is the branch, tag, or commit SHA to check out. Defaults to the default branch.
+	// +optional
+	Ref string `json:"ref,omitempty"`
+
+	// Path is the subdirectory under the workspace mountPath to clone into.
+	// Defaults to the repository name derived from the URL. Must be a relative path
+	// (no leading "/", no ".." segments).
+	// +optional
+	Path string `json:"path,omitempty"`
+
+	// Depth, when > 0, performs a shallow clone with this history depth.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	Depth int `json:"depth,omitempty"`
+
+	// SecretRef references a Secret with git credentials for private repos.
+	// Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH).
+	// +optional
+	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 }
 
 // CredentialSpec declares an environment variable backed by a Secret value.

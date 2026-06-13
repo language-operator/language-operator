@@ -833,3 +833,127 @@ func TestLanguageAgentValidateUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestLanguageAgentValidateRepository(t *testing.T) {
+	tests := []struct {
+		name      string
+		repo      *RepositorySpec
+		workspace *WorkspaceSpec
+		expectErr bool
+	}{
+		{
+			name: "valid https url",
+			repo: &RepositorySpec{URL: "https://github.com/org/repo.git"},
+		},
+		{
+			name: "valid http url",
+			repo: &RepositorySpec{URL: "http://git.internal/org/repo.git"},
+		},
+		{
+			name: "valid ssh url",
+			repo: &RepositorySpec{URL: "ssh://git@github.com/org/repo.git"},
+		},
+		{
+			name: "valid scp-like ssh url",
+			repo: &RepositorySpec{URL: "git@github.com:org/repo.git"},
+		},
+		{
+			name:      "empty url rejected",
+			repo:      &RepositorySpec{URL: ""},
+			expectErr: true,
+		},
+		{
+			name:      "whitespace url rejected",
+			repo:      &RepositorySpec{URL: "   "},
+			expectErr: true,
+		},
+		{
+			name:      "non-git scheme rejected",
+			repo:      &RepositorySpec{URL: "ftp://example.com/repo"},
+			expectErr: true,
+		},
+		{
+			name:      "https without host rejected",
+			repo:      &RepositorySpec{URL: "https:///repo.git"},
+			expectErr: true,
+		},
+		{
+			name: "valid relative path",
+			repo: &RepositorySpec{URL: "https://github.com/org/repo.git", Path: "sub/dir"},
+		},
+		{
+			name:      "absolute path rejected",
+			repo:      &RepositorySpec{URL: "https://github.com/org/repo.git", Path: "/abs"},
+			expectErr: true,
+		},
+		{
+			name:      "parent-dir path rejected",
+			repo:      &RepositorySpec{URL: "https://github.com/org/repo.git", Path: "foo/../../etc"},
+			expectErr: true,
+		},
+		{
+			name:      "repository with workspace explicitly disabled rejected",
+			repo:      &RepositorySpec{URL: "https://github.com/org/repo.git"},
+			workspace: &WorkspaceSpec{Enabled: ptr.To(false)},
+			expectErr: true,
+		},
+		{
+			name:      "repository with workspace explicitly enabled allowed",
+			repo:      &RepositorySpec{URL: "https://github.com/org/repo.git"},
+			workspace: &WorkspaceSpec{Enabled: ptr.To(true)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateRepository(tt.repo, tt.workspace)
+			if (err != nil) != tt.expectErr {
+				t.Errorf("validateRepository() error = %v, expectErr %v", err, tt.expectErr)
+			}
+		})
+	}
+}
+
+func TestLanguageAgentDefaultRepositoryWorkspace(t *testing.T) {
+	tests := []struct {
+		name        string
+		agent       *LanguageAgent
+		wantEnabled bool
+	}{
+		{
+			name: "repository set, workspace nil - workspace defaulted on",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+				Spec: LanguageAgentSpec{
+					Image:      "test:latest",
+					Repository: &RepositorySpec{URL: "https://github.com/org/repo.git"},
+				},
+			},
+			wantEnabled: true,
+		},
+		{
+			name: "repository set with runtime, workspace nil - workspace still defaulted on",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+				Spec: LanguageAgentSpec{
+					Runtime:    "some-runtime",
+					Repository: &RepositorySpec{URL: "https://github.com/org/repo.git"},
+				},
+			},
+			wantEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_ = (&LanguageAgentWebhook{}).Default(context.Background(), tt.agent)
+			if tt.agent.Spec.Workspace == nil {
+				t.Fatalf("expected workspace to be defaulted, got nil")
+			}
+			gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
+			if gotEnabled != tt.wantEnabled {
+				t.Errorf("expected workspace Enabled=%v, got %v", tt.wantEnabled, gotEnabled)
+			}
+		})
+	}
+}
