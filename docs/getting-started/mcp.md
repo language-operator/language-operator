@@ -155,7 +155,47 @@ Your agent now has access to Kubernetes operations. Ask it to list the pods in y
 
 On pod start, each runtime's adapter init container reads `config.yaml` and writes the tool endpoints into the runtime's native config before the agent starts — no agent code changes required.
 
+## Using a stdio MCP server
+
+Many MCP servers ship as stdio programs (npm packages, Python scripts) rather than HTTP servers. The operator wraps them with a persistent bridge — no custom image required. Set `transport: stdio` and provide the command argv in `spec.stdio.command`:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: context7
+spec:
+  transport: stdio
+  port: 8080
+  stdio:
+    command:
+      - npx
+      - -y
+      - "@upstash/context7-mcp"
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+EOF
+```
+
+The bridge (`ghcr.io/language-operator/mcp-bridge`) bundles Node and Python+uv, so both `npx` and `uvx` commands work. The egress rule is required because `npx` fetches the package from the npm registry on first boot.
+
+Attach it to an agent the same way as any other tool:
+
+```yaml
+spec:
+  tools:
+    - name: context7
+```
+
+The endpoint injected into `config.yaml` and `MCP_SERVERS` is the same Streamable HTTP URL (`http://context7.<namespace>.svc.cluster.local:8080/mcp`) — agents don't need to know the underlying transport.
+
 ## What's Next?
 
-- [Tools reference](../components/tools.md) — sidecar mode, network policies, and writing your own tool server
+- [Tools reference](../components/tools.md) — transports, sidecar mode, network policies, and writing your own tool server
 - [LanguageTool API reference](../api/languagetool.md) — full spec field documentation

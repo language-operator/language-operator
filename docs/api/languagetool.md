@@ -50,6 +50,62 @@ Tools must implement the Model Context Protocol:
 
 See [Tool Protocol](../components/tools.md) for the full specification.
 
+### Transport
+
+`spec.transport` controls how the operator exposes the tool's MCP endpoint. Three values are supported:
+
+| Value | Default | Description |
+|-------|---------|-------------|
+| `streamable-http` | ✓ | `spec.image` already serves Streamable HTTP at `/mcp`. |
+| `sse` | | `spec.image` already serves the legacy MCP HTTP+SSE transport. |
+| `stdio` | | The operator injects a bridge; `spec.image` is ignored. |
+
+#### stdio transport
+
+For `transport: stdio` the operator injects a pinned, persistent bridge (`ghcr.io/language-operator/mcp-bridge:latest`) that runs the user's stdio command as one long-lived child and serves Streamable HTTP at `/mcp` and `/health` on `spec.port`. `spec.image` is ignored — the defaulting webhook fills it automatically.
+
+`spec.stdio.command` is the full argv of the stdio MCP server:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: context7
+spec:
+  transport: stdio
+  port: 8080
+  stdio:
+    command:
+      - npx
+      - -y
+      - "@upstash/context7-mcp"
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+```
+
+The first-party bridge image bundles Node and Python+uv, so both `npx` and `uvx` stdio servers work. Pass environment variables for the stdio process via `spec.deployment.env` or `spec.deployment.envFrom` — they are forwarded to the child.
+
+!!! note "External egress"
+    `npx`/`uvx` fetch their package from the internet on cold boot. Add a `0.0.0.0/0:443` egress rule (as above) so the pod can reach package registries.
+
+##### Customising the bridge image
+
+The bridge image is controlled by Helm values under `config.mcpBridge`:
+
+```yaml
+config:
+  mcpBridge:
+    repository: ghcr.io/language-operator/mcp-bridge  # override to use a different bridge
+    tag: ""          # defaults to the chart appVersion
+    imagePullPolicy: ""
+    discoveryTimeout: "30s"  # increase for servers with slow cold starts
+```
+
 ### Deployment Modes
 
 **Service Mode** (default):
@@ -59,7 +115,7 @@ See [Tool Protocol](../components/tools.md) for the full specification.
 
 **Sidecar Mode**:
 - Tool container injected as a sidecar into each agent pod
-- Endpoint injected as `http://localhost:<port>` (not a Service URL)
+- Endpoint injected as `http://localhost:<port>/mcp` (not a Service URL)
 - Better for stateful or agent-specific tools that need workspace access
 - Shares agent lifecycle
 

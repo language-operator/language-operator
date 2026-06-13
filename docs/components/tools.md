@@ -6,16 +6,43 @@ A `LanguageTool` is an MCP-compatible service that agents call to do things beyo
 
 When you create a `LanguageTool`, the operator:
 
-1. Deploys the tool image as a standard Kubernetes Deployment and Service
-2. Waits for the pod to become ready, then calls `tools/list` to discover what the tool exposes
-3. Stores the discovered schemas in `status.toolSchemas`
-4. Injects the tool's endpoint into every referencing agent via `/etc/agent/config.yaml`
+1. Deploys the tool as a Kubernetes Deployment and Service. For `transport: streamable-http` or `sse` it runs `spec.image` directly; for `transport: stdio` it injects a bridge image that wraps the stdio command and serves Streamable HTTP at `/mcp`.
+2. Waits for the pod to become ready, then calls `tools/list` to discover what the tool exposes.
+3. Stores the discovered schemas in `status.toolSchemas`.
+4. Injects the tool's endpoint (including `/mcp`) into every referencing agent via `/etc/agent/config.yaml`.
 
 Agents connect to tools directly over MCP — the operator doesn't proxy or inspect tool traffic.
 
+## Transports
+
+`spec.transport` selects how the tool's MCP endpoint is exposed:
+
+| Transport | Description |
+|-----------|-------------|
+| `streamable-http` (default) | `spec.image` serves Streamable HTTP at `/mcp` on `spec.port`. |
+| `sse` | `spec.image` serves the legacy MCP HTTP+SSE transport on `spec.port`. |
+| `stdio` | The operator injects a bridge that runs `spec.stdio.command` as a persistent child and serves Streamable HTTP at `/mcp`. `spec.image` is ignored. |
+
+### stdio tools
+
+For `transport: stdio` you provide the full argv of the stdio MCP server in `spec.stdio.command`. The operator injects a pinned bridge (`ghcr.io/language-operator/mcp-bridge:latest`) that bundles Node and Python+uv, so both `npx` and `uvx` commands work without a custom image:
+
+```yaml
+spec:
+  transport: stdio
+  port: 8080
+  stdio:
+    command:
+      - npx
+      - -y
+      - "@upstash/context7-mcp"
+```
+
+The bridge keeps one long-lived child process — there is no per-request spawn. Writable scratch volumes (`HOME` and `/tmp`) are injected automatically so npm/uv caches work even with `readOnlyRootFilesystem`.
+
 ## Deploying a tool
 
-A `LanguageTool` is self-contained. You provide an image; the operator creates the Deployment and Service:
+A `LanguageTool` is self-contained. You provide an image (or a stdio command); the operator creates the Deployment and Service:
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -147,10 +174,12 @@ Runtime adapters (like `openclaw-adapter` and `opencode-adapter`) read this file
 
 ## Checklist
 
-A compliant tool image must:
+For `transport: streamable-http` or `transport: sse`, the tool image must:
 
 - [ ] Implement MCP JSON-RPC at the port defined in `spec.port`
 - [ ] Respond to `tools/list` with all available tools and their input schemas
 - [ ] Respond to `tools/call` with the result of invoking the named tool
 - [ ] Expose `GET /health` returning `200 OK` with `{"status":"ok"}` when ready
 - [ ] Return MCP error objects for failures, not HTTP error status codes
+
+For `transport: stdio`, the operator-injected bridge handles all of the above — the stdio command only needs to speak the [MCP stdio transport](https://spec.modelcontextprotocol.io/specification/2025-11-05/basic/transports/#stdio).
