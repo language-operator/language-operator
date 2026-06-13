@@ -175,9 +175,6 @@ spec:
     className: nginx
     tls:
       enabled: true
-      issuerRef:
-        name: letsencrypt-prod
-        kind: ClusterIssuer
 ```
 
 **`spec.ingress` fields:**
@@ -193,15 +190,9 @@ spec:
 | Field | Type | Description |
 |-------|------|-------------|
 | `enabled` | *bool | Enable TLS on the Ingress (default: true) |
-| `secretName` | string | Name of an existing TLS Secret (manual cert management) |
-| `issuerRef` | *CertIssuerReference | cert-manager issuer reference (used when `secretName` is empty) |
+| `secretName` | string | Name of an existing TLS Secret. When set, the operator uses this secret directly and skips cert-manager integration. |
 
-**`spec.ingress.tls.issuerRef` fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Name of the Issuer or ClusterIssuer (required) |
-| `kind` | string | `Issuer` or `ClusterIssuer` (default: `ClusterIssuer`) |
+cert-manager issuer selection is operator-wide, not per-cluster. Configure it via the operator Helm chart's `config.tls.certificateIssuerName` and `config.tls.certificateIssuerKind` values.
 
 **Example — manual TLS secret:**
 
