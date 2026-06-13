@@ -139,7 +139,7 @@ The operator writes each tool's endpoint into the referencing agent's `/etc/agen
 ```yaml
 tools:
   mem0-memory:
-    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080
+    endpoint: http://mem0-memory.language-operator-myapp.svc.cluster.local:8080/mcp
     protocol: mcp
 ```
 

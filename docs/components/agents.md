@@ -28,10 +28,10 @@ personas:
 # Resolved tool endpoints, keyed by tool name
 tools:
   mem0-memory:
-    endpoint: http://mem0-memory.tools.svc.cluster.local:8080
+    endpoint: http://mem0-memory.tools.svc.cluster.local:8080/mcp
     protocol: mcp
   python-executor:
-    endpoint: http://python-executor.tools.svc.cluster.local:8080
+    endpoint: http://python-executor.tools.svc.cluster.local:8080/mcp
     protocol: mcp
 
 # Model configuration — all LLM traffic routes through the shared gateway
@@ -58,7 +58,7 @@ The operator injects these into the agent container and all init containers:
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINT` | Shared LiteLLM gateway URL — the same URL regardless of how many models are referenced |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
-| `MCP_SERVERS` | Comma-separated tool endpoint URLs — service-mode tools use in-cluster DNS; sidecar-mode tools use `http://localhost:<port>` |
+| `MCP_SERVERS` | Comma-separated tool endpoint URLs — service-mode tools use in-cluster DNS; sidecar-mode tools use `http://localhost:<port>/mcp` |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when non-empty |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when OTEL is configured |
