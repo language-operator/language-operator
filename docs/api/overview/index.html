@@ -1196,6 +1196,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#languageagentselfconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LanguageAgentSelfConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#languagepersona" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1315,7 +1326,7 @@
 
 
 <h1 id="crd-reference-overview">CRD Reference Overview<a class="headerlink" href="#crd-reference-overview" title="Permanent link">&para;</a></h1>
-<p>Language Operator provides five Custom Resource Definitions (CRDs) for managing AI agent workloads on Kubernetes.</p>
+<p>Language Operator provides seven Custom Resource Definitions (CRDs) for managing AI agent workloads on Kubernetes.</p>
 <div class="admonition tip">
 <p class="admonition-title">Auto-Generated API Reference</p>
 <p>See the <strong><a href="../reference/">Complete API Reference</a></strong> for auto-generated field documentation from Go types.
@@ -1413,6 +1424,18 @@ This reference updates automatically when CRD types are modified.</p>
 <li>Version-control runtime defaults separately from agent configuration</li>
 </ul>
 <hr />
+<h3 id="languageagentselfconfig">LanguageAgentSelfConfig<a class="headerlink" href="#languageagentselfconfig" title="Permanent link">&para;</a></h3>
+<p><strong>Scope:</strong> Namespace
+<strong>Purpose:</strong> Runtime self-modification requests submitted by agent pods</p>
+<p>A <code>LanguageAgentSelfConfig</code> (<code>lasc</code>) is a short-lived, namespace-scoped resource that an agent pod submits to request changes to its own <code>LanguageAgent</code> spec at runtime. The controller validates the request against the parent agent's <code>spec.selfConfigure</code> allowlist before applying the patch.</p>
+<p><strong>Common Use Cases:</strong></p>
+<ul>
+<li>Agents dynamically adding tools they discover at runtime</li>
+<li>Agents injecting new environment variables without a full redeploy</li>
+<li>Agents updating their own system instructions mid-session</li>
+</ul>
+<p><a href="../languageagentselfconfig/">Full LanguageAgentSelfConfig Reference →</a></p>
+<hr />
 <h3 id="languagepersona">LanguagePersona<a class="headerlink" href="#languagepersona" title="Permanent link">&para;</a></h3>
 <p><strong>Scope:</strong> Namespace
 <strong>Purpose:</strong> Reusable behavioral templates</p>
@@ -1442,15 +1465,17 @@ This reference updates automatically when CRD types are modified.</p>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    Model[LanguageModel] --&gt;|deployed in| NS
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    Tool[LanguageTool] --&gt;|deployed in| NS
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    Persona[LanguagePersona] --&gt;|deployed in| NS
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    Agent --&gt;|references| Model
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    Agent --&gt;|references| Tool
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    Agent --&gt;|references| Persona
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    Model --&gt;|registered in| Proxy
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
-<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    Agent --&gt;|connects to| Proxy
-<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    Agent --&gt;|connects to| Tool
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    SelfConfig[LanguageAgentSelfConfig] --&gt;|deployed in| NS
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    Agent --&gt;|references| Model
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    Agent --&gt;|references| Tool
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    Agent --&gt;|references| Persona
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    Model --&gt;|registered in| Proxy
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    Agent --&gt;|connects to| Proxy
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    Agent --&gt;|connects to| Tool
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    SelfConfig --&gt;|modifies| Agent
 </code></pre></div>
 <h2 id="configuration-injection">Configuration Injection<a class="headerlink" href="#configuration-injection" title="Permanent link">&para;</a></h2>
 <p>The operator automatically injects configuration into agent pods:</p>

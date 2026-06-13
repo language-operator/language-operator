@@ -12,13 +12,9 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/getting-started/installation/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/api/languageagentselfconfig/">
       
       
-        <link rel="prev" href="../..">
-      
-      
-        <link rel="next" href="../quickstart/">
       
       
         
@@ -29,7 +25,7 @@
     
     
       
-        <title>Installation - Language Operator</title>
+        <title>LanguageAgentSelfConfig - Language Operator</title>
       
     
     
@@ -80,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#installation" class="md-skip">
+        <a href="#languageagentselfconfig" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Installation
+              LanguageAgentSelfConfig
             
           </span>
         </div>
@@ -229,12 +225,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../.." class="md-tabs__link">
           
   
@@ -253,7 +247,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../api/reference/" class="md-tabs__link">
+      <a href="../reference/" class="md-tabs__link">
         
   
   
@@ -335,31 +329,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
         
           
-          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
             
   
   
@@ -377,7 +368,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -420,37 +411,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Installation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
         
   
   
@@ -466,148 +430,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Requirements
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Requirements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hardware
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cluster" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cluster
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-via-helm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install via Helm
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Install via Helm">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-add-the-helm-repository" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Add the Helm Repository
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-install-the-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Install the Operator
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-install-the-runtimes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Install the Runtimes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-verify-installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Verify Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#upgrade" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upgrade
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uninstall" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Uninstall
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -620,7 +442,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
         
   
   
@@ -648,7 +470,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mcp/" class="md-nav__link">
+      <a href="../../getting-started/mcp/" class="md-nav__link">
         
   
   
@@ -682,13 +504,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -697,7 +516,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_5" >
         
           
-          <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_1_5" id="__nav_1_5_label" tabindex="0">
             
   
   
@@ -915,13 +734,10 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
@@ -930,7 +746,7 @@
         <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_6" >
         
           
-          <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_1_6" id="__nav_1_6_label" tabindex="0">
             
   
   
@@ -1121,7 +937,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../api/reference/" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   
@@ -1313,22 +1129,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Requirements
+        Overview
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Requirements">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete API Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete API Reference">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#hardware" class="md-nav__link">
+  <a href="#spec-fields-languageagentselfconfigspec" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hardware
+        spec fields (LanguageAgentSelfConfigSpec)
       
     </span>
   </a>
@@ -1336,10 +1174,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cluster" class="md-nav__link">
+  <a href="#specaddenvvars-fields-selfconfigenvvar" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cluster
+        spec.addEnvVars[] fields (SelfConfigEnvVar)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-fields-languageagentselfconfigstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        status fields (LanguageAgentSelfConfigStatus)
       
     </span>
   </a>
@@ -1352,71 +1201,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#install-via-helm" class="md-nav__link">
+  <a href="#phase-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install via Helm
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Install via Helm">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-add-the-helm-repository" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Add the Helm Repository
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-install-the-operator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Install the Operator
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-install-the-runtimes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Install the Runtimes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-verify-installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Verify Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#upgrade" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upgrade
+        Phase Lifecycle
       
     </span>
   </a>
@@ -1424,10 +1212,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#uninstall" class="md-nav__link">
+  <a href="#enabling-self-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Uninstall
+        Enabling Self-Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Resources
       
     </span>
   </a>
@@ -1454,147 +1253,152 @@
   
 
 
-<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
-<p>This guide covers installing the Language Operator on your Kubernetes cluster.</p>
-<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<h3 id="hardware">Hardware<a class="headerlink" href="#hardware" title="Permanent link">&para;</a></h3>
-<p>Minimum recommended node capacity:</p>
-<ul>
-<li><strong>2 CPU cores</strong> (4+ for running agents)</li>
-<li><strong>4Gi RAM</strong> (8Gi+ for running agents)</li>
-<li><strong>15Gi persistent storage</strong> (10Gi workspace per agent)</li>
-</ul>
-<h3 id="cluster">Cluster<a class="headerlink" href="#cluster" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Kubernetes 1.26+</strong></li>
-<li><strong>kubectl</strong> and <strong>Helm 3.8+</strong></li>
-<li><strong>cert-manager v1.12+</strong> — required for webhook TLS</li>
-<li><strong>NetworkPolicy-capable CNI</strong> — Cilium, Calico, Weave, or Antrea</li>
-<li><strong>Persistent storage</strong> — for agent workspace PVCs</li>
-</ul>
-<p>See the <a href="../../guides/cluster-setup/">Kubernetes guide</a> for instructions on installing and verifying these prerequisites.</p>
-<h2 id="install-via-helm">Install via Helm<a class="headerlink" href="#install-via-helm" title="Permanent link">&para;</a></h2>
-<p>Language Operator ships as two separate Helm charts:</p>
+<h1 id="languageagentselfconfig">LanguageAgentSelfConfig<a class="headerlink" href="#languageagentselfconfig" title="Permanent link">&para;</a></h1>
+<p>The <code>LanguageAgentSelfConfig</code> CRD (<code>lasc</code>) allows an agent pod to request runtime modifications to its own <code>LanguageAgent</code> spec. The operator validates each request against the parent agent's <code>spec.selfConfigure</code> allowlist before applying the patch.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Self-config requests are short-lived, namespace-scoped resources. The controller processes them once and transitions them to a terminal phase (<code>Applied</code>, <code>Denied</code>, or <code>Failed</code>). Completed requests are automatically deleted one hour after reaching a terminal phase.</p>
+<h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgentSelfConfig</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">add-web-search</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-agents</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">instanceRef</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-agent</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">addTools</span><span class="p">:</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web-search</span>
+</code></pre></div>
+<p>The parent agent must have <code>spec.selfConfigure.enabled: true</code> and <code>tools</code> in <code>spec.selfConfigure.allowedActions</code> for this request to be applied.</p>
+<h2 id="complete-api-reference">Complete API Reference<a class="headerlink" href="#complete-api-reference" title="Permanent link">&para;</a></h2>
+<h3 id="spec-fields-languageagentselfconfigspec"><code>spec</code> fields (<code>LanguageAgentSelfConfigSpec</code>)<a class="headerlink" href="#spec-fields-languageagentselfconfigspec" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Chart</th>
-<th>Purpose</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>language-operator/language-operator</code></td>
-<td>Operator, CRDs, RBAC, webhooks</td>
+<td><code>instanceRef</code></td>
+<td>string</td>
+<td>Name of the <code>LanguageAgent</code> to modify. Must be in the same namespace. <strong>Required.</strong></td>
 </tr>
 <tr>
-<td><code>language-operator/language-operator-runtimes</code></td>
-<td>Bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, claude-code)</td>
+<td><code>addTools</code></td>
+<td>[]string</td>
+<td><code>LanguageTool</code> names to append to <code>spec.tools</code> on the parent agent. Requires <code>tools</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>removeTools</code></td>
+<td>[]string</td>
+<td><code>LanguageTool</code> names to remove from <code>spec.tools</code> on the parent agent. Requires <code>tools</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>addModels</code></td>
+<td>[]string</td>
+<td><code>LanguageModel</code> names to append to <code>spec.models</code> on the parent agent. Requires <code>models</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>removeModels</code></td>
+<td>[]string</td>
+<td><code>LanguageModel</code> names to remove from <code>spec.models</code> on the parent agent. Requires <code>models</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>addEnvVars</code></td>
+<td>[]SelfConfigEnvVar</td>
+<td>Plain-value environment variables to inject into <code>spec.deployment.env</code>. Existing variables with the same name are overwritten. SecretKeyRef and other value sources are not supported. Requires <code>envVars</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>updateInstructions</code></td>
+<td>string</td>
+<td>When non-empty, replaces <code>spec.instructions</code> on the parent agent. Requires <code>instructions</code> in <code>allowedActions</code>.</td>
+</tr>
+<tr>
+<td><code>addRoleRules</code></td>
+<td>[]PolicyRule</td>
+<td>RBAC policy rules to append to <code>spec.deployment.roleRules</code>. Duplicate rules are de-duplicated. Requires <code>roleRules</code> in <code>allowedActions</code>.</td>
 </tr>
 </tbody>
 </table>
-<p>Install the operator chart first, then the runtimes chart.</p>
-<h3 id="1-add-the-helm-repository">1. Add the Helm Repository<a class="headerlink" href="#1-add-the-helm-repository" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>https://language-operator.github.io/language-operator
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<h3 id="specaddenvvars-fields-selfconfigenvvar"><code>spec.addEnvVars[]</code> fields (<code>SelfConfigEnvVar</code>)<a class="headerlink" href="#specaddenvvars-fields-selfconfigenvvar" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Environment variable name. <strong>Required.</strong></td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>string</td>
+<td>Literal string value. <strong>Required.</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="status-fields-languageagentselfconfigstatus"><code>status</code> fields (<code>LanguageAgentSelfConfigStatus</code>)<a class="headerlink" href="#status-fields-languageagentselfconfigstatus" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>phase</code></td>
+<td>string</td>
+<td>Current processing state: <code>Pending</code>, <code>Applied</code>, <code>Failed</code>, or <code>Denied</code>.</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>string</td>
+<td>Human-readable explanation of the current phase.</td>
+</tr>
+<tr>
+<td><code>completionTime</code></td>
+<td>time</td>
+<td>Set when the request reaches a terminal phase. The CR is deleted 1 hour after this time.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="phase-lifecycle">Phase Lifecycle<a class="headerlink" href="#phase-lifecycle" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Pending → Applied   (changes patched onto parent LanguageAgent)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>        → Denied    (selfConfigure not enabled, or action not in allowedActions)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        → Failed    (controller error while processing the request)
 </code></pre></div>
-<h3 id="2-install-the-operator">2. Install the Operator<a class="headerlink" href="#2-install-the-operator" title="Permanent link">&para;</a></h3>
-<p>Install into the <code>language-operator</code> namespace, substituting the values for your cluster:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--set<span class="w"> </span>config.agents.ingressClassName<span class="o">=</span>traefik<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--set<span class="w"> </span>config.agents.storageClassName<span class="o">=</span>local-path<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--set<span class="w"> </span>config.gateway.ingressClassName<span class="o">=</span>traefik<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--set<span class="w"> </span>config.tls.certificateIssuerName<span class="o">=</span>letsencrypt-production<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--set<span class="w"> </span>config.tls.certificateIssuerKind<span class="o">=</span>ClusterIssuer
+<h2 id="enabling-self-configuration">Enabling Self-Configuration<a class="headerlink" href="#enabling-self-configuration" title="Permanent link">&para;</a></h2>
+<p>The parent agent must opt in via <code>spec.selfConfigure</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-agent</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">selfConfigure</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">allowedActions</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tools</span><span class="w">      </span><span class="c1"># addTools / removeTools</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">models</span><span class="w">     </span><span class="c1"># addModels / removeModels</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">envVars</span><span class="w">    </span><span class="c1"># addEnvVars</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">instructions</span><span class="w">  </span><span class="c1"># updateInstructions</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">roleRules</span><span class="w">  </span><span class="c1"># addRoleRules</span>
 </code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Values vary by cluster</p>
-<p>Replace <code>traefik</code> with your ingress class (e.g. <code>nginx</code>, <code>alb</code>), <code>local-path</code> with your StorageClass, and the TLS issuer with the name of your cert-manager <code>ClusterIssuer</code> or <code>Issuer</code>. All of these can also be set in a values file with <code>helm install -f values.yaml</code>.</p>
-</div>
-<p>See the <a href="https://github.com/language-operator/language-operator/blob/main/charts/language-operator/values.yaml">complete <code>values.yaml</code></a> for all available configuration options.</p>
-<h3 id="3-install-the-runtimes">3. Install the Runtimes<a class="headerlink" href="#3-install-the-runtimes" title="Permanent link">&para;</a></h3>
-<p>The <code>language-operator-runtimes</code> chart installs the bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, and claude-code). These are cluster-scoped resources — install once and reference from any namespace.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator-runtimes<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>language-operator/language-operator-runtimes<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
-</code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">Operator must be installed first</p>
-<p>The runtimes chart requires the CRDs installed by the operator chart. Always install <code>language-operator</code> before <code>language-operator-runtimes</code>.</p>
-</div>
-<p>You can selectively disable runtimes you don't need:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator-runtimes<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>language-operator/language-operator-runtimes<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--set<span class="w"> </span>claude-code.enabled<span class="o">=</span><span class="nb">false</span>
-</code></pre></div>
-<h3 id="4-verify-installation">4. Verify Installation<a class="headerlink" href="#4-verify-installation" title="Permanent link">&para;</a></h3>
-<p>Check that the operator pod is running:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>NAME                                  READY   STATUS    RESTARTS   AGE
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>language-operator-5f7b8d9c4d-x8z2q    1/1     Running   0          30s
-</code></pre></div>
-<p>Check CRDs are installed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>langop.io
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>languageagentruntimes.langop.io
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>languageagents.langop.io
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>languageagentselfconfigs.langop.io
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>languageclusters.langop.io
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>languagemodels.langop.io
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>languagepersonas.langop.io
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>languagetools.langop.io
-</code></pre></div>
-<p>Check runtimes are installed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagentruntimes
-</code></pre></div>
-<p>Expected output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>NAME          AGE
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>claude-code   30s
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>openclaw      30s
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>opencode      30s
-</code></pre></div>
-<h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
-<p>Upgrade the operator to the latest version:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>language-operator<span class="w"> </span>language-operator/language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
-</code></pre></div>
-<p>Upgrade runtimes separately:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>language-operator-runtimes<span class="w"> </span>language-operator/language-operator-runtimes<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator
-</code></pre></div>
-<div class="admonition note">
-<p class="admonition-title">CRD schema changes</p>
-<p>Helm does not update CRDs automatically on <code>helm upgrade</code>. When upgrading to a version that includes CRD changes, apply the updated CRDs first:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagents.yaml
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagentruntimes.yaml
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagentselfconfigs.yaml
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageclusters.yaml
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagemodels.yaml
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagepersonas.yaml
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagetools.yaml
-</code></pre></div>
-<p>Check the release notes before upgrading to see if CRD changes are included.</p>
-</div>
-<h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
-<p>Remove the runtimes chart first, then the operator:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator-runtimes<span class="w"> </span>--namespace<span class="w"> </span>language-operator
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>language-operator<span class="w"> </span>--namespace<span class="w"> </span>language-operator
-</code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Data Loss</p>
-<p>Uninstalling will delete all LanguageAgent, LanguageModel, and related resources.
-Back up any important configurations before uninstalling.</p>
-</div>
+<p>When <code>enabled</code> is <code>true</code>, the operator grants the agent's ServiceAccount permission to create <code>LanguageAgentSelfConfig</code> resources in the namespace.</p>
+<p>When <code>allowedActions</code> is empty (while <code>enabled: true</code>), all requests are immediately denied.</p>
+<h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../languageagent/">LanguageAgent</a> — parent resource; <code>spec.selfConfigure</code> controls the gate</li>
+<li><a href="../overview/">CRD Overview</a> — all Language Operator CRDs</li>
+</ul>
 
 
 
