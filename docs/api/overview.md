@@ -1,6 +1,6 @@
 # CRD Reference Overview
 
-Language Operator provides five Custom Resource Definitions (CRDs) for managing AI agent workloads on Kubernetes.
+Language Operator provides seven Custom Resource Definitions (CRDs) for managing AI agent workloads on Kubernetes.
 
 !!! tip "Auto-Generated API Reference"
     See the **[Complete API Reference](reference.md)** for auto-generated field documentation from Go types.
@@ -122,6 +122,23 @@ The standard runtimes (`openclaw`, `opencode`) are bundled with the Helm chart a
 
 ---
 
+### LanguageAgentSelfConfig
+
+**Scope:** Namespace
+**Purpose:** Runtime self-modification requests submitted by agent pods
+
+A `LanguageAgentSelfConfig` (`lasc`) is a short-lived, namespace-scoped resource that an agent pod submits to request changes to its own `LanguageAgent` spec at runtime. The controller validates the request against the parent agent's `spec.selfConfigure` allowlist before applying the patch.
+
+**Common Use Cases:**
+
+- Agents dynamically adding tools they discover at runtime
+- Agents injecting new environment variables without a full redeploy
+- Agents updating their own system instructions mid-session
+
+[Full LanguageAgentSelfConfig Reference →](languageagentselfconfig.md)
+
+---
+
 ### LanguagePersona
 
 **Scope:** Namespace
@@ -157,6 +174,7 @@ graph TD
     Model[LanguageModel] -->|deployed in| NS
     Tool[LanguageTool] -->|deployed in| NS
     Persona[LanguagePersona] -->|deployed in| NS
+    SelfConfig[LanguageAgentSelfConfig] -->|deployed in| NS
 
     Agent -->|references| Model
     Agent -->|references| Tool
@@ -166,6 +184,7 @@ graph TD
 
     Agent -->|connects to| Proxy
     Agent -->|connects to| Tool
+    SelfConfig -->|modifies| Agent
 ```
 
 ## Configuration Injection

@@ -111,6 +111,7 @@ Expected output:
 ```
 languageagentruntimes.langop.io
 languageagents.langop.io
+languageagentselfconfigs.langop.io
 languageclusters.langop.io
 languagemodels.langop.io
 languagepersonas.langop.io
@@ -155,6 +156,7 @@ helm upgrade language-operator-runtimes language-operator/language-operator-runt
     ```bash
     kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagents.yaml
     kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagentruntimes.yaml
+    kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageagentselfconfigs.yaml
     kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languageclusters.yaml
     kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagemodels.yaml
     kubectl apply -f https://raw.githubusercontent.com/language-operator/language-operator/main/charts/language-operator/templates/crds/langop.io_languagepersonas.yaml
