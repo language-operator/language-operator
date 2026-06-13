@@ -224,6 +224,25 @@ Environment variables injected into every agent container and all init container
 
 Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` are passed through unchanged. See [Environment Variables](../components/agents.md#environment-variables) in the architecture docs for the full reference.
 
+### Workspace
+
+When `spec.workspace.enabled` is true (the default), the operator provisions a PersistentVolumeClaim and mounts it into the agent container and all init containers. The PVC is normally deleted when the LanguageAgent is deleted; set `retain: true` to preserve it across agent deletions.
+
+**`spec.workspace` fields (`WorkspaceSpec`):**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | *bool | `true` | Create and mount a workspace PVC. Set to `false` to disable without removing the workspace config. |
+| `size` | string | `10Gi` | PVC storage request (e.g. `"10Gi"`, `"500Mi"`) |
+| `mountPath` | string | `/workspace` | Mount path in the container |
+| `storageClassName` | *string | cluster default | StorageClass for the PVC |
+| `accessMode` | string | `ReadWriteOnce` | PVC access mode: `ReadWriteOnce` or `ReadWriteMany` |
+| `retain` | *bool | `false` | When `true`, the PVC's ownerReference is removed on agent deletion so Kubernetes GC does not collect it. The orphaned PVC name is surfaced in `status.workspacePVCName`. |
+| `initialFiles` | map[string]string | — | Files seeded into the workspace on first boot only. Keys are filenames; values are file contents. Files are not overwritten if they already exist. |
+| `seedConfigMapRef` | *LocalObjectReference | — | External ConfigMap whose keys are filenames and values are file contents. Merged with `initialFiles`; `initialFiles` wins on key collision. |
+
+When `retain` is `true` and the agent is deleted, `status.workspacePVCName` records the name of the orphaned PVC so it can be located and reattached later.
+
 ### Resource Management
 
 Agents are deployed as standard Kubernetes Deployments with:
@@ -232,6 +251,60 @@ Agents are deployed as standard Kubernetes Deployments with:
 - Resource limits and requests (`spec.deployment.resources`)
 - Node selectors, tolerations, and affinity rules
 - Custom liveness, readiness, and startup probes
+
+### Monitoring
+
+`spec.monitoring` integrates the agent with Prometheus Operator. The operator silently skips this if prometheus-operator is not installed.
+
+```yaml
+spec:
+  monitoring:
+    serviceMonitor:
+      enabled: true
+      path: /metrics
+      interval: 30s
+    rules:
+      - name: agent-alerts
+        rules:
+          - alert: AgentDown
+            expr: up{job="my-agent"} == 0
+            for: 5m
+            labels:
+              severity: critical
+```
+
+**`spec.monitoring.serviceMonitor` fields (`AgentServiceMonitorSpec`):**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | — | Create a ServiceMonitor for this agent. **Required.** |
+| `port` | string | first port name, or `"http"` | Name of the service port to scrape |
+| `path` | string | `/metrics` | HTTP path to scrape for metrics |
+| `interval` | string | Prometheus default | Scrape interval (e.g. `"30s"`) |
+| `scrapeTimeout` | string | Prometheus default | Per-scrape timeout |
+| `labels` | map[string]string | — | Additional labels added to the ServiceMonitor metadata |
+
+**`spec.monitoring.rules[]` fields (`PrometheusRuleGroup`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Rule group name. **Required.** |
+| `interval` | string | Evaluation interval for this group. Uses Prometheus default when omitted. |
+| `rules` | []PrometheusAlertingRule | Alerting or recording rules in this group. At least one required. |
+
+**`spec.monitoring.rules[].rules[]` fields (`PrometheusAlertingRule`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `alert` | string | Alert name (leave empty for recording rules) |
+| `record` | string | Output metric name for recording rules (leave empty for alerting rules) |
+| `expr` | string | PromQL expression. **Required.** |
+| `for` | string | Duration condition must be true before alert fires (alerting rules only) |
+| `labels` | map[string]string | Labels attached to the alert or recording rule |
+| `annotations` | map[string]string | Annotations attached to the alert (alerting rules only) |
+
+!!! note "Requires prometheus-operator"
+    The operator creates `ServiceMonitor` and `PrometheusRule` resources only when prometheus-operator CRDs are present in the cluster. If prometheus-operator is not installed, `spec.monitoring` is silently ignored.
 
 ## Related Resources
 

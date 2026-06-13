@@ -67,7 +67,7 @@ Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` ar
 
 ## Workspace
 
-When `spec.workspace.enabled` is true (the default), the operator provisions a PersistentVolumeClaim named `<agent-name>-workspace` and mounts it into the agent container and all init containers. The workspace survives pod restarts and redeployments — it's deleted only when the LanguageAgent itself is deleted.
+When `spec.workspace.enabled` is true (the default), the operator provisions a PersistentVolumeClaim named `<agent-name>-workspace` and mounts it into the agent container and all init containers. The workspace survives pod restarts and redeployments. By default the PVC is deleted when the LanguageAgent is deleted; set `spec.workspace.retain: true` to preserve it.
 
 | Field | Default | Description |
 |-------|---------|-------------|
@@ -75,7 +75,10 @@ When `spec.workspace.enabled` is true (the default), the operator provisions a P
 | `spec.workspace.size` | `10Gi` | PVC storage request |
 | `spec.workspace.mountPath` | `/workspace` | Mount path in the container |
 | `spec.workspace.storageClassName` | cluster default | StorageClass for the PVC |
-| `spec.workspace.accessMode` | `ReadWriteOnce` | PVC access mode |
+| `spec.workspace.accessMode` | `ReadWriteOnce` | PVC access mode (`ReadWriteOnce` or `ReadWriteMany`) |
+| `spec.workspace.retain` | `false` | When `true`, the PVC is preserved after agent deletion; the orphaned PVC name is recorded in `status.workspacePVCName` |
+| `spec.workspace.initialFiles` | — | Files seeded into the workspace on first boot (keys = filenames, values = file contents; not overwritten if already present) |
+| `spec.workspace.seedConfigMapRef` | — | External ConfigMap whose keys/values are seeded as files; merged with `initialFiles` (`initialFiles` wins on collision) |
 
 The volume is named `workspace` in the pod spec. Init containers that need to pre-seed it should mount it by that name.
 
