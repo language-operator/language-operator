@@ -1461,7 +1461,7 @@
 </table>
 <p>Additional variables from <code>spec.deployment.env</code> and <code>spec.deployment.envFrom</code> are passed through unchanged.</p>
 <h2 id="workspace">Workspace<a class="headerlink" href="#workspace" title="Permanent link">&para;</a></h2>
-<p>When <code>spec.workspace.enabled</code> is true (the default), the operator provisions a PersistentVolumeClaim named <code>&lt;agent-name&gt;-workspace</code> and mounts it into the agent container and all init containers. The workspace survives pod restarts and redeployments — it's deleted only when the LanguageAgent itself is deleted.</p>
+<p>When <code>spec.workspace.enabled</code> is true (the default), the operator provisions a PersistentVolumeClaim named <code>&lt;agent-name&gt;-workspace</code> and mounts it into the agent container and all init containers. The workspace survives pod restarts and redeployments. By default the PVC is deleted when the LanguageAgent is deleted; set <code>spec.workspace.retain: true</code> to preserve it.</p>
 <table>
 <thead>
 <tr>
@@ -1494,7 +1494,22 @@
 <tr>
 <td><code>spec.workspace.accessMode</code></td>
 <td><code>ReadWriteOnce</code></td>
-<td>PVC access mode</td>
+<td>PVC access mode (<code>ReadWriteOnce</code> or <code>ReadWriteMany</code>)</td>
+</tr>
+<tr>
+<td><code>spec.workspace.retain</code></td>
+<td><code>false</code></td>
+<td>When <code>true</code>, the PVC is preserved after agent deletion; the orphaned PVC name is recorded in <code>status.workspacePVCName</code></td>
+</tr>
+<tr>
+<td><code>spec.workspace.initialFiles</code></td>
+<td>—</td>
+<td>Files seeded into the workspace on first boot (keys = filenames, values = file contents; not overwritten if already present)</td>
+</tr>
+<tr>
+<td><code>spec.workspace.seedConfigMapRef</code></td>
+<td>—</td>
+<td>External ConfigMap whose keys/values are seeded as files; merged with <code>initialFiles</code> (<code>initialFiles</code> wins on collision)</td>
 </tr>
 </tbody>
 </table>

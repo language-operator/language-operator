@@ -1273,10 +1273,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workspace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#resource-management" class="md-nav__link">
     <span class="md-ellipsis">
       
         Resource Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring
       
     </span>
   </a>
@@ -1629,6 +1651,70 @@
 </tbody>
 </table>
 <p>Additional variables from <code>spec.deployment.env</code> and <code>spec.deployment.envFrom</code> are passed through unchanged. See <a href="../../components/agents/#environment-variables">Environment Variables</a> in the architecture docs for the full reference.</p>
+<h3 id="workspace">Workspace<a class="headerlink" href="#workspace" title="Permanent link">&para;</a></h3>
+<p>When <code>spec.workspace.enabled</code> is true (the default), the operator provisions a PersistentVolumeClaim and mounts it into the agent container and all init containers. The PVC is normally deleted when the LanguageAgent is deleted; set <code>retain: true</code> to preserve it across agent deletions.</p>
+<p><strong><code>spec.workspace</code> fields (<code>WorkspaceSpec</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>*bool</td>
+<td><code>true</code></td>
+<td>Create and mount a workspace PVC. Set to <code>false</code> to disable without removing the workspace config.</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>string</td>
+<td><code>10Gi</code></td>
+<td>PVC storage request (e.g. <code>"10Gi"</code>, <code>"500Mi"</code>)</td>
+</tr>
+<tr>
+<td><code>mountPath</code></td>
+<td>string</td>
+<td><code>/workspace</code></td>
+<td>Mount path in the container</td>
+</tr>
+<tr>
+<td><code>storageClassName</code></td>
+<td>*string</td>
+<td>cluster default</td>
+<td>StorageClass for the PVC</td>
+</tr>
+<tr>
+<td><code>accessMode</code></td>
+<td>string</td>
+<td><code>ReadWriteOnce</code></td>
+<td>PVC access mode: <code>ReadWriteOnce</code> or <code>ReadWriteMany</code></td>
+</tr>
+<tr>
+<td><code>retain</code></td>
+<td>*bool</td>
+<td><code>false</code></td>
+<td>When <code>true</code>, the PVC's ownerReference is removed on agent deletion so Kubernetes GC does not collect it. The orphaned PVC name is surfaced in <code>status.workspacePVCName</code>.</td>
+</tr>
+<tr>
+<td><code>initialFiles</code></td>
+<td>map[string]string</td>
+<td>—</td>
+<td>Files seeded into the workspace on first boot only. Keys are filenames; values are file contents. Files are not overwritten if they already exist.</td>
+</tr>
+<tr>
+<td><code>seedConfigMapRef</code></td>
+<td>*LocalObjectReference</td>
+<td>—</td>
+<td>External ConfigMap whose keys are filenames and values are file contents. Merged with <code>initialFiles</code>; <code>initialFiles</code> wins on key collision.</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>retain</code> is <code>true</code> and the agent is deleted, <code>status.workspacePVCName</code> records the name of the orphaned PVC so it can be located and reattached later.</p>
 <h3 id="resource-management">Resource Management<a class="headerlink" href="#resource-management" title="Permanent link">&para;</a></h3>
 <p>Agents are deployed as standard Kubernetes Deployments with:</p>
 <ul>
@@ -1637,6 +1723,145 @@
 <li>Node selectors, tolerations, and affinity rules</li>
 <li>Custom liveness, readiness, and startup probes</li>
 </ul>
+<h3 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">&para;</a></h3>
+<p><code>spec.monitoring</code> integrates the agent with Prometheus Operator. The operator silently skips this if prometheus-operator is not installed.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">monitoring</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">serviceMonitor</span><span class="p">:</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">      </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/metrics</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">rules</span><span class="p">:</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agent-alerts</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="nt">rules</span><span class="p">:</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">alert</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AgentDown</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">            </span><span class="nt">expr</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">up{job=&quot;my-agent&quot;} == 0</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">            </span><span class="nt">for</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5m</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">            </span><span class="nt">labels</span><span class="p">:</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">              </span><span class="nt">severity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">critical</span>
+</code></pre></div>
+<p><strong><code>spec.monitoring.serviceMonitor</code> fields (<code>AgentServiceMonitorSpec</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td>bool</td>
+<td>—</td>
+<td>Create a ServiceMonitor for this agent. <strong>Required.</strong></td>
+</tr>
+<tr>
+<td><code>port</code></td>
+<td>string</td>
+<td>first port name, or <code>"http"</code></td>
+<td>Name of the service port to scrape</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td>string</td>
+<td><code>/metrics</code></td>
+<td>HTTP path to scrape for metrics</td>
+</tr>
+<tr>
+<td><code>interval</code></td>
+<td>string</td>
+<td>Prometheus default</td>
+<td>Scrape interval (e.g. <code>"30s"</code>)</td>
+</tr>
+<tr>
+<td><code>scrapeTimeout</code></td>
+<td>string</td>
+<td>Prometheus default</td>
+<td>Per-scrape timeout</td>
+</tr>
+<tr>
+<td><code>labels</code></td>
+<td>map[string]string</td>
+<td>—</td>
+<td>Additional labels added to the ServiceMonitor metadata</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.monitoring.rules[]</code> fields (<code>PrometheusRuleGroup</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Rule group name. <strong>Required.</strong></td>
+</tr>
+<tr>
+<td><code>interval</code></td>
+<td>string</td>
+<td>Evaluation interval for this group. Uses Prometheus default when omitted.</td>
+</tr>
+<tr>
+<td><code>rules</code></td>
+<td>[]PrometheusAlertingRule</td>
+<td>Alerting or recording rules in this group. At least one required.</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>spec.monitoring.rules[].rules[]</code> fields (<code>PrometheusAlertingRule</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alert</code></td>
+<td>string</td>
+<td>Alert name (leave empty for recording rules)</td>
+</tr>
+<tr>
+<td><code>record</code></td>
+<td>string</td>
+<td>Output metric name for recording rules (leave empty for alerting rules)</td>
+</tr>
+<tr>
+<td><code>expr</code></td>
+<td>string</td>
+<td>PromQL expression. <strong>Required.</strong></td>
+</tr>
+<tr>
+<td><code>for</code></td>
+<td>string</td>
+<td>Duration condition must be true before alert fires (alerting rules only)</td>
+</tr>
+<tr>
+<td><code>labels</code></td>
+<td>map[string]string</td>
+<td>Labels attached to the alert or recording rule</td>
+</tr>
+<tr>
+<td><code>annotations</code></td>
+<td>map[string]string</td>
+<td>Annotations attached to the alert (alerting rules only)</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Requires prometheus-operator</p>
+<p>The operator creates <code>ServiceMonitor</code> and <code>PrometheusRule</code> resources only when prometheus-operator CRDs are present in the cluster. If prometheus-operator is not installed, <code>spec.monitoring</code> is silently ignored.</p>
+</div>
 <h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../languagemodel/">LanguageModel</a> - Configure LLM access</li>
