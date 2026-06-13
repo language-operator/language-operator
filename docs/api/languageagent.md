@@ -87,13 +87,6 @@ Entries declared by the agent's runtime are merged first, then the agent's own e
 
 Agents cannot configure authentication directly. Whether an agent sits behind the cluster's OIDC proxy is determined by its runtime's `auth.enabled` setting combined with the cluster's `auth.enabled` setting. See [LanguageAgentRuntime](languageagentruntime.md#authentication) and [Clusters](../components/clusters.md#authentication) for the effective model.
 
-### Execution Modes
-
-- `autonomous` - Continuously running agent
-- `scheduled` - Cron-based execution
-- `interactive` - User-triggered execution
-- `event-driven` - Responds to Kubernetes events
-
 ### Model References
 
 Each entry in `spec.models` is a `ModelReference` with the following fields:
