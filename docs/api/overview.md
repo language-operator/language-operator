@@ -33,13 +33,12 @@ A `LanguageCluster` creates an isolated environment for agents, models, and tool
 ### LanguageAgent
 
 **Scope:** Namespace
-**Purpose:** Autonomous, scheduled, and reactive agents
+**Purpose:** AI agents running as Kubernetes workloads
 
 A `LanguageAgent` represents an AI agent running as a Kubernetes workload with:
 
 - Container image specification
 - Model, tool, and persona references
-- Execution mode (autonomous, scheduled, interactive)
 - Configuration injection
 - Workspace storage
 

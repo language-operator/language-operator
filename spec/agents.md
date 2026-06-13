@@ -238,6 +238,6 @@ A well-behaved agent image should:
 
 - [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
-- [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_MODE`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
+- [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
 - [ ] Route LLM traffic through `MODEL_ENDPOINT` proxy URLs rather than connecting to model APIs directly
 - [ ] Use `spec.workspace.mountPath` (default `/workspace`) for persistent state — do not assume local container storage survives restarts
