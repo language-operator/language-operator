@@ -223,6 +223,52 @@ spec:
       enabled: false
 ```
 
+### Authentication
+
+Use `spec.auth` to enable OIDC authentication for the cluster. See [Authentication](../components/clusters.md#authentication) in the clusters guide for full usage examples.
+
+**`spec.auth` fields (`ClusterAuthSpec`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | bool | Enable OIDC authentication for the cluster (default: false) |
+| `oidc` | *ClusterOIDCSpec | OIDC provider configuration (embedded Dex or external) |
+
+**`spec.auth.oidc` fields (`ClusterOIDCSpec`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dex` | *DexSpec | Embedded Dex configuration. When set, the operator deploys Dex alongside the gateway. Mutually exclusive with `externalIssuerURL`. |
+| `externalIssuerURL` | string | Skip deploying Dex and use this issuer URL directly (e.g. `"https://accounts.google.com"`). Mutually exclusive with `dex`. |
+| `clientID` | string | OAuth2 client ID. Only used with `externalIssuerURL`; ignored when `dex` is set (the operator manages the client ID). |
+| `clientSecretRef` | *SecretReference | Reference to a Secret containing the OAuth2 client secret. Only used with `externalIssuerURL`; ignored when `dex` is set. |
+| `emailDomain` | string | Restrict logins to this email domain. Set to `"*"` to allow all domains (default). |
+
+**`spec.auth.oidc.dex` fields (`DexSpec`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `connectors` | []DexConnector | Upstream identity provider connectors (GitHub, Google, OIDC, LDAP, etc.) |
+| `enablePasswordDB` | bool | Enable Dex's built-in local password store (default: false) |
+| `staticPasswords` | []DexStaticPassword | Local user accounts for the built-in password store. Only used when `enablePasswordDB` is true. |
+| `image` | string | Override the Dex container image. Defaults to the operator Helm chart's `config.auth.dex.image`. |
+
+**`spec.auth.oidc.dex.connectors[]` fields (`DexConnector`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Connector type: `"github"`, `"google"`, `"oidc"`, `"ldap"`, `"microsoft"`, `"saml"`, etc. See [Dex connector docs](https://dexidp.io/docs/connectors/). |
+| `id` | string | Unique identifier for this connector |
+| `name` | string | Human-readable display name shown on the Dex login page |
+| `config` | map[string]string | Connector-specific configuration key/value pairs |
+
+**`spec.auth.oidc.clientSecretRef` fields (`SecretReference`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Name of the Kubernetes Secret |
+| `key` | string | Key within the Secret containing the client secret value (default: `"api-key"`) |
+
 ### Capacity and Quotas
 
 Use `spec.capacity` to enforce hard resource limits on the cluster's namespace. When set, the operator creates a `ResourceQuota` named `langop-quota` in the namespace. When removed, the quota is deleted.
