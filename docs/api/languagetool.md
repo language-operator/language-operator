@@ -178,6 +178,7 @@ spec:
 | `Running` | Deployment is available and the tool is healthy |
 | `Updating` | A spec change is in progress (e.g. image update or replica change); not yet fully rolled out |
 | `Failed` | Deployment failed or health check is not passing |
+| `Degraded` | Deployment is running but a non-critical subsystem (e.g. NetworkPolicy) has failed; tool is operational at reduced capability |
 
 ## Tool Discovery
 

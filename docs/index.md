@@ -36,7 +36,7 @@ The operator creates the Deployment, Service, and NetworkPolicy, injects model e
 | `LanguageAgentRuntime` | Reusable defaults for a class of agents |
 | `LanguageModel` | An LLM endpoint, proxied through LiteLLM |
 | `LanguageTool` | An MCP-compatible tool server |
-| `LanguagePersona` | Reusable behavioral configuration — tone, expertise, constraints |
+| `LanguagePersona` | Reusable behavioral configuration — tone, personality, expertise |
 
 ## Project Status
 
