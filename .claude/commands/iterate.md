@@ -32,6 +32,7 @@ Follow these directions closely:
      `gh issue list --label "queue/$ARGUMENTS" --state open --json number,title,labels --limit 1`
      - If no issue is found, report idle and stop.
      - If found, read its comments as well.
+   - **If no argument** pick the next logical issue.
 2. Investigate if the issue is valid, or a mis-use of the intended feature.
 3. **Label and create worktree** in one step. Determine a short slug (2-4 words) from the issue title, then:
    ```bash
