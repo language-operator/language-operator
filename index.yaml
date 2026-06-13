@@ -2,11 +2,11 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.1.130
-    created: "2026-06-13T02:26:13.172767562Z"
+    appVersion: 0.1.131
+    created: "2026-06-13T02:28:23.985602362Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 5599cdcd79d04c5eeb5d4b4aa88b26d0620c3017629a081584346dc29cc362fb
+    digest: dd45aa6cf4a68f4a492aa1ca10c9b35e536538db01fbad562c70577dbf22f4e1
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -22,12 +22,12 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.1.130.tgz
-    version: 0.1.130
+    - https://language-operator.github.io/language-operator/language-operator-0.1.131.tgz
+    version: 0.1.131
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.1.130
-    created: "2026-06-13T02:26:13.173588077Z"
+    appVersion: 0.1.131
+    created: "2026-06-13T02:28:23.986532424Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -43,7 +43,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code) as subcharts
-    digest: 8ab58d738564a4108267904a90cb5b43d04eb2a8dfdfd51b23c2c3be58908beb
+    digest: 5a518ac8e4c8969c6a22a499b67573f96fe0a36e250cc8e58d520403ef496a57
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -58,6 +58,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.130.tgz
-    version: 0.1.130
-generated: "2026-06-13T02:26:13.166577944Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.131.tgz
+    version: 0.1.131
+generated: "2026-06-13T02:28:23.979185931Z"
