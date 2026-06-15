@@ -29,6 +29,6 @@ dependencies:
     repository: oci://ghcr.io/language-operator/charts
     condition: openclaw.enabled
   - name: opencode
-    version: "0.1.2"
+    version: "0.1.3"
     repository: oci://ghcr.io/language-operator/charts
     condition: opencode.enabled
