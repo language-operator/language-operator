@@ -25,6 +25,7 @@ import (
 	"maps"
 	"net"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -1072,6 +1073,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	for k := range cmData {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	for _, k := range keys {
 		h.Write([]byte(k))
 		h.Write([]byte(cmData[k]))
