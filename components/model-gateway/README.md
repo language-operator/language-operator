@@ -406,7 +406,7 @@ The agent connects to: `http://gpt-4.langop-system.svc.cluster.local:4000`
 
 ### Benchmarks
 
-Tested with LiteLLM v1.50.0 on Kubernetes 1.28:
+Tested with LiteLLM v1.89.0 on Kubernetes 1.28:
 
 - **Latency Overhead** - ~5-10ms added latency vs direct API calls
 - **Throughput** - 1000+ req/s per proxy instance (CPU-bound)
