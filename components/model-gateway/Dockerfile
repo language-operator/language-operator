@@ -13,7 +13,7 @@ RUN groupadd -r langop && useradd -r -g langop langop
 
 # Install LiteLLM with proxy support (Debian has pre-compiled wheels)
 RUN pip install --no-cache-dir \
-    'litellm[proxy]>=1.50.0' \
+    'litellm[proxy]==1.89.0' \
     pyyaml \
     requests
 
