@@ -18,6 +18,11 @@ spec:
       - "@modelcontextprotocol/server-postgres"
       - "$DATABASE_URL"
   deployment:
+    # The Node MCP server grows past the operator's 512Mi default and gets OOMKilled;
+    # give it 1Gi of headroom.
+    resources:
+      limits:
+        memory: 1Gi
     env:
       # install.sh builds this DSN to point at the bundled in-cluster Postgres StatefulSet
       # (statefulset.postgres-db.yaml) and writes it to the secret's "url" key.
