@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -243,6 +244,13 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 			Name:         agent.Name,
 		})
 	}
+	// Sort by ID so the rendered YAML (and thus the config hash that drives the
+	// Dex pod-template rollout annotation) is deterministic. The agent list comes
+	// from a cached List whose iteration order is not stable; without this the
+	// hash flips every reconcile and Dex rolls out forever.
+	sort.Slice(staticClients, func(i, j int) bool {
+		return staticClients[i].ID < staticClients[j].ID
+	})
 
 	cfg := dexConfig{
 		Issuer:  issuer,
