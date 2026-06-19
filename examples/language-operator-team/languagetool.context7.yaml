@@ -1,0 +1,42 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: context7
+  namespace: ${CLUSTER_NAME}
+spec:
+  # Context7 ships as a stdio MCP server. transport=stdio tells the operator to run it under a
+  # pinned, persistent stdio→Streamable-HTTP bridge (one long-lived child) and serve /mcp on
+  # spec.port. No supergateway flags, npm-cache volume, or HOME env are needed here — the
+  # operator injects the bridge, a writable cache + /tmp, and the readiness probe.
+  transport: stdio
+  port: 8080
+  stdio:
+    command:
+      - npx
+      - -y
+      - "@upstash/context7-mcp"
+  deployment:
+    # The Node MCP server grows past the operator's 512Mi default and gets OOMKilled;
+    # give it 1Gi of headroom.
+    resources:
+      limits:
+        memory: 1Gi
+    env:
+      # The API key is optional: without it Context7 still works, just at a lower rate limit.
+      # optional:true lets the pod start when the secret is absent (install without an API key).
+      - name: CONTEXT7_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: context7-mcp-credentials
+            key: api-key
+            optional: true
+  # The operator's default tool policy denies external egress. Context7 needs public HTTPS
+  # twice over: npx fetches the server package from the npm registry at boot, and the server
+  # calls Context7's API at runtime. Without this the pod can't start.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
