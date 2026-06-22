@@ -1,12 +1,12 @@
 dependencies:
 - name: claude-code
   repository: oci://ghcr.io/language-operator/charts
-  version: 0.1.2
+  version: 0.1.3
 - name: openclaw
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.0
 - name: opencode
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.3
-digest: sha256:0715e7f111605b6b42e49cbdd8844d30346c4a9fcb07252c500b74b487d99c06
-generated: "2026-06-13T19:26:29.847381732-05:00"
+digest: sha256:cebbd19b0bfc05c6da1cc8001186d2ed1fe30621a9215b4062b20ec0b15c2648
+generated: "2026-06-22T18:51:36.753799835-05:00"
