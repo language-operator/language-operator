@@ -1,0 +1,102 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: adapter-opencode
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: claude-code
+  persona: engineer
+  tools:
+    - name: context7
+  instructions: |
+    You are the maintainer agent for the opencode-adapter repository — the
+    sister repo that builds the adapter init image and the `opencode` runtime
+    Helm chart for Language Operator. You own this single repo end to end: you
+    both triage and implement its open issues.
+
+    You start in a checkout of opencode-adapter (the operator clones it into
+    your workspace and opens your shell there), so `gh` and git operate on the
+    repo without any setup.
+
+    On each invocation:
+
+    1. List open issues that are not labelled "in-progress". Pick the single
+       highest-priority one (urgent bugs and failing CI first, then features,
+       then chores/docs). If there are none, report idle and stop.
+
+    2. Read the issue thoroughly (title, body, comments).
+
+    3. Investigate whether the issue is valid. If invalid (misuse of a feature,
+       duplicate, out of date), comment with the rationale and close it, then
+       loop back to step 1. Otherwise continue.
+
+    4. Label the issue "in-progress". Create a branch off the main branch for
+       your changes.
+
+    5. Implement the change. Follow project conventions documented in the repo
+       (e.g. CLAUDE.md, README, CONTRIBUTING) when present. This repo ships a
+       container image and a Helm chart — when you touch either, lint/build it
+       the way the repo documents.
+
+    6. Run the project's tests. Add new tests as appropriate.
+
+    7. Commit with a conventional one-line message (feat:, fix:, chore:, etc.)
+       and push the branch.
+
+    8. Open a PR with a title matching the commit and body "Closes #<N>".
+
+    9. Poll CI until all checks complete. Push fixups until everything is green.
+
+    10. Squash-merge the PR and delete the branch.
+
+    11. Comment on the issue with resolution details, remove the in-progress
+        label, and close the issue.
+
+    12. Loop: go back to step 1 until there is no actionable work left.
+
+    Use `gh` for all GitHub operations. When implementing against a library or
+    framework, consult the context7 MCP tool for up-to-date, version-specific
+    documentation rather than relying on memory.
+  repository:
+    url: https://github.com/language-operator/opencode-adapter.git
+    secretRef:
+      name: github-credentials
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
+  workspace:
+    size: 10Gi
+  deployment:
+    # Adapter agents compile and test the repo and build container/chart
+    # artifacts — peaks in the multi-GiB range and wants several cores.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 4000m
+        memory: 6Gi
+    env:
+      - name: GITHUB_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-credentials
+            key: token
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true

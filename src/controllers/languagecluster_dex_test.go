@@ -178,6 +178,29 @@ func TestBuildDexConfigYAML_PerAgentClientName(t *testing.T) {
 	assert.Contains(t, yaml, "name: worker")
 }
 
+func TestBuildDexConfigYAML_DeterministicAgentOrder(t *testing.T) {
+	r := newDexReconciler(t)
+	cluster := authCluster("test")
+	// The agent list comes from a cached List whose iteration order is not
+	// stable. Differently-ordered inputs must render byte-identical YAML, else
+	// the config hash flips every reconcile and Dex rolls out forever.
+	forward := []langopv1alpha1.LanguageAgent{
+		*gen.LanguageAgent("alpha", "test"),
+		*gen.LanguageAgent("bravo", "test"),
+		*gen.LanguageAgent("charlie", "test"),
+	}
+	reversed := []langopv1alpha1.LanguageAgent{
+		*gen.LanguageAgent("charlie", "test"),
+		*gen.LanguageAgent("bravo", "test"),
+		*gen.LanguageAgent("alpha", "test"),
+	}
+	yamlForward, err := r.buildDexConfigYAML(cluster, "secret", forward)
+	require.NoError(t, err)
+	yamlReversed, err := r.buildDexConfigYAML(cluster, "secret", reversed)
+	require.NoError(t, err)
+	assert.Equal(t, yamlForward, yamlReversed)
+}
+
 func TestBuildDexConfigYAML_EnablePasswordDB(t *testing.T) {
 	r := newDexReconciler(t)
 	cluster := authCluster("test")
