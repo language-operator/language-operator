@@ -1,9 +1,9 @@
 apiVersion: v2
 name: language-operator-runtimes
-description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code) as subcharts
+description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code, deepagents) as subcharts
 type: application
-version: 0.1.131
-appVersion: "0.1.131"
+version: 0.1.132
+appVersion: "0.1.132"
 keywords:
   - ai
   - llm
@@ -32,3 +32,7 @@ dependencies:
     version: "0.1.3"
     repository: oci://ghcr.io/language-operator/charts
     condition: opencode.enabled
+  - name: deepagents
+    version: "0.1.0"
+    repository: oci://ghcr.io/language-operator/charts
+    condition: deepagents.enabled
