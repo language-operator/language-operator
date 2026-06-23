@@ -3,7 +3,7 @@
 Deploys the full Language Operator engineering team into an existing LanguageCluster: the
 [development-team](../development-team/) (a supervisor that triages the core repo's issues into
 priority queues + three workers that implement them) **plus** one self-contained maintainer
-agent for each of the three sister adapter repositories.
+agent for each of the four sister adapter repositories.
 
 Each agent declares its repo via `spec.repository`, so the operator clones it into the agent's
 workspace on init and starts the runtime inside the checkout (exposed as `$AGENT_REPO_DIR`) — no
@@ -22,6 +22,7 @@ worker-2 (engineer persona)  ← queue/2: backlog (chores, docs, cleanup)
 adapter-claude-code (engineer persona)  → language-operator/claude-code-adapter
 adapter-openclaw    (engineer persona)  → language-operator/openclaw-adapter
 adapter-opencode    (engineer persona)  → language-operator/opencode-adapter
+adapter-deepagents  (engineer persona)  → language-operator/deepagents-adapter
 ```
 
 Unlike the queue-based core workers, each `adapter-*` agent owns a single repo end to end: it
@@ -29,11 +30,11 @@ runs its own triage+implement loop (pick the highest-priority open, non-`in-prog
 implement → PR → merge → loop). A single agent per repo serializes naturally, so no queues or
 supervisor are needed for the adapters.
 
-All seven agents reference the [`context7`](../tools/context7/) `LanguageTool`, giving them
+All eight agents reference the [`context7`](../tools/context7/) `LanguageTool`, giving them
 up-to-date, version-specific library documentation over MCP so they stop coding against stale or
 hallucinated APIs.
 
-> The three `adapter-*` agents hardcode their `spec.repository.url` to the
+> The four `adapter-*` agents hardcode their `spec.repository.url` to the
 > `language-operator/<name>-adapter` repos. Edit those URLs in
 > `languageagent.adapter-*.yaml` if you work against forks.
 
@@ -45,14 +46,14 @@ hallucinated APIs.
 - `envsubst` (`brew install gettext` on macOS, pre-installed on most Linux distros)
 - A `LanguageCluster` already applied in the target namespace (see [clusters/basic](../clusters/basic/))
 - A Claude account (Pro, Max, Team, or Enterprise)
-- A GitHub personal access token with `repo` and `issues` scopes — used both to authenticate the clones (`spec.repository.secretRef`) and for the agents' `gh` operations. The same token must have access to the core repo **and** the three adapter repos.
+- A GitHub personal access token with `repo` and `issues` scopes — used both to authenticate the clones (`spec.repository.secretRef`) and for the agents' `gh` operations. The same token must have access to the core repo **and** the four adapter repos.
 
 ## Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CLUSTER_NAME` | yes | — | Namespace of the target LanguageCluster |
-| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to `github-credentials/token` secret; used for the clones and for `gh`. Needs access to the core repo and all three adapter repos. |
+| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to `github-credentials/token` secret; used for the clones and for `gh`. Needs access to the core repo and all four adapter repos. |
 | `PROJECT_REPOSITORY` | yes | — | Clone URL of the **core** repo the supervisor/workers work on (e.g. `https://github.com/language-operator/language-operator.git`). Cloned into each core agent's workspace via `spec.repository`. The adapter agents hardcode their own repo URLs. |
 | `PROJECT_NAME` | no | repo basename (minus `.git`) | Human-readable project name used in the core agents' prompts (e.g. `Language Operator`) |
 | `ANTHROPIC_API_KEY` | no | — | If set, written to `anthropic-credentials/api-key` and injected as `ANTHROPIC_API_KEY` on every agent (API-key billing). |
@@ -88,7 +89,7 @@ To mint a long-lived OAuth token (subscription billing, no browser needed): run 
 ```bash
 kubectl port-forward -n my-cluster svc/supervisor 8080:8080
 # open http://localhost:8080, run /login
-# ... repeat for worker-0/1/2 and adapter-claude-code/openclaw/opencode
+# ... repeat for worker-0/1/2 and adapter-claude-code/openclaw/opencode/deepagents
 ```
 
 ## What's created
@@ -107,6 +108,7 @@ kubectl port-forward -n my-cluster svc/supervisor 8080:8080
 - `LanguageAgent/adapter-claude-code` — owns `claude-code-adapter`; 10Gi workspace; uses `context7`
 - `LanguageAgent/adapter-openclaw` — owns `openclaw-adapter`; 10Gi workspace; uses `context7`
 - `LanguageAgent/adapter-opencode` — owns `opencode-adapter`; 10Gi workspace; uses `context7`
+- `LanguageAgent/adapter-deepagents` — owns `deepagents-adapter`; 10Gi workspace; uses `context7`
 
 Each `LanguageAgent` also produces a `Deployment`, `Service`, `NetworkPolicy`, `PersistentVolumeClaim`, and `ConfigMap`. Because each agent sets `spec.repository`, the operator injects a `repository` init container that clones the repo into the workspace (authenticated with `github-credentials`) and points the runtime's working directory at the checkout via `$AGENT_REPO_DIR`.
 
