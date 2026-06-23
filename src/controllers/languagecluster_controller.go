@@ -93,25 +93,6 @@ func (r *LanguageClusterReconciler) gatewayImage() string {
 	return "ghcr.io/language-operator/model-gateway:latest"
 }
 
-// gatewayEnv merges user-supplied env vars with operator-managed ones.
-// When spec.auth.enabled, LITELLM_JWT_PUBLIC_KEY_URL is injected so that the
-// model gateway enables LiteLLM JWT auth pointed at the cluster's Dex instance.
-func (r *LanguageClusterReconciler) gatewayEnv(cluster *langopv1alpha1.LanguageCluster, userEnv []corev1.EnvVar) []corev1.EnvVar {
-	issuer := dexIssuerURL(cluster)
-	if cluster.Spec.Auth == nil || !cluster.Spec.Auth.Enabled || issuer == "" {
-		return userEnv
-	}
-	jwtKeyURL := issuer + "/keys"
-	managed := corev1.EnvVar{Name: "LITELLM_JWT_PUBLIC_KEY_URL", Value: jwtKeyURL}
-	// User env takes precedence — don't override if they set it explicitly.
-	for _, e := range userEnv {
-		if e.Name == "LITELLM_JWT_PUBLIC_KEY_URL" {
-			return userEnv
-		}
-	}
-	return append([]corev1.EnvVar{managed}, userEnv...)
-}
-
 func (r *LanguageClusterReconciler) gatewayImagePullPolicy(cluster *langopv1alpha1.LanguageCluster) corev1.PullPolicy {
 	if cluster.Spec.Gateway != nil && cluster.Spec.Gateway.Deployment.ImagePullPolicy != "" {
 		return cluster.Spec.Gateway.Deployment.ImagePullPolicy
@@ -1236,7 +1217,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 							Args:            gatewayDeploy.Args,
 							ImagePullPolicy: r.gatewayImagePullPolicy(cluster),
 							Resources:       resources,
-							Env:             r.gatewayEnv(cluster, gatewayDeploy.Env),
+							Env:             gatewayDeploy.Env,
 							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
