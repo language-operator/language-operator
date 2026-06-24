@@ -2,11 +2,11 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.1.131
-    created: "2026-06-24T00:05:32.155557904Z"
+    appVersion: 0.2.0
+    created: "2026-06-24T00:11:49.416501569Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 55d1ca64574ba16333e0a81cbcdbb861371d9c4e72b80d72c08f76ac98d59ad2
+    digest: 6c6b24624a76a1ae04373bd5629b171e5ae2c30daf57b5aa4b2bf46c5bd9694a
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -22,12 +22,12 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.1.131.tgz
-    version: 0.1.131
+    - https://language-operator.github.io/language-operator/language-operator-0.2.0.tgz
+    version: 0.2.0
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.1.132
-    created: "2026-06-24T00:05:32.157643071Z"
+    appVersion: 0.2.0
+    created: "2026-06-24T00:11:49.417434346Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -47,7 +47,7 @@ entries:
       version: 0.1.1
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code, deepagents) as subcharts
-    digest: 82d7cad1fc435cf78d89576f2910926ed8ec67cfe0a87c6a4c94670691b23630
+    digest: d6601efa251d3450929844d7931e8c1579860902cd457305b69e8e309c3d4a78
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -62,6 +62,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.132.tgz
-    version: 0.1.132
-generated: "2026-06-24T00:05:32.149190654Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.2.0.tgz
+    version: 0.2.0
+generated: "2026-06-24T00:11:49.410261662Z"
