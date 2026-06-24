@@ -428,7 +428,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `image` _string_ | Image is the default container image for agents using this runtime.<br />Agents may override this. When a runtime is referenced, spec.image on the agent is optional. |  | Optional: \{\} <br /> |
 | `ports` _[AgentPort](#agentport) array_ | Ports defines default ports for agents using this runtime.<br />Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely. |  | Optional: \{\} <br /> |
-| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace provides default size, storageClass, and mountPath for the agent's workspace.<br />Workspace storage is always provisioned; this presets its parameters.<br />Agents may override individual workspace fields. |  | Optional: \{\} <br /> |
 | `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended. |  | Optional: \{\} <br /> |
 | `credentials` _[CredentialSpec](#credentialspec) array_ | Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into agents using this runtime. Each entry is<br />auto-generated, set inline, or sourced from an existing Secret. Merged into the<br />agent's effective spec runtime-first; agent entries override by name. |  | Optional: \{\} <br /> |
 | `auth` _[RuntimeAuthSpec](#runtimeauthspec)_ | Auth gates whether agents using this runtime sit behind the cluster OIDC proxy.<br />Effective only when the cluster has auth enabled (which provisions the OIDC<br />infrastructure). The OIDC connection itself is configured cluster-wide. |  | Optional: \{\} <br /> |
@@ -1241,7 +1240,6 @@ WorkspaceSpec defines persistent workspace storage for an agent
 
 
 _Appears in:_
-- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
 - [LanguageAgentSpec](#languageagentspec)
 
 | Field | Description | Default | Validation |

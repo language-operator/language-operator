@@ -44,9 +44,6 @@ spec:
   ports:
     - name: http
       port: 8080
-  workspace:
-    size: 5Gi
-    mountPath: /workspace
   deployment:
     resources:
       requests:
@@ -63,7 +60,6 @@ spec:
 |-------|------|-------------|
 | `image` | string | Default container image for agents using this runtime |
 | `ports` | `[]AgentPort` | Default port list; see merge semantics below |
-| `workspace` | `WorkspaceSpec` | Default workspace configuration (size, mountPath) |
 | `deployment` | `DeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
 | `credentials` | `[]Credential` | Credentials provisioned for every agent referencing this runtime; see below |
 | `auth` | `RuntimeAuth` | Gates whether agents using this runtime sit behind the cluster's OIDC proxy; see [Authentication](#authentication) |

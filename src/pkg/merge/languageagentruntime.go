@@ -44,14 +44,6 @@ func ApplyRuntimeDefaults(agent *langopv1alpha1.LanguageAgentSpec, rt *langopv1a
 		agent.Ports = make([]langopv1alpha1.AgentPort, len(rt.Ports))
 		copy(agent.Ports, rt.Ports)
 	}
-	// Workspace: whole-object replacement (agent wins if non-nil).
-	// WorkspaceSpec fields are interdependent (size, accessMode, mountPath),
-	// so partial field-by-field merging would produce inconsistent objects.
-	if agent.Workspace == nil && rt.Workspace != nil {
-		ws := *rt.Workspace
-		agent.Workspace = &ws
-	}
-
 	// --- DeploymentSpec scalar fields (agent wins if non-zero/non-nil) ---
 
 	d := &agent.Deployment

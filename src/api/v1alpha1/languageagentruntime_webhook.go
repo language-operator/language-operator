@@ -59,12 +59,6 @@ func (h *LanguageAgentRuntimeWebhook) ValidateDelete(_ context.Context, _ *Langu
 
 // validateSpec validates the LanguageAgentRuntime spec fields.
 func (h *LanguageAgentRuntimeWebhook) validateSpec(rt *LanguageAgentRuntime) error {
-	if rt.Spec.Workspace != nil {
-		if err := validateWorkspaceSize(rt.Spec.Workspace.Size); err != nil {
-			return fmt.Errorf("spec.workspace.size: %w", err)
-		}
-	}
-
 	if len(rt.Spec.Ports) > 0 {
 		if err := validateAgentPorts(rt.Spec.Ports); err != nil {
 			return fmt.Errorf("spec.ports: %w", err)

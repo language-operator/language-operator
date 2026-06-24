@@ -58,64 +58,6 @@ func TestLanguageAgentRuntimeValidateSpec(t *testing.T) {
 	})
 }
 
-func TestLanguageAgentRuntimeWorkspaceValidation(t *testing.T) {
-	tests := []struct {
-		name    string
-		size    string
-		wantErr bool
-		errMsg  string
-	}{
-		{
-			name:    "valid workspace size",
-			size:    "10Gi",
-			wantErr: false,
-		},
-		{
-			name:    "valid decimal workspace size",
-			size:    "1.5Ti",
-			wantErr: false,
-		},
-		{
-			name:    "zero workspace size rejected",
-			size:    "0",
-			wantErr: true,
-			errMsg:  "cannot be zero",
-		},
-		{
-			name:    "empty workspace size rejected",
-			size:    "",
-			wantErr: true,
-			errMsg:  "cannot be empty",
-		},
-		{
-			name:    "invalid format rejected",
-			size:    "notasize",
-			wantErr: true,
-			errMsg:  "invalid format",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := &LanguageAgentRuntimeWebhook{}
-			rt := &LanguageAgentRuntime{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
-				Spec: LanguageAgentRuntimeSpec{
-					Workspace: &WorkspaceSpec{Size: tt.size},
-				},
-			}
-			err := h.validateSpec(rt)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateSpec() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr && !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("validateSpec() error = %q, want to contain %q", err.Error(), tt.errMsg)
-			}
-		})
-	}
-}
-
 func TestLanguageAgentRuntimePortValidation(t *testing.T) {
 	boolPtr := func(b bool) *bool { return &b }
 
@@ -200,16 +142,19 @@ func TestLanguageAgentRuntimeWebhookValidateCreate(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid workspace size rejected", func(t *testing.T) {
+	t.Run("invalid spec rejected", func(t *testing.T) {
 		rt := &LanguageAgentRuntime{
 			ObjectMeta: metav1.ObjectMeta{Name: "test-runtime"},
 			Spec: LanguageAgentRuntimeSpec{
-				Workspace: &WorkspaceSpec{Size: "0"},
+				Ports: []AgentPort{
+					{Name: "http", Port: 8080},
+					{Name: "http", Port: 9090},
+				},
 			},
 		}
 		_, err := h.ValidateCreate(context.Background(), rt)
 		if err == nil {
-			t.Error("ValidateCreate() expected error for zero workspace size, got nil")
+			t.Error("ValidateCreate() expected error for duplicate port name, got nil")
 		}
 	})
 }
@@ -238,7 +183,10 @@ func TestLanguageAgentRuntimeWebhookValidateUpdate(t *testing.T) {
 				DeletionTimestamp: &now,
 			},
 			Spec: LanguageAgentRuntimeSpec{
-				Workspace: &WorkspaceSpec{Size: "0"},
+				Ports: []AgentPort{
+					{Name: "http", Port: 8080},
+					{Name: "http", Port: 9090},
+				},
 			},
 		}
 		_, err := h.ValidateUpdate(context.Background(), old, rt)

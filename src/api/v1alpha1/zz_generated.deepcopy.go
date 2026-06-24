@@ -689,11 +689,6 @@ func (in *LanguageAgentRuntimeSpec) DeepCopyInto(out *LanguageAgentRuntimeSpec) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.Workspace != nil {
-		in, out := &in.Workspace, &out.Workspace
-		*out = new(WorkspaceSpec)
-		(*in).DeepCopyInto(*out)
-	}
 	in.Deployment.DeepCopyInto(&out.Deployment)
 	if in.Credentials != nil {
 		in, out := &in.Credentials, &out.Credentials

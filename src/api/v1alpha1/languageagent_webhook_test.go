@@ -107,6 +107,26 @@ func TestLanguageAgentDefault(t *testing.T) {
 				// enabled, accessMode, mountPath would be set by CRD defaults
 			},
 		},
+		{
+			name: "workspace defaulted even when a runtime is set",
+			agent: &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent",
+					Namespace: "default",
+				},
+				Spec: LanguageAgentSpec{
+					Runtime:      "claude-code",
+					Instructions: "test instructions",
+					// Workspace is nil; provisioning is an agent concern, not the runtime's
+				},
+			},
+			expected: &WorkspaceSpec{
+				Enabled:    ptr.To(true),
+				Size:       "10Gi",
+				AccessMode: "ReadWriteOnce",
+				MountPath:  "/workspace",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -160,6 +180,24 @@ func TestLanguageAgentDefault(t *testing.T) {
 			if tt.name == "workspace partially specified gets defaults applied by CRD" {
 				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
 					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
+				}
+			}
+
+			// Workspace is provisioned for the agent regardless of any referenced runtime.
+			if tt.name == "workspace defaulted even when a runtime is set" {
+				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
+				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
+				if gotEnabled != wantEnabled {
+					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
+				}
+				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
+					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
+				}
+				if tt.agent.Spec.Workspace.AccessMode != tt.expected.AccessMode {
+					t.Errorf("Expected AccessMode=%s, got %s", tt.expected.AccessMode, tt.agent.Spec.Workspace.AccessMode)
+				}
+				if tt.agent.Spec.Workspace.MountPath != tt.expected.MountPath {
+					t.Errorf("Expected MountPath=%s, got %s", tt.expected.MountPath, tt.agent.Spec.Workspace.MountPath)
 				}
 			}
 		})
