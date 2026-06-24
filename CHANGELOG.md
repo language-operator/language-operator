@@ -8,6 +8,30 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.2.0 — 2026-06-24
+
+**Features**
+- add deepagents runtime (umbrella chart, examples, guide) (#888)
+- clone spec.repository into the workspace via init container (#881)
+- add spec.repository to LanguageAgent CRD with webhook validation (#880)
+
+**Bug Fixes**
+- remove enterprise-only LiteLLM JWT auth from model gateway (#887)
+- stop auth reconcile hot-loop + add language-operator-team example (#886)
+- sort gateway config-hash keys to stop reconcile hot-loop (#884)
+
+**Documentation**
+- migrate development-team example to spec.repository clone
+- document spec.repository and AGENT_REPO_DIR for LanguageAgent (#882)
+
+**Chores**
+- update readme
+- pin model-gateway litellm to 1.89.0 (#885)
+- drop unused claude-code.image.pullPolicy from runtimes values
+- update runtime subchart pins
+
+---
+
 ## v0.1.131 — 2026-06-12
 
 **Features**
