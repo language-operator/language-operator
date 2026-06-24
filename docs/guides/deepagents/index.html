@@ -12,13 +12,13 @@
         <meta name="author" content="Language Operator Contributors">
       
       
-        <link rel="canonical" href="https://language-operator.github.io/language-operator/guides/opencode/">
+        <link rel="canonical" href="https://language-operator.github.io/language-operator/guides/deepagents/">
       
       
-        <link rel="prev" href="../openclaw/">
+        <link rel="prev" href="../claude-code/">
       
       
-        <link rel="next" href="../claude-code/">
+        <link rel="next" href="../custom-agents/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>OpenCode - Language Operator</title>
+        <title>deepagents - Language Operator</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#deploying-opencode" class="md-skip">
+        <a href="#deploying-deepagents" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              OpenCode
+              deepagents
             
           </span>
         </div>
@@ -850,6 +850,62 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../opencode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenCode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -869,7 +925,7 @@
   <span class="md-ellipsis">
     
   
-    OpenCode
+    deepagents
   
 
     
@@ -887,7 +943,7 @@
   <span class="md-ellipsis">
     
   
-    OpenCode
+    deepagents
   
 
     
@@ -958,10 +1014,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deploy-opencode" class="md-nav__link">
+  <a href="#deploy-a-deepagents-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deploy OpenCode
+        Deploy a deepagents Agent
       
     </span>
   </a>
@@ -980,10 +1036,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connect" class="md-nav__link">
+  <a href="#watch-it-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connect
+        Watch it run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connect-to-the-live-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect to the live view
       
     </span>
   </a>
@@ -992,6 +1059,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#human-in-the-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Human-in-the-loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding tools
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1010,62 +1099,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../claude-code/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Claude Code
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../deepagents/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    deepagents
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1358,10 +1391,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deploy-opencode" class="md-nav__link">
+  <a href="#deploy-a-deepagents-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deploy OpenCode
+        Deploy a deepagents Agent
       
     </span>
   </a>
@@ -1380,10 +1413,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connect" class="md-nav__link">
+  <a href="#watch-it-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connect
+        Watch it run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connect-to-the-live-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect to the live view
       
     </span>
   </a>
@@ -1392,6 +1436,28 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#human-in-the-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Human-in-the-loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding tools
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1426,11 +1492,12 @@
   
 
 
-<h1 id="deploying-opencode">Deploying OpenCode<a class="headerlink" href="#deploying-opencode" title="Permanent link">&para;</a></h1>
-<p>OpenCode is an AI coding assistant similar to Claude Code. The <code>opencode</code> runtime is bundled with Language Operator and installed automatically with the Helm chart.</p>
+<h1 id="deploying-deepagents">Deploying deepagents<a class="headerlink" href="#deploying-deepagents" title="Permanent link">&para;</a></h1>
+<p><a href="https://github.com/langchain-ai/deepagents">deepagents</a> is LangChain's framework for building a single, capable agent — planning, sub-agents, a virtual filesystem, and MCP tools. The <code>deepagents</code> runtime is bundled with Language Operator and installed automatically with the runtimes Helm chart.</p>
+<p>Unlike the coding-CLI runtimes (<a href="../claude-code/">Claude Code</a>, <a href="../opencode/">OpenCode</a>, <a href="../openclaw/">OpenClaw</a>), deepagents is not an interactive terminal you drive. It is an <strong>autonomous executor</strong>: on startup it reads the agent's <code>spec.instructions</code>, runs that task once — streaming every step to <strong>stdout</strong> (so <code>kubectl logs</code> is the primary UI) and a live web view — then idles. The task <em>is</em> the <code>instructions</code> field.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Language Operator <a href="../../getting-started/installation/">installed</a></li>
+<li>Language Operator <a href="../../getting-started/installation/">installed</a>, including the <code>language-operator-runtimes</code> chart (provides the <code>deepagents</code> runtime)</li>
 <li>An LLM provider API key, or a local model endpoint (e.g. Ollama)</li>
 </ul>
 <h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
@@ -1448,6 +1515,7 @@
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>demo-cluster
 </code></pre></div>
 <h3 id="configure-a-model">Configure a Model<a class="headerlink" href="#configure-a-model" title="Permanent link">&para;</a></h3>
+<p>deepagents reaches the model through the in-cluster LiteLLM gateway — it never holds a real provider key. Register a <code>LanguageModel</code> for the gateway to route to:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Anthropic</label><label for="__tabbed_1_2">OpenAI</label><label for="__tabbed_1_3">Local Model</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1502,7 +1570,8 @@
 </div>
 </div>
 </div>
-<h3 id="deploy-opencode">Deploy OpenCode<a class="headerlink" href="#deploy-opencode" title="Permanent link">&para;</a></h3>
+<h3 id="deploy-a-deepagents-agent">Deploy a deepagents Agent<a class="headerlink" href="#deploy-a-deepagents-agent" title="Permanent link">&para;</a></h3>
+<p>A deepagents agent needs two things to do work: a <code>models</code> reference (the primary model) and <code>instructions</code> (the task it runs autonomously).</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Anthropic</label><label for="__tabbed_2_2">OpenAI</label><label for="__tabbed_2_3">Local Model</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1510,12 +1579,16 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="s">kind: LanguageAgent</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s">  name: opencode</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s">  name: researcher</span>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s">spec:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="s">  runtime: opencode</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="s">  runtime: deepagents</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="s">  models:</span>
 <a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="s">    - name: claude-sonnet</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="s">EOF</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="s">    Research the public API of the &quot;deepagents&quot; Python library, then write</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="s">    a concise, well-organized summary to /workspace/summary.md covering what</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="s">    the library is and its main entry points. When the file is written, stop.</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="s">EOF</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1523,12 +1596,16 @@
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="s">kind: LanguageAgent</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">  name: opencode</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="s">  name: researcher</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s">spec:</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">  runtime: opencode</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s">  runtime: deepagents</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s">  models:</span>
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s">    - name: gpt-4o</span>
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">EOF</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="s">    Research the public API of the &quot;deepagents&quot; Python library, then write</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s">    a concise, well-organized summary to /workspace/summary.md covering what</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s">    the library is and its main entry points. When the file is written, stop.</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="s">EOF</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1536,35 +1613,87 @@
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s">apiVersion: langop.io/v1alpha1</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="s">kind: LanguageAgent</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="s">  name: opencode</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="s">  name: researcher</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="s">spec:</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s">  runtime: opencode</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s">  runtime: deepagents</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="s">  models:</span>
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s">    - name: llama3</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s">EOF</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s">  instructions: |</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s">    Research the public API of the &quot;deepagents&quot; Python library, then write</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="s">    a concise, well-organized summary to /workspace/summary.md covering what</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="s">    the library is and its main entry points. When the file is written, stop.</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="s">EOF</span>
 </code></pre></div>
 </div>
 </div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Without <code>instructions</code> the agent comes up healthy but idles — there is no task to run. Without a <code>models</code> reference it cannot resolve a model and idles as well. Both are reported in the pod logs on startup.</p>
 </div>
 <h3 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>languageagents
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-w
 </code></pre></div>
 <p>Wait for the pod to reach <code>Running</code> and the LanguageAgent to show <code>Ready=True</code>.</p>
-<h3 id="connect">Connect<a class="headerlink" href="#connect" title="Permanent link">&para;</a></h3>
-<p>Access is gated by the cluster's OIDC proxy — there is no separate opencode password.</p>
-<p>If your <code>LanguageCluster</code> has a domain and <a href="../../components/clusters/#authentication">auth enabled</a>,
-open https://opencode.demo-cluster.\&lt;your-domain&gt; and sign in through the cluster's OIDC provider.</p>
-<p>For local access, port-forward the service (this bypasses the proxy, so no login is required):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/opencode<span class="w"> </span><span class="m">3000</span>:3000
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># open http://localhost:3000, or attach the TUI:</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>opencode<span class="w"> </span>attach<span class="w"> </span>http://localhost:3000
+<h3 id="watch-it-run">Watch it run<a class="headerlink" href="#watch-it-run" title="Permanent link">&para;</a></h3>
+<p>The agent starts working as soon as the pod is <code>Running</code> — there is nothing to log into. The run streams to stdout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>deploy/researcher
 </code></pre></div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>opencode has no built-in authentication. When the cluster does <strong>not</strong> enable auth, opencode is
-exposed unauthenticated on its ingress. Enable cluster auth to protect it.</p>
-</div>
+<p>You'll see the agent plan, act, and (for this task) write <code>/workspace/summary.md</code>. When the task finishes it reports <code>completed</code> and idles.</p>
+<h3 id="connect-to-the-live-view">Connect to the live view<a class="headerlink" href="#connect-to-the-live-view" title="Permanent link">&para;</a></h3>
+<p>For a browser view of the same stream plus human-in-the-loop controls, port-forward the service:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/researcher<span class="w"> </span><span class="m">8080</span>:8080
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># open http://localhost:8080</span>
+</code></pre></div>
+<p>The thin server exposes <code>GET /</code> (live UI), <code>GET /events</code> (SSE), <code>GET /state</code> (status + any pending interrupt), <code>POST /resume</code>, and <code>POST /restart</code>. <code>GET /health</code> backs the pod's probes.</p>
+<h2 id="human-in-the-loop">Human-in-the-loop<a class="headerlink" href="#human-in-the-loop" title="Permanent link">&para;</a></h2>
+<p>By default the runtime pauses before <strong>side-effecting</strong> tools — the built-in <code>write_file</code>/<code>edit_file</code> plus every MCP tool — and waits for approval. Read-only operations (<code>ls</code>/<code>read_file</code>) never pause. While paused the agent reports <code>interrupted</code>; approve or reject from the live view at <code>/</code>, or with <code>POST /resume</code>.</p>
+<p>Tune the policy with the <code>HITL_TOOLS</code> environment variable:</p>
+<table>
+<thead>
+<tr>
+<th><code>HITL_TOOLS</code></th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>unset</em> (default)</td>
+<td>Pause before <code>write_file</code>/<code>edit_file</code> and all MCP tools</td>
+</tr>
+<tr>
+<td><code>none</code> or <code>""</code></td>
+<td>Never pause — fully autonomous</td>
+</tr>
+<tr>
+<td><code>*</code></td>
+<td>Pause before every tool (built-in writers + all MCP tools)</td>
+</tr>
+<tr>
+<td><code>write_file,edit_file,…</code></td>
+<td>Pause only before the named tools</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepagents</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">deployment</span><span class="p">:</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HITL_TOOLS</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;none&quot;</span><span class="w">   </span><span class="c1"># hands-off; the task runs end to end</span>
+</code></pre></div>
+<h2 id="adding-tools">Adding tools<a class="headerlink" href="#adding-tools" title="Permanent link">&para;</a></h2>
+<p>Reference any <a href="../../components/tools/"><code>LanguageTool</code></a> and the operator resolves its MCP endpoint into the agent; deepagents loads it as a tool automatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">runtime</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepagents</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">models</span><span class="p">:</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">context7</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="nt">instructions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="no">Use the context7 tool to look up the current API, then …</span>
+</code></pre></div>
 <h2 id="what-the-operator-created">What the Operator Created<a class="headerlink" href="#what-the-operator-created" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1582,28 +1711,33 @@ exposed unauthenticated on its ingress. Enable cluster auth to protect it.</p>
 </tr>
 <tr>
 <td>Deployment</td>
-<td><code>opencode</code></td>
-<td>Runs the OpenCode container</td>
+<td><code>researcher</code></td>
+<td>Runs the deepagents container</td>
 </tr>
 <tr>
 <td>Service</td>
-<td><code>opencode</code></td>
-<td>ClusterIP on port 3000</td>
+<td><code>researcher</code></td>
+<td>ClusterIP on port 8080</td>
 </tr>
 <tr>
 <td>NetworkPolicy</td>
-<td><code>opencode</code></td>
+<td><code>researcher</code></td>
 <td>Allows inbound from other agents in this namespace</td>
 </tr>
 <tr>
 <td>PVC</td>
-<td><code>opencode-workspace</code></td>
-<td>10Gi persistent workspace</td>
+<td><code>researcher-workspace</code></td>
+<td>10Gi persistent workspace (agent files + checkpoint DB)</td>
 </tr>
 <tr>
 <td>ConfigMap</td>
-<td><code>opencode-agent</code></td>
+<td><code>researcher-agent</code></td>
 <td>Injected at <code>/etc/agent/config.yaml</code></td>
+</tr>
+<tr>
+<td>```</td>
+<td></td>
+<td></td>
 </tr>
 </tbody>
 </table>
