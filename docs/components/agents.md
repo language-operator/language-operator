@@ -105,7 +105,7 @@ The operator creates:
 
 - A **ClusterIP Service** for each port in `spec.ports`, named after the agent
 - An **HTTPRoute** for external access when a Gateway is configured on the LanguageCluster
-- A **NetworkPolicy** allowing inbound traffic from other agents in the same cluster namespace
+- A **NetworkPolicy** allowing inbound traffic from other agents in the same cluster namespace — add egress for public APIs via `spec.networkPolicies` (see the [Network Policies guide](../guides/network-policies.md))
 
 The agent listens on the port(s) defined in `spec.ports`. What it serves there is up to the image — HTTP, WebSocket, OpenAI-compatible API, anything.
 
