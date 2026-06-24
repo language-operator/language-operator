@@ -647,15 +647,72 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_1_4" id="__nav_1_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runtimes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_1_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Runtimes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
-      <a href="../mcp/" class="md-nav__link">
+      <a href="../../runtimes/claude-code/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    MCP
+    Claude Code
   
 
     
@@ -664,6 +721,98 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../runtimes/deepagents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DeepAgents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../runtimes/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../runtimes/opencode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenCode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -994,14 +1143,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/openclaw/" class="md-nav__link">
+      <a href="../../guides/mcp-tools/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    OpenClaw
+    MCP Tools
   
 
     
@@ -1022,70 +1171,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guides/opencode/" class="md-nav__link">
+      <a href="../../guides/network-policies/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    OpenCode
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/claude-code/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Claude Code
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../guides/deepagents/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    deepagents
+    Network Policies
   
 
     
@@ -1517,7 +1610,7 @@
 </tr>
 <tr>
 <td><code>language-operator/language-operator-runtimes</code></td>
-<td>Bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, claude-code)</td>
+<td>Bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, claude-code, deepagents)</td>
 </tr>
 </tbody>
 </table>
@@ -1546,7 +1639,7 @@
 </div>
 <p>See the <a href="https://github.com/language-operator/language-operator/blob/main/charts/language-operator/values.yaml">complete <code>values.yaml</code></a> for all available configuration options.</p>
 <h3 id="3-install-the-runtimes">3. Install the Runtimes<a class="headerlink" href="#3-install-the-runtimes" title="Permanent link">&para;</a></h3>
-<p>The <code>language-operator-runtimes</code> chart installs the bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, and claude-code). These are cluster-scoped resources — install once and reference from any namespace.</p>
+<p>The <code>language-operator-runtimes</code> chart installs the bundled <code>LanguageAgentRuntime</code> presets (openclaw, opencode, claude-code, and deepagents). These are cluster-scoped resources — install once and reference from any namespace.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator-runtimes<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>language-operator/language-operator-runtimes<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--namespace<span class="w"> </span>language-operator

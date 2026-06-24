@@ -89,15 +89,7 @@
          <lastmod>2026-06-24</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/getting-started/mcp/</loc>
-         <lastmod>2026-06-24</lastmod>
-    </url>
-    <url>
          <loc>https://language-operator.github.io/language-operator/getting-started/quickstart/</loc>
-         <lastmod>2026-06-24</lastmod>
-    </url>
-    <url>
-         <loc>https://language-operator.github.io/language-operator/guides/claude-code/</loc>
          <lastmod>2026-06-24</lastmod>
     </url>
     <url>
@@ -109,15 +101,27 @@
          <lastmod>2026-06-24</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/guides/deepagents/</loc>
+         <loc>https://language-operator.github.io/language-operator/guides/mcp-tools/</loc>
          <lastmod>2026-06-24</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/guides/openclaw/</loc>
+         <loc>https://language-operator.github.io/language-operator/guides/network-policies/</loc>
          <lastmod>2026-06-24</lastmod>
     </url>
     <url>
-         <loc>https://language-operator.github.io/language-operator/guides/opencode/</loc>
+         <loc>https://language-operator.github.io/language-operator/runtimes/claude-code/</loc>
+         <lastmod>2026-06-24</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/runtimes/deepagents/</loc>
+         <lastmod>2026-06-24</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/runtimes/openclaw/</loc>
+         <lastmod>2026-06-24</lastmod>
+    </url>
+    <url>
+         <loc>https://language-operator.github.io/language-operator/runtimes/opencode/</loc>
          <lastmod>2026-06-24</lastmod>
     </url>
 </urlset>
