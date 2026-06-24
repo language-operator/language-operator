@@ -12,7 +12,7 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 | [`LanguageAgent`](https://langop.io/docs/api/reference/#languageagent) | Alpha | Deploy a goal-directed agent |
 | [`LanguageAgentRuntime`](https://langop.io/docs/api/reference/#languageagentruntime) | Alpha | Presets for popular vendors (Claude, OpenClaw, OpenCode) |
 | [`LanguageModel`](https://langop.io/docs/api/reference/#languagemodel) | Alpha | Model configuration (proxied through LiteLLM) |
-| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | Development | MCP-compatible tool server |
+| [`LanguageTool`](https://langop.io/docs/api/reference/#languagetool) | Alpha | MCP-compatible tool server |
 | [`LanguagePersona`](https://langop.io/docs/api/reference/#languagepersona) | Development | Reusable behaviors and expertise |
 
 
