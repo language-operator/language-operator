@@ -38,6 +38,8 @@ Relevant spec fields:
 | `spec.workspace.storageClassName` | cluster default | StorageClass for the PVC |
 | `spec.workspace.accessMode` | `ReadWriteOnce` | PVC access mode |
 
+Workspace provisioning is an agent/cluster concern, not a runtime concern. The operator always defaults `spec.workspace` on (to `/workspace`, `10Gi`) when the agent does not set it, regardless of any referenced `LanguageAgentRuntime`. A runtime expresses its coupling to persistent storage only through the env it owns (e.g. `CLAUDE_CONFIG_DIR=/workspace/.claude`), which is why `/workspace` is the canonical mount path — there is no runtime `workspace` field.
+
 The volume name inside the pod spec is `workspace`. Init containers that need to pre-seed the workspace (e.g. config adapters) should mount it explicitly by this name:
 
 ```yaml
@@ -61,7 +63,7 @@ Key behaviors a runtime can rely on:
 
 - **Clone-once.** The init container clones only when the target directory does not already contain a `.git` directory. On subsequent restarts the existing checkout — including any agent edits and commits — is left untouched.
 - **Working directory.** The operator sets the agent container's working directory to `AGENT_REPO_DIR`, and injects the same path as an env var into every container. A compliant runtime should open and operate inside this directory.
-- **Workspace required.** The clone lands on the workspace volume, so configuring a repository implies a workspace PVC; the operator defaults `spec.workspace.enabled` to `true` when a repository is set.
+- **Workspace required.** The clone lands on the workspace volume. The operator always defaults `spec.workspace.enabled` to `true` when the agent does not set it, so a repository always has a workspace PVC to land in.
 - **Credentials.** For private repositories, `spec.repository.secretRef` names a Secret mounted read-only into the `repository` init container at `/git-secret`. The operator never reads it; the init container selects SSH (`ssh-privatekey` key) or HTTPS (`token`, or `username` + `password` keys) authentication based on which keys are present.
 
 The clone uses `spec.repository.ref` for the branch/tag/commit and `spec.repository.depth` for an optional shallow clone. See the [LanguageAgent API reference](../docs/api/languageagent.md#repository) for the full field reference and a private-repo example.

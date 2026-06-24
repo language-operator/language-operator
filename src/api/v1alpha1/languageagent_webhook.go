@@ -49,10 +49,9 @@ var _ admission.Validator[*LanguageAgent] = &LanguageAgentWebhook{}
 
 // Default implements admission.Defaulter
 func (h *LanguageAgentWebhook) Default(ctx context.Context, a *LanguageAgent) error {
-	// Default workspace when no runtime is set, or whenever a repository is declared
-	// (the clone needs a PVC to land in, even if a runtime would otherwise supply the
-	// workspace preset at reconcile time).
-	if a.Spec.Workspace == nil && (a.Spec.Runtime == "" || a.Spec.Repository != nil) {
+	// Default workspace storage when the agent doesn't specify it. Provisioning is an
+	// agent/cluster concern, so it is always defaulted here regardless of runtime or repository.
+	if a.Spec.Workspace == nil {
 		enabled := true
 		a.Spec.Workspace = &WorkspaceSpec{
 			Enabled:    &enabled,

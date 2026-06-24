@@ -37,12 +37,6 @@ type LanguageAgentRuntimeSpec struct {
 	// +listMapKey=name
 	Ports []AgentPort `json:"ports,omitempty"`
 
-	// Workspace provides default size, storageClass, and mountPath for the agent's workspace.
-	// Workspace storage is always provisioned; this presets its parameters.
-	// Agents may override individual workspace fields.
-	// +optional
-	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
-
 	// Deployment provides default Kubernetes pod and container configuration.
 	// Scalars (args, command, resources, probes, etc.) are used when the agent has none set.
 	// Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.

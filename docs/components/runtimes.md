@@ -1,6 +1,6 @@
 # Runtimes
 
-A `LanguageAgentRuntime` is a cluster-scoped preset that packages the defaults for a specific agent type: container image, ports, workspace configuration, resource limits, probes, and init containers. It is analogous to a Kubernetes `StorageClass` — admins install runtimes once, users reference them by name.
+A `LanguageAgentRuntime` is a cluster-scoped preset that packages the defaults for a specific agent type: container image, ports, resource limits, probes, and init containers. It is analogous to a Kubernetes `StorageClass` — admins install runtimes once, users reference them by name.
 
 ```yaml
 spec:
@@ -24,7 +24,7 @@ spec:
     - name: claude-sonnet
 ```
 
-produces the same Deployment as if the agent had explicitly specified the OpenClaw image, port, workspace settings, init containers, and probes — because the runtime supplies those defaults.
+produces the same Deployment as if the agent had explicitly specified the OpenClaw image, port, init containers, and probes — because the runtime supplies those defaults. Workspace storage is provisioned per-agent (always defaulted to `/workspace`), not by the runtime.
 
 ## Bundled Runtimes
 
@@ -105,9 +105,6 @@ spec:
   ports:
     - name: http
       port: 8080
-  workspace:
-    size: 5Gi
-    mountPath: /workspace
   deployment:
     resources:
       requests:
