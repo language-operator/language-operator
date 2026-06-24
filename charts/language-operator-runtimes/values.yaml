@@ -8,6 +8,7 @@
 #   - https://github.com/language-operator/claude-code-adapter
 #   - https://github.com/language-operator/openclaw-adapter
 #   - https://github.com/language-operator/opencode-adapter
+#   - https://github.com/language-operator/deepagents-adapter
 
 claude-code:
   # Install the claude-code LanguageAgentRuntime.
@@ -19,4 +20,8 @@ openclaw:
 
 opencode:
   # Install the opencode LanguageAgentRuntime.
+  enabled: true
+
+deepagents:
+  # Install the deepagents LanguageAgentRuntime.
   enabled: true

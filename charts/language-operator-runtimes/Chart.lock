@@ -8,5 +8,8 @@ dependencies:
 - name: opencode
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.3
-digest: sha256:cebbd19b0bfc05c6da1cc8001186d2ed1fe30621a9215b4062b20ec0b15c2648
-generated: "2026-06-22T18:51:36.753799835-05:00"
+- name: deepagents
+  repository: oci://ghcr.io/language-operator/charts
+  version: 0.1.1
+digest: sha256:f33a1259a71e64cdfdffb3ffc147eef3385682dbe16995abb82df39dd8af3e29
+generated: "2026-06-23T18:47:15.650675555-05:00"

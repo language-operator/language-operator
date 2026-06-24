@@ -1,0 +1,35 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: ${AGENT_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: deepagents
+  # deepagents is an autonomous executor: it runs these instructions once on
+  # startup (planning, sub-agents, a /workspace filesystem, MCP tools), streams
+  # every step to stdout (watch with `kubectl logs`), then idles. There is no
+  # prompt to type into — the task IS spec.instructions.
+  instructions: |
+    Research the public API of the "deepagents" Python library using the
+    context7 documentation tool. Then write a concise, well-organized summary
+    to /workspace/deepagents-summary.md covering: what the library is, the
+    create_deep_agent entry point and its key arguments, and how to attach MCP
+    tools. Cite the documentation sources you used. When the file is written,
+    stop.
+  # The primary model. Resolved through the in-cluster LiteLLM gateway — the
+  # agent never holds a real provider key. Must already exist in the namespace.
+  models:
+    - name: ${MODEL_NAME}
+  tools:
+    - name: context7
+  workspace:
+    # deepagents writes its files (and its checkpoint DB) here; survives restarts.
+    size: ${WORKSPACE_SIZE}
+  deployment:
+    env:
+      # Human-in-the-loop is ON by default: the agent pauses before side-effecting
+      # tools (write_file/edit_file + every MCP tool) and waits for POST /resume.
+      # For a hands-off first run we disable it so the task completes end-to-end.
+      # Remove this (or set "*") to require Approve/Reject in the live UI at `/`.
+      - name: HITL_TOOLS
+        value: "none"

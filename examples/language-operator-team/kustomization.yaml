@@ -12,3 +12,4 @@ resources:
   - languageagent.adapter-claude-code.yaml
   - languageagent.adapter-openclaw.yaml
   - languageagent.adapter-opencode.yaml
+  - languageagent.adapter-deepagents.yaml
