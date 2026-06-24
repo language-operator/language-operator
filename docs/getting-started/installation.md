@@ -29,7 +29,7 @@ Language Operator ships as two separate Helm charts:
 | Chart | Purpose |
 |-------|---------|
 | `language-operator/language-operator` | Operator, CRDs, RBAC, webhooks |
-| `language-operator/language-operator-runtimes` | Bundled `LanguageAgentRuntime` presets (openclaw, opencode, claude-code) |
+| `language-operator/language-operator-runtimes` | Bundled `LanguageAgentRuntime` presets (openclaw, opencode, claude-code, deepagents) |
 
 Install the operator chart first, then the runtimes chart.
 
@@ -65,7 +65,7 @@ See the [complete `values.yaml`](https://github.com/language-operator/language-o
 
 ### 3. Install the Runtimes
 
-The `language-operator-runtimes` chart installs the bundled `LanguageAgentRuntime` presets (openclaw, opencode, and claude-code). These are cluster-scoped resources — install once and reference from any namespace.
+The `language-operator-runtimes` chart installs the bundled `LanguageAgentRuntime` presets (openclaw, opencode, claude-code, and deepagents). These are cluster-scoped resources — install once and reference from any namespace.
 
 ```bash
 helm install language-operator-runtimes \

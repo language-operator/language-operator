@@ -1,29 +1,14 @@
-# Deploying OpenClaw
+# Deploying OpenCode
 
-OpenClaw is an AI personal assistant that connects to your editor via a WebSocket gateway. The `openclaw` runtime is bundled with Language Operator and is installed automatically with the Helm chart.
+OpenCode is an AI coding assistant similar to Claude Code. The `opencode` runtime is installed by the `language-operator-runtimes` chart.
 
 ## Prerequisites
 
-- Language Operator [installed](../getting-started/installation.md)
+- Language Operator [installed](../getting-started/installation.md), including the `language-operator-runtimes` chart (provides the `opencode` runtime)
+- A [`LanguageCluster`](../components/clusters.md) to deploy into, with your `kubectl` context set to its namespace (examples below assume a cluster named `demo-cluster`)
 - An LLM provider API key, or a local model endpoint (e.g. Ollama)
 
 ## Instructions
-
-### Create a Cluster
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: demo-cluster
-spec:
-  domain: demo-cluster.<your-domain>
-EOF
-
-kubectl wait languagecluster/demo-cluster --for=condition=Ready --timeout=60s
-kubectl config set-context --current --namespace=demo-cluster
-```
 
 ### Configure a Model
 
@@ -84,7 +69,7 @@ kubectl config set-context --current --namespace=demo-cluster
     EOF
     ```
 
-### Deploy OpenClaw
+### Deploy OpenCode
 
 === "Anthropic"
 
@@ -93,9 +78,9 @@ kubectl config set-context --current --namespace=demo-cluster
     apiVersion: langop.io/v1alpha1
     kind: LanguageAgent
     metadata:
-      name: openclaw
+      name: opencode
     spec:
-      runtime: openclaw
+      runtime: opencode
       models:
         - name: claude-sonnet
     EOF
@@ -108,9 +93,9 @@ kubectl config set-context --current --namespace=demo-cluster
     apiVersion: langop.io/v1alpha1
     kind: LanguageAgent
     metadata:
-      name: openclaw
+      name: opencode
     spec:
-      runtime: openclaw
+      runtime: opencode
       models:
         - name: gpt-4o
     EOF
@@ -123,15 +108,13 @@ kubectl config set-context --current --namespace=demo-cluster
     apiVersion: langop.io/v1alpha1
     kind: LanguageAgent
     metadata:
-      name: openclaw
+      name: opencode
     spec:
-      runtime: openclaw
+      runtime: opencode
       models:
         - name: llama3
     EOF
     ```
-
-The operator will auto-generate a gateway token and store it in a Secret named `openclaw-runtime` after creation.
 
 ### Verify
 
@@ -142,30 +125,32 @@ kubectl get pods -w
 
 Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 
-### Get Credentials
-
-Retrieve the auto-generated token:
-
-```bash
-TOKEN=$(kubectl get secret openclaw-runtime \
-  -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
-
-echo "Token: $TOKEN"
-```
-
 ### Connect
 
-Log in with your token at https://openclaw.demo-cluster.<your-domain>.
+Access is gated by the cluster's OIDC proxy — there is no separate opencode password.
 
+If your `LanguageCluster` has a domain and [auth enabled](../components/clusters.md#authentication),
+open https://opencode.demo-cluster.\<your-domain\> and sign in through the cluster's OIDC provider.
+
+For local access, port-forward the service (this bypasses the proxy, so no login is required):
+
+```bash
+kubectl port-forward svc/opencode 3000:3000
+# open http://localhost:3000, or attach the TUI:
+opencode attach http://localhost:3000
+```
+
+!!! warning
+
+    opencode has no built-in authentication. When the cluster does **not** enable auth, opencode is
+    exposed unauthenticated on its ingress. Enable cluster auth to protect it.
 
 ## What the Operator Created
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Namespace | `my-cluster` | Isolated workload namespace |
-| Deployment | `openclaw` | Runs the OpenClaw container |
-| Service | `openclaw` | ClusterIP on port 18789 |
-| Secret | `openclaw-runtime` | Auto-generated gateway token |
-| NetworkPolicy | `openclaw` | Allows inbound from other agents in this namespace |
-| PVC | `openclaw-workspace` | 10Gi persistent workspace |
-| ConfigMap | `openclaw-agent` | Injected at `/etc/agent/config.yaml` |
+| Deployment | `opencode` | Runs the OpenCode container |
+| Service | `opencode` | ClusterIP on port 3000 |
+| NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
+| PVC | `opencode-workspace` | 10Gi persistent workspace |
+| ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |

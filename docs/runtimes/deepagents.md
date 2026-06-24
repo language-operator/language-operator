@@ -1,31 +1,16 @@
 # Deploying deepagents
 
-[deepagents](https://github.com/langchain-ai/deepagents) is LangChain's framework for building a single, capable agent — planning, sub-agents, a virtual filesystem, and MCP tools. The `deepagents` runtime is bundled with Language Operator and installed automatically with the runtimes Helm chart.
+[deepagents](https://github.com/langchain-ai/deepagents) is LangChain's framework for building a single, capable agent — planning, sub-agents, a virtual filesystem, and MCP tools. The `deepagents` runtime is installed by the `language-operator-runtimes` chart.
 
 Unlike the coding-CLI runtimes ([Claude Code](claude-code.md), [OpenCode](opencode.md), [OpenClaw](openclaw.md)), deepagents is not an interactive terminal you drive. It is an **autonomous executor**: on startup it reads the agent's `spec.instructions`, runs that task once — streaming every step to **stdout** (so `kubectl logs` is the primary UI) and a live web view — then idles. The task *is* the `instructions` field.
 
 ## Prerequisites
 
 - Language Operator [installed](../getting-started/installation.md), including the `language-operator-runtimes` chart (provides the `deepagents` runtime)
+- A [`LanguageCluster`](../components/clusters.md) to deploy into, with your `kubectl` context set to its namespace (examples below assume a cluster named `demo-cluster`)
 - An LLM provider API key, or a local model endpoint (e.g. Ollama)
 
 ## Instructions
-
-### Create a Cluster
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: langop.io/v1alpha1
-kind: LanguageCluster
-metadata:
-  name: demo-cluster
-spec:
-  domain: demo-cluster.<your-domain>
-EOF
-
-kubectl wait languagecluster/demo-cluster --for=condition=Ready --timeout=60s
-kubectl config set-context --current --namespace=demo-cluster
-```
 
 ### Configure a Model
 
@@ -224,7 +209,6 @@ spec:
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Namespace | `demo-cluster` | Isolated workload namespace |
 | Deployment | `researcher` | Runs the deepagents container |
 | Service | `researcher` | ClusterIP on port 8080 |
 | NetworkPolicy | `researcher` | Allows inbound from other agents in this namespace |

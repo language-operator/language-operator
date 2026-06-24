@@ -133,5 +133,5 @@ spec:
 
 - [LanguageAgent](../api/languageagent.md) — references runtimes via `spec.runtime`
 - [LanguageAgentRuntime API Reference](../api/languageagentruntime.md) — full field documentation
-- [OpenClaw Guide](../guides/openclaw.md)
-- [OpenCode Guide](../guides/opencode.md)
+- [OpenClaw Guide](../runtimes/openclaw.md)
+- [OpenCode Guide](../runtimes/opencode.md)

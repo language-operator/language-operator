@@ -44,7 +44,7 @@ spec:
           - port: 443
 ```
 
-Allow egress by DNS name (requires Cilium):
+Allow egress by DNS name (resolved to IPs when the policy is reconciled — see the [Network Policies guide](../guides/network-policies.md)):
 
 ```yaml
 spec:

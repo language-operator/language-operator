@@ -1,6 +1,6 @@
 # Quick Start
 
-Deploy OpenClaw or OpenCode in under 5 minutes.
+Deploy a Claude Code, DeepAgents, OpenClaw, or OpenCode agent in under 5 minutes.
 
 ## Prerequisites
 
@@ -64,6 +64,50 @@ EOF
 
 Choose one of the bundled runtimes:
 
+=== "Claude Code"
+
+    Claude Code authenticates to Anthropic directly (not through the gateway), so it doesn't use the `LanguageModel` from Step 2 — and it needs egress to reach `api.anthropic.com`:
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageAgent
+    metadata:
+      name: code-agent
+    spec:
+      runtime: claude-code
+      networkPolicies:
+        egress:
+          - to:
+              - cidr: "0.0.0.0/0"
+            ports:
+              - port: 443
+                protocol: TCP
+    EOF
+    ```
+
+    You'll log in interactively in Step 5 (or set an API key — see the [Claude Code guide](../runtimes/claude-code.md#authentication)).
+
+=== "DeepAgents"
+
+    DeepAgents runs a task autonomously, so it needs `instructions` alongside the model:
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: langop.io/v1alpha1
+    kind: LanguageAgent
+    metadata:
+      name: researcher
+    spec:
+      runtime: deepagents
+      models:
+        - name: claude-sonnet
+      instructions: |
+        Research the public API of the "deepagents" Python library, then write
+        a concise summary to /workspace/summary.md. When the file is written, stop.
+    EOF
+    ```
+
 === "OpenClaw"
 
     ```bash
@@ -108,13 +152,38 @@ kubectl get pods -w
 
 ## Step 5: Access the Agent
 
+=== "Claude Code"
+
+    Port-forward the WebSocket terminal:
+
+    ```bash
+    kubectl port-forward svc/code-agent 8080:8080
+    ```
+
+    Open `http://localhost:8080`, then run `/login` inside Claude Code and complete the browser flow to authenticate with your Claude account. Credentials persist on the workspace PVC. See the [Claude Code guide](../runtimes/claude-code.md#authentication) for headless API-key / token auth.
+
+=== "DeepAgents"
+
+    DeepAgents starts working as soon as the pod is `Running` — there's nothing to log into. Watch the run stream:
+
+    ```bash
+    kubectl logs -f deploy/researcher
+    ```
+
+    For a browser view of the same stream plus human-in-the-loop controls, port-forward the service:
+
+    ```bash
+    kubectl port-forward svc/researcher 8080:8080
+    # open http://localhost:8080
+    ```
+
 === "OpenClaw"
 
     Retrieve the auto-generated gateway token:
 
     ```bash
     TOKEN=$(kubectl get secret openclaw-runtime -o jsonpath='{.data.OPENCLAW_GATEWAY_TOKEN}' | base64 -d)
-    echo "Token: $TOKEN
+    echo "Token: $TOKEN"
     ```
 
     If you have a domain configured on your `LanguageCluster`, open `https://openclaw.<cluster-domain>` and enter the token when prompted, or connect the OpenClaw CLI directly to `wss://openclaw.<cluster-domain>`.
@@ -147,11 +216,3 @@ kubectl get pods -w
     ```
 
     Note: `opencode attach` against the `https://opencode.<cluster-domain>` URL won't work — the OIDC proxy needs a browser session. Attach via the port-forwarded `http://localhost:3000` instead. opencode has no built-in auth, so enable cluster auth to protect it.
-
-## What Just Happened?
-
-The operator automatically:
-
-1. Created a dedicated namespace (`language-operator-demo`)
-2. Deployed a LiteLLM proxy with your model credentials
-3. Configured and deployed your agent

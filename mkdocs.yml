@@ -64,7 +64,11 @@ nav:
     - Introduction: index.md
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
-    - MCP: getting-started/mcp.md
+    - Runtimes:
+        - Claude Code: runtimes/claude-code.md
+        - DeepAgents: runtimes/deepagents.md
+        - OpenClaw: runtimes/openclaw.md
+        - OpenCode: runtimes/opencode.md
     - Components:
         - Clusters: components/clusters.md
         - Agents: components/agents.md
@@ -74,10 +78,8 @@ nav:
         - Runtimes: components/runtimes.md
     - Guides:
         - Kubernetes: guides/cluster-setup.md
-        - OpenClaw: guides/openclaw.md
-        - OpenCode: guides/opencode.md
-        - Claude Code: guides/claude-code.md
-        - deepagents: guides/deepagents.md
+        - MCP Tools: guides/mcp-tools.md
+        - Network Policies: guides/network-policies.md
         - Custom Agents: guides/custom-agents.md
   - CRD Reference: api/reference.md
   - Development:

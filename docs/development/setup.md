@@ -1,226 +1,98 @@
 # Development Setup
 
-Set up your local environment for Language Operator development.
-
 ## Prerequisites
 
-- **Go 1.21+** - [Download](https://go.dev/dl/)
-- **Docker** - For building images
-- **kubectl** - Kubernetes CLI
-- **Helm 3.8+** - Package manager
-- **k3d or kind** (optional) - Local Kubernetes cluster
-- **make** - Build automation
+- **Go 1.25+** — [download](https://go.dev/dl/)
+- **Docker** — building images
+- **kubectl** and **Helm 3.8+**
+- **make**
+- **k3s** — `make dev` deploys into a local k3s cluster (it imports images via `k3s ctr`). [kind](https://kind.sigs.k8s.io/)/[k3d](https://k3d.io/) work for manual testing but aren't wired into `make dev`.
 
-## Clone the Repository
+## Clone and Install Hooks
 
 ```bash
 git clone https://github.com/language-operator/language-operator
 cd language-operator
+make setup-hooks   # pre-commit hooks: conventional commits + generated-files-staged check
 ```
 
-## Install Git Hooks
-
-Install pre-commit hooks for validation:
-
-```bash
-./scripts/setup-hooks
-```
-
-This installs hooks that:
-
-- Enforce conventional commit messages
-- Validate generated files are staged
-- Run basic linting
-
-## Development Commands
+## Common Commands
 
 All Go work runs from `src/`:
 
-### Build
-
 ```bash
 cd src
-make build       # compile operator binary
+make build              # compile the operator binary
+make test               # fmt + vet + all unit tests
+make fmt                # go fmt
+make vet                # go vet
+make integration-test   # envtest integration tests (requires setup-envtest)
+
+go test ./controllers/... -run TestLanguageAgentController -v   # single test
+go test -tags integration -v ./controllers/...                 # integration only
 ```
 
-### Test
-
-```bash
-cd src
-make test        # fmt + vet + all tests
-make fmt         # go fmt only
-make vet         # go vet only
-```
-
-### Integration Tests
-
-```bash
-cd src
-make integration-test  # requires setup-envtest
-```
-
-Integration tests run against a real Kubernetes API server via controller-runtime's envtest.
-
-### Run Single Test
-
-```bash
-cd src
-go test ./controllers/... -run TestLanguageAgentController -v
-```
-
-### Integration Tests Only
-
-```bash
-cd src
-go test -tags integration -v ./controllers/...
-```
+See [Testing](testing.md) for the test layout and patterns.
 
 ## Modifying CRD Types
 
-After changing types in `src/api/v1alpha1/`:
+After changing any type in `src/api/v1alpha1/`, regenerate and **stage the output** — the
+pre-commit hook (and CI) fail if generated files drift from their sources:
 
 ```bash
 cd src
-make generate   # regenerate zz_generated.deepcopy.go
-make helm-crds  # regenerate CRD YAMLs and copy to charts/language-operator/templates/crds/
+make generate   # zz_generated.deepcopy.go
+make helm-crds  # CRD YAMLs → charts/language-operator/templates/crds/
+
+git add src/api/v1alpha1/zz_generated.deepcopy.go \
+        src/config/crd/bases/ \
+        charts/language-operator/templates/crds/
 ```
-
-**Important:** Always stage generated files together with type changes:
-
-```bash
-git add src/api/v1alpha1/zz_generated.deepcopy.go
-git add src/config/crd/bases/
-git add charts/language-operator/templates/crds/
-```
-
-The pre-commit hook enforces this.
 
 ## Helm Chart Validation
 
 ```bash
-cd charts/language-operator
-helm lint .
-helm template language-operator . --debug
+helm lint charts/language-operator        && helm template charts/language-operator --debug
+helm lint charts/language-operator-runtimes && helm template charts/language-operator-runtimes --debug
 ```
 
-To validate the runtimes chart:
+## Local Cluster (`make dev`)
+
+`make dev` (project root) is the canonical local deploy: it builds the binary, builds a Docker
+image tagged with the current git SHA, imports it into k3s, and `helm upgrade`s both the operator
+and runtimes releases.
 
 ```bash
-cd charts/language-operator-runtimes
-helm lint .
-helm template language-operator-runtimes . --debug
+make dev
+```
+
+It reads per-developer overrides from `charts/language-operator/values.local.yaml` and
+`charts/language-operator-runtimes/values.local.yaml`. These are gitignored — create them before
+the first run (empty files are fine if you have no overrides).
+
+Because the image tag is the git SHA, **commit your changes before `make dev`** so the tag changes
+and Docker cache is busted.
+
+For the model gateway image, `cd components/model-gateway && make dev` builds and imports it into k3s.
+
+Watch operator logs:
+
+```bash
+kubectl logs -n language-operator -l app.kubernetes.io/name=language-operator --follow
 ```
 
 ## Documentation
 
-### Generate CRD Documentation
-
 ```bash
-cd src
-make docs   # generates src/docs/api-reference.md (local inspection only; CI generates docs/api/reference.md)
+cd src && make docs   # regenerate the CRD API reference (CI publishes docs/api/reference.md)
+make docs-serve       # preview the site at http://localhost:8000 (uv provisions deps)
 ```
-
-### Preview Documentation Site
-
-```bash
-# Serve locally (uv provisions the docs dependencies automatically)
-make docs-serve   # or: uv run mkdocs serve
-```
-
-Open [http://localhost:8000](http://localhost:8000)
-
-## Local Kubernetes Testing
-
-### Create a k3d Cluster
-
-```bash
-k3d cluster create langop-dev \
-  --agents 2 \
-  --k3s-arg "--disable=traefik@server:0"
-```
-
-### Install the Operator
-
-From source:
-
-```bash
-cd charts/language-operator
-helm install language-operator . \
-  --create-namespace \
-  --namespace language-operator \
-  --set image.tag=dev
-```
-
-### Build and Load Images
-
-For local development:
-
-```bash
-# Build operator image
-docker build -t language-operator:dev .
-
-# Import into k3d
-k3d image import language-operator:dev -c langop-dev
-```
-
-For the model proxy:
-
-```bash
-cd components/model-gateway
-make dev  # builds and imports into k3s
-```
-
-### Watch Logs
-
-```bash
-kubectl logs -n language-operator \
-  -l app.kubernetes.io/name=language-operator \
-  --follow
-```
-
-## Development Workflow
-
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feat/your-feature
-   ```
-
-2. **Make changes and test**
-   ```bash
-   cd src && make test
-   ```
-
-3. **Commit with conventional commits**
-   ```bash
-   git commit -m "feat: add new capability"
-   ```
-
-4. **Push and create PR**
 
 ## Troubleshooting
 
-### Tests Fail on CI but Pass Locally
+- **CI fails but local passes** — you almost certainly skipped `make generate && make helm-crds`, or
+  didn't commit the generated files. Re-run both and stage the output.
+- **Integration tests fail to start** — install the envtest binaries:
+  `go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest`.
 
-- Ensure you've run `make generate && make helm-crds`
-- Check that all generated files are committed
-- Verify you're using the same Go version as CI
-
-### Integration Tests Fail
-
-```bash
-# Install setup-envtest
-go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-# Run with verbose output
-cd src && go test -tags integration -v ./controllers/...
-```
-
-### Pre-commit Hook Fails
-
-The hook checks:
-
-- Commit message format
-- Generated files are staged with their sources
-- No obvious issues in Go code
-
-Read the error message carefully—it will tell you what needs fixing.
+For branching, commit conventions, and the PR process, see [Contributing](contributing.md).

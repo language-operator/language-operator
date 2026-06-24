@@ -41,8 +41,8 @@ After the pod is `Running`, open the agent terminal and run `/login` inside Clau
 - `Deployment/my-agent` — runs the claude-code container
 - `Service/my-agent` — exposes the WebSocket terminal
 - `NetworkPolicy/my-agent` — restricts ingress; allows unrestricted egress
-- `PersistentVolumeClaim/my-agent` — workspace at `/workspace` (also holds Claude config)
-- `ConfigMap/my-agent-config` — assembled agent configuration
+- `PersistentVolumeClaim/my-agent-workspace` — workspace at `/workspace` (also holds Claude config)
+- `ConfigMap/my-agent-agent` — assembled agent configuration
 
 ## Access
 

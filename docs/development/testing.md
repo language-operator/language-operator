@@ -1,151 +1,29 @@
 # Testing
 
-Comprehensive testing guide for Language Operator.
+## Test Types
 
-## Test Categories
+| Type | Location | Run |
+|------|----------|-----|
+| Unit | `src/**/*_test.go` | `cd src && make test` |
+| Integration | `src/controllers/` and `src/api/v1alpha1/`, behind the `//go:build integration` tag (harness in `suite_test.go`) | `cd src && make integration-test` |
 
-### Unit Tests
+Unit tests use the controller-runtime fake client and have no external dependencies.
+Integration tests run against a real kube-apiserver + etcd via [envtest](https://book.kubebuilder.io/reference/envtest.html).
 
-**Location:** `src/controllers/*_test.go`, `src/pkg/**/*_test.go`
+## Unit Test Pattern
 
-**Run:**
-```bash
-cd src && make test
-```
-
-**Characteristics:**
-
-- Use fake Kubernetes client (`controller-runtime/pkg/client/fake`)
-- Fast, no external dependencies
-- Test controller logic in isolation
-
-**Example:**
+Controllers reconcile twice in tests: the first call adds the finalizer, the second creates resources.
 
 ```go
-func TestLanguageAgentController(t *testing.T) {
-    scheme := testutil.SetupTestScheme(t)
-    agent := gen.LanguageAgent("test-agent", "default")
+scheme := testutil.SetupTestScheme(t)
+agent := gen.LanguageAgent("test-agent", "default", gen.SetAgentImage("test:latest"))
 
-    fakeClient := fake.NewClientBuilder().
-        WithScheme(scheme).
-        WithObjects(agent).
-        WithStatusSubresource(agent).
-        Build()
+fakeClient := fake.NewClientBuilder().
+    WithScheme(scheme).
+    WithObjects(agent).
+    WithStatusSubresource(agent).
+    Build()
 
-    reconciler := &LanguageAgentReconciler{
-        Client:                  fakeClient,
-        Scheme:                  scheme,
-        Log:                     logr.Discard(),
-        Recorder:                record.NewFakeRecorder(100),
-        EventManager:            events.NewEventManager(record.NewFakeRecorder(100)),
-        RegistryManager:         &mockRegistryManager{},
-        NetworkIsolationEnabled: false,
-    }
-    // mockRegistryManager is defined in languageagent_controller_test.go — copy it into your test file.
-
-    // First reconcile adds finalizer
-    _, err := reconciler.Reconcile(ctx, req)
-    require.NoError(t, err)
-
-    // Second reconcile creates resources
-    _, err = reconciler.Reconcile(ctx, req)
-    require.NoError(t, err)
-}
-```
-
-### Integration Tests
-
-**Location:** `src/controllers/*_integration_test.go`
-
-**Run:**
-```bash
-cd src && make integration-test
-```
-
-**Characteristics:**
-
-- Use `//go:build integration` build tag
-- Run against real Kubernetes API server (envtest)
-- Test full reconciliation loops with CRD validation
-- Slower but more realistic
-
-**Setup:**
-
-Integration tests use controller-runtime's envtest which runs a real etcd and kube-apiserver:
-
-```go
-//go:build integration
-
-var _ = Describe("LanguageAgent Controller", func() {
-    It("Should create deployment", func() {
-        agent := &v1alpha1.LanguageAgent{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      "test",
-                Namespace: "default",
-            },
-            Spec: v1alpha1.LanguageAgentSpec{
-                Image: "test:latest",
-            },
-        }
-
-        Expect(k8sClient.Create(ctx, agent)).Should(Succeed())
-
-        Eventually(func() error {
-            deployment := &appsv1.Deployment{}
-            return k8sClient.Get(ctx, types.NamespacedName{
-                Name:      agent.Name,
-                Namespace: agent.Namespace,
-            }, deployment)
-        }, timeout, interval).Should(Succeed())
-    })
-})
-```
-
-### End-to-End Tests
-
-**Status:** Not yet implemented
-
-**Planned:**
-
-- Deploy operator to real cluster
-- Create CRD instances
-- Verify full functionality
-- Test upgrades and migrations
-
-## Testing Patterns
-
-### Two-Reconcile Pattern
-
-Controllers always require two reconcile calls in tests:
-
-```go
-// First reconcile: adds finalizer
-result, err := reconciler.Reconcile(ctx, req)
-require.NoError(t, err)
-require.False(t, result.Requeue)
-
-// Second reconcile: creates resources
-result, err = reconciler.Reconcile(ctx, req)
-require.NoError(t, err)
-```
-
-### Fluent Fixture Builders
-
-Use builders from `internal/testutil/gen/`:
-
-```go
-agent := gen.LanguageAgent("my-agent", "default",
-    gen.WithImage("test:latest"),
-    gen.WithModelRef("claude-sonnet"),
-    gen.WithInstructions("Do something useful"),
-)
-```
-
-### Event Validation
-
-Verify events are recorded:
-
-```go
 recorder := record.NewFakeRecorder(100)
 reconciler := &LanguageAgentReconciler{
     Client:                  fakeClient,
@@ -153,163 +31,70 @@ reconciler := &LanguageAgentReconciler{
     Log:                     logr.Discard(),
     Recorder:                recorder,
     EventManager:            events.NewEventManager(recorder),
-    RegistryManager:         &mockRegistryManager{},
+    RegistryManager:         &mockRegistryManager{}, // defined in languageagent_controller_test.go
     NetworkIsolationEnabled: false,
 }
 
-// ... reconcile ...
+_, err := reconciler.Reconcile(ctx, req) // adds finalizer
+require.NoError(t, err)
+_, err = reconciler.Reconcile(ctx, req)  // creates resources
+require.NoError(t, err)
+```
 
+## Fixture Builders
+
+Build CRs with the fluent helpers in `src/internal/testutil/gen/`. Modifiers are named `SetAgent*`, `SetModel*`, etc.:
+
+```go
+agent := gen.LanguageAgent("my-agent", "default",
+    gen.SetAgentImage("test:latest"),
+    gen.SetAgentModel("claude-sonnet"),
+    gen.SetAgentInstructions("Do something useful"),
+)
+```
+
+## Common Assertions
+
+```go
+// Event recorded
 select {
 case event := <-recorder.Events:
     assert.Contains(t, event, "ResourceCreated")
 default:
-    t.Fatal("Expected event not recorded")
+    t.Fatal("expected event not recorded")
 }
+
+// Status condition
+var got v1alpha1.LanguageAgent
+require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, &got))
+cond := meta.FindStatusCondition(got.Status.Conditions, "Ready")
+require.NotNil(t, cond)
+assert.Equal(t, metav1.ConditionTrue, cond.Status)
 ```
 
-### Status Condition Checks
-
-```go
-var agent v1alpha1.LanguageAgent
-err := fakeClient.Get(ctx, req.NamespacedName, &agent)
-require.NoError(t, err)
-
-condition := meta.FindStatusCondition(agent.Status.Conditions, "Ready")
-require.NotNil(t, condition)
-assert.Equal(t, metav1.ConditionTrue, condition.Status)
-```
-
-## CI Testing
-
-### Test Workflow
-
-**File:** `.github/workflows/test.yaml`
-
-**Jobs:**
-
-1. **lint** - gofmt and go vet
-2. **unit-test** - All unit tests with coverage
-3. **integration-test** - Integration tests with envtest
-4. **validate-manifests** - CRD generation validation
-
-**Runs on:**
-
-- Every push to `main`
-- Every pull request
-- Manual workflow dispatch
-
-### Coverage
-
-Unit test coverage is reported to CI:
+## Debugging
 
 ```bash
 cd src
-go test -race -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
+go test -v ./controllers/...                                   # verbose
+go test ./controllers/... -run TestLanguageAgentController     # single unit test
+go test -tags integration -v ./controllers/... -run TestLanguageCluster  # single integration test
 
-## Manual Testing
-
-### Local Cluster Testing
-
-1. **Create k3d cluster:**
-   ```bash
-   k3d cluster create langop-test
-   ```
-
-2. **Install operator from source:**
-   ```bash
-   cd charts/language-operator
-   helm install language-operator . \
-     --namespace language-operator \
-     --create-namespace
-   ```
-
-3. **Watch logs:**
-   ```bash
-   kubectl logs -n language-operator \
-     -l app.kubernetes.io/name=language-operator \
-     --follow
-   ```
-
-5. **Check resources:**
-   ```bash
-   kubectl get languageagents -A
-   kubectl get pods -A
-   kubectl describe languageagent openclaw
-   ```
-
-### Testing CRD Changes
-
-After modifying CRD types:
-
-1. **Regenerate:**
-   ```bash
-   cd src
-   make generate
-   make helm-crds
-   ```
-
-2. **Reinstall CRDs:**
-   ```bash
-   kubectl apply -f charts/language-operator/templates/crds/
-   ```
-
-3. **Test with sample resources**
-
-## Test Data
-
-### No Mock Data Rule
-
-**Critical:** Features must work with real data before commit.
-
-- **No** mock telemetry data
-- **No** fake Kubernetes responses (except in unit tests)
-- **No** stubbed external services in integration tests
-
-Use real:
-
-- Kubernetes API for integration tests
-- Actual model proxies for e2e tests
-
-## Debugging Tests
-
-### Verbose Output
-
-```bash
-cd src
-go test -v ./controllers/...
-```
-
-### Run Single Test
-
-```bash
-go test ./controllers/... -run TestLanguageAgentController
-```
-
-### Integration Test Debugging
-
-```bash
-go test -tags integration -v ./controllers/... -run TestLanguageCluster
-```
-
-### Check Test Setup
-
-```bash
-# Verify envtest is installed
-setup-envtest list
-
-# Use specific Kubernetes version
+setup-envtest list                                            # available envtest binaries
 KUBEBUILDER_ASSETS=$(setup-envtest use 1.29.0 -p path) \
-  go test -tags integration ./controllers/...
+  go test -tags integration ./controllers/...                 # pin a Kubernetes version
 ```
 
-## Best Practices
+## CI
 
-1. **Test happy path and error cases**
-2. **Use table-driven tests** for multiple scenarios
-3. **Keep tests focused** - one thing per test
-4. **Clean up resources** in AfterEach/teardown
-5. **Use meaningful assertions** with clear messages
-6. **Avoid sleeps** - use Eventually/Consistently from Gomega
-7. **Test status conditions** not just resource existence
+`.github/workflows/test.yaml` runs on every push to `main` and every PR: `lint` (gofmt + go vet),
+`unit-test`, `integration-test`, `python-test`, and `validate-manifests` (fails if `make generate` /
+`make helm-crds` output is not committed — see [Development Setup](setup.md)).
+
+After changing any type in `src/api/v1alpha1/`, regenerate and stage the output:
+
+```bash
+cd src && make generate && make helm-crds
+```
+
+Features must work against real Kubernetes APIs before commit — no mock data outside unit tests.

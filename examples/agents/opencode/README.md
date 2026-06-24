@@ -62,8 +62,8 @@ OIDC provider.
 - `Deployment/opencode` — runs the opencode container on port 3000
 - `Service/opencode` — exposes the web UI
 - `NetworkPolicy/opencode` — restricts ingress; allows unrestricted egress
-- `PersistentVolumeClaim/opencode` — workspace at `/workspace`
-- `ConfigMap/opencode-config` — assembled agent configuration
+- `PersistentVolumeClaim/opencode-workspace` — workspace at `/workspace`
+- `ConfigMap/opencode-agent` — assembled agent configuration
 
 ## Access
 

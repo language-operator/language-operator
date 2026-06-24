@@ -18,7 +18,13 @@ Language Operator provides a purpose-built set of CRDs for deploying and managin
 
 ## Getting Started
 
-See the [installation guide](https://langop.io/docs/getting-started/installation/) and [quick start](https://langop.io/docs/getting-started/quickstart/) to deploy your first agent.
+Follow the [installation guide](https://langop.io/docs/getting-started/installation/), then deploy your first agent:
+
+* [Claude Code](https://langop.io/docs/runtimes/claude-code/)
+* [DeepAgents](https://langop.io/docs/runtimes/deepagents/)
+* [OpenClaw](https://langop.io/docs/runtimes/openclaw/)
+* [OpenCode](https://langop.io/docs/runtimes/opencode/)
+* [Custom Agents](https://langop.io/docs/guides/custom-agents/)
 
 ## Development
 
