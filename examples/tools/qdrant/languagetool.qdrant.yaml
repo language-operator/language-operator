@@ -1,0 +1,51 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: ${TOOL_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  # mcp-server-qdrant ships as a uvx (Python) stdio MCP server. transport=stdio tells the operator
+  # to run it under a pinned, persistent stdio→Streamable-HTTP bridge (one long-lived child) and
+  # serve /mcp on spec.port. The bridge image bundles Python+uv, so uvx works with no custom image;
+  # the operator injects the bridge, a writable cache + /tmp, and the readiness probe. (R1 proved
+  # the npx half of this toolchain; this is the uvx half.)
+  transport: stdio
+  port: 8080
+  # Sidecar mode injects the tool container into the agent's pod, where it can see the agent's
+  # /workspace PVC. That is what lets the embedded vector store survive a pod restart with zero
+  # extra infrastructure — no Qdrant server, no StatefulSet, no external store.
+  deploymentMode: sidecar
+  stdio:
+    command:
+      - uvx
+      # Pinned: env var names and embedded-mode behavior can drift between versions.
+      - "mcp-server-qdrant==0.8.1"
+  deployment:
+    # uvx resolves the package and downloads the FastEmbed embedding model on first boot, which
+    # pushes past the operator's 512Mi default and would get OOMKilled; give it 1Gi of headroom.
+    resources:
+      limits:
+        memory: 1Gi
+    env:
+      # Embedded mode: Qdrant runs in-process and writes to a local path — no separate server.
+      # Point it at the agent's /workspace PVC so the vectors survive a pod restart. Anywhere
+      # outside /workspace is ephemeral. The sidecar creates the .qdrant directory on first write.
+      - name: QDRANT_LOCAL_PATH
+        value: /workspace/.qdrant
+      - name: COLLECTION_NAME
+        value: memory
+      # Local FastEmbed embedding model — embeddings are computed in-process with no API key and no
+      # gateway. Downloaded once at boot (see the egress rule below), then cached on the PVC.
+      - name: EMBEDDING_MODEL
+        value: sentence-transformers/all-MiniLM-L6-v2
+  # The operator's default tool policy denies external egress. This server needs outbound HTTPS
+  # twice at boot: uvx fetches the package from PyPI, and FastEmbed downloads the embedding model.
+  # There is no runtime egress — once booted, store and search are fully local. No secret, no
+  # backend: this server has no credentials.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP

@@ -1,0 +1,52 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: ${AGENT_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  runtime: claude-code
+  # Referencing the tool injects its sidecar into this pod and wires the MCP endpoint into the
+  # agent via MCP_SERVERS and /etc/agent/config.yaml.
+  tools:
+    - name: ${TOOL_NAME}
+  models:
+    - name: ${MODEL_NAME}
+  instructions: |
+    You have a persistent semantic memory backed by the "qdrant" MCP tool — a vector store
+    that retrieves notes by *meaning*, not exact words, and survives restarts.
+
+    - When the user tells you something worth remembering (a fact, a date, a preference),
+      store it with the qdrant-store tool as a short, self-contained note.
+    - When the user asks a question, search with the qdrant-find tool and answer from what
+      it returns — even if the user phrased the question with completely different words than
+      the note you stored. That semantic match is the whole point; do not guess.
+    - Treat the vector store as the source of truth across conversations and restarts.
+  # Sidecar tools require the agent to have a workspace: the embedded Qdrant store writes to
+  # /workspace (default-enabled). This PVC is what makes the vectors survive a pod restart.
+  workspace:
+    size: ${WORKSPACE_SIZE}
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
+  deployment:
+    env:
+      # The claude-code runtime authenticates with either an Anthropic API key or an OAuth token.
+      # Both are optional here so the manifest applies cleanly; supply whichever your cluster uses.
+      - name: ANTHROPIC_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: anthropic-credentials
+            key: api-key
+            optional: true
+      - name: CLAUDE_CODE_OAUTH_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: claude-code-oauth
+            key: token
+            optional: true
