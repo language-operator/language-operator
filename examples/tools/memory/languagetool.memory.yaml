@@ -1,0 +1,43 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: ${TOOL_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  # The official knowledge-graph memory server ships as a stdio MCP server. transport=stdio tells
+  # the operator to run it under a pinned, persistent stdio→Streamable-HTTP bridge (one long-lived
+  # child) and serve /mcp on spec.port. The operator injects the bridge, a writable cache + /tmp,
+  # and the readiness probe — no supergateway flags or HOME env needed here.
+  transport: stdio
+  port: 8080
+  # The whole point of this example: sidecar mode injects the tool container into the agent's pod,
+  # where it can see the agent's own /workspace PVC. That is what lets memory survive a pod
+  # restart with zero extra infrastructure — no StatefulSet, no external store.
+  deploymentMode: sidecar
+  stdio:
+    command:
+      - npx
+      - -y
+      - "@modelcontextprotocol/server-memory"
+  deployment:
+    # The Node MCP server grows past the operator's 512Mi default and gets OOMKilled;
+    # give it 1Gi of headroom.
+    resources:
+      limits:
+        memory: 1Gi
+    env:
+      # Persist the knowledge graph on the agent's /workspace PVC. Anywhere outside /workspace is
+      # ephemeral and would be lost on restart — defeating the demo. The sidecar creates the
+      # .memory directory on first write.
+      - name: MEMORY_FILE_PATH
+        value: /workspace/.memory/memory.jsonl
+  # The operator's default tool policy denies external egress. npx fetches the server package from
+  # the npm registry at boot over HTTPS; without this the sidecar can't start. There is no runtime
+  # egress — the server only reads and writes the local file.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
