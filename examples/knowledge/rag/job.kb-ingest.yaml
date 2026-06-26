@@ -1,0 +1,145 @@
+# One-shot job that embeds the demo corpus and loads it into the bundled Qdrant. It writes points
+# in the EXACT format mcp-server-qdrant reads back (named vector `fast-<model>`, payload
+# {"document", "metadata"}, cosine distance) so the tool's qdrant-find retrieves them. The job is
+# idempotent: point IDs are derived deterministically from each doc's id (uuid5), so re-running
+# upserts in place and never duplicates. install.sh deletes any prior Job before re-applying, so a
+# second `install.sh` actually re-ingests — and still ends with exactly one point per doc.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${TOOL_NAME}-ingest-script
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-ingest
+data:
+  ingest.py: |
+    """Embed the corpus and upsert it into Qdrant in mcp-server-qdrant's wire format."""
+    import json
+    import os
+    import sys
+    import time
+    import uuid
+
+    from fastembed import TextEmbedding
+    from qdrant_client import QdrantClient, models
+
+    QDRANT_URL = os.environ["QDRANT_URL"]
+    API_KEY = os.environ.get("QDRANT_API_KEY") or None
+    COLLECTION = os.environ.get("COLLECTION_NAME", "kb")
+    MODEL = os.environ.get("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    CORPUS_PATH = os.environ.get("CORPUS_PATH", "/corpus/corpus.json")
+
+    # mcp-server-qdrant names its vector `fast-<last path segment, lowercased>`. We MUST match this
+    # exactly or qdrant-find queries a vector name that holds no points and silently returns nothing.
+    VECTOR_NAME = "fast-" + MODEL.split("/")[-1].lower()
+
+    with open(CORPUS_PATH) as f:
+        docs = json.load(f)
+    if not docs:
+        print("corpus is empty, nothing to ingest")
+        sys.exit(0)
+
+    print(f"embedding {len(docs)} docs with {MODEL} (vector '{VECTOR_NAME}')", flush=True)
+    embedder = TextEmbedding(model_name=MODEL)
+    # passage_embed is what mcp-server-qdrant uses for stored documents; for MiniLM it is identical
+    # to query_embed, so retrieval matches regardless.
+    vectors = [v.tolist() for v in embedder.passage_embed([d["text"] for d in docs])]
+    dim = len(vectors[0])
+
+    client = QdrantClient(url=QDRANT_URL, api_key=API_KEY)
+
+    # Wait for Qdrant to accept connections before touching collections — the StatefulSet may still
+    # be coming up when this Job starts.
+    for attempt in range(60):
+        try:
+            client.get_collections()
+            break
+        except Exception as exc:  # noqa: BLE001 — any transport/auth error is worth retrying briefly
+            print(f"waiting for qdrant ({attempt + 1}/60): {exc}", flush=True)
+            time.sleep(5)
+    else:
+        sys.exit("qdrant did not become reachable in time")
+
+    if not client.collection_exists(COLLECTION):
+        client.create_collection(
+            collection_name=COLLECTION,
+            vectors_config={VECTOR_NAME: models.VectorParams(size=dim, distance=models.Distance.COSINE)},
+        )
+        print(f"created collection '{COLLECTION}'", flush=True)
+
+    points = [
+        models.PointStruct(
+            # Deterministic id keyed on the doc's stable id → re-runs upsert in place (idempotent).
+            id=str(uuid.uuid5(uuid.NAMESPACE_URL, doc["id"])),
+            vector={VECTOR_NAME: vec},
+            # Payload shape mcp-server-qdrant expects: the text under "document", everything else
+            # under "metadata" (qdrant-find surfaces both, so the agent can cite the title).
+            payload={"document": doc["text"], "metadata": {"title": doc["title"], "source": doc["id"]}},
+        )
+        for doc, vec in zip(docs, vectors)
+    ]
+    client.upsert(collection_name=COLLECTION, points=points, wait=True)
+
+    count = client.count(COLLECTION).count
+    print(f"upserted {len(points)} points; collection '{COLLECTION}' now holds {count}", flush=True)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kb-ingest
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-ingest
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app: ${TOOL_NAME}-ingest
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: ingest
+          image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+          # uv resolves qdrant-client[fastembed] on the fly (no custom image) and runs the script.
+          command: ["uv", "run", "--no-project", "--with", "qdrant-client[fastembed]", "python", "/scripts/ingest.py"]
+          env:
+            - name: QDRANT_URL
+              value: http://${TOOL_NAME}-db.${CLUSTER_NAME}.svc.cluster.local:6333
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qdrant-credentials
+                  key: api-key
+            - name: COLLECTION_NAME
+              value: kb
+            # MUST match the LanguageTool's EMBEDDING_MODEL — install.sh substitutes the same
+            # ${EMBEDDING_MODEL} into both from one variable, so they cannot drift. Different models
+            # produce different vectors (and vector names); retrieval silently returns garbage if
+            # they diverge.
+            - name: EMBEDDING_MODEL
+              value: ${EMBEDDING_MODEL}
+            # uv's cache, the FastEmbed model download, and $HOME all need a writable path; the
+            # image's root filesystem is fine but an emptyDir keeps the Job self-contained.
+            - name: HOME
+              value: /tmp
+            - name: UV_CACHE_DIR
+              value: /tmp/uv-cache
+          volumeMounts:
+            - name: corpus
+              mountPath: /corpus
+              readOnly: true
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: corpus
+          configMap:
+            name: ${TOOL_NAME}-corpus
+        - name: script
+          configMap:
+            name: ${TOOL_NAME}-ingest-script
+        - name: tmp
+          emptyDir: {}

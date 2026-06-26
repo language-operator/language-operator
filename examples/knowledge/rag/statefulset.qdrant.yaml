@@ -1,0 +1,84 @@
+# Self-contained Qdrant vector database for the RAG knowledge base. This is a plain StatefulSet —
+# not a LanguageTool — so the operator applies no NetworkPolicy to it; in-cluster pods (the tool's
+# stdio bridge and the ingestion Job, both same-namespace) reach it on 6333/6334. Unlike R2's
+# embedded Qdrant (a library inside the sidecar, on the agent's PVC), this is a real server with its
+# own persistent volume — the corpus must outlive every agent and tool pod and be shared read-only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${TOOL_NAME}-db
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-db
+spec:
+  clusterIP: None  # headless — stable per-pod DNS for the StatefulSet
+  selector:
+    app: ${TOOL_NAME}-db
+  ports:
+    - name: rest
+      port: 6333
+      targetPort: 6333
+    - name: grpc
+      port: 6334
+      targetPort: 6334
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ${TOOL_NAME}-db
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-db
+spec:
+  serviceName: ${TOOL_NAME}-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${TOOL_NAME}-db
+  template:
+    metadata:
+      labels:
+        app: ${TOOL_NAME}-db
+    spec:
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:v1.18.2
+          ports:
+            - name: rest
+              containerPort: 6333
+            - name: grpc
+              containerPort: 6334
+          env:
+            # API key comes from the same secret the LanguageTool's QDRANT_API_KEY reads, so the
+            # server and the tool can never drift out of sync. Setting it turns on auth: every REST
+            # and gRPC request must present this key (the health endpoints below stay open).
+            - name: QDRANT__SERVICE__API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qdrant-credentials
+                  key: api-key
+          volumeMounts:
+            - name: storage
+              mountPath: /qdrant/storage
+          readinessProbe:
+            # /readyz, /livez and /healthz are unauthenticated regardless of the API key, so no
+            # header wiring is needed in the probe.
+            httpGet:
+              path: /readyz
+              port: 6333
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 6333
+            initialDelaySeconds: 30
+            periodSeconds: 15
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

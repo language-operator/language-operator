@@ -1,0 +1,57 @@
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: ${TOOL_NAME}
+  namespace: ${CLUSTER_NAME}
+spec:
+  # mcp-server-qdrant ships as a uvx (Python) stdio MCP server. transport=stdio tells the operator
+  # to run it under a pinned, persistent stdio->Streamable-HTTP bridge serving /mcp on spec.port.
+  transport: stdio
+  port: 8080
+  # service mode (the default) deploys the tool as a standalone Deployment+Service, shared across
+  # agents. R2 used sidecar mode so an embedded store could ride the agent's /workspace PVC. Here
+  # the data lives in the Qdrant StatefulSet instead, so the bridge needs no persistence of its own
+  # and one shared tool can serve many agents — the jump this rung is built to teach.
+  deploymentMode: service
+  stdio:
+    command:
+      - uvx
+      # Pinned: env var names and server behavior can drift between versions (matches R2).
+      - "mcp-server-qdrant==0.8.1"
+  deployment:
+    # uvx resolves the package and downloads the FastEmbed model on first boot, pushing past the
+    # operator's 512Mi default; give it 1Gi of headroom so it isn't OOMKilled.
+    resources:
+      limits:
+        memory: 1Gi
+    env:
+      # Point the server at the bundled Qdrant StatefulSet (same namespace). REST port 6333.
+      - name: QDRANT_URL
+        value: http://${TOOL_NAME}-db.${CLUSTER_NAME}.svc.cluster.local:6333
+      # Same secret the StatefulSet's QDRANT__SERVICE__API_KEY reads — single source of truth.
+      - name: QDRANT_API_KEY
+        valueFrom:
+          secretKeyRef:
+            name: qdrant-credentials
+            key: api-key
+      - name: COLLECTION_NAME
+        value: kb
+      # MUST match the ingestion Job's EMBEDDING_MODEL — install.sh substitutes the same
+      # ${EMBEDDING_MODEL} into both, so they cannot drift. If they did, qdrant-find would embed
+      # queries with a different model and retrieval would silently return garbage.
+      - name: EMBEDDING_MODEL
+        value: ${EMBEDDING_MODEL}
+      # Read-only is what makes this a *retrieval* tool, not a memory tool: the server exposes only
+      # qdrant-find (no qdrant-store), so agents query the curated corpus but can't mutate it.
+      - name: QDRANT_READ_ONLY
+        value: "true"
+  # The operator's default tool policy denies external egress but allows all same-namespace traffic,
+  # so reaching the bundled Qdrant (same namespace, 6333) needs no rule. The only external egress is
+  # HTTPS (443) at boot: uvx fetches the package from PyPI and FastEmbed downloads the query model.
+  networkPolicies:
+    egress:
+      - to:
+          - cidr: "0.0.0.0/0"
+        ports:
+          - port: 443
+            protocol: TCP
