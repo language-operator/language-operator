@@ -1,0 +1,45 @@
+# The demo corpus the agent grounds its answers in. These are facts about a *fictional* company
+# (Meridian Robotics) that no base model could know, which makes the end-to-end test unambiguous:
+# in-corpus questions get a grounded, cited answer; anything else must be declined. Swap this file
+# for your own docs (keep the {id, title, text} shape) and re-run install.sh to re-ingest.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${TOOL_NAME}-corpus
+  namespace: ${CLUSTER_NAME}
+  labels:
+    app: ${TOOL_NAME}-ingest
+data:
+  corpus.json: |
+    [
+      {
+        "id": "onboarding-laptop",
+        "title": "Onboarding: Laptop Setup",
+        "text": "New engineers at Meridian Robotics receive a standard-issue laptop preloaded with the Meridian Toolbelt. Run `mrb doctor` on your first day to verify the setup; it checks your VPN profile, signs you into the internal package registry at registry.meridian.internal, and provisions a short-lived SSH certificate that must be renewed every 18 hours with `mrb auth renew`."
+      },
+      {
+        "id": "pto-policy",
+        "title": "Time Off Policy",
+        "text": "Meridian Robotics grants 26 days of paid time off per year, accrued monthly. Unused days roll over up to a cap of 10 days into the next calendar year; anything above the cap is paid out at the end of January. PTO requests are filed in the Atlas portal and auto-approve after 3 business days unless your manager intervenes."
+      },
+      {
+        "id": "deploy-process",
+        "title": "Production Deploy Process",
+        "text": "Production deploys at Meridian Robotics happen through the Conductor pipeline. A deploy requires two approvals: one from a service owner and one from the on-call SRE. Conductor freezes all deploys on Fridays after 2pm and for the full week around the company offsite. Emergency hotfixes bypass the freeze with the `--break-glass` flag, which pages the VP of Engineering automatically."
+      },
+      {
+        "id": "oncall-rotation",
+        "title": "On-Call Rotation",
+        "text": "The on-call rotation at Meridian Robotics is weekly, handed off every Monday at 10am Pacific. The primary on-call carries the pager; the secondary is the escalation point after 15 minutes of no acknowledgement. On-call engineers earn a stipend of 400 credits per week and one comp day per shift, redeemable through the Atlas portal."
+      },
+      {
+        "id": "robot-naming",
+        "title": "Robot Fleet Naming Convention",
+        "text": "Every robot in the Meridian fleet is named after a constellation followed by a three-digit hull number, for example 'Lyra-204'. Hull numbers below 100 are reserved for prototypes that never left the Halibut Lab. The flagship warehouse model is the Orion class; the newer cold-storage variant is the Orion-Frost, rated to operate down to minus 30 Celsius."
+      },
+      {
+        "id": "incident-severity",
+        "title": "Incident Severity Levels",
+        "text": "Meridian Robotics classifies incidents from SEV-1 (a robot has stopped a production line, customer-visible) down to SEV-4 (cosmetic or internal-only). A SEV-1 requires an incident commander to be paged within 5 minutes and a written postmortem within 48 hours. Postmortems are blameless and stored in the Beacon knowledge base."
+      }
+    ]
