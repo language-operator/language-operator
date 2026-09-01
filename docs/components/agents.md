@@ -1,6 +1,8 @@
 # Agents
 
-A `LanguageAgent` is a container image running as a Kubernetes Deployment. The operator handles everything around it — lifecycle, configuration, networking, persistent storage — so the image itself can focus on doing work.
+A `LanguageAgent` is a container image running as an [Argo Workflow](https://argo-workflows.readthedocs.io/). The operator handles everything around it — lifecycle, configuration, networking, persistent storage — so the image itself can focus on doing work.
+
+An agent is either always on (`spec.execution.mode: service`, the default) or invoked — on a cron schedule, or by hand against the `WorkflowTemplate` the operator renders for it (`mode: task`). See [Execution Modes](../guides/execution-modes.md).
 
 This page covers what the operator injects into every agent pod, what the agent is expected to do with it, and how to wire everything together.
 
@@ -169,7 +171,6 @@ spec:
     mountPath: /workspace
 
   deployment:
-    replicas: 1
     resources:
       limits:
         memory: 1Gi

@@ -57,6 +57,34 @@ rules:
   - update
   - watch
 - apiGroups:
+  - argoproj.io
+  resources:
+  - cronworkflows
+  - workflows
+  - workflowtemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - cronworkflows/status
+  - workflows/status
+  verbs:
+  - get
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflowtaskresults
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
@@ -137,18 +165,6 @@ rules:
   resources:
   - ingresses
   - networkpolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - policy
-  resources:
-  - poddisruptionbudgets
   verbs:
   - create
   - delete

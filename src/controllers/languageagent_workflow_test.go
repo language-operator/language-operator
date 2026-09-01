@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	wfv1 "github.com/argoproj/argo-workflows/v4/pkg/apis/workflow/v1alpha1"
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
@@ -13,8 +16,9 @@ import (
 	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -23,12 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
+func TestLanguageAgentController_WorkflowTemplateCreation(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-deployment-agent",
+			Name:      "test-workflow-agent",
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
@@ -62,21 +66,14 @@ func TestLanguageAgentController_DeploymentCreation(t *testing.T) {
 	}
 
 	// Verify Deployment was created
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist for autonomous agent, but got error: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// Verify Deployment has correct image
-	if len(deployment.Spec.Template.Spec.Containers) != 1 {
-		t.Errorf("Expected 1 container, got %d", len(deployment.Spec.Template.Spec.Containers))
+	if len(podSpec.Containers) != 1 {
+		t.Errorf("Expected 1 container, got %d", len(podSpec.Containers))
 	}
-	if deployment.Spec.Template.Spec.Containers[0].Image != agent.Spec.Image {
-		t.Errorf("Expected image '%s', got '%s'", agent.Spec.Image, deployment.Spec.Template.Spec.Containers[0].Image)
+	if podSpec.Containers[0].Image != agent.Spec.Image {
+		t.Errorf("Expected image '%s', got '%s'", agent.Spec.Image, podSpec.Containers[0].Image)
 	}
 }
 
@@ -118,18 +115,10 @@ func TestLanguageAgentController_PodSecurityContext(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify Deployment was created
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// Verify Pod security context
-	podSec := deployment.Spec.Template.Spec.SecurityContext
+	podSec := podSpec.SecurityContext
 	if podSec == nil {
 		t.Fatal("Pod SecurityContext is nil")
 	}
@@ -189,22 +178,14 @@ func TestLanguageAgentController_ContainerSecurityContext(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify Deployment was created
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// Verify container security context
-	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers found in deployment")
+	if len(podSpec.Containers) == 0 {
+		t.Fatal("No containers found in workflow template")
 	}
 
-	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
+	containerSec := podSpec.Containers[0].SecurityContext
 	if containerSec == nil {
 		t.Fatal("Container SecurityContext is nil")
 	}
@@ -272,22 +253,14 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify Deployment was created
-	deployment := &appsv1.Deployment{}
-	err = fakeClient.Get(ctx, types.NamespacedName{
-		Name:      agent.Name,
-		Namespace: agent.Namespace,
-	}, deployment)
-	if err != nil {
-		t.Fatalf("Expected Deployment to exist, but got error: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// Check for tmpfs volumes
 	expectedVolumes := map[string]string{
 		"tmp": "/tmp",
 	}
 
-	volumes := deployment.Spec.Template.Spec.Volumes
+	volumes := podSpec.Volumes
 	volumeNames := make(map[string]bool)
 	for _, vol := range volumes {
 		volumeNames[vol.Name] = true
@@ -307,11 +280,11 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 	}
 
 	// Check volume mounts on container
-	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers found in deployment")
+	if len(podSpec.Containers) == 0 {
+		t.Fatal("No containers found in workflow template")
 	}
 
-	volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+	volumeMounts := podSpec.Containers[0].VolumeMounts
 	mountPaths := make(map[string]string)
 	for _, mount := range volumeMounts {
 		mountPaths[mount.Name] = mount.MountPath
@@ -719,7 +692,7 @@ func TestLanguageAgentController_ResolveSidecarTools(t *testing.T) {
 	})
 }
 
-func TestLanguageAgentController_SidecarToolInjectedIntoDeployment(t *testing.T) {
+func TestLanguageAgentController_SidecarToolInjectedIntoWorkflow(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	tool := gen.LanguageTool("my-sidecar", "default",
@@ -757,15 +730,15 @@ func TestLanguageAgentController_SidecarToolInjectedIntoDeployment(t *testing.T)
 	_, err = r.Reconcile(ctx, req)
 	require.NoError(t, err)
 
-	dep := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, req.NamespacedName, dep))
+	tmpl := agentWorkflowTemplate(t, fakeClient, agent.Name, agent.Namespace)
 
-	initContainers := dep.Spec.Template.Spec.InitContainers
-	require.Len(t, initContainers, 1, "expected exactly one init container from sidecar tool")
-	assert.Equal(t, "tool-my-sidecar", initContainers[0].Name)
-	assert.Equal(t, "ghcr.io/language-operator/tool:latest", initContainers[0].Image)
-	require.NotNil(t, dep.Spec.Template.Spec.ShareProcessNamespace)
-	assert.True(t, *dep.Spec.Template.Spec.ShareProcessNamespace)
+	// Tool sidecars become Argo sidecars: they run alongside the agent for its
+	// whole life and Argo tears them down when the agent container exits.
+	sidecars := tmpl.Spec.Templates[0].Sidecars
+	require.Len(t, sidecars, 1, "expected exactly one sidecar from sidecar tool")
+	assert.Equal(t, "tool-my-sidecar", sidecars[0].Name)
+	assert.Equal(t, "ghcr.io/language-operator/tool:latest", sidecars[0].Image)
+	assert.Contains(t, tmpl.Spec.PodSpecPatch, "shareProcessNamespace")
 }
 
 func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
@@ -804,15 +777,12 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	expectedConfigMapName := GenerateConfigMapName(agent.Name, "agent")
 
 	var foundVolume bool
-	for _, vol := range deployment.Spec.Template.Spec.Volumes {
+	for _, vol := range podSpec.Volumes {
 		if vol.Name == "agent-config" {
 			foundVolume = true
 			if vol.ConfigMap == nil {
@@ -825,12 +795,12 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 		}
 	}
 	if !foundVolume {
-		t.Error("expected agent-config volume in deployment, not found")
+		t.Error("expected agent-config volume in workflow template, not found")
 	}
 
-	containers := deployment.Spec.Template.Spec.Containers
+	containers := podSpec.Containers
 	if len(containers) == 0 {
-		t.Fatal("no containers in deployment")
+		t.Fatal("no containers in workflow template")
 	}
 	var foundMount bool
 	for _, vm := range containers[0].VolumeMounts {
@@ -972,12 +942,7 @@ func TestLanguageAgentController_SchedulingFields(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
-
-	podSpec := deployment.Spec.Template.Spec
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	if podSpec.NodeSelector["kubernetes.io/arch"] != "amd64" {
 		t.Errorf("Expected NodeSelector kubernetes.io/arch=amd64, got %v", podSpec.NodeSelector)
@@ -985,9 +950,11 @@ func TestLanguageAgentController_SchedulingFields(t *testing.T) {
 	if len(podSpec.Tolerations) == 0 || podSpec.Tolerations[0].Key != "gpu" {
 		t.Errorf("Expected Toleration gpu, got %v", podSpec.Tolerations)
 	}
-	if len(podSpec.TopologySpreadConstraints) == 0 || podSpec.TopologySpreadConstraints[0].TopologyKey != "topology.kubernetes.io/zone" {
-		t.Errorf("Expected TopologySpreadConstraint, got %v", podSpec.TopologySpreadConstraints)
-	}
+	// WorkflowSpec has no topologySpreadConstraints field, so the operator carries
+	// them over as a strategic-merge patch on the pod Argo generates.
+	tmpl := agentWorkflowTemplate(t, fakeClient, agent.Name, agent.Namespace)
+	assert.Contains(t, tmpl.Spec.PodSpecPatch, "topology.kubernetes.io/zone",
+		"expected topology spread constraints in podSpecPatch, got %q", tmpl.Spec.PodSpecPatch)
 	if podSpec.Affinity == nil || podSpec.Affinity.NodeAffinity == nil {
 		t.Error("Expected Affinity to be set")
 	}
@@ -1045,12 +1012,7 @@ func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
-
-	podMeta := deployment.Spec.Template.ObjectMeta
+	_, podMeta := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// User label should be present
 	if podMeta.Labels["cost-center"] != "team-a" {
@@ -1060,10 +1022,12 @@ func TestLanguageAgentController_PodLabelsAndAnnotations(t *testing.T) {
 	if podMeta.Labels["app.kubernetes.io/name"] != agent.Name {
 		t.Errorf("Operator label app.kubernetes.io/name should be %q, got %q", agent.Name, podMeta.Labels["app.kubernetes.io/name"])
 	}
-	// Selector labels must remain unchanged (operator labels only)
-	selectorLabels := deployment.Spec.Selector.MatchLabels
-	if _, hasUserLabel := selectorLabels["cost-center"]; hasUserLabel {
-		t.Error("User pod label should not appear in selector MatchLabels")
+	// The Service selector must stay operator-labels-only, or a user pod label
+	// could silently detach the Service from the agent's pods.
+	svc := &corev1.Service{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, svc))
+	if _, hasUserLabel := svc.Spec.Selector["cost-center"]; hasUserLabel {
+		t.Error("User pod label should not appear in the Service selector")
 	}
 	// PodAnnotations
 	if podMeta.Annotations["prometheus.io/scrape"] != "true" {
@@ -1113,12 +1077,9 @@ func TestLanguageAgentController_ConfigHashAnnotation(t *testing.T) {
 		}
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	_, podMeta := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	annotations := deployment.Spec.Template.Annotations
+	annotations := podMeta.Annotations
 	hash, ok := annotations[langoplabels.LabelKeyLangopConfigHash]
 	if !ok || hash == "" {
 		t.Errorf("Expected pod annotation %q to be set, got annotations: %v", langoplabels.LabelKeyLangopConfigHash, annotations)
@@ -1180,14 +1141,11 @@ func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	// Operator-managed volumes (tmp, agent-config) must still be present
 	volumeNames := map[string]bool{}
-	for _, v := range deployment.Spec.Template.Spec.Volumes {
+	for _, v := range podSpec.Volumes {
 		volumeNames[v.Name] = true
 	}
 	if !volumeNames["tmp"] {
@@ -1202,7 +1160,7 @@ func TestLanguageAgentController_UserVolumesAndMounts(t *testing.T) {
 
 	// User mount must also be present
 	mountPaths := map[string]string{}
-	for _, m := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+	for _, m := range podSpec.Containers[0].VolumeMounts {
 		mountPaths[m.Name] = m.MountPath
 	}
 	if mountPaths["user-secret"] != "/etc/user-secret" {
@@ -1264,12 +1222,9 @@ func TestLanguageAgentController_StartupProbe(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	container := deployment.Spec.Template.Spec.Containers[0]
+	container := podSpec.Containers[0]
 	if container.StartupProbe == nil {
 		t.Fatal("Expected StartupProbe to be set")
 	}
@@ -1327,12 +1282,9 @@ func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	podSec := deployment.Spec.Template.Spec.SecurityContext
+	podSec := podSpec.SecurityContext
 	if podSec == nil {
 		t.Fatal("Pod SecurityContext is nil")
 	}
@@ -1343,13 +1295,63 @@ func TestLanguageAgentController_UserPodSecurityContext(t *testing.T) {
 		t.Errorf("Expected RunAsGroup=%d (user-supplied), got %v", customGID, podSec.RunAsGroup)
 	}
 	// Container-level security context should still be the operator-managed one
-	containerSec := deployment.Spec.Template.Spec.Containers[0].SecurityContext
+	containerSec := podSpec.Containers[0].SecurityContext
 	if containerSec == nil {
 		t.Fatal("Container SecurityContext should still be set by operator")
 	}
 	if containerSec.AllowPrivilegeEscalation == nil || *containerSec.AllowPrivilegeEscalation {
 		t.Error("Container SecurityContext.AllowPrivilegeEscalation should be false")
 	}
+}
+
+// agentWorkflowTemplate fetches the WorkflowTemplate the operator rendered for an
+// agent, failing the test if it is absent or malformed.
+func agentWorkflowTemplate(t *testing.T, c client.Client, name, namespace string) *wfv1.WorkflowTemplate {
+	t.Helper()
+	tmpl := &wfv1.WorkflowTemplate{}
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{Name: name, Namespace: namespace}, tmpl),
+		"expected a WorkflowTemplate for agent %s/%s", namespace, name)
+	require.Len(t, tmpl.Spec.Templates, 1, "expected exactly one Argo template")
+	return tmpl
+}
+
+// agentPodView reassembles an agent's WorkflowTemplate into the pod spec and pod
+// metadata Argo will generate from it, so tests can assert on pod shape without
+// caring how Argo splits it across WorkflowSpec and Template.
+//
+// It deliberately does not fold in PodSpecPatch — assert on that field directly
+// for the handful of settings (shareProcessNamespace, topology spread) carried there.
+func agentPodView(t *testing.T, c client.Client, name, namespace string) (corev1.PodSpec, metav1.ObjectMeta) {
+	t.Helper()
+	tmpl := agentWorkflowTemplate(t, c, name, namespace)
+	spec := tmpl.Spec
+	argoTmpl := spec.Templates[0]
+
+	pod := corev1.PodSpec{
+		ServiceAccountName: spec.ServiceAccountName,
+		Volumes:            spec.Volumes,
+		SecurityContext:    spec.SecurityContext,
+		ImagePullSecrets:   spec.ImagePullSecrets,
+		NodeSelector:       spec.NodeSelector,
+		Tolerations:        spec.Tolerations,
+		Affinity:           spec.Affinity,
+	}
+	if argoTmpl.Container != nil {
+		pod.Containers = []corev1.Container{*argoTmpl.Container}
+	}
+	for _, ic := range argoTmpl.InitContainers {
+		pod.InitContainers = append(pod.InitContainers, ic.Container)
+	}
+	for _, sc := range argoTmpl.Sidecars {
+		pod.Containers = append(pod.Containers, sc.Container)
+	}
+
+	meta := metav1.ObjectMeta{}
+	if spec.PodMetadata != nil {
+		meta.Labels = spec.PodMetadata.Labels
+		meta.Annotations = spec.PodMetadata.Annotations
+	}
+	return pod, meta
 }
 
 // newSeedReconciler creates a reconciler and fake client for workspace seeding tests.
@@ -1378,4 +1380,316 @@ func reconcileTwice(t *testing.T, r *LanguageAgentReconciler, name, ns string) {
 	require.NoError(t, err)
 	_, err = r.Reconcile(context.Background(), req)
 	require.NoError(t, err)
+}
+
+// --- execution modes ---
+
+// newModeReconciler builds a reconciler for an agent whose execution mode is under test.
+func newModeReconciler(t *testing.T, agent *langopv1alpha1.LanguageAgent) (*LanguageAgentReconciler, client.Client) {
+	t.Helper()
+	scheme := testutil.SetupTestScheme(t)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), agent).
+		WithStatusSubresource(agent).
+		Build()
+	return &LanguageAgentReconciler{
+		Client:          fakeClient,
+		Scheme:          scheme,
+		Log:             logr.Discard(),
+		Recorder:        &record.FakeRecorder{},
+		RegistryManager: &mockRegistryManager{},
+	}, fakeClient
+}
+
+func TestLanguageAgentController_ServiceModeCreatesWorkflow(t *testing.T) {
+	agent := gen.LanguageAgent("svc-mode-agent", "default")
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+	ctx := context.Background()
+	key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+
+	require.NoError(t, fc.Get(ctx, key, &wfv1.WorkflowTemplate{}))
+
+	wf := &wfv1.Workflow{}
+	require.NoError(t, fc.Get(ctx, key, wf), "service mode must create a long-lived Workflow")
+	require.NotNil(t, wf.Spec.WorkflowTemplateRef)
+	assert.Equal(t, agent.Name, wf.Spec.WorkflowTemplateRef.Name)
+
+	// It must restart forever, the way a Deployment would have restarted the pod,
+	// and never be garbage-collected while the agent exists.
+	require.NotNil(t, wf.Spec.RetryStrategy)
+	assert.Equal(t, wfv1.RetryPolicyAlways, wf.Spec.RetryStrategy.RetryPolicy)
+	require.NotNil(t, wf.Spec.RetryStrategy.Limit)
+	assert.Equal(t, serviceRetryLimit, wf.Spec.RetryStrategy.Limit.IntValue())
+	assert.Nil(t, wf.Spec.TTLStrategy, "a service agent's Workflow must not expire")
+	require.NotNil(t, wf.Spec.PodGC)
+	assert.Equal(t, wfv1.PodGCOnPodNone, wf.Spec.PodGC.Strategy)
+
+	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.CronWorkflow{})),
+		"service mode must not create a CronWorkflow")
+
+	// A service agent is addressable.
+	require.NoError(t, fc.Get(ctx, key, &corev1.Service{}))
+}
+
+func TestLanguageAgentController_TaskModeCreatesCronWorkflow(t *testing.T) {
+	agent := gen.LanguageAgent("task-mode-agent", "default")
+	agent.Spec.Execution = langopv1alpha1.ExecutionSpec{
+		Mode:              langopv1alpha1.ExecutionModeTask,
+		Schedule:          "*/5 * * * *",
+		Timezone:          "America/New_York",
+		ConcurrencyPolicy: "Replace",
+	}
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+	ctx := context.Background()
+	key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+
+	require.NoError(t, fc.Get(ctx, key, &wfv1.WorkflowTemplate{}))
+
+	cron := &wfv1.CronWorkflow{}
+	require.NoError(t, fc.Get(ctx, key, cron), "a scheduled task agent must create a CronWorkflow")
+	assert.Equal(t, []string{"*/5 * * * *"}, cron.Spec.Schedules)
+	assert.Equal(t, "America/New_York", cron.Spec.Timezone)
+	assert.Equal(t, wfv1.ReplaceConcurrent, cron.Spec.ConcurrencyPolicy)
+	assert.False(t, cron.Spec.Suspend)
+
+	// Each run references the template and is cleaned up after its TTL.
+	require.NotNil(t, cron.Spec.WorkflowSpec.WorkflowTemplateRef)
+	assert.Equal(t, agent.Name, cron.Spec.WorkflowSpec.WorkflowTemplateRef.Name)
+	require.NotNil(t, cron.Spec.WorkflowSpec.TTLStrategy)
+	require.NotNil(t, cron.Spec.WorkflowSpec.TTLStrategy.SecondsAfterCompletion)
+	assert.Equal(t, defaultTaskTTLSeconds, *cron.Spec.WorkflowSpec.TTLStrategy.SecondsAfterCompletion)
+
+	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.Workflow{})),
+		"task mode must not create a long-lived Workflow")
+
+	// A task agent's pods come and go, so it gets no Service.
+	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &corev1.Service{})),
+		"task mode must not create a Service")
+}
+
+func TestLanguageAgentController_UnscheduledTaskIsTemplateOnly(t *testing.T) {
+	agent := gen.LanguageAgent("manual-task-agent", "default")
+	agent.Spec.Execution = langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask}
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+	ctx := context.Background()
+	key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+
+	// The template is what `argo submit --from workflowtemplate/<agent>` targets.
+	require.NoError(t, fc.Get(ctx, key, &wfv1.WorkflowTemplate{}))
+	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.CronWorkflow{})))
+	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.Workflow{})))
+}
+
+func TestLanguageAgentController_ModeFlipRemovesStaleObject(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("service_to_task_deletes_workflow", func(t *testing.T) {
+		agent := gen.LanguageAgent("flip-to-task", "default")
+		r, fc := newModeReconciler(t, agent)
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+		key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+		require.NoError(t, fc.Get(ctx, key, &wfv1.Workflow{}))
+
+		stored := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fc.Get(ctx, key, stored))
+		stored.Spec.Execution = langopv1alpha1.ExecutionSpec{
+			Mode:     langopv1alpha1.ExecutionModeTask,
+			Schedule: "@hourly",
+		}
+		require.NoError(t, fc.Update(ctx, stored))
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+		assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.Workflow{})),
+			"the service Workflow must be removed when the agent becomes a task")
+		require.NoError(t, fc.Get(ctx, key, &wfv1.CronWorkflow{}))
+	})
+
+	t.Run("task_to_service_deletes_cronworkflow", func(t *testing.T) {
+		agent := gen.LanguageAgent("flip-to-service", "default")
+		agent.Spec.Execution = langopv1alpha1.ExecutionSpec{
+			Mode:     langopv1alpha1.ExecutionModeTask,
+			Schedule: "@hourly",
+		}
+		r, fc := newModeReconciler(t, agent)
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+		key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+		require.NoError(t, fc.Get(ctx, key, &wfv1.CronWorkflow{}))
+
+		stored := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fc.Get(ctx, key, stored))
+		stored.Spec.Execution = langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeService}
+		require.NoError(t, fc.Update(ctx, stored))
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+		assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.CronWorkflow{})),
+			"the CronWorkflow must be removed when the agent becomes a service")
+		require.NoError(t, fc.Get(ctx, key, &wfv1.Workflow{}))
+	})
+
+	t.Run("clearing_schedule_deletes_cronworkflow", func(t *testing.T) {
+		agent := gen.LanguageAgent("clear-schedule", "default")
+		agent.Spec.Execution = langopv1alpha1.ExecutionSpec{
+			Mode:     langopv1alpha1.ExecutionModeTask,
+			Schedule: "@daily",
+		}
+		r, fc := newModeReconciler(t, agent)
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+		key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+		require.NoError(t, fc.Get(ctx, key, &wfv1.CronWorkflow{}))
+
+		stored := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fc.Get(ctx, key, stored))
+		stored.Spec.Execution.Schedule = ""
+		require.NoError(t, fc.Update(ctx, stored))
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+		assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.CronWorkflow{})))
+		require.NoError(t, fc.Get(ctx, key, &wfv1.WorkflowTemplate{}), "the template survives")
+	})
+}
+
+func TestLanguageAgentController_SuspendTearsDownWorkflow(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("service_workflow_removed", func(t *testing.T) {
+		agent := gen.LanguageAgent("suspend-svc", "default")
+		r, fc := newModeReconciler(t, agent)
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+		key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+		require.NoError(t, fc.Get(ctx, key, &wfv1.Workflow{}))
+
+		stored := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fc.Get(ctx, key, stored))
+		suspend := true
+		stored.Spec.Execution.Suspend = &suspend
+		require.NoError(t, fc.Update(ctx, stored))
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+		assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.Workflow{})),
+			"suspending a service agent must tear its Workflow down")
+		// The template stays so the agent can still be invoked by hand.
+		require.NoError(t, fc.Get(ctx, key, &wfv1.WorkflowTemplate{}))
+
+		updated := &langopv1alpha1.LanguageAgent{}
+		require.NoError(t, fc.Get(ctx, key, updated))
+		assert.Equal(t, events.PhaseStatusSuspended, updated.Status.Phase)
+	})
+
+	t.Run("cronworkflow_suspended_not_deleted", func(t *testing.T) {
+		agent := gen.LanguageAgent("suspend-cron", "default")
+		suspend := true
+		agent.Spec.Execution = langopv1alpha1.ExecutionSpec{
+			Mode:     langopv1alpha1.ExecutionModeTask,
+			Schedule: "@daily",
+			Suspend:  &suspend,
+		}
+		r, fc := newModeReconciler(t, agent)
+		reconcileTwice(t, r, agent.Name, agent.Namespace)
+		key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+
+		cron := &wfv1.CronWorkflow{}
+		require.NoError(t, fc.Get(ctx, key, cron))
+		assert.True(t, cron.Spec.Suspend, "a suspended task agent's CronWorkflow must stop firing")
+	})
+}
+
+func TestLanguageAgentController_ServiceWorkflowReplacedOnConfigChange(t *testing.T) {
+	ctx := context.Background()
+	agent := gen.LanguageAgent("replace-agent", "default")
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+	key := types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}
+
+	before := &wfv1.Workflow{}
+	require.NoError(t, fc.Get(ctx, key, before))
+	firstHash := before.Annotations[langoplabels.LabelKeyLangopConfigHash]
+	require.NotEmpty(t, firstHash)
+
+	// Change something that lands in the agent's config.yaml. A Workflow spec cannot
+	// be updated in place, so the operator must replace it rather than leave the
+	// agent running against a stale config.
+	stored := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fc.Get(ctx, key, stored))
+	stored.Spec.Instructions = "completely new instructions"
+	require.NoError(t, fc.Update(ctx, stored))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	after := &wfv1.Workflow{}
+	require.NoError(t, fc.Get(ctx, key, after))
+	assert.NotEqual(t, firstHash, after.Annotations[langoplabels.LabelKeyLangopConfigHash],
+		"the Workflow must be re-created with the new config hash")
+}
+
+func TestLanguageAgentController_TaskRunStatusFromLatestRun(t *testing.T) {
+	ctx := context.Background()
+	agent := gen.LanguageAgent("run-history-agent", "default")
+	agent.Spec.Execution = langopv1alpha1.ExecutionSpec{
+		Mode:     langopv1alpha1.ExecutionModeTask,
+		Schedule: "@daily",
+	}
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	// Stand in for Argo: two runs the CronWorkflow fired, the newer one still going.
+	older := metav1.NewTime(time.Now().Add(-2 * time.Hour))
+	newer := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+	for _, run := range []struct {
+		name     string
+		phase    wfv1.WorkflowPhase
+		started  metav1.Time
+		finished metav1.Time
+	}{
+		{"run-history-agent-aaa", wfv1.WorkflowSucceeded, older, metav1.NewTime(older.Add(time.Minute))},
+		{"run-history-agent-bbb", wfv1.WorkflowRunning, newer, metav1.Time{}},
+	} {
+		wf := &wfv1.Workflow{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      run.name,
+				Namespace: agent.Namespace,
+				Labels:    GetCommonLabels(agent.Name, "LanguageAgent"),
+			},
+		}
+		wf.Status.Phase = run.phase
+		wf.Status.StartedAt = run.started
+		wf.Status.FinishedAt = run.finished
+		require.NoError(t, fc.Create(ctx, wf))
+	}
+
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	updated := &langopv1alpha1.LanguageAgent{}
+	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+	assert.Equal(t, "run-history-agent-bbb", updated.Status.LastRunName, "the newest run wins")
+	assert.Equal(t, string(wfv1.WorkflowRunning), updated.Status.LastRunPhase)
+	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
+	assert.Nil(t, updated.Status.LastRunFinishedAt, "a running run has not finished")
+	assert.Empty(t, updated.Status.ActiveWorkflowName, "task mode has no long-lived Workflow")
+}
+
+func TestLanguageAgentController_AgentServiceAccountCanReportTaskResults(t *testing.T) {
+	// The Argo executor writes a WorkflowTaskResult with the pod's own
+	// ServiceAccount; without this rule every agent run fails at completion.
+	agent := gen.LanguageAgent("taskresult-agent", "default")
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	role := &rbacv1.Role{}
+	require.NoError(t, fc.Get(context.Background(), types.NamespacedName{
+		Name:      GenerateServiceAccountName(agent.Name),
+		Namespace: agent.Namespace,
+	}, role))
+
+	var found bool
+	for _, rule := range role.Rules {
+		if slices.Contains(rule.APIGroups, "argoproj.io") && slices.Contains(rule.Resources, "workflowtaskresults") {
+			assert.Contains(t, rule.Verbs, "create")
+			assert.Contains(t, rule.Verbs, "patch")
+			found = true
+		}
+	}
+	assert.True(t, found, "agent Role must allow writing workflowtaskresults, got %+v", role.Rules)
 }

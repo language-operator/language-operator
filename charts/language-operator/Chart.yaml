@@ -16,3 +16,12 @@ sources:
 maintainers:
   - name: James Ryan
     email: james@theryans.io
+
+# Agents run as Argo Workflows, so the operator requires the argoproj.io CRDs and
+# the workflow controller. Bundled by default; set `argo-workflows.enabled: false`
+# to point at an Argo installation you manage yourself.
+dependencies:
+  - name: argo-workflows
+    version: "2.0.3"
+    repository: https://argoproj.github.io/argo-helm
+    condition: argo-workflows.enabled

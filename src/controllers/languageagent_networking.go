@@ -84,7 +84,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 		agent.Spec.NetworkPolicies,
 	)
 
-	// Add ingress rules to allow trigger pods to connect to agent.
 	// Build NetworkPolicy port list from all agent ports.
 	var npPorts []networkingv1.NetworkPolicyPort
 	for _, ap := range agentPorts(agent) {
@@ -100,19 +99,6 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 	}
 	networkPolicy.Spec.PolicyTypes = append(networkPolicy.Spec.PolicyTypes, networkingv1.PolicyTypeIngress)
 	networkPolicy.Spec.Ingress = []networkingv1.NetworkPolicyIngressRule{
-		{
-			// Allow trigger pods in same namespace to connect to agent
-			From: []networkingv1.NetworkPolicyPeer{
-				{
-					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							langoplabels.LabelKeyLangopComponent: "trigger",
-						},
-					},
-				},
-			},
-			Ports: npPorts,
-		},
 		{
 			// Allow other agent pods to connect (agent-to-agent traffic)
 			From: []networkingv1.NetworkPolicyPeer{
@@ -178,10 +164,21 @@ func (r *LanguageAgentReconciler) reconcileNetworkPolicy(ctx context.Context, ag
 	return CreateOrUpdateNetworkPolicyWithTimeout(ctx, r.Client, r.Scheme, agent, networkPolicy, r.NetworkPolicyTimeout, r.NetworkPolicyRetries)
 }
 
+// agentAddressable reports whether an agent has a stable network identity worth
+// putting a Service and Ingress in front of. Task-mode agents come and go with each
+// run, so a Service would point at nothing between runs.
+func agentAddressable(agent *langopv1alpha1.LanguageAgent) bool {
+	return agent.Spec.Execution.EffectiveExecutionMode() == langopv1alpha1.ExecutionModeService
+}
+
 // reconcileService creates a Service for the agent
 func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
+	if !agentAddressable(agent) {
+		return nil
+	}
+
 	labels := GetCommonLabels(agent.Name, "LanguageAgent")
-	labels[langoplabels.LabelKeyLangopComponent] = "agent" // Only route to agent pods, not trigger pods
+	labels[langoplabels.LabelKeyLangopComponent] = "agent" // Matches the Workflow's podMetadata labels
 
 	// Try to fetch the cluster to determine if auth (and the oauth2-proxy sidecar) is enabled.
 	cluster := &langopv1alpha1.LanguageCluster{}
@@ -253,6 +250,10 @@ func (r *LanguageAgentReconciler) reconcileService(ctx context.Context, agent *l
 // reconcileWebhooks creates an Ingress for webhook access
 func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *langopv1alpha1.LanguageAgent) error {
 	log := log.FromContext(ctx)
+
+	if !agentAddressable(agent) {
+		return nil
+	}
 
 	// Get the cluster to check for domain configuration
 	cluster := &langopv1alpha1.LanguageCluster{}

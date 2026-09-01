@@ -33,6 +33,63 @@ type AgentPort struct {
 	Expose *bool `json:"expose,omitempty"`
 }
 
+// ExecutionSpec controls how an agent's workload is scheduled and run.
+//
+// Agents run as Argo Workflows. The operator always renders a WorkflowTemplate
+// named after the agent; Mode decides what else is derived from it:
+//
+//	service — a long-lived Workflow that never completes (the always-on agent).
+//	task    — a one-shot run, fired by a CronWorkflow when Schedule is set and/or
+//	          submitted manually against the WorkflowTemplate.
+type ExecutionSpec struct {
+	// Mode selects the execution model for this agent.
+	// +kubebuilder:validation:Enum=service;task
+	// +kubebuilder:default=service
+	// +optional
+	Mode string `json:"mode,omitempty"`
+
+	// Schedule is a cron expression that fires a run. Only valid when mode is "task".
+	// When unset, a task agent has no CronWorkflow and is invoked manually.
+	// +optional
+	Schedule string `json:"schedule,omitempty"`
+
+	// Timezone is the IANA timezone the Schedule is evaluated in (e.g. "America/New_York").
+	// Only valid alongside schedule.
+	// +optional
+	Timezone string `json:"timezone,omitempty"`
+
+	// ActiveDeadlineSeconds is the wall-clock limit for a single run.
+	// Only valid when mode is "task" — a service agent is expected to run forever.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	ActiveDeadlineSeconds *int64 `json:"activeDeadlineSeconds,omitempty"`
+
+	// TTLSecondsAfterFinished is how long a finished run is retained before Argo
+	// garbage-collects it. Defaults to 86400 (24h). Only valid when mode is "task".
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	TTLSecondsAfterFinished *int32 `json:"ttlSecondsAfterFinished,omitempty"`
+
+	// ConcurrencyPolicy decides what happens when a scheduled run is due while the
+	// previous one is still going. Only valid alongside schedule.
+	// +kubebuilder:validation:Enum=Allow;Forbid;Replace
+	// +kubebuilder:default=Forbid
+	// +optional
+	ConcurrencyPolicy string `json:"concurrencyPolicy,omitempty"`
+
+	// Suspend stops the agent from running: the CronWorkflow stops firing (task mode),
+	// or the long-lived Workflow is torn down (service mode). The WorkflowTemplate is
+	// left in place so the agent can still be invoked manually.
+	// +optional
+	Suspend *bool `json:"suspend,omitempty"`
+
+	// RetryLimit is the number of retries for a failed run. Only valid when mode is
+	// "task"; a service agent always retries without limit so it stays up.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	RetryLimit *int32 `json:"retryLimit,omitempty"`
+}
+
 // LanguageAgentSpec defines the desired state of LanguageAgent
 type LanguageAgentSpec struct {
 	// Runtime is the name of a LanguageAgentRuntime that provides preset configuration
@@ -89,8 +146,15 @@ type LanguageAgentSpec struct {
 	Ports []AgentPort `json:"ports,omitempty"`
 
 	// Deployment groups Kubernetes-specific pod and container configuration.
+	// The name is historical: agents run as Argo Workflow pods, not Deployments,
+	// so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
+
+	// Execution controls how this agent's workload is scheduled and run —
+	// always-on (mode: service) or invoked (mode: task).
+	// +optional
+	Execution ExecutionSpec `json:"execution,omitempty"`
 
 	// Credentials declares environment variables backed by Secret values that the
 	// operator resolves and injects into the agent container. Typically supplied by
@@ -344,8 +408,10 @@ type RuntimeSecretRef struct {
 
 // LanguageAgentStatus defines the observed state of LanguageAgent
 type LanguageAgentStatus struct {
-	// Phase represents the current phase of the agent
-	// +kubebuilder:validation:Enum=Pending;Running;Failed;Updating;Degraded
+	// Phase represents the current phase of the agent.
+	// In service mode it tracks the long-lived Workflow; in task mode it mirrors
+	// the most recent run. Suspended means spec.execution.suspend is set.
+	// +kubebuilder:validation:Enum=Pending;Running;Succeeded;Failed;Suspended;Degraded
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
@@ -357,13 +423,37 @@ type LanguageAgentStatus struct {
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// ActiveReplicas is the number of agent pods currently running
+	// WorkflowTemplateName is the Argo WorkflowTemplate rendered for this agent.
+	// It is the unit submitted against for a manual run:
+	// `argo submit --from workflowtemplate/<name> -n <namespace>`.
 	// +optional
-	ActiveReplicas int32 `json:"activeReplicas,omitempty"`
+	WorkflowTemplateName string `json:"workflowTemplateName,omitempty"`
 
-	// ReadyReplicas is the number of agent pods ready
+	// ActiveWorkflowName is the long-lived Workflow backing a service-mode agent.
+	// Empty in task mode.
 	// +optional
-	ReadyReplicas int32 `json:"readyReplicas,omitempty"`
+	ActiveWorkflowName string `json:"activeWorkflowName,omitempty"`
+
+	// LastRunName is the most recent Workflow run for this agent.
+	// +optional
+	LastRunName string `json:"lastRunName,omitempty"`
+
+	// LastRunPhase is the Argo phase of the most recent run
+	// (Pending, Running, Succeeded, Failed, or Error).
+	// +optional
+	LastRunPhase string `json:"lastRunPhase,omitempty"`
+
+	// LastRunStartedAt is when the most recent run started.
+	// +optional
+	LastRunStartedAt *metav1.Time `json:"lastRunStartedAt,omitempty"`
+
+	// LastRunFinishedAt is when the most recent run completed. Unset while it is running.
+	// +optional
+	LastRunFinishedAt *metav1.Time `json:"lastRunFinishedAt,omitempty"`
+
+	// LastScheduledTime is when the CronWorkflow last fired a run. Task mode only.
+	// +optional
+	LastScheduledTime *metav1.Time `json:"lastScheduledTime,omitempty"`
 
 	// UUID is a unique identifier for this agent instance
 	// Not used for webhook routing; webhooks are routed via agent name (e.g., <agent-name>.domain.com)
@@ -395,10 +485,11 @@ type LanguageAgentStatus struct {
 }
 
 // +kubebuilder:resource:scope=Namespaced,shortName=lagent
+// +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.execution.mode`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-// +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.status.activeReplicas`
-// +kubebuilder:printcolumn:name="Ready",type=integer,JSONPath=`.status.readyReplicas`
-// +kubebuilder:printcolumn:name="UUID",type=string,JSONPath=`.status.uuid`
+// +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.execution.schedule`
+// +kubebuilder:printcolumn:name="Last Run",type=string,JSONPath=`.status.lastRunPhase`
+// +kubebuilder:printcolumn:name="UUID",type=string,priority=1,JSONPath=`.status.uuid`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // LanguageAgent is the Schema for the languageagents API

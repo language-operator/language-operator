@@ -278,6 +278,24 @@ crds:
   # Annotations to add to CRDs
   annotations: {}
 
+# Argo Workflows subchart. LanguageAgents run as Argo Workflows, so the argoproj.io
+# CRDs and the workflow controller must be present. Bundled and enabled by default;
+# set enabled: false only if you install and manage Argo Workflows yourself — the
+# operator marks agents NotReady when the CRDs are missing.
+#
+# Values here are passed straight through to the argo-workflows chart; see
+# https://github.com/argoproj/argo-helm/tree/main/charts/argo-workflows for the full set.
+argo-workflows:
+  enabled: true
+  controller:
+    # Empty means "watch every namespace", which is what the operator needs:
+    # agents run in whichever LanguageCluster namespace the user creates them in.
+    workflowNamespaces: []
+  # The Argo UI/API server is not required by the operator. Enable it if you want
+  # to browse runs in a browser rather than with the argo CLI.
+  server:
+    enabled: false
+
 # Additional volumes
 volumes: []
 # - name: tmp

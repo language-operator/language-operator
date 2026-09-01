@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -200,6 +202,16 @@ func (a *LanguageAgent) validateSpec() error {
 		return fmt.Errorf("spec.image: required when spec.runtime is not set")
 	}
 
+	// Agents run as Argo Workflows, which have no replica or scale semantics.
+	// Reject rather than silently ignore — a user who sets replicas: 3 would
+	// otherwise get one pod and no explanation.
+	if a.Spec.Deployment.Replicas != nil {
+		return fmt.Errorf("spec.deployment.replicas: not supported; agents run as Argo Workflows, which have no replicas")
+	}
+	if a.Spec.Deployment.Autoscaling != nil {
+		return fmt.Errorf("spec.deployment.autoscaling: not supported; agents run as Argo Workflows, which have no scale subresource to target")
+	}
+
 	if len(a.Spec.Models) > 0 {
 		if err := a.validateModelReferences(); err != nil {
 			return fmt.Errorf("spec.models: %w", err)
@@ -224,6 +236,173 @@ func (a *LanguageAgent) validateSpec() error {
 		}
 	}
 
+	if err := validateExecution(&a.Spec.Execution, a.Spec.Ports); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ExecutionModeService is the always-on execution mode: a long-lived Argo Workflow.
+const ExecutionModeService = "service"
+
+// ExecutionModeTask is the invoked execution mode: one-shot Argo Workflow runs.
+const ExecutionModeTask = "task"
+
+// EffectiveExecutionMode returns the agent's execution mode, defaulting to "service".
+// The CRD defaults spec.execution.mode, but objects built in code (tests, fixtures)
+// bypass defaulting, so callers must not assume the field is populated.
+func (e *ExecutionSpec) EffectiveExecutionMode() string {
+	if e.Mode == "" {
+		return ExecutionModeService
+	}
+	return e.Mode
+}
+
+// validateExecution rejects execution settings that are meaningless for the chosen mode.
+// Silently ignoring them would leave the user believing a schedule or deadline is in
+// force when nothing acts on it.
+func validateExecution(e *ExecutionSpec, ports []AgentPort) error {
+	if e.EffectiveExecutionMode() == ExecutionModeService {
+		switch {
+		case e.Schedule != "":
+			return fmt.Errorf("spec.execution.schedule: only valid when mode is %q (a service agent runs continuously)", ExecutionModeTask)
+		case e.ActiveDeadlineSeconds != nil:
+			return fmt.Errorf("spec.execution.activeDeadlineSeconds: only valid when mode is %q (a service agent is not expected to finish)", ExecutionModeTask)
+		case e.TTLSecondsAfterFinished != nil:
+			return fmt.Errorf("spec.execution.ttlSecondsAfterFinished: only valid when mode is %q", ExecutionModeTask)
+		case e.RetryLimit != nil:
+			return fmt.Errorf("spec.execution.retryLimit: only valid when mode is %q (a service agent always retries so it stays up)", ExecutionModeTask)
+		}
+	}
+
+	// timezone and concurrencyPolicy only take effect through a CronWorkflow.
+	if e.Schedule == "" {
+		if e.Timezone != "" {
+			return fmt.Errorf("spec.execution.timezone: only valid alongside spec.execution.schedule")
+		}
+	} else {
+		if err := validateCronSchedule(e.Schedule); err != nil {
+			return fmt.Errorf("spec.execution.schedule: %w", err)
+		}
+		if e.Timezone != "" {
+			if _, err := time.LoadLocation(e.Timezone); err != nil {
+				return fmt.Errorf("spec.execution.timezone: %q is not a valid IANA timezone", e.Timezone)
+			}
+		}
+	}
+
+	// A task agent is not addressable: its pods come and go, so a Service and its
+	// ports would point at nothing between runs.
+	if e.EffectiveExecutionMode() == ExecutionModeTask && len(ports) > 0 {
+		return fmt.Errorf("spec.ports: not supported when spec.execution.mode is %q (task runs are not addressable)", ExecutionModeTask)
+	}
+
+	return nil
+}
+
+// cronFieldRange is the permitted numeric range for each of the five cron fields.
+var cronFieldRange = [5][2]int{{0, 59}, {0, 23}, {1, 31}, {1, 12}, {0, 7}}
+
+// cronMacros are the shorthand schedules Argo's cron parser accepts.
+var cronMacros = map[string]bool{
+	"@yearly": true, "@annually": true, "@monthly": true, "@weekly": true,
+	"@daily": true, "@midnight": true, "@hourly": true,
+}
+
+// cronMonths and cronDays are the textual aliases accepted in the month and
+// day-of-week fields respectively.
+var cronMonths = map[string]bool{
+	"jan": true, "feb": true, "mar": true, "apr": true, "may": true, "jun": true,
+	"jul": true, "aug": true, "sep": true, "oct": true, "nov": true, "dec": true,
+}
+var cronDays = map[string]bool{
+	"sun": true, "mon": true, "tue": true, "wed": true, "thu": true, "fri": true, "sat": true,
+}
+
+// validateCronSchedule checks a standard 5-field cron expression or an @-macro.
+// Catching a typo at admission is far cheaper than an agent that silently never fires.
+func validateCronSchedule(s string) error {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return fmt.Errorf("cannot be empty")
+	}
+	if strings.HasPrefix(s, "@") {
+		if cronMacros[strings.ToLower(s)] {
+			return nil
+		}
+		if rest, ok := strings.CutPrefix(strings.ToLower(s), "@every "); ok {
+			if _, err := time.ParseDuration(strings.TrimSpace(rest)); err != nil {
+				return fmt.Errorf("%q has an invalid @every duration", s)
+			}
+			return nil
+		}
+		return fmt.Errorf("%q is not a recognized cron macro", s)
+	}
+
+	fields := strings.Fields(s)
+	if len(fields) != 5 {
+		return fmt.Errorf("%q must have 5 fields (minute hour day-of-month month day-of-week), got %d", s, len(fields))
+	}
+	for i, f := range fields {
+		if err := validateCronField(f, cronFieldRange[i][0], cronFieldRange[i][1], i); err != nil {
+			return fmt.Errorf("%q: field %d: %w", s, i+1, err)
+		}
+	}
+	return nil
+}
+
+// validateCronField validates one cron field, which may be a comma-separated list of
+// entries, each optionally stepped ("*/5", "1-30/2") and each a wildcard, a single
+// value, or a range.
+func validateCronField(field string, min, max, index int) error {
+	for _, entry := range strings.Split(field, ",") {
+		if entry == "" {
+			return fmt.Errorf("empty entry in %q", field)
+		}
+		value, step, hasStep := strings.Cut(entry, "/")
+		if hasStep {
+			n, err := strconv.Atoi(step)
+			if err != nil || n < 1 {
+				return fmt.Errorf("step %q must be a positive integer", step)
+			}
+		}
+		if value == "*" {
+			continue
+		}
+		lo, hi, isRange := strings.Cut(value, "-")
+		if err := validateCronValue(lo, min, max, index); err != nil {
+			return err
+		}
+		if isRange {
+			if err := validateCronValue(hi, min, max, index); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// validateCronValue validates a single cron value: a number in range, or a textual
+// month/day alias in the fields that accept one.
+func validateCronValue(v string, min, max, index int) error {
+	if v == "" {
+		return fmt.Errorf("empty value")
+	}
+	lower := strings.ToLower(v)
+	if index == 3 && cronMonths[lower] {
+		return nil
+	}
+	if index == 4 && cronDays[lower] {
+		return nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return fmt.Errorf("%q is not a number", v)
+	}
+	if n < min || n > max {
+		return fmt.Errorf("%d is out of range %d-%d", n, min, max)
+	}
 	return nil
 }
 

@@ -16,7 +16,6 @@ deleted alongside it. With no `spec.networkPolicies` of your own, it permits:
 **Ingress** — restricted to:
 
 - other agents in the namespace (label `langop.io/kind=LanguageAgent`)
-- trigger pods (label `langop.io/component=trigger`)
 - the ingress controller's namespace, when the operator is configured with one
 
 ...on the agent's port(s) (`spec.ports`, default `8080`).

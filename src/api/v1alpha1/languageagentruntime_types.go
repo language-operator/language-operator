@@ -40,8 +40,16 @@ type LanguageAgentRuntimeSpec struct {
 	// Deployment provides default Kubernetes pod and container configuration.
 	// Scalars (args, command, resources, probes, etc.) are used when the agent has none set.
 	// Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.
+	// The name is historical: agents run as Argo Workflow pods, so replicas and
+	// autoscaling have no effect for agents using this runtime.
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
+
+	// Execution provides the default execution model for agents using this runtime —
+	// for example a runtime that only makes sense as a one-shot task can default
+	// mode to "task". Agents override any field they set themselves.
+	// +optional
+	Execution ExecutionSpec `json:"execution,omitempty"`
 
 	// Credentials declares environment variables backed by Secret values that the
 	// operator resolves and injects into agents using this runtime. Each entry is

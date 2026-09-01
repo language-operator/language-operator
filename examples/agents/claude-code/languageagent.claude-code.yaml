@@ -5,6 +5,12 @@ metadata:
   namespace: ${CLUSTER_NAME}
 spec:
   runtime: claude-code
+  # An interactive terminal has to be there when you connect, so this agent runs
+  # as a service: a long-lived Argo Workflow with a Service in front of it.
+  # (This is the default; shown here to contrast with the scheduled task agents
+  # in examples/development-team.)
+  execution:
+    mode: service
   networkPolicies:
     egress:
       - to:

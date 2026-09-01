@@ -6,13 +6,11 @@ import (
 	"strings"
 	"time"
 
+	wfv1 "github.com/argoproj/argo-workflows/v4/pkg/apis/workflow/v1alpha1"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/codes"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,7 +62,12 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents/finalizers,verbs=update
 //+kubebuilder:rbac:groups=langop.io,resources=languagepersonas,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languageclusters,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflows;workflowtemplates;cronworkflows,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflows/status;cronworkflows/status,verbs=get
+// The operator grants workflowtaskresults to each agent's ServiceAccount so the Argo
+// executor can report node outcomes. RBAC forbids granting a permission the granter
+// does not hold, so the operator must carry it too.
+//+kubebuilder:rbac:groups=argoproj.io,resources=workflowtaskresults,verbs=create;patch
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
@@ -82,8 +85,6 @@ type LanguageAgentReconciler struct {
 //+kubebuilder:rbac:groups=langop.io,resources=languagemodels,verbs=get;list;watch
 //+kubebuilder:rbac:groups=langop.io,resources=languageagentruntimes,verbs=get;list;watch
 //+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules,verbs=get;list;watch;create;update;patch;delete
 
@@ -352,41 +353,61 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileDeployment(ctx, workingAgent, configHash); err != nil {
-		log.Error(err, "Failed to reconcile Deployment")
+	// The WorkflowTemplate is the agent's podspec and the unit a manual run is
+	// submitted against; it exists in both execution modes.
+	if err := r.reconcileWorkflowTemplate(ctx, workingAgent, configHash); err != nil {
+		log.Error(err, "Failed to reconcile WorkflowTemplate")
 		span.RecordError(err)
-		span.SetStatus(codes.Error, "Deployment reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
+		span.SetStatus(codes.Error, "WorkflowTemplate reconciliation failed")
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonWorkflowError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
 	}
+	agent.Status.WorkflowTemplateName = agent.Name
 
-	if err := r.reconcilePodDisruptionBudget(ctx, workingAgent); err != nil {
-		log.Error(err, "Failed to reconcile PodDisruptionBudget")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "PodDisruptionBudget reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
-		agent.Status.Phase = events.PhaseStatusFailed
-		reconcileErr = err
-		return ctrl.Result{}, err
-	}
-
-	if err := r.reconcileHPA(ctx, workingAgent); err != nil {
-		log.Error(err, "Failed to reconcile HorizontalPodAutoscaler")
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "HPA reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
-		agent.Status.Phase = events.PhaseStatusFailed
-		reconcileErr = err
-		return ctrl.Result{}, err
+	// Then whatever the execution mode derives from it: an always-on Workflow for
+	// a service agent, a CronWorkflow for a scheduled task. Both reconcilers also
+	// remove the object belonging to the other mode, so flipping mode is clean.
+	if workingAgent.Spec.Execution.EffectiveExecutionMode() == langopv1alpha1.ExecutionModeService {
+		if err := r.reconcileCronWorkflow(ctx, workingAgent, configHash); err != nil {
+			log.Error(err, "Failed to remove CronWorkflow")
+			span.RecordError(err)
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+		if err := r.reconcileServiceWorkflow(ctx, workingAgent, configHash); err != nil {
+			log.Error(err, "Failed to reconcile agent Workflow")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Workflow reconciliation failed")
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonWorkflowError, err.Error(), agent.Generation)
+			agent.Status.Phase = events.PhaseStatusFailed
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+	} else {
+		if err := r.deleteWorkflowIfExists(ctx, agent.Name, agent.Namespace); err != nil {
+			log.Error(err, "Failed to remove service Workflow")
+			span.RecordError(err)
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+		if err := r.reconcileCronWorkflow(ctx, workingAgent, configHash); err != nil {
+			log.Error(err, "Failed to reconcile CronWorkflow")
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "CronWorkflow reconciliation failed")
+			SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonWorkflowError, err.Error(), agent.Generation)
+			agent.Status.Phase = events.PhaseStatusFailed
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
 	}
 
 	if err := r.reconcileServiceMonitor(ctx, workingAgent); err != nil {
 		log.Error(err, "Failed to reconcile ServiceMonitor")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "ServiceMonitor reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonWorkflowError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -396,7 +417,7 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Error(err, "Failed to reconcile PrometheusRule")
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "PrometheusRule reconciliation failed")
-		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonDeploymentError, err.Error(), agent.Generation)
+		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionFalse, langopv1alpha1.ReasonWorkflowError, err.Error(), agent.Generation)
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
@@ -405,62 +426,30 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Update status only if something changed
 	statusChanged := false
 
-	// Sync replica counts and derive phase from Deployment state.
-	existingDeploy := &appsv1.Deployment{}
-	if err := r.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, existingDeploy); err == nil {
-		if agent.Status.ActiveReplicas != existingDeploy.Status.Replicas ||
-			agent.Status.ReadyReplicas != existingDeploy.Status.ReadyReplicas {
-			agent.Status.ActiveReplicas = existingDeploy.Status.Replicas
-			agent.Status.ReadyReplicas = existingDeploy.Status.ReadyReplicas
-			statusChanged = true
-		}
-
-		// When HPA is active, desired count is managed by the HPA and stored in
-		// existingDeploy.Spec.Replicas. Use that so Updating reflects the full rollout.
-		desiredReplicas := int32(1)
-		if agent.Spec.Deployment.Autoscaling != nil && existingDeploy.Spec.Replicas != nil {
-			desiredReplicas = *existingDeploy.Spec.Replicas
-		} else if agent.Spec.Deployment.Replicas != nil {
-			desiredReplicas = *agent.Spec.Deployment.Replicas
-		}
-
-		newPhase := events.PhaseStatusPending
-		if existingDeploy.Status.Replicas > 0 && existingDeploy.Status.UpdatedReplicas < desiredReplicas {
-			// Pods exist but rollout is in progress — distinct from Pending (no pods yet).
-			newPhase = events.PhaseStatusUpdating
-		} else if existingDeploy.Status.ReadyReplicas > 0 {
-			newPhase = events.PhaseStatusRunning
-		} else if existingDeploy.Status.Replicas > 0 {
-			// Pods exist but none ready — check Deployment conditions to distinguish
-			// a transient rollout (Pending) from a crash/config error (Failed).
-			for _, c := range existingDeploy.Status.Conditions {
-				if c.Type == appsv1.DeploymentAvailable &&
-					c.Status == corev1.ConditionFalse &&
-					c.Reason == "MinimumReplicasUnavailable" {
-					newPhase = events.PhaseStatusFailed
-					break
-				}
+	// Derive phase and run history from Argo Workflow state.
+	newPhase, runStatusChanged, err := r.syncWorkflowStatus(ctx, agent, workingAgent)
+	if runStatusChanged {
+		statusChanged = true
+	}
+	if err != nil {
+		log.Error(err, "Failed to read Workflow status")
+		span.RecordError(err)
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+	// Downgrade Running to Degraded when a non-critical subsystem has failed
+	// (e.g. NetworkPolicy timed out). The agent is operational but at reduced capability.
+	if newPhase == events.PhaseStatusRunning {
+		for _, c := range agent.Status.Conditions {
+			if c.Type == langopv1alpha1.ConditionNetworkPolicyReady && c.Status == metav1.ConditionFalse {
+				newPhase = events.PhaseStatusDegraded
+				break
 			}
 		}
-		// Downgrade Running to Degraded when a non-critical subsystem has failed
-		// (e.g. NetworkPolicy timed out). The agent is operational but at reduced capability.
-		if newPhase == events.PhaseStatusRunning {
-			for _, c := range agent.Status.Conditions {
-				if c.Type == langopv1alpha1.ConditionNetworkPolicyReady && c.Status == metav1.ConditionFalse {
-					newPhase = events.PhaseStatusDegraded
-					break
-				}
-			}
-		}
-		if agent.Status.Phase != newPhase {
-			SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, newPhase, agent.Generation)
-			statusChanged = true
-		}
-	} else if apierrors.IsNotFound(err) {
-		if agent.Status.Phase != events.PhaseStatusPending {
-			SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, events.PhaseStatusPending, agent.Generation)
-			statusChanged = true
-		}
+	}
+	if agent.Status.Phase != newPhase {
+		SetPhase(&agent.Status.Phase, &agent.Status.ObservedGeneration, newPhase, agent.Generation)
+		statusChanged = true
 	}
 
 	if agent.Status.ObservedGeneration != agent.Generation {
@@ -572,14 +561,14 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 	enqueue := r.enqueueAgentsInNamespace()
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
-		Owns(&appsv1.Deployment{}).
+		Owns(&wfv1.WorkflowTemplate{}).
+		Owns(&wfv1.Workflow{}).
+		Owns(&wfv1.CronWorkflow{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
-		Owns(&policyv1.PodDisruptionBudget{}).
-		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
@@ -612,9 +601,22 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 ) []langopv1alpha1.ManagedResource {
 	ns := agent.Namespace
 	resources := []langopv1alpha1.ManagedResource{
-		{Group: "apps", Kind: "Deployment", Name: agent.Name, Namespace: ns},
-		{Kind: "Service", Name: agent.Name, Namespace: ns},
+		{Group: "argoproj.io", Kind: "WorkflowTemplate", Name: agent.Name, Namespace: ns},
 		{Kind: "ConfigMap", Name: GenerateConfigMapName(agent.Name, "agent"), Namespace: ns},
+	}
+
+	// A service agent is backed by a long-lived Workflow and is addressable; a
+	// scheduled task agent by a CronWorkflow. An unscheduled task agent has only
+	// the WorkflowTemplate, invoked by hand.
+	if agentAddressable(workingAgent) {
+		resources = append(resources,
+			langopv1alpha1.ManagedResource{Group: "argoproj.io", Kind: "Workflow", Name: agent.Name, Namespace: ns},
+			langopv1alpha1.ManagedResource{Kind: "Service", Name: agent.Name, Namespace: ns},
+		)
+	} else if workingAgent.Spec.Execution.Schedule != "" {
+		resources = append(resources, langopv1alpha1.ManagedResource{
+			Group: "argoproj.io", Kind: "CronWorkflow", Name: agent.Name, Namespace: ns,
+		})
 	}
 
 	if r.NetworkIsolationEnabled {
@@ -646,8 +648,8 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 		})
 	}
 
-	// Ingress is created when the cluster has a domain configured.
-	if clusterDomain != "" {
+	// Ingress is created when the agent is addressable and the cluster has a domain.
+	if agentAddressable(workingAgent) && clusterDomain != "" {
 		resources = append(resources, langopv1alpha1.ManagedResource{
 			Group: "networking.k8s.io", Kind: "Ingress", Name: agent.Name, Namespace: ns,
 		})
@@ -661,24 +663,6 @@ func (r *LanguageAgentReconciler) buildAgentManagedResources(
 			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "Role", Name: saName, Namespace: ns},
 			langopv1alpha1.ManagedResource{Group: "rbac.authorization.k8s.io", Kind: "RoleBinding", Name: saName, Namespace: ns},
 		)
-	}
-
-	// PodDisruptionBudget is created only when replicas > 1.
-	replicas := int32(1)
-	if workingAgent.Spec.Deployment.Replicas != nil {
-		replicas = *workingAgent.Spec.Deployment.Replicas
-	}
-	if replicas > 1 {
-		resources = append(resources, langopv1alpha1.ManagedResource{
-			Group: "policy", Kind: "PodDisruptionBudget", Name: agent.Name, Namespace: ns,
-		})
-	}
-
-	// HorizontalPodAutoscaler is created when autoscaling is configured.
-	if workingAgent.Spec.Deployment.Autoscaling != nil {
-		resources = append(resources, langopv1alpha1.ManagedResource{
-			Group: "autoscaling", Kind: "HorizontalPodAutoscaler", Name: agent.Name, Namespace: ns,
-		})
 	}
 
 	// ServiceMonitor is created when monitoring.serviceMonitor.enabled is true.

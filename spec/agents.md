@@ -4,7 +4,41 @@ This document defines the contract between the Language Operator and agent runti
 
 ## Overview
 
-A **LanguageAgent** runs as a standard Kubernetes Deployment. The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
+A **LanguageAgent** runs as an [Argo Workflow](https://argo-workflows.readthedocs.io/). The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
+
+For every LanguageAgent the operator renders a `WorkflowTemplate` named after the agent. That template holds the agent's pod spec and is the unit you submit against for a one-off run:
+
+```bash
+argo submit --from workflowtemplate/<agent-name> -n <namespace>
+```
+
+### Execution modes
+
+`spec.execution.mode` decides what else the operator derives from that template.
+
+| Mode | Derived object | Semantics |
+|------|----------------|-----------|
+| `service` (default) | a `Workflow` named after the agent | Runs continuously. The step retries forever, so a crashed agent comes back. The agent is addressable: it gets a Service, and an Ingress when the cluster has a domain. |
+| `task` | a `CronWorkflow`, when `spec.execution.schedule` is set | Each fire is a run that starts, does its work, and exits. Without a schedule the agent has only a template and is invoked by hand. Task agents are **not** addressable — no Service, and `spec.ports` is rejected. |
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `spec.execution.mode` | `service` | `service` or `task` |
+| `spec.execution.schedule` | — | Cron expression (5-field or `@daily`/`@every 1h`). Task mode only |
+| `spec.execution.timezone` | — | IANA timezone for the schedule |
+| `spec.execution.concurrencyPolicy` | `Forbid` | `Allow`, `Forbid`, or `Replace` when a run is due while the previous one is going |
+| `spec.execution.activeDeadlineSeconds` | — | Wall-clock limit for one run. Task mode only |
+| `spec.execution.ttlSecondsAfterFinished` | `86400` | How long a finished run is kept before Argo collects it. Task mode only |
+| `spec.execution.retryLimit` | — | Retries for a failed run. Task mode only; a service agent always retries |
+| `spec.execution.suspend` | `false` | Stop the agent: tears down the service Workflow, or stops the CronWorkflow firing. The template stays, so manual runs still work |
+
+Because a Workflow's spec cannot be updated once it is running, the operator **replaces** a service agent's Workflow whenever the agent's config hash or generation changes. Expect the pod to restart on a spec change, exactly as it would have under a Deployment rollout.
+
+Agents have no replica or scale semantics — an Argo Workflow has neither. `spec.deployment.replicas` and `spec.deployment.autoscaling` are rejected at admission rather than silently ignored. (`spec.deployment` keeps its name for continuity with the `LanguageAgentRuntime` presets; it configures the pod, not a Deployment.)
+
+### ServiceAccount requirements
+
+Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`. Beyond the usual read access it is granted `create` and `patch` on `argoproj.io/workflowtaskresults`, which the Argo executor uses to report each node's outcome. A custom `spec.deployment.serviceAccountName` **must** carry that permission or every run will fail at completion.
 
 ## What the Operator Provides
 

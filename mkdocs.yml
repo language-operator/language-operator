@@ -78,6 +78,7 @@ nav:
         - Runtimes: components/runtimes.md
     - Guides:
         - Kubernetes: guides/cluster-setup.md
+        - Execution Modes: guides/execution-modes.md
         - MCP Tools: guides/mcp-tools.md
         - Network Policies: guides/network-policies.md
         - Custom Agents: guides/custom-agents.md

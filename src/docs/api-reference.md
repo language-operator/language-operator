@@ -320,6 +320,37 @@ _Appears in:_
 | `userID` _string_ | UserID is a stable unique identifier for this user. |  | Optional: \{\} <br /> |
 
 
+#### ExecutionSpec
+
+
+
+ExecutionSpec controls how an agent's workload is scheduled and run.
+
+Agents run as Argo Workflows. The operator always renders a WorkflowTemplate
+named after the agent; Mode decides what else is derived from it:
+
+	service — a long-lived Workflow that never completes (the always-on agent).
+	task    — a one-shot run, fired by a CronWorkflow when Schedule is set and/or
+	          submitted manually against the WorkflowTemplate.
+
+
+
+_Appears in:_
+- [LanguageAgentRuntimeSpec](#languageagentruntimespec)
+- [LanguageAgentSpec](#languageagentspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `mode` _string_ | Mode selects the execution model for this agent. | service | Enum: [service task] <br />Optional: \{\} <br /> |
+| `schedule` _string_ | Schedule is a cron expression that fires a run. Only valid when mode is "task".<br />When unset, a task agent has no CronWorkflow and is invoked manually. |  | Optional: \{\} <br /> |
+| `timezone` _string_ | Timezone is the IANA timezone the Schedule is evaluated in (e.g. "America/New_York").<br />Only valid alongside schedule. |  | Optional: \{\} <br /> |
+| `activeDeadlineSeconds` _integer_ | ActiveDeadlineSeconds is the wall-clock limit for a single run.<br />Only valid when mode is "task" — a service agent is expected to run forever. |  | Minimum: 1 <br />Optional: \{\} <br /> |
+| `ttlSecondsAfterFinished` _integer_ | TTLSecondsAfterFinished is how long a finished run is retained before Argo<br />garbage-collects it. Defaults to 86400 (24h). Only valid when mode is "task". |  | Minimum: 0 <br />Optional: \{\} <br /> |
+| `concurrencyPolicy` _string_ | ConcurrencyPolicy decides what happens when a scheduled run is due while the<br />previous one is still going. Only valid alongside schedule. | Forbid | Enum: [Allow Forbid Replace] <br />Optional: \{\} <br /> |
+| `suspend` _boolean_ | Suspend stops the agent from running: the CronWorkflow stops firing (task mode),<br />or the long-lived Workflow is torn down (service mode). The WorkflowTemplate is<br />left in place so the agent can still be invoked manually. |  | Optional: \{\} <br /> |
+| `retryLimit` _integer_ | RetryLimit is the number of retries for a failed run. Only valid when mode is<br />"task"; a service agent always retries without limit so it stays up. |  | Minimum: 0 <br />Optional: \{\} <br /> |
+
+
 #### GatewaySpec
 
 
@@ -428,7 +459,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `image` _string_ | Image is the default container image for agents using this runtime.<br />Agents may override this. When a runtime is referenced, spec.image on the agent is optional. |  | Optional: \{\} <br /> |
 | `ports` _[AgentPort](#agentport) array_ | Ports defines default ports for agents using this runtime.<br />Replace semantics: when the agent defines spec.ports, runtime ports are ignored entirely. |  | Optional: \{\} <br /> |
-| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended. |  | Optional: \{\} <br /> |
+| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment provides default Kubernetes pod and container configuration.<br />Scalars (args, command, resources, probes, etc.) are used when the agent has none set.<br />Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.<br />The name is historical: agents run as Argo Workflow pods, so replicas and<br />autoscaling have no effect for agents using this runtime. |  | Optional: \{\} <br /> |
+| `execution` _[ExecutionSpec](#executionspec)_ | Execution provides the default execution model for agents using this runtime —<br />for example a runtime that only makes sense as a one-shot task can default<br />mode to "task". Agents override any field they set themselves. |  | Optional: \{\} <br /> |
 | `credentials` _[CredentialSpec](#credentialspec) array_ | Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into agents using this runtime. Each entry is<br />auto-generated, set inline, or sourced from an existing Secret. Merged into the<br />agent's effective spec runtime-first; agent entries override by name. |  | Optional: \{\} <br /> |
 | `auth` _[RuntimeAuthSpec](#runtimeauthspec)_ | Auth gates whether agents using this runtime sit behind the cluster OIDC proxy.<br />Effective only when the cluster has auth enabled (which provisions the OIDC<br />infrastructure). The OIDC connection itself is configured cluster-wide. |  | Optional: \{\} <br /> |
 
@@ -522,7 +554,8 @@ _Appears in:_
 | `repository` _[RepositorySpec](#repositoryspec)_ | Repository declares a git repository to clone into the agent's workspace.<br />When set, the operator ensures a workspace PVC is provisioned (defaulting it on<br />if not explicitly configured) so the clone has somewhere to land. |  | Optional: \{\} <br /> |
 | `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for this agent.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  | Optional: \{\} <br /> |
 | `ports` _[AgentPort](#agentport) array_ | Ports defines all network ports this agent exposes.<br />At most one entry should have expose: true (the ingress target);<br />if none are marked, the first port is used for ingress routing.<br />Defaults to a single HTTP port on 8080 when not set. |  | Optional: \{\} <br /> |
-| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration. |  | Optional: \{\} <br /> |
+| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration.<br />The name is historical: agents run as Argo Workflow pods, not Deployments,<br />so spec.deployment.replicas and spec.deployment.autoscaling are rejected here. |  | Optional: \{\} <br /> |
+| `execution` _[ExecutionSpec](#executionspec)_ | Execution controls how this agent's workload is scheduled and run —<br />always-on (mode: service) or invoked (mode: task). |  | Optional: \{\} <br /> |
 | `credentials` _[CredentialSpec](#credentialspec) array_ | Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into the agent container. Typically supplied by<br />the referenced LanguageAgentRuntime; agents may add or override entries by name. |  | Optional: \{\} <br /> |
 | `selfConfigure` _[SelfConfigureSpec](#selfconfigurespec)_ | SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig<br />requests to modify its own spec at runtime. When enabled, the operator grants<br />the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources. |  | Optional: \{\} <br /> |
 | `monitoring` _[AgentMonitoringSpec](#agentmonitoringspec)_ | Monitoring configures Prometheus Operator integration for this agent.<br />When set, the operator creates a ServiceMonitor and/or PrometheusRule resource.<br />Requires prometheus-operator to be installed in the cluster; silently skipped otherwise. |  | Optional: \{\} <br /> |
@@ -541,10 +574,15 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `phase` _string_ | Phase represents the current phase of the agent |  | Enum: [Pending Running Failed Updating Degraded] <br />Optional: \{\} <br /> |
+| `phase` _string_ | Phase represents the current phase of the agent.<br />In service mode it tracks the long-lived Workflow; in task mode it mirrors<br />the most recent run. Suspended means spec.execution.suspend is set. |  | Enum: [Pending Running Succeeded Failed Suspended Degraded] <br />Optional: \{\} <br /> |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#condition-v1-meta) array_ | Conditions represent the latest available observations of the agent's state |  | Optional: \{\} <br /> |
-| `activeReplicas` _integer_ | ActiveReplicas is the number of agent pods currently running |  | Optional: \{\} <br /> |
-| `readyReplicas` _integer_ | ReadyReplicas is the number of agent pods ready |  | Optional: \{\} <br /> |
+| `workflowTemplateName` _string_ | WorkflowTemplateName is the Argo WorkflowTemplate rendered for this agent.<br />It is the unit submitted against for a manual run:<br />`argo submit --from workflowtemplate/<name> -n <namespace>`. |  | Optional: \{\} <br /> |
+| `activeWorkflowName` _string_ | ActiveWorkflowName is the long-lived Workflow backing a service-mode agent.<br />Empty in task mode. |  | Optional: \{\} <br /> |
+| `lastRunName` _string_ | LastRunName is the most recent Workflow run for this agent. |  | Optional: \{\} <br /> |
+| `lastRunPhase` _string_ | LastRunPhase is the Argo phase of the most recent run<br />(Pending, Running, Succeeded, Failed, or Error). |  | Optional: \{\} <br /> |
+| `lastRunStartedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastRunStartedAt is when the most recent run started. |  | Optional: \{\} <br /> |
+| `lastRunFinishedAt` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastRunFinishedAt is when the most recent run completed. Unset while it is running. |  | Optional: \{\} <br /> |
+| `lastScheduledTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#time-v1-meta)_ | LastScheduledTime is when the CronWorkflow last fired a run. Task mode only. |  | Optional: \{\} <br /> |
 | `uuid` _string_ | UUID is a unique identifier for this agent instance<br />Not used for webhook routing; webhooks are routed via agent name (e.g., <agent-name>.domain.com) |  | Optional: \{\} <br /> |
 | `webhookURLs` _string array_ | WebhookURLs contains the URLs where this agent can receive webhooks |  | Optional: \{\} <br /> |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed by the controller.<br />It corresponds to the metadata.generation of the LanguageAgent at the time<br />the controller last processed it. Watchers can use this to detect when the<br />status reflects a stale version of the spec. |  | Optional: \{\} <br /> |

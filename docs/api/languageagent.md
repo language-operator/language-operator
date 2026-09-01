@@ -4,8 +4,8 @@ The `LanguageAgent` CRD represents an autonomous AI agent deployment in Kubernet
 
 ## Overview
 
-A LanguageAgent runs a container image with:
-- LLM access through the shared cluster proxy
+A LanguageAgent runs a container image as an [Argo Workflow](https://argo-workflows.readthedocs.io/), with:
+- LLM access through the shared cluster gateway
 - Tool endpoints for extended capabilities
 - Persona configuration for behavioral templates
 - Instructions for tasks and goals
@@ -47,6 +47,32 @@ See the [Complete API Reference](reference.md#languageagent) for full field docu
 - **LanguageAgentStatus** - Status and conditions
 
 ## Key Concepts
+
+### Execution
+
+The operator renders a `WorkflowTemplate` for every agent — its pod spec, and the unit you
+submit against for a one-off run (`argo submit --from workflowtemplate/<agent>`).
+`spec.execution.mode` decides what else is derived from it:
+
+| Mode | Derived object | Semantics |
+|------|----------------|-----------|
+| `service` (default) | a `Workflow` | Always on, retries forever, addressable (Service + Ingress) |
+| `task` | a `CronWorkflow`, when `schedule` is set | One-shot runs, scheduled or invoked by hand; not addressable |
+
+```yaml
+spec:
+  execution:
+    mode: task
+    schedule: "*/15 * * * *"
+    timezone: America/New_York
+    concurrencyPolicy: Forbid       # Allow | Forbid | Replace
+    activeDeadlineSeconds: 900
+    ttlSecondsAfterFinished: 86400
+    suspend: false
+```
+
+See [Execution Modes](../guides/execution-modes.md) for the full picture, including status
+fields, suspension, and the ServiceAccount permission the Argo executor needs.
 
 ### Runtimes
 
@@ -295,12 +321,15 @@ stringData:
 
 ### Resource Management
 
-Agents are deployed as standard Kubernetes Deployments with:
+Agents run as Argo Workflow pods, configured through `spec.deployment`:
 
-- Configurable replicas (`spec.deployment.replicas`)
 - Resource limits and requests (`spec.deployment.resources`)
-- Node selectors, tolerations, and affinity rules
+- Node selectors, tolerations, affinity, and topology spread constraints
 - Custom liveness, readiness, and startup probes
+
+An Argo Workflow has no replica count or scale subresource, so `spec.deployment.replicas`
+and `spec.deployment.autoscaling` are rejected at admission. See
+[Execution Modes](../guides/execution-modes.md) for how an agent is scheduled.
 
 ### Monitoring
 
