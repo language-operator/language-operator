@@ -20,8 +20,10 @@ maintainers:
 # Agents run as Argo Workflows, so the operator requires the argoproj.io CRDs and
 # the workflow controller. Bundled by default; set `argo-workflows.enabled: false`
 # to point at an Argo installation you manage yourself.
+# Pulled as OCI (like charts/language-operator-runtimes) so no `helm repo add` is
+# needed to resolve it — `helm dependency build` works on a clean checkout.
 dependencies:
   - name: argo-workflows
     version: "2.0.3"
-    repository: https://argoproj.github.io/argo-helm
+    repository: oci://ghcr.io/argoproj/argo-helm
     condition: argo-workflows.enabled
