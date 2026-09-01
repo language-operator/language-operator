@@ -13,14 +13,18 @@ help: ## Display this help message
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
+.PHONY: deps
+deps: ## Resolve chart dependencies (argo-workflows subchart)
+	helm dependency build $(CHART_DIR)
+
 .PHONY: test
-test: ## Run Helm chart tests (lint)
+test: deps ## Run Helm chart tests (lint)
 	@echo "Testing Helm chart..."
 	helm lint $(CHART_DIR) --values $(VALUES_FILE)
 	@echo "✓ All tests passed!"
 
 .PHONY: install
-install: ## Install the Helm chart
+install: deps ## Install the Helm chart
 	@echo "Installing $(CHART_NAME) as $(RELEASE_NAME) in namespace $(NAMESPACE)..."
 	helm install $(RELEASE_NAME) $(CHART_DIR) \
 		--namespace $(NAMESPACE) \
@@ -31,7 +35,7 @@ install: ## Install the Helm chart
 	@echo "✓ Installation complete!"
 
 .PHONY: upgrade
-upgrade: ## Upgrade the Helm release
+upgrade: deps ## Upgrade the Helm release
 	@echo "Upgrading $(RELEASE_NAME)..."
 	helm upgrade $(RELEASE_NAME) $(CHART_DIR) \
 		--namespace $(NAMESPACE) \

@@ -20,6 +20,10 @@ dev:
 	@cd src && $(MAKE) build
 	docker build -t $(DEV_IMAGE) .
 	docker save $(DEV_IMAGE) | sudo k3s ctr images import -
+	helm dependency build charts/language-operator
+	@# 5m, not 2m: this release also installs Argo Workflows, so the wait covers the
+	@# CRD-installer hook Job and the workflow-controller, both of which may pull
+	@# images from quay.io on a cold cluster.
 	helm upgrade --install language-operator charts/language-operator \
 		--namespace language-operator \
 		--create-namespace \
@@ -27,7 +31,7 @@ dev:
 		--set image.repository=docker.io/library/language-operator \
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
-		--wait --timeout 2m
+		--wait --timeout 5m
 	helm dependency build charts/language-operator-runtimes
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \
 		--namespace language-operator \
