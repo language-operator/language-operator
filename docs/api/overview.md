@@ -33,19 +33,22 @@ A `LanguageCluster` creates an isolated environment for agents, models, and tool
 ### LanguageAgent
 
 **Scope:** Namespace
-**Purpose:** AI agents running as Kubernetes workloads
+**Purpose:** AI agents running as Argo Workflows
 
-A `LanguageAgent` represents an AI agent running as a Kubernetes workload with:
+A `LanguageAgent` represents an AI agent running as an
+[Argo Workflow](https://argo-workflows.readthedocs.io/), with:
 
 - Container image specification
 - Model, tool, and persona references
 - Configuration injection
 - Workspace storage
+- An execution model — always-on (`spec.execution.mode: service`) or invoked on a schedule
+  (`mode: task`). See [Execution Modes](../guides/execution-modes.md)
 
 **Common Use Cases:**
 
 - Deploying AI assistants (OpenClaw, etc.)
-- Scheduled automation tasks
+- Scheduled automation tasks (`spec.execution.schedule`)
 - Interactive agent services
 - Multi-agent systems
 
@@ -171,6 +174,9 @@ graph TD
     Cluster -->|manages| Proxy[LiteLLM Proxy]
 
     Agent[LanguageAgent] -->|deployed in| NS
+    Agent -->|renders| WFT[WorkflowTemplate]
+    WFT -->|service mode| WF[Workflow]
+    WFT -->|task mode + schedule| CWF[CronWorkflow]
     Model[LanguageModel] -->|deployed in| NS
     Tool[LanguageTool] -->|deployed in| NS
     Persona[LanguagePersona] -->|deployed in| NS
@@ -238,7 +244,7 @@ Most resources follow Kubernetes conventions for status conditions:
 
 ```yaml
 status:
-  phase: Running  # or Pending, Failed
+  phase: Running  # LanguageAgent: Pending, Running, Succeeded, Failed, Suspended, Degraded
   conditions:
     - type: Ready
       status: "True"
