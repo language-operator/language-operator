@@ -24,7 +24,7 @@ See [Agent Runtime Container Specification](../components/agents.md) for the ful
 1. **Listen on a port** — the operator creates a ClusterIP Service for each entry in `spec.ports` (default: `http/8080`). Your agent must bind to these port(s).
 2. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
 3. **Route LLM traffic through `MODEL_ENDPOINT`** — never call model APIs directly from inside the pod.
-4. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts.
+4. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts. In task mode every run is a brand-new pod, so anything not on the workspace volume is gone by the next run.
 
 ## Minimal Dockerfile
 

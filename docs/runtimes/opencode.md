@@ -120,10 +120,12 @@ OpenCode is an AI coding assistant similar to Claude Code. The `opencode` runtim
 
 ```bash
 kubectl get languageagents
-kubectl get pods -w
+kubectl get lagent -w
 ```
 
-Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
+Wait for `PHASE` to reach `Running`. The `MODE` column shows `service`: this runtime is a
+long-lived, addressable agent, which is why it has a Service you can port-forward to. See
+[Execution Modes](../guides/execution-modes.md).
 
 ### Connect
 
@@ -149,7 +151,8 @@ opencode attach http://localhost:3000
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Deployment | `opencode` | Runs the OpenCode container |
+| WorkflowTemplate | `opencode` | The agent's pod spec; also what `argo submit --from` targets |
+| Workflow | `opencode` | The long-lived run. Runs the OpenCode container |
 | Service | `opencode` | ClusterIP on port 3000 |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |

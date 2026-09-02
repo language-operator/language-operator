@@ -335,7 +335,7 @@ The operator manages seven Custom Resource Definitions:
 - **LanguageAgentRuntime** - Reusable agent presets (image, ports, pod config, execution defaults)
 - **LanguageAgentSelfConfig** - Runtime self-configuration requests from agents
 - **LanguageModel** - Manages LLM provider configurations
-- **LanguageTool** - Creates Services and Deployments for MCP tools
+- **LanguageTool** - Creates Services and Deployments for MCP tools (tools are long-running servers, not agents)
 - **LanguagePersona** - Stores persona definitions in ConfigMaps
 - **LanguageCluster** - Orchestrates multiple agents with isolation
 

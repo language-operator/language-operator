@@ -38,7 +38,8 @@ After the pod is `Running`, open the agent terminal and run `/login` inside Clau
 ## What's created
 
 - `LanguageAgent/my-agent` — the agent CR
-- `Deployment/my-agent` — runs the claude-code container
+- `WorkflowTemplate/my-agent` — the agent's pod spec
+- `Workflow/my-agent` — the long-lived run; runs the claude-code container
 - `Service/my-agent` — exposes the WebSocket terminal
 - `NetworkPolicy/my-agent` — restricts ingress; allows unrestricted egress
 - `PersistentVolumeClaim/my-agent-workspace` — workspace at `/workspace` (also holds Claude config)

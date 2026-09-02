@@ -24,7 +24,7 @@ spec:
     - name: claude-sonnet
 ```
 
-produces the same Deployment as if the agent had explicitly specified the OpenClaw image, port, init containers, and probes — because the runtime supplies those defaults. Workspace storage is provisioned per-agent (always defaulted to `/workspace`), not by the runtime.
+produces the same pod spec as if the agent had explicitly specified the OpenClaw image, port, init containers, and probes — because the runtime supplies those defaults. Workspace storage is provisioned per-agent (always defaulted to `/workspace`), not by the runtime.
 
 ## Bundled Runtimes
 

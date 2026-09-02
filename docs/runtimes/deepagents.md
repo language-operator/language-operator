@@ -2,7 +2,9 @@
 
 [deepagents](https://github.com/langchain-ai/deepagents) is LangChain's framework for building a single, capable agent — planning, sub-agents, a virtual filesystem, and MCP tools. The `deepagents` runtime is installed by the `language-operator-runtimes` chart.
 
-Unlike the coding-CLI runtimes ([Claude Code](claude-code.md), [OpenCode](opencode.md), [OpenClaw](openclaw.md)), deepagents is not an interactive terminal you drive. It is an **autonomous executor**: on startup it reads the agent's `spec.instructions`, runs that task once — streaming every step to **stdout** (so `kubectl logs` is the primary UI) and a live web view — then idles. The task *is* the `instructions` field.
+Unlike the coding-CLI runtimes ([Claude Code](claude-code.md), [OpenCode](opencode.md), [OpenClaw](openclaw.md)), deepagents is not an interactive terminal you drive. It is an **autonomous executor**: on startup it reads the agent's `spec.instructions`, runs that task once — streaming every step to **stdout** (so `argo logs` is the primary UI) and a live web view — then finishes. The task *is* the `instructions` field.
+
+That shape makes deepagents the natural fit for `spec.execution.mode: task`: give it a schedule and each fire is a run that starts, does the work, and exits. Run it in the default `service` mode and it does the work once and then sits idle until you change its spec. See [Execution Modes](../guides/execution-modes.md).
 
 ## Prerequisites
 
@@ -136,16 +138,18 @@ A deepagents agent needs two things to do work: a `models` reference (the primar
 
 !!! note
 
-    Without `instructions` the agent comes up healthy but idles — there is no task to run. Without a `models` reference it cannot resolve a model and idles as well. Both are reported in the pod logs on startup.
+    Without `instructions` the agent comes up healthy but has no task to run. Without a `models` reference it cannot resolve a model. Both are reported in the pod logs on startup.
 
 ### Verify
 
 ```bash
 kubectl get languageagents
-kubectl get pods -w
+kubectl get lagent -w
 ```
 
-Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
+Wait for `PHASE` to reach `Running`. The `MODE` column shows `service`: this runtime is a
+long-lived, addressable agent, which is why it has a Service you can port-forward to. See
+[Execution Modes](../guides/execution-modes.md).
 
 ### Watch it run
 
@@ -215,7 +219,8 @@ spec:
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Deployment | `researcher` | Runs the deepagents container |
+| WorkflowTemplate | `researcher` | The agent's pod spec; also what `argo submit --from` targets |
+| Workflow | `researcher` | The long-lived run. Runs the deepagents container |
 | Service | `researcher` | ClusterIP on port 8080 |
 | NetworkPolicy | `researcher` | Allows inbound from other agents in this namespace |
 | PVC | `researcher-workspace` | 10Gi persistent workspace (agent files + checkpoint DB) |

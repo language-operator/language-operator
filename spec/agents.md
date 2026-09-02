@@ -60,7 +60,7 @@ When `spec.workspace.enabled` is true (the default), the operator creates a Pers
 |------|---------|
 | `spec.workspace.mountPath` (default `/workspace`) | Read-write persistent volume, backed by a PVC |
 
-The workspace survives pod restarts and redeployments. It does not survive deletion of the LanguageAgent.
+The workspace survives pod restarts, Workflow replacement (which the operator does whenever the agent spec changes), and — for task-mode agents — the boundary between runs: every scheduled run starts a fresh pod against the same persisted volume. It does not survive deletion of the LanguageAgent unless `spec.workspace.retain` is true.
 
 Relevant spec fields:
 

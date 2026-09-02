@@ -7,7 +7,7 @@ and writing a cited summary to its workspace.
 Unlike the coding-CLI runtimes (claude-code, opencode, openclaw), deepagents is a *framework*
 runtime: it is not an interactive terminal you drive. On startup it reads its
 `spec.instructions`, builds a deep agent (planning, sub-agents, a `/workspace` filesystem,
-and any referenced MCP tools) pointed at the cluster gateway, runs the task once, then idles.
+and any referenced MCP tools) pointed at the cluster gateway, then runs the task once.
 **`kubectl logs` is the primary UI** — every step streams to stdout. A thin web view at `/`
 mirrors the stream and adds Approve/Reject buttons when human-in-the-loop is enabled.
 
@@ -87,7 +87,8 @@ view at `/` or via `POST /resume`.
 
 - `LanguageAgent/researcher` — the agent CR
 - `LanguageTool/context7` — the bundled MCP documentation tool
-- `Deployment/researcher` — runs the deepagents container on port 8080
+- `WorkflowTemplate/researcher` — the agent's pod spec
+- `Workflow/researcher` — the long-lived run; runs the deepagents container on port 8080
 - `Service/researcher` — exposes the live view / HITL endpoints
 - `NetworkPolicy/researcher` — operator-managed; in-cluster access to the gateway and tool
 - `PersistentVolumeClaim/researcher` — workspace at `/workspace` (agent files + checkpoint DB)

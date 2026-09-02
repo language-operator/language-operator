@@ -70,7 +70,7 @@ Additional variables from `spec.deployment.env` and `spec.deployment.envFrom` ar
 
 ## Workspace
 
-When `spec.workspace.enabled` is true (the default), the operator provisions a PersistentVolumeClaim named `<agent-name>-workspace` and mounts it into the agent container and all init containers. The workspace survives pod restarts and redeployments. By default the PVC is deleted when the LanguageAgent is deleted; set `spec.workspace.retain: true` to preserve it.
+When `spec.workspace.enabled` is true (the default), the operator provisions a PersistentVolumeClaim named `<agent-name>-workspace` and mounts it into the agent container and all init containers. The workspace survives pod restarts, Workflow replacement, and the boundary between task-mode runs — each scheduled run gets a fresh pod attached to the same volume. By default the PVC is deleted when the LanguageAgent is deleted; set `spec.workspace.retain: true` to preserve it.
 
 | Field | Default | Description |
 |-------|---------|-------------|
@@ -103,13 +103,16 @@ When `secretRef` is set, the Secret is mounted read-only into the `repository` i
 
 ## Networking
 
-The operator creates:
+Every agent gets a **NetworkPolicy** allowing inbound traffic from other agents in the same cluster namespace — add egress for public APIs via `spec.networkPolicies` (see the [Network Policies guide](../guides/network-policies.md)).
 
-- A **ClusterIP Service** for each port in `spec.ports`, named after the agent
-- An **HTTPRoute** for external access when a Gateway is configured on the LanguageCluster
-- A **NetworkPolicy** allowing inbound traffic from other agents in the same cluster namespace — add egress for public APIs via `spec.networkPolicies` (see the [Network Policies guide](../guides/network-policies.md))
+A **service-mode** agent is addressable, and additionally gets:
 
-The agent listens on the port(s) defined in `spec.ports`. What it serves there is up to the image — HTTP, WebSocket, OpenAI-compatible API, anything.
+- A **ClusterIP Service** named after the agent, with one port entry per `spec.ports`
+- An **Ingress** at `<agent-name>.<cluster domain>`, when the LanguageCluster has a domain
+
+It listens on the port(s) defined in `spec.ports`. What it serves there is up to the image — HTTP, WebSocket, OpenAI-compatible API, anything.
+
+A **task-mode** agent gets neither Service nor Ingress: its pods exist only for the duration of a run, so there would be nothing to route to in between. `spec.ports` is rejected for task agents.
 
 ## Init Containers
 
