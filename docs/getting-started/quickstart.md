@@ -164,10 +164,16 @@ kubectl get pods -w
 
 === "DeepAgents"
 
-    DeepAgents starts working as soon as the pod is `Running` — there's nothing to log into. Watch the run stream:
+    DeepAgents starts working as soon as its pod is `Running` — there's nothing to log into. The run streams to stdout:
 
     ```bash
-    kubectl logs -f deploy/researcher
+    argo logs @latest -n <namespace> -f
+    ```
+
+    Or, without the `argo` CLI:
+
+    ```bash
+    kubectl logs -f -n <namespace> -l app.kubernetes.io/name=researcher -c main
     ```
 
     For a browser view of the same stream plus human-in-the-loop controls, port-forward the service:

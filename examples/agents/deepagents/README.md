@@ -56,11 +56,17 @@ CLUSTER_NAME=my-cluster bash examples/agents/deepagents/install.sh --dry-run
 The agent starts working as soon as the pod is `Running` — there is nothing to log into.
 
 ```bash
-kubectl logs -n my-cluster -f deploy/researcher
+argo logs @latest -n my-cluster -f
+```
+
+Or, without the `argo` CLI:
+
+```bash
+kubectl logs -n my-cluster -f -l app.kubernetes.io/name=researcher -c main
 ```
 
 You'll see the agent plan, call the `context7` tool, and write
-`/workspace/deepagents-summary.md`. When the task finishes it reports `completed` and idles.
+`/workspace/deepagents-summary.md`.
 
 For the live web view (status, streaming output, and HITL controls):
 

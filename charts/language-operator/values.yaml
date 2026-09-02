@@ -281,7 +281,7 @@ crds:
 # Argo Workflows subchart. LanguageAgents run as Argo Workflows, so the argoproj.io
 # CRDs and the workflow controller must be present. Bundled and enabled by default;
 # set enabled: false only if you install and manage Argo Workflows yourself — the
-# operator marks agents NotReady when the CRDs are missing.
+# operator refuses to start when the argoproj.io CRDs are missing.
 #
 # Values here are passed straight through to the argo-workflows chart; see
 # https://github.com/argoproj/argo-helm/tree/main/charts/argo-workflows for the full set.

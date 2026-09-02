@@ -128,18 +128,23 @@ Additional environment variables from `spec.deployment.env` and `spec.deployment
 
 ### Networking
 
-Every agent gets:
-- A **ClusterIP Service** for each port in `spec.ports` named `<agent-name>` in the agent's namespace (the port with `expose: true`, or the first port if none, is used for the HTTPRoute)
-- An **HTTPRoute** for external access (if a Gateway is configured)
-- **NetworkPolicy** permitting inbound traffic from other agent pods in the same cluster namespace
+Every agent gets a **NetworkPolicy** permitting inbound traffic from other agent pods in the same cluster namespace.
+
+A **service-mode** agent is additionally addressable, and gets:
+- A **ClusterIP Service** named `<agent-name>` in the agent's namespace, with one port entry per `spec.ports`
+- An **Ingress** at `<agent-name>.<cluster domain>`, when the LanguageCluster has a domain configured. It targets the port with `expose: true`, or the first port if none is marked.
+
+A **task-mode** agent gets neither: its pods exist only for the duration of a run, so a Service would point at nothing in between. `spec.ports` is rejected for task agents.
 
 ## What the Agent Must Implement
 
 ### Ports
 
+Ports apply to **service-mode agents only**; they are rejected in task mode.
+
 The agent listens on the port(s) defined in `spec.ports`. The operator creates a ClusterIP Service with one port entry per `AgentPort`. What the agent serves there is up to the image — HTTP, gRPC, OpenAI-compatible API, or anything else.
 
-Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the HTTPRoute targets this port; if no port has `expose: true`, the first port is used).
+Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the Ingress targets this port; if no port has `expose: true`, the first port is used).
 
 ### Probes
 
@@ -147,10 +152,10 @@ Liveness and readiness probes are configured via `spec.deployment.livenessProbe`
 
 ### Startup Behaviour
 
-On startup, the agent should:
+On startup, every agent should read `/etc/agent/config.yaml` for its configuration (instructions, personas, tools, models). What it does next depends on the execution mode it will be run in:
 
-1. Read `/etc/agent/config.yaml` for all configuration (instructions, personas, tools, models)
-2. Start listening on the port(s) defined in `spec.ports`
+- **service mode** — start listening on the port(s) defined in `spec.ports` and keep running. If the process exits, Argo restarts it.
+- **task mode** — do the work described by the instructions, then **exit**. The exit code becomes the run's phase: `0` is `Succeeded`, anything else is `Failed`. An agent that never exits in task mode runs until `spec.execution.activeDeadlineSeconds` kills it, or forever if that is unset.
 
 ## File Formats
 
@@ -235,7 +240,6 @@ spec:
 
   deployment:
     imagePullPolicy: Always
-    replicas: 1
     resources:
       limits:
         memory: 1Gi

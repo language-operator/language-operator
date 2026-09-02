@@ -152,10 +152,16 @@ Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
 The agent starts working as soon as the pod is `Running` — there is nothing to log into. The run streams to stdout:
 
 ```bash
-kubectl logs -f deploy/researcher
+argo logs @latest -n <namespace> -f
 ```
 
-You'll see the agent plan, act, and (for this task) write `/workspace/summary.md`. When the task finishes it reports `completed` and idles.
+Or, without the `argo` CLI:
+
+```bash
+kubectl logs -f -n <namespace> -l app.kubernetes.io/name=researcher -c main
+```
+
+You'll see the agent plan, act, and (for this task) write `/workspace/summary.md`.
 
 ### Connect to the live view
 

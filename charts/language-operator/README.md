@@ -16,7 +16,13 @@ The Language Operator provides Custom Resources for deploying and managing AI in
 
 - Kubernetes 1.24+
 - Helm 3.8+
-- **Wildcard DNS** configured for agent webhooks (see [DNS Setup](../docs/dns.md))
+- **cert-manager v1.12+** — required for webhook TLS
+- **Argo Workflows** — LanguageAgents run as Argo Workflows. This chart bundles it as a
+  subchart (`argo-workflows.enabled`, default `true`), so nothing extra is needed. If you
+  set `argo-workflows.enabled: false` you must install and manage Argo yourself; the
+  operator **refuses to start** when the `argoproj.io` CRDs are missing.
+- **Wildcard DNS** configured for agent ingress (see the
+  [Kubernetes guide](https://langop.io/docs/guides/cluster-setup/))
   - Required when using LanguageCluster with `domain` field
   - Pattern: `*.<domain>` → cluster ingress
   - Use nip.io for local development
@@ -26,7 +32,7 @@ The Language Operator provides Custom Resources for deploying and managing AI in
 ### Quick Start
 
 ```bash
-helm install language-operator ./chart \
+helm install language-operator charts/language-operator \
   --namespace language-operator \
   --create-namespace
 ```
@@ -34,7 +40,7 @@ helm install language-operator ./chart \
 ### Install with custom values
 
 ```bash
-helm install language-operator ./chart \
+helm install language-operator charts/language-operator \
   --namespace language-operator \
   --create-namespace \
   --values my-values.yaml
@@ -46,7 +52,7 @@ helm install language-operator ./chart \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `replicaCount` | Number of operator replicas | `2` |
+| `replicaCount` | Number of operator replicas | `1` |
 | `image.repository` | Operator image repository | `ghcr.io/language-operator/language-operator` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.tag` | Operator image tag | `""` (uses appVersion) |
@@ -163,6 +169,29 @@ helm install language-operator ./chart \
 | `crds.install` | Install CRDs with chart | `true` |
 | `crds.keep` | Keep CRDs on uninstall | `true` |
 
+### Argo Workflows
+
+LanguageAgents run as Argo Workflows, so the `argoproj.io` CRDs and the workflow controller
+must be present. They are bundled as a subchart and installed by default.
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `argo-workflows.enabled` | Install Argo Workflows with this chart | `true` |
+| `argo-workflows.controller.workflowNamespaces` | Namespaces the controller watches. Empty means all, which is what the operator needs — agents run in whichever LanguageCluster namespace you create them in | `[]` |
+| `argo-workflows.server.enabled` | Install the Argo UI/API server. Not required by the operator; enable it to browse runs in a browser | `false` |
+
+Any other value is passed straight through to the
+[argo-workflows chart](https://github.com/argoproj/argo-helm/tree/main/charts/argo-workflows).
+
+Set `argo-workflows.enabled: false` only if you install and manage Argo yourself. The
+operator **refuses to start** when the `argoproj.io` CRDs are missing.
+
+Because this chart now has a dependency, resolve it before installing from source:
+
+```bash
+helm dependency build charts/language-operator
+```
+
 ## Usage Examples
 
 ### Deploy a Language Agent
@@ -175,7 +204,9 @@ metadata:
   namespace: default
 spec:
   image: ghcr.io/language-operator/language-agent:latest
-  goal: "Answer questions about Kubernetes"
+  instructions: "Answer questions about Kubernetes"
+  execution:
+    mode: service          # always-on; use `task` + `schedule` for periodic runs
   models:
   - name: claude-sonnet
     role: primary
@@ -235,7 +266,7 @@ spec:
 ## Upgrading
 
 ```bash
-helm upgrade language-operator ./chart \
+helm upgrade language-operator charts/language-operator \
   --namespace language-operator \
   --values my-values.yaml
 ```
@@ -251,12 +282,18 @@ helm uninstall language-operator --namespace language-operator
 **Note:** CRDs are kept by default. To remove them:
 
 ```bash
-kubectl delete crd languageagents.langop.io
-kubectl delete crd languagemodels.langop.io
-kubectl delete crd languagetools.langop.io
-kubectl delete crd languagepersonas.langop.io
-kubectl delete crd languageclusters.langop.io
+kubectl get crds -o name | grep langop.io | xargs kubectl delete
 ```
+
+Argo's CRDs need removing separately. They are applied by a **pre-install hook Job**, so
+they are not part of the Helm release and survive `helm uninstall`:
+
+```bash
+kubectl get crds -o name | grep argoproj.io | xargs kubectl delete
+```
+
+Deleting the `argoproj.io` CRDs also removes any `Workflow` objects still in your cluster
+namespaces. Skip this step if anything else in the cluster uses Argo Workflows.
 
 ## Development
 
@@ -268,7 +305,7 @@ cd src
 make docker-build IMG=localhost:5000/language-operator:dev
 
 # Install chart with local image
-helm install language-operator ./chart \
+helm install language-operator charts/language-operator \
   --namespace language-operator \
   --create-namespace \
   --set image.repository=localhost:5000/language-operator \
@@ -291,9 +328,12 @@ kubectl get crds | grep langop.io
 
 ## Architecture
 
-The operator manages five Custom Resource Definitions:
+The operator manages seven Custom Resource Definitions:
 
-- **LanguageAgent** - Creates Deployments for autonomous agents
+- **LanguageAgent** - Renders an Argo `WorkflowTemplate` per agent, plus a long-lived
+  `Workflow` (`execution.mode: service`) or a `CronWorkflow` (`mode: task` with a schedule)
+- **LanguageAgentRuntime** - Reusable agent presets (image, ports, pod config, execution defaults)
+- **LanguageAgentSelfConfig** - Runtime self-configuration requests from agents
 - **LanguageModel** - Manages LLM provider configurations
 - **LanguageTool** - Creates Services and Deployments for MCP tools
 - **LanguagePersona** - Stores persona definitions in ConfigMaps
@@ -328,6 +368,22 @@ kubectl describe pod -n language-operator -l app.kubernetes.io/name=language-ope
 kubectl logs -n language-operator -l app.kubernetes.io/name=language-operator
 ```
 
+### Operator exits at startup with "Argo Workflows is not installed"
+
+LanguageAgents run as Argo Workflows, and the operator checks for the `argoproj.io` CRDs
+before starting. Confirm they are present and that the workflow controller is running:
+
+```bash
+kubectl get crds | grep argoproj.io    # expect workflows, workflowtemplates, cronworkflows, workflowtaskresults
+kubectl get pods -n language-operator -l app.kubernetes.io/name=argo-workflows-workflow-controller
+```
+
+If the CRDs are missing, the pre-install hook that applies them failed. Check its Job:
+
+```bash
+kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install
+```
+
 ### CRDs not installing
 
 Ensure `crds.install: true` in values and check for conflicts:
@@ -345,7 +401,7 @@ kubectl get mutatingwebhookconfigurations
 
 ## Contributing
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for development guidelines.
+See the [contributing guide](https://langop.io/docs/development/contributing/) for development guidelines.
 
 ## License
 

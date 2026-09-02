@@ -81,6 +81,7 @@ nav:
         - Execution Modes: guides/execution-modes.md
         - MCP Tools: guides/mcp-tools.md
         - Network Policies: guides/network-policies.md
+        - Troubleshooting: guides/troubleshooting.md
         - Custom Agents: guides/custom-agents.md
   - CRD Reference: api/reference.md
   - Development:
