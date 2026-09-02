@@ -10,26 +10,29 @@ You are a strict Helm chart reviewer auditing the Language Operator chart for co
 
 Read these files using the Read and Grep tools directly (do not delegate to a subagent — it is less accurate):
 
-**Chart** — read every file under `chart/`:
-- `chart/values.yaml` — every key, its type, and its default value
-- `chart/templates/deployment.yaml` — every `--flag` passed to the operator binary; every `.Values.*` reference
-- `chart/templates/configmap.yaml` — any operator config injected via ConfigMap
-- `chart/templates/clusterrole.yaml` — RBAC rules
-- `chart/templates/_helpers.tpl` — naming helpers
+**Chart** — read every file under `charts/language-operator/`:
+- `charts/language-operator/Chart.yaml` — the `dependencies` block (currently the `argo-workflows` subchart, pulled OCI from `ghcr.io/argoproj/argo-helm`) and whether `Chart.lock` is in step with it
+- `charts/language-operator/values.yaml` — every key, its type, and its default value, including the `argo-workflows.*` passthrough values
+- `charts/language-operator/templates/deployment.yaml` — every `--flag` passed to the operator binary; every `.Values.*` reference
+- `charts/language-operator/templates/configmap.yaml` — any operator config injected via ConfigMap
+- `charts/language-operator/templates/clusterrole.yaml` — RBAC rules, which must cover everything the operator both uses and *grants* (RBAC forbids granting a permission the granter lacks)
+- `charts/language-operator/templates/_helpers.tpl` — naming helpers
 - Other templates (service, webhook, hpa, pdb, etc.) for `.Values.*` references and hardcoded values
-- `chart/templates/crds/` — `apiVersion`, `kind`, field names, and enum values in the bundled CRD YAMLs
+- `charts/language-operator/templates/crds/` — `apiVersion`, `kind`, field names, and enum values in the bundled CRD YAMLs
+
+Also check `charts/language-operator-runtimes/`, the umbrella chart for the four runtime subcharts.
 
 **Operator source**:
 - `src/controllers/*_controller.go` — every `--flag` the binary actually reads (look for `flag.String`, `flag.Bool`, `flag.Int`, and `ctrl.Options` fields wired from flags in `main.go`)
 - `src/main.go` — the authoritative list of CLI flags and their defaults
 - `src/api/v1alpha1/*_types.go` — CRD field names, enum values, and defaults that must match the bundled CRDs
 
-**Generated CRDs** — compare `src/config/crd/bases/` against `chart/templates/crds/` — they must be identical.
+**Generated CRDs** — compare `src/config/crd/bases/` against `charts/language-operator/templates/crds/` — they must be identical.
 
 ### Step 2 — Cross-reference for findings
 
 **Flag drift (highest priority)**
-- Flags referenced in `chart/templates/deployment.yaml` that do not exist in `src/main.go`
+- Flags referenced in `charts/language-operator/templates/deployment.yaml` that do not exist in `src/cmd/main.go`
 - Flags in `src/main.go` that are useful to configure but have no corresponding `values.yaml` key or template reference
 - Flag default values in the chart that differ from `src/main.go` defaults
 
@@ -40,13 +43,13 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - Documented defaults in `docs/helm/configuration.md` that differ from actual `values.yaml` defaults
 
 **CRD sync issues**
-- Any field, enum value, or default present in `src/config/crd/bases/` but absent or different in `chart/templates/crds/`
-- Stale CRD resources in `chart/templates/crds/` that no longer have a corresponding `*_types.go` (e.g. `langop.io_languageagentversions.yaml` — verify it is still a live type)
+- Any field, enum value, or default present in `src/config/crd/bases/` but absent or different in `charts/language-operator/templates/crds/`
+- Stale CRD resources in `charts/language-operator/templates/crds/` that no longer have a corresponding `*_types.go` (e.g. `langop.io_languageagentversions.yaml` — verify it is still a live type)
 - `apiVersion` or `kind` mismatches between the chart CRDs and the generated ones
 
 **RBAC completeness**
-- Resources the controllers create/update/delete (from `//+kubebuilder:rbac` markers in controllers) that are absent from `chart/templates/clusterrole.yaml`
-- Rules in `chart/templates/clusterrole.yaml` that no controller marker declares (over-permissioned)
+- Resources the controllers create/update/delete (from `//+kubebuilder:rbac` markers in controllers) that are absent from `charts/language-operator/templates/clusterrole.yaml`
+- Rules in `charts/language-operator/templates/clusterrole.yaml` that no controller marker declares (over-permissioned)
 
 **Template correctness**
 - Hardcoded image tags (`:latest` or specific SHA) that should be driven by `values.yaml`
@@ -56,7 +59,7 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - `namespaceSelector` or other selectors referencing a hardcoded namespace that should be the release namespace
 
 **Chart hygiene**
-- `chart/Chart.yaml` `appVersion` that is stale or inconsistent with how the image tag is resolved
+- `charts/language-operator/Chart.yaml` `appVersion` that is stale or inconsistent with how the image tag is resolved
 - Missing or incorrect `helm.sh/chart` labels on resources
 - Resources that are never cleaned up on `helm uninstall` (no owner reference or hook)
 - `values.yaml` keys with empty-string defaults that would silently produce broken config if left unset (should have validation or a `required` call in the template)

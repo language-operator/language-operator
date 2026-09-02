@@ -47,23 +47,61 @@ For each CR found, note: name, age, and any status conditions.
 
 For each LanguageAgent found, verify the operator created the expected child resources:
 
+Agents run as Argo Workflows, not Deployments.
+
 ```bash
-kubectl get deployments
+kubectl get workflowtemplates,workflows,cronworkflows
 kubectl get services
 kubectl get pods
 kubectl get configmaps
 kubectl get secrets
 kubectl get pvc
 kubectl get networkpolicies
+kubectl get lagent -o wide
 ```
 
-Cross-check:
-- Each LanguageAgent has a matching Deployment, Service, ConfigMap (`{name}-agent`), and NetworkPolicy
-- If `spec.openclaw.token` or `spec.opencode.password` was set, a `{name}-runtime` Secret should exist
-- If `spec.workspace` is set, a PVC should exist
-- Pod is Running (not just Pending or CrashLoopBackOff)
+Cross-check, per LanguageAgent:
+- A `WorkflowTemplate` named after the agent always exists — it holds the pod spec
+- `spec.execution.mode: service` (the default) → also a `Workflow` named after the agent, a
+  `Service`, and (with a cluster domain) an `Ingress`
+- `spec.execution.mode: task` → a `CronWorkflow` **only if** `spec.execution.schedule` is set,
+  and **no** Service or Ingress. A task agent with a Service is a bug
+- A ConfigMap `{name}-agent` and a NetworkPolicy in both modes
+- If credentials are declared without a `valueFrom`, a `{name}-runtime` Secret should exist
+- If `spec.workspace` is enabled, a PVC `{name}-workspace` should exist
+- The per-agent Role `language-agent-{name}` grants `create`/`patch` on
+  `argoproj.io/workflowtaskresults` — without it every run fails at completion
+- No agent should have a Deployment, HorizontalPodAutoscaler, or PodDisruptionBudget
 
-### Step 5 — Check the LiteLLM gateway
+Check the reported status:
+
+```bash
+kubectl get lagent -o custom-columns=\
+'NAME:.metadata.name,MODE:.spec.execution.mode,PHASE:.status.phase,TEMPLATE:.status.workflowTemplateName,ACTIVE:.status.activeWorkflowName,LASTRUN:.status.lastRunPhase'
+```
+
+- Service agents should report `PHASE=Running` with `ACTIVE` set
+- Task agents report the most recent run in `LASTRUN`; `ACTIVE` is empty by design
+- `PHASE=Suspended` means `spec.execution.suspend` is set
+
+### Step 5 — Check Argo Workflows
+
+The operator refuses to start without these, so a missing piece here explains an operator
+CrashLoopBackOff.
+
+```bash
+kubectl get crds | grep argoproj.io
+kubectl get pods -n language-operator -l app.kubernetes.io/name=argo-workflows-workflow-controller
+kubectl logs -n language-operator -l app.kubernetes.io/name=argo-workflows-workflow-controller --tail=30
+```
+
+Verify:
+- Four CRDs are served: `workflows`, `workflowtemplates`, `cronworkflows`, `workflowtaskresults`
+- The workflow controller pod is Running
+- Its configured `namespaces` is empty (watch-all). A namespace-scoped controller creates the
+  objects correctly and then silently never runs them — the quietest failure mode here
+
+### Step 6 — Check the LiteLLM gateway
 
 ```bash
 kubectl get deployment gateway
@@ -77,7 +115,7 @@ Verify:
 - Gateway is serving: `kubectl exec -it <agent-pod> -- wget -qO- http://gateway.<namespace>.svc.cluster.local:8000/v1/models`
 - Models listed in the response match the LanguageModel CRs in the namespace
 
-### Step 6 — Spot-check agent config injection
+### Step 7 — Spot-check agent config injection
 
 Pick the first Running agent pod and verify operator-injected env vars:
 
@@ -98,7 +136,7 @@ kubectl exec <pod> -- cat /etc/agent/config.yaml
 
 Verify models, tools, and persona sections match what the CRs declare.
 
-### Step 7 — Check NetworkPolicies
+### Step 8 — Check NetworkPolicies
 
 ```bash
 kubectl get networkpolicies -o yaml
@@ -106,10 +144,12 @@ kubectl get networkpolicies -o yaml
 
 Verify:
 - The cluster-level `{cluster-name}-agents` NetworkPolicy selects pods with `langop.io/kind=LanguageAgent` (not the gateway)
-- Each agent has its own NetworkPolicy allowing ingress on its port
+- Each agent has its own NetworkPolicy allowing ingress on its ports (`spec.ports`)
+- Selectors match the labels Argo stamps on workflow pods via `podMetadata` — if a Service has
+  no endpoints, compare its selector against the actual pod labels
 - The gateway pod is NOT selected by the agents NetworkPolicy (it needs unrestricted egress to reach model APIs)
 
-### Step 8 — Check for warnings and events
+### Step 9 — Check for warnings and events
 
 ```bash
 kubectl get events --sort-by='.lastTimestamp' | tail -30
@@ -119,9 +159,11 @@ kubectl describe languageagents
 Flag any:
 - `Warning` events (ImagePullBackOff, OOMKilled, Evicted, FailedScheduling)
 - Failed reconciliation conditions on any CR
-- Pods not matching their Deployment's desired replica count
+- Agent Workflows in `Failed` or `Error` phase (`kubectl get workflows`)
+- CronWorkflows whose `status.lastScheduledTime` is stale relative to their schedule
+- RBAC errors mentioning `workflowtaskresults` in agent pod logs
 
-### Step 9 — Report findings
+### Step 10 — Report findings
 
 Produce a concise summary table:
 
