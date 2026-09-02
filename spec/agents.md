@@ -136,6 +136,26 @@ A **service-mode** agent is additionally addressable, and gets:
 
 A **task-mode** agent gets neither: its pods exist only for the duration of a run, so a Service would point at nothing in between. `spec.ports` is rejected for task agents.
 
+### Status
+
+The operator reports back on the LanguageAgent's `status`:
+
+| Field | Meaning |
+|---|---|
+| `phase` | `Pending`, `Running`, `Succeeded`, `Failed`, `Suspended`, or `Degraded` |
+| `workflowTemplateName` | The WorkflowTemplate to submit against for a manual run |
+| `activeWorkflowName` | The long-lived Workflow (service mode only) |
+| `lastRunName` / `lastRunPhase` | The most recent run and its Argo phase |
+| `lastRunStartedAt` / `lastRunFinishedAt` | When it ran; `lastRunFinishedAt` is unset while running |
+| `lastScheduledTime` | When the CronWorkflow last fired (task mode) |
+| `conditions` | Standard conditions; `Ready` plus subsystem conditions such as `NetworkPolicyReady` |
+| `managedResources` | Inventory of everything the operator owns for this agent |
+
+`Degraded` means the agent is running but a non-critical subsystem failed — most often a
+NetworkPolicy that did not converge. Check `conditions` for the reason.
+
+`kubectl get lagent` surfaces mode, phase, schedule, and last-run phase as columns.
+
 ## What the Agent Must Implement
 
 ### Ports
@@ -294,7 +314,8 @@ The init container runs to completion before the agent container starts. On subs
 
 A well-behaved agent image should:
 
-- [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
+- [ ] **Service mode:** listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`) and keep running
+- [ ] **Task mode:** do the work and exit — `0` for success, non-zero for failure. An agent that idles after finishing never completes its run
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
 - [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
 - [ ] Route LLM traffic through `MODEL_ENDPOINT` proxy URLs rather than connecting to model APIs directly

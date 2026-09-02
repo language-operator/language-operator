@@ -144,11 +144,26 @@ Choose one of the bundled runtimes:
 kubectl get languageagents
 ```
 
-Watch the agent pod come up:
+```
+NAME         MODE      PHASE     SCHEDULE   LAST RUN   AGE
+researcher   service   Running                         45s
+```
+
+Agents run as [Argo Workflows](https://argo-workflows.readthedocs.io/). The operator renders
+a `WorkflowTemplate` holding the agent's pod spec, and — because `MODE` is `service`, the
+default — a long-lived `Workflow` that runs it:
 
 ```bash
-kubectl get pods -w
+kubectl get workflowtemplate,workflow
 ```
+
+Watch it come up:
+
+```bash
+kubectl get lagent -w
+```
+
+Wait for `PHASE` to reach `Running`.
 
 ## Step 5: Access the Agent
 
@@ -222,3 +237,51 @@ kubectl get pods -w
     ```
 
     Note: `opencode attach` against the `https://opencode.<cluster-domain>` URL won't work — the OIDC proxy needs a browser session. Attach via the port-forwarded `http://localhost:3000` instead. opencode has no built-in auth, so enable cluster auth to protect it.
+
+## Step 6: Run an Agent on a Schedule
+
+The agents above are **service** agents: always on, and addressable through a Service. The
+other mode is **task** — the agent runs, does its work, exits, and is invoked again on a
+schedule. That fits any agent whose instructions read "do X, then stop".
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: nightly-summary
+spec:
+  runtime: deepagents
+  models:
+    - name: claude-sonnet
+  instructions: |
+    Summarise yesterday's activity to /workspace/summary.md, then stop.
+  execution:
+    mode: task
+    schedule: "0 3 * * *"
+EOF
+```
+
+```bash
+kubectl get lagent nightly-summary
+```
+
+```
+NAME              MODE   PHASE     SCHEDULE     LAST RUN    AGE
+nightly-summary   task   Pending   0 3 * * *                10s
+```
+
+The operator creates a `CronWorkflow` that fires on that schedule. To run it now rather than
+waiting:
+
+```bash
+argo submit --from workflowtemplate/nightly-summary
+argo list
+argo logs @latest
+```
+
+A task agent has no Service and no Ingress — its pods only exist while a run is in flight —
+so `spec.ports` is rejected for it.
+
+See [Execution Modes](../guides/execution-modes.md) for suspending agents, concurrency
+policies, run deadlines, and the status fields that report run history.

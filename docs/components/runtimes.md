@@ -65,9 +65,14 @@ See [Installation](../getting-started/installation.md#3-install-the-runtimes) fo
 
 | Field type | Behaviour |
 |------------|-----------|
-| Scalars (`image`, `resources`, probes) | Runtime provides the default; agent overrides if set |
+| Scalars (`image`, `resources`, probes, `execution.*`) | Runtime provides the default; agent overrides if set |
 | `ports` | Replace semantics — runtime ports apply only when the agent specifies no ports |
 | Lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
+| `deployment.replicas`, `deployment.autoscaling` | Not merged — agents run as Argo Workflows, which have neither |
+
+A runtime can also default the execution model through `spec.execution`, so an image that only
+makes sense as a one-shot job can ship with `mode: task` without every agent restating it. See
+[Execution Modes](../guides/execution-modes.md).
 
 **Example:** An OpenClaw runtime defines an init container that adapts `/etc/agent/config.yaml` into OpenClaw's native format. An agent using `runtime: openclaw` can add its own init containers; they run after the runtime's adapter.
 

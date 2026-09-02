@@ -11,7 +11,7 @@ The operator injects configuration into every agent pod. Your image must be read
 | What | Where | Notes |
 |---|---|---|
 | Agent config | `/etc/agent/config.yaml` | Instructions, persona, tools, models |
-| Persistent storage | `spec.workspace.mountPath` (default `/workspace`) | Survives pod restarts |
+| Persistent storage | `spec.workspace.mountPath` (default `/workspace`) | Survives pod restarts and, in task mode, the boundary between runs |
 | LLM gateway URL | `MODEL_ENDPOINT` env var | Single proxy URL for all models |
 | Model names | `LLM_MODEL` env var | Comma-separated list |
 | Tool URLs | `MCP_SERVERS` env var | Comma-separated MCP endpoint URLs |
@@ -21,10 +21,44 @@ See [Agent Runtime Container Specification](../components/agents.md) for the ful
 
 ### What Your Image Must Do
 
-1. **Listen on a port** — the operator creates a ClusterIP Service for each entry in `spec.ports` (default: `http/8080`). Your agent must bind to these port(s).
-2. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
-3. **Route LLM traffic through `MODEL_ENDPOINT`** — never call model APIs directly from inside the pod.
-4. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts. In task mode every run is a brand-new pod, so anything not on the workspace volume is gone by the next run.
+1. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
+2. **Route LLM traffic through `MODEL_ENDPOINT`** — never call model APIs directly from inside the pod.
+3. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts. In task mode every run is a brand-new pod, so anything not on the workspace volume is gone by the next run.
+4. **Behave correctly for the execution mode it will be run in** — see below.
+
+### Service mode vs task mode
+
+Agents run as Argo Workflows, and `spec.execution.mode` decides what the operator expects
+from your process. An image can support one mode or both; say which in your runtime's docs.
+
+| | `service` (default) | `task` |
+|---|---|---|
+| Your process should | start, listen, and **keep running** | do the work and **exit** |
+| Exit code | any exit is a crash; Argo restarts it | `0` → run `Succeeded`, non-zero → `Failed` |
+| `spec.ports` | required to be reachable; the operator creates a Service and (with a cluster domain) an Ingress | **rejected** — a task agent is not addressable |
+| Lifetime bound by | nothing; it runs until the agent is deleted or suspended | `spec.execution.activeDeadlineSeconds`, if set |
+| Retries | unlimited, so the agent stays up | `spec.execution.retryLimit`, if set |
+
+The most common mistake is a task-mode image that finishes its work and then idles. Argo has
+no way to know the work is done, so the run never completes, the next scheduled fire is
+skipped under the default `concurrencyPolicy: Forbid`, and the agent silently stops running.
+**Exit when you are done.**
+
+### ServiceAccount requirements
+
+Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`, which is
+granted `create` and `patch` on `argoproj.io/workflowtaskresults`. The Argo executor writes
+one of those per node to report the outcome of a run.
+
+If you point an agent at a ServiceAccount of your own with `spec.deployment.serviceAccountName`,
+it **must** carry that permission or every run will fail at completion, no matter what your
+image does:
+
+```yaml
+- apiGroups: ["argoproj.io"]
+  resources: ["workflowtaskresults"]
+  verbs: ["create", "patch"]
+```
 
 ## Minimal Dockerfile
 

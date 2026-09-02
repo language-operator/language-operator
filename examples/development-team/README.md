@@ -22,6 +22,7 @@ hallucinated APIs.
 - Language Operator [installed](https://langop.io/docs/getting-started/installation/)
 - `language-operator-runtimes` chart installed (provides the `claude-code` runtime)
 - `kubectl` configured for your cluster
+- the [`argo` CLI](https://github.com/argoproj/argo-workflows/releases) — these agents are scheduled tasks, so `argo list`/`logs`/`submit` is how you watch and drive them
 - `envsubst` (`brew install gettext` on macOS, pre-installed on most Linux distros)
 - A `LanguageCluster` already applied in the target namespace (see [clusters/basic](../clusters/basic/))
 - A Claude account (Pro, Max, Team, or Enterprise)
