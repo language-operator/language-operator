@@ -381,7 +381,7 @@ kubectl get pods -n language-operator -l app.kubernetes.io/name=argo-workflows-w
 If the CRDs are missing, the pre-install hook that applies them failed. Check its Job:
 
 ```bash
-kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install
+kubectl logs -n language-operator job/argo-crd-install
 ```
 
 ### CRDs not installing

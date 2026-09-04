@@ -109,7 +109,7 @@ make docs-serve       # preview the site at http://localhost:8000 (uv provisions
 - **Operator pod exits immediately with "Argo Workflows is not installed"** — the `argoproj.io`
   CRDs are missing. Agents run as Argo Workflows and the operator checks for them at startup.
   Check the subchart's pre-install hook:
-  `kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install`.
+  `kubectl logs -n language-operator job/argo-crd-install`.
 - **`helm lint`/`template` fails with "found in Chart.yaml, but missing in charts/ directory"** —
   run `helm dependency build` on the chart first. The pulled subchart tarballs are gitignored.
 
