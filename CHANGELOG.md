@@ -8,6 +8,13 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.2 — 2026-09-04
+
+**Chores**
+- chart: shorten argo-workflows resource names (#905)
+
+---
+
 ## v0.3.1 — 2026-09-04
 
 **Bug Fixes**
