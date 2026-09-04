@@ -1949,7 +1949,7 @@ and Docker cache is busted.</p>
 <li><strong>Operator pod exits immediately with "Argo Workflows is not installed"</strong> — the <code>argoproj.io</code>
   CRDs are missing. Agents run as Argo Workflows and the operator checks for them at startup.
   Check the subchart's pre-install hook:
-  <code>kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install</code>.</li>
+  <code>kubectl logs -n language-operator job/argo-crd-install</code>.</li>
 <li><strong><code>helm lint</code>/<code>template</code> fails with "found in Chart.yaml, but missing in charts/ directory"</strong> —
   run <code>helm dependency build</code> on the chart first. The pulled subchart tarballs are gitignored.</li>
 </ul>

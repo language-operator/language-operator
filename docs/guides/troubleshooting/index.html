@@ -1870,7 +1870,7 @@ cause.</p>
 <p>Expect <code>workflows</code>, <code>workflowtemplates</code>, <code>cronworkflows</code>, and <code>workflowtaskresults</code>.</p>
 <p>If they are missing and you installed with the bundled subchart, the pre-install hook that
 applies them failed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span>job/language-operator-argo-workflows-crd-install
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span>job/argo-crd-install
 </code></pre></div>
 <p>If you run your own Argo, see <a href="../../getting-started/installation/#bring-your-own-argo">Bring your own Argo</a>.</p>
 <h2 id="an-agent-never-runs">An agent never runs<a class="headerlink" href="#an-agent-never-runs" title="Permanent link">&para;</a></h2>
@@ -1907,7 +1907,7 @@ applies them failed:</p>
 <p>A namespace-scoped Argo installation is the quietest failure here: the objects are created
 correctly and simply never run. Confirm the controller watches your namespace:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>language-operator-argo-workflows-workflow-controller-configmap<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-A3<span class="w"> </span>namespaces
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>argo-workflow-controller-configmap<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-A3<span class="w"> </span>namespaces
 </code></pre></div>
 <h2 id="runs-fail-at-completion">Runs fail at completion<a class="headerlink" href="#runs-fail-at-completion" title="Permanent link">&para;</a></h2>
 <p>If the agent's own work succeeds but the run ends <code>Failed</code>, and the pod logs show an RBAC
