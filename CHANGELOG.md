@@ -8,6 +8,54 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.0 — 2026-09-04
+
+**Breaking Changes**
+
+LanguageAgents no longer run as Kubernetes Deployments. They run as Argo Workflows (#903).
+
+- **Argo Workflows is now required.** The operator chart bundles it as a subchart
+  (`argo-workflows.enabled`, default `true`). The operator refuses to start when the
+  `argoproj.io` CRDs are missing.
+- `spec.deployment.replicas` and `spec.deployment.autoscaling` are **rejected at admission** —
+  an Argo Workflow has neither a replica count nor a scale subresource. Remove both fields
+  before upgrading, or existing manifests will fail to apply.
+- Agent HorizontalPodAutoscalers and PodDisruptionBudgets are no longer created. This reverts
+  `HorizontalPodAutoscaler support for LanguageAgent (#725)` and `create PodDisruptionBudget for
+  multi-replica LanguageAgent deployments (#723)` from v0.2.0. Delete any left over from a
+  previous install.
+- `status.activeReplicas` and `status.readyReplicas` are removed, replaced by
+  `workflowTemplateName`, `activeWorkflowName`, `lastRunName`, `lastRunPhase`,
+  `lastRunStartedAt`, `lastRunFinishedAt`, and `lastScheduledTime`. The `Updating` phase is
+  gone; `Succeeded` and `Suspended` are new.
+- A custom `spec.deployment.serviceAccountName` must now grant `create` and `patch` on
+  `argoproj.io/workflowtaskresults`, which the Argo executor uses to report each run's outcome.
+  Without it every run fails at completion.
+- The `langop.io/component=trigger` NetworkPolicy allowance is removed.
+
+Agents gain `spec.execution`: `mode: service` (default) is the always-on, addressable agent that
+replaces the Deployment; `mode: task` runs one-shot, on a cron `schedule` or invoked by hand with
+`argo submit --from workflowtemplate/<agent>`. See the
+[Execution Modes guide](https://langop.io/docs/guides/execution-modes/) and the
+[upgrade notes](https://langop.io/docs/getting-started/installation/#upgrade).
+
+**Features**
+- run LanguageAgents as Argo Workflows instead of Deployments (#903)
+- examples: R3 — RAG over a seeded corpus (bundled Qdrant StatefulSet + ingestion Job) (#902)
+- examples: R2 — semantic memory with local embeddings (mcp-server-qdrant, embedded) (#900)
+- examples: add R1 agent-memory example (server-memory, sidecar) (#899)
+
+**Bug Fixes**
+- network: let agent pods reach the Kubernetes API server (#904)
+
+**Refactoring**
+- remove spec.workspace from LanguageAgentRuntime (#898)
+
+**Documentation**
+- restructure runtime guides and add network policy + MCP tool guides (#889)
+
+---
+
 ## v0.2.0 — 2026-06-24
 
 **Features**
