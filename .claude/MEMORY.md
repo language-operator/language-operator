@@ -3,11 +3,15 @@
 ## Development Environment
 
 ### Deployment Rules
-- **Operator**: CI pipeline only, no local Docker builds
-- **Dashboard**: http://localhost:3000 — if not available, run `make dev-up` or `docker compose up`
-- **Login**: `james@theryans.io` / `password123`
-- **NEVER**: `npm run build` or `npm run dev` outside docker compose (port conflicts, memory bloat)
-- **NEVER**: `components/dashboard/docker-compose.yml` (deprecated)
+- **Operator**: `make dev` from the repo root builds, imports into k3s, and upgrades both
+  Helm releases. `make wipe` resets the cluster to a clean slate.
+- **Agents run as Argo Workflows** — a `WorkflowTemplate` per agent, plus a `Workflow`
+  (`execution.mode: service`) or `CronWorkflow` (`mode: task` with a schedule). No Deployments,
+  no replicas, no HPA/PDB on the agent path.
+- **Argo is required**: the operator exits at startup without the `argoproj.io` CRDs. The
+  operator chart bundles the subchart by default.
+- **Inspect runs** with `argo list` / `argo logs @latest`, or `kubectl get lagent` for
+  MODE/PHASE/SCHEDULE/LAST RUN.
 
 ### Port Conflict Debugging
 - **Symptom**: Dashboard starts on port 3001 instead of 3000

@@ -6,6 +6,7 @@
 - **Docker** — building images
 - **kubectl** and **Helm 3.8+**
 - **make**
+- **argo** (optional) — the [Argo Workflows CLI](https://github.com/argoproj/argo-workflows/releases), for inspecting agent runs
 - **k3s** — `make dev` deploys into a local k3s cluster (it imports images via `k3s ctr`). [kind](https://kind.sigs.k8s.io/)/[k3d](https://k3d.io/) work for manual testing but aren't wired into `make dev`.
 
 ## Clone and Install Hooks
@@ -51,7 +52,13 @@ git add src/api/v1alpha1/zz_generated.deepcopy.go \
 
 ## Helm Chart Validation
 
+Both charts have dependencies, so resolve them first — on a clean checkout `lint` and
+`template` fail without this:
+
 ```bash
+helm dependency build charts/language-operator          # argo-workflows subchart
+helm dependency build charts/language-operator-runtimes # the four runtime subcharts
+
 helm lint charts/language-operator        && helm template charts/language-operator --debug
 helm lint charts/language-operator-runtimes && helm template charts/language-operator-runtimes --debug
 ```
@@ -59,8 +66,13 @@ helm lint charts/language-operator-runtimes && helm template charts/language-ope
 ## Local Cluster (`make dev`)
 
 `make dev` (project root) is the canonical local deploy: it builds the binary, builds a Docker
-image tagged with the current git SHA, imports it into k3s, and `helm upgrade`s both the operator
-and runtimes releases.
+image tagged with the current git SHA, imports it into k3s, resolves both charts' dependencies,
+and `helm upgrade`s the operator and runtimes releases. The operator install waits up to 5
+minutes because it also brings up Argo Workflows.
+
+To get back to a clean cluster, `make wipe` removes everything `make dev` installs: custom
+resources, both Helm releases, the `langop.io` and `argoproj.io` CRDs, the namespace, orphaned
+cluster-scoped resources, and the imported dev images.
 
 ```bash
 make dev
@@ -94,5 +106,13 @@ make docs-serve       # preview the site at http://localhost:8000 (uv provisions
   didn't commit the generated files. Re-run both and stage the output.
 - **Integration tests fail to start** — install the envtest binaries:
   `go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest`.
+- **Operator pod exits immediately with "Argo Workflows is not installed"** — the `argoproj.io`
+  CRDs are missing. Agents run as Argo Workflows and the operator checks for them at startup.
+  Check the subchart's pre-install hook:
+  `kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install`.
+- **`helm lint`/`template` fails with "found in Chart.yaml, but missing in charts/ directory"** —
+  run `helm dependency build` on the chart first. The pulled subchart tarballs are gitignored.
+
+See the [troubleshooting guide](../guides/troubleshooting.md) for runtime failures.
 
 For branching, commit conventions, and the PR process, see [Contributing](contributing.md).

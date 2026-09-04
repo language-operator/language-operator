@@ -113,6 +113,9 @@ CLUSTER_NAME=my-cluster MODEL_NAME=my-model bash examples/knowledge/rag/install.
 - `Deployment/kb` + `Service/kb` — the operator-injected bridge running `mcp-server-qdrant`, exposing
   `/mcp` in-cluster on port 8080
 - `LanguageAgent/rag-demo` — a `claude-code` agent that retrieves from `kb` and cites sources
+- `WorkflowTemplate/rag-demo` + `Workflow/rag-demo` — the agent runs as an Argo Workflow in the
+  default `execution.mode: service`, so it is always on and addressable
+- `Service/rag-demo` — exposes the agent's terminal
 
 Watch the ingestion finish, then confirm the tool exposes **only** `qdrant-find` (read-only → no
 `qdrant-store`):

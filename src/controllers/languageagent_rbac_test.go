@@ -10,7 +10,6 @@ import (
 	"github.com/language-operator/language-operator/internal/testutil/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -127,10 +126,9 @@ func TestLanguageAgentController_CustomServiceAccount(t *testing.T) {
 	err = fakeClient.Get(ctx, types.NamespacedName{Name: defaultSAName, Namespace: agent.Namespace}, &rbacv1.RoleBinding{})
 	assert.True(t, errors.IsNotFound(err), "expected no RoleBinding %q, got: %v", defaultSAName, err)
 
-	// Deployment must use the custom service account name.
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
-	assert.Equal(t, "custom-sa", deployment.Spec.Template.Spec.ServiceAccountName)
+	// The Workflow pods must run as the custom service account.
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	assert.Equal(t, "custom-sa", podSpec.ServiceAccountName)
 }
 
 func TestLanguageAgentController_ServiceAccountAnnotations(t *testing.T) {

@@ -57,6 +57,17 @@ spec:
     Use `gh` for all GitHub operations. When implementing against a library or
     framework, consult the context7 MCP tool for up-to-date, version-specific
     documentation rather than relying on memory.
+  # This agent's instructions are written around "on each invocation": it does a
+  # pass of work and stops. That is a task, not a service — so it runs as a
+  # scheduled Argo Workflow rather than an always-on pod.
+  execution:
+    mode: task
+    schedule: "25-59/30 * * * *"  # staggered across the adapter repos
+    # Never let two runs of the same agent touch the repo at once.
+    concurrencyPolicy: Forbid
+    # A run that has not finished in an hour is stuck; kill it and let the
+    # next tick start clean.
+    activeDeadlineSeconds: 3600
   repository:
     url: https://github.com/language-operator/opencode-adapter.git
     secretRef:

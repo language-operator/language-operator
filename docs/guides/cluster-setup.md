@@ -20,6 +20,9 @@ Install these tools locally before proceeding:
 
 - **kubectl** — configured to access your target cluster
 - **Helm 3.8+**
+- **argo** (optional) — the [Argo Workflows CLI](https://github.com/argoproj/argo-workflows/releases).
+  Agents run as Argo Workflows, and `argo list`/`logs`/`submit` is the most direct way to
+  inspect runs and invoke task-mode agents. Everything it does is also reachable with `kubectl`.
 
 Verify:
 
@@ -212,6 +215,11 @@ kubectl get svc -n kube-system traefik 2>/dev/null || kubectl get svc -n traefik
 # ClusterIssuers ready
 kubectl get clusterissuer
 
-# Sufficient node resources (operator + gateway + one agent needs ~4Gi RAM)
+# Sufficient node resources (operator + Argo controller + gateway + one agent needs ~4Gi RAM)
 kubectl top nodes
+
+# Argo Workflows CRDs and controller (installed with the operator chart by default).
+# The operator refuses to start without these.
+kubectl get crds | grep argoproj.io
+kubectl get pods -n language-operator -l app.kubernetes.io/name=argo-workflows-workflow-controller
 ```

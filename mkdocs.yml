@@ -78,14 +78,26 @@ nav:
         - Runtimes: components/runtimes.md
     - Guides:
         - Kubernetes: guides/cluster-setup.md
+        - Execution Modes: guides/execution-modes.md
         - MCP Tools: guides/mcp-tools.md
         - Network Policies: guides/network-policies.md
+        - Troubleshooting: guides/troubleshooting.md
         - Custom Agents: guides/custom-agents.md
-  - CRD Reference: api/reference.md
+  - API:
+      - Overview: api/overview.md
+      - LanguageAgent: api/languageagent.md
+      - LanguageAgentRuntime: api/languageagentruntime.md
+      - LanguageAgentSelfConfig: api/languageagentselfconfig.md
+      - LanguageCluster: api/languagecluster.md
+      - LanguageModel: api/languagemodel.md
+      - LanguagePersona: api/languagepersona.md
+      - LanguageTool: api/languagetool.md
+      - Complete CRD Reference: api/reference.md
   - Development:
       - Contributing: development/contributing.md
       - Development Setup: development/setup.md
       - Testing: development/testing.md
+      - Writing Docs: CONTRIBUTING_DOCS.md
 extra:
   social:
     - icon: fontawesome/brands/github

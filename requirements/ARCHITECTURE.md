@@ -18,9 +18,11 @@
 
 ## Architectural Principles
 
-### 1. Pure Deployment Infrastructure
+### 1. Pure Scheduling Infrastructure
 
-The operator deploys containers and manages Kubernetes resources. It has no opinion about what the container serves, what protocol it speaks, or how it behaves at runtime. Agent images are treated as opaque workloads.
+The operator schedules containers and manages Kubernetes resources. It has no opinion about what the container serves, what protocol it speaks, or how it behaves at runtime. Agent images are treated as opaque workloads.
+
+Agents run as [Argo Workflows](https://argo-workflows.readthedocs.io/), not Deployments. This buys the one thing a Deployment cannot express: a *run*. An agent can be always-on (`spec.execution.mode: service`) or invoked — on a cron schedule, or by hand against its `WorkflowTemplate` (`mode: task`). Runs have a start, an end, and a terminal phase the operator surfaces on the agent's status.
 
 **Separation of concerns:**
 - **Operator**: lifecycle, configuration injection, networking, observability
@@ -30,12 +32,13 @@ This is the openclaw-operator pattern generalised: opinionated about K8s mechani
 
 ### 2. Configuration over Code
 
-The operator injects two files into every agent container:
+The operator injects one file into every agent container:
 
 | Path | Content |
 |------|---------|
-| `/etc/agent/instructions.txt` | Task instructions (plain text) |
-| `/etc/agent/config.yaml` | Personas, tools, models, agent identity |
+| `/etc/agent/config.yaml` | Instructions, personas, tools, models, agent identity |
+
+Instructions are also available as the `AGENT_INSTRUCTIONS` env var, for runtimes that take a prompt on the command line rather than reading a config file.
 
 Instructions are what the agent does. The image is how it does it. Changing instructions requires no image rebuild.
 
@@ -43,7 +46,7 @@ Instructions are what the agent does. The image is how it does it. Changing inst
 
 Memory, knowledge retrieval, and code execution are handled by MCP tool servers (`LanguageTool` CRDs), not by the operator. The operator resolves tool endpoints and injects them into agent config — it does not proxy or inspect tool traffic.
 
-LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a single shared LiteLLM proxy (`proxy` Deployment + Service) that is dynamically configured as models are added or removed. Agents route all LLM traffic through this shared proxy rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally, and enables cross-model reporting through LiteLLM's unified dashboard.
+LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a single shared LiteLLM gateway (`gateway` Deployment + Service) that is dynamically configured as models are added or removed. Agents route all LLM traffic through this shared gateway rather than connecting to model APIs directly. This allows the operator to manage credentials, token spend, and routing centrally, and enables cross-model reporting through LiteLLM's unified dashboard.
 
 ---
 
@@ -56,8 +59,8 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
 │  │   Language Operator   │    │        Agent Pods            │   │
 │  │                      │    │                              │   │
-│  │  Reconciles:         │    │  /etc/agent/instructions.txt │   │
-│  │  · LanguageAgent     │───▶│  /etc/agent/config.yaml      │   │
+│  │  Reconciles:         │    │  /etc/agent/config.yaml      │   │
+│  │  · LanguageAgent     │───▶│  (as Argo Workflow pods)     │   │
 │  │  · LanguagePersona   │    │                              │   │
 │  │  · LanguageTool      │    │  Env vars injected:          │   │
 │  │  · LanguageModel     │    │  · AGENT_NAME, AGENT_UUID    │   │
@@ -65,8 +68,8 @@ LLM access is handled by `LanguageModel` CRDs. Each `LanguageCluster` runs a sin
 │  └──────────────────────┘    │  · MCP_SERVERS            │   │
 │                               └──────────────────────────────┘   │
 │  ┌──────────────────────┐    ┌──────────────────────────────┐   │
-│  │    MCP Tool Servers  │    │  Shared LiteLLM Proxy        │   │
-│  │  (LanguageTool CRDs) │    │  proxy.<namespace>.svc:8000  │   │
+│  │    MCP Tool Servers  │    │  Shared LiteLLM Gateway      │   │
+│  │  (LanguageTool CRDs) │    │  gateway.<namespace>.svc:8000  │   │
 │  └──────────────────────┘    │  (one per LanguageCluster)   │   │
 │                               └──────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -120,10 +123,13 @@ spec:
     size: 10Gi
     mountPath: /home/node/.myapp
 
-  replicas: 1
+  execution:
+    mode: service   # or: mode: task + schedule: "*/15 * * * *"
 ```
 
-The operator creates: Deployment, Service (on `spec.port`), HTTPRoute, NetworkPolicy, and two ConfigMaps (instructions, config).
+The operator always creates a `WorkflowTemplate` (the agent's pod spec, and the unit `argo submit --from` targets), one ConfigMap (`config.yaml`), a NetworkPolicy, and a ServiceAccount/Role/RoleBinding.
+
+A `service` agent additionally gets a long-lived `Workflow`, a ClusterIP Service on `spec.ports`, and an Ingress when the cluster has a domain. A `task` agent gets a `CronWorkflow` when `spec.execution.schedule` is set, and is not addressable.
 
 If `initContainers` are specified, the operator prepends `MODEL_ENDPOINT` and `LLM_MODEL` env vars into each init container so config adapters can bridge operator injection to native runtime config formats.
 
@@ -165,7 +171,7 @@ Agents connect to tools directly over MCP. The operator does not proxy tool traf
 
 ### LanguageModel
 
-Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM proxy (`proxy` Deployment + Service). The proxy URL is injected as `MODEL_ENDPOINT` into every agent container (main container and all init containers). Agents never hold real API credentials.
+Declares an LLM endpoint. The operator writes the model spec into a ConfigMap; the `LanguageCluster` controller assembles all models in the namespace into a shared LiteLLM gateway (`gateway` Deployment + Service). The gateway URL is injected as `MODEL_ENDPOINT` into every agent container (main container and all init containers). Agents never hold real API credentials.
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -181,7 +187,7 @@ spec:
     key: api-key
 ```
 
-Adding or removing a `LanguageModel` triggers a rolling restart of the shared proxy with the updated model list. No agent redeploy is required.
+Adding or removing a `LanguageModel` triggers a rolling restart of the shared gateway with the updated model list. No agent redeploy is required.
 
 ### LanguageCluster
 
@@ -194,12 +200,12 @@ metadata:
   name: language-operator-myapp
 spec:
   domain: agents.example.com
-  proxy:
-    ingressEnabled: true    # expose proxy at proxy.agents.example.com (default when domain is set)
+  gateway:
+    ingressEnabled: true    # expose the gateway at gateway.agents.example.com (default when domain is set)
     replicas: 1
 ```
 
-The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM proxy. The proxy is exposed externally at `proxy.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
+The operator creates the namespace, configures shared networking, sets up default RBAC, and deploys a shared LiteLLM gateway. The gateway is exposed externally at `gateway.<spec.domain>` when a domain is configured. Model configuration is dynamically updated as `LanguageModel` CRs are created or deleted.
 
 ---
 
@@ -208,33 +214,36 @@ The operator creates the namespace, configures shared networking, sets up defaul
 The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 
 **Operator provides:**
-- `/etc/agent/instructions.txt` — plain text task instructions (optional)
-- `/etc/agent/config.yaml` — structured YAML with agent identity, personas, tools, models (optional)
-- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`
-- `MODEL_ENDPOINT` — URL of the shared LiteLLM proxy (`http://proxy.<namespace>.svc.cluster.local:8000`), injected into main container and all init containers
-- `LLM_MODEL` — comma-separated model names registered in the proxy (from all `models`)
+- `/etc/agent/config.yaml` — structured YAML with agent identity, instructions, personas, tools, models
+- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_INSTRUCTIONS`
+- `MODEL_ENDPOINT` — URL of the shared LiteLLM gateway (`http://gateway.<namespace>.svc.cluster.local:8000`), injected into the main container and all init containers
+- `LLM_MODEL` — comma-separated model names registered in the gateway (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs
-- ClusterIP Service on `spec.port`
-- HTTPRoute for external access
+- ClusterIP Service on `spec.ports` (service-mode agents only)
+- Ingress for external access, when the cluster has a domain
 - NetworkPolicy allowing agent-to-agent traffic
 
-**Agent image:** No mandatory endpoints or protocols. The operator is runtime-agnostic. Liveness and readiness probes are defined in `spec.livenessProbe` / `spec.readinessProbe` — if not set, none are configured.
+**Agent image:** No mandatory endpoints or protocols. The operator is runtime-agnostic. Liveness and readiness probes are defined in `spec.deployment.livenessProbe` / `spec.deployment.readinessProbe` — if not set, none are configured.
+
+A `task`-mode agent is expected to exit when its work is done; the run's exit code becomes the run's phase. A `service`-mode agent is expected never to exit; if it does, Argo restarts it.
 
 ---
 
 ## Network Architecture
 
-Each `LanguageAgent` gets:
+Each addressable (`mode: service`) `LanguageAgent` gets:
 
-- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local:<port>`) — in-cluster access on `spec.port`
-- **HTTPRoute** — external access via the cluster Gateway
-- **NetworkPolicy** with ingress rules allowing:
-  - Agent pods (`langop.io/kind=LanguageAgent`) — agent-to-agent traffic on `spec.port`
-  - Configured trigger pods
+- **ClusterIP Service** (`<agent-name>.<namespace>.svc.cluster.local:<port>`) — in-cluster access on `spec.ports`
+- **Ingress** — external access at `<agent-name>.<cluster domain>`
+- **NetworkPolicy** with an ingress rule allowing agent pods (`langop.io/kind=LanguageAgent`) to reach each other on `spec.ports`
+
+The Service selector and NetworkPolicy podSelector both match the operator-managed labels the Workflow stamps onto its pods via `podMetadata`, so they are unaffected by user-supplied `spec.deployment.podLabels`.
+
+A `task`-mode agent gets a NetworkPolicy but no Service or Ingress: its pods exist only for the duration of a run.
 
 Tool servers (`LanguageTool`) get their own Services. The operator reconciles NetworkPolicy to allow agent pods to reach tool pods.
 
-The shared LiteLLM proxy (`proxy.<namespace>.svc.cluster.local:8000`) is deployed per `LanguageCluster`. NetworkPolicy allows agent pods to reach the proxy, and the proxy has outbound HTTPS egress to upstream model providers.
+The shared LiteLLM gateway (`gateway.<namespace>.svc.cluster.local:8000`) is deployed per `LanguageCluster`. NetworkPolicy allows agent pods to reach the gateway, and the gateway has outbound HTTPS egress to upstream model providers.
 
 ---
 

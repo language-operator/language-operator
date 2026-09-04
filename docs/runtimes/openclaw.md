@@ -122,10 +122,12 @@ The operator will auto-generate a gateway token and store it in a Secret named `
 
 ```bash
 kubectl get languageagents
-kubectl get pods -w
+kubectl get lagent -w
 ```
 
-Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
+Wait for `PHASE` to reach `Running`. The `MODE` column shows `service`: this runtime is a
+long-lived, addressable agent, which is why it has a Service you can port-forward to. See
+[Execution Modes](../guides/execution-modes.md).
 
 ### Get Credentials
 
@@ -147,7 +149,8 @@ Log in with your token at https://openclaw.demo-cluster.<your-domain>.
 
 | Resource | Name | Purpose |
 |---|---|---|
-| Deployment | `openclaw` | Runs the OpenClaw container |
+| WorkflowTemplate | `openclaw` | The agent's pod spec; also what `argo submit --from` targets |
+| Workflow | `openclaw` | The long-lived run. Runs the OpenClaw container |
 | Service | `openclaw` | ClusterIP on port 18789 |
 | Secret | `openclaw-runtime` | Auto-generated gateway token |
 | NetworkPolicy | `openclaw` | Allows inbound from other agents in this namespace |

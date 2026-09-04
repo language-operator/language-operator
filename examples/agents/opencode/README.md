@@ -59,7 +59,8 @@ OIDC provider.
 ## What's created
 
 - `LanguageAgent/opencode` — the agent CR
-- `Deployment/opencode` — runs the opencode container on port 3000
+- `WorkflowTemplate/opencode` — the agent's pod spec
+- `Workflow/opencode` — the long-lived run; runs the opencode container on port 3000
 - `Service/opencode` — exposes the web UI
 - `NetworkPolicy/opencode` — restricts ingress; allows unrestricted egress
 - `PersistentVolumeClaim/opencode-workspace` — workspace at `/workspace`

@@ -15,7 +15,6 @@ import (
 	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,9 +130,9 @@ func TestLanguageAgentController_NetworkPolicy_FromRule(t *testing.T) {
 	}
 
 	t.Run("from_rule_appended_to_ingress", func(t *testing.T) {
-		// Hardcoded rules: trigger, agent-to-agent = 2; user From rule = 1; total >= 3
-		if len(np.Spec.Ingress) < 3 {
-			t.Errorf("expected at least 3 ingress rules (2 default + 1 from spec), got %d", len(np.Spec.Ingress))
+		// Built-in agent-to-agent rule = 1; user From rule = 1; total >= 2
+		if len(np.Spec.Ingress) < 2 {
+			t.Errorf("expected at least 2 ingress rules (1 default + 1 from spec), got %d", len(np.Spec.Ingress))
 		}
 		// Last rule should be the user-defined one
 		last := np.Spec.Ingress[len(np.Spec.Ingress)-1]
@@ -915,9 +914,9 @@ func TestLanguageAgentController_MultiPortNetworkPolicy(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// First 2 rules are the built-in trigger/agent-to-agent rules.
-	require.GreaterOrEqual(t, len(np.Spec.Ingress), 2)
-	for i := 0; i < 2; i++ {
+	// The first rule is the built-in agent-to-agent rule.
+	require.GreaterOrEqual(t, len(np.Spec.Ingress), 1)
+	for i := 0; i < 1; i++ {
 		rule := np.Spec.Ingress[i]
 		require.Len(t, rule.Ports, 2, "rule %d should have 2 ports", i)
 		assert.Equal(t, int32(3000), rule.Ports[0].Port.IntVal, "rule %d port 0", i)
@@ -957,9 +956,9 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// 2 built-in rules + 1 ingress-controller rule; no oauth2-proxy rule (sidecar uses localhost)
-	require.Len(t, np.Spec.Ingress, 3, "expected 3 ingress rules (2 built-in + ingress controller)")
-	ingressNsRule := np.Spec.Ingress[2]
+	// 1 built-in rule + 1 ingress-controller rule; no oauth2-proxy rule (sidecar uses localhost)
+	require.Len(t, np.Spec.Ingress, 2, "expected 2 ingress rules (agent-to-agent + ingress controller)")
+	ingressNsRule := np.Spec.Ingress[1]
 	require.Len(t, ingressNsRule.From, 1)
 	require.NotNil(t, ingressNsRule.From[0].NamespaceSelector)
 	assert.Equal(t, "traefik", ingressNsRule.From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
@@ -968,7 +967,7 @@ func TestLanguageAgentController_IngressControllerNamespace(t *testing.T) {
 }
 
 // TestLanguageAgentController_NoIngressControllerNamespace verifies that without
-// IngressControllerNamespace set, only the 2 built-in ingress rules are created.
+// IngressControllerNamespace set, only the built-in agent-to-agent rule is created.
 func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	agent := gen.LanguageAgent("no-ingress-ns-agent", "default")
@@ -993,8 +992,8 @@ func TestLanguageAgentController_NoIngressControllerNamespace(t *testing.T) {
 
 	np := &networkingv1.NetworkPolicy{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, np))
-	// 2 built-in rules only; no oauth2-proxy rule (sidecar uses localhost, no NetworkPolicy needed)
-	assert.Len(t, np.Spec.Ingress, 2, "expected 2 ingress rules (trigger + agent-to-agent)")
+	// Built-in agent-to-agent rule only; no oauth2-proxy rule (sidecar uses localhost, no NetworkPolicy needed)
+	assert.Len(t, np.Spec.Ingress, 1, "expected 1 ingress rule (agent-to-agent)")
 }
 
 // --- oauth2-proxy reconciliation ---
@@ -1129,31 +1128,31 @@ func TestReconcileIngress_BackendIsAgentDirectWhenAuthDisabled(t *testing.T) {
 	assert.Equal(t, int32(8080), backend.Port.Number)
 }
 
-// TestReconcileDeployment_OAuthProxySidecarPresent verifies that when auth is enabled,
-// reconcileDeployment injects an oauth2-proxy sidecar with upstream pointing to localhost.
-func TestReconcileDeployment_OAuthProxySidecarPresent(t *testing.T) {
+// TestReconcileWorkflowTemplate_OAuthProxySidecarPresent verifies that when auth is
+// enabled, the rendered WorkflowTemplate carries an oauth2-proxy sidecar whose
+// upstream points at the agent on localhost.
+func TestReconcileWorkflowTemplate_OAuthProxySidecarPresent(t *testing.T) {
 	cluster := authEnabledCluster("default")
 	agent := authAgent("my-agent", "default")
 	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
 	seedDexSecret(t, fc, "default")
 	ctx := context.Background()
 
-	require.NoError(t, r.reconcileDeployment(ctx, agent, "abc123"))
+	require.NoError(t, r.reconcileWorkflowTemplate(ctx, agent, "abc123"))
 
-	dep := &appsv1.Deployment{}
-	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: "default"}, dep))
+	podSpec, _ := agentPodView(t, fc, agent.Name, "default")
 
-	names := make([]string, 0, len(dep.Spec.Template.Spec.Containers))
-	for _, c := range dep.Spec.Template.Spec.Containers {
+	names := make([]string, 0, len(podSpec.Containers))
+	for _, c := range podSpec.Containers {
 		names = append(names, c.Name)
 	}
 	assert.Contains(t, names, "agent")
 	assert.Contains(t, names, "oauth2-proxy")
 
 	var oauthC *corev1.Container
-	for i := range dep.Spec.Template.Spec.Containers {
-		if dep.Spec.Template.Spec.Containers[i].Name == "oauth2-proxy" {
-			oauthC = &dep.Spec.Template.Spec.Containers[i]
+	for i := range podSpec.Containers {
+		if podSpec.Containers[i].Name == "oauth2-proxy" {
+			oauthC = &podSpec.Containers[i]
 			break
 		}
 	}
@@ -1163,18 +1162,17 @@ func TestReconcileDeployment_OAuthProxySidecarPresent(t *testing.T) {
 	assert.Contains(t, argsStr, "--upstream=http://localhost:8080")
 }
 
-// TestReconcileDeployment_OAuthProxySidecarAbsent verifies that when auth is disabled,
-// the agent Deployment has exactly one container (no oauth2-proxy sidecar).
-func TestReconcileDeployment_OAuthProxySidecarAbsent(t *testing.T) {
+// TestReconcileWorkflowTemplate_OAuthProxySidecarAbsent verifies that when auth is
+// disabled, the agent runs alone (no oauth2-proxy sidecar).
+func TestReconcileWorkflowTemplate_OAuthProxySidecarAbsent(t *testing.T) {
 	cluster := gen.ReadyCluster("default")
 	agent := gen.LanguageAgent("my-agent", "default")
 	r, fc := newAgentReconcilerForAuth(t, cluster, agent)
 	ctx := context.Background()
 
-	require.NoError(t, r.reconcileDeployment(ctx, agent, "abc123"))
+	require.NoError(t, r.reconcileWorkflowTemplate(ctx, agent, "abc123"))
 
-	dep := &appsv1.Deployment{}
-	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: "default"}, dep))
-	assert.Len(t, dep.Spec.Template.Spec.Containers, 1, "expected only agent container when auth is disabled")
-	assert.Equal(t, "agent", dep.Spec.Template.Spec.Containers[0].Name)
+	podSpec, _ := agentPodView(t, fc, agent.Name, "default")
+	assert.Len(t, podSpec.Containers, 1, "expected only agent container when auth is disabled")
+	assert.Equal(t, "agent", podSpec.Containers[0].Name)
 }

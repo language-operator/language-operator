@@ -32,10 +32,12 @@ EOF
 
 ```bash
 kubectl get languageagents
-kubectl get pods -w
+kubectl get lagent -w
 ```
 
-Wait for the pod to reach `Running` and the LanguageAgent to show `Ready=True`.
+Wait for `PHASE` to reach `Running`. The `MODE` column shows `service`: this runtime is a
+long-lived, addressable agent, which is why it has a Service you can port-forward to. See
+[Execution Modes](../guides/execution-modes.md).
 
 ### Connect to the Terminal
 
@@ -119,7 +121,8 @@ spec:
 
 | Resource | Name | Purpose |
 |----------|------|---------|
-| Deployment | `code-agent` | Runs the Claude Code WebSocket terminal container |
+| WorkflowTemplate | `code-agent` | The agent's pod spec; also what `argo submit --from` targets |
+| Workflow | `code-agent` | The long-lived run. Runs the Claude Code WebSocket terminal container |
 | Service | `code-agent` | ClusterIP on port 8080 (WebSocket terminal) |
 | NetworkPolicy | `code-agent` | Allows inbound from other agents in this namespace. Add `spec.networkPolicies.egress` with `cidr: 0.0.0.0/0` on port 443 to reach `claude.ai`, `api.anthropic.com`, and other public APIs. |
 | PVC | `code-agent-workspace` | 10Gi persistent workspace at `/workspace` (also holds Claude config) |

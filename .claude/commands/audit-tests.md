@@ -16,11 +16,12 @@ Read these files using the Read and Grep tools directly (do not delegate to a su
 - Whether it calls `Reconcile` the correct number of times (first call adds finalizer, second creates resources)
 
 **Controllers** — skim `src/controllers/*_controller.go` to identify every meaningful code path:
-- Each early-exit error branch (registry validation, ConfigMap, PVC, NetworkPolicy, Service, Deployment)
-- Each status field written (`phase`, `conditions`, `activeReplicas`, `readyReplicas`, `uuid`, `webhookURLs`, `endpoint`, etc.)
+- Each early-exit error branch (registry validation, ConfigMap, PVC, NetworkPolicy, Service, WorkflowTemplate, Workflow, CronWorkflow)
+- Each status field written (`phase`, `conditions`, `uuid`, `webhookURLs`, `workflowTemplateName`, `activeWorkflowName`, `lastRunName`, `lastRunPhase`, `lastRunStartedAt`, `lastRunFinishedAt`, `lastScheduledTime`, `endpoint`, etc.)
 - Each condition type set (`Ready`, `RegistryValidated`, `NetworkPolicyReady`, `GatewayReady`, etc.)
 - Each env var injected into pods
-- Each Kubernetes resource created (Deployment, Service, ConfigMap, NetworkPolicy, Ingress, PVC, ServiceAccount, ClusterRoleBinding, ResourceQuota)
+- Each Kubernetes resource created. For agents: WorkflowTemplate, Workflow (service mode), CronWorkflow (scheduled task mode), Service and Ingress (service mode only), ConfigMap, NetworkPolicy, PVC, ServiceAccount/Role/RoleBinding. For tools and the cluster gateway: Deployment, Service, ConfigMap, ResourceQuota
+- Both execution modes for anything on the agent path, plus mode transitions (the reconciler must delete the object belonging to the other mode)
 
 **Generator helpers** — read `src/internal/testutil/gen/` to understand what fixture builders exist, since missing builders often indicate missing test coverage.
 

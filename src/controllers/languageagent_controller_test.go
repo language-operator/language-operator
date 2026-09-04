@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	wfv1 "github.com/argoproj/argo-workflows/v4/pkg/apis/workflow/v1alpha1"
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
@@ -12,7 +14,6 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -167,12 +168,12 @@ func TestLanguageAgentController_StatusConditions(t *testing.T) {
 	}
 }
 
-func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
+func TestLanguageAgentController_RunStatusSync(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "replica-agent",
+			Name:      "run-status-agent",
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
@@ -202,20 +203,28 @@ func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
 		t.Fatalf("first Reconcile failed: %v", err)
 	}
 
-	// Seed the Deployment status to simulate the real Deployment controller
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist after first reconcile: %v", err)
-	}
-	deployment.Status.Replicas = 2
-	deployment.Status.ReadyReplicas = 1
-	if err := fakeClient.Status().Update(ctx, deployment); err != nil {
-		t.Fatalf("Failed to seed Deployment status: %v", err)
-	}
-
-	// Second reconcile: should pick up replica counts
+	// Second reconcile: creates the Workflow.
 	if _, err := reconciler.Reconcile(ctx, req); err != nil {
 		t.Fatalf("second Reconcile failed: %v", err)
+	}
+
+	// Seed the Workflow status to stand in for the Argo workflow controller.
+	wf := &wfv1.Workflow{}
+	if err := fakeClient.Get(ctx, req.NamespacedName, wf); err != nil {
+		t.Fatalf("Expected Workflow to exist after reconcile: %v", err)
+	}
+	started := metav1.NewTime(time.Now().Add(-time.Minute))
+	wf.Status.Phase = wfv1.WorkflowRunning
+	wf.Status.StartedAt = started
+	// The fake client has no status subresource registered for Workflow, so the
+	// whole object is written back.
+	if err := fakeClient.Update(ctx, wf); err != nil {
+		t.Fatalf("Failed to seed Workflow status: %v", err)
+	}
+
+	// Third reconcile: should pick the run state up onto the agent status.
+	if _, err := reconciler.Reconcile(ctx, req); err != nil {
+		t.Fatalf("third Reconcile failed: %v", err)
 	}
 
 	updatedAgent := &langopv1alpha1.LanguageAgent{}
@@ -223,11 +232,23 @@ func TestLanguageAgentController_ReplicaStatusSync(t *testing.T) {
 		t.Fatalf("Failed to fetch updated agent: %v", err)
 	}
 
-	if updatedAgent.Status.ActiveReplicas != 2 {
-		t.Errorf("expected ActiveReplicas=2, got %d", updatedAgent.Status.ActiveReplicas)
+	if updatedAgent.Status.WorkflowTemplateName != agent.Name {
+		t.Errorf("expected WorkflowTemplateName=%q, got %q", agent.Name, updatedAgent.Status.WorkflowTemplateName)
 	}
-	if updatedAgent.Status.ReadyReplicas != 1 {
-		t.Errorf("expected ReadyReplicas=1, got %d", updatedAgent.Status.ReadyReplicas)
+	if updatedAgent.Status.ActiveWorkflowName != agent.Name {
+		t.Errorf("expected ActiveWorkflowName=%q, got %q", agent.Name, updatedAgent.Status.ActiveWorkflowName)
+	}
+	if updatedAgent.Status.LastRunPhase != string(wfv1.WorkflowRunning) {
+		t.Errorf("expected LastRunPhase=Running, got %q", updatedAgent.Status.LastRunPhase)
+	}
+	if updatedAgent.Status.LastRunStartedAt == nil {
+		t.Error("expected LastRunStartedAt to be set")
+	}
+	if updatedAgent.Status.LastRunFinishedAt != nil {
+		t.Errorf("expected LastRunFinishedAt to be unset for a running agent, got %v", updatedAgent.Status.LastRunFinishedAt)
+	}
+	if updatedAgent.Status.Phase != events.PhaseStatusRunning {
+		t.Errorf("expected Phase=Running, got %q", updatedAgent.Status.Phase)
 	}
 }
 
@@ -714,10 +735,10 @@ func TestLanguageAgentController_BasicReconcile(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	// Verify Deployment created
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
+	// Verify WorkflowTemplate created
+	tmpl := &wfv1.WorkflowTemplate{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, tmpl); err != nil {
+		t.Fatalf("Expected WorkflowTemplate to exist: %v", err)
 	}
 
 	// Verify Service created
@@ -822,19 +843,18 @@ func TestLanguageAgentController_PhaseRunning(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	// Simulate the Deployment becoming available: update with ReadyReplicas=1
-	deploy := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
-		t.Fatalf("Deployment not found: %v", err)
+	// Simulate the Workflow starting up.
+	wf := &wfv1.Workflow{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, wf); err != nil {
+		t.Fatalf("Workflow not found: %v", err)
 	}
-	deploy.Status.Replicas = 1
-	deploy.Status.ReadyReplicas = 1
-	deploy.Status.UpdatedReplicas = 1
-	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
-		t.Fatalf("Failed to update deployment status: %v", err)
+	wf.Status.Phase = wfv1.WorkflowRunning
+	wf.Status.StartedAt = metav1.Now()
+	if err := fakeClient.Update(ctx, wf); err != nil {
+		t.Fatalf("Failed to update Workflow status: %v", err)
 	}
 
-	// Third reconcile reads the updated deployment status
+	// Third reconcile reads the updated Workflow status
 	if _, err := reconciler.Reconcile(ctx, req); err != nil {
 		t.Fatalf("Third reconcile failed: %v", err)
 	}
@@ -885,23 +905,16 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	// Simulate pods crashing: Replicas>0, rollout complete, but ReadyReplicas=0 and DeploymentAvailable=False
-	deploy := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
-		t.Fatalf("Deployment not found: %v", err)
+	// Simulate the agent process dying for good: the Workflow ends in Failed.
+	wf := &wfv1.Workflow{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, wf); err != nil {
+		t.Fatalf("Workflow not found: %v", err)
 	}
-	deploy.Status.Replicas = 1
-	deploy.Status.ReadyReplicas = 0
-	deploy.Status.UpdatedReplicas = 1
-	deploy.Status.Conditions = []appsv1.DeploymentCondition{
-		{
-			Type:   appsv1.DeploymentAvailable,
-			Status: corev1.ConditionFalse,
-			Reason: "MinimumReplicasUnavailable",
-		},
-	}
-	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
-		t.Fatalf("Failed to update deployment status: %v", err)
+	wf.Status.Phase = wfv1.WorkflowFailed
+	wf.Status.StartedAt = metav1.Now()
+	wf.Status.FinishedAt = metav1.Now()
+	if err := fakeClient.Update(ctx, wf); err != nil {
+		t.Fatalf("Failed to update Workflow status: %v", err)
 	}
 
 	if _, err := reconciler.Reconcile(ctx, req); err != nil {
@@ -917,12 +930,12 @@ func TestLanguageAgentController_PhaseFailed(t *testing.T) {
 	}
 }
 
-func TestLanguageAgentController_PhaseUpdating(t *testing.T) {
+func TestLanguageAgentController_PhaseErrorReportedAsFailed(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 
 	agent := &langopv1alpha1.LanguageAgent{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "phase-updating-agent",
+			Name:      "phase-error-agent",
 			Namespace: "default",
 		},
 		Spec: langopv1alpha1.LanguageAgentSpec{
@@ -955,19 +968,19 @@ func TestLanguageAgentController_PhaseUpdating(t *testing.T) {
 		t.Fatalf("Second reconcile failed: %v", err)
 	}
 
-	// Simulate a rollout in progress: Replicas=1 but UpdatedReplicas=0
-	deploy := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deploy); err != nil {
-		t.Fatalf("Deployment not found: %v", err)
+	// Argo reports infrastructure failures as Error rather than Failed; to someone
+	// looking at an agent the distinction is not meaningful, so both read as Failed.
+	wf := &wfv1.Workflow{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, wf); err != nil {
+		t.Fatalf("Workflow not found: %v", err)
 	}
-	deploy.Status.Replicas = 1
-	deploy.Status.ReadyReplicas = 0
-	deploy.Status.UpdatedReplicas = 0
-	if err := fakeClient.Status().Update(ctx, deploy); err != nil {
-		t.Fatalf("Failed to update deployment status: %v", err)
+	wf.Status.Phase = wfv1.WorkflowError
+	wf.Status.StartedAt = metav1.Now()
+	if err := fakeClient.Update(ctx, wf); err != nil {
+		t.Fatalf("Failed to update Workflow status: %v", err)
 	}
 
-	// Third reconcile reads the updated deployment status
+	// Third reconcile reads the updated Workflow status
 	if _, err := reconciler.Reconcile(ctx, req); err != nil {
 		t.Fatalf("Third reconcile failed: %v", err)
 	}
@@ -976,8 +989,8 @@ func TestLanguageAgentController_PhaseUpdating(t *testing.T) {
 	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updatedAgent); err != nil {
 		t.Fatalf("Failed to get agent: %v", err)
 	}
-	if updatedAgent.Status.Phase != events.PhaseStatusUpdating {
-		t.Errorf("Expected phase %q, got %q", events.PhaseStatusUpdating, updatedAgent.Status.Phase)
+	if updatedAgent.Status.Phase != events.PhaseStatusFailed {
+		t.Errorf("Expected phase %q, got %q", events.PhaseStatusFailed, updatedAgent.Status.Phase)
 	}
 }
 
@@ -1165,18 +1178,18 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 			condReason:  langopv1alpha1.ReasonServiceAccountError,
 		},
 		{
-			name: langopv1alpha1.ReasonDeploymentError,
+			name: langopv1alpha1.ReasonWorkflowError,
 			buildAgent: func() *langopv1alpha1.LanguageAgent {
-				a := gen.LanguageAgent("dep-err-agent", "default")
+				a := gen.LanguageAgent("wf-err-agent", "default")
 				a.Finalizers = []string{FinalizerName}
 				return a
 			},
-			failCreate:  func(obj client.Object) bool { _, ok := obj.(*appsv1.Deployment); return ok },
-			failErrMsg:  "injected deployment error",
+			failCreate:  func(obj client.Object) bool { _, ok := obj.(*wfv1.WorkflowTemplate); return ok },
+			failErrMsg:  "injected workflow template error",
 			expectError: true,
 			condType:    langopv1alpha1.ConditionReady,
 			condStatus:  metav1.ConditionFalse,
-			condReason:  langopv1alpha1.ReasonDeploymentError,
+			condReason:  langopv1alpha1.ReasonWorkflowError,
 		},
 		{
 			name: langopv1alpha1.ReasonNetworkPolicyError,
@@ -1270,7 +1283,7 @@ func TestLanguageAgentController_ErrorPathConditions(t *testing.T) {
 }
 
 func TestLanguageAgentController_DegradedPhase(t *testing.T) {
-	// Verify that a running agent (ReadyReplicas > 0) whose NetworkPolicy timed out
+	// Verify that a running agent (Workflow phase Running) whose NetworkPolicy timed out
 	// reports Degraded rather than Running.
 	scheme := testutil.SetupTestScheme(t)
 
@@ -1303,19 +1316,18 @@ func TestLanguageAgentController_DegradedPhase(t *testing.T) {
 	ctx := context.Background()
 	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}}
 
-	// First reconcile: NP times out but reconcile continues; Deployment is created.
+	// First reconcile: NP times out but reconcile continues; the Workflow is created.
 	_, err := reconciler.Reconcile(ctx, req)
 	require.NoError(t, err)
 
-	// Seed the Deployment status to simulate ready pods (rollout complete).
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
-	deployment.Status.Replicas = 1
-	deployment.Status.ReadyReplicas = 1
-	deployment.Status.UpdatedReplicas = 1
-	require.NoError(t, fakeClient.Status().Update(ctx, deployment))
+	// Seed the Workflow status to simulate the agent running.
+	wf := &wfv1.Workflow{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, wf))
+	wf.Status.Phase = wfv1.WorkflowRunning
+	wf.Status.StartedAt = metav1.Now()
+	require.NoError(t, fakeClient.Update(ctx, wf))
 
-	// Second reconcile: NP still times out; deployment is running → Degraded phase.
+	// Second reconcile: NP still times out; the agent is running → Degraded phase.
 	_, err = reconciler.Reconcile(ctx, req)
 	require.NoError(t, err)
 
@@ -1419,7 +1431,8 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		mr := updated.Status.ManagedResources
 
 		assert.NotEmpty(t, mr)
-		assert.True(t, hasMR(mr, "Deployment", "base-agent"), "Deployment must be present")
+		assert.True(t, hasMR(mr, "WorkflowTemplate", "base-agent"), "WorkflowTemplate must be present")
+		assert.True(t, hasMR(mr, "Workflow", "base-agent"), "Workflow must be present for a service agent")
 		assert.True(t, hasMR(mr, "Service", "base-agent"), "Service must be present")
 		assert.True(t, hasMR(mr, "ConfigMap", GenerateConfigMapName("base-agent", "agent")), "ConfigMap must be present")
 		assert.True(t, hasMR(mr, "ServiceAccount", GenerateServiceAccountName("base-agent")), "ServiceAccount must be present")
@@ -1492,54 +1505,37 @@ func TestLanguageAgentController_ManagedResources(t *testing.T) {
 		assert.False(t, hasMR(mr, "RoleBinding", "language-agent"))
 	})
 
-	t.Run("multi_replica_adds_pdb", func(t *testing.T) {
-		three := int32(3)
+	t.Run("scheduled_task_adds_cronworkflow", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{Name: "pdb-agent", Namespace: "default"},
-			Spec: langopv1alpha1.LanguageAgentSpec{
-				Image:      "ghcr.io/language-operator/agent:latest",
-				Deployment: langopv1alpha1.DeploymentSpec{Replicas: &three},
-			},
-		}
-		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
-		assert.True(t, hasMR(updated.Status.ManagedResources, "PodDisruptionBudget", "pdb-agent"))
-	})
-
-	t.Run("single_replica_omits_pdb", func(t *testing.T) {
-		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{Name: "no-pdb-agent", Namespace: "default"},
+			ObjectMeta: metav1.ObjectMeta{Name: "cron-agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
 				Image: "ghcr.io/language-operator/agent:latest",
-			},
-		}
-		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
-		assert.False(t, hasMR(updated.Status.ManagedResources, "PodDisruptionBudget", "no-pdb-agent"))
-	})
-
-	t.Run("autoscaling_adds_hpa", func(t *testing.T) {
-		ten := int32(10)
-		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{Name: "hpa-mr-agent", Namespace: "default"},
-			Spec: langopv1alpha1.LanguageAgentSpec{
-				Image: "ghcr.io/language-operator/agent:latest",
-				Deployment: langopv1alpha1.DeploymentSpec{
-					Autoscaling: &langopv1alpha1.AutoscalingSpec{MaxReplicas: ten},
+				Execution: langopv1alpha1.ExecutionSpec{
+					Mode:     langopv1alpha1.ExecutionModeTask,
+					Schedule: "*/5 * * * *",
 				},
 			},
 		}
-		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
-		assert.True(t, hasMR(updated.Status.ManagedResources, "HorizontalPodAutoscaler", "hpa-mr-agent"))
+		mr := reconcileAgent(t, agent, gen.ReadyCluster("default"), false).Status.ManagedResources
+		assert.True(t, hasMR(mr, "CronWorkflow", "cron-agent"))
+		assert.True(t, hasMR(mr, "WorkflowTemplate", "cron-agent"))
+		// A task agent is not addressable, so it gets neither a Workflow nor a Service.
+		assert.False(t, hasMR(mr, "Workflow", "cron-agent"))
+		assert.False(t, hasMR(mr, "Service", "cron-agent"))
 	})
 
-	t.Run("no_autoscaling_omits_hpa", func(t *testing.T) {
+	t.Run("unscheduled_task_is_template_only", func(t *testing.T) {
 		agent := &langopv1alpha1.LanguageAgent{
-			ObjectMeta: metav1.ObjectMeta{Name: "no-hpa-mr-agent", Namespace: "default"},
+			ObjectMeta: metav1.ObjectMeta{Name: "manual-agent", Namespace: "default"},
 			Spec: langopv1alpha1.LanguageAgentSpec{
-				Image: "ghcr.io/language-operator/agent:latest",
+				Image:     "ghcr.io/language-operator/agent:latest",
+				Execution: langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask},
 			},
 		}
-		updated := reconcileAgent(t, agent, gen.ReadyCluster("default"), false)
-		assert.False(t, hasMR(updated.Status.ManagedResources, "HorizontalPodAutoscaler", "no-hpa-mr-agent"))
+		mr := reconcileAgent(t, agent, gen.ReadyCluster("default"), false).Status.ManagedResources
+		assert.True(t, hasMR(mr, "WorkflowTemplate", "manual-agent"))
+		assert.False(t, hasMR(mr, "CronWorkflow", "manual-agent"))
+		assert.False(t, hasMR(mr, "Workflow", "manual-agent"))
 	})
 
 }

@@ -19,17 +19,21 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.execution.mode
+      name: Mode
+      type: string
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.activeReplicas
-      name: Replicas
-      type: integer
-    - jsonPath: .status.readyReplicas
-      name: Ready
-      type: integer
+    - jsonPath: .spec.execution.schedule
+      name: Schedule
+      type: string
+    - jsonPath: .status.lastRunPhase
+      name: Last Run
+      type: string
     - jsonPath: .status.uuid
       name: UUID
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -100,8 +104,10 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               deployment:
-                description: Deployment groups Kubernetes-specific pod and container
-                  configuration.
+                description: |-
+                  Deployment groups Kubernetes-specific pod and container configuration.
+                  The name is historical: agents run as Argo Workflow pods, not Deployments,
+                  so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.
                 properties:
                   affinity:
                     description: Affinity defines pod affinity and anti-affinity rules.
@@ -6325,6 +6331,66 @@ spec:
                       type: object
                     type: array
                 type: object
+              execution:
+                description: |-
+                  Execution controls how this agent's workload is scheduled and run —
+                  always-on (mode: service) or invoked (mode: task).
+                properties:
+                  activeDeadlineSeconds:
+                    description: |-
+                      ActiveDeadlineSeconds is the wall-clock limit for a single run.
+                      Only valid when mode is "task" — a service agent is expected to run forever.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  concurrencyPolicy:
+                    default: Forbid
+                    description: |-
+                      ConcurrencyPolicy decides what happens when a scheduled run is due while the
+                      previous one is still going. Only valid alongside schedule.
+                    enum:
+                    - Allow
+                    - Forbid
+                    - Replace
+                    type: string
+                  mode:
+                    default: service
+                    description: Mode selects the execution model for this agent.
+                    enum:
+                    - service
+                    - task
+                    type: string
+                  retryLimit:
+                    description: |-
+                      RetryLimit is the number of retries for a failed run. Only valid when mode is
+                      "task"; a service agent always retries without limit so it stays up.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  schedule:
+                    description: |-
+                      Schedule is a cron expression that fires a run. Only valid when mode is "task".
+                      When unset, a task agent has no CronWorkflow and is invoked manually.
+                    type: string
+                  suspend:
+                    description: |-
+                      Suspend stops the agent from running: the CronWorkflow stops firing (task mode),
+                      or the long-lived Workflow is torn down (service mode). The WorkflowTemplate is
+                      left in place so the agent can still be invoked manually.
+                    type: boolean
+                  timezone:
+                    description: |-
+                      Timezone is the IANA timezone the Schedule is evaluated in (e.g. "America/New_York").
+                      Only valid alongside schedule.
+                    type: string
+                  ttlSecondsAfterFinished:
+                    description: |-
+                      TTLSecondsAfterFinished is how long a finished run is retained before Argo
+                      garbage-collects it. Defaults to 86400 (24h). Only valid when mode is "task".
+                    format: int32
+                    minimum: 0
+                    type: integer
+                type: object
               image:
                 description: |-
                   Image is the container image to run for this agent.
@@ -7028,11 +7094,11 @@ spec:
           status:
             description: LanguageAgentStatus defines the observed state of LanguageAgent
             properties:
-              activeReplicas:
-                description: ActiveReplicas is the number of agent pods currently
-                  running
-                format: int32
-                type: integer
+              activeWorkflowName:
+                description: |-
+                  ActiveWorkflowName is the long-lived Workflow backing a service-mode agent.
+                  Empty in task mode.
+                type: string
               conditions:
                 description: Conditions represent the latest available observations
                   of the agent's state
@@ -7094,6 +7160,29 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastRunFinishedAt:
+                description: LastRunFinishedAt is when the most recent run completed.
+                  Unset while it is running.
+                format: date-time
+                type: string
+              lastRunName:
+                description: LastRunName is the most recent Workflow run for this
+                  agent.
+                type: string
+              lastRunPhase:
+                description: |-
+                  LastRunPhase is the Argo phase of the most recent run
+                  (Pending, Running, Succeeded, Failed, or Error).
+                type: string
+              lastRunStartedAt:
+                description: LastRunStartedAt is when the most recent run started.
+                format: date-time
+                type: string
+              lastScheduledTime:
+                description: LastScheduledTime is when the CronWorkflow last fired
+                  a run. Task mode only.
+                format: date-time
+                type: string
               managedResources:
                 description: |-
                   ManagedResources is the inventory of Kubernetes resources created and owned
@@ -7137,18 +7226,18 @@ spec:
                 format: int64
                 type: integer
               phase:
-                description: Phase represents the current phase of the agent
+                description: |-
+                  Phase represents the current phase of the agent.
+                  In service mode it tracks the long-lived Workflow; in task mode it mirrors
+                  the most recent run. Suspended means spec.execution.suspend is set.
                 enum:
                 - Pending
                 - Running
+                - Succeeded
                 - Failed
-                - Updating
+                - Suspended
                 - Degraded
                 type: string
-              readyReplicas:
-                description: ReadyReplicas is the number of agent pods ready
-                format: int32
-                type: integer
               uuid:
                 description: |-
                   UUID is a unique identifier for this agent instance
@@ -7160,6 +7249,12 @@ spec:
                 items:
                   type: string
                 type: array
+              workflowTemplateName:
+                description: |-
+                  WorkflowTemplateName is the Argo WorkflowTemplate rendered for this agent.
+                  It is the unit submitted against for a manual run:
+                  `argo submit --from workflowtemplate/<name> -n <namespace>`.
+                type: string
               workspacePVCName:
                 description: |-
                   WorkspacePVCName is the name of the retained workspace PVC after agent deletion.

@@ -11,7 +11,6 @@ import (
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,17 +63,14 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
-	}
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers in deployment")
+	if len(podSpec.Containers) == 0 {
+		t.Fatal("No containers in workflow template")
 	}
 
 	envMap := make(map[string]string)
-	for _, e := range deployment.Spec.Template.Spec.Containers[0].Env {
+	for _, e := range podSpec.Containers[0].Env {
 		envMap[e.Name] = e.Value
 	}
 
@@ -126,10 +122,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		assert.Equal(t, "do the thing", envMap["AGENT_INSTRUCTIONS"], "AGENT_INSTRUCTIONS must equal spec.instructions")
@@ -161,10 +156,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", envMap["MODEL_ENDPOINT"])
@@ -197,10 +191,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		// Default port is 0 → resolved to 8080 in resolveTools
@@ -232,10 +225,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		_, present := envMap["AGENT_INSTRUCTIONS"]
@@ -271,10 +263,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		assert.Equal(t, "http://otel:4317", envMap["OTEL_EXPORTER_OTLP_ENDPOINT"])
@@ -308,10 +299,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		_, present := envMap["OTEL_EXPORTER_OTLP_ENDPOINT"]
@@ -343,10 +333,9 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 		envMap := make(map[string]string)
-		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+		for _, e := range podSpec.Containers[0].Env {
 			envMap[e.Name] = e.Value
 		}
 		_, present := envMap["MCP_SERVERS"]
@@ -384,17 +373,16 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
-		dep := &appsv1.Deployment{}
-		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, dep))
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 		var setupContainer *corev1.Container
-		for i := range dep.Spec.Template.Spec.InitContainers {
-			if dep.Spec.Template.Spec.InitContainers[i].Name == "setup" {
-				setupContainer = &dep.Spec.Template.Spec.InitContainers[i]
+		for i := range podSpec.InitContainers {
+			if podSpec.InitContainers[i].Name == "setup" {
+				setupContainer = &podSpec.InitContainers[i]
 				break
 			}
 		}
-		require.NotNil(t, setupContainer, "expected init container 'setup' in deployment")
+		require.NotNil(t, setupContainer, "expected init container 'setup' in workflow template")
 
 		initEnvMap := make(map[string]string)
 		for _, e := range setupContainer.Env {
@@ -452,16 +440,13 @@ func TestLanguageAgentController_ResourceRequests(t *testing.T) {
 		t.Fatalf("Reconcile failed: %v", err)
 	}
 
-	deployment := &appsv1.Deployment{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment); err != nil {
-		t.Fatalf("Expected Deployment to exist: %v", err)
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+
+	if len(podSpec.Containers) == 0 {
+		t.Fatal("No containers in workflow template")
 	}
 
-	if len(deployment.Spec.Template.Spec.Containers) == 0 {
-		t.Fatal("No containers in deployment")
-	}
-
-	res := deployment.Spec.Template.Spec.Containers[0].Resources
+	res := podSpec.Containers[0].Resources
 	if res.Requests.Cpu().Cmp(resource.MustParse("200m")) != 0 {
 		t.Errorf("Expected CPU request 200m, got %s", res.Requests.Cpu().String())
 	}
@@ -732,13 +717,12 @@ func TestLanguageAgentController_WorkspaceSeed_InitialFiles(t *testing.T) {
 	assert.Equal(t, "{}", cm.Data["memory.json"])
 
 	// Deployment should have a workspace-seeder init container
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	var seeder *corev1.Container
-	for i := range deployment.Spec.Template.Spec.InitContainers {
-		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
-			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+	for i := range podSpec.InitContainers {
+		if podSpec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &podSpec.InitContainers[i]
 			break
 		}
 	}
@@ -765,7 +749,7 @@ func TestLanguageAgentController_WorkspaceSeed_InitialFiles(t *testing.T) {
 
 	// Pod volumes must include workspace-seed-init
 	var hasVol bool
-	for _, v := range deployment.Spec.Template.Spec.Volumes {
+	for _, v := range podSpec.Volumes {
 		if v.Name == "workspace-seed-init" {
 			hasVol = true
 		}
@@ -773,7 +757,7 @@ func TestLanguageAgentController_WorkspaceSeed_InitialFiles(t *testing.T) {
 	assert.True(t, hasVol, "pod volumes must include workspace-seed-init")
 
 	// Seed init container runs before user init containers (it must be index 0 when no user containers)
-	assert.Equal(t, "workspace-seeder", deployment.Spec.Template.Spec.InitContainers[0].Name)
+	assert.Equal(t, "workspace-seeder", podSpec.InitContainers[0].Name)
 }
 
 func TestLanguageAgentController_WorkspaceSeed_SeedConfigMapRef(t *testing.T) {
@@ -795,13 +779,12 @@ func TestLanguageAgentController_WorkspaceSeed_SeedConfigMapRef(t *testing.T) {
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace-seed", Namespace: agent.Namespace}, cm)
 	assert.True(t, errors.IsNotFound(err), "seed ConfigMap should not be created when only SeedConfigMapRef is set")
 
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	var seeder *corev1.Container
-	for i := range deployment.Spec.Template.Spec.InitContainers {
-		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
-			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+	for i := range podSpec.InitContainers {
+		if podSpec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &podSpec.InitContainers[i]
 			break
 		}
 	}
@@ -829,14 +812,12 @@ func TestLanguageAgentController_WorkspaceSeed_Both(t *testing.T) {
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), refCM)
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	var seeder *corev1.Container
-	for i := range deployment.Spec.Template.Spec.InitContainers {
-		if deployment.Spec.Template.Spec.InitContainers[i].Name == "workspace-seeder" {
-			seeder = &deployment.Spec.Template.Spec.InitContainers[i]
+	for i := range podSpec.InitContainers {
+		if podSpec.InitContainers[i].Name == "workspace-seeder" {
+			seeder = &podSpec.InitContainers[i]
 			break
 		}
 	}
@@ -863,9 +844,8 @@ func TestLanguageAgentController_WorkspaceSeed_NoWorkspace(t *testing.T) {
 	err := fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name + "-workspace-seed", Namespace: agent.Namespace}, cm)
 	assert.True(t, errors.IsNotFound(err), "no seed ConfigMap without workspace")
 
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
-	for _, c := range deployment.Spec.Template.Spec.InitContainers {
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	for _, c := range podSpec.InitContainers {
 		assert.NotEqual(t, "workspace-seeder", c.Name, "workspace-seeder must not be injected without workspace")
 	}
 }
@@ -895,11 +875,11 @@ func TestLanguageAgentController_WorkspaceSeed_ConditionSet(t *testing.T) {
 	assert.Equal(t, langopv1alpha1.ReasonWorkspaceSeedReady, seededCond.Reason)
 }
 
-// findInitContainer returns the named init container from a deployment, or nil.
-func findInitContainer(deployment *appsv1.Deployment, name string) *corev1.Container {
-	for i := range deployment.Spec.Template.Spec.InitContainers {
-		if deployment.Spec.Template.Spec.InitContainers[i].Name == name {
-			return &deployment.Spec.Template.Spec.InitContainers[i]
+// findInitContainer returns the named init container from a pod spec, or nil.
+func findInitContainer(podSpec corev1.PodSpec, name string) *corev1.Container {
+	for i := range podSpec.InitContainers {
+		if podSpec.InitContainers[i].Name == name {
+			return &podSpec.InitContainers[i]
 		}
 	}
 	return nil
@@ -928,11 +908,9 @@ func TestLanguageAgentController_Repository_InitContainerAndWorkingDir(t *testin
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	repo := findInitContainer(deployment, "repository")
+	repo := findInitContainer(podSpec, "repository")
 	require.NotNil(t, repo, "expected repository init container")
 	assert.Equal(t, "alpine/git:latest", repo.Image)
 
@@ -954,11 +932,11 @@ func TestLanguageAgentController_Repository_InitContainerAndWorkingDir(t *testin
 	assert.True(t, hasWorkspace, "repository init container must mount workspace")
 
 	// Main container opens inside the cloned repo.
-	assert.Equal(t, "/workspace/bar", deployment.Spec.Template.Spec.Containers[0].WorkingDir)
+	assert.Equal(t, "/workspace/bar", podSpec.Containers[0].WorkingDir)
 
 	// Init container order: workspace-seeder is absent (no seed), repository runs first.
-	require.NotEmpty(t, deployment.Spec.Template.Spec.InitContainers)
-	assert.Equal(t, "repository", deployment.Spec.Template.Spec.InitContainers[0].Name)
+	require.NotEmpty(t, podSpec.InitContainers)
+	assert.Equal(t, "repository", podSpec.InitContainers[0].Name)
 }
 
 func TestLanguageAgentController_Repository_AgentRepoDirInjected(t *testing.T) {
@@ -970,9 +948,7 @@ func TestLanguageAgentController_Repository_AgentRepoDirInjected(t *testing.T) {
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
 	hasRepoDir := func(env []corev1.EnvVar) bool {
 		for _, e := range env {
@@ -984,11 +960,11 @@ func TestLanguageAgentController_Repository_AgentRepoDirInjected(t *testing.T) {
 		return false
 	}
 
-	assert.True(t, hasRepoDir(deployment.Spec.Template.Spec.Containers[0].Env), "AGENT_REPO_DIR must be set on the main container")
-	repo := findInitContainer(deployment, "repository")
+	assert.True(t, hasRepoDir(podSpec.Containers[0].Env), "AGENT_REPO_DIR must be set on the main container")
+	repo := findInitContainer(podSpec, "repository")
 	require.NotNil(t, repo)
 	// Explicit path overrides the derived name for WorkingDir too.
-	assert.Equal(t, "/data/src/app", deployment.Spec.Template.Spec.Containers[0].WorkingDir)
+	assert.Equal(t, "/data/src/app", podSpec.Containers[0].WorkingDir)
 }
 
 func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
@@ -1003,11 +979,9 @@ func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), secret)
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	repo := findInitContainer(deployment, "repository")
+	repo := findInitContainer(podSpec, "repository")
 	require.NotNil(t, repo)
 	var hasCredMount bool
 	for _, vm := range repo.VolumeMounts {
@@ -1020,9 +994,9 @@ func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
 
 	// Pod volume must reference the Secret.
 	var credVol *corev1.Volume
-	for i := range deployment.Spec.Template.Spec.Volumes {
-		if deployment.Spec.Template.Spec.Volumes[i].Name == "repository-credentials" {
-			credVol = &deployment.Spec.Template.Spec.Volumes[i]
+	for i := range podSpec.Volumes {
+		if podSpec.Volumes[i].Name == "repository-credentials" {
+			credVol = &podSpec.Volumes[i]
 		}
 	}
 	require.NotNil(t, credVol, "pod volumes must include repository-credentials")
@@ -1035,13 +1009,11 @@ func TestLanguageAgentController_Repository_AbsentWhenNoRepository(t *testing.T)
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{}
-	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, deployment))
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
-	assert.Nil(t, findInitContainer(deployment, "repository"), "no repository init container without spec.repository")
-	assert.Empty(t, deployment.Spec.Template.Spec.Containers[0].WorkingDir, "WorkingDir must be unset without a repository")
-	for _, e := range deployment.Spec.Template.Spec.Containers[0].Env {
+	assert.Nil(t, findInitContainer(podSpec, "repository"), "no repository init container without spec.repository")
+	assert.Empty(t, podSpec.Containers[0].WorkingDir, "WorkingDir must be unset without a repository")
+	for _, e := range podSpec.Containers[0].Env {
 		assert.NotEqual(t, "AGENT_REPO_DIR", e.Name, "AGENT_REPO_DIR must not be injected without a repository")
 	}
 }

@@ -87,6 +87,14 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
+			// Agents run as Argo Workflow pods. The Argo executor reports each
+			// node's outcome through a WorkflowTaskResult written with the pod's
+			// own ServiceAccount — without this the run fails at completion.
+			{
+				APIGroups: []string{"argoproj.io"},
+				Resources: []string{"workflowtaskresults"},
+				Verbs:     []string{"create", "patch"},
+			},
 		}
 		// When self-configure is enabled, grant the agent's SA permission to
 		// create LanguageAgentSelfConfig requests targeting itself.

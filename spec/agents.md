@@ -4,7 +4,41 @@ This document defines the contract between the Language Operator and agent runti
 
 ## Overview
 
-A **LanguageAgent** runs as a standard Kubernetes Deployment. The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
+A **LanguageAgent** runs as an [Argo Workflow](https://argo-workflows.readthedocs.io/). The operator manages the pod lifecycle, injects configuration, and handles networking. The agent container is responsible for its own runtime logic: reading instructions, connecting to tools, and executing tasks.
+
+For every LanguageAgent the operator renders a `WorkflowTemplate` named after the agent. That template holds the agent's pod spec and is the unit you submit against for a one-off run:
+
+```bash
+argo submit --from workflowtemplate/<agent-name> -n <namespace>
+```
+
+### Execution modes
+
+`spec.execution.mode` decides what else the operator derives from that template.
+
+| Mode | Derived object | Semantics |
+|------|----------------|-----------|
+| `service` (default) | a `Workflow` named after the agent | Runs continuously. The step retries forever, so a crashed agent comes back. The agent is addressable: it gets a Service, and an Ingress when the cluster has a domain. |
+| `task` | a `CronWorkflow`, when `spec.execution.schedule` is set | Each fire is a run that starts, does its work, and exits. Without a schedule the agent has only a template and is invoked by hand. Task agents are **not** addressable — no Service, and `spec.ports` is rejected. |
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `spec.execution.mode` | `service` | `service` or `task` |
+| `spec.execution.schedule` | — | Cron expression (5-field or `@daily`/`@every 1h`). Task mode only |
+| `spec.execution.timezone` | — | IANA timezone for the schedule |
+| `spec.execution.concurrencyPolicy` | `Forbid` | `Allow`, `Forbid`, or `Replace` when a run is due while the previous one is going |
+| `spec.execution.activeDeadlineSeconds` | — | Wall-clock limit for one run. Task mode only |
+| `spec.execution.ttlSecondsAfterFinished` | `86400` | How long a finished run is kept before Argo collects it. Task mode only |
+| `spec.execution.retryLimit` | — | Retries for a failed run. Task mode only; a service agent always retries |
+| `spec.execution.suspend` | `false` | Stop the agent: tears down the service Workflow, or stops the CronWorkflow firing. The template stays, so manual runs still work |
+
+Because a Workflow's spec cannot be updated once it is running, the operator **replaces** a service agent's Workflow whenever the agent's config hash or generation changes. Expect the pod to restart on a spec change, exactly as it would have under a Deployment rollout.
+
+Agents have no replica or scale semantics — an Argo Workflow has neither. `spec.deployment.replicas` and `spec.deployment.autoscaling` are rejected at admission rather than silently ignored. (`spec.deployment` keeps its name for continuity with the `LanguageAgentRuntime` presets; it configures the pod, not a Deployment.)
+
+### ServiceAccount requirements
+
+Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`. Beyond the usual read access it is granted `create` and `patch` on `argoproj.io/workflowtaskresults`, which the Argo executor uses to report each node's outcome. A custom `spec.deployment.serviceAccountName` **must** carry that permission or every run will fail at completion.
 
 ## What the Operator Provides
 
@@ -26,7 +60,7 @@ When `spec.workspace.enabled` is true (the default), the operator creates a Pers
 |------|---------|
 | `spec.workspace.mountPath` (default `/workspace`) | Read-write persistent volume, backed by a PVC |
 
-The workspace survives pod restarts and redeployments. It does not survive deletion of the LanguageAgent.
+The workspace survives pod restarts, Workflow replacement (which the operator does whenever the agent spec changes), and — for task-mode agents — the boundary between runs: every scheduled run starts a fresh pod against the same persisted volume. It does not survive deletion of the LanguageAgent unless `spec.workspace.retain` is true.
 
 Relevant spec fields:
 
@@ -94,18 +128,43 @@ Additional environment variables from `spec.deployment.env` and `spec.deployment
 
 ### Networking
 
-Every agent gets:
-- A **ClusterIP Service** for each port in `spec.ports` named `<agent-name>` in the agent's namespace (the port with `expose: true`, or the first port if none, is used for the HTTPRoute)
-- An **HTTPRoute** for external access (if a Gateway is configured)
-- **NetworkPolicy** permitting inbound traffic from other agent pods in the same cluster namespace
+Every agent gets a **NetworkPolicy** permitting inbound traffic from other agent pods in the same cluster namespace.
+
+A **service-mode** agent is additionally addressable, and gets:
+- A **ClusterIP Service** named `<agent-name>` in the agent's namespace, with one port entry per `spec.ports`
+- An **Ingress** at `<agent-name>.<cluster domain>`, when the LanguageCluster has a domain configured. It targets the port with `expose: true`, or the first port if none is marked.
+
+A **task-mode** agent gets neither: its pods exist only for the duration of a run, so a Service would point at nothing in between. `spec.ports` is rejected for task agents.
+
+### Status
+
+The operator reports back on the LanguageAgent's `status`:
+
+| Field | Meaning |
+|---|---|
+| `phase` | `Pending`, `Running`, `Succeeded`, `Failed`, `Suspended`, or `Degraded` |
+| `workflowTemplateName` | The WorkflowTemplate to submit against for a manual run |
+| `activeWorkflowName` | The long-lived Workflow (service mode only) |
+| `lastRunName` / `lastRunPhase` | The most recent run and its Argo phase |
+| `lastRunStartedAt` / `lastRunFinishedAt` | When it ran; `lastRunFinishedAt` is unset while running |
+| `lastScheduledTime` | When the CronWorkflow last fired (task mode) |
+| `conditions` | Standard conditions; `Ready` plus subsystem conditions such as `NetworkPolicyReady` |
+| `managedResources` | Inventory of everything the operator owns for this agent |
+
+`Degraded` means the agent is running but a non-critical subsystem failed — most often a
+NetworkPolicy that did not converge. Check `conditions` for the reason.
+
+`kubectl get lagent` surfaces mode, phase, schedule, and last-run phase as columns.
 
 ## What the Agent Must Implement
 
 ### Ports
 
+Ports apply to **service-mode agents only**; they are rejected in task mode.
+
 The agent listens on the port(s) defined in `spec.ports`. The operator creates a ClusterIP Service with one port entry per `AgentPort`. What the agent serves there is up to the image — HTTP, gRPC, OpenAI-compatible API, or anything else.
 
-Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the HTTPRoute targets this port; if no port has `expose: true`, the first port is used).
+Each `AgentPort` has three fields: `name` (required, used as the Service port name), `port` (required, the container port number), and `expose` (optional bool — when `true`, the Ingress targets this port; if no port has `expose: true`, the first port is used).
 
 ### Probes
 
@@ -113,10 +172,10 @@ Liveness and readiness probes are configured via `spec.deployment.livenessProbe`
 
 ### Startup Behaviour
 
-On startup, the agent should:
+On startup, every agent should read `/etc/agent/config.yaml` for its configuration (instructions, personas, tools, models). What it does next depends on the execution mode it will be run in:
 
-1. Read `/etc/agent/config.yaml` for all configuration (instructions, personas, tools, models)
-2. Start listening on the port(s) defined in `spec.ports`
+- **service mode** — start listening on the port(s) defined in `spec.ports` and keep running. If the process exits, Argo restarts it.
+- **task mode** — do the work described by the instructions, then **exit**. The exit code becomes the run's phase: `0` is `Succeeded`, anything else is `Failed`. An agent that never exits in task mode runs until `spec.execution.activeDeadlineSeconds` kills it, or forever if that is unset.
 
 ## File Formats
 
@@ -201,7 +260,6 @@ spec:
 
   deployment:
     imagePullPolicy: Always
-    replicas: 1
     resources:
       limits:
         memory: 1Gi
@@ -256,7 +314,8 @@ The init container runs to completion before the agent container starts. On subs
 
 A well-behaved agent image should:
 
-- [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
+- [ ] **Service mode:** listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`) and keep running
+- [ ] **Task mode:** do the work and exit — `0` for success, non-zero for failure. An agent that idles after finishing never completes its run
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field
 - [ ] Respect `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID` environment variables
 - [ ] Route LLM traffic through `MODEL_ENDPOINT` proxy URLs rather than connecting to model APIs directly

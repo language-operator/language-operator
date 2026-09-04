@@ -60,7 +60,8 @@ spec:
 |-------|------|-------------|
 | `image` | string | Default container image for agents using this runtime |
 | `ports` | `[]AgentPort` | Default port list; see merge semantics below |
-| `deployment` | `DeploymentSpec` | Default deployment settings (resources, probes, initContainers, env, …) |
+| `deployment` | `DeploymentSpec` | Default pod and container settings (resources, probes, initContainers, env, …). The name is historical — agents run as Argo Workflow pods, so `replicas` and `autoscaling` have no effect and are rejected on the agent |
+| `execution` | `ExecutionSpec` | Default execution model for agents using this runtime — `mode`, `schedule`, `timezone`, `concurrencyPolicy`, `activeDeadlineSeconds`, `ttlSecondsAfterFinished`, `retryLimit`, `suspend`. See [Execution Modes](../guides/execution-modes.md) |
 | `credentials` | `[]Credential` | Credentials provisioned for every agent referencing this runtime; see below |
 | `auth` | `RuntimeAuth` | Gates whether agents using this runtime sit behind the cluster's OIDC proxy; see [Authentication](#authentication) |
 
@@ -118,10 +119,22 @@ spec:
 
 | Field type | Behaviour |
 |------------|-----------|
-| Scalars (`image`, `resources`, probes) | Runtime provides default; agent overrides if set |
+| Scalars (`image`, `resources`, probes, `execution.*`) | Runtime provides default; agent overrides if set |
 | `ports` | **Replace semantics** — runtime ports apply only when the agent defines no ports of its own |
 | `credentials` | Runtime entries merged first, then agent entries appended; deduplicated by `name`, agent wins on collision |
 | Other lists (`env`, `envFrom`, `volumes`, `volumeMounts`, `initContainers`) | Runtime entries prepended; agent entries appended |
+| `deployment.replicas`, `deployment.autoscaling` | **Not merged.** Agents run as Argo Workflows, which have neither; the agent webhook rejects both fields |
+
+A runtime whose image only makes sense as a one-shot job can default the mode for every agent
+that uses it:
+
+```yaml
+spec:
+  execution:
+    mode: task
+```
+
+An agent may still override it.
 
 ## Status
 

@@ -44,19 +44,47 @@ func ApplyRuntimeDefaults(agent *langopv1alpha1.LanguageAgentSpec, rt *langopv1a
 		agent.Ports = make([]langopv1alpha1.AgentPort, len(rt.Ports))
 		copy(agent.Ports, rt.Ports)
 	}
+	// --- ExecutionSpec (agent wins if non-zero/non-nil) ---
+	// Agents run as Argo Workflows, so the runtime's replicas/autoscaling are not
+	// merged — they have no meaning for a Workflow and the webhook rejects them.
+
+	e := &agent.Execution
+	re := &rt.Execution
+
+	if e.Mode == "" {
+		e.Mode = re.Mode
+	}
+	if e.Schedule == "" {
+		e.Schedule = re.Schedule
+	}
+	if e.Timezone == "" {
+		e.Timezone = re.Timezone
+	}
+	if e.ActiveDeadlineSeconds == nil && re.ActiveDeadlineSeconds != nil {
+		v := *re.ActiveDeadlineSeconds
+		e.ActiveDeadlineSeconds = &v
+	}
+	if e.TTLSecondsAfterFinished == nil && re.TTLSecondsAfterFinished != nil {
+		v := *re.TTLSecondsAfterFinished
+		e.TTLSecondsAfterFinished = &v
+	}
+	if e.ConcurrencyPolicy == "" {
+		e.ConcurrencyPolicy = re.ConcurrencyPolicy
+	}
+	if e.Suspend == nil && re.Suspend != nil {
+		v := *re.Suspend
+		e.Suspend = &v
+	}
+	if e.RetryLimit == nil && re.RetryLimit != nil {
+		v := *re.RetryLimit
+		e.RetryLimit = &v
+	}
+
 	// --- DeploymentSpec scalar fields (agent wins if non-zero/non-nil) ---
 
 	d := &agent.Deployment
 	r := &rt.Deployment
 
-	if d.Replicas == nil && r.Replicas != nil {
-		v := *r.Replicas
-		d.Replicas = &v
-	}
-	if d.Autoscaling == nil && r.Autoscaling != nil {
-		a := *r.Autoscaling
-		d.Autoscaling = &a
-	}
 	if d.ImagePullPolicy == "" {
 		d.ImagePullPolicy = r.ImagePullPolicy
 	}

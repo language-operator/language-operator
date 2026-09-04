@@ -100,9 +100,11 @@ rules:
   - update
   - watch
 - apiGroups:
-  - policy
+  - argoproj.io
   resources:
-  - poddisruptionbudgets
+  - workflows
+  - workflowtemplates
+  - cronworkflows
   verbs:
   - create
   - delete
@@ -111,6 +113,23 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows/status
+  - cronworkflows/status
+  verbs:
+  - get
+# Granted so the operator can in turn grant it to each agent's ServiceAccount:
+# the Argo executor reports node outcomes as WorkflowTaskResults, and RBAC forbids
+# granting a permission the granter does not hold.
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflowtaskresults
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - apps
   resources:

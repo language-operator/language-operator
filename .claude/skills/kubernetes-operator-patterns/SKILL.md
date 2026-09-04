@@ -258,7 +258,7 @@ make generate
 make test
 
 # Run integration tests with real cluster
-make test-integration
+make integration-test
 ```
 
 ## Integration with Language Operator Architecture

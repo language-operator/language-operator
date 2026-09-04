@@ -118,7 +118,7 @@ kubectl get pod -n my-cluster -l app.kubernetes.io/name=qdrant-demo,langop.io/co
    ```bash
    kubectl delete pod -n my-cluster -l app.kubernetes.io/name=qdrant-demo,langop.io/component=agent
    ```
-   After the Deployment reschedules a fresh pod (which re-attaches the same `/workspace` PVC and
+   After Argo restarts the agent step with a fresh pod (which re-attaches the same `/workspace` PVC and
    reuses the cached embedding model), ask again — the note is still there.
 
 ## Teardown

@@ -110,6 +110,8 @@ spec:
                   Deployment provides default Kubernetes pod and container configuration.
                   Scalars (args, command, resources, probes, etc.) are used when the agent has none set.
                   Lists (initContainers, env, volumes, volumeMounts, envFrom) are runtime-first, agent-appended.
+                  The name is historical: agents run as Argo Workflow pods, so replicas and
+                  autoscaling have no effect for agents using this runtime.
                 properties:
                   affinity:
                     description: Affinity defines pod affinity and anti-affinity rules.
@@ -6332,6 +6334,67 @@ spec:
                       - name
                       type: object
                     type: array
+                type: object
+              execution:
+                description: |-
+                  Execution provides the default execution model for agents using this runtime —
+                  for example a runtime that only makes sense as a one-shot task can default
+                  mode to "task". Agents override any field they set themselves.
+                properties:
+                  activeDeadlineSeconds:
+                    description: |-
+                      ActiveDeadlineSeconds is the wall-clock limit for a single run.
+                      Only valid when mode is "task" — a service agent is expected to run forever.
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  concurrencyPolicy:
+                    default: Forbid
+                    description: |-
+                      ConcurrencyPolicy decides what happens when a scheduled run is due while the
+                      previous one is still going. Only valid alongside schedule.
+                    enum:
+                    - Allow
+                    - Forbid
+                    - Replace
+                    type: string
+                  mode:
+                    default: service
+                    description: Mode selects the execution model for this agent.
+                    enum:
+                    - service
+                    - task
+                    type: string
+                  retryLimit:
+                    description: |-
+                      RetryLimit is the number of retries for a failed run. Only valid when mode is
+                      "task"; a service agent always retries without limit so it stays up.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  schedule:
+                    description: |-
+                      Schedule is a cron expression that fires a run. Only valid when mode is "task".
+                      When unset, a task agent has no CronWorkflow and is invoked manually.
+                    type: string
+                  suspend:
+                    description: |-
+                      Suspend stops the agent from running: the CronWorkflow stops firing (task mode),
+                      or the long-lived Workflow is torn down (service mode). The WorkflowTemplate is
+                      left in place so the agent can still be invoked manually.
+                    type: boolean
+                  timezone:
+                    description: |-
+                      Timezone is the IANA timezone the Schedule is evaluated in (e.g. "America/New_York").
+                      Only valid alongside schedule.
+                    type: string
+                  ttlSecondsAfterFinished:
+                    description: |-
+                      TTLSecondsAfterFinished is how long a finished run is retained before Argo
+                      garbage-collects it. Defaults to 86400 (24h). Only valid when mode is "task".
+                    format: int32
+                    minimum: 0
+                    type: integer
                 type: object
               image:
                 description: |-

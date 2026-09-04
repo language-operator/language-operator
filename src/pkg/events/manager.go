@@ -60,6 +60,11 @@ const (
 	PhaseStatusRunning  = "Running"
 	PhaseStatusUpdating = "Updating"
 	PhaseStatusDegraded = "Degraded"
+	// PhaseStatusSucceeded is a completed run — a task-mode LanguageAgent whose
+	// most recent Argo Workflow finished successfully.
+	PhaseStatusSucceeded = "Succeeded"
+	// PhaseStatusSuspended is a LanguageAgent held back by spec.execution.suspend.
+	PhaseStatusSuspended = "Suspended"
 )
 
 // EventManager provides centralized, type-safe event recording for all controllers.

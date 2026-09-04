@@ -29,9 +29,11 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	wfv1 "github.com/argoproj/argo-workflows/v4/pkg/apis/workflow/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -59,6 +61,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(langopv1alpha1.AddToScheme(scheme))
+	// Agents run as Argo Workflows, so the operator speaks argoproj.io directly.
+	utilruntime.Must(wfv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -207,6 +211,16 @@ func main() {
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		setupLog.Error(err, "unable to create kubernetes clientset for CNI detection")
+		os.Exit(1)
+	}
+
+	// Agents are Argo Workflows, so the argoproj.io CRDs are a hard requirement.
+	// Fail at startup rather than letting every agent reconcile fail with a
+	// no-matches-for-kind error that says nothing about the cause.
+	if err := requireArgoWorkflowCRDs(clientset.Discovery()); err != nil {
+		setupLog.Error(err, "Argo Workflows is not installed in this cluster. "+
+			"LanguageAgents run as Argo Workflows. Install it with the bundled subchart "+
+			"(`argo-workflows.enabled=true`, the default) or install Argo Workflows yourself.")
 		os.Exit(1)
 	}
 
@@ -540,4 +554,25 @@ func trimSpace(s string) string {
 		end--
 	}
 	return s[start:end]
+}
+
+// requireArgoWorkflowCRDs verifies the argoproj.io kinds the agent controller
+// writes are served by the API server.
+func requireArgoWorkflowCRDs(d discovery.DiscoveryInterface) error {
+	groupVersion := wfv1.SchemeGroupVersion.String()
+	resources, err := d.ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		return fmt.Errorf("%s is not served by the API server: %w", groupVersion, err)
+	}
+
+	served := make(map[string]bool, len(resources.APIResources))
+	for _, r := range resources.APIResources {
+		served[r.Name] = true
+	}
+	for _, name := range []string{"workflows", "workflowtemplates", "cronworkflows", "workflowtaskresults"} {
+		if !served[name] {
+			return fmt.Errorf("%s does not serve %q", groupVersion, name)
+		}
+	}
+	return nil
 }

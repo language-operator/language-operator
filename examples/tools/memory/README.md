@@ -93,7 +93,7 @@ kubectl get pod -n my-cluster -l app.kubernetes.io/name=memory-demo,langop.io/co
    ```bash
    kubectl delete pod -n my-cluster -l app.kubernetes.io/name=memory-demo,langop.io/component=agent
    ```
-   The Deployment reschedules a fresh pod. The new pod re-attaches the same `/workspace` PVC, so the
+   Argo restarts the agent step with a fresh pod. The new pod re-attaches the same `/workspace` PVC, so the
    `memory.jsonl` written earlier is still there.
 
 3. **Ask it what it remembers.** *"What's my name and favorite language?"* The agent queries the
