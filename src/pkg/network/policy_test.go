@@ -38,21 +38,21 @@ func TestCreateSecureAPIServerEgressRules(t *testing.T) {
 		{
 			name:          "cilium provider",
 			provider:      CNIProviderCilium,
-			expectedRules: 2, // namespace + CIDR rules
+			expectedRules: 3, // namespace + CIDR rules, plus the unrestricted-peer API server rule
 			expectCIDR:    true,
 			expectNS:      true,
 		},
 		{
 			name:          "calico provider",
 			provider:      CNIProviderCalico,
-			expectedRules: 1, // CIDR rules only
+			expectedRules: 2, // CIDR rules, plus the unrestricted-peer API server rule
 			expectCIDR:    true,
 			expectNS:      false,
 		},
 		{
 			name:          "generic provider",
 			provider:      CNIProviderGeneric,
-			expectedRules: 1, // namespace rules only
+			expectedRules: 2, // namespace rules, plus the unrestricted-peer API server rule
 			expectCIDR:    false,
 			expectNS:      true,
 		},
@@ -60,7 +60,7 @@ func TestCreateSecureAPIServerEgressRules(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rules := CreateSecureAPIServerEgressRules(tt.provider)
+			rules := CreateSecureAPIServerEgressRules(tt.provider, DefaultAPIServerPorts)
 
 			if len(rules) != tt.expectedRules {
 				t.Errorf("CreateSecureAPIServerEgressRules() returned %d rules, want %d", len(rules), tt.expectedRules)
@@ -198,4 +198,66 @@ func contains(slice []int32, item int32) bool {
 		}
 	}
 	return false
+}
+
+// TestCreateSecureAPIServerEgressRules_UnrestrictedPeerRule pins the rule that actually
+// lets an agent reach the API server.
+//
+// Every peer-scoped rule fails to match it: Cilium classifies the API server as a reserved
+// entity that neither ipBlock nor namespaceSelector matches, and it is not a pod, so no
+// pod selector can match it under any CNI. Only a rule with no `to` reaches it. Without
+// this rule the Argo executor cannot post a WorkflowTaskResult, so every task run hangs
+// until its deadline and reports Failed even though the agent's work succeeded.
+func TestCreateSecureAPIServerEgressRules_UnrestrictedPeerRule(t *testing.T) {
+	for _, provider := range []CNIProvider{CNIProviderCilium, CNIProviderCalico, CNIProviderGeneric} {
+		t.Run(string(provider), func(t *testing.T) {
+			rules := CreateSecureAPIServerEgressRules(provider, []int32{6443})
+
+			var found *networkingv1.NetworkPolicyEgressRule
+			for i := range rules {
+				if len(rules[i].To) == 0 {
+					found = &rules[i]
+					break
+				}
+			}
+			if found == nil {
+				t.Fatal("no rule with an unrestricted peer; agents cannot reach the API server")
+			}
+			if len(found.Ports) != 1 || found.Ports[0].Port.IntVal != 6443 {
+				t.Errorf("rule should be scoped to the discovered API server port, got %+v", found.Ports)
+			}
+		})
+	}
+}
+
+// TestCreateSecureAPIServerEgressRules_UsesDiscoveredPort verifies the discovered port is
+// what ends up in the policy. NetworkPolicy is evaluated after DNAT, so naming the Service
+// port (443) rather than the endpoint port (6443) silently fails to match.
+func TestCreateSecureAPIServerEgressRules_UsesDiscoveredPort(t *testing.T) {
+	rules := CreateSecureAPIServerEgressRules(CNIProviderCilium, []int32{9443})
+
+	for _, rule := range rules {
+		if len(rule.To) == 0 {
+			if len(rule.Ports) != 1 || rule.Ports[0].Port.IntVal != 9443 {
+				t.Errorf("expected the discovered port 9443, got %+v", rule.Ports)
+			}
+			return
+		}
+	}
+	t.Fatal("no unrestricted-peer rule found")
+}
+
+// TestCreateSecureAPIServerEgressRules_EmptyPortsFallBack ensures a failed discovery
+// degrades to a slightly broader rule rather than locking agents out entirely.
+func TestCreateSecureAPIServerEgressRules_EmptyPortsFallBack(t *testing.T) {
+	rules := CreateSecureAPIServerEgressRules(CNIProviderCilium, nil)
+	for _, rule := range rules {
+		if len(rule.To) == 0 {
+			if len(rule.Ports) != len(DefaultAPIServerPorts) {
+				t.Errorf("expected fallback to %v, got %+v", DefaultAPIServerPorts, rule.Ports)
+			}
+			return
+		}
+	}
+	t.Fatal("no unrestricted-peer rule found")
 }

@@ -286,8 +286,12 @@ func BuildEgressNetworkPolicy(
 		cniProvider = network.CNIProviderGeneric
 	}
 
-	// Generate secure API server egress rules based on detected CNI
-	apiServerRules := network.CreateSecureAPIServerEgressRules(cniProvider)
+	// Generate secure API server egress rules based on detected CNI.
+	// The port is discovered rather than assumed: NetworkPolicy is evaluated after DNAT,
+	// so a connection to the API server ClusterIP on 443 arrives at the node on its real
+	// port (6443 on k3s/kubeadm) and a rule naming only 443 will not match it.
+	apiServerPorts := network.DiscoverAPIServerPorts(ctx, client)
+	apiServerRules := network.CreateSecureAPIServerEgressRules(cniProvider, apiServerPorts)
 	egress = append(egress, apiServerRules...)
 
 	// Add user-defined egress rules.
