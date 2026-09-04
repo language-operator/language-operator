@@ -8,7 +8,20 @@ This document tracks releases of the Language Operator project.
 
 ---
 
-## v0.3.0 — 2026-09-04
+## v0.3.1 — 2026-09-04
+
+**Bug Fixes**
+- ci: resolve the operator chart's dependencies before packaging
+
+> **v0.3.0 was tagged but never published.** The Helm release workflow resolved subchart
+> dependencies for `language-operator-runtimes` only, so `helm package` failed on
+> `language-operator` once it gained the `argo-workflows` subchart — producing no chart and no
+> GitHub release. v0.3.1 is the first release that actually ships the changes listed under
+> v0.3.0 below, including all of its breaking changes.
+
+---
+
+## v0.3.0 — 2026-09-04 *(tagged, never published — see v0.3.1)*
 
 **Breaking Changes**
 
