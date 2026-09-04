@@ -287,6 +287,12 @@ crds:
 # https://github.com/argoproj/argo-helm/tree/main/charts/argo-workflows for the full set.
 argo-workflows:
   enabled: true
+  # Shortens generated resource names (Deployment/pod, ServiceAccount, ConfigMap,
+  # RBAC) from the "<release>-argo-workflows-..." default to "argo-...". Safe
+  # because the operator (and its bundled argo-workflows subchart) is a
+  # cluster-singleton install — LanguageClusters are namespaces it manages, not
+  # separate operator installs, so there's no name-collision risk.
+  fullnameOverride: "argo"
   controller:
     # Empty means "watch every namespace", which is what the operator needs:
     # agents run in whichever LanguageCluster namespace the user creates them in.

@@ -23,7 +23,7 @@ If they are missing and you installed with the bundled subchart, the pre-install
 applies them failed:
 
 ```bash
-kubectl logs -n language-operator job/language-operator-argo-workflows-crd-install
+kubectl logs -n language-operator job/argo-crd-install
 ```
 
 If you run your own Argo, see [Bring your own Argo](../getting-started/installation.md#bring-your-own-argo).
@@ -49,7 +49,7 @@ correctly and simply never run. Confirm the controller watches your namespace:
 
 ```bash
 kubectl get configmap -n language-operator \
-  language-operator-argo-workflows-workflow-controller-configmap -o yaml | grep -A3 namespaces
+  argo-workflow-controller-configmap -o yaml | grep -A3 namespaces
 ```
 
 ## Runs fail at completion
