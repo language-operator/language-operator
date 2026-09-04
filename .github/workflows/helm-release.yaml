@@ -39,8 +39,14 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
             --username "$GITHUB_ACTOR" --password-stdin
 
-      - name: Resolve runtimes subchart dependencies
-        run: helm dependency build charts/language-operator-runtimes
+      - name: Resolve subchart dependencies
+        # Both umbrella charts have dependencies: language-operator pulls argo-workflows,
+        # language-operator-runtimes pulls the runtime subcharts. The pulled tarballs are
+        # gitignored, so `helm package` fails without this.
+        run: |
+          for chart in charts/language-operator charts/language-operator-runtimes; do
+            helm dependency build "$chart"
+          done
 
       - name: Package Helm charts
         run: |
