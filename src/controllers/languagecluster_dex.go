@@ -567,6 +567,13 @@ func dexIssuerURL(cluster *langopv1alpha1.LanguageCluster) string {
 	return fmt.Sprintf("%s://auth.%s", scheme, cluster.Spec.Domain)
 }
 
+// usesExternalOIDCIssuer reports whether the cluster is configured to use an
+// external OIDC provider (as opposed to the embedded Dex provider).
+func usesExternalOIDCIssuer(cluster *langopv1alpha1.LanguageCluster) bool {
+	return cluster.Spec.Auth != nil && cluster.Spec.Auth.OIDC != nil &&
+		cluster.Spec.Auth.OIDC.ExternalIssuerURL != ""
+}
+
 // oauth2ProxyClientID returns the OIDC client ID to use for oauth2-proxy.
 // For embedded Dex, each agent has its own client whose ID matches the agent
 // name. For external OIDC the cluster-level clientID is used instead.
