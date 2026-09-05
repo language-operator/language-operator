@@ -8,6 +8,13 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.3 — 2026-09-04
+
+**Bug Fixes**
+- point oauth2-proxy at external OIDC issuer discovery instead of Dex (#907)
+
+---
+
 ## v0.3.2 — 2026-09-04
 
 **Chores**
