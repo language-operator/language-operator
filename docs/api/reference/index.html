@@ -3505,7 +3505,7 @@ verbatim from real NetworkPolicy manifests.</p>
 </tr>
 <tr>
 <td><code>externalIssuerURL</code> <em>string</em></td>
-<td>ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.<br />Mutually exclusive with dex.<br />Example: "https://accounts.google.com"</td>
+<td>ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.<br />Mutually exclusive with dex.<br />oauth2-proxy performs standard OIDC discovery against this issuer's<br />/.well-known/openid-configuration endpoint, so the issuer must be reachable<br />from inside the cluster; add an egress NetworkPolicy rule for it if<br />spec.networkPolicies.egress restricts egress.<br />Example: "https://accounts.google.com"</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
