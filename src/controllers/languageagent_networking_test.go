@@ -1098,6 +1098,54 @@ func TestBuildOAuthProxySidecar_UsesInternalDexURLs(t *testing.T) {
 	assert.NotContains(t, argsStr, "https://auth.example.com/keys", "JWKS URL must use internal cluster URL, not public domain")
 }
 
+// externalIssuerCluster returns a cluster configured to use an external OIDC provider
+// (no embedded Dex) with the clientID/secretRef that validateAuth() requires.
+func externalIssuerCluster(name string) *langopv1alpha1.LanguageCluster {
+	c := gen.ReadyCluster(name, gen.SetClusterDomain("example.com"))
+	c.Spec.Auth = &langopv1alpha1.ClusterAuthSpec{
+		Enabled: true,
+		OIDC: &langopv1alpha1.ClusterOIDCSpec{
+			ExternalIssuerURL: "https://accounts.example.org",
+			ClientID:          "external-client-id",
+			ClientSecretRef:   &langopv1alpha1.SecretReference{Name: "external-oidc-secret", Key: "client-secret"},
+		},
+	}
+	return c
+}
+
+// seedExternalOIDCSecret creates the Secret referenced by externalIssuerCluster's clientSecretRef.
+func seedExternalOIDCSecret(t *testing.T, fc client.Client, namespace string) {
+	t.Helper()
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "external-oidc-secret", Namespace: namespace},
+		StringData: map[string]string{"client-secret": "external-test-secret"},
+	}
+	require.NoError(t, fc.Create(context.Background(), secret))
+}
+
+func TestBuildOAuthProxySidecar_UsesDiscoveryForExternalIssuer(t *testing.T) {
+	// When an external OIDC issuer is configured, oauth2-proxy must perform standard
+	// OIDC discovery instead of assuming Dex's internal endpoints/path shape.
+	cluster := externalIssuerCluster("mycluster")
+	agent := authAgent("my-agent", "mycluster")
+	r, fc := newAgentReconcilerForAuth(t, cluster, authRuntime(), agent)
+	seedExternalOIDCSecret(t, fc, "mycluster")
+	ctx := context.Background()
+
+	sidecar, err := r.buildOAuthProxySidecar(ctx, agent)
+	require.NoError(t, err)
+	require.NotNil(t, sidecar, "sidecar must be non-nil when auth is enabled")
+	argsStr := strings.Join(sidecar.Args, " ")
+
+	assert.Contains(t, argsStr, "--oidc-issuer-url=https://accounts.example.org")
+	assert.Contains(t, argsStr, "--client-id=external-client-id")
+	assert.NotContains(t, argsStr, "--skip-oidc-discovery", "external issuer must rely on OIDC discovery, not skip it")
+	assert.NotContains(t, argsStr, "--oidc-jwks-url", "no Dex Service exists for an external issuer")
+	assert.NotContains(t, argsStr, "--login-url", "external issuer's path shape isn't assumed")
+	assert.NotContains(t, argsStr, "--redeem-url", "no Dex Service exists for an external issuer")
+	assert.NotContains(t, argsStr, "svc.cluster.local")
+}
+
 func TestReconcileIngress_BackendIsOAuth2ProxyWhenAuthEnabled(t *testing.T) {
 	cluster := authEnabledCluster("default")
 	agent := authAgent("my-agent", "default")

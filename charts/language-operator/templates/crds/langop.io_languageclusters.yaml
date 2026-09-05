@@ -175,6 +175,10 @@ spec:
                         description: |-
                           ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.
                           Mutually exclusive with dex.
+                          oauth2-proxy performs standard OIDC discovery against this issuer's
+                          /.well-known/openid-configuration endpoint, so the issuer must be reachable
+                          from inside the cluster; add an egress NetworkPolicy rule for it if
+                          spec.networkPolicies.egress restricts egress.
                           Example: "https://accounts.google.com"
                         type: string
                     type: object

@@ -520,30 +520,41 @@ func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, ag
 		emailDomain = cluster.Spec.Auth.OIDC.EmailDomain
 	}
 
+	args := []string{
+		"--provider=oidc",
+		"--oidc-issuer-url=" + issuerURL,
+	}
+	if !usesExternalOIDCIssuer(cluster) {
+		// Embedded Dex: skip discovery and wire internal cluster-local endpoints
+		// directly so oauth2-proxy never needs to reach the public ingress from
+		// inside the cluster.
+		args = append(args,
+			"--skip-oidc-discovery=true",
+			"--oidc-jwks-url="+fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/keys", DexResourceName, cluster.Name, DexPort),
+			"--login-url="+issuerURL+"/auth",
+			"--redeem-url="+fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/token", DexResourceName, cluster.Name, DexPort),
+		)
+	}
+	// External issuer: no internal Service exists for it and its endpoint path shape
+	// isn't assumed, so oauth2-proxy performs standard OIDC discovery instead, against
+	// <issuerURL>/.well-known/openid-configuration.
+	args = append(args,
+		"--client-id="+clientID,
+		"--client-secret="+clientSecretVal,
+		"--cookie-secret="+cookieSecret,
+		"--upstream="+upstream,
+		"--redirect-url="+redirectURL,
+		"--cookie-domain=."+cluster.Spec.Domain,
+		"--email-domain="+emailDomain,
+		fmt.Sprintf("--http-address=0.0.0.0:%d", OAuth2ProxyPort),
+		"--skip-provider-button=true",
+		"--skip-auth-regex=^/oauth2/",
+	)
+
 	return &corev1.Container{
 		Name:  "oauth2-proxy",
 		Image: r.oauth2ProxyImage(),
-		Args: []string{
-			"--provider=oidc",
-			// Use the public issuer URL for iss-claim validation and browser redirects,
-			// but skip OIDC discovery and wire internal endpoints directly so
-			// oauth2-proxy never needs to reach the public ingress from inside the cluster.
-			"--oidc-issuer-url=" + issuerURL,
-			"--skip-oidc-discovery=true",
-			"--oidc-jwks-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/keys", DexResourceName, cluster.Name, DexPort),
-			"--login-url=" + issuerURL + "/auth",
-			"--redeem-url=" + fmt.Sprintf("http://%s.%s.svc.cluster.local:%d/token", DexResourceName, cluster.Name, DexPort),
-			"--client-id=" + clientID,
-			"--client-secret=" + clientSecretVal,
-			"--cookie-secret=" + cookieSecret,
-			"--upstream=" + upstream,
-			"--redirect-url=" + redirectURL,
-			"--cookie-domain=." + cluster.Spec.Domain,
-			"--email-domain=" + emailDomain,
-			fmt.Sprintf("--http-address=0.0.0.0:%d", OAuth2ProxyPort),
-			"--skip-provider-button=true",
-			"--skip-auth-regex=^/oauth2/",
-		},
+		Args:  args,
 		Ports: []corev1.ContainerPort{
 			{Name: "http", ContainerPort: OAuth2ProxyPort, Protocol: corev1.ProtocolTCP},
 		},
