@@ -8,6 +8,13 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.4 — 2026-09-12
+
+**Features**
+- gateway: env-driven extra config and per-agent HMAC keys (#909)
+
+---
+
 ## v0.3.3 — 2026-09-04
 
 **Bug Fixes**
