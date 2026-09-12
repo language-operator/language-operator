@@ -115,6 +115,37 @@ The proxy automatically generates LiteLLM configuration from the LanguageModel C
 | `spec.loadBalancing` | `router_settings.routing_strategy` | Load balancing strategy |
 | `spec.caching` | `litellm_settings.cache` | Response caching |
 
+## Operator-level settings (environment)
+
+Two optional environment variables on the gateway Deployment (set through
+`LanguageCluster.spec.gateway.deployment.env`) shape the generated config without a
+new image. Both default to off.
+
+| Variable | Effect |
+|---|---|
+| `LANGOP_GATEWAY_EXTRA_CONFIG` | A YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace. Use it for spend callbacks, a master key, or any other LiteLLM setting. Anything that is not a mapping fails startup. |
+| `LANGOP_GATEWAY_HMAC_SECRET` | Enables stateless per-agent API keys through `custom_auth.py`. A key is `sk-langop-<agent-id>.<signature>` with the signature the first 32 hex characters of HMAC-SHA256(secret, agent-id); the agent id becomes the request's LiteLLM user id, so callbacks attribute usage per agent. The proxy's `LITELLM_MASTER_KEY` keeps working alongside. |
+
+Example: spend callbacks to a control plane plus per-agent keys.
+
+```yaml
+spec:
+  gateway:
+    deployment:
+      env:
+        - name: LITELLM_MASTER_KEY
+          value: sk-placeholder
+        - name: LANGOP_GATEWAY_HMAC_SECRET
+          valueFrom: {secretKeyRef: {name: gateway-auth, key: hmac-secret}}
+        - name: GENERIC_LOGGER_ENDPOINT
+          value: https://cloud.example.com/hooks/litellm/<token>
+        - name: LANGOP_GATEWAY_EXTRA_CONFIG
+          value: |
+            litellm_settings:
+              success_callback: ["generic"]
+              failure_callback: ["generic"]
+```
+
 ## Supported Providers
 
 The proxy supports 100+ providers through LiteLLM. Most common providers:

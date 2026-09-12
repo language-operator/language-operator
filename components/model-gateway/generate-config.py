@@ -5,6 +5,12 @@ Generate LiteLLM configuration from LanguageModel CRD ConfigMap(s).
 Supports two modes:
   - Multi-model (cluster proxy): reads all *.json files from /etc/langop/models/
   - Single-model (legacy):       reads /etc/langop/model.json
+
+Two optional environment variables let the operator's owner shape the result:
+  - LANGOP_GATEWAY_EXTRA_CONFIG: a YAML mapping deep-merged into the generated
+    config (callbacks, keys, any LiteLLM setting)
+  - LANGOP_GATEWAY_HMAC_SECRET: enables stateless per-agent API keys through
+    custom_auth.py (see that module)
 """
 
 import glob
@@ -195,6 +201,59 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
     return settings
 
 
+def deep_merge(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge ``extra`` into ``base``: mappings merge recursively, anything else is replaced."""
+    merged = dict(base)
+    for key, value in extra.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def load_extra_config(env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Operator-supplied LiteLLM settings from LANGOP_GATEWAY_EXTRA_CONFIG (a YAML mapping).
+
+    Lets whoever runs the operator enable callbacks, keys or any other LiteLLM
+    setting without a new image. Empty or unset means no change; anything that
+    is not a mapping is a configuration error.
+    """
+    env = os.environ if env is None else env
+    raw = env.get("LANGOP_GATEWAY_EXTRA_CONFIG", "")
+    if not raw.strip():
+        return {}
+    try:
+        extra = yaml.safe_load(raw)
+    except yaml.YAMLError as e:
+        print(f"✗ LANGOP_GATEWAY_EXTRA_CONFIG is not valid YAML: {e}", file=sys.stderr)
+        sys.exit(1)
+    if extra is None:
+        return {}
+    if not isinstance(extra, dict):
+        print("✗ LANGOP_GATEWAY_EXTRA_CONFIG must be a YAML mapping of LiteLLM settings", file=sys.stderr)
+        sys.exit(1)
+    return extra
+
+
+def apply_operator_settings(config: Dict[str, Any], env: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Apply the env-driven extras: the extra-config merge and the HMAC agent-key auth."""
+    env = os.environ if env is None else env
+
+    extra = load_extra_config(env)
+    if extra:
+        config = deep_merge(config, extra)
+        print(f"✓ Merged LANGOP_GATEWAY_EXTRA_CONFIG ({', '.join(sorted(extra))})", file=sys.stderr)
+
+    if env.get("LANGOP_GATEWAY_HMAC_SECRET"):
+        general = dict(config.get("general_settings") or {})
+        general.setdefault("custom_auth", "custom_auth.user_api_key_auth")
+        config["general_settings"] = general
+        print("✓ Per-agent HMAC keys enabled (custom_auth)", file=sys.stderr)
+
+    return config
+
+
 def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Generate complete LiteLLM config from one or more LanguageModel specs."""
     config: Dict[str, Any] = {}
@@ -217,7 +276,7 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
     general_settings: Dict[str, Any] = {"background_health_checks": False}
     config["general_settings"] = general_settings
 
-    return config
+    return apply_operator_settings(config)
 
 
 def main():
