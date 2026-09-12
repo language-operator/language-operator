@@ -1,4 +1,4 @@
-"""Tests for generate-config.py — focused on the timeout duration parser."""
+"""Tests for generate-config.py and custom_auth.py."""
 
 import importlib.util
 import sys
@@ -16,6 +16,12 @@ _spec.loader.exec_module(generate_config)
 
 parse_duration_to_seconds = generate_config.parse_duration_to_seconds
 build_litellm_params = generate_config.build_litellm_params
+deep_merge = generate_config.deep_merge
+load_extra_config = generate_config.load_extra_config
+apply_operator_settings = generate_config.apply_operator_settings
+
+sys.path.insert(0, str(Path(__file__).parent))
+import custom_auth  # noqa: E402
 
 
 class TestParseDurationToSeconds:
@@ -100,3 +106,73 @@ class TestBuildLitellmParamsTimeout:
         spec = {**self.BASE_SPEC}
         params = build_litellm_params(spec, api_key=None)
         assert "timeout" not in params
+
+
+class TestOperatorSettings:
+    def base(self):
+        return {
+            "model_list": [{"model_name": "gpt-4"}],
+            "litellm_settings": {"drop_params": True},
+            "general_settings": {"background_health_checks": False},
+        }
+
+    def test_unset_or_blank_extra_config_changes_nothing(self):
+        assert apply_operator_settings(self.base(), env={}) == self.base()
+        assert apply_operator_settings(self.base(), env={"LANGOP_GATEWAY_EXTRA_CONFIG": "  \n"}) == self.base()
+
+    def test_extra_config_deep_merges_mappings_and_replaces_lists(self):
+        extra = """
+        litellm_settings:
+          success_callback: ["generic"]
+          failure_callback: ["generic"]
+        general_settings:
+          master_key: sk-placeholder
+        """
+        merged = apply_operator_settings(self.base(), env={"LANGOP_GATEWAY_EXTRA_CONFIG": extra})
+        assert merged["litellm_settings"] == {
+            "drop_params": True,
+            "success_callback": ["generic"],
+            "failure_callback": ["generic"],
+        }
+        assert merged["general_settings"] == {"background_health_checks": False, "master_key": "sk-placeholder"}
+        assert merged["model_list"] == [{"model_name": "gpt-4"}]
+
+        replaced = deep_merge({"a": [1, 2], "b": {"c": 1}}, {"a": [3], "b": {"d": 2}})
+        assert replaced == {"a": [3], "b": {"c": 1, "d": 2}}
+
+    def test_invalid_extra_config_exits(self):
+        with pytest.raises(SystemExit):
+            load_extra_config({"LANGOP_GATEWAY_EXTRA_CONFIG": "- not\n- a mapping"})
+        with pytest.raises(SystemExit):
+            load_extra_config({"LANGOP_GATEWAY_EXTRA_CONFIG": "key: [unclosed"})
+
+    def test_hmac_secret_wires_custom_auth_without_overriding_an_explicit_one(self):
+        wired = apply_operator_settings(self.base(), env={"LANGOP_GATEWAY_HMAC_SECRET": "s3cret"})
+        assert wired["general_settings"]["custom_auth"] == "custom_auth.user_api_key_auth"
+
+        explicit = apply_operator_settings(
+            self.base(),
+            env={
+                "LANGOP_GATEWAY_HMAC_SECRET": "s3cret",
+                "LANGOP_GATEWAY_EXTRA_CONFIG": "general_settings: {custom_auth: mine.auth}",
+            },
+        )
+        assert explicit["general_settings"]["custom_auth"] == "mine.auth"
+
+
+class TestCustomAuth:
+    def test_keys_round_trip_and_reject_tampering(self):
+        key = custom_auth.agent_key("s3cret", "9f8221e3-a8ce-47c0-9e31-4afeb62657df")
+        assert key.startswith("sk-langop-9f8221e3-a8ce-47c0-9e31-4afeb62657df.")
+        assert len(key.rsplit(".", 1)[1]) == 32
+        assert custom_auth.verify("s3cret", key) == "9f8221e3-a8ce-47c0-9e31-4afeb62657df"
+        assert custom_auth.verify("other", key) is None
+        assert custom_auth.verify("s3cret", key[:-1] + "0") is None
+        assert custom_auth.verify("s3cret", "sk-langop-no-signature") is None
+        assert custom_auth.verify("s3cret", "sk-something-else") is None
+        assert custom_auth.verify("s3cret", None) is None
+
+    def test_signature_is_bound_to_the_agent_id(self):
+        key = custom_auth.agent_key("s3cret", "agent-a")
+        forged = key.replace("agent-a", "agent-b")
+        assert custom_auth.verify("s3cret", forged) is None

@@ -23,6 +23,9 @@ WORKDIR /app
 COPY generate-config.py /usr/local/bin/generate-config.py
 RUN chmod +x /usr/local/bin/generate-config.py
 
+# Optional per-agent HMAC key auth (general_settings.custom_auth), importable from /app
+COPY custom_auth.py /app/custom_auth.py
+
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
