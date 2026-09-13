@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"fmt"
 	"github.com/go-logr/logr"
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
@@ -22,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
+	"strconv"
+	"strings"
 )
 
 func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
@@ -967,6 +970,57 @@ func TestLanguageAgentController_Repository_AgentRepoDirInjected(t *testing.T) {
 	assert.Equal(t, "/data/src/app", podSpec.Containers[0].WorkingDir)
 }
 
+func TestRepositoryUsesSSH(t *testing.T) {
+	cases := map[string]bool{
+		"https://github.com/foo/bar.git": false,
+		"http://git.internal/foo/bar":    false,
+		"ssh://git@github.com/foo/bar":   true,
+		"git@github.com:foo/bar.git":     true,
+	}
+	for url, want := range cases {
+		assert.Equal(t, want, repositoryUsesSSH(url), "repositoryUsesSSH(%q)", url)
+	}
+}
+
+// envByName indexes a container's env by name.
+func envByName(env []corev1.EnvVar) map[string]corev1.EnvVar {
+	m := make(map[string]corev1.EnvVar, len(env))
+	for _, e := range env {
+		m[e.Name] = e
+	}
+	return m
+}
+
+// gitConfig returns the GIT_CONFIG_KEY_n -> GIT_CONFIG_VALUE_n pairs of an env list.
+func gitConfig(t *testing.T, env []corev1.EnvVar) map[string]string {
+	t.Helper()
+	by := envByName(env)
+	count, ok := by["GIT_CONFIG_COUNT"]
+	if !ok {
+		return nil
+	}
+	n, err := strconv.Atoi(count.Value)
+	require.NoError(t, err)
+	cfg := map[string]string{}
+	for i := 0; i < n; i++ {
+		k, ok := by[fmt.Sprintf("GIT_CONFIG_KEY_%d", i)]
+		require.True(t, ok, "GIT_CONFIG_KEY_%d missing", i)
+		v, ok := by[fmt.Sprintf("GIT_CONFIG_VALUE_%d", i)]
+		require.True(t, ok, "GIT_CONFIG_VALUE_%d missing", i)
+		cfg[k.Value] = v.Value
+	}
+	return cfg
+}
+
+func findMount(mounts []corev1.VolumeMount, name string) *corev1.VolumeMount {
+	for i := range mounts {
+		if mounts[i].Name == name {
+			return &mounts[i]
+		}
+	}
+	return nil
+}
+
 func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "git-creds", Namespace: "default"},
@@ -975,22 +1029,67 @@ func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
 	agent := gen.LanguageAgent("repo-secret-agent", "default",
 		gen.SetAgentWorkspace("5Gi"),
 		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "", "git-creds"),
+		gen.SetAgentRepositoryVendor("github"),
 	)
+	agent.Spec.Deployment.InitContainers = []corev1.Container{{Name: "seed-config", Image: "adapter:latest"}}
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"), secret)
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
 	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 
+	// The Secret is mounted read-only into the clone init container and the agent container.
 	repo := findInitContainer(podSpec, "repository")
 	require.NotNil(t, repo)
-	var hasCredMount bool
-	for _, vm := range repo.VolumeMounts {
-		if vm.Name == "repository-credentials" {
-			assert.Equal(t, "/git-secret", vm.MountPath)
-			hasCredMount = true
-		}
+	initMount := findMount(repo.VolumeMounts, "repository-credentials")
+	require.NotNil(t, initMount, "repository init container must mount git credentials")
+	assert.Equal(t, "/var/run/secrets/langop.io/git", initMount.MountPath)
+	assert.True(t, initMount.ReadOnly)
+
+	main := podSpec.Containers[0]
+	mainMount := findMount(main.VolumeMounts, "repository-credentials")
+	require.NotNil(t, mainMount, "agent container must mount git credentials")
+	assert.Equal(t, "/var/run/secrets/langop.io/git", mainMount.MountPath)
+	assert.True(t, mainMount.ReadOnly)
+
+	// The init script no longer writes an askpass helper; git reads the env config.
+	assert.NotContains(t, repo.Command[2], "GIT_ASKPASS")
+	assert.NotContains(t, repo.Command[2], "/git-secret")
+
+	// Both containers get the same git config: identity and a host-scoped credential helper.
+	for _, env := range [][]corev1.EnvVar{repo.Env, main.Env} {
+		cfg := gitConfig(t, env)
+		assert.Equal(t, "repo-secret-agent", cfg["user.name"])
+		assert.Equal(t, "repo-secret-agent@default.langop.io", cfg["user.email"])
+		helper := cfg["credential.https://github.com.helper"]
+		assert.Contains(t, helper, "/var/run/secrets/langop.io/git")
+		assert.Contains(t, helper, "x-access-token")
+		assert.Contains(t, helper, "$d/token")
+		by := envByName(env)
+		assert.Equal(t, "0", by["GIT_TERMINAL_PROMPT"].Value)
+		_, ssh := by["GIT_SSH_COMMAND"]
+		assert.False(t, ssh, "HTTPS remotes must not set GIT_SSH_COMMAND")
 	}
-	assert.True(t, hasCredMount, "repository init container must mount git credentials")
+
+	// The vendor CLI credential goes to the agent container only.
+	by := envByName(main.Env)
+	gh, ok := by["GH_TOKEN"]
+	require.True(t, ok, "GH_TOKEN must be set for a github repository with a secret")
+	require.NotNil(t, gh.ValueFrom)
+	require.NotNil(t, gh.ValueFrom.SecretKeyRef)
+	assert.Equal(t, "git-creds", gh.ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "token", gh.ValueFrom.SecretKeyRef.Key)
+	assert.True(t, *gh.ValueFrom.SecretKeyRef.Optional)
+	_, hasHost := by["GH_HOST"]
+	assert.False(t, hasHost, "GH_HOST is only set for GitHub Enterprise hosts")
+	_, hasGitlab := by["GITLAB_TOKEN"]
+	assert.False(t, hasGitlab)
+
+	seed := findInitContainer(podSpec, "seed-config")
+	require.NotNil(t, seed)
+	_, seedToken := envByName(seed.Env)["GH_TOKEN"]
+	assert.False(t, seedToken, "user init containers must not receive the CLI token")
+	assert.Nil(t, findMount(seed.VolumeMounts, "repository-credentials"))
+	assert.Nil(t, gitConfig(t, seed.Env))
 
 	// Pod volume must reference the Secret.
 	var credVol *corev1.Volume
@@ -1004,6 +1103,141 @@ func TestLanguageAgentController_Repository_SecretRefMounted(t *testing.T) {
 	assert.Equal(t, "git-creds", credVol.Secret.SecretName)
 }
 
+func TestLanguageAgentController_Repository_SSHSecret(t *testing.T) {
+	agent := gen.LanguageAgent("repo-ssh-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("git@github.com:foo/bar.git", "", "", "deploy-key"),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	main := podSpec.Containers[0]
+	by := envByName(main.Env)
+	assert.Contains(t, by["GIT_SSH_COMMAND"].Value, "-i /var/run/secrets/langop.io/git/ssh-privatekey")
+	assert.Contains(t, by["GIT_SSH_COMMAND"].Value, "IdentitiesOnly=yes")
+	cfg := gitConfig(t, main.Env)
+	for k := range cfg {
+		assert.False(t, strings.HasPrefix(k, "credential."), "SSH remotes get no credential helper, found %q", k)
+	}
+	// The vendor falls back to the host mapping when the webhook did not default it.
+	gh, ok := by["GH_TOKEN"]
+	require.True(t, ok)
+	assert.True(t, *gh.ValueFrom.SecretKeyRef.Optional, "a Secret with only an SSH key must not block the pod")
+}
+
+func TestLanguageAgentController_Repository_IdentityDefaultsWithoutSecret(t *testing.T) {
+	agent := gen.LanguageAgent("repo-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "", ""),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	main := podSpec.Containers[0]
+	cfg := gitConfig(t, main.Env)
+	assert.Equal(t, map[string]string{
+		"user.name":  "repo-agent",
+		"user.email": "repo-agent@default.langop.io",
+	}, cfg)
+	by := envByName(main.Env)
+	for _, name := range []string{"GH_TOKEN", "GH_HOST", "GITLAB_TOKEN", "GIT_TERMINAL_PROMPT", "GIT_SSH_COMMAND"} {
+		_, ok := by[name]
+		assert.False(t, ok, "%s must not be set without a secretRef", name)
+	}
+	assert.Nil(t, findMount(main.VolumeMounts, "repository-credentials"))
+}
+
+func TestLanguageAgentController_Repository_UserEnvOverridesIdentity(t *testing.T) {
+	agent := gen.LanguageAgent("repo-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://github.com/foo/bar.git", "", "", "git-creds"),
+	)
+	agent.Spec.Deployment.Env = []corev1.EnvVar{
+		{Name: "GIT_AUTHOR_NAME", Value: "Ada"},
+		{Name: "GH_TOKEN", Value: "user-supplied"},
+	}
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	env := podSpec.Containers[0].Env
+	index := func(name string, value string) int {
+		for i, e := range env {
+			if e.Name == name && e.Value == value {
+				return i
+			}
+		}
+		return -1
+	}
+	lastConfig := -1
+	for i, e := range env {
+		if strings.HasPrefix(e.Name, "GIT_CONFIG_") {
+			lastConfig = i
+		}
+	}
+	assert.Greater(t, index("GIT_AUTHOR_NAME", "Ada"), lastConfig, "user env must come after the operator's git config")
+	assert.Equal(t, "user-supplied", env[len(env)-1].Value, "the user's GH_TOKEN is last and therefore wins")
+}
+
+func TestLanguageAgentController_Repository_GitLabVendor(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		url      string
+		wantHost string
+	}{
+		{"gitlab.com", "https://gitlab.com/group/sub/repo.git", ""},
+		{"self-hosted", "https://gitlab.example.com/group/repo.git", "gitlab.example.com"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			agent := gen.LanguageAgent("gl-agent", "default",
+				gen.SetAgentWorkspace("5Gi"),
+				gen.SetAgentRepository(tc.url, "", "", "gl-creds"),
+				gen.SetAgentRepositoryVendor("gitlab"),
+			)
+			r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+			reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+			podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+			by := envByName(podSpec.Containers[0].Env)
+			token, ok := by["GITLAB_TOKEN"]
+			require.True(t, ok)
+			assert.Equal(t, "gl-creds", token.ValueFrom.SecretKeyRef.Name)
+			_, gh := by["GH_TOKEN"]
+			assert.False(t, gh, "a gitlab repository must not export GH_TOKEN")
+			host, ok := by["GITLAB_HOST"]
+			assert.Equal(t, tc.wantHost != "", ok)
+			if ok {
+				assert.Equal(t, tc.wantHost, host.Value)
+			}
+			cfg := gitConfig(t, podSpec.Containers[0].Env)
+			_, helper := cfg["credential.https://"+langopv1alpha1.RepositoryHost(tc.url)+".helper"]
+			assert.True(t, helper, "HTTPS gitlab remotes still get the git credential helper")
+		})
+	}
+}
+
+func TestLanguageAgentController_Repository_GenericVendorHasNoCLIEnv(t *testing.T) {
+	agent := gen.LanguageAgent("git-agent", "default",
+		gen.SetAgentWorkspace("5Gi"),
+		gen.SetAgentRepository("https://git.example.com/foo/bar.git", "", "", "git-creds"),
+		gen.SetAgentRepositoryVendor("git"),
+	)
+	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+	by := envByName(podSpec.Containers[0].Env)
+	for _, name := range []string{"GH_TOKEN", "GH_HOST", "GITLAB_TOKEN", "GITLAB_HOST"} {
+		_, ok := by[name]
+		assert.False(t, ok, "%s must not be set for a plain git vendor", name)
+	}
+	cfg := gitConfig(t, podSpec.Containers[0].Env)
+	assert.Contains(t, cfg, "credential.https://git.example.com.helper")
+	assert.Equal(t, "0", by["GIT_TERMINAL_PROMPT"].Value)
+}
+
 func TestLanguageAgentController_Repository_AbsentWhenNoRepository(t *testing.T) {
 	agent := gen.LanguageAgent("no-repo-agent", "default", gen.SetAgentWorkspace("5Gi"))
 	r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
@@ -1015,7 +1249,10 @@ func TestLanguageAgentController_Repository_AbsentWhenNoRepository(t *testing.T)
 	assert.Empty(t, podSpec.Containers[0].WorkingDir, "WorkingDir must be unset without a repository")
 	for _, e := range podSpec.Containers[0].Env {
 		assert.NotEqual(t, "AGENT_REPO_DIR", e.Name, "AGENT_REPO_DIR must not be injected without a repository")
+		assert.False(t, strings.HasPrefix(e.Name, "GIT_") || strings.HasPrefix(e.Name, "GH_") || strings.HasPrefix(e.Name, "GITLAB_"),
+			"%s must not be injected without a repository", e.Name)
 	}
+	assert.Nil(t, findMount(podSpec.Containers[0].VolumeMounts, "repository-credentials"))
 }
 
 func TestLanguageAgentController_Repository_ConditionSet(t *testing.T) {

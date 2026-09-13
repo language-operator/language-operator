@@ -64,11 +64,6 @@ spec:
     size: 5Gi
   deployment:
     env:
-      - name: GITHUB_TOKEN
-        valueFrom:
-          secretKeyRef:
-            name: github-credentials
-            key: token
       - name: ANTHROPIC_API_KEY
         valueFrom:
           secretKeyRef:

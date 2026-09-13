@@ -1,6 +1,10 @@
 package v1alpha1
 
 import (
+	"net/url"
+	"regexp"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -373,8 +377,57 @@ type RepositorySpec struct {
 
 	// SecretRef references a Secret with git credentials for private repos.
 	// Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH).
+	// The Secret is mounted read-only into the repository init container and the agent
+	// container, where git authenticates through a credential helper that reads it, so
+	// fetch and push keep working after the clone. The `token` key is also exported to
+	// the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab).
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
+
+	// Vendor is the hosting vendor of the repository. It selects which CLI receives the
+	// credential inside the agent container (`gh` for github, `glab` for gitlab; none
+	// for git). Defaulted from the URL host (github.com, gitlab.com), otherwise git.
+	// +kubebuilder:validation:Enum=github;gitlab;git
+	// +optional
+	Vendor string `json:"vendor,omitempty"`
+}
+
+// Repository vendors.
+const (
+	RepositoryVendorGitHub = "github"
+	RepositoryVendorGitLab = "gitlab"
+	RepositoryVendorGit    = "git"
+)
+
+// repositoryScpLikeURL captures the host of the scp-like SSH form (git@host:path).
+var repositoryScpLikeURL = regexp.MustCompile(`^[^@/]+@([^:/]+):.+$`)
+
+// RepositoryHost returns the host of a repository URL: the authority of an
+// http(s)/ssh URL or the host of the scp-like form (git@host:path). Empty when the
+// URL cannot be parsed.
+func RepositoryHost(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if m := repositoryScpLikeURL.FindStringSubmatch(raw); m != nil {
+		return strings.ToLower(m[1])
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(u.Hostname())
+}
+
+// DefaultRepositoryVendor maps a repository host to a vendor: github.com is github,
+// gitlab.com is gitlab, anything else is git.
+func DefaultRepositoryVendor(raw string) string {
+	switch RepositoryHost(raw) {
+	case "github.com":
+		return RepositoryVendorGitHub
+	case "gitlab.com":
+		return RepositoryVendorGitLab
+	default:
+		return RepositoryVendorGit
+	}
 }
 
 // CredentialSpec declares an environment variable backed by a Secret value.

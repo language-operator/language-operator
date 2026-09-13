@@ -6,6 +6,9 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+**Features**
+- agent: `spec.repository.vendor` (github, gitlab, git; defaulted from the host) and authenticated `git`, `gh` and `glab` inside the agent container from `spec.repository.secretRef`: the Secret is mounted into the agent container, git gets a host-scoped credential helper and a default commit identity through `GIT_CONFIG_*`, and the `token` key is exported as `GH_TOKEN` or `GITLAB_TOKEN` by vendor
+
 ---
 
 ## v0.3.4 — 2026-09-12

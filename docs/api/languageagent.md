@@ -243,6 +243,11 @@ Environment variables injected into every agent container and all init container
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs (only injected when at least one tool is resolved) |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty |
 | `AGENT_REPO_DIR` | Absolute path to the cloned repository (the agent container's working directory). Only injected when `spec.repository` is set. See [Repository](#repository). |
+| `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n` | Git configuration for the repository: the default commit identity and, with `secretRef` on an HTTPS remote, a host-scoped credential helper. Agent and `repository` init containers only. See [Git and CLI authentication](#git-and-cli-authentication). |
+| `GIT_SSH_COMMAND` | With `secretRef` on an SSH remote: `ssh -i` pointing at the mounted `ssh-privatekey`. Agent and `repository` init containers only. |
+| `GIT_TERMINAL_PROMPT` | `0` when `secretRef` is set, so a missing credential fails fast instead of prompting. |
+| `GH_TOKEN`, `GH_HOST` | With `secretRef` and vendor `github`: the Secret's `token` key for `gh` (`GH_HOST` only for GitHub Enterprise hosts). Agent container only. |
+| `GITLAB_TOKEN`, `GITLAB_HOST` | With `secretRef` and vendor `gitlab`: the Secret's `token` key for `glab` (`GITLAB_HOST` only for self-hosted instances). Agent container only. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
 | `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment (conditional on OTEL endpoint) |
@@ -285,10 +290,27 @@ The clone is **clone-once**: if the target directory already contains a `.git` d
 | `path` | string | repo name from URL | Subdirectory under the workspace `mountPath` to clone into. Must be relative (no leading `/`, no `..` segments). |
 | `depth` | int | `0` (full clone) | When > 0, performs a shallow clone with this history depth. |
 | `secretRef` | *LocalObjectReference | — | Secret holding git credentials for private repositories. Recognized keys: `token`, or `username` + `password` (HTTPS); `ssh-privatekey` (SSH). |
+| `vendor` | string | from the host | Hosting vendor: `github`, `gitlab` or `git`. Selects which CLI receives the credential (`gh`, `glab`, none). Defaulted from the URL host (`github.com`, `gitlab.com`); set it for GitHub Enterprise or self-hosted GitLab. |
 
 The clone target is `<workspace mountPath>/<path>` — e.g. with the default `mountPath: /workspace` and `path: app`, the repository is cloned to `/workspace/app` and `AGENT_REPO_DIR` is set to `/workspace/app`. When `path` is omitted, the directory name is derived from the URL (e.g. `https://github.com/org/repo.git` → `/workspace/repo`).
 
-The operator never reads the credentials Secret; it is mounted read-only into the `repository` init container, which selects SSH or HTTPS auth based on which keys are present.
+The operator never reads the credentials Secret. It is mounted read-only at `/var/run/secrets/langop.io/git` into the `repository` init container and the agent container, and git is pointed at it through environment variables, so the credential works for the clone and for every later `git fetch` and `git push` without ever being written into the checkout.
+
+#### Git and CLI authentication
+
+When `spec.repository` is set, the agent container (and the `repository` init container) receive git configuration through `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n`, which git 2.31+ reads as if it were a config file; nothing is written into the image or the workspace:
+
+| Setting | Value | When |
+|---------|-------|------|
+| `user.name` | `metadata.name` | always |
+| `user.email` | `<name>@<namespace>.langop.io` | always |
+| `credential.https://<host>.helper` | an inline helper that answers `get` from the mounted Secret: username from `username` (else `x-access-token`), password from `password` or `token` | `secretRef` and an HTTPS URL |
+| `GIT_SSH_COMMAND` (env) | `ssh -i /var/run/secrets/langop.io/git/ssh-privatekey -o IdentitiesOnly=yes …` | `secretRef` and an SSH URL |
+| `GIT_TERMINAL_PROMPT` (env) | `0` | `secretRef` |
+
+The helper is scoped to the repository's host, so the token is never offered to another remote, and it reads the files on every call, so a rotated Secret is picked up without a restart. To commit under a different identity, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in `spec.deployment.env`; git's environment beats its configuration. A user-supplied `GIT_CONFIG_COUNT` replaces the operator's block entirely.
+
+The Secret's `token` key is also exported to the vendor's CLI in the agent container only: `GH_TOKEN` for `github` (plus `GH_HOST` for a GitHub Enterprise host) and `GITLAB_TOKEN` for `gitlab` (plus `GITLAB_HOST` when self-hosted). The reference is optional, so a Secret holding only an SSH key or a username and password still starts the pod; `gh` and `glab` then report themselves unauthenticated. Environment variables do not refresh, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship `gh` or `glab` for this to be useful.
 
 **Private repository example (HTTPS token):**
 
@@ -315,9 +337,11 @@ metadata:
   namespace: default
 type: Opaque
 stringData:
-  token: ghp_xxxxxxxxxxxxxxxxxxxx   # a personal access token (HTTPS)
+  token: github_pat_xxxxxxxxxxxxxxxxxxxx   # a personal access token (HTTPS); also exported as GH_TOKEN
   # For SSH instead, provide an ssh-privatekey key and a git@host:... url.
 ```
+
+Inside the agent, `git push` and `gh pr create` then work without further setup, and commits are authored as `code-agent <code-agent@default.langop.io>`.
 
 ### Resource Management
 

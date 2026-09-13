@@ -54,7 +54,7 @@ hallucinated APIs.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `CLUSTER_NAME` | yes | — | Namespace of the target LanguageCluster |
-| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to `github-credentials/token` secret; used for the clones and for `gh`. Needs access to the core repo and all four adapter repos. |
+| `GITHUB_TOKEN` | yes | — | GitHub PAT (`repo`, `issues` scopes) — written to the `github-credentials/token` secret. The operator uses it for the clones, for `git push`, and exports it as `GH_TOKEN` for `gh`. Needs access to the core repo and all four adapter repos. |
 | `PROJECT_REPOSITORY` | yes | — | Clone URL of the **core** repo the supervisor/workers work on (e.g. `https://github.com/language-operator/language-operator.git`). Cloned into each core agent's workspace via `spec.repository`. The adapter agents hardcode their own repo URLs. |
 | `PROJECT_NAME` | no | repo basename (minus `.git`) | Human-readable project name used in the core agents' prompts (e.g. `Language Operator`) |
 | `ANTHROPIC_API_KEY` | no | — | If set, written to `anthropic-credentials/api-key` and injected as `ANTHROPIC_API_KEY` on every agent (API-key billing). |

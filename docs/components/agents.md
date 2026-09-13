@@ -63,6 +63,8 @@ The operator injects these into the agent container and all init containers:
 | `MCP_SERVERS` | Comma-separated tool endpoint URLs — service-mode tools use in-cluster DNS; sidecar-mode tools use `http://localhost:<port>/mcp` |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when non-empty |
 | `AGENT_REPO_DIR` | Absolute path to the cloned repository; also the agent's working directory. Only injected when `spec.repository` is set |
+| `GIT_CONFIG_*`, `GIT_SSH_COMMAND`, `GIT_TERMINAL_PROMPT` | Git identity and credentials for `spec.repository`; agent and `repository` init containers only |
+| `GH_TOKEN` / `GITLAB_TOKEN` | The repository Secret's `token` for the vendor CLI (`gh`, `glab`); agent container only |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when OTEL is configured |
 
@@ -98,8 +100,9 @@ The clone is **clone-once**: it is skipped when the target directory already con
 | `spec.repository.path` | repo name from URL | Subdirectory under the workspace `mountPath` to clone into (relative path only) |
 | `spec.repository.depth` | `0` | When > 0, shallow-clone to this history depth |
 | `spec.repository.secretRef` | — | Secret with git credentials for private repos. Keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH) |
+| `spec.repository.vendor` | from the host | `github`, `gitlab` or `git`; selects the CLI that receives the token (`gh`, `glab`, none) |
 
-When `secretRef` is set, the Secret is mounted read-only into the `repository` init container at `/git-secret`; the operator never reads its contents. The init container picks SSH or HTTPS authentication based on which keys are present. See the [LanguageAgent API reference](../api/languageagent.md#repository) for a full private-repo example.
+When `secretRef` is set, the Secret is mounted read-only at `/var/run/secrets/langop.io/git` into the `repository` init container and the agent container; the operator never reads its contents. Git is configured through `GIT_CONFIG_*` environment variables: a default commit identity (`<name>@<namespace>.langop.io`, overridable with `GIT_AUTHOR_*`/`GIT_COMMITTER_*`), a host-scoped credential helper for HTTPS remotes or `GIT_SSH_COMMAND` for SSH remotes, so fetch and push work after the clone. The Secret's `token` is also exported as `GH_TOKEN` or `GITLAB_TOKEN` by vendor. See the [LanguageAgent API reference](../api/languageagent.md#git-and-cli-authentication) for details.
 
 ## Networking
 
