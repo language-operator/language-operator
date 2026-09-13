@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +21,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/language-operator/language-operator/pkg/network"
+	"k8s.io/utils/ptr"
 )
 
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
@@ -334,9 +336,44 @@ func repositoryDir(agent *langopv1alpha1.LanguageAgent) string {
 	return filepath.Join(workspaceMountPath(agent), sub)
 }
 
+// repositoryCredentialsVolume is the pod volume holding spec.repository.secretRef.
+const repositoryCredentialsVolume = "repository-credentials"
+
+// repositoryCredentialsMountPath is where the credentials Secret is mounted, read-only,
+// in the repository init container and the agent container.
+const repositoryCredentialsMountPath = "/var/run/secrets/langop.io/git"
+
+// gitIdentityEmailDomain is the domain of the default commit identity
+// (<agent>@<namespace>.<domain>); a control plane overrides it through GIT_AUTHOR_* /
+// GIT_COMMITTER_* in spec.deployment.env.
+const gitIdentityEmailDomain = "langop.io"
+
+// repositoryUsesSSH reports whether the repository URL is fetched over SSH (an ssh://
+// URL or the scp-like git@host:path form) rather than HTTP(S).
+func repositoryUsesSSH(rawURL string) bool {
+	rawURL = strings.TrimSpace(rawURL)
+	if strings.HasPrefix(rawURL, "ssh://") {
+		return true
+	}
+	return !strings.Contains(rawURL, "://") && strings.Contains(rawURL, "@") && strings.Contains(rawURL, ":")
+}
+
+// repositoryVendor returns spec.repository.vendor, falling back to the host mapping for
+// objects admitted before the webhook defaulted it.
+func repositoryVendor(agent *langopv1alpha1.LanguageAgent) string {
+	if !agentHasRepository(agent) {
+		return ""
+	}
+	if v := agent.Spec.Repository.Vendor; v != "" {
+		return v
+	}
+	return langopv1alpha1.DefaultRepositoryVendor(agent.Spec.Repository.URL)
+}
+
 // buildRepositoryVolumes returns the pod-level volume holding git credentials when
 // spec.repository.secretRef is set. The Secret is mounted read-only into the
-// repository init container; the operator never reads its contents.
+// repository init container and the agent container; the operator never reads its
+// contents.
 func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume {
 	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
 		return nil
@@ -344,7 +381,7 @@ func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume
 	mode := int32(0o400)
 	return []corev1.Volume{
 		{
-			Name: "repository-credentials",
+			Name: repositoryCredentialsVolume,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  agent.Spec.Repository.SecretRef.Name,
@@ -355,15 +392,107 @@ func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume
 	}
 }
 
+// buildRepositoryCredentialMount returns the read-only mount of the credentials
+// Secret, or nil when no secretRef is set.
+func buildRepositoryCredentialMount(agent *langopv1alpha1.LanguageAgent) *corev1.VolumeMount {
+	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
+		return nil
+	}
+	return &corev1.VolumeMount{
+		Name:      repositoryCredentialsVolume,
+		MountPath: repositoryCredentialsMountPath,
+		ReadOnly:  true,
+	}
+}
+
+// gitCredentialHelper is an inline git credential helper that answers "get" from the
+// mounted Secret: username from the `username` key (else the x-access-token
+// convention), password from `password` or `token`. Reading the files on every call
+// means a rotated Secret is picked up without a pod restart; nothing is ever written.
+const gitCredentialHelper = `!f() { d=` + repositoryCredentialsMountPath + `; [ "$1" = get ] || exit 0; u=x-access-token; [ -f "$d/username" ] && u=$(cat "$d/username"); if [ -f "$d/password" ]; then p=$(cat "$d/password"); elif [ -f "$d/token" ]; then p=$(cat "$d/token"); else exit 0; fi; printf 'username=%s\npassword=%s\n' "$u" "$p"; }; f`
+
+// buildGitEnv returns the git configuration for the repository init container and the
+// agent container, expressed through GIT_CONFIG_COUNT/GIT_CONFIG_KEY_n/GIT_CONFIG_VALUE_n
+// so no file has to be written into a read-only image: a default commit identity
+// (<agent>@<namespace>.langop.io, overridable with GIT_AUTHOR_*/GIT_COMMITTER_* in
+// spec.deployment.env), a host-scoped credential helper for HTTPS remotes, or
+// GIT_SSH_COMMAND pointing at the mounted key for SSH remotes. Nil without a repository.
+func buildGitEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
+	if !agentHasRepository(agent) {
+		return nil
+	}
+	repo := agent.Spec.Repository
+	entries := [][2]string{
+		{"user.name", agent.Name},
+		{"user.email", fmt.Sprintf("%s@%s.%s", agent.Name, agent.Namespace, gitIdentityEmailDomain)},
+	}
+	var env []corev1.EnvVar
+	if repo.SecretRef != nil {
+		if repositoryUsesSSH(repo.URL) {
+			env = append(env, corev1.EnvVar{
+				Name: "GIT_SSH_COMMAND",
+				Value: fmt.Sprintf("ssh -i %s/ssh-privatekey -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null",
+					repositoryCredentialsMountPath),
+			})
+		} else if host := langopv1alpha1.RepositoryHost(repo.URL); host != "" {
+			entries = append(entries, [2]string{"credential.https://" + host + ".helper", gitCredentialHelper})
+		}
+		env = append(env, corev1.EnvVar{Name: "GIT_TERMINAL_PROMPT", Value: "0"})
+	}
+	env = append(env, corev1.EnvVar{Name: "GIT_CONFIG_COUNT", Value: strconv.Itoa(len(entries))})
+	for i, kv := range entries {
+		env = append(env,
+			corev1.EnvVar{Name: fmt.Sprintf("GIT_CONFIG_KEY_%d", i), Value: kv[0]},
+			corev1.EnvVar{Name: fmt.Sprintf("GIT_CONFIG_VALUE_%d", i), Value: kv[1]},
+		)
+	}
+	return env
+}
+
+// buildVendorEnv returns the credential the repository vendor's CLI reads, taken from
+// the `token` key of spec.repository.secretRef: GH_TOKEN (and GH_HOST for GitHub
+// Enterprise) for github, GITLAB_TOKEN (and GITLAB_HOST for self-hosted) for gitlab,
+// nothing for git. The reference is optional so a Secret without a `token` key (SSH
+// key, username and password) still starts. Agent container only.
+func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
+	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
+		return nil
+	}
+	token := &corev1.EnvVarSource{
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: agent.Spec.Repository.SecretRef.Name},
+			Key:                  "token",
+			Optional:             ptr.To(true),
+		},
+	}
+	host := langopv1alpha1.RepositoryHost(agent.Spec.Repository.URL)
+	switch repositoryVendor(agent) {
+	case langopv1alpha1.RepositoryVendorGitHub:
+		env := []corev1.EnvVar{{Name: "GH_TOKEN", ValueFrom: token}}
+		if host != "" && host != "github.com" {
+			env = append(env, corev1.EnvVar{Name: "GH_HOST", Value: host})
+		}
+		return env
+	case langopv1alpha1.RepositoryVendorGitLab:
+		env := []corev1.EnvVar{{Name: "GITLAB_TOKEN", ValueFrom: token}}
+		if host != "" && host != "gitlab.com" {
+			env = append(env, corev1.EnvVar{Name: "GITLAB_HOST", Value: host})
+		}
+		return env
+	default:
+		return nil
+	}
+}
+
 // buildRepositoryInitContainer returns the "repository" init container that clones
 // spec.repository into the workspace, or nil when no repository is configured. The
 // clone uses clone-once semantics (skipped when the target already contains a .git
 // directory), so agent edits and commits survive pod restarts — mirroring the
 // workspace-seeder's seed-once behavior.
 //
-// Credentials are detected at runtime from the mounted Secret (the operator does not
-// read the Secret): an ssh-privatekey key configures GIT_SSH_COMMAND, otherwise a
-// token or username+password pair configures a GIT_ASKPASS helper for HTTPS.
+// Authentication comes from the same GIT_CONFIG_* / GIT_SSH_COMMAND environment the
+// agent container gets (buildGitEnv), reading the mounted Secret; the operator never
+// reads the Secret and the script never embeds a credential in the checkout.
 func buildRepositoryInitContainer(agent *langopv1alpha1.LanguageAgent) *corev1.Container {
 	if !agentHasRepository(agent) {
 		return nil
@@ -386,24 +515,6 @@ if [ -d "$TARGET/.git" ]; then
   echo "repository already present at $TARGET, skipping clone"
   exit 0
 fi
-SECRET_DIR=/git-secret
-if [ -d "$SECRET_DIR" ]; then
-  if [ -f "$SECRET_DIR/ssh-privatekey" ]; then
-    install -m 600 "$SECRET_DIR/ssh-privatekey" /tmp/git-ssh-key
-    export GIT_SSH_COMMAND="ssh -i /tmp/git-ssh-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-  else
-    cat > /tmp/git-askpass <<'ASKPASS'
-#!/bin/sh
-case "$1" in
-  Username*) if [ -f /git-secret/username ]; then cat /git-secret/username; else echo "x-access-token"; fi ;;
-  Password*) if [ -f /git-secret/password ]; then cat /git-secret/password; else cat /git-secret/token; fi ;;
-esac
-ASKPASS
-    chmod +x /tmp/git-askpass
-    export GIT_ASKPASS=/tmp/git-askpass
-    export GIT_TERMINAL_PROMPT=0
-  fi
-fi
 if [ -n "$REF" ]; then
   git clone %s --branch "$REF" "$URL" "$TARGET" 2>/dev/null || {
     rm -rf "$TARGET"
@@ -421,12 +532,8 @@ echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFl
 			MountPath: mountPath,
 		},
 	}
-	if repo.SecretRef != nil {
-		mounts = append(mounts, corev1.VolumeMount{
-			Name:      "repository-credentials",
-			MountPath: "/git-secret",
-			ReadOnly:  true,
-		})
+	if credMount := buildRepositoryCredentialMount(agent); credMount != nil {
+		mounts = append(mounts, *credMount)
 	}
 
 	return &corev1.Container{
@@ -434,13 +541,16 @@ echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFl
 		Image:        repositoryImage,
 		Command:      []string{"/bin/sh", "-c", script},
 		VolumeMounts: mounts,
-		Env: []corev1.EnvVar{
+		Env: append([]corev1.EnvVar{
 			{Name: "HOME", Value: "/tmp"},
-		},
+		}, buildGitEnv(agent)...),
 	}
 }
 
-func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, modelURLs []string, modelNames []string, toolURLs []string) []corev1.EnvVar {
+// buildAgentEnv returns the operator-managed environment for a container. `extra`
+// entries (the agent container's git and vendor CLI credentials) are appended after
+// the contract variables and before spec.deployment.env, so user env still wins.
+func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *langopv1alpha1.LanguageAgent, cluster *langopv1alpha1.LanguageCluster, modelURLs []string, modelNames []string, toolURLs []string, extra ...corev1.EnvVar) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  "AGENT_NAME",
@@ -545,6 +655,8 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Value: strings.Join(toolURLs, ","),
 		})
 	}
+
+	env = append(env, extra...)
 
 	// User-specified env vars (may override any of the above)
 	env = append(env, agent.Spec.Deployment.Env...)

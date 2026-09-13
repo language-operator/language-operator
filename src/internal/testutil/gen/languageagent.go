@@ -247,6 +247,16 @@ func SetAgentRepository(url, ref, path, secretRef string) LanguageAgentModifier 
 	}
 }
 
+// SetAgentRepositoryVendor sets spec.repository.vendor, initialising the repository if needed.
+func SetAgentRepositoryVendor(vendor string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		if a.Spec.Repository == nil {
+			a.Spec.Repository = &langopv1alpha1.RepositorySpec{}
+		}
+		a.Spec.Repository.Vendor = vendor
+	}
+}
+
 // SetAgentRepositoryDepth sets spec.repository.depth, initialising the repository if needed.
 func SetAgentRepositoryDepth(depth int) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {

@@ -952,6 +952,60 @@ func TestLanguageAgentValidateRepository(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentDefaultRepositoryVendor(t *testing.T) {
+	cases := []struct {
+		name   string
+		repo   *RepositorySpec
+		expect string
+	}{
+		{"github.com https", &RepositorySpec{URL: "https://github.com/org/repo.git"}, RepositoryVendorGitHub},
+		{"github.com scp-like", &RepositorySpec{URL: "git@github.com:org/repo.git"}, RepositoryVendorGitHub},
+		{"GitHub.com mixed case", &RepositorySpec{URL: "https://GitHub.com/org/repo"}, RepositoryVendorGitHub},
+		{"gitlab.com https", &RepositorySpec{URL: "https://gitlab.com/group/sub/repo.git"}, RepositoryVendorGitLab},
+		{"gitlab.com ssh url", &RepositorySpec{URL: "ssh://git@gitlab.com/group/repo.git"}, RepositoryVendorGitLab},
+		{"self-hosted defaults to git", &RepositorySpec{URL: "https://gitlab.example.com/group/repo.git"}, RepositoryVendorGit},
+		{"explicit vendor kept", &RepositorySpec{URL: "https://gitlab.example.com/group/repo.git", Vendor: RepositoryVendorGitLab}, RepositoryVendorGitLab},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			agent := &LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+				Spec:       LanguageAgentSpec{Image: "test:latest", Repository: tc.repo},
+			}
+			_ = (&LanguageAgentWebhook{}).Default(context.Background(), agent)
+			if agent.Spec.Repository.Vendor != tc.expect {
+				t.Fatalf("vendor = %q, want %q", agent.Spec.Repository.Vendor, tc.expect)
+			}
+		})
+	}
+
+	// No repository: nothing to default.
+	agent := &LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
+		Spec:       LanguageAgentSpec{Image: "test:latest"},
+	}
+	_ = (&LanguageAgentWebhook{}).Default(context.Background(), agent)
+	if agent.Spec.Repository != nil {
+		t.Fatalf("expected repository to stay nil")
+	}
+}
+
+func TestRepositoryHost(t *testing.T) {
+	cases := map[string]string{
+		"https://github.com/foo/bar.git":       "github.com",
+		"https://GitHub.com:443/foo/bar":       "github.com",
+		"http://git.internal/foo/bar.git":      "git.internal",
+		"ssh://git@gitlab.example.com/foo/bar": "gitlab.example.com",
+		"git@github.com:foo/bar.git":           "github.com",
+		"not a url":                            "",
+	}
+	for raw, want := range cases {
+		if got := RepositoryHost(raw); got != want {
+			t.Errorf("RepositoryHost(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
 func TestLanguageAgentDefaultRepositoryWorkspace(t *testing.T) {
 	tests := []struct {
 		name        string

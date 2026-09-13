@@ -63,6 +63,12 @@ func (h *LanguageAgentWebhook) Default(ctx context.Context, a *LanguageAgent) er
 		}
 	}
 
+	// Default the repository vendor from the URL host so the controller can export the
+	// right CLI credential without sniffing hosts itself.
+	if a.Spec.Repository != nil && a.Spec.Repository.Vendor == "" {
+		a.Spec.Repository.Vendor = DefaultRepositoryVendor(a.Spec.Repository.URL)
+	}
+
 	// Default resources
 	if a.Spec.Deployment.Resources.Requests == nil && a.Spec.Deployment.Resources.Limits == nil {
 		a.Spec.Deployment.Resources = corev1.ResourceRequirements{

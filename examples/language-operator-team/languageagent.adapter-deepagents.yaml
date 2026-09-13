@@ -96,11 +96,6 @@ spec:
         cpu: 4000m
         memory: 6Gi
     env:
-      - name: GITHUB_TOKEN
-        valueFrom:
-          secretKeyRef:
-            name: github-credentials
-            key: token
       - name: ANTHROPIC_API_KEY
         valueFrom:
           secretKeyRef:
