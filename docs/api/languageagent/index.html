@@ -1437,6 +1437,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Repository">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#git-and-cli-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git and CLI authentication
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2063,6 +2080,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Repository">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#git-and-cli-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git and CLI authentication
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2452,6 +2486,26 @@ fields, suspension, and the ServiceAccount permission the Argo executor needs.</
 <td>Absolute path to the cloned repository (the agent container's working directory). Only injected when <code>spec.repository</code> is set. See <a href="#repository">Repository</a>.</td>
 </tr>
 <tr>
+<td><code>GIT_CONFIG_COUNT</code>, <code>GIT_CONFIG_KEY_n</code>, <code>GIT_CONFIG_VALUE_n</code></td>
+<td>Git configuration for the repository: the default commit identity and, with <code>secretRef</code> on an HTTPS remote, a host-scoped credential helper. Agent and <code>repository</code> init containers only. See <a href="#git-and-cli-authentication">Git and CLI authentication</a>.</td>
+</tr>
+<tr>
+<td><code>GIT_SSH_COMMAND</code></td>
+<td>With <code>secretRef</code> on an SSH remote: <code>ssh -i</code> pointing at the mounted <code>ssh-privatekey</code>. Agent and <code>repository</code> init containers only.</td>
+</tr>
+<tr>
+<td><code>GIT_TERMINAL_PROMPT</code></td>
+<td><code>0</code> when <code>secretRef</code> is set, so a missing credential fails fast instead of prompting.</td>
+</tr>
+<tr>
+<td><code>GH_TOKEN</code>, <code>GH_HOST</code></td>
+<td>With <code>secretRef</code> and vendor <code>github</code>: the Secret's <code>token</code> key for <code>gh</code> (<code>GH_HOST</code> only for GitHub Enterprise hosts). Agent container only.</td>
+</tr>
+<tr>
+<td><code>GITLAB_TOKEN</code>, <code>GITLAB_HOST</code></td>
+<td>With <code>secretRef</code> and vendor <code>gitlab</code>: the Secret's <code>token</code> key for <code>glab</code> (<code>GITLAB_HOST</code> only for self-hosted instances). Agent container only.</td>
+</tr>
+<tr>
 <td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
 <td>Propagated from the operator environment when configured</td>
 </tr>
@@ -2582,10 +2636,56 @@ fields, suspension, and the ServiceAccount permission the Argo executor needs.</
 <td>—</td>
 <td>Secret holding git credentials for private repositories. Recognized keys: <code>token</code>, or <code>username</code> + <code>password</code> (HTTPS); <code>ssh-privatekey</code> (SSH).</td>
 </tr>
+<tr>
+<td><code>vendor</code></td>
+<td>string</td>
+<td>from the host</td>
+<td>Hosting vendor: <code>github</code>, <code>gitlab</code> or <code>git</code>. Selects which CLI receives the credential (<code>gh</code>, <code>glab</code>, none). Defaulted from the URL host (<code>github.com</code>, <code>gitlab.com</code>); set it for GitHub Enterprise or self-hosted GitLab.</td>
+</tr>
 </tbody>
 </table>
 <p>The clone target is <code>&lt;workspace mountPath&gt;/&lt;path&gt;</code> — e.g. with the default <code>mountPath: /workspace</code> and <code>path: app</code>, the repository is cloned to <code>/workspace/app</code> and <code>AGENT_REPO_DIR</code> is set to <code>/workspace/app</code>. When <code>path</code> is omitted, the directory name is derived from the URL (e.g. <code>https://github.com/org/repo.git</code> → <code>/workspace/repo</code>).</p>
-<p>The operator never reads the credentials Secret; it is mounted read-only into the <code>repository</code> init container, which selects SSH or HTTPS auth based on which keys are present.</p>
+<p>The operator never reads the credentials Secret. It is mounted read-only at <code>/var/run/secrets/langop.io/git</code> into the <code>repository</code> init container and the agent container, and git is pointed at it through environment variables, so the credential works for the clone and for every later <code>git fetch</code> and <code>git push</code> without ever being written into the checkout.</p>
+<h4 id="git-and-cli-authentication">Git and CLI authentication<a class="headerlink" href="#git-and-cli-authentication" title="Permanent link">&para;</a></h4>
+<p>When <code>spec.repository</code> is set, the agent container (and the <code>repository</code> init container) receive git configuration through <code>GIT_CONFIG_COUNT</code> / <code>GIT_CONFIG_KEY_n</code> / <code>GIT_CONFIG_VALUE_n</code>, which git 2.31+ reads as if it were a config file; nothing is written into the image or the workspace:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user.name</code></td>
+<td><code>metadata.name</code></td>
+<td>always</td>
+</tr>
+<tr>
+<td><code>user.email</code></td>
+<td><code>&lt;name&gt;@&lt;namespace&gt;.langop.io</code></td>
+<td>always</td>
+</tr>
+<tr>
+<td><code>credential.https://&lt;host&gt;.helper</code></td>
+<td>an inline helper that answers <code>get</code> from the mounted Secret: username from <code>username</code> (else <code>x-access-token</code>), password from <code>password</code> or <code>token</code></td>
+<td><code>secretRef</code> and an HTTPS URL</td>
+</tr>
+<tr>
+<td><code>GIT_SSH_COMMAND</code> (env)</td>
+<td><code>ssh -i /var/run/secrets/langop.io/git/ssh-privatekey -o IdentitiesOnly=yes …</code></td>
+<td><code>secretRef</code> and an SSH URL</td>
+</tr>
+<tr>
+<td><code>GIT_TERMINAL_PROMPT</code> (env)</td>
+<td><code>0</code></td>
+<td><code>secretRef</code></td>
+</tr>
+</tbody>
+</table>
+<p>The helper is scoped to the repository's host, so the token is never offered to another remote, and it reads the files on every call, so a rotated Secret is picked up without a restart. To commit under a different identity, set <code>GIT_AUTHOR_NAME</code>, <code>GIT_AUTHOR_EMAIL</code>, <code>GIT_COMMITTER_NAME</code> and <code>GIT_COMMITTER_EMAIL</code> in <code>spec.deployment.env</code>; git's environment beats its configuration. A user-supplied <code>GIT_CONFIG_COUNT</code> replaces the operator's block entirely.</p>
+<p>The Secret's <code>token</code> key is also exported to the vendor's CLI in the agent container only: <code>GH_TOKEN</code> for <code>github</code> (plus <code>GH_HOST</code> for a GitHub Enterprise host) and <code>GITLAB_TOKEN</code> for <code>gitlab</code> (plus <code>GITLAB_HOST</code> when self-hosted). The reference is optional, so a Secret holding only an SSH key or a username and password still starts the pod; <code>gh</code> and <code>glab</code> then report themselves unauthenticated. Environment variables do not refresh, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship <code>gh</code> or <code>glab</code> for this to be useful.</p>
 <p><strong>Private repository example (HTTPS token):</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgent</span>
@@ -2609,9 +2709,10 @@ fields, suspension, and the ServiceAccount permission the Argo executor needs.</
 <a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">default</span>
 <a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
 <a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="nt">stringData</span><span class="p">:</span>
-<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghp_xxxxxxxxxxxxxxxxxxxx</span><span class="w">   </span><span class="c1"># a personal access token (HTTPS)</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github_pat_xxxxxxxxxxxxxxxxxxxx</span><span class="w">   </span><span class="c1"># a personal access token (HTTPS); also exported as GH_TOKEN</span>
 <a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">  </span><span class="c1"># For SSH instead, provide an ssh-privatekey key and a git@host:... url.</span>
 </code></pre></div>
+<p>Inside the agent, <code>git push</code> and <code>gh pr create</code> then work without further setup, and commits are authored as <code>code-agent &lt;code-agent@default.langop.io&gt;</code>.</p>
 <h3 id="resource-management">Resource Management<a class="headerlink" href="#resource-management" title="Permanent link">&para;</a></h3>
 <p>Agents run as Argo Workflow pods, configured through <code>spec.deployment</code>:</p>
 <ul>

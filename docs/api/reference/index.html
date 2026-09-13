@@ -5466,9 +5466,15 @@ desired source. Follows the WorkspaceSpec/CredentialSpec conventions.</p>
 </tr>
 <tr>
 <td><code>secretRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a></em></td>
-<td>SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH).</td>
+<td>SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH).<br />The Secret is mounted read-only into the repository init container and the agent<br />container, where git authenticates through a credential helper that reads it, so<br />fetch and push keep working after the clone. The <code>token</code> key is also exported to<br />the vendor's CLI (<code>GH_TOKEN</code> for github, <code>GITLAB_TOKEN</code> for gitlab).</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>vendor</code> <em>string</em></td>
+<td>Vendor is the hosting vendor of the repository. It selects which CLI receives the<br />credential inside the agent container (<code>gh</code> for github, <code>glab</code> for gitlab; none<br />for git). Defaulted from the URL host (github.com, gitlab.com), otherwise git.</td>
+<td></td>
+<td>Enum: [github gitlab git] <br />Optional: {} <br /></td>
 </tr>
 </tbody>
 </table>
