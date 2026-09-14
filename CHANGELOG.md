@@ -8,6 +8,16 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.8 — 2026-09-14
+
+**Features**
+- support ingress without cert-manager or Let's Encrypt (#914)
+
+**Bug Fixes**
+- move workspace/resources/tool-image defaults from webhook to CRD schema (#916)
+
+---
+
 ## v0.3.7 — 2026-09-14
 
 **Chores**
