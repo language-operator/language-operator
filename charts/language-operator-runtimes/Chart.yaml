@@ -2,8 +2,8 @@ apiVersion: v2
 name: language-operator-runtimes
 description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code, deepagents) as subcharts
 type: application
-version: 0.3.6
-appVersion: "0.3.6"
+version: 0.3.7
+appVersion: "0.3.7"
 keywords:
   - ai
   - llm
