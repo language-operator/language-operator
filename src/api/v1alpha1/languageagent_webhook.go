@@ -50,37 +50,17 @@ var _ admission.Defaulter[*LanguageAgent] = &LanguageAgentWebhook{}
 var _ admission.Validator[*LanguageAgent] = &LanguageAgentWebhook{}
 
 // Default implements admission.Defaulter
+//
+// Workspace and Deployment.Resources defaults used to be filled in here, but
+// now live on the CRD schema itself (LanguageAgentSpec.Workspace and
+// .Deployment each carry a +kubebuilder:default), so they apply even when
+// this webhook — or all webhooks — are disabled. See languageagent_types.go.
 func (h *LanguageAgentWebhook) Default(ctx context.Context, a *LanguageAgent) error {
-	// Default workspace storage when the agent doesn't specify it. Provisioning is an
-	// agent/cluster concern, so it is always defaulted here regardless of runtime or repository.
-	if a.Spec.Workspace == nil {
-		enabled := true
-		a.Spec.Workspace = &WorkspaceSpec{
-			Enabled:    &enabled,
-			Size:       "10Gi",
-			AccessMode: "ReadWriteOnce",
-			MountPath:  "/workspace",
-		}
-	}
-
 	// Default the repository vendor from the URL host so the controller can export the
-	// right CLI credential without sniffing hosts itself.
+	// right CLI credential without sniffing hosts itself. This can't be a CRD default:
+	// it derives from another field's value, not a static literal.
 	if a.Spec.Repository != nil && a.Spec.Repository.Vendor == "" {
 		a.Spec.Repository.Vendor = DefaultRepositoryVendor(a.Spec.Repository.URL)
-	}
-
-	// Default resources
-	if a.Spec.Deployment.Resources.Requests == nil && a.Spec.Deployment.Resources.Limits == nil {
-		a.Spec.Deployment.Resources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("100m"),
-				corev1.ResourceMemory: resource.MustParse("256Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1000m"),
-				corev1.ResourceMemory: resource.MustParse("2Gi"),
-			},
-		}
 	}
 
 	return nil

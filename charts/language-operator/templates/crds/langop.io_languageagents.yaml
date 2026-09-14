@@ -104,10 +104,21 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               deployment:
+                default:
+                  resources:
+                    limits:
+                      cpu: 1000m
+                      memory: 2Gi
+                    requests:
+                      cpu: 100m
+                      memory: 256Mi
                 description: |-
                   Deployment groups Kubernetes-specific pod and container configuration.
                   The name is historical: agents run as Argo Workflow pods, not Deployments,
                   so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.
+                  DeploymentSpec.Resources has no default of its own (it's shared with
+                  LanguageTool and LanguageCluster's gateway, which want different defaults),
+                  so the default lives here instead — applied without a defaulting webhook.
                 properties:
                   affinity:
                     description: Affinity defines pod affinity and anti-affinity rules.
@@ -7039,7 +7050,12 @@ spec:
                   type: object
                 type: array
               workspace:
-                description: Workspace defines persistent storage for the agent
+                default: {}
+                description: |-
+                  Workspace defines persistent storage for the agent. Provisioning is an
+                  agent/cluster concern, so it defaults to enabled even when omitted entirely —
+                  the empty-object default here lets WorkspaceSpec's own per-field defaults
+                  (enabled, size, accessMode, mountPath) apply without a defaulting webhook.
                 properties:
                   accessMode:
                     default: ReadWriteOnce

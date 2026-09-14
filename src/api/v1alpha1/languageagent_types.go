@@ -125,7 +125,11 @@ type LanguageAgentSpec struct {
 	// +optional
 	Instructions string `json:"instructions,omitempty"`
 
-	// Workspace defines persistent storage for the agent
+	// Workspace defines persistent storage for the agent. Provisioning is an
+	// agent/cluster concern, so it defaults to enabled even when omitted entirely —
+	// the empty-object default here lets WorkspaceSpec's own per-field defaults
+	// (enabled, size, accessMode, mountPath) apply without a defaulting webhook.
+	// +kubebuilder:default={}
 	// +optional
 	Workspace *WorkspaceSpec `json:"workspace,omitempty"`
 
@@ -152,6 +156,10 @@ type LanguageAgentSpec struct {
 	// Deployment groups Kubernetes-specific pod and container configuration.
 	// The name is historical: agents run as Argo Workflow pods, not Deployments,
 	// so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.
+	// DeploymentSpec.Resources has no default of its own (it's shared with
+	// LanguageTool and LanguageCluster's gateway, which want different defaults),
+	// so the default lives here instead — applied without a defaulting webhook.
+	// +kubebuilder:default={resources: {requests: {cpu: "100m", memory: "256Mi"}, limits: {cpu: "1000m", memory: "2Gi"}}}
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 

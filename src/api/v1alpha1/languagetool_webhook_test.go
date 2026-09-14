@@ -122,28 +122,32 @@ func TestLanguageToolWebhook_ValidateUpdate_RegistryAllowed(t *testing.T) {
 	}
 }
 
-func TestLanguageToolWebhook_Default_TransportAndStdioImage(t *testing.T) {
+// TestLanguageToolWebhook_Default_IsNoOp guards against regressing the fix in
+// #915: Transport, Deployment.Resources, and the stdio-tool Image workaround
+// all moved to the CRD schema (+kubebuilder:default on Transport and
+// Deployment, +kubebuilder:validation:XValidation relaxing Image's
+// requirement for transport=stdio — see languagetool_types.go), so they apply
+// even when this webhook — or all webhooks — are disabled. Default() must
+// leave the object untouched; real defaulting behavior is covered by the
+// envtest suite (suite_test.go), which exercises the actual CRD schema.
+func TestLanguageToolWebhook_Default_IsNoOp(t *testing.T) {
 	h := newToolWebhook(t, nil)
-
-	// Empty transport defaults to streamable-http.
-	tool := makeTool("ghcr.io/x/y:1")
-	if err := h.Default(context.Background(), tool); err != nil {
-		t.Fatalf("Default: %v", err)
-	}
-	if tool.Spec.Transport != "streamable-http" {
-		t.Errorf("transport = %q, want streamable-http", tool.Spec.Transport)
-	}
-
-	// stdio with no image gets the bridge image filled so the required field is satisfied.
-	stdio := &LanguageTool{
+	tool := &LanguageTool{
 		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "default"},
 		Spec:       LanguageToolSpec{Transport: "stdio", Stdio: &StdioServerSpec{Command: []string{"npx", "-y", "x"}}},
 	}
-	if err := h.Default(context.Background(), stdio); err != nil {
-		t.Fatalf("Default stdio: %v", err)
+	before := tool.DeepCopy()
+	if err := h.Default(context.Background(), tool); err != nil {
+		t.Fatalf("Default: %v", err)
 	}
-	if stdio.Spec.Image != DefaultMCPBridgeImage {
-		t.Errorf("stdio image = %q, want default bridge %q", stdio.Spec.Image, DefaultMCPBridgeImage)
+	if tool.Spec.Transport != before.Spec.Transport {
+		t.Errorf("Default() changed Transport: %q -> %q", before.Spec.Transport, tool.Spec.Transport)
+	}
+	if tool.Spec.Image != before.Spec.Image {
+		t.Errorf("Default() changed Image (CRD relaxation now handles this): %q -> %q", before.Spec.Image, tool.Spec.Image)
+	}
+	if tool.Spec.Deployment.Resources.Requests != nil || tool.Spec.Deployment.Resources.Limits != nil {
+		t.Errorf("expected Deployment.Resources to stay empty (CRD default now handles this), got %+v", tool.Spec.Deployment.Resources)
 	}
 }
 

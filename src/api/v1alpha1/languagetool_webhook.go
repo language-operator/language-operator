@@ -21,8 +21,6 @@ import (
 	"fmt"
 
 	"github.com/language-operator/language-operator/pkg/validation"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -44,31 +42,14 @@ var _ admission.Defaulter[*LanguageTool] = &LanguageToolWebhook{}
 var _ admission.Validator[*LanguageTool] = &LanguageToolWebhook{}
 
 // Default implements admission.Defaulter
+//
+// Transport, Deployment.Resources, and the stdio-tool Image requirement all
+// used to be filled in or worked around here. They now live on the CRD schema
+// itself — Transport and Deployment each carry a +kubebuilder:default, and
+// Image's requirement is relaxed to a +kubebuilder:validation:XValidation
+// rule that only requires it outside transport=stdio — so this webhook is no
+// longer needed for any of it and stays a no-op. See languagetool_types.go.
 func (h *LanguageToolWebhook) Default(ctx context.Context, t *LanguageTool) error {
-	if t.Spec.Transport == "" {
-		t.Spec.Transport = "streamable-http"
-	}
-
-	// stdio tools supply a command, not an image — the operator injects the bridge image at
-	// deploy time. Fill the required Image field so structural schema validation passes; the
-	// tool controller ignores spec.image for stdio.
-	if t.Spec.Transport == "stdio" && t.Spec.Image == "" {
-		t.Spec.Image = DefaultMCPBridgeImage
-	}
-
-	if t.Spec.Deployment.Resources.Requests == nil && t.Spec.Deployment.Resources.Limits == nil {
-		t.Spec.Deployment.Resources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("50m"),
-				corev1.ResourceMemory: resource.MustParse("128Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("200m"),
-				corev1.ResourceMemory: resource.MustParse("512Mi"),
-			},
-		}
-	}
-
 	return nil
 }
 
