@@ -8,6 +8,13 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.6 — 2026-09-13
+
+**Chores**
+- update runtime subchart pins
+
+---
+
 ## v0.3.5 — 2026-09-13
 
 **Features**
