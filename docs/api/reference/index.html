@@ -4365,8 +4365,8 @@ spec.selfConfigure allowlist before patching.</p>
 </tr>
 <tr>
 <td><code>workspace</code> <em><a href="#workspacespec">WorkspaceSpec</a></em></td>
-<td>Workspace defines persistent storage for the agent</td>
-<td></td>
+<td>Workspace defines persistent storage for the agent. Provisioning is an<br />agent/cluster concern, so it defaults to enabled even when omitted entirely —<br />the empty-object default here lets WorkspaceSpec's own per-field defaults<br />(enabled, size, accessMode, mountPath) apply without a defaulting webhook.</td>
+<td>{  }</td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
@@ -4389,8 +4389,8 @@ spec.selfConfigure allowlist before patching.</p>
 </tr>
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
-<td>Deployment groups Kubernetes-specific pod and container configuration.<br />The name is historical: agents run as Argo Workflow pods, not Deployments,<br />so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.</td>
-<td></td>
+<td>Deployment groups Kubernetes-specific pod and container configuration.<br />The name is historical: agents run as Argo Workflow pods, not Deployments,<br />so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.<br />DeploymentSpec.Resources has no default of its own (it's shared with<br />LanguageTool and LanguageCluster's gateway, which want different defaults),<br />so the default lives here instead — applied without a defaulting webhook.</td>
+<td>{ resources:map[limits:map[cpu:1000m memory:2Gi] requests:map[cpu:100m memory:256Mi]] }</td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
@@ -4981,9 +4981,9 @@ spec.selfConfigure allowlist before patching.</p>
 <tbody>
 <tr>
 <td><code>image</code> <em>string</em></td>
-<td>Image is the container image to run for this tool. For transport=stdio it is ignored —<br />the operator injects the MCP bridge image instead — and may be omitted (the defaulting<br />webhook fills it).</td>
+<td>Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead.</td>
 <td></td>
-<td>MinLength: 1 <br />Required: {} <br /></td>
+<td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>type</code> <em>string</em></td>
@@ -5017,8 +5017,8 @@ spec.selfConfigure allowlist before patching.</p>
 </tr>
 <tr>
 <td><code>deployment</code> <em><a href="#deploymentspec">DeploymentSpec</a></em></td>
-<td>Deployment groups Kubernetes-specific pod and container configuration.</td>
-<td></td>
+<td>Deployment groups Kubernetes-specific pod and container configuration.<br />DeploymentSpec.Resources has no default of its own (it's shared with<br />LanguageAgent and LanguageCluster's gateway, which want different defaults),<br />so the default lives here instead — applied without a defaulting webhook.</td>
+<td>{ resources:map[limits:map[cpu:200m memory:512Mi] requests:map[cpu:50m memory:128Mi]] }</td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
