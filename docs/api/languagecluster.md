@@ -174,7 +174,7 @@ spec:
     enabled: true
     className: nginx
     tls:
-      enabled: true
+      mode: auto
 ```
 
 **`spec.ingress` fields:**
@@ -184,15 +184,16 @@ spec:
 | `enabled` | *bool | Create an external Ingress for the gateway (default: false — gateway is in-cluster only; requires `spec.domain` when set to true) |
 | `className` | string | IngressClass name — per-cluster override of `config.gateway.ingressClassName` |
 | `tls` | *IngressTLSConfig | TLS configuration (see below) |
+| `externalScheme` | string | Public-facing scheme (`http` or `https`) used to build OIDC issuer URLs and OAuth redirect URIs, independent of whether the in-cluster Ingress carries TLS. Defaults to the operator's `config.tls.externalScheme` (`https`). Set this when TLS terminates upstream of the cluster (e.g. an external load balancer or reverse proxy) so those URLs still reflect what the outside world sees. |
 
 **`spec.ingress.tls` fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `enabled` | *bool | Enable TLS on the Ingress (default: true) |
-| `secretName` | string | Name of an existing TLS Secret. When set, the operator uses this secret directly and skips cert-manager integration. |
+| `mode` | string | `auto` (default), `secret`, or `none`. `auto` uses the operator's cert-manager issuer if one is configured, otherwise creates no TLS block at all — the right behavior when TLS terminates upstream of the cluster. `secret` always uses `secretName`. `none` never creates a TLS block, even if an issuer is configured. When omitted, `secret` is inferred if `secretName` is set, otherwise `auto`. |
+| `secretName` | string | Name of an existing TLS Secret (bring-your-own certificate). Required when `mode: secret`. |
 
-cert-manager issuer selection is operator-wide, not per-cluster. Configure it via the operator Helm chart's `config.tls.certificateIssuerName` and `config.tls.certificateIssuerKind` values.
+cert-manager issuer selection is operator-wide, not per-cluster. Configure it via the operator Helm chart's `config.tls.certificateIssuerName` and `config.tls.certificateIssuerKind` values. With no issuer configured and no `secretName`, the Ingress is created without a `tls` block — no cert-manager installation is required.
 
 **Example — manual TLS secret:**
 
@@ -204,14 +205,24 @@ spec:
       secretName: gateway-tls
 ```
 
-**Example — disable TLS:**
+**Example — no cert-manager, TLS terminated upstream:**
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    enabled: true
+    externalScheme: https # the edge proxy serves https; the in-cluster Ingress stays plain HTTP
+```
+
+**Example — never create a TLS block, even if an issuer is configured:**
 
 ```yaml
 spec:
   domain: agents.example.com
   ingress:
     tls:
-      enabled: false
+      mode: none
 ```
 
 ### Authentication

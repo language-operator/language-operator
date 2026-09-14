@@ -47,6 +47,7 @@ type LanguageAgentReconciler struct {
 	DefaultStorageClassName    string
 	DefaultTLSIssuerName       string
 	DefaultTLSIssuerKind       string
+	DefaultExternalScheme      string
 	IngressControllerNamespace string
 	OAuth2ProxyImage           string
 	CNICapabilities            *cni.CNICapabilities

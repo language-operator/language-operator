@@ -304,7 +304,7 @@ func (r *LanguageAgentReconciler) reconcileWebhooks(ctx context.Context, agent *
 		SetCondition(&agent.Status.Conditions, langopv1alpha1.ConditionWebhookRouteReady, metav1.ConditionTrue, langopv1alpha1.ReasonWebhookRouteReady, routeReadyMsg, agent.Generation)
 
 		// Only populate WebhookURLs when route is ready
-		webhookURL := fmt.Sprintf("https://%s", hostname)
+		webhookURL := fmt.Sprintf("%s://%s", publicScheme(cluster, r.DefaultExternalScheme), hostname)
 		if agent.Status.WebhookURLs == nil || len(agent.Status.WebhookURLs) == 0 || agent.Status.WebhookURLs[0] != webhookURL {
 			agent.Status.WebhookURLs = []string{webhookURL}
 			log.Info("Updated webhook URL in status", "url", webhookURL)
@@ -381,36 +381,22 @@ func (r *LanguageAgentReconciler) reconcileIngress(ctx context.Context, agent *l
 
 		// Apply TLS and IngressClass from cluster config with operator-level defaults.
 		ingressClass := r.DefaultIngressClassName
-		tlsEnabled := r.DefaultTLSIssuerName != ""
-		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
-			if cluster.Spec.Ingress.TLS.Enabled != nil {
-				tlsEnabled = *cluster.Spec.Ingress.TLS.Enabled
-			} else {
-				tlsEnabled = true
+		var tlsCfg *langopv1alpha1.IngressTLSConfig
+		if cluster.Spec.Ingress != nil {
+			tlsCfg = cluster.Spec.Ingress.TLS
+		}
+		tlsBlock, tlsAnnotations, skippedNoIssuer := resolveIngressTLS(tlsCfg, []string{hostname}, r.DefaultTLSIssuerName, r.DefaultTLSIssuerKind, GenerateTLSSecretName(agent.Name))
+		if len(tlsAnnotations) > 0 {
+			if ingress.Annotations == nil {
+				ingress.Annotations = make(map[string]string)
+			}
+			for k, v := range tlsAnnotations {
+				ingress.Annotations[k] = v
 			}
 		}
-		if tlsEnabled {
-			secretName := ""
-			if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
-				secretName = cluster.Spec.Ingress.TLS.SecretName
-			}
-			if secretName == "" {
-				if r.DefaultTLSIssuerName != "" {
-					if ingress.Annotations == nil {
-						ingress.Annotations = make(map[string]string)
-					}
-					kind := r.DefaultTLSIssuerKind
-					if kind == "" {
-						kind = "ClusterIssuer"
-					}
-					annotationKey := "cert-manager.io/" + certManagerIssuerAnnotationSuffix(kind)
-					ingress.Annotations[annotationKey] = r.DefaultTLSIssuerName
-				}
-				secretName = GenerateTLSSecretName(agent.Name)
-			}
-			ingress.Spec.TLS = []networkingv1.IngressTLS{
-				{Hosts: []string{hostname}, SecretName: secretName},
-			}
+		ingress.Spec.TLS = tlsBlock
+		if skippedNoIssuer {
+			r.EventManager.RecordValidationFailed(agent, "spec.ingress.tls has no secretName and no TLS issuer is configured; the agent Ingress will be created without TLS")
 		}
 		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.ClassName != "" {
 			ingressClass = cluster.Spec.Ingress.ClassName
@@ -494,7 +480,7 @@ func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, ag
 		return nil, nil
 	}
 
-	issuerURL := dexIssuerURL(cluster)
+	issuerURL := dexIssuerURL(cluster, r.DefaultExternalScheme)
 	if issuerURL == "" {
 		return nil, fmt.Errorf("cannot build oauth2-proxy sidecar: auth is enabled but no OIDC issuer URL could be determined (set spec.domain or spec.auth.oidc.externalIssuerURL)")
 	}
@@ -513,7 +499,7 @@ func (r *LanguageAgentReconciler) buildOAuthProxySidecar(ctx context.Context, ag
 	// Upstream is localhost — no network hop, no NetworkPolicy needed.
 	upstream := fmt.Sprintf("http://localhost:%d", agentIngressPort(agent))
 	hostname := fmt.Sprintf("%s.%s", agent.Name, cluster.Spec.Domain)
-	redirectURL := fmt.Sprintf("https://%s/oauth2/callback", hostname)
+	redirectURL := fmt.Sprintf("%s://%s/oauth2/callback", publicScheme(cluster, r.DefaultExternalScheme), hostname)
 
 	emailDomain := "*"
 	if cluster.Spec.Auth.OIDC != nil && cluster.Spec.Auth.OIDC.EmailDomain != "" {

@@ -224,11 +224,7 @@ func dexFrontendExtra(cluster *langopv1alpha1.LanguageCluster) map[string]string
 // Each auth-enabled agent gets its own static client so the grant page displays
 // the agent name rather than a generic "Language Operator" label.
 func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.LanguageCluster, clientSecret string, agents []langopv1alpha1.LanguageAgent) (string, error) {
-	scheme := "https"
-	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil &&
-		cluster.Spec.Ingress.TLS.Enabled != nil && !*cluster.Spec.Ingress.TLS.Enabled {
-		scheme = "http"
-	}
+	scheme := publicScheme(cluster, r.DefaultExternalScheme)
 	issuer := fmt.Sprintf("%s://auth.%s", scheme, cluster.Spec.Domain)
 
 	// Build one static client per agent so the OAuth grant page displays the
@@ -236,7 +232,7 @@ func (r *LanguageClusterReconciler) buildDexConfigYAML(cluster *langopv1alpha1.L
 	// across all agents (the ConfigMap is namespace-scoped, access gated by RBAC).
 	staticClients := make([]dexStaticClient, 0, len(agents))
 	for _, agent := range agents {
-		redirectURI := fmt.Sprintf("https://%s.%s/oauth2/callback", agent.Name, cluster.Spec.Domain)
+		redirectURI := fmt.Sprintf("%s://%s.%s/oauth2/callback", scheme, agent.Name, cluster.Spec.Domain)
 		staticClients = append(staticClients, dexStaticClient{
 			ID:           agent.Name,
 			Secret:       clientSecret,
@@ -467,28 +463,22 @@ func (r *LanguageClusterReconciler) reconcileDexIngress(ctx context.Context, clu
 			},
 		}
 
-		tlsEnabled := r.DefaultTLSIssuerName != ""
-		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
-			if cluster.Spec.Ingress.TLS.Enabled != nil {
-				tlsEnabled = *cluster.Spec.Ingress.TLS.Enabled
-			} else {
-				tlsEnabled = true
+		var tlsCfg *langopv1alpha1.IngressTLSConfig
+		if cluster.Spec.Ingress != nil {
+			tlsCfg = cluster.Spec.Ingress.TLS
+		}
+		tlsBlock, tlsAnnotations, skippedNoIssuer := resolveIngressTLS(tlsCfg, []string{hostname}, r.DefaultTLSIssuerName, r.DefaultTLSIssuerKind, "auth-tls")
+		if len(tlsAnnotations) > 0 {
+			if ingress.Annotations == nil {
+				ingress.Annotations = make(map[string]string)
+			}
+			for k, v := range tlsAnnotations {
+				ingress.Annotations[k] = v
 			}
 		}
-		if tlsEnabled {
-			if r.DefaultTLSIssuerName != "" {
-				if ingress.Annotations == nil {
-					ingress.Annotations = make(map[string]string)
-				}
-				kind := r.DefaultTLSIssuerKind
-				if kind == "" {
-					kind = "ClusterIssuer"
-				}
-				ingress.Annotations["cert-manager.io/"+certManagerIssuerAnnotationSuffix(kind)] = r.DefaultTLSIssuerName
-			}
-			ingress.Spec.TLS = []networkingv1.IngressTLS{
-				{Hosts: []string{hostname}, SecretName: "auth-tls"},
-			}
+		ingress.Spec.TLS = tlsBlock
+		if skippedNoIssuer {
+			r.EventManager.RecordValidationFailed(cluster, "spec.ingress.tls has no secretName and no TLS issuer is configured; the Dex Ingress will be created without TLS")
 		}
 		if ingressClass != "" {
 			ingress.Spec.IngressClassName = &ingressClass
@@ -548,8 +538,10 @@ func agentAuthEnabled(ctx context.Context, c client.Client, agent *langopv1alpha
 }
 
 // dexIssuerURL returns the Dex OIDC issuer URL for the given cluster.
-// Falls back to the external issuer URL if configured.
-func dexIssuerURL(cluster *langopv1alpha1.LanguageCluster) string {
+// Falls back to the external issuer URL if configured. defaultScheme is the
+// operator-level --external-scheme default, used when the cluster does not
+// override spec.ingress.externalScheme.
+func dexIssuerURL(cluster *langopv1alpha1.LanguageCluster, defaultScheme string) string {
 	if cluster.Spec.Auth == nil {
 		return ""
 	}
@@ -559,12 +551,7 @@ func dexIssuerURL(cluster *langopv1alpha1.LanguageCluster) string {
 	if cluster.Spec.Domain == "" {
 		return ""
 	}
-	scheme := "https"
-	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil &&
-		cluster.Spec.Ingress.TLS.Enabled != nil && !*cluster.Spec.Ingress.TLS.Enabled {
-		scheme = "http"
-	}
-	return fmt.Sprintf("%s://auth.%s", scheme, cluster.Spec.Domain)
+	return fmt.Sprintf("%s://auth.%s", publicScheme(cluster, defaultScheme), cluster.Spec.Domain)
 }
 
 // usesExternalOIDCIssuer reports whether the cluster is configured to use an

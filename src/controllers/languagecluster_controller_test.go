@@ -29,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"k8s.io/client-go/tools/record"
 )
 
 func clusterRequest(name string) ctrl.Request {
@@ -1266,7 +1268,7 @@ func TestLanguageClusterController_GatewayIngressCreation(t *testing.T) {
 	ingress := &networkingv1.Ingress{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, ingress))
 	require.NotEmpty(t, ingress.Spec.Rules)
-	assert.Equal(t, "example.com", ingress.Spec.Rules[0].Host)
+	assert.Equal(t, "gateway.example.com", ingress.Spec.Rules[0].Host)
 
 	updated := &langopv1alpha1.LanguageCluster{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: cluster.Name}, updated))
@@ -1966,7 +1968,7 @@ func TestValidateDNS_FailureSetsWildcardDNSMissing(t *testing.T) {
 func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	const domain = "example.com"
-	const gatewayHost = "example.com"
+	const gatewayHost = "gateway.example.com"
 
 	reconcileCluster := func(t *testing.T, cluster *langopv1alpha1.LanguageCluster, rOpts ...func(*LanguageClusterReconciler)) *networkingv1.Ingress {
 		t.Helper()
@@ -1981,6 +1983,7 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 		t.Cleanup(func() { close(dnsUnblock) })
 		r := &LanguageClusterReconciler{
 			Client: fakeClient, Scheme: scheme, Log: logr.Discard(),
+			EventManager: events.NewEventManager(&record.FakeRecorder{}),
 			DNSLookup: func(ctx context.Context, host string) error {
 				select {
 				case <-dnsUnblock:
@@ -2044,15 +2047,25 @@ func TestLanguageClusterController_GatewayIngressTLS(t *testing.T) {
 		assert.Equal(t, "gateway-tls", ing.Spec.TLS[0].SecretName)
 	})
 
-	t.Run("tls_disabled", func(t *testing.T) {
-		disabled := false
-		cluster := gen.LanguageCluster("tls-disabled",
+	t.Run("mode_none", func(t *testing.T) {
+		cluster := gen.LanguageCluster("tls-none",
 			gen.SetClusterDomain(domain),
 			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
-				Enabled: &disabled,
+				Mode: langopv1alpha1.IngressTLSModeNone,
 			}))
+		ing := reconcileCluster(t, cluster, func(r *LanguageClusterReconciler) {
+			// Even with an issuer configured, mode: none never emits a TLS block.
+			r.DefaultTLSIssuerName = "letsencrypt"
+		})
+		assert.Empty(t, ing.Spec.TLS, "TLS should not be configured when Mode=none")
+	})
+
+	t.Run("no_issuer_no_secret", func(t *testing.T) {
+		cluster := gen.LanguageCluster("tls-no-issuer",
+			gen.SetClusterDomain(domain),
+			gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
 		ing := reconcileCluster(t, cluster)
-		assert.Empty(t, ing.Spec.TLS, "TLS should not be configured when Enabled=false")
+		assert.Empty(t, ing.Spec.TLS, "no TLS block should be created with no issuer and no secretName — nothing would populate the Secret")
 	})
 }
 

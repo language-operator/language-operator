@@ -240,10 +240,18 @@ config:
 
   tls:
     # cert-manager issuer name for gateway and agent Ingress TLS certificates.
-    # Set to "" to disable cert-manager integration (e.g. when supplying certificates manually).
+    # Set to "" to disable cert-manager integration (e.g. when supplying certificates manually,
+    # or when TLS terminates upstream of the cluster and no in-cluster Ingress TLS is needed at all).
     certificateIssuerName: ""
     # Kind of the cert-manager issuer: ClusterIssuer (default) or Issuer.
     certificateIssuerKind: "ClusterIssuer"
+    # Public-facing scheme (http or https) used to build OIDC issuer URLs and OAuth
+    # redirect URIs. Independent of in-cluster Ingress TLS — set to "https" (the
+    # default) whenever the outside world reaches the cluster over TLS, even if
+    # that TLS terminates upstream (e.g. at an external load balancer or reverse
+    # proxy) rather than at the in-cluster Ingress. Can be overridden per-cluster
+    # via LanguageCluster spec.ingress.externalScheme.
+    externalScheme: "https"
 
   # Watch configuration
   watch:

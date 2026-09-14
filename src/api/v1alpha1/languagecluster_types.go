@@ -367,25 +367,56 @@ type IngressConfig struct {
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// TLS configuration for agent webhooks
+	// TLS configures how the gateway, agent, and Dex Ingress resources for this
+	// cluster obtain their TLS certificate.
 	// +optional
 	TLS *IngressTLSConfig `json:"tls,omitempty"`
 
 	// ClassName specifies the IngressClass to use (maps to spec.ingressClassName on the Ingress object).
 	// +optional
 	ClassName string `json:"className,omitempty"`
+
+	// ExternalScheme is the public-facing scheme ("http" or "https") used to build
+	// OIDC issuer URLs and OAuth redirect URIs. It is independent of whether the
+	// in-cluster Ingress carries a TLS block: set this when TLS terminates upstream
+	// of the cluster (e.g. at an external load balancer or reverse proxy) so those
+	// URLs still reflect what the outside world actually sees. Defaults to the
+	// operator-level --external-scheme flag ("https" unless overridden).
+	// +kubebuilder:validation:Enum=http;https
+	// +optional
+	ExternalScheme string `json:"externalScheme,omitempty"`
 }
 
-// IngressTLSConfig defines TLS configuration
-type IngressTLSConfig struct {
-	// Enabled controls whether TLS is enabled for webhooks.
-	// Defaults to true; set to false to disable TLS.
-	// +kubebuilder:default=true
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+// Ingress TLS modes for IngressTLSConfig.Mode.
+const (
+	// IngressTLSModeAuto uses the operator's configured cert-manager issuer, if any.
+	// With no issuer configured, no TLS block is created — the correct behavior when
+	// TLS terminates upstream of the cluster.
+	IngressTLSModeAuto = "auto"
+	// IngressTLSModeSecret always references SecretName (bring-your-own certificate),
+	// with or without an issuer configured.
+	IngressTLSModeSecret = "secret"
+	// IngressTLSModeNone never creates a TLS block, even if an issuer is configured.
+	IngressTLSModeNone = "none"
+)
 
-	// SecretName is the name of an existing TLS secret (bring-your-own certificate).
-	// When set, cert-manager integration is skipped and this secret is used directly.
+// IngressTLSConfig configures how an Ingress obtains its TLS certificate.
+type IngressTLSConfig struct {
+	// Mode controls how TLS is configured for this Ingress:
+	//   - "auto": use the operator's configured cert-manager issuer if one is
+	//     set; otherwise no TLS block is created — the correct behavior when
+	//     TLS terminates upstream of the cluster.
+	//   - "secret": always reference SecretName (bring-your-own certificate),
+	//     with or without an issuer configured.
+	//   - "none": never create a TLS block, even if an issuer is configured.
+	// When omitted, Mode is inferred: "secret" if SecretName is set, otherwise
+	// "auto".
+	// +kubebuilder:validation:Enum=auto;secret;none
+	// +optional
+	Mode string `json:"mode,omitempty"`
+
+	// SecretName is the name of an existing TLS secret. Required when Mode is
+	// "secret"; ignored otherwise.
 	// +optional
 	SecretName string `json:"secretName,omitempty"`
 }
