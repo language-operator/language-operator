@@ -56,13 +56,13 @@ type ToolProperty struct {
 const DefaultMCPBridgeImage = "ghcr.io/language-operator/mcp-bridge:latest"
 
 // LanguageToolSpec defines the desired state of LanguageTool
+// +kubebuilder:validation:XValidation:rule="self.transport == 'stdio' || size(self.image) > 0",message="spec.image is required unless spec.transport is stdio"
 type LanguageToolSpec struct {
-	// Image is the container image to run for this tool. For transport=stdio it is ignored —
-	// the operator injects the MCP bridge image instead — and may be omitted (the defaulting
-	// webhook fills it).
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	Image string `json:"image"`
+	// Image is the container image to run for this tool. Required unless
+	// transport=stdio, where it is ignored entirely — the operator injects the
+	// MCP bridge image instead.
+	// +optional
+	Image string `json:"image,omitempty"`
 
 	// Type specifies the tool protocol type. Only "mcp" is currently implemented.
 	// +kubebuilder:validation:Enum=mcp
@@ -99,6 +99,10 @@ type LanguageToolSpec struct {
 	Port int32 `json:"port,omitempty"`
 
 	// Deployment groups Kubernetes-specific pod and container configuration.
+	// DeploymentSpec.Resources has no default of its own (it's shared with
+	// LanguageAgent and LanguageCluster's gateway, which want different defaults),
+	// so the default lives here instead — applied without a defaulting webhook.
+	// +kubebuilder:default={resources: {requests: {cpu: "50m", memory: "128Mi"}, limits: {cpu: "200m", memory: "512Mi"}}}
 	// +optional
 	Deployment DeploymentSpec `json:"deployment,omitempty"`
 

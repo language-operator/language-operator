@@ -19,6 +19,8 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -189,7 +191,13 @@ func TestWebhookClusterMembership(t *testing.T) {
 		}
 	})
 
-	t.Run("webhook defaults workspace when not set", func(t *testing.T) {
+	// These two default sources are CRD schema defaults (+kubebuilder:default on
+	// LanguageAgentSpec.Workspace and .Deployment, see languageagent_types.go),
+	// not webhook logic — LanguageAgentWebhook.Default no longer touches either
+	// field (#915). Exercising them here, against the real API server with the
+	// webhook still registered, proves the CRD is what's responsible: the
+	// webhook has nothing left to contribute for these fields.
+	t.Run("CRD defaults workspace when not set", func(t *testing.T) {
 		agent := gen.LanguageAgent("ws-defaulted-agent", "webhook-test-cluster",
 			gen.SetAgentImage("ghcr.io/test/agent:latest"),
 		)
@@ -210,11 +218,59 @@ func TestWebhookClusterMembership(t *testing.T) {
 		if created.Spec.Workspace == nil {
 			t.Fatal("expected workspace to be defaulted, got nil")
 		}
-		if created.Spec.Workspace.Enabled != nil && !*created.Spec.Workspace.Enabled {
+		if created.Spec.Workspace.Enabled == nil || !*created.Spec.Workspace.Enabled {
 			t.Error("expected workspace.enabled=true")
 		}
-		if created.Spec.Workspace.Size == "" {
-			t.Error("expected workspace.size to be set")
+		if created.Spec.Workspace.Size != "10Gi" {
+			t.Errorf("expected workspace.size=10Gi, got %q", created.Spec.Workspace.Size)
+		}
+		if created.Spec.Workspace.AccessMode != "ReadWriteOnce" {
+			t.Errorf("expected workspace.accessMode=ReadWriteOnce, got %q", created.Spec.Workspace.AccessMode)
+		}
+		if created.Spec.Workspace.MountPath != "/workspace" {
+			t.Errorf("expected workspace.mountPath=/workspace, got %q", created.Spec.Workspace.MountPath)
+		}
+	})
+
+	t.Run("CRD defaults deployment resources when not set", func(t *testing.T) {
+		// Built as raw unstructured JSON, not the typed LanguageAgent struct: Go's
+		// encoding/json never omits a non-pointer struct field (DeploymentSpec has
+		// no omitempty-eligible zero value), so a typed k8sClient.Create would
+		// always send "deployment": {} — never truly absent — and the CRD default
+		// on the Deployment field would never fire. A real kubectl apply of a YAML
+		// manifest that simply never mentions "deployment" hits this same
+		// genuinely-absent path, which is what this test needs to exercise.
+		agent := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "langop.io/v1alpha1",
+			"kind":       "LanguageAgent",
+			"metadata": map[string]interface{}{
+				"name":      "resources-defaulted-agent",
+				"namespace": "webhook-test-cluster",
+			},
+			"spec": map[string]interface{}{
+				"image": "ghcr.io/test/agent:latest",
+			},
+		}}
+
+		if err := k8sClient.Create(ctx, agent); err != nil {
+			t.Fatalf("create agent: %v", err)
+		}
+		t.Cleanup(func() { _ = k8sClient.Delete(ctx, agent) })
+
+		created := &langopv1alpha1.LanguageAgent{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: "resources-defaulted-agent", Namespace: "webhook-test-cluster",
+		}, created); err != nil {
+			t.Fatalf("get agent: %v", err)
+		}
+
+		limits := created.Spec.Deployment.Resources.Limits
+		requests := created.Spec.Deployment.Resources.Requests
+		if requests.Cpu().Cmp(resource.MustParse("100m")) != 0 || requests.Memory().Cmp(resource.MustParse("256Mi")) != 0 {
+			t.Errorf("expected requests cpu=100m memory=256Mi, got cpu=%s memory=%s", requests.Cpu(), requests.Memory())
+		}
+		if limits.Cpu().Cmp(resource.MustParse("1000m")) != 0 || limits.Memory().Cmp(resource.MustParse("2Gi")) != 0 {
+			t.Errorf("expected limits cpu=1000m memory=2Gi, got cpu=%s memory=%s", limits.Cpu(), limits.Memory())
 		}
 	})
 }
@@ -263,6 +319,72 @@ func TestWebhookClusterMembershipTool(t *testing.T) {
 		}
 	})
 
+	// These are all CRD schema rules now (+kubebuilder:default on
+	// LanguageToolSpec.Deployment, and a +kubebuilder:validation:XValidation
+	// relaxing Image's requirement for transport=stdio — see
+	// languagetool_types.go), not webhook logic — LanguageToolWebhook.Default
+	// is a no-op (#915). Exercising them here, against the real API server
+	// with the webhook still registered, proves the CRD is what's responsible.
+	t.Run("CRD defaults deployment resources when not set", func(t *testing.T) {
+		// Raw unstructured JSON — see the comment on the equivalent LanguageAgent
+		// subtest above for why the typed client can't exercise this path.
+		tool := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "langop.io/v1alpha1",
+			"kind":       "LanguageTool",
+			"metadata": map[string]interface{}{
+				"name":      "resources-defaulted-tool",
+				"namespace": "webhook-tool-cluster",
+			},
+			"spec": map[string]interface{}{
+				"image": "ghcr.io/test/tool:latest",
+			},
+		}}
+
+		if err := k8sClient.Create(ctx, tool); err != nil {
+			t.Fatalf("create tool: %v", err)
+		}
+		t.Cleanup(func() { _ = k8sClient.Delete(ctx, tool) })
+
+		created := &langopv1alpha1.LanguageTool{}
+		if err := k8sClient.Get(ctx, types.NamespacedName{
+			Name: "resources-defaulted-tool", Namespace: "webhook-tool-cluster",
+		}, created); err != nil {
+			t.Fatalf("get tool: %v", err)
+		}
+
+		limits := created.Spec.Deployment.Resources.Limits
+		requests := created.Spec.Deployment.Resources.Requests
+		if requests.Cpu().Cmp(resource.MustParse("50m")) != 0 || requests.Memory().Cmp(resource.MustParse("128Mi")) != 0 {
+			t.Errorf("expected requests cpu=50m memory=128Mi, got cpu=%s memory=%s", requests.Cpu(), requests.Memory())
+		}
+		if limits.Cpu().Cmp(resource.MustParse("200m")) != 0 || limits.Memory().Cmp(resource.MustParse("512Mi")) != 0 {
+			t.Errorf("expected limits cpu=200m memory=512Mi, got cpu=%s memory=%s", limits.Cpu(), limits.Memory())
+		}
+	})
+
+	t.Run("stdio tool with no image is accepted", func(t *testing.T) {
+		tool := gen.LanguageTool("stdio-tool", "webhook-tool-cluster",
+			gen.SetToolImage(""),
+			gen.SetToolTransport("stdio"),
+			gen.SetToolStdioCommand("npx", "-y", "some-mcp-server"),
+		)
+		if err := k8sClient.Create(ctx, tool); err != nil {
+			t.Errorf("expected success for stdio tool with no image, got: %v", err)
+		} else {
+			t.Cleanup(func() { _ = k8sClient.Delete(ctx, tool) })
+		}
+	})
+
+	t.Run("non-stdio tool with no image is rejected", func(t *testing.T) {
+		tool := gen.LanguageTool("no-image-tool", "webhook-tool-cluster",
+			gen.SetToolImage(""),
+		)
+		err := k8sClient.Create(ctx, tool)
+		if err == nil {
+			t.Error("expected admission to reject a non-stdio tool with no image, but it was created")
+			_ = k8sClient.Delete(ctx, tool)
+		}
+	})
 }
 
 // TestWebhookClusterMembershipModel verifies that the admission webhook enforces

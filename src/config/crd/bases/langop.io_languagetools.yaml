@@ -58,8 +58,19 @@ spec:
             description: LanguageToolSpec defines the desired state of LanguageTool
             properties:
               deployment:
-                description: Deployment groups Kubernetes-specific pod and container
-                  configuration.
+                default:
+                  resources:
+                    limits:
+                      cpu: 200m
+                      memory: 512Mi
+                    requests:
+                      cpu: 50m
+                      memory: 128Mi
+                description: |-
+                  Deployment groups Kubernetes-specific pod and container configuration.
+                  DeploymentSpec.Resources has no default of its own (it's shared with
+                  LanguageAgent and LanguageCluster's gateway, which want different defaults),
+                  so the default lives here instead — applied without a defaulting webhook.
                 properties:
                   affinity:
                     description: Affinity defines pod affinity and anti-affinity rules.
@@ -6295,10 +6306,9 @@ spec:
                 type: string
               image:
                 description: |-
-                  Image is the container image to run for this tool. For transport=stdio it is ignored —
-                  the operator injects the MCP bridge image instead — and may be omitted (the defaulting
-                  webhook fills it).
-                minLength: 1
+                  Image is the container image to run for this tool. Required unless
+                  transport=stdio, where it is ignored entirely — the operator injects the
+                  MCP bridge image instead.
                 type: string
               networkPolicies:
                 description: |-
@@ -6682,9 +6692,10 @@ spec:
                 enum:
                 - mcp
                 type: string
-            required:
-            - image
             type: object
+            x-kubernetes-validations:
+            - message: spec.image is required unless spec.transport is stdio
+              rule: self.transport == 'stdio' || size(self.image) > 0
           status:
             description: LanguageToolStatus defines the observed state of LanguageTool
             properties:

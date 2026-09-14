@@ -26,181 +26,29 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func TestLanguageAgentDefault(t *testing.T) {
-	tests := []struct {
-		name     string
-		agent    *LanguageAgent
-		expected *WorkspaceSpec
-	}{
-		{
-			name: "workspace defaults to enabled when nil",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Image: "test:latest",
-					Models: []ModelReference{
-						{Name: "test-model"},
-					},
-					Instructions: "test instructions",
-					// Workspace is nil
-				},
-			},
-			expected: &WorkspaceSpec{
-				Enabled:    ptr.To(true),
-				Size:       "10Gi",
-				AccessMode: "ReadWriteOnce",
-				MountPath:  "/workspace",
-			},
-		},
-		{
-			name: "workspace not overridden when explicitly set",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Image: "test:latest",
-					Models: []ModelReference{
-						{Name: "test-model"},
-					},
-					Instructions: "test instructions",
-					Workspace: &WorkspaceSpec{
-						Enabled:    ptr.To(false),
-						Size:       "5Gi",
-						AccessMode: "ReadWriteMany",
-						MountPath:  "/custom",
-					},
-				},
-			},
-			expected: &WorkspaceSpec{
-				Enabled:    ptr.To(false),
-				Size:       "5Gi",
-				AccessMode: "ReadWriteMany",
-				MountPath:  "/custom",
-			},
-		},
-		{
-			name: "workspace partially specified gets defaults applied by CRD",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Image: "test:latest",
-					Models: []ModelReference{
-						{Name: "test-model"},
-					},
-					Instructions: "test instructions",
-					Workspace: &WorkspaceSpec{
-						Size: "20Gi",
-						// Other fields will get CRD defaults
-					},
-				},
-			},
-			expected: &WorkspaceSpec{
-				Size: "20Gi",
-				// enabled, accessMode, mountPath would be set by CRD defaults
-			},
-		},
-		{
-			name: "workspace defaulted even when a runtime is set",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-agent",
-					Namespace: "default",
-				},
-				Spec: LanguageAgentSpec{
-					Runtime:      "claude-code",
-					Instructions: "test instructions",
-					// Workspace is nil; provisioning is an agent concern, not the runtime's
-				},
-			},
-			expected: &WorkspaceSpec{
-				Enabled:    ptr.To(true),
-				Size:       "10Gi",
-				AccessMode: "ReadWriteOnce",
-				MountPath:  "/workspace",
-			},
+// TestLanguageAgentDefault_NoLongerTouchesWorkspaceOrResources guards against
+// regressing the fix in #915: Workspace and Deployment.Resources defaults were
+// moved to the CRD schema (+kubebuilder:default on LanguageAgentSpec.Workspace
+// and .Deployment, see languageagent_types.go) so they apply even when this
+// webhook — or all webhooks — are disabled. Default() itself must leave both
+// alone; real defaulting behavior for them is covered by the envtest suite
+// (suite_test.go), which exercises the actual CRD schema.
+func TestLanguageAgentDefault_NoLongerTouchesWorkspaceOrResources(t *testing.T) {
+	agent := &LanguageAgent{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-agent", Namespace: "default"},
+		Spec: LanguageAgentSpec{
+			Image:        "test:latest",
+			Instructions: "test instructions",
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Call the Default method via the webhook handler (nil client: Default makes no API calls)
-			_ = (&LanguageAgentWebhook{}).Default(context.Background(), tt.agent)
-
-			// Check workspace was set appropriately
-			if tt.agent.Spec.Workspace == nil {
-				t.Errorf("Expected workspace to be set, got nil")
-				return
-			}
-
-			// For the first test case, verify all fields
-			if tt.name == "workspace defaults to enabled when nil" {
-				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
-				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
-				if gotEnabled != wantEnabled {
-					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
-				}
-				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
-					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
-				}
-				if tt.agent.Spec.Workspace.AccessMode != tt.expected.AccessMode {
-					t.Errorf("Expected AccessMode=%s, got %s", tt.expected.AccessMode, tt.agent.Spec.Workspace.AccessMode)
-				}
-				if tt.agent.Spec.Workspace.MountPath != tt.expected.MountPath {
-					t.Errorf("Expected MountPath=%s, got %s", tt.expected.MountPath, tt.agent.Spec.Workspace.MountPath)
-				}
-			}
-
-			// For the second test case, verify values weren't overridden
-			if tt.name == "workspace not overridden when explicitly set" {
-				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
-				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
-				if gotEnabled != wantEnabled {
-					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
-				}
-				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
-					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
-				}
-				if tt.agent.Spec.Workspace.AccessMode != tt.expected.AccessMode {
-					t.Errorf("Expected AccessMode=%s, got %s", tt.expected.AccessMode, tt.agent.Spec.Workspace.AccessMode)
-				}
-				if tt.agent.Spec.Workspace.MountPath != tt.expected.MountPath {
-					t.Errorf("Expected MountPath=%s, got %s", tt.expected.MountPath, tt.agent.Spec.Workspace.MountPath)
-				}
-			}
-
-			// For the third test case, verify workspace wasn't replaced
-			if tt.name == "workspace partially specified gets defaults applied by CRD" {
-				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
-					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
-				}
-			}
-
-			// Workspace is provisioned for the agent regardless of any referenced runtime.
-			if tt.name == "workspace defaulted even when a runtime is set" {
-				gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
-				wantEnabled := tt.expected.Enabled != nil && *tt.expected.Enabled
-				if gotEnabled != wantEnabled {
-					t.Errorf("Expected Enabled=%v, got %v", wantEnabled, gotEnabled)
-				}
-				if tt.agent.Spec.Workspace.Size != tt.expected.Size {
-					t.Errorf("Expected Size=%s, got %s", tt.expected.Size, tt.agent.Spec.Workspace.Size)
-				}
-				if tt.agent.Spec.Workspace.AccessMode != tt.expected.AccessMode {
-					t.Errorf("Expected AccessMode=%s, got %s", tt.expected.AccessMode, tt.agent.Spec.Workspace.AccessMode)
-				}
-				if tt.agent.Spec.Workspace.MountPath != tt.expected.MountPath {
-					t.Errorf("Expected MountPath=%s, got %s", tt.expected.MountPath, tt.agent.Spec.Workspace.MountPath)
-				}
-			}
-		})
+	if err := (&LanguageAgentWebhook{}).Default(context.Background(), agent); err != nil {
+		t.Fatalf("Default() returned error: %v", err)
+	}
+	if agent.Spec.Workspace != nil {
+		t.Errorf("expected Workspace to stay nil (CRD default now handles this), got %+v", agent.Spec.Workspace)
+	}
+	if agent.Spec.Deployment.Resources.Requests != nil || agent.Spec.Deployment.Resources.Limits != nil {
+		t.Errorf("expected Deployment.Resources to stay empty (CRD default now handles this), got %+v", agent.Spec.Deployment.Resources)
 	}
 }
 
@@ -1003,49 +851,5 @@ func TestRepositoryHost(t *testing.T) {
 		if got := RepositoryHost(raw); got != want {
 			t.Errorf("RepositoryHost(%q) = %q, want %q", raw, got, want)
 		}
-	}
-}
-
-func TestLanguageAgentDefaultRepositoryWorkspace(t *testing.T) {
-	tests := []struct {
-		name        string
-		agent       *LanguageAgent
-		wantEnabled bool
-	}{
-		{
-			name: "repository set, workspace nil - workspace defaulted on",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
-				Spec: LanguageAgentSpec{
-					Image:      "test:latest",
-					Repository: &RepositorySpec{URL: "https://github.com/org/repo.git"},
-				},
-			},
-			wantEnabled: true,
-		},
-		{
-			name: "repository set with runtime, workspace nil - workspace still defaulted on",
-			agent: &LanguageAgent{
-				ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "default"},
-				Spec: LanguageAgentSpec{
-					Runtime:    "some-runtime",
-					Repository: &RepositorySpec{URL: "https://github.com/org/repo.git"},
-				},
-			},
-			wantEnabled: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_ = (&LanguageAgentWebhook{}).Default(context.Background(), tt.agent)
-			if tt.agent.Spec.Workspace == nil {
-				t.Fatalf("expected workspace to be defaulted, got nil")
-			}
-			gotEnabled := tt.agent.Spec.Workspace.Enabled != nil && *tt.agent.Spec.Workspace.Enabled
-			if gotEnabled != tt.wantEnabled {
-				t.Errorf("expected workspace Enabled=%v, got %v", tt.wantEnabled, gotEnabled)
-			}
-		})
 	}
 }
