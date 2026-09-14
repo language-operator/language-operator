@@ -103,6 +103,9 @@ spec:
         {{- if .Values.config.tls.certificateIssuerKind }}
         - --tls-issuer-kind={{ .Values.config.tls.certificateIssuerKind }}
         {{- end }}
+        {{- if .Values.config.tls.externalScheme }}
+        - --external-scheme={{ .Values.config.tls.externalScheme }}
+        {{- end }}
         {{- if .Values.config.networkPolicy.requireNetworkPolicy }}
         - --require-network-policy={{ .Values.config.networkPolicy.requireNetworkPolicy }}
         {{- end }}

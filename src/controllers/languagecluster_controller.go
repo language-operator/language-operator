@@ -78,6 +78,7 @@ type LanguageClusterReconciler struct {
 	DefaultIngressClassName string
 	DefaultTLSIssuerName    string
 	DefaultTLSIssuerKind    string
+	DefaultExternalScheme   string
 	// DNSLookup replaces the live net.Resolver lookup when non-nil.
 	// Used only in unit tests to inject controlled success/failure.
 	DNSLookup func(ctx context.Context, host string) error
@@ -1364,7 +1365,7 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 		return r.deleteGatewayIngress(ctx, cluster)
 	}
 
-	hostname := cluster.Spec.Domain
+	hostname := "gateway." + cluster.Spec.Domain
 	namespace := cluster.Name
 
 	ingressClass := r.DefaultIngressClassName
@@ -1400,35 +1401,22 @@ func (r *LanguageClusterReconciler) reconcileGatewayIngress(ctx context.Context,
 				},
 			},
 		}
-		tlsEnabled := r.DefaultTLSIssuerName != ""
-		if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
-			if cluster.Spec.Ingress.TLS.Enabled != nil {
-				tlsEnabled = *cluster.Spec.Ingress.TLS.Enabled
-			} else {
-				tlsEnabled = true
+		var tlsCfg *langopv1alpha1.IngressTLSConfig
+		if cluster.Spec.Ingress != nil {
+			tlsCfg = cluster.Spec.Ingress.TLS
+		}
+		tlsBlock, tlsAnnotations, skippedNoIssuer := resolveIngressTLS(tlsCfg, []string{hostname}, r.DefaultTLSIssuerName, r.DefaultTLSIssuerKind, "gateway-tls")
+		if len(tlsAnnotations) > 0 {
+			if ingress.Annotations == nil {
+				ingress.Annotations = make(map[string]string)
+			}
+			for k, v := range tlsAnnotations {
+				ingress.Annotations[k] = v
 			}
 		}
-		if tlsEnabled {
-			secretName := ""
-			if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.TLS != nil {
-				secretName = cluster.Spec.Ingress.TLS.SecretName
-			}
-			if secretName == "" {
-				if r.DefaultTLSIssuerName != "" {
-					if ingress.Annotations == nil {
-						ingress.Annotations = make(map[string]string)
-					}
-					kind := r.DefaultTLSIssuerKind
-					if kind == "" {
-						kind = "ClusterIssuer"
-					}
-					ingress.Annotations["cert-manager.io/"+certManagerIssuerAnnotationSuffix(kind)] = r.DefaultTLSIssuerName
-				}
-				secretName = "gateway-tls"
-			}
-			ingress.Spec.TLS = []networkingv1.IngressTLS{
-				{Hosts: []string{hostname}, SecretName: secretName},
-			}
+		ingress.Spec.TLS = tlsBlock
+		if skippedNoIssuer {
+			r.EventManager.RecordValidationFailed(cluster, "spec.ingress.tls has no secretName and no TLS issuer is configured; the gateway Ingress will be created without TLS")
 		}
 		if ingressClass != "" {
 			ingress.Spec.IngressClassName = &ingressClass

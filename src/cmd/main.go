@@ -156,6 +156,11 @@ func main() {
 	var tlsIssuerKind string
 	flag.StringVar(&tlsIssuerKind, "tls-issuer-kind", "ClusterIssuer",
 		"Kind of the cert-manager issuer (ClusterIssuer or Issuer). Defaults to ClusterIssuer.")
+	var externalScheme string
+	flag.StringVar(&externalScheme, "external-scheme", "https",
+		"Public-facing scheme (http or https) used to build OIDC issuer URLs and OAuth redirect URIs. "+
+			"Independent of in-cluster Ingress TLS: set to https when TLS terminates upstream of the cluster. "+
+			"Can be overridden per-cluster via spec.ingress.externalScheme.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"Port the webhook server listens on.")
 	flag.StringVar(&webhookCertDir, "cert-dir", "/tmp/k8s-webhook-server/serving-certs",
@@ -371,6 +376,7 @@ func main() {
 		DefaultStorageClassName:    agentStorageClassName,
 		DefaultTLSIssuerName:       tlsIssuerName,
 		DefaultTLSIssuerKind:       tlsIssuerKind,
+		DefaultExternalScheme:      externalScheme,
 		IngressControllerNamespace: ingressControllerNamespace,
 		OAuth2ProxyImage:           oauth2ProxyImage,
 		CNICapabilities:            cniCaps,
@@ -432,6 +438,7 @@ func main() {
 		DefaultIngressClassName: gatewayIngressClassName,
 		DefaultTLSIssuerName:    tlsIssuerName,
 		DefaultTLSIssuerKind:    tlsIssuerKind,
+		DefaultExternalScheme:   externalScheme,
 	}).SetupWithManager(mgr, concurrency); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LanguageCluster")
 		os.Exit(1)

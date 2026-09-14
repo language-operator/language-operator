@@ -6526,19 +6526,43 @@ spec:
                       Defaults to false — the gateway is reachable in-cluster via its Service. Set to
                       true to expose it externally at gateway.<spec.domain>.
                     type: boolean
+                  externalScheme:
+                    description: |-
+                      ExternalScheme is the public-facing scheme ("http" or "https") used to build
+                      OIDC issuer URLs and OAuth redirect URIs. It is independent of whether the
+                      in-cluster Ingress carries a TLS block: set this when TLS terminates upstream
+                      of the cluster (e.g. at an external load balancer or reverse proxy) so those
+                      URLs still reflect what the outside world actually sees. Defaults to the
+                      operator-level --external-scheme flag ("https" unless overridden).
+                    enum:
+                    - http
+                    - https
+                    type: string
                   tls:
-                    description: TLS configuration for agent webhooks
+                    description: |-
+                      TLS configures how the gateway, agent, and Dex Ingress resources for this
+                      cluster obtain their TLS certificate.
                     properties:
-                      enabled:
-                        default: true
+                      mode:
                         description: |-
-                          Enabled controls whether TLS is enabled for webhooks.
-                          Defaults to true; set to false to disable TLS.
-                        type: boolean
+                          Mode controls how TLS is configured for this Ingress:
+                            - "auto": use the operator's configured cert-manager issuer if one is
+                              set; otherwise no TLS block is created — the correct behavior when
+                              TLS terminates upstream of the cluster.
+                            - "secret": always reference SecretName (bring-your-own certificate),
+                              with or without an issuer configured.
+                            - "none": never create a TLS block, even if an issuer is configured.
+                          When omitted, Mode is inferred: "secret" if SecretName is set, otherwise
+                          "auto".
+                        enum:
+                        - auto
+                        - secret
+                        - none
+                        type: string
                       secretName:
                         description: |-
-                          SecretName is the name of an existing TLS secret (bring-your-own certificate).
-                          When set, cert-manager integration is skipped and this secret is used directly.
+                          SecretName is the name of an existing TLS secret. Required when Mode is
+                          "secret"; ignored otherwise.
                         type: string
                     type: object
                 type: object

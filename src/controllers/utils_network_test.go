@@ -461,3 +461,111 @@ func TestBuildIngressPeerFromNetworkPeer_NamespaceAndPodSelector(t *testing.T) {
 	assert.Equal(t, "prod", result.NamespaceSelector.MatchLabels["env"])
 	assert.Equal(t, "api", result.PodSelector.MatchLabels["role"])
 }
+
+// --- resolveIngressTLS ---
+
+func TestResolveIngressTLS_ModeNone(t *testing.T) {
+	cfg := &langopv1alpha1.IngressTLSConfig{Mode: langopv1alpha1.IngressTLSModeNone}
+	tls, annotations, skipped := resolveIngressTLS(cfg, []string{"host"}, "letsencrypt", "", "fallback-tls")
+	assert.Nil(t, tls, "mode: none must never emit a TLS block, even with an issuer configured")
+	assert.Nil(t, annotations)
+	assert.False(t, skipped)
+}
+
+func TestResolveIngressTLS_ModeSecret_ExplicitMode(t *testing.T) {
+	cfg := &langopv1alpha1.IngressTLSConfig{Mode: langopv1alpha1.IngressTLSModeSecret, SecretName: "my-secret"}
+	tls, annotations, skipped := resolveIngressTLS(cfg, []string{"host"}, "", "", "fallback-tls")
+	require.Len(t, tls, 1)
+	assert.Equal(t, "my-secret", tls[0].SecretName)
+	assert.Equal(t, []string{"host"}, tls[0].Hosts)
+	assert.Nil(t, annotations, "bring-your-own secret needs no cert-manager annotation")
+	assert.False(t, skipped)
+}
+
+func TestResolveIngressTLS_SecretNameInfersSecretMode(t *testing.T) {
+	// Mode omitted, SecretName set: an unambiguous bring-your-own signal, used
+	// directly regardless of whether an issuer is also configured.
+	cfg := &langopv1alpha1.IngressTLSConfig{SecretName: "my-secret"}
+	tls, annotations, skipped := resolveIngressTLS(cfg, []string{"host"}, "letsencrypt", "", "fallback-tls")
+	require.Len(t, tls, 1)
+	assert.Equal(t, "my-secret", tls[0].SecretName)
+	assert.Nil(t, annotations)
+	assert.False(t, skipped)
+}
+
+func TestResolveIngressTLS_AutoWithIssuer(t *testing.T) {
+	cfg := &langopv1alpha1.IngressTLSConfig{}
+	tls, annotations, skipped := resolveIngressTLS(cfg, []string{"host"}, "letsencrypt", "", "fallback-tls")
+	require.Len(t, tls, 1)
+	assert.Equal(t, "fallback-tls", tls[0].SecretName)
+	assert.Equal(t, "letsencrypt", annotations["cert-manager.io/cluster-issuer"])
+	assert.False(t, skipped)
+}
+
+func TestResolveIngressTLS_AutoWithIssuer_IssuerKind(t *testing.T) {
+	cfg := &langopv1alpha1.IngressTLSConfig{}
+	_, annotations, _ := resolveIngressTLS(cfg, []string{"host"}, "my-issuer", "Issuer", "fallback-tls")
+	assert.Equal(t, "my-issuer", annotations["cert-manager.io/issuer"])
+	_, hasClusterIssuer := annotations["cert-manager.io/cluster-issuer"]
+	assert.False(t, hasClusterIssuer)
+}
+
+func TestResolveIngressTLS_AutoNoIssuer_ExplicitConfig(t *testing.T) {
+	// The core fix: an explicit tls block with neither Mode, SecretName, nor an
+	// issuer must never reference a Secret nothing will create. skipped is true
+	// so the caller can surface the misconfiguration.
+	cfg := &langopv1alpha1.IngressTLSConfig{}
+	tls, annotations, skipped := resolveIngressTLS(cfg, []string{"host"}, "", "", "fallback-tls")
+	assert.Nil(t, tls)
+	assert.Nil(t, annotations)
+	assert.True(t, skipped)
+}
+
+func TestResolveIngressTLS_NilConfig_NoIssuer(t *testing.T) {
+	// spec.ingress.tls was never set at all: no TLS is expected behavior, not a
+	// misconfiguration worth surfacing.
+	tls, annotations, skipped := resolveIngressTLS(nil, []string{"host"}, "", "", "fallback-tls")
+	assert.Nil(t, tls)
+	assert.Nil(t, annotations)
+	assert.False(t, skipped)
+}
+
+func TestResolveIngressTLS_NilConfig_WithIssuer(t *testing.T) {
+	tls, _, skipped := resolveIngressTLS(nil, []string{"host"}, "letsencrypt", "", "fallback-tls")
+	require.Len(t, tls, 1)
+	assert.Equal(t, "fallback-tls", tls[0].SecretName)
+	assert.False(t, skipped)
+}
+
+// --- publicScheme ---
+
+func TestPublicScheme_DefaultsToHTTPS(t *testing.T) {
+	cluster := &langopv1alpha1.LanguageCluster{}
+	assert.Equal(t, "https", publicScheme(cluster, ""))
+}
+
+func TestPublicScheme_UsesOperatorDefault(t *testing.T) {
+	cluster := &langopv1alpha1.LanguageCluster{}
+	assert.Equal(t, "http", publicScheme(cluster, "http"))
+}
+
+func TestPublicScheme_ClusterOverridesOperatorDefault(t *testing.T) {
+	cluster := &langopv1alpha1.LanguageCluster{
+		Spec: langopv1alpha1.LanguageClusterSpec{
+			Ingress: &langopv1alpha1.IngressConfig{ExternalScheme: "http"},
+		},
+	}
+	assert.Equal(t, "http", publicScheme(cluster, "https"))
+}
+
+func TestPublicScheme_IndependentOfTLSBlock(t *testing.T) {
+	// A TLS block (or its absence) never influences the public scheme.
+	cluster := &langopv1alpha1.LanguageCluster{
+		Spec: langopv1alpha1.LanguageClusterSpec{
+			Ingress: &langopv1alpha1.IngressConfig{
+				TLS: &langopv1alpha1.IngressTLSConfig{Mode: langopv1alpha1.IngressTLSModeNone},
+			},
+		},
+	}
+	assert.Equal(t, "https", publicScheme(cluster, ""))
+}

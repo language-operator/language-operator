@@ -356,6 +356,29 @@ func TestLanguageAgentController_IngressTLS(t *testing.T) {
 		require.NotNil(t, ing.Spec.IngressClassName)
 		assert.Equal(t, "traefik", *ing.Spec.IngressClassName)
 	})
+
+	t.Run("no_issuer_no_secret", func(t *testing.T) {
+		cluster := gen.ReadyCluster("default", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, agent).
+			WithStatusSubresource(agent).
+			Build()
+		r := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			EventManager:    events.NewEventManager(&record.FakeRecorder{}),
+			RegistryManager: &mockRegistryManager{},
+		}
+
+		require.NoError(t, r.reconcileIngress(context.Background(), agent, cluster, hostname))
+
+		ing := &networkingv1.Ingress{}
+		require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, ing))
+		assert.Empty(t, ing.Spec.TLS, "no TLS block should be created with no issuer and no secretName — nothing would populate the Secret")
+	})
 }
 
 func TestLanguageAgentController_CheckIngressReadiness(t *testing.T) {

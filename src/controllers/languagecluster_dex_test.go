@@ -9,12 +9,14 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/controllers/testutil"
 	"github.com/language-operator/language-operator/internal/testutil/gen"
+	"github.com/language-operator/language-operator/pkg/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -109,23 +111,35 @@ func TestAgentAuthEnabled_NoRuntime(t *testing.T) {
 
 func TestDexIssuerURL_NilAuth(t *testing.T) {
 	cluster := gen.ReadyCluster("test", gen.SetClusterDomain("example.com"))
-	assert.Equal(t, "", dexIssuerURL(cluster))
+	assert.Equal(t, "", dexIssuerURL(cluster, ""))
 }
 
 func TestDexIssuerURL_Embedded_HTTPS(t *testing.T) {
 	cluster := authCluster("test")
-	assert.Equal(t, "https://auth.example.com", dexIssuerURL(cluster))
+	assert.Equal(t, "https://auth.example.com", dexIssuerURL(cluster, ""))
 }
 
-func TestDexIssuerURL_Embedded_HTTP_WhenTLSDisabled(t *testing.T) {
-	cluster := authCluster("test", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{Enabled: ptr.To(false)}))
-	assert.Equal(t, "http://auth.example.com", dexIssuerURL(cluster))
+func TestDexIssuerURL_Embedded_HTTP_WhenNoTLSBlock(t *testing.T) {
+	// A missing/none TLS block no longer implies http — the public scheme is
+	// independent of the in-cluster TLS block (TLS may terminate upstream).
+	cluster := authCluster("test", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{Mode: langopv1alpha1.IngressTLSModeNone}))
+	assert.Equal(t, "https://auth.example.com", dexIssuerURL(cluster, ""))
+}
+
+func TestDexIssuerURL_HTTP_WhenExternalSchemeSet(t *testing.T) {
+	cluster := authCluster("test", gen.SetClusterIngressExternalScheme("http"))
+	assert.Equal(t, "http://auth.example.com", dexIssuerURL(cluster, ""))
+}
+
+func TestDexIssuerURL_UsesOperatorDefaultScheme(t *testing.T) {
+	cluster := authCluster("test")
+	assert.Equal(t, "http://auth.example.com", dexIssuerURL(cluster, "http"))
 }
 
 func TestDexIssuerURL_External(t *testing.T) {
 	cluster := authCluster("test")
 	cluster.Spec.Auth.OIDC.ExternalIssuerURL = "https://idp.corp.com"
-	assert.Equal(t, "https://idp.corp.com", dexIssuerURL(cluster))
+	assert.Equal(t, "https://idp.corp.com", dexIssuerURL(cluster, ""))
 }
 
 // --- buildDexConfigYAML ---
@@ -404,6 +418,40 @@ func TestReconcileDex_CreatesIngress(t *testing.T) {
 	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, ing))
 	require.Len(t, ing.Spec.Rules, 1)
 	assert.Equal(t, "auth.example.com", ing.Spec.Rules[0].Host)
+}
+
+func TestReconcileDex_IngressBringYourOwnSecret(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := authCluster("mycluster", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{
+		SecretName: "my-auth-tls",
+	}))
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+
+	require.NoError(t, r.reconcileDex(context.Background(), cluster))
+
+	ing := &networkingv1.Ingress{}
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, ing))
+	require.Len(t, ing.Spec.TLS, 1)
+	assert.Equal(t, "my-auth-tls", ing.Spec.TLS[0].SecretName)
+}
+
+func TestReconcileDex_IngressNoTLSWithoutIssuer(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := authCluster("mycluster", gen.SetClusterIngressTLS(&langopv1alpha1.IngressTLSConfig{}))
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{
+		Client:       fakeClient,
+		Scheme:       scheme,
+		Log:          logr.Discard(),
+		EventManager: events.NewEventManager(&record.FakeRecorder{}),
+	}
+
+	require.NoError(t, r.reconcileDex(context.Background(), cluster))
+
+	ing := &networkingv1.Ingress{}
+	require.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: DexResourceName, Namespace: cluster.Name}, ing))
+	assert.Empty(t, ing.Spec.TLS, "no TLS block should be created with no issuer and no secretName — nothing would populate the Secret")
 }
 
 func TestReconcileDex_SkipsIngressWhenNoDomain(t *testing.T) {

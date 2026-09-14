@@ -527,3 +527,68 @@ func resolveDNSToCIDRs(ctx context.Context, dnsNames []string) ([]string, error)
 
 	return cidrs, nil
 }
+
+// resolveIngressTLS builds the TLS block and any cert-manager annotations for an
+// Ingress from a cluster-level IngressTLSConfig and the operator's default issuer.
+// It centralizes the gateway/agent/Dex Ingress TLS logic so all three interpret
+// Mode identically.
+//
+// skippedNoIssuer is true only when the caller explicitly configured cfg (a
+// non-nil tls block) with Mode "auto" (or unset), but no issuer is configured
+// and cfg supplies no SecretName either — nothing would ever populate a
+// referenced Secret, so no TLS block is created. cfg == nil (the tls block
+// was never set at all) never sets skippedNoIssuer: omitting spec.ingress.tls
+// entirely expresses no preference, so silently getting no TLS is expected,
+// not a misconfiguration worth a warning.
+func resolveIngressTLS(cfg *langopv1alpha1.IngressTLSConfig, hosts []string, issuerName, issuerKind, fallbackSecretName string) (tlsBlock []networkingv1.IngressTLS, annotations map[string]string, skippedNoIssuer bool) {
+	mode := ""
+	secretName := ""
+	if cfg != nil {
+		mode = cfg.Mode
+		secretName = cfg.SecretName
+	}
+	if mode == "" {
+		// SecretName alone is an unambiguous bring-your-own signal; otherwise
+		// fall back to the operator's cert-manager issuer, if any.
+		if secretName != "" {
+			mode = langopv1alpha1.IngressTLSModeSecret
+		} else {
+			mode = langopv1alpha1.IngressTLSModeAuto
+		}
+	}
+
+	switch mode {
+	case langopv1alpha1.IngressTLSModeNone:
+		return nil, nil, false
+	case langopv1alpha1.IngressTLSModeSecret:
+		return []networkingv1.IngressTLS{{Hosts: hosts, SecretName: secretName}}, nil, false
+	default: // IngressTLSModeAuto
+		if issuerName == "" {
+			return nil, nil, cfg != nil
+		}
+		kind := issuerKind
+		if kind == "" {
+			kind = "ClusterIssuer"
+		}
+		annotations = map[string]string{
+			"cert-manager.io/" + certManagerIssuerAnnotationSuffix(kind): issuerName,
+		}
+		return []networkingv1.IngressTLS{{Hosts: hosts, SecretName: fallbackSecretName}}, annotations, false
+	}
+}
+
+// publicScheme returns the externally-visible scheme ("http" or "https") used to
+// build OIDC issuer URLs and OAuth redirect URIs. It is independent of whether
+// the in-cluster Ingress carries a TLS block, since TLS may terminate upstream
+// of the cluster (e.g. at an external load balancer or reverse proxy). Falls
+// back to defaultScheme — the operator-level --external-scheme default — when
+// the cluster does not override it.
+func publicScheme(cluster *langopv1alpha1.LanguageCluster, defaultScheme string) string {
+	if cluster.Spec.Ingress != nil && cluster.Spec.Ingress.ExternalScheme != "" {
+		return cluster.Spec.Ingress.ExternalScheme
+	}
+	if defaultScheme != "" {
+		return defaultScheme
+	}
+	return "https"
+}
