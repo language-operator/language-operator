@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.3.6
-    created: "2026-09-14T01:42:14.242333698Z"
+    appVersion: 0.3.7
+    created: "2026-09-14T02:54:17.389358618Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -11,7 +11,7 @@ entries:
       version: 2.0.3
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: d320f7f033a3af705096d4da49523681160ced281c0d0c813d9bd58c7805c3ca
+    digest: d0dad7d9ccbd0b8ad4ac45fe66e721cb7cb9380a89b5b356a42c51fd2ef4bf87
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -27,17 +27,17 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.3.6.tgz
-    version: 0.3.6
+    - https://language-operator.github.io/language-operator/language-operator-0.3.7.tgz
+    version: 0.3.7
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.3.6
-    created: "2026-09-14T01:42:14.243276269Z"
+    appVersion: 0.3.7
+    created: "2026-09-14T02:54:17.390114624Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
       repository: oci://ghcr.io/language-operator/charts
-      version: 0.1.4
+      version: 0.1.5
     - condition: openclaw.enabled
       name: openclaw
       repository: oci://ghcr.io/language-operator/charts
@@ -52,7 +52,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code, deepagents) as subcharts
-    digest: 2d415e95233782034e63fb119b972a4affa98fc8e41db1ad8470e92453a39ef2
+    digest: 4d7b65d151a9723f71ada0e14b8f4b1a66333bacfd05933edaa47a7ecf6aaa36
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -67,6 +67,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.6.tgz
-    version: 0.3.6
-generated: "2026-09-14T01:42:14.231283656Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.7.tgz
+    version: 0.3.7
+generated: "2026-09-14T02:54:17.379237592Z"
