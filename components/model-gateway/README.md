@@ -142,8 +142,8 @@ spec:
         - name: LANGOP_GATEWAY_EXTRA_CONFIG
           value: |
             litellm_settings:
-              success_callback: ["generic"]
-              failure_callback: ["generic"]
+              success_callback: ["generic_api"]
+              failure_callback: ["generic_api"]
 ```
 
 ## Supported Providers
