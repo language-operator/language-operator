@@ -2048,8 +2048,9 @@
 </tbody>
 </table>
 <p>The volume is named <code>workspace</code> in the pod spec. Init containers that need to pre-seed it should mount it by that name.</p>
+<p>The container's root filesystem is read-only. <code>/tmp</code> is a memory-backed tmpfs capped at 1Gi: it counts against the container's memory limit, and a write past the cap fails with <code>ENOSPC</code> rather than OOM-killing the pod. Anything large — clones, builds, downloads — belongs on the workspace.</p>
 <h2 id="repository">Repository<a class="headerlink" href="#repository" title="Permanent link">&para;</a></h2>
-<p>When <code>spec.repository</code> is set, the operator adds a <code>repository</code> init container (image <code>alpine/git:latest</code>) that runs after the workspace seeder and clones a git repository into the workspace. The agent container's working directory is set to the clone path, and <code>AGENT_REPO_DIR</code> is injected into every container.</p>
+<p>When <code>spec.repository</code> is set, the operator adds a <code>repository</code> init container that runs after the workspace seeder and clones a git repository into the workspace. Both init containers use the operator's git client image (<code>ghcr.io/language-operator/git</code>, pinned to the chart <code>appVersion</code>; override with <code>config.git.repository</code>/<code>config.git.tag</code> or <code>--git-image</code>). The agent container's working directory is set to the clone path, and <code>AGENT_REPO_DIR</code> is injected into every container.</p>
 <p>The clone is <strong>clone-once</strong>: it is skipped when the target directory already contains a <code>.git</code> directory, so the agent's edits and commits survive pod restarts. Declaring <code>spec.repository</code> defaults <code>spec.workspace.enabled</code> to <code>true</code>, since the clone needs the workspace PVC to land in.</p>
 <table>
 <thead>
@@ -2063,7 +2064,7 @@
 <tr>
 <td><code>spec.repository.url</code></td>
 <td>—</td>
-<td>Git repository to clone — HTTPS (<code>https://...</code>) or SSH (<code>git@host:org/repo.git</code>). Required</td>
+<td>Git repository to clone — HTTPS (<code>https://...</code>) or SSH (<code>git@host:org/repo.git</code>). Required. Use the <code>https://</code> URL for public repositories: GitHub does not accept anonymous SSH, so an SSH URL always needs an <code>ssh-privatekey</code></td>
 </tr>
 <tr>
 <td><code>spec.repository.ref</code></td>
