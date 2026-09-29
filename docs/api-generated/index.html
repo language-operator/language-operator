@@ -2280,6 +2280,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#toolheader" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ToolHeader
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#toolproperty" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4954,6 +4965,34 @@ stdio→Streamable-HTTP bridge.</p>
 </tr>
 </tbody>
 </table>
+<h4 id="toolheader">ToolHeader<a class="headerlink" href="#toolheader" title="Permanent link">&para;</a></h4>
+<p>ToolHeader is one HTTP header an agent's runtime sends to an external MCP server.</p>
+<p><em>Appears in:</em>
+- <a href="#toolreference">ToolReference</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the header name.</td>
+<td></td>
+<td>MaxLength: 128 <br />Pattern: <code>^[A-Za-z0-9!#$%&amp;'*+.^_\|~-]+$</code> <br /></td>
+</tr>
+<tr>
+<td><code>value</code> <em>string</em></td>
+<td>Value is the header value. $(NAME) references an environment variable of the agent<br />container, substituted by the runtime when it connects.</td>
+<td></td>
+<td>MaxLength: 4096 <br /></td>
+</tr>
+</tbody>
+</table>
 <h4 id="toolproperty">ToolProperty<a class="headerlink" href="#toolproperty" title="Permanent link">&para;</a></h4>
 <p>ToolProperty defines an individual parameter or return field</p>
 <p><em>Appears in:</em>
@@ -4989,7 +5028,8 @@ stdio→Streamable-HTTP bridge.</p>
 </tbody>
 </table>
 <h4 id="toolreference">ToolReference<a class="headerlink" href="#toolreference" title="Permanent link">&para;</a></h4>
-<p>ToolReference references a LanguageTool</p>
+<p>ToolReference references a LanguageTool in the agent's namespace or, when url is set,
+names an external MCP server the agent's runtime connects to directly.</p>
 <p><em>Appears in:</em>
 - <a href="#languageagentspec">LanguageAgentSpec</a></p>
 <table>
@@ -5004,7 +5044,7 @@ stdio→Streamable-HTTP bridge.</p>
 <tbody>
 <tr>
 <td><code>name</code> <em>string</em></td>
-<td>Name is the name of the LanguageTool</td>
+<td>Name is the name of the LanguageTool or, when url is set, the name the agent's<br />runtime knows the external server by (its key in config.yaml).</td>
 <td></td>
 <td>MaxLength: 63 <br />Pattern: <code>^[a-z0-9]([-a-z0-9]*[a-z0-9])?$</code> <br />Required: {} <br /></td>
 </tr>
@@ -5013,6 +5053,18 @@ stdio→Streamable-HTTP bridge.</p>
 <td>Enabled indicates if this tool is available to the agent.<br />Defaults to true. Set to false to explicitly disable the tool without removing it.</td>
 <td>true</td>
 <td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL makes this entry an external Streamable HTTP MCP server instead of a LanguageTool:<br />nothing is looked up or deployed, and the URL is handed to the runtime as it is.<br />Must be http or https.</td>
+<td></td>
+<td>MaxLength: 2048 <br />Pattern: <code>^https?://</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>headers</code> <em><a href="#toolheader">ToolHeader</a> array</em></td>
+<td>Headers are HTTP headers the runtime sends to the external MCP server, such as an<br />Authorization header. A value may reference an environment variable of the agent<br />container as $(NAME); the runtime substitutes it at connection time, so a secret<br />delivered through spec.credentials never lands in the agent's ConfigMap.<br />Only valid together with url.</td>
+<td></td>
+<td>MaxItems: 16 <br />Optional: {} <br /></td>
 </tr>
 </tbody>
 </table>

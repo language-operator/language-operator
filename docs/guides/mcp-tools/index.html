@@ -1165,6 +1165,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Attaching to an agent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#external-mcp-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External MCP servers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1890,6 +1907,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Attaching to an agent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#external-mcp-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        External MCP servers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2126,6 +2160,27 @@ without it. Create the secret first:</p>
 <p>The operator resolves each tool to <code>http://&lt;tool&gt;.&lt;namespace&gt;.svc.cluster.local:&lt;port&gt;</code> and injects
 the list via <code>MCP_SERVERS</code>. For the transport details and the full schema, see
 <a href="../../components/tools/">Tools</a> and the <a href="../../api/languagetool/">LanguageTool API reference</a>.</p>
+<h3 id="external-mcp-servers">External MCP servers<a class="headerlink" href="#external-mcp-servers" title="Permanent link">&para;</a></h3>
+<p>A <code>spec.tools</code> entry may name a Streamable HTTP MCP server that runs elsewhere instead of a
+<code>LanguageTool</code>: give it a <code>url</code>, and optionally <code>headers</code>. Nothing is deployed; the runtime
+connects to the URL directly. A header value may reference an environment variable of the
+agent container as <code>$(NAME)</code>, so a token delivered through <code>spec.credentials</code> reaches the
+server without ever being written into the agent's ConfigMap:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">control-plane</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://cloud.example.com/mcp</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Authorization</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bearer $(CONTROL_PLANE_TOKEN)</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="nt">credentials</span><span class="p">:</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CONTROL_PLANE_TOKEN</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">      </span><span class="nt">valueFrom</span><span class="p">:</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">control-plane-token</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
+</code></pre></div>
+<p>The entry lands in <code>/etc/agent/config.yaml</code> under <code>tools.control-plane</code> with its <code>endpoint</code> and
+<code>headers</code>. <code>MCP_SERVERS</code> lists an external server only when it needs no headers.</p>
 
 
 
