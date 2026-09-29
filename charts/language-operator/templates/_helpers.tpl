@@ -80,6 +80,15 @@ per chart release rather than tracking a floating tag.
 {{- end }}
 
 {{/*
+Git client image (workspace-seeder and repository init containers in agent pods).
+Tag defaults to the chart appVersion so the image is pinned per chart release.
+*/}}
+{{- define "language-operator.gitImage" -}}
+{{- $tag := .Values.config.git.tag | default .Chart.AppVersion }}
+{{- printf "%s:%s" .Values.config.git.repository $tag }}
+{{- end }}
+
+{{/*
 Create the metrics bind address
 */}}
 {{- define "language-operator.metricsBindAddress" -}}

@@ -94,15 +94,17 @@ When `spec.workspace.enabled` is true (the default), the operator provisions a P
 
 The volume is named `workspace` in the pod spec. Init containers that need to pre-seed it should mount it by that name.
 
+The container's root filesystem is read-only. `/tmp` is a memory-backed tmpfs capped at 1Gi: it counts against the container's memory limit, and a write past the cap fails with `ENOSPC` rather than OOM-killing the pod. Anything large — clones, builds, downloads — belongs on the workspace.
+
 ## Repository
 
-When `spec.repository` is set, the operator adds a `repository` init container (image `alpine/git:latest`) that runs after the workspace seeder and clones a git repository into the workspace. The agent container's working directory is set to the clone path, and `AGENT_REPO_DIR` is injected into every container.
+When `spec.repository` is set, the operator adds a `repository` init container that runs after the workspace seeder and clones a git repository into the workspace. Both init containers use the operator's git client image (`ghcr.io/language-operator/git`, pinned to the chart `appVersion`; override with `config.git.repository`/`config.git.tag` or `--git-image`). The agent container's working directory is set to the clone path, and `AGENT_REPO_DIR` is injected into every container.
 
 The clone is **clone-once**: it is skipped when the target directory already contains a `.git` directory, so the agent's edits and commits survive pod restarts. Declaring `spec.repository` defaults `spec.workspace.enabled` to `true`, since the clone needs the workspace PVC to land in.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `spec.repository.url` | — | Git repository to clone — HTTPS (`https://...`) or SSH (`git@host:org/repo.git`). Required |
+| `spec.repository.url` | — | Git repository to clone — HTTPS (`https://...`) or SSH (`git@host:org/repo.git`). Required. Use the `https://` URL for public repositories: GitHub does not accept anonymous SSH, so an SSH URL always needs an `ssh-privatekey` |
 | `spec.repository.ref` | default branch | Branch, tag, or commit SHA to check out |
 | `spec.repository.path` | repo name from URL | Subdirectory under the workspace `mountPath` to clone into (relative path only) |
 | `spec.repository.depth` | `0` | When > 0, shallow-clone to this history depth |

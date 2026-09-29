@@ -264,11 +264,17 @@ func TestLanguageAgentController_TmpfsVolumes(t *testing.T) {
 	volumeNames := make(map[string]bool)
 	for _, vol := range volumes {
 		volumeNames[vol.Name] = true
-		// Verify it's an EmptyDir with Memory medium
-		if vol.EmptyDir != nil && vol.EmptyDir.Medium == corev1.StorageMediumMemory {
-			// Good - it's a tmpfs volume
-		} else if _, ok := expectedVolumes[vol.Name]; ok {
-			t.Errorf("Volume %s should be EmptyDir with Memory medium", vol.Name)
+		// Verify it's a capped EmptyDir with Memory medium
+		if _, ok := expectedVolumes[vol.Name]; ok {
+			if vol.EmptyDir == nil || vol.EmptyDir.Medium != corev1.StorageMediumMemory {
+				t.Errorf("Volume %s should be EmptyDir with Memory medium", vol.Name)
+				continue
+			}
+			// An uncapped memory-backed emptyDir advertises the node's memory as free
+			// space and OOM-kills the pod when filled (#920).
+			if vol.EmptyDir.SizeLimit == nil || vol.EmptyDir.SizeLimit.String() != AgentTmpSizeLimit {
+				t.Errorf("Volume %s should have sizeLimit %s, got %v", vol.Name, AgentTmpSizeLimit, vol.EmptyDir.SizeLimit)
+			}
 		}
 	}
 

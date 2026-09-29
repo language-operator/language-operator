@@ -59,6 +59,7 @@ When `spec.workspace.enabled` is true (the default), the operator creates a Pers
 | Path | Content |
 |------|---------|
 | `spec.workspace.mountPath` (default `/workspace`) | Read-write persistent volume, backed by a PVC |
+| `/tmp` | Memory-backed scratch space (tmpfs), capped at 1Gi. Counts against the container's memory limit; a write past the cap fails with `ENOSPC`. Not persistent. Put clones, builds and downloads on the workspace |
 
 The workspace survives pod restarts, Workflow replacement (which the operator does whenever the agent spec changes), and — for task-mode agents — the boundary between runs: every scheduled run starts a fresh pod against the same persisted volume. It does not survive deletion of the LanguageAgent unless `spec.workspace.retain` is true.
 
@@ -87,7 +88,7 @@ initContainers:
 
 ### Repository Cloning
 
-When `spec.repository` is set, the operator injects a `repository` init container (image `alpine/git:latest`) that runs after the `workspace-seeder` and clones the configured git repository into the workspace before the agent container starts:
+When `spec.repository` is set, the operator injects a `repository` init container (the operator's git client image, `ghcr.io/language-operator/git`, pinned per release) that runs after the `workspace-seeder` and clones the configured git repository into the workspace before the agent container starts:
 
 | Path | Content |
 |------|---------|

@@ -790,7 +790,7 @@ func TestLanguageAgentController_WorkspaceSeed_InitialFiles(t *testing.T) {
 		}
 	}
 	require.NotNil(t, seeder, "expected workspace-seeder init container")
-	assert.Equal(t, "busybox:latest", seeder.Image)
+	assert.Equal(t, DefaultGitImage, seeder.Image)
 
 	// Init container must mount the workspace PVC
 	var hasWorkspace bool
@@ -975,7 +975,7 @@ func TestLanguageAgentController_Repository_InitContainerAndWorkingDir(t *testin
 
 	repo := findInitContainer(podSpec, "repository")
 	require.NotNil(t, repo, "expected repository init container")
-	assert.Equal(t, "alpine/git:latest", repo.Image)
+	assert.Equal(t, DefaultGitImage, repo.Image)
 
 	// Clone-once semantics and ref/depth reflected in the script.
 	require.Len(t, repo.Command, 3)

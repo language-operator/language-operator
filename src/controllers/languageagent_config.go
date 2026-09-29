@@ -263,7 +263,7 @@ func buildWorkspaceSeedVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Vol
 // is configured, or nil otherwise. The container uses seed-once semantics: files are only
 // copied if they do not already exist at the destination path, preserving any agent edits.
 // InitialFiles are processed first (higher priority), SeedConfigMapRef second.
-func buildWorkspaceSeedInitContainer(agent *langopv1alpha1.LanguageAgent) *corev1.Container {
+func buildWorkspaceSeedInitContainer(agent *langopv1alpha1.LanguageAgent, image string, pullPolicy corev1.PullPolicy) *corev1.Container {
 	if !workspaceSeedEnabled(agent) {
 		return nil
 	}
@@ -313,15 +313,13 @@ fi`, mountPath)
 	}
 
 	return &corev1.Container{
-		Name:         "workspace-seeder",
-		Image:        "busybox:latest",
-		Command:      []string{"/bin/sh", "-c", script},
-		VolumeMounts: mounts,
+		Name:            "workspace-seeder",
+		Image:           image,
+		ImagePullPolicy: pullPolicy,
+		Command:         []string{"/bin/sh", "-c", script},
+		VolumeMounts:    mounts,
 	}
 }
-
-// repositoryImage is the git client image used by the repository init container.
-const repositoryImage = "alpine/git:latest"
 
 // workspaceMountPath returns the path the workspace PVC is mounted at, defaulting
 // to /workspace when the workspace is enabled without an explicit mountPath.
@@ -522,7 +520,11 @@ func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 // Authentication comes from the same GIT_CONFIG_* / GIT_SSH_COMMAND environment the
 // agent container gets (buildGitEnv), reading the mounted Secret; the operator never
 // reads the Secret and the script never embeds a credential in the checkout.
-func buildRepositoryInitContainer(agent *langopv1alpha1.LanguageAgent) *corev1.Container {
+//
+// The image (components/git, pinned per operator release) must have a passwd entry for
+// uid 1000: OpenSSH refuses to start as a uid it cannot resolve, which is what broke SSH
+// clones under the non-root pod securityContext with alpine/git.
+func buildRepositoryInitContainer(agent *langopv1alpha1.LanguageAgent, image string, pullPolicy corev1.PullPolicy) *corev1.Container {
 	if !agentHasRepository(agent) {
 		return nil
 	}
@@ -566,10 +568,11 @@ echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFl
 	}
 
 	return &corev1.Container{
-		Name:         "repository",
-		Image:        repositoryImage,
-		Command:      []string{"/bin/sh", "-c", script},
-		VolumeMounts: mounts,
+		Name:            "repository",
+		Image:           image,
+		ImagePullPolicy: pullPolicy,
+		Command:         []string{"/bin/sh", "-c", script},
+		VolumeMounts:    mounts,
 		Env: append([]corev1.EnvVar{
 			{Name: "HOME", Value: "/tmp"},
 		}, buildGitEnv(agent)...),

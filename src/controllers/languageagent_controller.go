@@ -56,6 +56,19 @@ type LanguageAgentReconciler struct {
 	MCPBridgeImage string
 	// MCPBridgeImagePullPolicy is the pull policy for the injected bridge image.
 	MCPBridgeImagePullPolicy corev1.PullPolicy
+	// GitImage is the git client image for the workspace-seeder and repository init
+	// containers. When empty, DefaultGitImage is used.
+	GitImage string
+	// GitImagePullPolicy is the pull policy for GitImage.
+	GitImagePullPolicy corev1.PullPolicy
+}
+
+// gitImage returns the configured git client image, falling back to DefaultGitImage.
+func (r *LanguageAgentReconciler) gitImage() string {
+	if r.GitImage != "" {
+		return r.GitImage
+	}
+	return DefaultGitImage
 }
 
 //+kubebuilder:rbac:groups=langop.io,resources=languageagents,verbs=get;list;watch;create;update;patch;delete
