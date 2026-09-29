@@ -189,7 +189,7 @@ tools:
     url: https://cloud.example.com/mcp
     headers:
       - name: Authorization
-        value: Bearer $(CONTROL_PLANE_TOKEN)   # from spec.credentials
+        value: Bearer $(CONTROL_PLANE_TOKEN)   # from spec.credentials (a Secret injected via envFrom)
 ```
 
 ### Port References
