@@ -3,7 +3,7 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.3.9
-    created: "2026-09-29T21:46:17.55066765Z"
+    created: "2026-09-29T23:55:30.27558739Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -11,7 +11,7 @@ entries:
       version: 2.0.3
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 648ac85d360b4a513c18c3c4c9e40615330e9d9ac1955120fd5d13f9b3709c01
+    digest: 78285df3e5874bda5fe485dabfeefaab8d6b770d6bb0b7916669ff60f47c565f
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -32,7 +32,7 @@ entries:
   language-operator-runtimes:
   - apiVersion: v2
     appVersion: 0.3.9
-    created: "2026-09-29T21:46:17.55161959Z"
+    created: "2026-09-29T23:55:30.276889807Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -52,7 +52,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code, deepagents) as subcharts
-    digest: 563a9eef71c749d567c339294170ef877fb5414ddc59eb85fca2083c93d40ac6
+    digest: 25f6feb87b906a1b18c23b035ce5a139e46e534e2dc773c35f808a6322d6ef25
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -69,4 +69,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.9.tgz
     version: 0.3.9
-generated: "2026-09-29T21:46:17.538877021Z"
+generated: "2026-09-29T23:55:30.262862202Z"
