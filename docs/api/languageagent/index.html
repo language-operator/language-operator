@@ -2389,7 +2389,7 @@ for them.</p>
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://cloud.example.com/mcp</span>
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">headers</span><span class="p">:</span>
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Authorization</span>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bearer $(CONTROL_PLANE_TOKEN)</span><span class="w">   </span><span class="c1"># from spec.credentials</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bearer $(CONTROL_PLANE_TOKEN)</span><span class="w">   </span><span class="c1"># from spec.credentials (a Secret injected via envFrom)</span>
 </code></pre></div>
 <h3 id="port-references">Port References<a class="headerlink" href="#port-references" title="Permanent link">&para;</a></h3>
 <p>Each entry in <code>spec.ports</code> is an <code>AgentPort</code> with the following fields:</p>
