@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.3.8
-    created: "2026-09-29T16:57:28.009395867Z"
+    appVersion: 0.3.9
+    created: "2026-09-29T21:45:06.804275484Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -11,7 +11,7 @@ entries:
       version: 2.0.3
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 4ec9ae8b2f9cb799b4046839e1cd1560eea1beac55e6a932767d7b8afc702907
+    digest: 7ae44b9dc597ba4c1f467fdddc296132ebfe6da9295ca2dc811d3f0a7bc5397c
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -27,12 +27,12 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.3.8.tgz
-    version: 0.3.8
+    - https://language-operator.github.io/language-operator/language-operator-0.3.9.tgz
+    version: 0.3.9
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.3.8
-    created: "2026-09-29T16:57:28.010140246Z"
+    appVersion: 0.3.9
+    created: "2026-09-29T21:45:06.804971297Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -52,7 +52,7 @@ entries:
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code, deepagents) as subcharts
-    digest: 186d54163c199a4b243637fb2c327b87ffdde7d78db37f59fda621b15af32996
+    digest: 482053a169cb4333676cff89813c26637f78ccb3465008597932c3861396ab4f
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -67,6 +67,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.8.tgz
-    version: 0.3.8
-generated: "2026-09-29T16:57:28.00240955Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.9.tgz
+    version: 0.3.9
+generated: "2026-09-29T21:45:06.794832578Z"
