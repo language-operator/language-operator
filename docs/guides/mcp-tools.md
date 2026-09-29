@@ -272,8 +272,7 @@ spec:
   credentials:
     - name: CONTROL_PLANE_TOKEN
       valueFrom:
-        name: control-plane-token
-        key: token
+        name: control-plane-token   # a Secret whose CONTROL_PLANE_TOKEN key is injected via envFrom
 ```
 
 The entry lands in `/etc/agent/config.yaml` under `tools.control-plane` with its `endpoint` and
