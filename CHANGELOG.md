@@ -8,6 +8,14 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.10 — 2026-09-29
+
+**Documentation**
+- gateway: the generic HTTP logger callback is named generic_api (#910)
+- spec.credentials[].valueFrom names a Secret, it has no key (#926)
+
+---
+
 ## v0.3.9 — 2026-09-29
 
 **Features**
