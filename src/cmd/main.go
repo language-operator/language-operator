@@ -97,6 +97,8 @@ func main() {
 	var mcpBridgeImage string
 	var mcpBridgeImagePullPolicy string
 	var mcpDiscoveryTimeout time.Duration
+	var gitImage string
+	var gitImagePullPolicy string
 	var dexImage string
 	var oauth2ProxyImage string
 	var webhookPort int
@@ -144,6 +146,10 @@ func main() {
 		"Image for the stdio→Streamable-HTTP MCP bridge injected for transport=stdio tools. Defaults to "+langopv1alpha1.DefaultMCPBridgeImage+".")
 	flag.StringVar(&mcpBridgeImagePullPolicy, "mcp-bridge-image-pull-policy", "",
 		"ImagePullPolicy for the injected MCP bridge image (Always, IfNotPresent, Never).")
+	flag.StringVar(&gitImage, "git-image", "",
+		"Git client image for the workspace-seeder and repository init containers of agent pods. Defaults to "+controllers.DefaultGitImage+".")
+	flag.StringVar(&gitImagePullPolicy, "git-image-pull-policy", "",
+		"ImagePullPolicy for the git client image (Always, IfNotPresent, Never).")
 	flag.DurationVar(&mcpDiscoveryTimeout, "mcp-discovery-timeout", 30*time.Second,
 		"Timeout for an MCP tool schema-discovery handshake. Increase for tools with slow cold starts.")
 	flag.StringVar(&dexImage, "dex-image", "",
@@ -382,6 +388,8 @@ func main() {
 		CNICapabilities:            cniCaps,
 		MCPBridgeImage:             mcpBridgeImage,
 		MCPBridgeImagePullPolicy:   corev1.PullPolicy(mcpBridgeImagePullPolicy),
+		GitImage:                   gitImage,
+		GitImagePullPolicy:         corev1.PullPolicy(gitImagePullPolicy),
 	}
 
 	if err = agentReconciler.SetupWithManager(mgr, concurrency); err != nil {

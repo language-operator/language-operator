@@ -171,10 +171,10 @@ func (r *LanguageAgentReconciler) buildAgentPodSpec(ctx context.Context, agent *
 	// [workspace-seeder, repository, ...userInit]. The workspace is populated and
 	// the repo cloned before any user init containers run.
 	build.initContainers = userInitContainers
-	if repoContainer := buildRepositoryInitContainer(agent); repoContainer != nil {
+	if repoContainer := buildRepositoryInitContainer(agent, r.gitImage(), r.GitImagePullPolicy); repoContainer != nil {
 		build.initContainers = append([]corev1.Container{*repoContainer}, build.initContainers...)
 	}
-	if seedContainer := buildWorkspaceSeedInitContainer(agent); seedContainer != nil {
+	if seedContainer := buildWorkspaceSeedInitContainer(agent, r.gitImage(), r.GitImagePullPolicy); seedContainer != nil {
 		build.initContainers = append([]corev1.Container{*seedContainer}, build.initContainers...)
 	}
 	build.shareProcessNamespace = len(build.initContainers) > 0 || len(build.sidecars) > 0
@@ -842,13 +842,15 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 	volumes := []corev1.Volume{}
 	volumeMounts := []corev1.VolumeMount{}
 
-	// Add tmpfs volumes for read-only root filesystem
-	// /tmp - general temporary files
+	// /tmp - general scratch space for the read-only root filesystem. Memory-backed
+	// (tmpfs) and capped: see AgentTmpSizeLimit. Large data belongs on the workspace PVC.
+	tmpLimit := resource.MustParse(AgentTmpSizeLimit)
 	volumes = append(volumes, corev1.Volume{
 		Name: "tmp",
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{
-				Medium: corev1.StorageMediumMemory, // Use tmpfs
+				Medium:    corev1.StorageMediumMemory,
+				SizeLimit: &tmpLimit,
 			},
 		},
 	})

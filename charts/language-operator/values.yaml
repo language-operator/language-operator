@@ -228,6 +228,19 @@ config:
     # starts (e.g. servers that npx/uvx-fetch their package on first boot).
     discoveryTimeout: "30s"
 
+  git:
+    # Git client image for the workspace-seeder and repository init containers the operator
+    # adds to agent pods. The repository container runs with the agent's git credentials
+    # mounted, so the image is pinned per release rather than tracking a floating tag. The
+    # first-party image is alpine/git pinned by digest plus a passwd entry for uid 1000
+    # (OpenSSH refuses to run as an unresolvable uid, which broke SSH clones). Any image with
+    # git, ssh, /bin/sh and a uid-1000 user works.
+    repository: ghcr.io/language-operator/git
+    # Image tag; defaults to the chart appVersion when empty.
+    tag: ""
+    # ImagePullPolicy for the git client image (Always, IfNotPresent, Never).
+    imagePullPolicy: ""
+
   auth:
     dex:
       # Image for the Dex OIDC provider deployed per LanguageCluster when spec.auth.enabled is true.

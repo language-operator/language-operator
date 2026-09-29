@@ -36,6 +36,19 @@ const (
 	// LangopGroupID is the group ID for the langop group.
 	LangopGroupID = 101
 
+	// DefaultGitImage is the git client image for the workspace-seeder and repository
+	// init containers when --git-image is not set. The chart always passes --git-image
+	// pinned to its appVersion; this fallback is for running the operator outside the
+	// chart. See components/git.
+	DefaultGitImage = "ghcr.io/language-operator/git:latest"
+
+	// AgentTmpSizeLimit caps the memory-backed /tmp emptyDir in agent pods. tmpfs pages
+	// count against the container's memory cgroup, and an uncapped emptyDir advertises
+	// the node's memory as free space, so a large write OOM-killed the pod with no
+	// warning. With a limit, the write fails with ENOSPC instead. 1Gi is half the
+	// default memory limit (2Gi).
+	AgentTmpSizeLimit = "1Gi"
+
 	// DexResourceName is the name used for Dex OIDC provider resources.
 	DexResourceName = "auth"
 	// DexConfigMapName is the name of the Dex configuration ConfigMap.

@@ -91,6 +91,10 @@ spec:
         {{- if .Values.config.mcpBridge.discoveryTimeout }}
         - --mcp-discovery-timeout={{ .Values.config.mcpBridge.discoveryTimeout }}
         {{- end }}
+        - --git-image={{ include "language-operator.gitImage" . }}
+        {{- if .Values.config.git.imagePullPolicy }}
+        - --git-image-pull-policy={{ .Values.config.git.imagePullPolicy }}
+        {{- end }}
         {{- if .Values.config.auth.dex.image }}
         - --dex-image={{ .Values.config.auth.dex.image }}
         {{- end }}
