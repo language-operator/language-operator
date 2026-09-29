@@ -6,6 +6,9 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+**Features**
+- agent: external MCP servers on `spec.tools[]`: an entry with `url` (and optional `headers`, whose values may reference the agent container's environment as `$(NAME)`) is handed to the runtime as it is instead of naming a `LanguageTool`. It appears in `/etc/agent/config.yaml` under `tools.<name>` with `endpoint` and `headers`; `MCP_SERVERS` lists it only when it needs no headers
+
 ---
 
 ## v0.3.8 — 2026-09-14

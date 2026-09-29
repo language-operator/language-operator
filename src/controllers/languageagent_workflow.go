@@ -705,6 +705,11 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 			continue
 		}
 
+		// External MCP servers run elsewhere; there is nothing to run alongside the agent.
+		if toolRef.External() {
+			continue
+		}
+
 		// Fetch the LanguageTool (always in the agent's namespace)
 		tool := &langopv1alpha1.LanguageTool{}
 		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
@@ -798,12 +803,24 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 	return sidecarContainers, sidecarVolumes, nil
 }
 
+// resolveTools returns the MCP URLs that go into MCP_SERVERS: every enabled LanguageTool in
+// the agent's namespace, plus external servers (spec.tools[].url) that need no headers. An
+// external server with headers is left out, because the comma-separated variable has no room
+// for them; runtimes read it from config.yaml instead.
 func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
 	var toolURLs []string
 
 	for _, toolRef := range agent.Spec.Tools {
 		// Skip tools explicitly disabled by the user
 		if toolRef.Enabled != nil && !*toolRef.Enabled {
+			continue
+		}
+
+		// External MCP servers are not looked up or deployed; the URL is used as given.
+		if toolRef.External() {
+			if len(toolRef.Headers) == 0 {
+				toolURLs = append(toolURLs, toolRef.URL)
+			}
 			continue
 		}
 

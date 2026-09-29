@@ -164,10 +164,18 @@ Each entry in `spec.tools` is a `ToolReference` with the following fields:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | required | Name of a `LanguageTool` resource |
+| `name` | string | required | Name of a `LanguageTool` resource, or, with `url`, the name the runtime knows the external server by |
 | `enabled` | boolean | `true` | Set to `false` to temporarily disable a tool without removing the reference |
+| `url` | string | — | An external Streamable HTTP MCP server (`http` or `https`). Nothing is looked up or deployed; the URL is handed to the runtime as given |
+| `headers` | list | — | HTTP headers the runtime sends to the external server, each `{name, value}`. Only valid with `url`. A value may reference an environment variable of the agent container as `$(NAME)` |
 
 When `enabled` is `false`, the tool endpoint is not injected into `/etc/agent/config.yaml` and not included in `MCP_SERVERS`.
+
+An external server appears in `/etc/agent/config.yaml` under its name with its `endpoint`
+and `headers`; the runtime substitutes `$(NAME)` from its environment when it connects, so a
+credential delivered through `spec.credentials` never lands in the ConfigMap. `MCP_SERVERS`
+lists external servers only when they need no headers, because that variable has no room
+for them.
 
 Example:
 
@@ -177,6 +185,11 @@ tools:
     enabled: true
   - name: code-executor
     enabled: false   # disabled — endpoint not injected
+  - name: control-plane
+    url: https://cloud.example.com/mcp
+    headers:
+      - name: Authorization
+        value: Bearer $(CONTROL_PLANE_TOKEN)   # from spec.credentials
 ```
 
 ### Port References

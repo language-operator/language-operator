@@ -293,9 +293,12 @@ type ModelReference struct {
 	Priority *int32 `json:"priority,omitempty"`
 }
 
-// ToolReference references a LanguageTool
+// ToolReference references a LanguageTool in the agent's namespace or, when url is set,
+// names an external MCP server the agent's runtime connects to directly.
+// +kubebuilder:validation:XValidation:rule="!has(self.headers) || has(self.url)",message="headers may only be set together with url"
 type ToolReference struct {
-	// Name is the name of the LanguageTool
+	// Name is the name of the LanguageTool or, when url is set, the name the agent's
+	// runtime knows the external server by (its key in config.yaml).
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	// +kubebuilder:validation:MaxLength=63
@@ -306,6 +309,42 @@ type ToolReference struct {
 	// +kubebuilder:default=true
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+
+	// URL makes this entry an external Streamable HTTP MCP server instead of a LanguageTool:
+	// nothing is looked up or deployed, and the URL is handed to the runtime as it is.
+	// Must be http or https.
+	// +kubebuilder:validation:Pattern=`^https?://`
+	// +kubebuilder:validation:MaxLength=2048
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// Headers are HTTP headers the runtime sends to the external MCP server, such as an
+	// Authorization header. A value may reference an environment variable of the agent
+	// container as $(NAME); the runtime substitutes it at connection time, so a secret
+	// delivered through spec.credentials never lands in the agent's ConfigMap.
+	// Only valid together with url.
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	Headers []ToolHeader `json:"headers,omitempty"`
+}
+
+// External reports whether the reference names an external MCP server (by url)
+// rather than a LanguageTool in the agent's namespace.
+func (t ToolReference) External() bool {
+	return t.URL != ""
+}
+
+// ToolHeader is one HTTP header an agent's runtime sends to an external MCP server.
+type ToolHeader struct {
+	// Name is the header name.
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9!#$%&'*+.^_|~-]+$`
+	// +kubebuilder:validation:MaxLength=128
+	Name string `json:"name"`
+
+	// Value is the header value. $(NAME) references an environment variable of the agent
+	// container, substituted by the runtime when it connects.
+	// +kubebuilder:validation:MaxLength=4096
+	Value string `json:"value"`
 }
 
 // WorkspaceSpec defines persistent workspace storage for an agent

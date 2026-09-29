@@ -27,7 +27,9 @@ personas:
     personality: "precise, data-driven, always cites sources before drawing conclusions"
     expertise: "data analyst specialising in statistical reasoning and business intelligence"
 
-# Resolved tool endpoints, keyed by tool name
+# Resolved tool endpoints, keyed by tool name. An external server (spec.tools[].url)
+# keeps its URL and may carry headers; $(NAME) in a value is an agent environment
+# variable the runtime substitutes when it connects.
 tools:
   mem0-memory:
     endpoint: http://mem0-memory.tools.svc.cluster.local:8080/mcp
@@ -35,6 +37,11 @@ tools:
   python-executor:
     endpoint: http://python-executor.tools.svc.cluster.local:8080/mcp
     protocol: mcp
+  control-plane:
+    endpoint: https://cloud.example.com/mcp
+    protocol: mcp
+    headers:
+      Authorization: Bearer $(CONTROL_PLANE_TOKEN)
 
 # Model configuration — all LLM traffic routes through the shared gateway
 models:

@@ -189,7 +189,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `dex` _[DexSpec](#dexspec)_ | Dex configures the embedded Dex OIDC provider.<br />When set (and ExternalIssuerURL is not), the controller deploys Dex alongside the gateway. |  | Optional: \{\} <br /> |
-| `externalIssuerURL` _string_ | ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.<br />Mutually exclusive with dex.<br />Example: "https://accounts.google.com" |  | Optional: \{\} <br /> |
+| `externalIssuerURL` _string_ | ExternalIssuerURL skips deploying Dex and uses this issuer URL for oauth2-proxy.<br />Mutually exclusive with dex.<br />oauth2-proxy performs standard OIDC discovery against this issuer's<br />/.well-known/openid-configuration endpoint, so the issuer must be reachable<br />from inside the cluster; add an egress NetworkPolicy rule for it if<br />spec.networkPolicies.egress restricts egress.<br />Example: "https://accounts.google.com" |  | Optional: \{\} <br /> |
 | `clientID` _string_ | ClientID is the OAuth2 client ID when using an external OIDC provider.<br />Ignored when dex is configured (the operator manages the client ID). |  | Optional: \{\} <br /> |
 | `clientSecretRef` _[SecretReference](#secretreference)_ | ClientSecretRef references a Secret containing the OAuth2 client secret.<br />Ignored when dex is configured (the operator manages the client secret). |  | Optional: \{\} <br /> |
 | `emailDomain` _string_ | EmailDomain restricts login to users with this email domain.<br />Set to "*" to allow all email domains (default). |  | Optional: \{\} <br /> |
@@ -381,15 +381,16 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Enabled controls whether an external Ingress is created for the shared gateway.<br />Defaults to false — the gateway is reachable in-cluster via its Service. Set to<br />true to expose it externally at gateway.<spec.domain>. |  | Optional: \{\} <br /> |
-| `tls` _[IngressTLSConfig](#ingresstlsconfig)_ | TLS configuration for agent webhooks |  | Optional: \{\} <br /> |
+| `tls` _[IngressTLSConfig](#ingresstlsconfig)_ | TLS configures how the gateway, agent, and Dex Ingress resources for this<br />cluster obtain their TLS certificate. |  | Optional: \{\} <br /> |
 | `className` _string_ | ClassName specifies the IngressClass to use (maps to spec.ingressClassName on the Ingress object). |  | Optional: \{\} <br /> |
+| `externalScheme` _string_ | ExternalScheme is the public-facing scheme ("http" or "https") used to build<br />OIDC issuer URLs and OAuth redirect URIs. It is independent of whether the<br />in-cluster Ingress carries a TLS block: set this when TLS terminates upstream<br />of the cluster (e.g. at an external load balancer or reverse proxy) so those<br />URLs still reflect what the outside world actually sees. Defaults to the<br />operator-level --external-scheme flag ("https" unless overridden). |  | Enum: [http https] <br />Optional: \{\} <br /> |
 
 
 #### IngressTLSConfig
 
 
 
-IngressTLSConfig defines TLS configuration
+IngressTLSConfig configures how an Ingress obtains its TLS certificate.
 
 
 
@@ -398,8 +399,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enabled` _boolean_ | Enabled controls whether TLS is enabled for webhooks.<br />Defaults to true; set to false to disable TLS. | true | Optional: \{\} <br /> |
-| `secretName` _string_ | SecretName is the name of an existing TLS secret (bring-your-own certificate).<br />When set, cert-manager integration is skipped and this secret is used directly. |  | Optional: \{\} <br /> |
+| `mode` _string_ | Mode controls how TLS is configured for this Ingress:<br />  - "auto": use the operator's configured cert-manager issuer if one is<br />    set; otherwise no TLS block is created — the correct behavior when<br />    TLS terminates upstream of the cluster.<br />  - "secret": always reference SecretName (bring-your-own certificate),<br />    with or without an issuer configured.<br />  - "none": never create a TLS block, even if an issuer is configured.<br />When omitted, Mode is inferred: "secret" if SecretName is set, otherwise<br />"auto". |  | Enum: [auto secret none] <br />Optional: \{\} <br /> |
+| `secretName` _string_ | SecretName is the name of an existing TLS secret. Required when Mode is<br />"secret"; ignored otherwise. |  | Optional: \{\} <br /> |
 
 
 #### LanguageAgent
@@ -550,11 +551,11 @@ _Appears in:_
 | `tools` _[ToolReference](#toolreference) array_ | Tools is a list of LanguageTool references available to this agent |  | Optional: \{\} <br /> |
 | `persona` _string_ | Persona is the name of a LanguagePersona this agent uses |  | Optional: \{\} <br /> |
 | `instructions` _string_ | Instructions provides system instructions for the agent.<br />Delivered as the top-level "instructions" field in /etc/agent/config.yaml. |  | Optional: \{\} <br /> |
-| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace defines persistent storage for the agent |  | Optional: \{\} <br /> |
+| `workspace` _[WorkspaceSpec](#workspacespec)_ | Workspace defines persistent storage for the agent. Provisioning is an<br />agent/cluster concern, so it defaults to enabled even when omitted entirely —<br />the empty-object default here lets WorkspaceSpec's own per-field defaults<br />(enabled, size, accessMode, mountPath) apply without a defaulting webhook. | \{  \} | Optional: \{\} <br /> |
 | `repository` _[RepositorySpec](#repositoryspec)_ | Repository declares a git repository to clone into the agent's workspace.<br />When set, the operator ensures a workspace PVC is provisioned (defaulting it on<br />if not explicitly configured) so the clone has somewhere to land. |  | Optional: \{\} <br /> |
 | `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for this agent.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  | Optional: \{\} <br /> |
 | `ports` _[AgentPort](#agentport) array_ | Ports defines all network ports this agent exposes.<br />At most one entry should have expose: true (the ingress target);<br />if none are marked, the first port is used for ingress routing.<br />Defaults to a single HTTP port on 8080 when not set. |  | Optional: \{\} <br /> |
-| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration.<br />The name is historical: agents run as Argo Workflow pods, not Deployments,<br />so spec.deployment.replicas and spec.deployment.autoscaling are rejected here. |  | Optional: \{\} <br /> |
+| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration.<br />The name is historical: agents run as Argo Workflow pods, not Deployments,<br />so spec.deployment.replicas and spec.deployment.autoscaling are rejected here.<br />DeploymentSpec.Resources has no default of its own (it's shared with<br />LanguageTool and LanguageCluster's gateway, which want different defaults),<br />so the default lives here instead — applied without a defaulting webhook. | \{ resources:map[limits:map[cpu:1000m memory:2Gi] requests:map[cpu:100m memory:256Mi]] \} | Optional: \{\} <br /> |
 | `execution` _[ExecutionSpec](#executionspec)_ | Execution controls how this agent's workload is scheduled and run —<br />always-on (mode: service) or invoked (mode: task). |  | Optional: \{\} <br /> |
 | `credentials` _[CredentialSpec](#credentialspec) array_ | Credentials declares environment variables backed by Secret values that the<br />operator resolves and injects into the agent container. Typically supplied by<br />the referenced LanguageAgentRuntime; agents may add or override entries by name. |  | Optional: \{\} <br /> |
 | `selfConfigure` _[SelfConfigureSpec](#selfconfigurespec)_ | SelfConfigure controls whether this agent may submit LanguageAgentSelfConfig<br />requests to modify its own spec at runtime. When enabled, the operator grants<br />the agent's ServiceAccount permission to create LanguageAgentSelfConfig resources. |  | Optional: \{\} <br /> |
@@ -806,13 +807,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `image` _string_ | Image is the container image to run for this tool. For transport=stdio it is ignored —<br />the operator injects the MCP bridge image instead — and may be omitted (the defaulting<br />webhook fills it). |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `image` _string_ | Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead. |  | Optional: \{\} <br /> |
 | `type` _string_ | Type specifies the tool protocol type. Only "mcp" is currently implemented. | mcp | Enum: [mcp] <br /> |
 | `transport` _string_ | Transport selects how the operator exposes this tool's MCP endpoint.<br />- "streamable-http" (default): spec.image already serves Streamable HTTP at /mcp.<br />- "sse": spec.image already serves the (legacy) MCP HTTP+SSE transport.<br />- "stdio": the user supplies a stdio MCP command in spec.stdio; the operator injects a<br />  pinned, persistent stdio→Streamable-HTTP bridge that serves /mcp and /health on spec.port. | streamable-http | Enum: [streamable-http sse stdio] <br />Optional: \{\} <br /> |
 | `stdio` _[StdioServerSpec](#stdioserverspec)_ | Stdio configures the stdio MCP server when transport=stdio. Required for that transport,<br />ignored otherwise. |  | Optional: \{\} <br /> |
 | `deploymentMode` _string_ | DeploymentMode specifies how this tool should be deployed<br />- "service": Deployed as a standalone Deployment+Service (default, shared across agents)<br />- "sidecar": Deployed as a sidecar container in each agent pod (dedicated, with workspace access) | service | Enum: [service sidecar] <br />Optional: \{\} <br /> |
 | `port` _integer_ | Port is the port the tool listens on | 8080 | Maximum: 65535 <br />Minimum: 1 <br /> |
-| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration. |  | Optional: \{\} <br /> |
+| `deployment` _[DeploymentSpec](#deploymentspec)_ | Deployment groups Kubernetes-specific pod and container configuration.<br />DeploymentSpec.Resources has no default of its own (it's shared with<br />LanguageAgent and LanguageCluster's gateway, which want different defaults),<br />so the default lives here instead — applied without a defaulting webhook. | \{ resources:map[limits:map[cpu:200m memory:512Mi] requests:map[cpu:50m memory:128Mi]] \} | Optional: \{\} <br /> |
 | `networkPolicies` _[AgentNetworkPolicies](#agentnetworkpolicies)_ | NetworkPolicies defines ingress and egress rules for this tool.<br />Rules mirror the native Kubernetes NetworkPolicy shape. |  | Optional: \{\} <br /> |
 
 
@@ -1033,7 +1034,8 @@ _Appears in:_
 | `ref` _string_ | Ref is the branch, tag, or commit SHA to check out. Defaults to the default branch. |  | Optional: \{\} <br /> |
 | `path` _string_ | Path is the subdirectory under the workspace mountPath to clone into.<br />Defaults to the repository name derived from the URL. Must be a relative path<br />(no leading "/", no ".." segments). |  | Optional: \{\} <br /> |
 | `depth` _integer_ | Depth, when > 0, performs a shallow clone with this history depth. |  | Minimum: 0 <br />Optional: \{\} <br /> |
-| `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core)_ | SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH). |  | Optional: \{\} <br /> |
+| `secretRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core)_ | SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH).<br />The Secret is mounted read-only into the repository init container and the agent<br />container, where git authenticates through a credential helper that reads it, so<br />fetch and push keep working after the clone. The `token` key is also exported to<br />the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab). |  | Optional: \{\} <br /> |
+| `vendor` _string_ | Vendor is the hosting vendor of the repository. It selects which CLI receives the<br />credential inside the agent container (`gh` for github, `glab` for gitlab; none<br />for git). Defaulted from the URL host (github.com, gitlab.com), otherwise git. |  | Enum: [github gitlab git] <br />Optional: \{\} <br /> |
 
 
 #### RuntimeAuthSpec
@@ -1198,6 +1200,23 @@ _Appears in:_
 | `command` _string array_ | Command is the full argv of the stdio MCP server, e.g.<br />["npx","-y","@upstash/context7-mcp"] or ["uvx","mcp-server-git","--repository","/workspace"].<br />The operator passes it to the bridge as a single stdio command. Environment for the<br />child comes from spec.deployment.env / spec.deployment.envFrom. |  | MinItems: 1 <br />Required: \{\} <br /> |
 
 
+#### ToolHeader
+
+
+
+ToolHeader is one HTTP header an agent's runtime sends to an external MCP server.
+
+
+
+_Appears in:_
+- [ToolReference](#toolreference)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the header name. |  | MaxLength: 128 <br />Pattern: `^[A-Za-z0-9!#$%&'*+.^_\|~-]+$` <br /> |
+| `value` _string_ | Value is the header value. $(NAME) references an environment variable of the agent<br />container, substituted by the runtime when it connects. |  | MaxLength: 4096 <br /> |
+
+
 #### ToolProperty
 
 
@@ -1220,7 +1239,8 @@ _Appears in:_
 
 
 
-ToolReference references a LanguageTool
+ToolReference references a LanguageTool in the agent's namespace or, when url is set,
+names an external MCP server the agent's runtime connects to directly.
 
 
 
@@ -1229,8 +1249,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the name of the LanguageTool |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
+| `name` _string_ | Name is the name of the LanguageTool or, when url is set, the name the agent's<br />runtime knows the external server by (its key in config.yaml). |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
 | `enabled` _boolean_ | Enabled indicates if this tool is available to the agent.<br />Defaults to true. Set to false to explicitly disable the tool without removing it. | true | Optional: \{\} <br /> |
+| `url` _string_ | URL makes this entry an external Streamable HTTP MCP server instead of a LanguageTool:<br />nothing is looked up or deployed, and the URL is handed to the runtime as it is.<br />Must be http or https. |  | MaxLength: 2048 <br />Pattern: `^https?://` <br />Optional: \{\} <br /> |
+| `headers` _[ToolHeader](#toolheader) array_ | Headers are HTTP headers the runtime sends to the external MCP server, such as an<br />Authorization header. A value may reference an environment variable of the agent<br />container as $(NAME); the runtime substitutes it at connection time, so a secret<br />delivered through spec.credentials never lands in the agent's ConfigMap.<br />Only valid together with url. |  | MaxItems: 16 <br />Optional: \{\} <br /> |
 
 
 #### ToolSchema

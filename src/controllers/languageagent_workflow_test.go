@@ -456,6 +456,85 @@ func TestLanguageAgentController_ResolveTools(t *testing.T) {
 	})
 }
 
+func TestLanguageAgentController_ResolveExternalTools(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	// No LanguageTool objects exist: an external server must not be looked up.
+	newReconciler := func() *LanguageAgentReconciler {
+		return &LanguageAgentReconciler{
+			Client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			Scheme: scheme,
+			Log:    logr.Discard(),
+		}
+	}
+
+	t.Run("external_without_headers_listed_as_given", func(t *testing.T) {
+		agent := gen.LanguageAgent("agent", "default",
+			gen.SetAgentExternalTool("docs", "https://mcp.example.com/mcp", nil),
+		)
+
+		urls, err := newReconciler().resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 1 || urls[0] != "https://mcp.example.com/mcp" {
+			t.Errorf("expected the external URL as given, got %v", urls)
+		}
+	})
+
+	t.Run("external_with_headers_left_out_of_mcp_servers", func(t *testing.T) {
+		agent := gen.LanguageAgent("agent", "default",
+			gen.SetAgentExternalTool("langop", "https://cloud.example.com/mcp",
+				map[string]string{"Authorization": "Bearer $(LANGOP_MCP_TOKEN)"}),
+		)
+
+		urls, err := newReconciler().resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 0 {
+			t.Errorf("a server that needs headers has no place in MCP_SERVERS, got %v", urls)
+		}
+	})
+
+	t.Run("external_never_becomes_a_sidecar", func(t *testing.T) {
+		agent := gen.LanguageAgent("agent", "default",
+			gen.SetAgentExternalTool("langop", "https://cloud.example.com/mcp",
+				map[string]string{"Authorization": "Bearer $(LANGOP_MCP_TOKEN)"}),
+		)
+
+		containers, volumes, err := newReconciler().resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 0 || len(volumes) != 0 {
+			t.Errorf("expected no sidecars for an external server, got %d containers", len(containers))
+		}
+	})
+
+	t.Run("external_and_in_cluster_tools_mix", func(t *testing.T) {
+		tool := gen.LanguageTool("my-tool", "default", gen.SetToolDeploymentMode("service"))
+		agent := gen.LanguageAgent("agent", "default",
+			gen.SetAgentTool("my-tool", nil),
+			gen.SetAgentExternalTool("docs", "https://mcp.example.com/mcp", nil),
+		)
+		r := &LanguageAgentReconciler{
+			Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(tool).Build(),
+			Scheme: scheme,
+			Log:    logr.Discard(),
+		}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		expected := []string{"http://my-tool.default.svc.cluster.local:8080/mcp", "https://mcp.example.com/mcp"}
+		if len(urls) != 2 || urls[0] != expected[0] || urls[1] != expected[1] {
+			t.Errorf("expected %v, got %v", expected, urls)
+		}
+	})
+}
+
 func TestLanguageAgentController_ResolveModels(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 

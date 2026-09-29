@@ -116,7 +116,7 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `MODEL_ENDPOINT` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
-| `MCP_SERVERS` | Comma-separated full MCP tool URLs (each already includes the `/mcp` path) for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>/mcp`; sidecar-mode tools use `http://localhost:<port>/mcp`. The runtime connects to each URL directly as a Streamable HTTP MCP server (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. |
+| `MCP_SERVERS` | Comma-separated full MCP tool URLs (each already includes the `/mcp` path) for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>/mcp`; sidecar-mode tools use `http://localhost:<port>/mcp`; external servers (`spec.tools[].url`) appear as given, but only when they need no headers. The runtime connects to each URL directly as a Streamable HTTP MCP server (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. Runtimes should prefer the `tools` section of `config.yaml`, which also carries headers. |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
 | `AGENT_REPO_DIR` | Absolute path to the repository cloned from `spec.repository`. Only injected when a repository is configured. The operator also sets the agent container's working directory to this path, so a compliant runtime should operate inside it. See [Repository Cloning](#repository-cloning). |
 | `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n`, `GIT_SSH_COMMAND`, `GIT_TERMINAL_PROMPT` | Git identity and credentials for `spec.repository` (see [Repository Cloning](#repository-cloning)). Unlike the variables above, these go only to the agent container and the `repository` init container, never to user init containers or sidecars. |
@@ -209,6 +209,9 @@ personas:
     expertise: Data analysis, statistical reasoning, and visualization
 
 # Tool endpoints — keyed by tool name, resolved to full in-cluster MCP URLs (incl. /mcp).
+# An external server (spec.tools[].url) keeps its URL and may carry headers; a header value
+# may reference an environment variable of the agent container as $(NAME), which the
+# runtime MUST substitute when it connects (Claude Code: ${NAME}; OpenCode: {env:NAME}).
 tools:
   mem0-memory:
     endpoint: http://mem0-memory.tools.svc.cluster.local:8080/mcp
@@ -216,6 +219,11 @@ tools:
   python-executor:
     endpoint: http://python-executor.tools.svc.cluster.local:8080/mcp
     protocol: mcp
+  control-plane:
+    endpoint: https://cloud.example.com/mcp
+    protocol: mcp
+    headers:
+      Authorization: Bearer $(CONTROL_PLANE_TOKEN)
 
 # Model configuration — keyed by model name.
 # All LLM traffic routes through the shared namespace gateway.
