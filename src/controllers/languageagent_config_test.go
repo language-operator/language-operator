@@ -203,6 +203,37 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		assert.Equal(t, "http://mem0.default.svc.cluster.local:8080/mcp", envMap["MCP_SERVERS"])
 	})
 
+	t.Run("MCP_SERVERS lists external servers only when they need no headers", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := gen.LanguageAgent("external-env-agent", "default",
+			gen.SetAgentExternalTool("docs", "https://mcp.example.com/mcp", nil),
+			gen.SetAgentExternalTool("langop", "https://cloud.example.com/mcp",
+				map[string]string{"Authorization": "Bearer $(LANGOP_MCP_TOKEN)"}),
+		)
+		agent.Spec.Image = "ghcr.io/language-operator/agent:latest"
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		_, err := reconciler.Reconcile(context.Background(), agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+		envMap := make(map[string]string)
+		for _, e := range podSpec.Containers[0].Env {
+			envMap[e.Name] = e.Value
+		}
+		assert.Equal(t, "https://mcp.example.com/mcp", envMap["MCP_SERVERS"])
+	})
+
 	t.Run("AGENT_INSTRUCTIONS absent when spec.instructions is empty", func(t *testing.T) {
 		scheme := testutil.SetupTestScheme(t)
 		agent := &langopv1alpha1.LanguageAgent{
@@ -591,6 +622,35 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		require.Contains(t, cfg.Tools, "sidecar-tool", "config.yaml missing sidecar tool entry")
 		assert.Equal(t, "http://localhost:8080/mcp", cfg.Tools["sidecar-tool"].Endpoint)
 		assert.Equal(t, "mcp", cfg.Tools["sidecar-tool"].Protocol)
+	})
+
+	t.Run("tool_external_with_headers", func(t *testing.T) {
+		// No LanguageTool named langop exists; the reference carries everything.
+		agent := gen.LanguageAgent("external-agent", "default",
+			gen.SetAgentExternalTool("langop", "https://cloud.example.com/mcp",
+				map[string]string{"Authorization": "Bearer $(LANGOP_MCP_TOKEN)", "X-Org": "acme"}),
+		)
+
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), agent)
+
+		require.Contains(t, cfg.Tools, "langop", "config.yaml missing external tool entry")
+		external := cfg.Tools["langop"]
+		assert.Equal(t, "https://cloud.example.com/mcp", external.Endpoint)
+		assert.Equal(t, "mcp", external.Protocol)
+		assert.Equal(t, map[string]string{
+			"Authorization": "Bearer $(LANGOP_MCP_TOKEN)",
+			"X-Org":         "acme",
+		}, external.Headers)
+	})
+
+	t.Run("tool_in_cluster_has_no_headers_key", func(t *testing.T) {
+		tool := gen.LanguageTool("plain-tool", "default")
+		agent := gen.LanguageAgent("plain-agent", "default")
+		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "plain-tool"}}
+
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+
+		assert.Nil(t, cfg.Tools["plain-tool"].Headers)
 	})
 
 	t.Run("persona_section", func(t *testing.T) {

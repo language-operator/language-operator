@@ -3,6 +3,8 @@
 package gen
 
 import (
+	"sort"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -154,6 +156,26 @@ func SetAgentTool(name string, enabled *bool) LanguageAgentModifier {
 	return func(a *langopv1alpha1.LanguageAgent) {
 		a.Spec.Tools = append(a.Spec.Tools, langopv1alpha1.ToolReference{Name: name, Enabled: enabled})
 	}
+}
+
+// SetAgentExternalTool appends an external MCP server (url + headers) to spec.tools.
+func SetAgentExternalTool(name, url string, headers map[string]string) LanguageAgentModifier {
+	return func(a *langopv1alpha1.LanguageAgent) {
+		ref := langopv1alpha1.ToolReference{Name: name, URL: url}
+		for _, k := range sortedKeys(headers) {
+			ref.Headers = append(ref.Headers, langopv1alpha1.ToolHeader{Name: k, Value: headers[k]})
+		}
+		a.Spec.Tools = append(a.Spec.Tools, ref)
+	}
+}
+
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // SetAgentNetworkPolicies sets spec.networkPolicies.

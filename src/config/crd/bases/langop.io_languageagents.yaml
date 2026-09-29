@@ -7030,7 +7030,9 @@ spec:
                 description: Tools is a list of LanguageTool references available
                   to this agent
                 items:
-                  description: ToolReference references a LanguageTool
+                  description: |-
+                    ToolReference references a LanguageTool in the agent's namespace or, when url is set,
+                    names an external MCP server the agent's runtime connects to directly.
                   properties:
                     enabled:
                       default: true
@@ -7038,14 +7040,55 @@ spec:
                         Enabled indicates if this tool is available to the agent.
                         Defaults to true. Set to false to explicitly disable the tool without removing it.
                       type: boolean
+                    headers:
+                      description: |-
+                        Headers are HTTP headers the runtime sends to the external MCP server, such as an
+                        Authorization header. A value may reference an environment variable of the agent
+                        container as $(NAME); the runtime substitutes it at connection time, so a secret
+                        delivered through spec.credentials never lands in the agent's ConfigMap.
+                        Only valid together with url.
+                      items:
+                        description: ToolHeader is one HTTP header an agent's runtime
+                          sends to an external MCP server.
+                        properties:
+                          name:
+                            description: Name is the header name.
+                            maxLength: 128
+                            pattern: ^[A-Za-z0-9!#$%&'*+.^_|~-]+$
+                            type: string
+                          value:
+                            description: |-
+                              Value is the header value. $(NAME) references an environment variable of the agent
+                              container, substituted by the runtime when it connects.
+                            maxLength: 4096
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      type: array
                     name:
-                      description: Name is the name of the LanguageTool
+                      description: |-
+                        Name is the name of the LanguageTool or, when url is set, the name the agent's
+                        runtime knows the external server by (its key in config.yaml).
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    url:
+                      description: |-
+                        URL makes this entry an external Streamable HTTP MCP server instead of a LanguageTool:
+                        nothing is looked up or deployed, and the URL is handed to the runtime as it is.
+                        Must be http or https.
+                      maxLength: 2048
+                      pattern: ^https?://
                       type: string
                   required:
                   - name
                   type: object
+                  x-kubernetes-validations:
+                  - message: headers may only be set together with url
+                    rule: '!has(self.headers) || has(self.url)'
                 type: array
               workspace:
                 default: {}

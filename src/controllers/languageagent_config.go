@@ -49,6 +49,10 @@ type personaConfigYAML struct {
 type toolConfigYAML struct {
 	Endpoint string `json:"endpoint"`
 	Protocol string `json:"protocol"`
+	// Headers the runtime sends to an external MCP server (spec.tools[].headers). Values may
+	// carry $(NAME) references to the agent container's environment, which the runtime
+	// resolves when it connects, so no secret is written into the ConfigMap.
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 type modelConfigYAML struct {
@@ -87,6 +91,18 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 	// Tools
 	for _, toolRef := range agent.Spec.Tools {
 		if toolRef.Enabled != nil && !*toolRef.Enabled {
+			continue
+		}
+		if toolRef.External() {
+			// An external MCP server: the entry is the reference itself, headers included.
+			if cfg.Tools == nil {
+				cfg.Tools = make(map[string]toolConfigYAML)
+			}
+			cfg.Tools[toolRef.Name] = toolConfigYAML{
+				Endpoint: toolRef.URL,
+				Protocol: "mcp",
+				Headers:  toolHeaders(toolRef.Headers),
+			}
 			continue
 		}
 		tool := &langopv1alpha1.LanguageTool{}
@@ -134,6 +150,19 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
 	return configHash, CreateOrUpdateConfigMap(ctx, r.Client, r.Scheme, agent, configMapName, agent.Namespace, data)
+}
+
+// toolHeaders turns spec.tools[].headers into the map config.yaml carries (nil when empty,
+// so the key is omitted). A later duplicate name wins, as it would in a header set.
+func toolHeaders(headers []langopv1alpha1.ToolHeader) map[string]string {
+	if len(headers) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(headers))
+	for _, h := range headers {
+		out[h.Name] = h.Value
+	}
+	return out
 }
 
 // getToolNames extracts tool names from agent's tools

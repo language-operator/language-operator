@@ -252,3 +252,29 @@ spec:
 The operator resolves each tool to `http://<tool>.<namespace>.svc.cluster.local:<port>` and injects
 the list via `MCP_SERVERS`. For the transport details and the full schema, see
 [Tools](../components/tools.md) and the [LanguageTool API reference](../api/languagetool.md).
+
+### External MCP servers
+
+A `spec.tools` entry may name a Streamable HTTP MCP server that runs elsewhere instead of a
+`LanguageTool`: give it a `url`, and optionally `headers`. Nothing is deployed; the runtime
+connects to the URL directly. A header value may reference an environment variable of the
+agent container as `$(NAME)`, so a token delivered through `spec.credentials` reaches the
+server without ever being written into the agent's ConfigMap:
+
+```yaml
+spec:
+  tools:
+    - name: control-plane
+      url: https://cloud.example.com/mcp
+      headers:
+        - name: Authorization
+          value: Bearer $(CONTROL_PLANE_TOKEN)
+  credentials:
+    - name: CONTROL_PLANE_TOKEN
+      valueFrom:
+        name: control-plane-token
+        key: token
+```
+
+The entry lands in `/etc/agent/config.yaml` under `tools.control-plane` with its `endpoint` and
+`headers`. `MCP_SERVERS` lists an external server only when it needs no headers.
