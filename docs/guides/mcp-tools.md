@@ -277,3 +277,34 @@ spec:
 
 The entry lands in `/etc/agent/config.yaml` under `tools.control-plane` with its `endpoint` and
 `headers`. `MCP_SERVERS` lists an external server only when it needs no headers.
+
+To share one remote server across several agents, declare it once as a `LanguageTool` with
+`spec.url` and `spec.headers`, then reference it by name like any other tool. The agent receives
+the same `config.yaml` entry, and the server shows up in `kubectl get languagetool`:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: control-plane
+spec:
+  url: https://cloud.example.com/mcp
+  headers:
+    - name: Authorization
+      value: Bearer $(CONTROL_PLANE_TOKEN)
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageAgent
+metadata:
+  name: my-agent
+spec:
+  tools:
+    - name: control-plane
+  credentials:
+    - name: CONTROL_PLANE_TOKEN
+      valueFrom:
+        name: control-plane-token
+```
+
+`$(NAME)` still refers to the environment of the agent that attaches the tool, so each agent
+brings its own credential. See [Remote servers](../components/tools.md#remote-servers).

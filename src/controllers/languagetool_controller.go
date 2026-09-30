@@ -109,6 +109,7 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	span.SetAttributes(
 		attribute.String("tool.type", tool.Spec.Type),
 		attribute.String("tool.deployment_mode", tool.Spec.DeploymentMode),
+		attribute.Bool("tool.remote", tool.Remote()),
 		attribute.Int64("tool.generation", tool.Generation),
 	)
 
@@ -144,6 +145,18 @@ func (r *LanguageToolReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 		r.EventManager.RecordToolCreated(tool, tool.Spec.Type)
+	}
+
+	// A remote tool (spec.url) already runs elsewhere: nothing to deploy, isolate, or scale.
+	if tool.Remote() {
+		if err := r.reconcileRemote(ctx, tool); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "Failed to reconcile remote tool")
+			reconcileErr = err
+			return ctrl.Result{}, err
+		}
+		span.SetStatus(codes.Ok, "Reconciliation successful")
+		return ctrl.Result{}, nil
 	}
 
 	// Skip Deployment and Service for sidecar mode tools
@@ -575,6 +588,64 @@ func (r *LanguageToolReconciler) reconcileNetworkPolicy(ctx context.Context, too
 	return CreateOrUpdateNetworkPolicy(ctx, r.Client, r.Scheme, tool, networkPolicy)
 }
 
+// reconcileRemote handles a LanguageTool whose spec.url names an MCP server that runs
+// elsewhere. It removes any workload left over from before the tool became remote, reports
+// the URL as the endpoint, and discovers schemas when the headers can be sent as they are.
+func (r *LanguageToolReconciler) reconcileRemote(ctx context.Context, tool *langopv1alpha1.LanguageTool) error {
+	log := log.FromContext(ctx)
+
+	// A tool converted from deployed to remote keeps its owned objects until the tool itself
+	// is deleted, so remove them here. Owner references still garbage-collect on deletion.
+	meta := metav1.ObjectMeta{Name: tool.Name, Namespace: tool.Namespace}
+	for _, obj := range []client.Object{
+		&appsv1.Deployment{ObjectMeta: meta},
+		&corev1.Service{ObjectMeta: meta},
+		&autoscalingv2.HorizontalPodAutoscaler{ObjectMeta: meta},
+		&networkingv1.NetworkPolicy{ObjectMeta: meta},
+	} {
+		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete stale %T for remote tool: %w", obj, err)
+		}
+	}
+
+	tool.Status.Endpoint = tool.Spec.URL
+	tool.Status.ReadyReplicas = 0
+	tool.Status.AvailableReplicas = 0
+	tool.Status.UpdatedReplicas = 0
+	tool.Status.UnavailableReplicas = 0
+	SetPhase(&tool.Status.Phase, &tool.Status.ObservedGeneration, events.PhaseStatusRunning, tool.Generation)
+	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionReady, metav1.ConditionTrue, langopv1alpha1.ReasonRemoteEndpoint,
+		"Remote MCP server; nothing is deployed", tool.Generation)
+	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionNetworkPolicyReady, metav1.ConditionTrue, langopv1alpha1.ReasonRemoteEndpoint,
+		"No NetworkPolicy: a remote tool has no pods to isolate", tool.Generation)
+
+	if tool.Spec.Type != "mcp" {
+		return nil
+	}
+
+	// Headers that reference an agent's environment ($(NAME)) are resolved by the agent's
+	// runtime, not here, so discovery would be refused or would send the placeholder.
+	headers := make(map[string]string, len(tool.Spec.Headers))
+	for _, h := range tool.Spec.Headers {
+		if strings.Contains(h.Value, "$(") {
+			SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionFalse, langopv1alpha1.ReasonSchemaDiscoverySkipped,
+				fmt.Sprintf("Header %s references an agent environment variable, which the operator cannot resolve; schemas are not discovered for this tool", h.Name), tool.Generation)
+			return nil
+		}
+		headers[h.Name] = h.Value
+	}
+
+	schemas, err := r.discoverMCPToolSchemasAt(ctx, tool.Spec.URL, headers)
+	if err != nil {
+		log.Error(err, "Failed to discover MCP tool schemas", "tool", tool.Name, "endpoint", tool.Spec.URL)
+		SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionFalse, langopv1alpha1.ReasonSchemaDiscoveryFailed, err.Error(), tool.Generation)
+		return nil
+	}
+	tool.Status.ToolSchemas = schemas
+	SetCondition(&tool.Status.Conditions, langopv1alpha1.ConditionSchemasDiscovered, metav1.ConditionTrue, langopv1alpha1.ReasonSchemasDiscovered, "Tool schemas discovered", tool.Generation)
+	return nil
+}
+
 // discoveryTimeout returns the bound for an MCP schema-discovery handshake.
 func (r *LanguageToolReconciler) discoveryTimeout() time.Duration {
 	if r.MCPDiscoveryTimeout > 0 {
@@ -587,6 +658,12 @@ func (r *LanguageToolReconciler) discoveryTimeout() time.Duration {
 // initialize → tools/list handshake and a legacy fallback) to discover its tools and schemas.
 // endpoint is "host:port" (no scheme or path).
 func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, endpoint string) ([]langopv1alpha1.ToolSchema, error) {
+	return r.discoverMCPToolSchemasAt(ctx, "http://"+endpoint+"/mcp", nil)
+}
+
+// discoverMCPToolSchemasAt is discoverMCPToolSchemas for a complete MCP endpoint URL, used
+// verbatim, with extra request headers (a remote tool's spec.headers).
+func (r *LanguageToolReconciler) discoverMCPToolSchemasAt(ctx context.Context, endpoint string, headers map[string]string) ([]langopv1alpha1.ToolSchema, error) {
 	log := log.FromContext(ctx)
 
 	// Bound the handshake; the context deadline is the primary bound (interruptible on
@@ -594,8 +671,8 @@ func (r *LanguageToolReconciler) discoverMCPToolSchemas(ctx context.Context, end
 	ctx, cancel := context.WithTimeout(ctx, r.discoveryTimeout())
 	defer cancel()
 
-	client := &mcp.Client{HTTP: r.HTTPClient}
-	tools, err := client.ListTools(ctx, "http://"+endpoint)
+	client := &mcp.Client{HTTP: r.HTTPClient, Headers: headers}
+	tools, err := client.ListToolsEndpoint(ctx, endpoint)
 	if err != nil {
 		return nil, err
 	}

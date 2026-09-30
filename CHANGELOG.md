@@ -6,6 +6,9 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+**Features**
+- tool: a `LanguageTool` with `spec.url` (and optional `spec.headers`) denotes a remote Streamable HTTP MCP server. Nothing is deployed; the URL and headers reach every referencing agent's `config.yaml` exactly like an inline `spec.tools[].url` entry, so one remote server can be declared once and attached to many agents. `status.endpoint` reports the URL; schemas are discovered when the headers are literal (#927)
+
 ---
 
 ## v0.3.10 — 2026-09-29

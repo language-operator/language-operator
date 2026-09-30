@@ -218,3 +218,46 @@ func TestParseSSEResponse_MultiLineAndComments(t *testing.T) {
 	}
 	assertContext7Tools(t, tools)
 }
+
+func TestListToolsEndpoint_UsesEndpointVerbatimAndSendsHeaders(t *testing.T) {
+	var initialized bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/tools-server" {
+			t.Errorf("endpoint must be used as given, got path %q", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer literal" {
+			t.Errorf("Authorization = %q, want the configured header", got)
+		}
+		if got := r.Header.Get("Accept"); !strings.Contains(got, "text/event-stream") {
+			t.Errorf("a custom header must not displace protocol headers; Accept = %q", got)
+		}
+		env := decodeMethod(t, r)
+		switch env.Method {
+		case "initialize":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, rpcResult(env.ID, `{"protocolVersion":"2024-11-05","capabilities":{}}`))
+		case "notifications/initialized":
+			initialized = true
+			w.WriteHeader(http.StatusAccepted)
+		case "tools/list":
+			if !initialized {
+				t.Errorf("tools/list before notifications/initialized")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, rpcResult(env.ID, toolsListJSON))
+		default:
+			t.Errorf("unexpected method %q", env.Method)
+		}
+	}))
+	defer srv.Close()
+
+	c := &Client{Headers: map[string]string{
+		"Authorization": "Bearer literal",
+		"Accept":        "text/plain", // must lose to the protocol's Accept
+	}}
+	tools, err := c.ListToolsEndpoint(context.Background(), srv.URL+"/api/v2/tools-server")
+	if err != nil {
+		t.Fatalf("ListToolsEndpoint: %v", err)
+	}
+	assertContext7Tools(t, tools)
+}

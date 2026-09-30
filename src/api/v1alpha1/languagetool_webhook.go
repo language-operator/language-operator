@@ -72,6 +72,30 @@ func (h *LanguageToolWebhook) ValidateUpdate(ctx context.Context, _, t *Language
 func (h *LanguageToolWebhook) validateSpec(t *LanguageTool) (admission.Warnings, error) {
 	var warnings admission.Warnings
 
+	// A remote tool (spec.url) deploys nothing, so every field that describes a workload
+	// contradicts it. Headers belong to the remote endpoint alone.
+	if len(t.Spec.Headers) > 0 && t.Spec.URL == "" {
+		return nil, fmt.Errorf("spec.headers may only be set together with spec.url")
+	}
+	if t.Remote() {
+		if t.Spec.Image != "" {
+			return nil, fmt.Errorf("spec.image cannot be set together with spec.url: a remote tool deploys nothing")
+		}
+		if t.Spec.Transport != "" && t.Spec.Transport != "streamable-http" {
+			return nil, fmt.Errorf("spec.transport must be streamable-http when spec.url is set; the remote server is reached as it is")
+		}
+		if t.Spec.Stdio != nil {
+			return nil, fmt.Errorf("spec.stdio cannot be set together with spec.url")
+		}
+		if t.Spec.DeploymentMode == "sidecar" {
+			return nil, fmt.Errorf("spec.deploymentMode sidecar cannot be set together with spec.url: a remote tool runs outside the agent pod")
+		}
+		if t.Spec.NetworkPolicies != nil {
+			warnings = append(warnings, "spec.networkPolicies is ignored when spec.url is set; nothing is deployed for a remote tool, so set egress rules on the agents that reach it")
+		}
+		return warnings, nil
+	}
+
 	// Transport/stdio consistency.
 	if t.Spec.Transport == "stdio" {
 		if t.Spec.Stdio == nil || len(t.Spec.Stdio.Command) == 0 {

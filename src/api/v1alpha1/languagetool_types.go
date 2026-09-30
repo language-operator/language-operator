@@ -56,13 +56,32 @@ type ToolProperty struct {
 const DefaultMCPBridgeImage = "ghcr.io/language-operator/mcp-bridge:latest"
 
 // LanguageToolSpec defines the desired state of LanguageTool
-// +kubebuilder:validation:XValidation:rule="self.transport == 'stdio' || size(self.image) > 0",message="spec.image is required unless spec.transport is stdio"
+// +kubebuilder:validation:XValidation:rule="self.transport == 'stdio' || has(self.url) || (has(self.image) && size(self.image) > 0)",message="spec.image is required unless spec.transport is stdio or spec.url is set"
+// +kubebuilder:validation:XValidation:rule="!has(self.headers) || has(self.url)",message="headers may only be set together with url"
 type LanguageToolSpec struct {
 	// Image is the container image to run for this tool. Required unless
 	// transport=stdio, where it is ignored entirely — the operator injects the
-	// MCP bridge image instead.
+	// MCP bridge image instead — or url is set, where nothing is deployed.
 	// +optional
 	Image string `json:"image,omitempty"`
+
+	// URL makes this LanguageTool a remote Streamable HTTP MCP server that already runs
+	// elsewhere: nothing is deployed, and the URL (including its /mcp path) is handed to every
+	// referencing agent as it is. Mutually exclusive with image, stdio, and deploymentMode
+	// sidecar. Must be http or https.
+	// +kubebuilder:validation:Pattern=`^https?://`
+	// +kubebuilder:validation:MaxLength=2048
+	// +optional
+	URL string `json:"url,omitempty"`
+
+	// Headers are HTTP headers an agent's runtime sends to the remote MCP server, such as an
+	// Authorization header. A value may reference an environment variable of the agent
+	// container as $(NAME); the runtime substitutes it at connection time, so a secret
+	// delivered through the agent's spec.credentials never lands in its ConfigMap.
+	// Only valid together with url.
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	Headers []ToolHeader `json:"headers,omitempty"`
 
 	// Type specifies the tool protocol type. Only "mcp" is currently implemented.
 	// +kubebuilder:validation:Enum=mcp
@@ -184,6 +203,12 @@ type LanguageTool struct {
 
 	Spec   LanguageToolSpec   `json:"spec,omitempty"`
 	Status LanguageToolStatus `json:"status,omitempty"`
+}
+
+// Remote reports whether this LanguageTool denotes an MCP server that runs elsewhere
+// (spec.url is set): the operator deploys nothing for it.
+func (t *LanguageTool) Remote() bool {
+	return t.Spec.URL != ""
 }
 
 // +kubebuilder:object:root=true

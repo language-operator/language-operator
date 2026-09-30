@@ -52,15 +52,25 @@ type Client struct {
 	HTTP *http.Client
 	// ProtocolVersion overrides the advertised MCP protocol version. Defaults to DefaultProtocolVersion.
 	ProtocolVersion string
+	// Headers are extra HTTP headers sent with every request, such as an Authorization header
+	// a remote server requires. They are applied after the protocol headers, so they cannot
+	// override Content-Type, Accept, MCP-Protocol-Version, or Mcp-Session-Id.
+	Headers map[string]string
 }
 
 // ListTools performs the full MCP handshake against baseURL's /mcp endpoint and returns the
 // discovered tools. If the server rejects the initialize handshake, it transparently falls
 // back to a bare tools/list. baseURL is like "http://host:port" (no /mcp suffix).
 func (c *Client) ListTools(ctx context.Context, baseURL string) ([]Tool, error) {
-	tools, err := c.listToolsHandshake(ctx, baseURL)
+	return c.ListToolsEndpoint(ctx, mcpEndpoint(baseURL))
+}
+
+// ListToolsEndpoint is ListTools for a complete MCP endpoint URL, used verbatim: nothing is
+// appended, so a remote server whose path is not /mcp works too.
+func (c *Client) ListToolsEndpoint(ctx context.Context, endpoint string) ([]Tool, error) {
+	tools, err := c.listToolsHandshakeEndpoint(ctx, endpoint)
 	if errors.Is(err, ErrInitializeUnsupported) {
-		return c.ListToolsLegacy(ctx, baseURL)
+		return c.listToolsLegacyEndpoint(ctx, endpoint)
 	}
 	return tools, err
 }
@@ -68,16 +78,18 @@ func (c *Client) ListTools(ctx context.Context, baseURL string) ([]Tool, error) 
 // ListToolsLegacy posts a bare tools/list with no handshake — the pre-Streamable-HTTP dialect
 // some simplified operator-native tools implement.
 func (c *Client) ListToolsLegacy(ctx context.Context, baseURL string) ([]Tool, error) {
-	resp, _, err := c.do(ctx, mcpEndpoint(baseURL), "", rpcRequest{JSONRPC: "2.0", ID: 1, Method: "tools/list"})
+	return c.listToolsLegacyEndpoint(ctx, mcpEndpoint(baseURL))
+}
+
+func (c *Client) listToolsLegacyEndpoint(ctx context.Context, endpoint string) ([]Tool, error) {
+	resp, _, err := c.do(ctx, endpoint, "", rpcRequest{JSONRPC: "2.0", ID: 1, Method: "tools/list"})
 	if err != nil {
 		return nil, err
 	}
 	return toolsFromResponse(resp)
 }
 
-func (c *Client) listToolsHandshake(ctx context.Context, baseURL string) ([]Tool, error) {
-	endpoint := mcpEndpoint(baseURL)
-
+func (c *Client) listToolsHandshakeEndpoint(ctx context.Context, endpoint string) ([]Tool, error) {
 	// 1. initialize — establish the session.
 	initResp, sessionID, err := c.do(ctx, endpoint, "", rpcRequest{
 		JSONRPC: "2.0",
@@ -173,6 +185,12 @@ func (c *Client) newRequest(ctx context.Context, endpoint, sessionID string, req
 	httpReq.Header.Set("MCP-Protocol-Version", c.protocolVersion())
 	if sessionID != "" {
 		httpReq.Header.Set("Mcp-Session-Id", sessionID)
+	}
+	for name, value := range c.Headers {
+		if httpReq.Header.Get(name) != "" {
+			continue // protocol headers win
+		}
+		httpReq.Header.Set(name, value)
 	}
 	return httpReq, nil
 }

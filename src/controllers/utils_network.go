@@ -434,6 +434,9 @@ func serviceURL(name, namespace string, port int32) string {
 // the /mcp path so the value is directly usable by an MCP client (no path-appending required).
 // Sidecar-mode tools are reached over localhost; service-mode tools via the in-cluster Service.
 func mcpToolEndpoint(tool *langopv1alpha1.LanguageTool, namespace string) string {
+	if tool.Remote() {
+		return tool.Spec.URL // already a complete MCP endpoint; nothing runs in the cluster
+	}
 	port := tool.Spec.Port
 	if port == 0 {
 		port = 8080 // Default MCP port

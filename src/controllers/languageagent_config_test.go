@@ -643,6 +643,24 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		}, external.Headers)
 	})
 
+	t.Run("tool_remote_languagetool", func(t *testing.T) {
+		// A remote LanguageTool contributes its URL and headers exactly like an inline entry.
+		tool := gen.LanguageTool("control-plane", "default",
+			gen.SetToolURL("https://cloud.example.com/mcp",
+				map[string]string{"Authorization": "Bearer $(CONTROL_PLANE_TOKEN)"}),
+		)
+		agent := gen.LanguageAgent("remote-agent", "default")
+		agent.Spec.Tools = []langopv1alpha1.ToolReference{{Name: "control-plane"}}
+
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), tool, agent)
+
+		require.Contains(t, cfg.Tools, "control-plane", "config.yaml missing remote tool entry")
+		remote := cfg.Tools["control-plane"]
+		assert.Equal(t, "https://cloud.example.com/mcp", remote.Endpoint)
+		assert.Equal(t, "mcp", remote.Protocol)
+		assert.Equal(t, map[string]string{"Authorization": "Bearer $(CONTROL_PLANE_TOKEN)"}, remote.Headers)
+	})
+
 	t.Run("tool_in_cluster_has_no_headers_key", func(t *testing.T) {
 		tool := gen.LanguageTool("plain-tool", "default")
 		agent := gen.LanguageAgent("plain-agent", "default")
