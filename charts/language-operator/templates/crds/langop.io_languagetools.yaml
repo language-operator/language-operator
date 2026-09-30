@@ -6306,11 +6306,39 @@ spec:
                 - service
                 - sidecar
                 type: string
+              headers:
+                description: |-
+                  Headers are HTTP headers an agent's runtime sends to the remote MCP server, such as an
+                  Authorization header. A value may reference an environment variable of the agent
+                  container as $(NAME); the runtime substitutes it at connection time, so a secret
+                  delivered through the agent's spec.credentials never lands in its ConfigMap.
+                  Only valid together with url.
+                items:
+                  description: ToolHeader is one HTTP header an agent's runtime sends
+                    to an external MCP server.
+                  properties:
+                    name:
+                      description: Name is the header name.
+                      maxLength: 128
+                      pattern: ^[A-Za-z0-9!#$%&'*+.^_|~-]+$
+                      type: string
+                    value:
+                      description: |-
+                        Value is the header value. $(NAME) references an environment variable of the agent
+                        container, substituted by the runtime when it connects.
+                      maxLength: 4096
+                      type: string
+                  required:
+                  - name
+                  - value
+                  type: object
+                maxItems: 16
+                type: array
               image:
                 description: |-
                   Image is the container image to run for this tool. Required unless
                   transport=stdio, where it is ignored entirely — the operator injects the
-                  MCP bridge image instead.
+                  MCP bridge image instead — or url is set, where nothing is deployed.
                 type: string
               networkPolicies:
                 description: |-
@@ -6694,10 +6722,23 @@ spec:
                 enum:
                 - mcp
                 type: string
+              url:
+                description: |-
+                  URL makes this LanguageTool a remote Streamable HTTP MCP server that already runs
+                  elsewhere: nothing is deployed, and the URL (including its /mcp path) is handed to every
+                  referencing agent as it is. Mutually exclusive with image, stdio, and deploymentMode
+                  sidecar. Must be http or https.
+                maxLength: 2048
+                pattern: ^https?://
+                type: string
             type: object
             x-kubernetes-validations:
-            - message: spec.image is required unless spec.transport is stdio
-              rule: self.transport == 'stdio' || size(self.image) > 0
+            - message: spec.image is required unless spec.transport is stdio or spec.url
+                is set
+              rule: self.transport == 'stdio' || has(self.url) || (has(self.image)
+                && size(self.image) > 0)
+            - message: headers may only be set together with url
+              rule: '!has(self.headers) || has(self.url)'
           status:
             description: LanguageToolStatus defines the observed state of LanguageTool
             properties:

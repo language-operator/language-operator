@@ -6,7 +6,7 @@ A `LanguageTool` is an MCP-compatible service that agents call to do things beyo
 
 When you create a `LanguageTool`, the operator:
 
-1. Deploys the tool as a Kubernetes Deployment and Service. For `transport: streamable-http` or `sse` it runs `spec.image` directly; for `transport: stdio` it injects a bridge image that wraps the stdio command and serves Streamable HTTP at `/mcp`.
+1. Deploys the tool as a Kubernetes Deployment and Service. For `transport: streamable-http` or `sse` it runs `spec.image` directly; for `transport: stdio` it injects a bridge image that wraps the stdio command and serves Streamable HTTP at `/mcp`. A tool with `spec.url` is [remote](#remote-servers): nothing is deployed.
 2. Waits for the pod to become ready, then calls `tools/list` to discover what the tool exposes.
 3. Stores the discovered schemas in `status.toolSchemas`.
 4. Injects the tool's endpoint (including `/mcp`) into every referencing agent via `/etc/agent/config.yaml`.
@@ -39,6 +39,29 @@ spec:
 ```
 
 The bridge keeps one long-lived child process — there is no per-request spawn. Writable scratch volumes (`HOME` and `/tmp`) are injected automatically so npm/uv caches work even with `readOnlyRootFilesystem`.
+
+### Remote servers
+
+A `LanguageTool` can also stand for a Streamable HTTP MCP server that already runs somewhere else — a SaaS endpoint, another cluster, an org-wide control plane. Set `spec.url` instead of `spec.image`; the operator deploys nothing and hands the URL (including its path) to every agent that references the tool:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: control-plane
+  namespace: language-operator-myapp
+spec:
+  url: https://cloud.example.com/mcp
+  headers:
+    - name: Authorization
+      value: Bearer $(CONTROL_PLANE_TOKEN)
+```
+
+This is the reusable form of an agent's inline `spec.tools[].url` entry: declare the server once, attach it to any number of agents by name, and see it in `kubectl get languagetool` alongside the deployed tools. `status.endpoint` reports the URL and the phase is `Running` as soon as the resource is accepted.
+
+`spec.headers` are sent by each agent's runtime when it connects. A value may reference an environment variable of the *agent* container as `$(NAME)`, so a token delivered through the agent's `spec.credentials` never lands in a ConfigMap. Each agent that attaches the tool supplies its own copy of that variable. The operator discovers `status.toolSchemas` only when every header is literal; a header that references the agent's environment cannot be resolved by the operator, and the `SchemasDiscovered` condition says so.
+
+`spec.url` is mutually exclusive with `spec.image`, `spec.stdio`, `transport: sse` or `stdio`, and `deploymentMode: sidecar`. `spec.networkPolicies` is ignored — there are no pods to isolate. The agent's default NetworkPolicy allows egress only inside its namespace, so an agent that reaches a remote server outside the cluster needs an egress rule in its own `spec.networkPolicies`.
 
 ## Deploying a tool
 

@@ -804,9 +804,9 @@ func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent
 }
 
 // resolveTools returns the MCP URLs that go into MCP_SERVERS: every enabled LanguageTool in
-// the agent's namespace, plus external servers (spec.tools[].url) that need no headers. An
-// external server with headers is left out, because the comma-separated variable has no room
-// for them; runtimes read it from config.yaml instead.
+// the agent's namespace, plus external servers (spec.tools[].url) that need no headers. A
+// server with headers, inline or a remote LanguageTool, is left out, because the
+// comma-separated variable has no room for them; runtimes read it from config.yaml instead.
 func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]string, error) {
 	var toolURLs []string
 
@@ -828,6 +828,10 @@ func (r *LanguageAgentReconciler) resolveTools(ctx context.Context, agent *lango
 		tool := &langopv1alpha1.LanguageTool{}
 		if err := r.Get(ctx, types.NamespacedName{Name: toolRef.Name, Namespace: agent.Namespace}, tool); err != nil {
 			return nil, fmt.Errorf("failed to get tool %s/%s: %w", agent.Namespace, toolRef.Name, err)
+		}
+
+		if tool.Remote() && len(tool.Spec.Headers) > 0 {
+			continue
 		}
 
 		// Full Streamable HTTP MCP URL (includes /mcp); sidecar tools resolve to localhost.

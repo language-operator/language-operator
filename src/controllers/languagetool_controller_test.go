@@ -1738,3 +1738,152 @@ func TestLanguageToolController_HPA_DeletedWhenAutoscalingRemoved(t *testing.T) 
 	err = fakeClient.Get(ctx, req.NamespacedName, hpa)
 	assert.True(t, errors.IsNotFound(err), "HPA must be deleted when autoscaling is removed")
 }
+
+// findToolCondition returns the named condition from a tool's status, or nil.
+func findToolCondition(tool *langopv1alpha1.LanguageTool, condType string) *metav1.Condition {
+	for i := range tool.Status.Conditions {
+		if tool.Status.Conditions[i].Type == condType {
+			return &tool.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+// reconcileToolTwice runs the finalizer-adding reconcile and then the real one.
+func reconcileToolTwice(t *testing.T, r *LanguageToolReconciler, tool *langopv1alpha1.LanguageTool) *langopv1alpha1.LanguageTool {
+	t.Helper()
+	ctx := context.Background()
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}}
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	updated := &langopv1alpha1.LanguageTool{}
+	require.NoError(t, r.Get(ctx, req.NamespacedName, updated))
+	return updated
+}
+
+func TestLanguageToolController_Remote_DeploysNothing(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	tool := gen.LanguageTool("remote-tool", "default",
+		gen.SetToolURL("https://cloud.example.com/mcp", map[string]string{"Authorization": "Bearer $(TOKEN)"}),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+	r := &LanguageToolReconciler{Client: fakeClient, Scheme: scheme, NetworkIsolationEnabled: true}
+
+	updated := reconcileToolTwice(t, r, tool)
+
+	ctx := context.Background()
+	key := types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &appsv1.Deployment{})), "no Deployment for a remote tool")
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &corev1.Service{})), "no Service for a remote tool")
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &networkingv1.NetworkPolicy{})), "no NetworkPolicy for a remote tool")
+
+	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
+	assert.Equal(t, "https://cloud.example.com/mcp", updated.Status.Endpoint)
+	assert.Equal(t, int32(0), updated.Status.ReadyReplicas)
+
+	ready := findToolCondition(updated, langopv1alpha1.ConditionReady)
+	require.NotNil(t, ready)
+	assert.Equal(t, metav1.ConditionTrue, ready.Status)
+	assert.Equal(t, langopv1alpha1.ReasonRemoteEndpoint, ready.Reason)
+
+	np := findToolCondition(updated, langopv1alpha1.ConditionNetworkPolicyReady)
+	require.NotNil(t, np)
+	assert.Equal(t, metav1.ConditionTrue, np.Status)
+	assert.Equal(t, langopv1alpha1.ReasonRemoteEndpoint, np.Reason)
+
+	// A header that references the agent's environment cannot be sent by the operator.
+	schemas := findToolCondition(updated, langopv1alpha1.ConditionSchemasDiscovered)
+	require.NotNil(t, schemas)
+	assert.Equal(t, metav1.ConditionFalse, schemas.Status)
+	assert.Equal(t, langopv1alpha1.ReasonSchemaDiscoverySkipped, schemas.Reason)
+	assert.Empty(t, updated.Status.ToolSchemas)
+}
+
+func TestLanguageToolController_Remote_DiscoversSchemasWithLiteralHeaders(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+
+	var sawPath, sawHeader string
+	mcpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawPath = r.URL.Path
+		sawHeader = r.Header.Get("X-Org")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"admin_users","description":"List users"}]}}`))
+	}))
+	defer mcpServer.Close()
+
+	tool := gen.LanguageTool("remote-tool", "default",
+		gen.SetToolURL(mcpServer.URL+"/custom/mcp", map[string]string{"X-Org": "acme"}),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+	r := &LanguageToolReconciler{Client: fakeClient, Scheme: scheme}
+
+	updated := reconcileToolTwice(t, r, tool)
+
+	assert.Equal(t, "/custom/mcp", sawPath, "the URL is used as given, no /mcp appended")
+	assert.Equal(t, "acme", sawHeader, "literal headers are sent during discovery")
+	require.Len(t, updated.Status.ToolSchemas, 1)
+	assert.Equal(t, "admin_users", updated.Status.ToolSchemas[0].Name)
+	schemas := findToolCondition(updated, langopv1alpha1.ConditionSchemasDiscovered)
+	require.NotNil(t, schemas)
+	assert.Equal(t, metav1.ConditionTrue, schemas.Status)
+}
+
+func TestLanguageToolController_Remote_DiscoveryFailureIsNonFatal(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	// Nothing listens here; discovery must fail without failing the reconcile.
+	tool := gen.LanguageTool("remote-tool", "default",
+		gen.SetToolURL("http://127.0.0.1:1/mcp", nil),
+	)
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool).
+		WithStatusSubresource(tool).
+		Build()
+	r := &LanguageToolReconciler{Client: fakeClient, Scheme: scheme, MCPDiscoveryTimeout: 2 * time.Second}
+
+	updated := reconcileToolTwice(t, r, tool)
+
+	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
+	schemas := findToolCondition(updated, langopv1alpha1.ConditionSchemasDiscovered)
+	require.NotNil(t, schemas)
+	assert.Equal(t, metav1.ConditionFalse, schemas.Status)
+	assert.Equal(t, langopv1alpha1.ReasonSchemaDiscoveryFailed, schemas.Reason)
+}
+
+func TestLanguageToolController_Remote_RemovesStaleWorkload(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	tool := gen.LanguageTool("converted-tool", "default",
+		gen.SetToolURL("https://cloud.example.com/mcp", map[string]string{"Authorization": "Bearer $(TOKEN)"}),
+	)
+	meta := metav1.ObjectMeta{Name: tool.Name, Namespace: tool.Namespace}
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(gen.ReadyCluster("default"), tool,
+			&appsv1.Deployment{ObjectMeta: meta},
+			&corev1.Service{ObjectMeta: meta},
+			&autoscalingv2.HorizontalPodAutoscaler{ObjectMeta: meta},
+			&networkingv1.NetworkPolicy{ObjectMeta: meta},
+		).
+		WithStatusSubresource(tool).
+		Build()
+	r := &LanguageToolReconciler{Client: fakeClient, Scheme: scheme, NetworkIsolationEnabled: true}
+
+	reconcileToolTwice(t, r, tool)
+
+	ctx := context.Background()
+	key := types.NamespacedName{Name: tool.Name, Namespace: tool.Namespace}
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &appsv1.Deployment{})), "stale Deployment removed")
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &corev1.Service{})), "stale Service removed")
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &autoscalingv2.HorizontalPodAutoscaler{})), "stale HPA removed")
+	assert.True(t, errors.IsNotFound(fakeClient.Get(ctx, key, &networkingv1.NetworkPolicy{})), "stale NetworkPolicy removed")
+}

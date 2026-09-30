@@ -99,3 +99,16 @@ func SetToolStdioCommand(command ...string) LanguageToolModifier {
 		t.Spec.Stdio = &langopv1alpha1.StdioServerSpec{Command: command}
 	}
 }
+
+// SetToolURL makes the tool remote: spec.url plus spec.headers (in key order), deploying
+// nothing. Mirrors SetAgentExternalTool for the inline form.
+func SetToolURL(url string, headers map[string]string) LanguageToolModifier {
+	return func(t *langopv1alpha1.LanguageTool) {
+		t.Spec.URL = url
+		t.Spec.Image = "" // the webhook forbids image with url
+		t.Spec.Headers = nil
+		for _, k := range sortedKeys(headers) {
+			t.Spec.Headers = append(t.Spec.Headers, langopv1alpha1.ToolHeader{Name: k, Value: headers[k]})
+		}
+	}
+}

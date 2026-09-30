@@ -49,7 +49,8 @@ type personaConfigYAML struct {
 type toolConfigYAML struct {
 	Endpoint string `json:"endpoint"`
 	Protocol string `json:"protocol"`
-	// Headers the runtime sends to an external MCP server (spec.tools[].headers). Values may
+	// Headers the runtime sends to an external MCP server (spec.tools[].headers, or a remote
+	// LanguageTool's spec.headers). Values may
 	// carry $(NAME) references to the agent container's environment, which the runtime
 	// resolves when it connects, so no secret is written into the ConfigMap.
 	Headers map[string]string `json:"headers,omitempty"`
@@ -113,8 +114,13 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		if cfg.Tools == nil {
 			cfg.Tools = make(map[string]toolConfigYAML)
 		}
-		// Full Streamable HTTP MCP URL (includes /mcp) so MCP clients can use it directly.
-		cfg.Tools[tool.Name] = toolConfigYAML{Endpoint: mcpToolEndpoint(tool, agent.Namespace), Protocol: "mcp"}
+		// Full Streamable HTTP MCP URL (includes /mcp) so MCP clients can use it directly. A
+		// remote tool contributes its URL and headers, exactly like an inline external entry.
+		cfg.Tools[tool.Name] = toolConfigYAML{
+			Endpoint: mcpToolEndpoint(tool, agent.Namespace),
+			Protocol: "mcp",
+			Headers:  toolHeaders(tool.Spec.Headers),
+		}
 	}
 
 	// Models — all served via the shared namespace gateway

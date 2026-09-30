@@ -60,6 +60,8 @@ See [Tool Protocol](../components/tools.md) for the full specification.
 | `sse` | | `spec.image` already serves the legacy MCP HTTP+SSE transport. |
 | `stdio` | | The operator injects a bridge; `spec.image` is ignored. |
 
+A tool with `spec.url` keeps the default `streamable-http` transport but deploys nothing — see [Remote servers](#remote-servers).
+
 #### stdio transport
 
 For `transport: stdio` the operator injects a pinned, persistent bridge (`ghcr.io/language-operator/mcp-bridge:latest`) that runs the user's stdio command as one long-lived child and serves Streamable HTTP at `/mcp` and `/health` on `spec.port`. `spec.image` is ignored — the defaulting webhook fills it automatically.
@@ -118,6 +120,28 @@ config:
 - Endpoint injected as `http://localhost:<port>/mcp` (not a Service URL)
 - Better for stateful or agent-specific tools that need workspace access
 - Shares agent lifecycle
+
+### Remote Servers
+
+`spec.url` turns the LanguageTool into a reference to a Streamable HTTP MCP server that already runs elsewhere. The operator creates no Deployment, Service, or NetworkPolicy; it reports the URL in `status.endpoint`, sets the phase to `Running`, and injects the URL and `spec.headers` into every referencing agent's `/etc/agent/config.yaml`:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageTool
+metadata:
+  name: control-plane
+  namespace: my-cluster
+spec:
+  url: https://cloud.example.com/mcp
+  headers:
+    - name: Authorization
+      value: Bearer $(CONTROL_PLANE_TOKEN)
+```
+
+- `headers[].value` may reference an environment variable of the *agent* container as `$(NAME)`; the runtime substitutes it when it connects. Each attaching agent supplies its own copy of the variable through `spec.credentials`.
+- `MCP_SERVERS` lists a remote tool only when it has no headers; otherwise agents read it from `config.yaml`.
+- `status.toolSchemas` is discovered only when every header is literal. A `$(NAME)` reference sets `SchemasDiscovered` to `False` with reason `SchemaDiscoverySkipped`.
+- `spec.url` cannot be combined with `spec.image`, `spec.stdio`, `transport: sse` or `stdio`, or `deploymentMode: sidecar`. `spec.networkPolicies` is ignored; add an egress rule to the agents that reach the server instead.
 
 ### Endpoint Injection
 
@@ -231,7 +255,7 @@ spec:
 | Phase | Description |
 |-------|-------------|
 | `Pending` | Deployment not yet scheduled or pods not ready |
-| `Running` | Deployment is available and the tool is healthy |
+| `Running` | Deployment is available and the tool is healthy; a remote tool (`spec.url`) is `Running` as soon as it is accepted |
 | `Updating` | A spec change is in progress (e.g. image update or replica change); not yet fully rolled out |
 | `Failed` | Deployment failed or health check is not passing |
 | `Degraded` | Deployment is running but a non-critical subsystem (e.g. NetworkPolicy) has failed; tool is operational at reduced capability |

@@ -518,6 +518,37 @@ func TestLanguageAgentController_ResolveExternalTools(t *testing.T) {
 		}
 	})
 
+	t.Run("remote_languagetool_follows_the_header_rule", func(t *testing.T) {
+		open := gen.LanguageTool("docs", "default", gen.SetToolURL("https://mcp.example.com/mcp", nil))
+		gated := gen.LanguageTool("langop", "default",
+			gen.SetToolURL("https://cloud.example.com/mcp", map[string]string{"Authorization": "Bearer $(TOKEN)"}))
+		agent := gen.LanguageAgent("agent", "default",
+			gen.SetAgentTool("docs", nil),
+			gen.SetAgentTool("langop", nil),
+		)
+		r := &LanguageAgentReconciler{
+			Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(open, gated).Build(),
+			Scheme: scheme,
+			Log:    logr.Discard(),
+		}
+
+		urls, err := r.resolveTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(urls) != 1 || urls[0] != "https://mcp.example.com/mcp" {
+			t.Errorf("MCP_SERVERS should carry only the remote tool without headers, got %v", urls)
+		}
+
+		containers, _, err := r.resolveSidecarTools(context.Background(), agent)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(containers) != 0 {
+			t.Errorf("a remote tool is never a sidecar, got %d containers", len(containers))
+		}
+	})
+
 	t.Run("external_and_in_cluster_tools_mix", func(t *testing.T) {
 		tool := gen.LanguageTool("my-tool", "default", gen.SetToolDeploymentMode("service"))
 		agent := gen.LanguageAgent("agent", "default",

@@ -199,3 +199,72 @@ func TestLanguageToolWebhook_Validate_StdioSkipsRegistryAndWarnsOnImage(t *testi
 		t.Error("expected a warning that spec.image is ignored for stdio tools")
 	}
 }
+
+func remoteTool(url string) *LanguageTool {
+	return &LanguageTool{
+		ObjectMeta: metav1.ObjectMeta{Name: "remote", Namespace: "default"},
+		Spec:       LanguageToolSpec{URL: url},
+	}
+}
+
+func TestLanguageToolWebhook_Validate_RemoteTool(t *testing.T) {
+	// The allowlist excludes every registry: a remote tool has no image, so it must pass anyway.
+	h := newToolWebhook(t, []string{"docker.io"})
+
+	t.Run("url alone is valid and skips the registry allowlist", func(t *testing.T) {
+		tool := remoteTool("https://mcp.example.com/mcp")
+		tool.Spec.Headers = []ToolHeader{{Name: "Authorization", Value: "Bearer $(TOKEN)"}}
+		warnings, err := h.ValidateCreate(context.Background(), tool)
+		if err != nil {
+			t.Fatalf("remote tool should be valid, got: %v", err)
+		}
+		if len(warnings) != 0 {
+			t.Errorf("unexpected warnings: %v", warnings)
+		}
+	})
+
+	t.Run("explicit streamable-http is accepted", func(t *testing.T) {
+		tool := remoteTool("https://mcp.example.com/mcp")
+		tool.Spec.Transport = "streamable-http"
+		if _, err := h.ValidateCreate(context.Background(), tool); err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	rejected := map[string]func(*LanguageTool){
+		"image":           func(tool *LanguageTool) { tool.Spec.Image = "docker.io/x/y:1" },
+		"transport sse":   func(tool *LanguageTool) { tool.Spec.Transport = "sse" },
+		"transport stdio": func(tool *LanguageTool) { tool.Spec.Transport = "stdio" },
+		"stdio command":   func(tool *LanguageTool) { tool.Spec.Stdio = &StdioServerSpec{Command: []string{"npx", "x"}} },
+		"sidecar mode":    func(tool *LanguageTool) { tool.Spec.DeploymentMode = "sidecar" },
+	}
+	for name, mutate := range rejected {
+		t.Run("url with "+name+" is rejected", func(t *testing.T) {
+			tool := remoteTool("https://mcp.example.com/mcp")
+			mutate(tool)
+			if _, err := h.ValidateCreate(context.Background(), tool); err == nil {
+				t.Errorf("expected an error for url with %s, got nil", name)
+			}
+		})
+	}
+
+	t.Run("networkPolicies only warns", func(t *testing.T) {
+		tool := remoteTool("https://mcp.example.com/mcp")
+		tool.Spec.NetworkPolicies = &AgentNetworkPolicies{}
+		warnings, err := h.ValidateCreate(context.Background(), tool)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(warnings) != 1 {
+			t.Errorf("expected one warning that networkPolicies is ignored, got %v", warnings)
+		}
+	})
+
+	t.Run("headers without url are rejected", func(t *testing.T) {
+		tool := makeTool("docker.io/x/y:1")
+		tool.Spec.Headers = []ToolHeader{{Name: "X-Org", Value: "acme"}}
+		if _, err := h.ValidateUpdate(context.Background(), tool, tool); err == nil {
+			t.Error("expected an error for headers without url, got nil")
+		}
+	})
+}

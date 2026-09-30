@@ -807,7 +807,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `image` _string_ | Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead. |  | Optional: \{\} <br /> |
+| `image` _string_ | Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead — or url is set, where nothing is deployed. |  | Optional: \{\} <br /> |
+| `url` _string_ | URL makes this LanguageTool a remote Streamable HTTP MCP server that already runs<br />elsewhere: nothing is deployed, and the URL (including its /mcp path) is handed to every<br />referencing agent as it is. Mutually exclusive with image, stdio, and deploymentMode<br />sidecar. Must be http or https. |  | MaxLength: 2048 <br />Pattern: `^https?://` <br />Optional: \{\} <br /> |
+| `headers` _[ToolHeader](#toolheader) array_ | Headers are HTTP headers an agent's runtime sends to the remote MCP server, such as an<br />Authorization header. A value may reference an environment variable of the agent<br />container as $(NAME); the runtime substitutes it at connection time, so a secret<br />delivered through the agent's spec.credentials never lands in its ConfigMap.<br />Only valid together with url. |  | MaxItems: 16 <br />Optional: \{\} <br /> |
 | `type` _string_ | Type specifies the tool protocol type. Only "mcp" is currently implemented. | mcp | Enum: [mcp] <br /> |
 | `transport` _string_ | Transport selects how the operator exposes this tool's MCP endpoint.<br />- "streamable-http" (default): spec.image already serves Streamable HTTP at /mcp.<br />- "sse": spec.image already serves the (legacy) MCP HTTP+SSE transport.<br />- "stdio": the user supplies a stdio MCP command in spec.stdio; the operator injects a<br />  pinned, persistent stdio→Streamable-HTTP bridge that serves /mcp and /health on spec.port. | streamable-http | Enum: [streamable-http sse stdio] <br />Optional: \{\} <br /> |
 | `stdio` _[StdioServerSpec](#stdioserverspec)_ | Stdio configures the stdio MCP server when transport=stdio. Required for that transport,<br />ignored otherwise. |  | Optional: \{\} <br /> |
@@ -1209,6 +1211,7 @@ ToolHeader is one HTTP header an agent's runtime sends to an external MCP server
 
 
 _Appears in:_
+- [LanguageToolSpec](#languagetoolspec)
 - [ToolReference](#toolreference)
 
 | Field | Description | Default | Validation |
