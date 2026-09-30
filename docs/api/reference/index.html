@@ -5003,9 +5003,21 @@ spec.selfConfigure allowlist before patching.</p>
 <tbody>
 <tr>
 <td><code>image</code> <em>string</em></td>
-<td>Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead.</td>
+<td>Image is the container image to run for this tool. Required unless<br />transport=stdio, where it is ignored entirely — the operator injects the<br />MCP bridge image instead — or url is set, where nothing is deployed.</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>url</code> <em>string</em></td>
+<td>URL makes this LanguageTool a remote Streamable HTTP MCP server that already runs<br />elsewhere: nothing is deployed, and the URL (including its /mcp path) is handed to every<br />referencing agent as it is. Mutually exclusive with image, stdio, and deploymentMode<br />sidecar. Must be http or https.</td>
+<td></td>
+<td>MaxLength: 2048 <br />Pattern: <code>^https?://</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>headers</code> <em><a href="#toolheader">ToolHeader</a> array</em></td>
+<td>Headers are HTTP headers an agent's runtime sends to the remote MCP server, such as an<br />Authorization header. A value may reference an environment variable of the agent<br />container as $(NAME); the runtime substitutes it at connection time, so a secret<br />delivered through the agent's spec.credentials never lands in its ConfigMap.<br />Only valid together with url.</td>
+<td></td>
+<td>MaxItems: 16 <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>type</code> <em>string</em></td>
@@ -5762,6 +5774,7 @@ stdio→Streamable-HTTP bridge.</p>
 <h4 id="toolheader">ToolHeader<a class="headerlink" href="#toolheader" title="Permanent link">&para;</a></h4>
 <p>ToolHeader is one HTTP header an agent's runtime sends to an external MCP server.</p>
 <p><em>Appears in:</em>
+- <a href="#languagetoolspec">LanguageToolSpec</a>
 - <a href="#toolreference">ToolReference</a></p>
 <table>
 <thead>
