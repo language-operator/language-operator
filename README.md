@@ -90,7 +90,7 @@ spec:
 
 ### Development Teams
 
-[examples/development-team](https://github.com/language-operator/language-operator/tree/main/examples/development-team) wires several of these together into a self-managing engineering team: a supervisor triages open issues into priority queues, and worker agents implement changes, run tests, and open pull requests — all in one namespace.
+[examples/development-team](https://github.com/language-operator/language-operator/tree/main/examples/development-team) deploys a self-managing maintainer agent: on each scheduled run it picks the next open issue, implements it, runs the tests, and opens and merges a pull request — one issue per run.
 
 ## Getting Started
 

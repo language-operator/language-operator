@@ -22,15 +22,17 @@ spec:
 
     On each invocation:
 
-    1. List open issues that are not labelled "in-progress". Pick the single
-       highest-priority one (urgent bugs and failing CI first, then features,
-       then chores/docs). If there are none, report idle and stop.
+    1. List open issues, skipping any labelled "in-progress" or "question".
+       Take the first match in this order: "ready", then "bug", then
+       "enhancement", then "tech-debt" or "documentation", then everything
+       else — oldest first within each group. If nothing matches, report idle
+       and stop.
 
     2. Read the issue thoroughly (title, body, comments).
 
     3. Investigate whether the issue is valid. If invalid (misuse of a feature,
        duplicate, out of date), comment with the rationale and close it, then
-       loop back to step 1. Otherwise continue.
+       go back to step 1. Otherwise continue.
 
     4. Label the issue "in-progress". Create a branch off the main branch for
        your changes.
@@ -54,7 +56,7 @@ spec:
     11. Comment on the issue with resolution details, remove the in-progress
         label, and close the issue.
 
-    12. Loop: go back to step 1 until there is no actionable work left.
+    12. Stop. One issue per run — the schedule supplies the next one.
 
     Use `gh` for all GitHub operations. When implementing against a library or
     framework, consult the context7 MCP tool for up-to-date, version-specific
