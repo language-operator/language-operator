@@ -15,13 +15,14 @@ The operator merges the runtime's defaults into the agent's effective spec at re
 
 ## Bundled Runtimes
 
-The standard runtimes are installed automatically with the Helm chart:
+The standard runtimes are installed by the `language-operator-runtimes` chart:
 
 | Name | Image | Port | Use case |
 |------|-------|------|----------|
 | `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | AI personal assistant (WebSocket gateway) |
-| `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | AI coding assistant (HTTP/browser UI) |
-| `claude-code` | `ghcr.io/language-operator/claude-code-adapter:latest` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
+| `opencode` | `ghcr.io/language-operator/opencode-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
+| `claude-code` | `ghcr.io/language-operator/claude-code-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
+| `deepagents` | `ghcr.io/language-operator/deepagents-adapter` | 8080 | Autonomous deep agent (HTTP live UI, optional A2A) |
 
 Disable a bundled runtime in `values.yaml`:
 
@@ -99,7 +100,7 @@ spec:
 
 `spec.auth.enabled` (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied.
 
-The three bundled runtimes (`openclaw`, `opencode`, `claude-code`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
+The four bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -142,9 +143,11 @@ An agent may still override it.
 
 ```bash
 kubectl get languageagentruntimes
-# NAME       AGE
-# openclaw   5m
-# opencode   5m
+# NAME          AGE
+# openclaw      5m
+# opencode      5m
+# claude-code   5m
+# deepagents    5m
 ```
 
 ## Related

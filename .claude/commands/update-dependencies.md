@@ -10,7 +10,7 @@ Bring all packages, Docker base images, and adapter dependencies up to date.
 | Node — hooks | `.claude/hooks/package.json` | `npm update` |
 | Docker base images | `Dockerfile`, `components/*/Dockerfile` | manual edit |
 
-> Runtime adapters (claude-code, openclaw, opencode) now live in their own
+> Runtime adapters (claude-code, openclaw, opencode, deepagents) now live in their own
 > repositories and manage their own dependencies — they are out of scope here.
 | Go build tools | `src/Makefile` vars | manual edit |
 | GitHub Actions | `.github/workflows/*.yaml` | manual edit |

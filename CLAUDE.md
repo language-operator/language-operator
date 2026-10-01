@@ -50,7 +50,10 @@ Two charts live under `charts/`:
 Each runtime now lives in its **own repository** (image source **and** self-contained chart), not in this repo:
 - `language-operator/claude-code-adapter` — combined terminal image + `claude-code` runtime chart
 - `language-operator/openclaw-adapter` — adapter init image + `openclaw` runtime chart
-- `language-operator/opencode-adapter` — adapter init image + `opencode` runtime chart
+- `language-operator/opencode-adapter` — combined terminal image + `opencode` runtime chart
+- `language-operator/deepagents-adapter` — combined image (FastAPI server, optional A2A) + `deepagents` runtime chart
+
+`language-operator/coding-runtime` is the shared base image (config translation plus web terminal) that the claude-code and opencode adapter images build `FROM`.
 
 The umbrella's values are keyed by subchart name (e.g. `claude-code.enabled`, `claude-code.image.pullPolicy`), forwarded to each subchart.
 

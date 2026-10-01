@@ -12,7 +12,7 @@
 ## Context
 
 - Version source of truth: the `version` and `appVersion` fields of **both** umbrella charts — `charts/language-operator/Chart.yaml` and `charts/language-operator-runtimes/Chart.yaml`. All four fields must stay in sync; treat `charts/language-operator/Chart.yaml` as canonical when reading the current version.
-- Runtime **subchart** pins (`claude-code`, `openclaw`, `opencode`) inside `charts/language-operator-runtimes/Chart.yaml` are versioned independently and are **not** touched here — use `/update-runtimes` for those.
+- Runtime **subchart** pins (`claude-code`, `openclaw`, `opencode`, `deepagents`) inside `charts/language-operator-runtimes/Chart.yaml` are versioned independently and are **not** touched here — use `/update-runtimes` for those.
 - Release trigger: pushing a `v*` git tag kicks off CI to build all Docker images and create a GitHub release with the packaged Helm chart as an asset
 - CHANGELOG: `CHANGELOG.md` has an `## Unreleased` section at the top; on release, move its content into a new `## v{version} — {date}` section
 

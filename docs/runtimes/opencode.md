@@ -134,13 +134,13 @@ Access is gated by the cluster's OIDC proxy — there is no separate opencode pa
 If your `LanguageCluster` has a domain and [auth enabled](../components/clusters.md#authentication),
 open https://opencode.demo-cluster.\<your-domain\> and sign in through the cluster's OIDC provider.
 
-For local access, port-forward the service (this bypasses the proxy, so no login is required):
+The agent serves a WebSocket terminal on port 8080 that fronts opencode's interactive TUI. For local access, port-forward the service (this bypasses the proxy, so no login is required):
 
 ```bash
-kubectl port-forward svc/opencode 3000:3000
-# open http://localhost:3000, or attach the TUI:
-opencode attach http://localhost:3000
+kubectl port-forward svc/opencode 8080:8080
 ```
+
+Then open `http://localhost:8080` in your browser.
 
 !!! warning
 
@@ -152,8 +152,8 @@ opencode attach http://localhost:3000
 | Resource | Name | Purpose |
 |---|---|---|
 | WorkflowTemplate | `opencode` | The agent's pod spec; also what `argo submit --from` targets |
-| Workflow | `opencode` | The long-lived run. Runs the OpenCode container |
-| Service | `opencode` | ClusterIP on port 3000 |
+| Workflow | `opencode` | The long-lived run. Runs the OpenCode WebSocket terminal container |
+| Service | `opencode` | ClusterIP on port 8080 |
 | NetworkPolicy | `opencode` | Allows inbound from other agents in this namespace |
 | PVC | `opencode-workspace` | 10Gi persistent workspace |
 | ConfigMap | `opencode-agent` | Injected at `/etc/agent/config.yaml` |
