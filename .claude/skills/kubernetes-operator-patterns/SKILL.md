@@ -265,6 +265,5 @@ make integration-test
 
 This skill integrates with:
 - **Telemetry system**: Controllers emit OpenTelemetry traces for monitoring
-- **Dashboard API**: Controllers expose status via Kubernetes API for dashboard consumption  
 - **Helm charts**: Generated manifests are packaged in `chart/` directory
 - **CI/CD**: `make` targets integrate with GitHub Actions workflows

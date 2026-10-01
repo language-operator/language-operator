@@ -1,13 +1,13 @@
 /*
  * Language Operator — Dex login theme.
- * Mirrors the dashboard's "Marfa" design system (West Texas minimalism):
+ * Uses the project's "Marfa" design system (West Texas minimalism):
  * stone + amber palette, no rounded corners, light fonts, uppercase
  * tracked-out labels. Light + dark via prefers-color-scheme.
  */
 
 :root {
   --background: hsl(30 20% 97%);
-  /* Subtle three-stop warm wash that matches the dashboard's login gradient. */
+  /* Subtle three-stop warm wash behind the login panel. */
   --background-image: linear-gradient(to bottom right,
     hsl(60 9% 96%),
     hsla(48 100% 96% / 0.3),
@@ -217,8 +217,8 @@ body {
 
 /*
  * Forms inside the panel stack with generous vertical breathing room between
- * rows (label+input groups). The dashboard uses Tailwind's space-y-6 (1.5rem);
- * we go slightly more generous to give the Marfa layout room to breathe.
+ * rows (label+input groups): slightly more than Tailwind's space-y-6 (1.5rem),
+ * to give the Marfa layout room to breathe.
  */
 .theme-panel form {
   display: flex;

@@ -1,7 +1,7 @@
 {{- if .Values.rbac.create -}}
-# langop-admin — cluster-wide admin for human operators and the dashboard admin SA.
+# langop-admin — cluster-wide admin for human operators.
 # Grants full CRUD on all langop.io resources across all namespaces.
-# The language-operator-dashboard chart binds its admin SA to this role.
+# Not bound by the chart or the operator; bind it with a ClusterRoleBinding as needed.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
