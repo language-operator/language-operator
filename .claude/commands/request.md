@@ -22,7 +22,7 @@ Parse `$ARGUMENTS` as the feature description. If it is missing or too vague to 
 
 ### Step 2 — Explore the codebase
 
-Read the parts of the codebase most likely affected. Depending on the feature, this may include controller files in `src/controllers/`, CRD types in `src/api/v1alpha1/`, Helm chart values/templates, or dashboard components. Identify:
+Read the parts of the codebase most likely affected. Depending on the feature, this may include controller files in `src/controllers/`, CRD types in `src/api/v1alpha1/`, or Helm chart values/templates. Identify:
 - What already exists that the feature can build on
 - What is missing or needs to change
 - Technical constraints or risks worth surfacing
@@ -46,7 +46,7 @@ Enter plan mode. Present a structured proposal:
   - Scope: what this issue covers and what it explicitly does NOT cover
   - Dependencies: which other issues (if any) must land first
 
-Split concerns across issues when the work spans different layers (e.g. CRD type change, controller logic, Helm chart, dashboard). Each issue should be independently workable and reviewable.
+Split concerns across issues when the work spans different layers (e.g. CRD type change, controller logic, Helm chart). Each issue should be independently workable and reviewable.
 
 Ask the user:
 - Does the motivation and approach match their intent?

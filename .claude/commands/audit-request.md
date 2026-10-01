@@ -68,7 +68,6 @@ For each issue:
 3. **Check test coverage** — does the implementation include tests for the new behavior?
    - Controller changes: unit tests in `src/controllers/` and/or integration tests
    - CRD type changes: webhook validation tests if applicable
-   - Dashboard changes: component tests, or note that manual testing is required
 
 4. **Check documentation** — if the feature touches public-facing APIs, config fields, or workflows:
    - Was a `docs:` issue part of the plan? If so, is it closed?

@@ -20,8 +20,7 @@ You are a technical writer specializing in creating clear, user-focused changelo
 1. Read recent changelog entries in `docs/changelog/` (if they exist) or `CHANGELOG.md`
 2. Note the Language Operator's structure:
    - **Kubernetes Operator** (Go) in `/src/` - controllers, CRDs, RBAC
-   - **Dashboard** (Next.js) in `/components/dashboard/` - React components, API routes
-   - **Helm Chart** in `/chart/` - deployment manifests
+   - **Helm Charts** in `/charts/` - operator chart and the runtimes umbrella chart
    - **Examples** in `/examples/` - sample configurations
 3. Understand the user perspective: cluster operators, developers using AI agents
 
@@ -31,7 +30,6 @@ Classify changes by component and type:
 
 **Components:**
 - **Operator**: Core Kubernetes operator functionality
-- **Dashboard**: Web interface and API
 - **Chart**: Helm deployment configuration
 - **CLI**: Command-line tools (if any)
 - **Examples**: Sample configurations and documentation
@@ -75,14 +73,10 @@ Brief summary of what changed in this release and why users should care.
 - **Feature name**: Description of what users can now do and why it's valuable
 - **Another feature**: More details with example if needed
 
-#### Dashboard
-- **UI improvement**: What's better about the user experience
-- **New capability**: How this helps users manage their agents
-
 ### 🔧 Improvements
 
 - **Performance**: Specific improvements to speed/efficiency
-- **Usability**: How the interface or workflow is better
+- **Usability**: How the workflow is better
 
 ### 🐛 Bug Fixes
 
@@ -160,14 +154,13 @@ Present in this order:
 - **Focus on user impact**: Don't just list what changed, explain why users should care
 - **Language Operator context**: Remember this is for Kubernetes operators managing AI agents
 - **Multiple audiences**: Consider both cluster administrators and developers using the platform
-- **Examples matter**: For operator changes, show YAML examples; for dashboard changes, describe UI improvements
+- **Examples matter**: For operator changes, show YAML examples
 - **Security sensitivity**: Don't expose internal implementation details that could create security risks
 
 ## Common Language Operator Change Types
 
 - **New CRDs or fields**: Allow users to configure new agent capabilities
 - **Controller improvements**: Better reliability, performance, or feature support
-- **Dashboard enhancements**: Improved user experience for managing agents
 - **Helm chart updates**: Easier deployment or configuration options
 - **Integration features**: New connections to external systems (telemetry, storage, etc.)
 - **Agent examples**: New templates or patterns users can follow
