@@ -5,7 +5,7 @@ latest published versions.
 
 ## Context
 
-The umbrella chart `charts/language-operator-runtimes` pulls three runtime adapters as
+The umbrella chart `charts/language-operator-runtimes` pulls four runtime adapters as
 OCI subcharts from `oci://ghcr.io/language-operator/charts`:
 
 | Subchart | Source repo | Published from |
@@ -13,6 +13,7 @@ OCI subcharts from `oci://ghcr.io/language-operator/charts`:
 | `claude-code` | `language-operator/claude-code-adapter` | its `chart/Chart.yaml` `version` |
 | `openclaw`    | `language-operator/openclaw-adapter`    | its `chart/Chart.yaml` `version` |
 | `opencode`    | `language-operator/opencode-adapter`    | its `chart/Chart.yaml` `version` |
+| `deepagents`  | `language-operator/deepagents-adapter`  | its `chart/Chart.yaml` `version` |
 
 Each adapter repo publishes its chart independently (via its own `release-chart.yaml`
 workflow: `helm package chart && helm push`), so the umbrella's pins drift behind the
@@ -51,7 +52,7 @@ Keep this "before" snapshot for the final report.
 Query the ghcr OCI registry for the highest published semver tag of each subchart:
 
 ```bash
-for chart in claude-code openclaw opencode; do
+for chart in claude-code openclaw opencode deepagents; do
   token=$(curl -fsSL "https://ghcr.io/token?scope=repository:language-operator/charts/${chart}:pull" | jq -r .token)
   echo -n "${chart}: "
   curl -fsSL -H "Authorization: Bearer ${token}" \
@@ -142,6 +143,7 @@ Runtime pins updated.
   claude-code : <before> → <after>
   openclaw    : <before> → <after>
   opencode    : <before> → <after>
+  deepagents  : <before> → <after>
 
 Run `make upgrade-runtimes` to redeploy the runtimes with the new versions.
 ```

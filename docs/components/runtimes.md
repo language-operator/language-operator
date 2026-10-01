@@ -28,13 +28,16 @@ produces the same pod spec as if the agent had explicitly specified the OpenClaw
 
 ## Bundled Runtimes
 
-Three runtimes are shipped via the `language-operator-runtimes` umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from `oci://ghcr.io/language-operator/charts`:
+Four runtimes are shipped via the `language-operator-runtimes` umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from `oci://ghcr.io/language-operator/charts`:
 
 | Name | Image | Port | Interface | Repository |
 |------|-------|------|-----------|------------|
 | `openclaw` | `ghcr.io/openclaw/openclaw:latest` | 18789 | WebSocket gateway | [openclaw-adapter](https://github.com/language-operator/openclaw-adapter) |
-| `opencode` | `ghcr.io/anomalyco/opencode:latest` | 3000 | HTTP / browser UI | [opencode-adapter](https://github.com/language-operator/opencode-adapter) |
-| `claude-code` | `ghcr.io/language-operator/claude-code-adapter:latest` | 8080 | HTTP / WebSocket terminal | [claude-code-adapter](https://github.com/language-operator/claude-code-adapter) |
+| `opencode` | `ghcr.io/language-operator/opencode-adapter` | 8080 | HTTP / WebSocket terminal | [opencode-adapter](https://github.com/language-operator/opencode-adapter) |
+| `claude-code` | `ghcr.io/language-operator/claude-code-adapter` | 8080 | HTTP / WebSocket terminal | [claude-code-adapter](https://github.com/language-operator/claude-code-adapter) |
+| `deepagents` | `ghcr.io/language-operator/deepagents-adapter` | 8080 | HTTP / A2A | [deepagents-adapter](https://github.com/language-operator/deepagents-adapter) |
+
+The `opencode` and `claude-code` images share the [coding-runtime](https://github.com/language-operator/coding-runtime) base image, which translates `/etc/agent/config.yaml` into the CLI's config and serves the browser terminal. Each runtime chart pins its own image tag.
 
 Install them all with the umbrella chart:
 
@@ -89,12 +92,13 @@ The bundled runtimes declare the credentials their images need:
 - `openclaw` declares `OPENCLAW_GATEWAY_TOKEN` (auto-generated).
 - `opencode` declares no credentials — access is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `claude-code` declares no credentials — authentication is interactive via `/login`.
+- `deepagents` declares no credentials — LLM traffic goes through the injected `MODEL_ENDPOINT` gateway.
 
 Runtime-declared entries merge first, then any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision.
 
 ## Authentication
 
-Authentication is a runtime trait, not an agent setting. A runtime's `spec.auth.enabled: true` gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. The three bundled runtimes all enable auth since they serve web UIs. See [Clusters](clusters.md#authentication) for the cluster-side configuration.
+Authentication is a runtime trait, not an agent setting. A runtime's `spec.auth.enabled: true` gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. The four bundled runtimes all enable auth since they serve web UIs. See [Clusters](clusters.md#authentication) for the cluster-side configuration.
 
 ## Custom Runtimes
 
@@ -137,3 +141,5 @@ spec:
 - [LanguageAgentRuntime API Reference](../api/languageagentruntime.md) — full field documentation
 - [OpenClaw Guide](../runtimes/openclaw.md)
 - [OpenCode Guide](../runtimes/opencode.md)
+- [Claude Code Guide](../runtimes/claude-code.md)
+- [DeepAgents Guide](../runtimes/deepagents.md)

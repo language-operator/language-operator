@@ -110,7 +110,7 @@ spec:
 
 Enabling auth on the cluster does not, by itself, put any agent behind the proxy. An agent is placed behind the OIDC proxy **only when both** the cluster has `auth.enabled: true` **and** the agent's runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied — there is no per-agent auth override.
 
-The three bundled runtimes (`openclaw`, `opencode`, `claude-code`) all set `auth.enabled: true` because they serve web UIs, so once the cluster enables auth they are automatically proxied. See [Runtimes](runtimes.md#authentication) for the runtime side of this gate.
+The four bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`) all set `auth.enabled: true` because they serve web UIs, so once the cluster enables auth they are automatically proxied. See [Runtimes](runtimes.md#authentication) for the runtime side of this gate.
 
 ## Capacity Limits
 
