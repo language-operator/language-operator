@@ -1,34 +1,28 @@
 ---
-description: Label the highest-priority GitHub issues as "ready" using project-manager persona
+description: Label the highest-priority open GitHub issues as "ready" for /iterate to pick up first
 ---
 
 ## Prerequisites
 
-Read:
-- `requirements/personas/project-manager.md`
-- `.claude/MEMORY.md`
-
-Adopt the project-manager persona.
+Read `.claude/MEMORY.md`, if it exists.
 
 ## Directions
 
-1. Use `gh` to view all open issues (excluding those already labelled `in-progress`)
-2. Clear any existing `queue/0`, `queue/1`, `queue/2` labels from all open issues:
+1. List open issues, excluding those labelled `in-progress` or `question`:
    ```bash
-   gh issue list --label "queue/0" --state open --json number | jq -r '.[].number' | xargs -I{} gh issue edit {} --remove-label "queue/0"
-   gh issue list --label "queue/1" --state open --json number | jq -r '.[].number' | xargs -I{} gh issue edit {} --remove-label "queue/1"
-   gh issue list --label "queue/2" --state open --json number | jq -r '.[].number' | xargs -I{} gh issue edit {} --remove-label "queue/2"
+   gh issue list --state open --limit 500 --json number,title,labels,createdAt \
+     --jq 'map(select([.labels[].name] | (index("in-progress") or index("question")) | not))'
    ```
-3. Analyze the open issues for **conflict groups** — issues that likely touch the same files, controllers, CRDs, or areas of the codebase should be in the same group (they must serialize). Issues touching unrelated areas can run in parallel across queues.
-4. Assign each conflict group to a queue. Label only the **single highest-priority issue** from each group — leave the rest unlabeled for `delegate` to fill in as queues drain:
-   - Top issue from group 1 → `queue/0`
-   - Top issue from group 2 → `queue/1`
-   - Top issue from group 3 → `queue/2`
-   - If there are fewer than 3 independent groups, only use as many queues as there are distinct groups.
-5. Apply the queue labels: `gh issue edit <N> --add-label "queue/0"` (etc.)
+2. Pick the **top few (at most 5)** by impact and urgency: broken behaviour and failing CI first, then work that unblocks other issues, then everything else. Read an issue's body when its title isn't enough to judge.
+3. Remove `ready` from any open issue that is not in that set:
+   ```bash
+   gh issue list --label ready --state open --json number --jq '.[].number'
+   gh issue edit <N> --remove-label ready
+   ```
+4. Add `ready` to each issue in the set: `gh issue edit <N> --add-label ready`.
 
-Update `.claude/MEMORY.md` if anything is worth noting for the next run (e.g. the grouping rationale).
+Update `.claude/MEMORY.md` if anything is worth noting for the next run (e.g. the ranking rationale).
 
 ## Output
 
-Up to three queues, each containing exactly one issue — the next item for that agent to pick up. Remaining issues stay unassigned until `delegate` refills the queue.
+At most five open issues labelled `ready`. `/iterate` takes `ready` issues first, oldest first.

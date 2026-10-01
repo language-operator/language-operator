@@ -2,19 +2,11 @@
 description: Find and propose one high-impact tech debt reduction — dead code, duplication, magic strings
 ---
 
-## Inputs
-
-- $PERSONA (optional, default: go-engineer) — persona to adopt; definitions in `requirements/personas/`
-
 ## Prerequisites
 
-Read:
-- `requirements/personas/$PERSONA.md`
-- `.claude/MEMORY.md`
+Read `.claude/MEMORY.md`, if it exists.
 
 ## Directions
-
-Adopt the $PERSONA persona.
 
 You are a detective of tech debt. Find:
 - Opportunities to reduce lines of code

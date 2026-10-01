@@ -1,71 +1,92 @@
-# Action: do the next logical piece of work
+---
+description: Do the next logical piece of work — one issue, from pick to merged PR to closed
+argument-hint: "[#issue] [--auto]"
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(bash .claude/commands/iterate/*), Bash(printenv:*), Bash(make:*), Bash(go:*), Bash(helm:*), Bash(uv:*), Bash(pytest:*), Read, Edit, Write, Glob, Grep
+---
+<!-- Canonical /iterate (language-operator#932). Only the frontmatter `allowed-tools`
+     build-tool entries and the `## Testing` section vary per repo; everything else,
+     and the scripts in .claude/commands/iterate/, is copied verbatim. -->
 
-## Prerequisites
+# Iterate: do the next logical piece of work
 
-Please read the following context files:
+One run handles **one issue**, from selection to a merged PR and a closed issue, then stops.
+For continuous work, use `/loop /iterate` or a scheduled agent.
 
-* Project: CLAUDE.md
-* Persona: requirements/personas/go-engineer.md
-* Memory: .claude/MEMORY.md
+## Context
 
-## Persona
-
-**CRITICAL**: Adopt the given persona while executing these instructions, please.
+Read:
+- `CLAUDE.md`
+- `README.md`
+- `.claude/MEMORY.md`, if it exists
 
 ## Arguments
 
-`$ARGUMENTS` is either:
-- A queue number to work from: `0`, `1`, or `2`
-- A specific issue reference: `#706`, `issue #706`, or bare `706`
+`$ARGUMENTS` may contain:
+- *(nothing)*: pick the next issue (see below).
+- `#N` or `N`: work issue N.
+- `--auto`: unattended mode (see step 4).
 
-## Instructions
+## Picking the next issue
 
-Follow these directions closely:
+```bash
+gh issue list --state open --limit 500 --json number,title,labels,createdAt --jq '
+  map(select([.labels[].name] | (index("in-progress") or index("question")) | not))
+  | map(. + {rank: ([.labels[].name] as $l |
+      if $l | index("ready") then 0
+      elif $l | index("bug") then 1
+      elif $l | index("enhancement") then 2
+      elif ($l | index("tech-debt")) or ($l | index("documentation")) then 3
+      else 4 end)})
+  | sort_by(.rank, .createdAt) | first // empty'
+```
 
-1. Determine the issue to work on based on `$ARGUMENTS`:
-   - **If it looks like an issue ID** (contains `#` or is a plain integer ≥ 10, e.g. `#706`, `issue #706`, `706`):
-     Parse out the number N and fetch it directly: `gh issue view <N> --json number,title,labels,state`
-     - If the issue is closed or not found, report and stop.
-     - Read its comments as well: `gh issue view <N> --comments`
-     - Note: since this issue was not pulled from a queue, skip the queue-label removal in step 3 and pass an empty string for `<queue-number>` to `start-issue.sh`.
-   - **Otherwise** treat `$ARGUMENTS` as a queue label:
-     `gh issue list --label "queue/$ARGUMENTS" --state open --json number,title,labels --limit 1`
-     - If no issue is found, report idle and stop.
-     - If found, read its comments as well.
-   - **If no argument** pick the next logical issue.
-2. Investigate if the issue is valid, or a mis-use of the intended feature.
-3. **Label and create worktree** in one step. Determine a short slug (2-4 words) from the issue title, then:
+This skips issues labelled `in-progress` or `question`, then takes the first match in order: `ready` (set by `/prioritize`), `bug`, `enhancement`, `tech-debt`/`documentation`, everything else; oldest first within a group. If the output is empty, report idle and stop.
+
+## Steps
+
+1. **Select** the issue, either as above or from `#N`. If it's closed or not found, report and stop. Read the body and comments: `gh issue view <N> --comments`.
+2. **Validate.** If the issue is invalid, a duplicate or out of date, comment why, close it, and go back to step 1. (With `#N`, stop instead.)
+3. **Claim** the issue. Pick a short slug (2–4 words) from the title, then:
    ```bash
-   bash .claude/commands/iterate/start-issue.sh <N> <short-slug> <queue-number>
+   bash .claude/commands/iterate/start-issue.sh <N> <short-slug>
    ```
-   The script labels the issue `in-progress`, removes the queue label, and creates a worktree. It prints `worktree:<path>` — `cd` into that path. All subsequent work happens inside this worktree. Do not `cd` out of it.
-5. **CRITICAL:** Switch to plan mode, and propose an implementation plan. Await my feedback.
-6. Implement your plan inside the worktree.
-7. Run existing tests, and add new ones if necessary. Remember to include CI. Remember the linter.
-8. Commit with a semantic, ONE LINE message like `fix: set GatewayReady false on error` and push the branch — run as two separate commands, do not use inline variable assignments:
+   - The script adds `in-progress` (creating the label if the repo lacks it) before creating the worktree.
+   - If it exits non-zero because the issue is already `in-progress`, go back to step 1 (with `#N`, stop).
+   - It prints `worktree:<path>`. `cd` into that path and stay there for the rest of the run.
+4. **Plan.** The run is unattended if `printenv AGENT_NAME` prints a value (the operator injects it into every agent pod) or `$ARGUMENTS` contains `--auto`.
+   - Interactive: enter plan mode, propose the plan, and wait for approval.
+   - Unattended: post the plan as a comment (`gh issue comment <N> --body "<plan>"`) and continue.
+5. **Implement** the plan inside the worktree.
+6. **Test**, following `## Testing` below. Add tests as needed.
+7. **Commit** with a one-line conventional message (e.g. `fix: set GatewayReady false on error`), then push. Run these as separate commands, without inline variable assignments:
    ```bash
    bash .claude/commands/iterate/push-branch.sh <branch-name>
    ```
-9. Open a pull request: `gh pr create --title "<commit message>" --body "Closes #<N>"`. Use conventional commit style for the PR title.
-10. **CRITICAL:** Poll CI on the PR: `gh pr checks <PR-number> --watch`. Fix any failing checks before proceeding.
-11. When all checks pass, merge: `gh pr merge <PR-number> --squash --delete-branch`.
-12. Clean up the worktree (run from inside it — no arguments needed):
+8. **Open a PR**: `gh pr create --title "<commit message>" --body "Closes #<N>"`.
+9. **Watch CI**: `gh pr checks <PR> --watch`. Fix failures until all checks are green.
+10. **Merge**: `gh pr merge <PR> --squash --delete-branch`.
+11. **Clean up** the worktree (run from inside it; no arguments needed):
     ```bash
     bash .claude/commands/iterate/remove-worktree.sh
     ```
-13. Remove the `in-progress` label, add a comment with resolution details, then close the issue:
+12. **Close the issue**:
     ```bash
-    gh issue edit <N> --remove-label "in-progress"
     gh issue comment <N> --body "<resolution details>"
+    gh issue edit <N> --remove-label "in-progress"
     gh issue close <N>
     ```
-14. Consider if you need to update .claude/MEMORY.md for the next run.  It's not a changelog, it's for things that you may forget.
-15. If `$ARGUMENTS` was a queue number (not a specific issue ID), check for remaining issues:
-    `gh issue list --label "queue/$ARGUMENTS" --state open --json number --limit 1`
-    - If issues remain, loop back to step 1 to pick up the next one.
-    - If the queue is empty, report idle and stop.
-    - If `$ARGUMENTS` was a specific issue ID, stop here.
+13. **Update `.claude/MEMORY.md`** if it exists and something is worth remembering for the next run (it's not a changelog). Then **stop**.
 
-## Output
+<!-- per-repo: Testing -->
+## Testing
 
-A merged PR, test coverage, updated CI, and a closed ticket.
+Mirror the PR CI jobs (`.github/workflows/test.yaml`, `pr-checks.yaml`):
+
+- Lint and unit tests: `cd src && make test` (go fmt, go vet, all tests)
+- Integration tests: `cd src && make integration-test`
+- Model gateway touched: `pytest components/model-gateway/test_generate_config.py`
+- `src/api/v1alpha1/` touched: `cd src && make generate && make helm-crds`, and stage the generated output (`validate-manifests` fails on drift)
+- A chart touched: `helm dependency build charts/<chart> && helm lint charts/<chart>`
+- Docs touched: `make docs-build`
+- The PR title must be a conventional commit (`feat:`, `fix:`, `chore:`, `docs:`, `test:`); `clean:` is rejected
+<!-- /per-repo -->
