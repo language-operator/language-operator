@@ -53,7 +53,7 @@ This skips issues labelled `in-progress` or `question`, then takes the first mat
    - The script adds `in-progress` (creating the label if the repo lacks it) before creating the worktree.
    - If it exits non-zero because the issue is already `in-progress`, go back to step 1 (with `#N`, stop).
    - It prints `worktree:<path>`. `cd` into that path and stay there for the rest of the run.
-4. **Plan.** The run is unattended if `printenv AGENT_NAME` prints a value (the operator injects it into every agent pod) or `$ARGUMENTS` contains `--auto`.
+4. **Plan.** The run is unattended only if `$ARGUMENTS` contains `--auto`. A scheduled or task-mode agent should pass it; `AGENT_NAME` must not be used for this, because the operator sets it in *every* agent pod and those agents are interactive by design — the terminal is the whole point — so it is also set when someone is watching.
    - Interactive: enter plan mode, propose the plan, and wait for approval.
    - Unattended: post the plan as a comment (`gh issue comment <N> --body "<plan>"`) and continue.
 5. **Implement** the plan inside the worktree.
@@ -64,10 +64,25 @@ This skips issues labelled `in-progress` or `question`, then takes the first mat
    ```
 8. **Open a PR**: `gh pr create --title "<commit message>" --body "Closes #<N>"`.
 9. **Watch CI**: `gh pr checks <PR> --watch`. Fix failures until all checks are green.
-10. **Merge**: `gh pr merge <PR> --squash --delete-branch`.
-11. **Clean up** the worktree (run from inside it; no arguments needed):
+10. **Merge**, then delete the remote branch. Not `--delete-branch`: that also deletes the
+    local branch and switches the checkout to the default, which cannot work from a
+    worktree whose parent has the default branch checked out — which is where this step
+    always runs. It fails with `fatal: 'main' is already checked out` *after* merging, so
+    the error reads like a failed merge when the merge succeeded.
     ```bash
-    bash .claude/commands/iterate/remove-worktree.sh
+    gh pr merge <PR> --squash
+    git push origin --delete <branch-name>
+    ```
+11. **Clean up.** This is the one step that leaves the worktree. Run the *main checkout's*
+    copy of the script and pass the worktree path — not the copy inside the worktree, because
+    bash holds its own source file open while running it. On NFS, unlinking an open file
+    leaves a `.nfs*` placeholder that cannot be removed until bash exits, so the worktree
+    self-deleting its own script fails with `Device or resource busy` and the directory
+    survives. Then delete the local branch, which `git worktree remove` leaves behind.
+    ```bash
+    cd <main checkout>
+    bash .claude/commands/iterate/remove-worktree.sh <worktree-path>
+    git branch -D <branch-name>
     ```
 12. **Close the issue**:
     ```bash
