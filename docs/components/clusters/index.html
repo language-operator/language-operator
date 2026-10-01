@@ -1934,7 +1934,7 @@
 <a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">      </span><span class="nt">emailDomain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">example.com</span>
 </code></pre></div>
 <p>Enabling auth on the cluster does not, by itself, put any agent behind the proxy. An agent is placed behind the OIDC proxy <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> the agent's runtime has <code>auth.enabled: true</code>. An agent with no runtime, or whose runtime does not enable auth, is never proxied — there is no per-agent auth override.</p>
-<p>The three bundled runtimes (<code>openclaw</code>, <code>opencode</code>, <code>claude-code</code>) all set <code>auth.enabled: true</code> because they serve web UIs, so once the cluster enables auth they are automatically proxied. See <a href="../runtimes/#authentication">Runtimes</a> for the runtime side of this gate.</p>
+<p>The four bundled runtimes (<code>openclaw</code>, <code>opencode</code>, <code>claude-code</code>, <code>deepagents</code>) all set <code>auth.enabled: true</code> because they serve web UIs, so once the cluster enables auth they are automatically proxied. See <a href="../runtimes/#authentication">Runtimes</a> for the runtime side of this gate.</p>
 <h2 id="capacity-limits">Capacity Limits<a class="headerlink" href="#capacity-limits" title="Permanent link">&para;</a></h2>
 <p>Enforce hard limits on how many resources can be created in the namespace:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">spec</span><span class="p">:</span>

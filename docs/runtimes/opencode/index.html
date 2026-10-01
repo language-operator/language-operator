@@ -1987,11 +1987,10 @@ long-lived, addressable agent, which is why it has a Service you can port-forwar
 <p>Access is gated by the cluster's OIDC proxy — there is no separate opencode password.</p>
 <p>If your <code>LanguageCluster</code> has a domain and <a href="../../components/clusters/#authentication">auth enabled</a>,
 open https://opencode.demo-cluster.\&lt;your-domain&gt; and sign in through the cluster's OIDC provider.</p>
-<p>For local access, port-forward the service (this bypasses the proxy, so no login is required):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/opencode<span class="w"> </span><span class="m">3000</span>:3000
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># open http://localhost:3000, or attach the TUI:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>opencode<span class="w"> </span>attach<span class="w"> </span>http://localhost:3000
+<p>The agent serves a WebSocket terminal on port 8080 that fronts opencode's interactive TUI. For local access, port-forward the service (this bypasses the proxy, so no login is required):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>svc/opencode<span class="w"> </span><span class="m">8080</span>:8080
 </code></pre></div>
+<p>Then open <code>http://localhost:8080</code> in your browser.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>opencode has no built-in authentication. When the cluster does <strong>not</strong> enable auth, opencode is
@@ -2015,12 +2014,12 @@ exposed unauthenticated on its ingress. Enable cluster auth to protect it.</p>
 <tr>
 <td>Workflow</td>
 <td><code>opencode</code></td>
-<td>The long-lived run. Runs the OpenCode container</td>
+<td>The long-lived run. Runs the OpenCode WebSocket terminal container</td>
 </tr>
 <tr>
 <td>Service</td>
 <td><code>opencode</code></td>
-<td>ClusterIP on port 3000</td>
+<td>ClusterIP on port 8080</td>
 </tr>
 <tr>
 <td>NetworkPolicy</td>
