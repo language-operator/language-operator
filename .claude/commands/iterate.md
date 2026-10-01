@@ -73,9 +73,16 @@ This skips issues labelled `in-progress` or `question`, then takes the first mat
     gh pr merge <PR> --squash
     git push origin --delete <branch-name>
     ```
-11. **Clean up** the worktree (run from inside it; no arguments needed):
+11. **Clean up.** This is the one step that leaves the worktree. Run the *main checkout's*
+    copy of the script and pass the worktree path — not the copy inside the worktree, because
+    bash holds its own source file open while running it. On NFS, unlinking an open file
+    leaves a `.nfs*` placeholder that cannot be removed until bash exits, so the worktree
+    self-deleting its own script fails with `Device or resource busy` and the directory
+    survives. Then delete the local branch, which `git worktree remove` leaves behind.
     ```bash
-    bash .claude/commands/iterate/remove-worktree.sh
+    cd <main checkout>
+    bash .claude/commands/iterate/remove-worktree.sh <worktree-path>
+    git branch -D <branch-name>
     ```
 12. **Close the issue**:
     ```bash
