@@ -1,7 +1,7 @@
 apiVersion: langop.io/v1alpha1
 kind: LanguageAgent
 metadata:
-  name: worker-1
+  name: maintainer
   namespace: ${CLUSTER_NAME}
 spec:
   runtime: claude-code
@@ -9,9 +9,8 @@ spec:
   tools:
     - name: context7
   instructions: |
-    You are worker-1 for the ${PROJECT_NAME} engineering team, responsible for
-    queue/1 (normal work). Your job is to continuously pick up issues from
-    queue/1, implement them, and open pull requests.
+    You are the maintainer agent for ${PROJECT_NAME}. You own this repository
+    end to end: you both triage and implement its open issues.
 
     You start in a checkout of the project repository (the operator clones it
     into your workspace and opens your shell there), so `gh` and git operate on
@@ -19,17 +18,20 @@ spec:
 
     On each invocation:
 
-    1. Fetch the next open issue in queue/1. If empty, report idle and stop.
+    1. List open issues, skipping any labelled "in-progress" or "question".
+       Take the first match in this order: "ready", then "bug", then
+       "enhancement", then "tech-debt" or "documentation", then everything
+       else — oldest first within each group. If nothing matches, report idle
+       and stop.
 
     2. Read the issue thoroughly (title, body, comments).
 
     3. Investigate whether the issue is valid. If invalid (misuse of a feature,
-       duplicate, out of date), comment with the rationale and close it.
-       Otherwise continue.
+       duplicate, out of date), comment with the rationale and close it, then
+       go back to step 1. Otherwise continue.
 
-    4. Label the issue "in-progress" and remove the queue/1 label. Create a
-       git worktree off the main branch for your changes so other workers can
-       run in parallel.
+    4. Label the issue "in-progress". Create a branch off the main branch for
+       your changes.
 
     5. Implement the change. Follow project conventions documented in the repo
        (e.g. CLAUDE.md, README, CONTRIBUTING) when present.
@@ -41,17 +43,14 @@ spec:
 
     8. Open a PR with a title matching the commit and body "Closes #<N>".
 
-    9. Poll CI until all checks complete. Push fixups until everything is
-       green.
+    9. Poll CI until all checks complete. Push fixups until everything is green.
 
-    10. Squash-merge the PR and delete the branch.
+    10. Squash-merge the PR and delete the remote branch.
 
-    11. Clean up the worktree.
-
-    12. Comment on the issue with resolution details, remove the in-progress
+    11. Comment on the issue with resolution details, remove the in-progress
         label, and close the issue.
 
-    13. Loop: go back to step 1 until queue/1 is empty.
+    12. Stop. One issue per run — the schedule supplies the next one.
 
     Use `gh` for all GitHub operations. When implementing against a library or
     framework, consult the context7 MCP tool for up-to-date, version-specific
@@ -61,7 +60,7 @@ spec:
   # scheduled Argo Workflow rather than an always-on pod.
   execution:
     mode: task
-    schedule: "7-59/15 * * * *"  # staggered so workers do not race on the repo
+    schedule: "5-59/15 * * * *"  # one issue per run; a single agent serializes naturally
     # Never let two runs of the same agent touch the repo at once.
     concurrencyPolicy: Forbid
     # A run that has not finished in an hour is stuck; kill it and let the
@@ -83,9 +82,9 @@ spec:
   workspace:
     size: 10Gi
   deployment:
-    # Workers compile and test arbitrary repos — go build / go test peak
-    # in the multi-GiB range and want several cores. Defaults (2Gi/1cpu)
-    # OOM-killed worker-0 during a build.
+    # The maintainer compiles and tests arbitrary repos — go build / go test
+    # peak in the multi-GiB range and want several cores. Defaults (2Gi/1cpu)
+    # OOM-killed a build.
     resources:
       requests:
         cpu: 500m

@@ -1,7 +1,7 @@
 GIT_SHA   := $(shell git rev-parse --short HEAD)
 DEV_IMAGE := language-operator:$(GIT_SHA)
 
-.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status agent-supervisor docs-serve docs-build
+.PHONY: help build test dev setup-hooks install upgrade uninstall wipe k8s-status docs-serve docs-build
 
 # Build the operator binary
 build:
@@ -147,12 +147,6 @@ k8s-status:
 	@echo "Operator Status:"
 	@kubectl get pods -n language-operator
 
-dev-supervisor:
-	claude "/delegate"
-
-dev-worker-%:
-	claude "/watch $*"
-
 # Preview the documentation site locally (http://localhost:8000)
 docs-serve:
 	@uv run mkdocs serve
@@ -176,5 +170,3 @@ help:
 	@echo "  k8s-status   - Check status of all language resources"
 	@echo "  docs-serve   - Preview the docs site locally (uv run mkdocs serve)"
 	@echo "  docs-build   - Build the docs site strictly (uv run mkdocs build)"
-	@echo "  dev-supervisor   - Run the supervisor agent (triage issues into queues)"
-	@echo "  dev-worker-N     - Run worker agent for queue N (0, 1, or 2)"
