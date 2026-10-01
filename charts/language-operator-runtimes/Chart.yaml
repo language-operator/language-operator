@@ -21,7 +21,7 @@ maintainers:
 # them; toggle individual runtimes via the `<runtime>.enabled` values.
 dependencies:
   - name: claude-code
-    version: "0.1.5"
+    version: "0.1.8"
     repository: oci://ghcr.io/language-operator/charts
     condition: claude-code.enabled
   - name: openclaw
@@ -29,7 +29,7 @@ dependencies:
     repository: oci://ghcr.io/language-operator/charts
     condition: openclaw.enabled
   - name: opencode
-    version: "0.1.4"
+    version: "0.1.6"
     repository: oci://ghcr.io/language-operator/charts
     condition: opencode.enabled
   - name: deepagents
