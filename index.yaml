@@ -2,8 +2,8 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
-    appVersion: 0.3.10
-    created: "2026-09-30T23:31:51.599362846Z"
+    appVersion: 0.3.11
+    created: "2026-10-01T03:12:03.611114275Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -11,7 +11,7 @@ entries:
       version: 2.0.3
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 203ce75179d60d339adb3d42b68fc1ccc42a660ae44b2a9d2692d0c770d6ce5a
+    digest: 589fc2954a617da586ff9b9ce7d3fdb948d41e23500b0bbffcdd77b555ecf8d6
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -27,17 +27,17 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-0.3.10.tgz
-    version: 0.3.10
+    - https://language-operator.github.io/language-operator/language-operator-0.3.11.tgz
+    version: 0.3.11
   language-operator-runtimes:
   - apiVersion: v2
-    appVersion: 0.3.10
-    created: "2026-09-30T23:31:51.601244204Z"
+    appVersion: 0.3.11
+    created: "2026-10-01T03:12:03.612523974Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
       repository: oci://ghcr.io/language-operator/charts
-      version: 0.1.5
+      version: 0.1.8
     - condition: openclaw.enabled
       name: openclaw
       repository: oci://ghcr.io/language-operator/charts
@@ -45,14 +45,14 @@ entries:
     - condition: opencode.enabled
       name: opencode
       repository: oci://ghcr.io/language-operator/charts
-      version: 0.1.4
+      version: 0.1.6
     - condition: deepagents.enabled
       name: deepagents
       repository: oci://ghcr.io/language-operator/charts
       version: 0.1.2
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
       opencode, claude-code, deepagents) as subcharts
-    digest: ff678b65583b96e8eb1bc55552f467fe9d5c36e87d8a52a022ecde8cee52c3f2
+    digest: 299e212170570ab27fc5398927666990a483af7bddd3febe96932e888bf95e72
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -67,6 +67,6 @@ entries:
     - https://github.com/language-operator/language-operator
     type: application
     urls:
-    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.10.tgz
-    version: 0.3.10
-generated: "2026-09-30T23:31:51.584893683Z"
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.11.tgz
+    version: 0.3.11
+generated: "2026-10-01T03:12:03.600154099Z"
