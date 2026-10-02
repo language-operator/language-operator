@@ -1978,6 +1978,11 @@
 <td><code>AGENT_NAME</code>, <code>AGENT_NAMESPACE</code>, <code>AGENT_UUID</code></td>
 <td>Standard env vars</td>
 </tr>
+<tr>
+<td>Execution mode</td>
+<td><code>AGENT_EXECUTION_MODE</code> env var</td>
+<td><code>service</code> or <code>task</code>; see <a href="#service-mode-vs-task-mode">below</a></td>
+</tr>
 </tbody>
 </table>
 <p>See <a href="../../components/agents/">Agent Runtime Container Specification</a> for the full contract including the <code>config.yaml</code> schema.</p>
@@ -1986,11 +1991,13 @@
 <li><strong>Read <code>/etc/agent/config.yaml</code></strong> on startup (if present) to load instructions, personas, and tool endpoints.</li>
 <li><strong>Route LLM traffic through <code>MODEL_ENDPOINT</code></strong> — never call model APIs directly from inside the pod.</li>
 <li><strong>Write persistent state to <code>/workspace</code></strong> — do not assume the local container filesystem survives restarts. In task mode every run is a brand-new pod, so anything not on the workspace volume is gone by the next run.</li>
-<li><strong>Behave correctly for the execution mode it will be run in</strong> — see below.</li>
+<li><strong>Behave correctly for the execution mode in <code>AGENT_EXECUTION_MODE</code></strong> — see below.</li>
 </ol>
 <h3 id="service-mode-vs-task-mode">Service mode vs task mode<a class="headerlink" href="#service-mode-vs-task-mode" title="Permanent link">&para;</a></h3>
 <p>Agents run as Argo Workflows, and <code>spec.execution.mode</code> decides what the operator expects
-from your process. An image can support one mode or both; say which in your runtime's docs.</p>
+from your process. The operator passes the mode to the container as <code>AGENT_EXECUTION_MODE</code>
+(<code>service</code> or <code>task</code>); treat an unset value as <code>service</code>. An image can support one mode or
+both — one that supports both must branch on the variable. Say which in your runtime's docs.</p>
 <table>
 <thead>
 <tr>
@@ -2030,7 +2037,7 @@ from your process. An image can support one mode or both; say which in your runt
 <p>The most common mistake is a task-mode image that finishes its work and then idles. Argo has
 no way to know the work is done, so the run never completes, the next scheduled fire is
 skipped under the default <code>concurrencyPolicy: Forbid</code>, and the agent silently stops running.
-<strong>Exit when you are done.</strong></p>
+<strong>When <code>AGENT_EXECUTION_MODE</code> is <code>task</code>, exit when you are done.</strong></p>
 <h3 id="serviceaccount-requirements">ServiceAccount requirements<a class="headerlink" href="#serviceaccount-requirements" title="Permanent link">&para;</a></h3>
 <p>Agent pods run as the operator-managed ServiceAccount <code>language-agent-&lt;agent-name&gt;</code>, which is
 granted <code>create</code> and <code>patch</code> on <code>argoproj.io/workflowtaskresults</code>. The Argo executor writes

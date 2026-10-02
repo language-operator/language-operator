@@ -1068,6 +1068,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-the-agent-knows-its-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the agent knows its mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1815,6 +1826,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-the-agent-knows-its-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the agent knows its mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1949,6 +1971,14 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># NAME     MODE   PHASE       SCHEDULE       LAST RUN</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># triage   task   Succeeded   */15 * * * *   Succeeded</span>
 </code></pre></div>
+<h2 id="how-the-agent-knows-its-mode">How the agent knows its mode<a class="headerlink" href="#how-the-agent-knows-its-mode" title="Permanent link">&para;</a></h2>
+<p>The pod is the same in both modes — only the Argo object around it differs, and the container cannot see that. So the operator injects <code>AGENT_EXECUTION_MODE</code> (<code>service</code> or <code>task</code>) into the agent container and every init container, and the runtime uses it to decide whether to keep running or to exit when the work is done.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>workflowtemplate<span class="w"> </span>triage<span class="w"> </span>-n<span class="w"> </span>my-cluster<span class="w"> </span>-o<span class="w"> </span>yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-A1<span class="w"> </span>AGENT_EXECUTION_MODE
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1">#   - name: AGENT_EXECUTION_MODE</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">#     value: task</span>
+</code></pre></div>
+<p>It is the agent's mode, not the run's. <code>argo submit --from workflowtemplate/assistant</code> against a service agent starts a second pod that also sees <code>service</code> and never exits; for one-off runs, use a task agent.</p>
+<p>A task run that finishes its work but stays <code>Running</code> means the image ignores the variable. Check that your runtime version supports task mode, and set <code>activeDeadlineSeconds</code> as a backstop.</p>
 <h2 id="schedules">Schedules<a class="headerlink" href="#schedules" title="Permanent link">&para;</a></h2>
 <p><code>spec.execution.schedule</code> accepts a standard 5-field cron expression (<code>minute hour day-of-month month day-of-week</code>), textual month and day aliases (<code>0 0 1 JAN MON</code>), the <code>@yearly</code>/<code>@monthly</code>/<code>@weekly</code>/<code>@daily</code>/<code>@hourly</code> macros, and <code>@every &lt;duration&gt;</code> (e.g. <code>@every 90m</code>). Invalid expressions are rejected at admission rather than silently never firing.</p>
 <p><code>concurrencyPolicy</code> decides what happens when a run is due while the previous one is still going:</p>
@@ -2016,13 +2046,13 @@
 <p>An Argo Workflow has no replica count and no scale subresource, so <code>spec.deployment.replicas</code> and <code>spec.deployment.autoscaling</code> are rejected at admission rather than silently ignored. To run more agents, create more agents.</p>
 <h2 id="serviceaccount-requirements">ServiceAccount requirements<a class="headerlink" href="#serviceaccount-requirements" title="Permanent link">&para;</a></h2>
 <p>Agent pods run as <code>language-agent-&lt;agent-name&gt;</code>, which the operator grants <code>create</code> and <code>patch</code> on <code>argoproj.io/workflowtaskresults</code> — the Argo executor uses it to report each node's outcome. If you set <code>spec.deployment.serviceAccountName</code> to a ServiceAccount of your own, it must carry that permission or every run will fail at completion:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;argoproj.io&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;workflowtaskresults&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;create&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;patch&quot;</span><span class="p p-Indicator">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;argoproj.io&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;workflowtaskresults&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;create&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;patch&quot;</span><span class="p p-Indicator">]</span>
 </code></pre></div>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Argo Workflows must be installed. The <code>language-operator</code> chart bundles it as a subchart and installs it by default; the operator refuses to start if the <code>argoproj.io</code> CRDs are missing. To manage Argo yourself:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>...<span class="w"> </span>--set<span class="w"> </span>argo-workflows.enabled<span class="o">=</span><span class="nb">false</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>...<span class="w"> </span>--set<span class="w"> </span>argo-workflows.enabled<span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
 
 

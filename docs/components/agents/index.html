@@ -1956,6 +1956,10 @@
 <td>Kubernetes UID of the LanguageCluster</td>
 </tr>
 <tr>
+<td><code>AGENT_EXECUTION_MODE</code></td>
+<td><code>service</code> or <code>task</code> — the agent's <code>spec.execution.mode</code>. A runtime keeps running in <code>service</code> and exits when its work is done in <code>task</code></td>
+</tr>
+<tr>
 <td><code>MODEL_ENDPOINT</code></td>
 <td>Shared LiteLLM gateway URL — the same URL regardless of how many models are referenced</td>
 </tr>
@@ -2177,6 +2181,7 @@
 <p>A well-behaved agent image should:</p>
 <ul>
 <li>[ ] Listen on the port(s) defined in <code>spec.ports</code> (default: one port named <code>http</code> on <code>8080</code>)</li>
+<li>[ ] Read <code>AGENT_EXECUTION_MODE</code>: keep running when it is <code>service</code> (or unset), exit when the work is done when it is <code>task</code></li>
 <li>[ ] Read <code>/etc/agent/config.yaml</code> on startup for instructions, personas, tools, and models</li>
 <li>[ ] Respect the <code>AGENT_*</code> identity env vars</li>
 <li>[ ] Route all LLM traffic through <code>MODEL_ENDPOINT</code> — agents never hold real API credentials</li>
