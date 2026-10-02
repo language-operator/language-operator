@@ -70,6 +70,20 @@ kubectl get lagent triage
 # triage   task   Succeeded   */15 * * * *   Succeeded
 ```
 
+## How the agent knows its mode
+
+The pod is the same in both modes — only the Argo object around it differs, and the container cannot see that. So the operator injects `AGENT_EXECUTION_MODE` (`service` or `task`) into the agent container and every init container, and the runtime uses it to decide whether to keep running or to exit when the work is done.
+
+```bash
+kubectl get workflowtemplate triage -n my-cluster -o yaml | grep -A1 AGENT_EXECUTION_MODE
+#   - name: AGENT_EXECUTION_MODE
+#     value: task
+```
+
+It is the agent's mode, not the run's. `argo submit --from workflowtemplate/assistant` against a service agent starts a second pod that also sees `service` and never exits; for one-off runs, use a task agent.
+
+A task run that finishes its work but stays `Running` means the image ignores the variable. Check that your runtime version supports task mode, and set `activeDeadlineSeconds` as a backstop.
+
 ## Schedules
 
 `spec.execution.schedule` accepts a standard 5-field cron expression (`minute hour day-of-month month day-of-week`), textual month and day aliases (`0 0 1 JAN MON`), the `@yearly`/`@monthly`/`@weekly`/`@daily`/`@hourly` macros, and `@every <duration>` (e.g. `@every 90m`). Invalid expressions are rejected at admission rather than silently never firing.

@@ -104,7 +104,7 @@ Webhooks live in `*_webhook.go` alongside the types. `zz_generated.deepcopy.go` 
 The operator mounts one file into every agent pod:
 - `/etc/agent/config.yaml` — assembled from `spec.instructions`, referenced personas, resolved tool endpoints, model configs, and agent identity
 
-Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`.
+Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_EXECUTION_MODE` (`service` or `task` — the only way the container learns its `spec.execution.mode`).
 
 `MODEL_ENDPOINT` is the shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) — one URL regardless of how many models are referenced. `LLM_MODEL` is a comma-separated list of model names from all `models`. Both are injected into the main container and all init containers. `MCP_SERVERS` contains resolved MCP tool server URLs.
 

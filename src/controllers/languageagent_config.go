@@ -610,6 +610,13 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Name:  "AGENT_CLUSTER_UUID",
 			Value: string(cluster.UID),
 		},
+		// The pod is the same in both modes, and the wrapping Argo object is invisible
+		// from inside it, so this is the only way a runtime learns whether to keep
+		// running (service) or do its work and exit (task).
+		{
+			Name:  "AGENT_EXECUTION_MODE",
+			Value: agent.Spec.Execution.EffectiveExecutionMode(),
+		},
 	}
 
 	// AGENT_REPO_DIR points at the cloned repository so the runtime (and any init

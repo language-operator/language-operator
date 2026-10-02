@@ -215,7 +215,7 @@ The full contract is defined in [`spec/agents.md`](../spec/agents.md). Summary:
 
 **Operator provides:**
 - `/etc/agent/config.yaml` — structured YAML with agent identity, instructions, personas, tools, models
-- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_INSTRUCTIONS`
+- Environment variables: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER_NAME`, `AGENT_CLUSTER_UUID`, `AGENT_EXECUTION_MODE` (`service` or `task`), `AGENT_INSTRUCTIONS`
 - `MODEL_ENDPOINT` — URL of the shared LiteLLM gateway (`http://gateway.<namespace>.svc.cluster.local:8000`), injected into the main container and all init containers
 - `LLM_MODEL` — comma-separated model names registered in the gateway (from all `models`)
 - `MCP_SERVERS` — resolved MCP tool server URLs

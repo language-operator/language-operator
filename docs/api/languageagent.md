@@ -251,6 +251,7 @@ Environment variables injected into every agent container and all init container
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
+| `AGENT_EXECUTION_MODE` | `service` or `task` — the resolved `spec.execution.mode`, after runtime defaults. Always set. See [Execution Modes](../guides/execution-modes.md#how-the-agent-knows-its-mode). |
 | `MODEL_ENDPOINT` | Shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs (only injected when at least one tool is resolved) |

@@ -65,6 +65,7 @@ The operator injects these into the agent container and all init containers:
 | `AGENT_UUID` | Stable UUID assigned to this agent |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
+| `AGENT_EXECUTION_MODE` | `service` or `task` — the agent's `spec.execution.mode`. A runtime keeps running in `service` and exits when its work is done in `task` |
 | `MODEL_ENDPOINT` | Shared LiteLLM gateway URL — the same URL regardless of how many models are referenced |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated tool endpoint URLs — service-mode tools use in-cluster DNS; sidecar-mode tools use `http://localhost:<port>/mcp` |
@@ -209,6 +210,7 @@ spec:
 A well-behaved agent image should:
 
 - [ ] Listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`)
+- [ ] Read `AGENT_EXECUTION_MODE`: keep running when it is `service` (or unset), exit when the work is done when it is `task`
 - [ ] Read `/etc/agent/config.yaml` on startup for instructions, personas, tools, and models
 - [ ] Respect the `AGENT_*` identity env vars
 - [ ] Route all LLM traffic through `MODEL_ENDPOINT` — agents never hold real API credentials
