@@ -45,7 +45,8 @@ const (
 // agentPodBuild is the assembled, mode-independent shape of an agent's pod:
 // the container it runs, everything that runs alongside it, and the pod-level
 // settings. It is built once and then wrapped in whichever Argo object the
-// agent's execution mode calls for.
+// agent's execution mode calls for. The mode reaches the containers only as the
+// AGENT_EXECUTION_MODE env var.
 type agentPodBuild struct {
 	container      corev1.Container
 	initContainers []corev1.Container

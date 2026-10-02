@@ -16,6 +16,7 @@ The operator injects configuration into every agent pod. Your image must be read
 | Model names | `LLM_MODEL` env var | Comma-separated list |
 | Tool URLs | `MCP_SERVERS` env var | Comma-separated MCP endpoint URLs |
 | Identity | `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID` | Standard env vars |
+| Execution mode | `AGENT_EXECUTION_MODE` env var | `service` or `task`; see [below](#service-mode-vs-task-mode) |
 
 See [Agent Runtime Container Specification](../components/agents.md) for the full contract including the `config.yaml` schema.
 
@@ -24,12 +25,14 @@ See [Agent Runtime Container Specification](../components/agents.md) for the ful
 1. **Read `/etc/agent/config.yaml`** on startup (if present) to load instructions, personas, and tool endpoints.
 2. **Route LLM traffic through `MODEL_ENDPOINT`** — never call model APIs directly from inside the pod.
 3. **Write persistent state to `/workspace`** — do not assume the local container filesystem survives restarts. In task mode every run is a brand-new pod, so anything not on the workspace volume is gone by the next run.
-4. **Behave correctly for the execution mode it will be run in** — see below.
+4. **Behave correctly for the execution mode in `AGENT_EXECUTION_MODE`** — see below.
 
 ### Service mode vs task mode
 
 Agents run as Argo Workflows, and `spec.execution.mode` decides what the operator expects
-from your process. An image can support one mode or both; say which in your runtime's docs.
+from your process. The operator passes the mode to the container as `AGENT_EXECUTION_MODE`
+(`service` or `task`); treat an unset value as `service`. An image can support one mode or
+both — one that supports both must branch on the variable. Say which in your runtime's docs.
 
 | | `service` (default) | `task` |
 |---|---|---|
@@ -42,7 +45,7 @@ from your process. An image can support one mode or both; say which in your runt
 The most common mistake is a task-mode image that finishes its work and then idles. Argo has
 no way to know the work is done, so the run never completes, the next scheduled fire is
 skipped under the default `concurrencyPolicy: Forbid`, and the agent silently stops running.
-**Exit when you are done.**
+**When `AGENT_EXECUTION_MODE` is `task`, exit when you are done.**
 
 ### ServiceAccount requirements
 

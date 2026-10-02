@@ -115,6 +115,7 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_UUID` | Stable UUID assigned to this agent (from `status.uuid`) |
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
+| `AGENT_EXECUTION_MODE` | `service` or `task` — the agent's resolved `spec.execution.mode`, after runtime defaults. Always set. See [Startup Behaviour](#startup-behaviour). |
 | `MODEL_ENDPOINT` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated full MCP tool URLs (each already includes the `/mcp` path) for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>/mcp`; sidecar-mode tools use `http://localhost:<port>/mcp`; external servers (`spec.tools[].url`) appear as given, but only when they need no headers. The runtime connects to each URL directly as a Streamable HTTP MCP server (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. Runtimes should prefer the `tools` section of `config.yaml`, which also carries headers. |
@@ -176,10 +177,14 @@ Liveness and readiness probes are configured via `spec.deployment.livenessProbe`
 
 ### Startup Behaviour
 
-On startup, every agent should read `/etc/agent/config.yaml` for its configuration (instructions, personas, tools, models). What it does next depends on the execution mode it will be run in:
+On startup, every agent should read `/etc/agent/config.yaml` for its configuration (instructions, personas, tools, models). What it does next depends on the execution mode, which the operator passes in `AGENT_EXECUTION_MODE`:
 
-- **service mode** — start listening on the port(s) defined in `spec.ports` and keep running. If the process exits, Argo restarts it.
-- **task mode** — do the work described by the instructions, then **exit**. The exit code becomes the run's phase: `0` is `Succeeded`, anything else is `Failed`. An agent that never exits in task mode runs until `spec.execution.activeDeadlineSeconds` kills it, or forever if that is unset.
+- **`service`** — start listening on the port(s) defined in `spec.ports` and keep running. If the process exits, Argo restarts it.
+- **`task`** — do the work described by the instructions, then **exit**. The exit code becomes the run's phase: `0` is `Succeeded`, anything else is `Failed`. An agent that never exits in task mode runs until `spec.execution.activeDeadlineSeconds` kills it, or forever if that is unset.
+
+The pod is identical in both modes and the Argo object wrapping it is not visible from inside, so the variable is the only signal a runtime gets. An image that supports both modes must branch on it. Treat an unset value as `service`: operators before this variable existed do not inject it, and a service agent that was already running when the operator was upgraded keeps its old environment until its next spec change.
+
+The value is the agent's mode, not the run's: a run submitted by hand against a service agent's WorkflowTemplate still sees `service`.
 
 ## File Formats
 
@@ -326,6 +331,7 @@ The init container runs to completion before the agent container starts. On subs
 
 A well-behaved agent image should:
 
+- [ ] Read `AGENT_EXECUTION_MODE` to decide between the two behaviours below; treat unset as `service`
 - [ ] **Service mode:** listen on the port(s) defined in `spec.ports` (default: one port named `http` on `8080`) and keep running
 - [ ] **Task mode:** do the work and exit — `0` for success, non-zero for failure. An agent that idles after finishing never completes its run
 - [ ] Read runtime configuration from `/etc/agent/config.yaml` on startup (if present); task instructions are in the top-level `instructions` field

@@ -93,6 +93,9 @@ func TestLanguageAgentController_EnvVarInjection(t *testing.T) {
 	if envMap["AGENT_CLUSTER_UUID"] != "test-cluster-uid-1234" {
 		t.Errorf("Expected AGENT_CLUSTER_UUID=test-cluster-uid-1234, got %s", envMap["AGENT_CLUSTER_UUID"])
 	}
+	if envMap["AGENT_EXECUTION_MODE"] != langopv1alpha1.ExecutionModeService {
+		t.Errorf("Expected AGENT_EXECUTION_MODE=service, got %s", envMap["AGENT_EXECUTION_MODE"])
+	}
 }
 
 func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
@@ -425,6 +428,106 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		assert.Equal(t, "http://gateway.default.svc.cluster.local:8000", initEnvMap["MODEL_ENDPOINT"])
 		assert.Equal(t, model.Spec.ModelName, initEnvMap["LLM_MODEL"])
 	})
+}
+
+// AGENT_EXECUTION_MODE is the only way a container learns whether it must keep
+// running or do its work and exit, so it has to be present in both modes and
+// carry the mode the operator actually resolved — runtime defaults included.
+func TestLanguageAgentController_ExecutionModeEnv(t *testing.T) {
+	taskRuntime := gen.LanguageAgentRuntime("task-runtime")
+	taskRuntime.Spec.Execution = langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask}
+
+	tests := []struct {
+		name      string
+		execution langopv1alpha1.ExecutionSpec
+		runtime   string
+		want      string
+	}{
+		{
+			name: "unset mode defaults to service",
+			want: langopv1alpha1.ExecutionModeService,
+		},
+		{
+			name:      "explicit service",
+			execution: langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeService},
+			want:      langopv1alpha1.ExecutionModeService,
+		},
+		{
+			name:      "unscheduled task",
+			execution: langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask},
+			want:      langopv1alpha1.ExecutionModeTask,
+		},
+		{
+			name: "scheduled task",
+			execution: langopv1alpha1.ExecutionSpec{
+				Mode:     langopv1alpha1.ExecutionModeTask,
+				Schedule: "*/5 * * * *",
+			},
+			want: langopv1alpha1.ExecutionModeTask,
+		},
+		{
+			name:    "mode inherited from the runtime",
+			runtime: taskRuntime.Name,
+			want:    langopv1alpha1.ExecutionModeTask,
+		},
+		{
+			name:      "agent mode wins over the runtime",
+			execution: langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeService},
+			runtime:   taskRuntime.Name,
+			want:      langopv1alpha1.ExecutionModeService,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := testutil.SetupTestScheme(t)
+			agent := &langopv1alpha1.LanguageAgent{
+				ObjectMeta: metav1.ObjectMeta{Name: "mode-env-agent", Namespace: "default"},
+				Spec: langopv1alpha1.LanguageAgentSpec{
+					Image:     "ghcr.io/language-operator/agent:latest",
+					Runtime:   tt.runtime,
+					Execution: tt.execution,
+					Deployment: langopv1alpha1.DeploymentSpec{
+						InitContainers: []corev1.Container{
+							{Name: "setup", Image: "busybox:latest"},
+						},
+					},
+				},
+			}
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(gen.ReadyCluster("default"), taskRuntime.DeepCopy(), agent).
+				WithStatusSubresource(agent).
+				Build()
+			reconciler := &LanguageAgentReconciler{
+				Client:          fakeClient,
+				Scheme:          scheme,
+				Log:             logr.Discard(),
+				Recorder:        &record.FakeRecorder{},
+				RegistryManager: &mockRegistryManager{},
+			}
+			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace},
+			})
+			require.NoError(t, err)
+
+			podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+			require.NotEmpty(t, podSpec.Containers)
+			require.NotEmpty(t, podSpec.InitContainers)
+
+			// Adapters run as init containers and need the mode as much as the agent does.
+			containers := append([]corev1.Container{podSpec.Containers[0]}, podSpec.InitContainers...)
+			for _, c := range containers {
+				var got []string
+				for _, e := range c.Env {
+					if e.Name == "AGENT_EXECUTION_MODE" {
+						got = append(got, e.Value)
+					}
+				}
+				assert.Equal(t, []string{tt.want}, got, "container %q", c.Name)
+			}
+		})
+	}
 }
 
 func TestLanguageAgentController_ResourceRequests(t *testing.T) {
