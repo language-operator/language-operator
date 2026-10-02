@@ -8,6 +8,22 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.12 — 2026-10-01
+
+**Features**
+- examples: replace the supervisor + queue workers with a single maintainer agent (#936)
+
+**Bug Fixes**
+- inject AGENT_EXECUTION_MODE so task-mode agents know to exit (#940)
+- iterate: merge from a worktree, remove it, and stop guessing at unattended (#935)
+
+**Chores**
+- remove leftovers from the deleted dashboard repo (#938)
+- bump deepagents to 0.1.3 and document all four runtimes (#937)
+- single-issue /iterate as the canonical command; retire the queue machinery (#934)
+
+---
+
 ## v0.3.11 — 2026-09-30
 
 **Features**
