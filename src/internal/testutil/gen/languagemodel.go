@@ -83,3 +83,10 @@ func SetModelTimeout(timeout string) LanguageModelModifier {
 		m.Spec.Timeout = timeout
 	}
 }
+
+// SetModelCredentialsSecretRef sets spec.credentialsSecretRef.
+func SetModelCredentialsSecretRef(secretName string) LanguageModelModifier {
+	return func(m *langopv1alpha1.LanguageModel) {
+		m.Spec.CredentialsSecretRef = &langopv1alpha1.CredentialsSecretReference{Name: secretName}
+	}
+}

@@ -782,6 +782,18 @@ func TestLanguageAgentController_ConfigMapContent(t *testing.T) {
 		assert.Equal(t, "primary", m.Role)
 	})
 
+	t.Run("model_with_litellm_provider", func(t *testing.T) {
+		model := gen.LanguageModel("deepseek", "default", gen.SetModelProvider(""), gen.SetModelName("deepseek-chat"))
+		model.Spec.LiteLLMProvider = "deepseek"
+		agent := gen.LanguageAgent("ds-agent", "default")
+		agent.Spec.Models = []langopv1alpha1.ModelReference{{Name: "deepseek"}}
+
+		cfg := parseAgentConfigMap(t, scheme, gen.ReadyCluster("default"), model, agent)
+
+		require.Contains(t, cfg.Models, "deepseek")
+		assert.Equal(t, "deepseek", cfg.Models["deepseek"].Provider, "provider falls back to litellmProvider")
+	})
+
 	t.Run("tool_service_mode", func(t *testing.T) {
 		tool := gen.LanguageTool("search-tool", "default") // service mode by default, port 0 → 8080
 		agent := gen.LanguageAgent("tool-agent", "default")

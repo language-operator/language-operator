@@ -58,13 +58,16 @@ Agents call the gateway with the model name they want. The gateway routes to the
 
 | Provider | Value |
 |----------|-------|
-| Anthropic | `anthropic` |
-| OpenAI | `openai` |
-| Azure OpenAI | `azure` |
-| AWS Bedrock | `bedrock` |
-| Google Vertex AI | `vertex` |
-| Any OpenAI-compatible API | `openai-compatible` |
-| Custom LiteLLM config | `custom` |
+| Anthropic | `provider: anthropic` |
+| OpenAI | `provider: openai` |
+| Google AI Studio (Gemini API) | `provider: gemini` |
+| Azure OpenAI | `provider: azure` (+ `endpoint`, `apiVersion`) |
+| AWS Bedrock | `provider: bedrock` (+ `region`) |
+| Google Vertex AI | `provider: vertex` (+ `project`, `location`) |
+| Any OpenAI chat-completions API (Ollama, vLLM, LM Studio…) | `provider: openai-compatible` (+ `endpoint`) |
+| Any other LiteLLM provider (DeepSeek, Qwen, xAI, Mistral, Groq, OpenRouter…) | `litellmProvider: <LiteLLM prefix>` |
+
+`custom` is deprecated and behaves exactly like `openai-compatible`. Providers that need more than one credential (Bedrock access keys, a Vertex service account, an Azure AD app) take a whole Secret through `credentialsSecretRef`, applied to that model only. See [LanguageModel](../api/languagemodel.md#providers) for each provider's fields and examples.
 
 ### Self-hosted models (Ollama, vLLM)
 
@@ -76,6 +79,8 @@ spec:
 ```
 
 No `apiKeySecretRef` needed for unauthenticated endpoints.
+
+The backend only needs `/v1/chat/completions`. Clients that speak the Responses API (`/v1/responses`, e.g. Codex) or the Anthropic Messages API (`/v1/messages`) still work: the gateway translates both to chat completions for these models.
 
 ### Multiple models
 

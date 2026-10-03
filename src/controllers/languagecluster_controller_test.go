@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -2660,4 +2661,70 @@ func TestLanguageClusterReconciler_AdoptsPreExistingMembers(t *testing.T) {
 	updatedTool := &langopv1alpha1.LanguageTool{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "tool-1", Namespace: ns}, updatedTool))
 	assert.Equal(t, wantAnnotation, updatedTool.Annotations[langoplabels.AnnotationKeyClusterGeneration], "LanguageTool should be adopted")
+}
+
+// Each referenced Secret is mounted once: whole when a credentialsSecretRef names
+// it, otherwise with every key the models' apiKeySecretRefs read from it.
+func TestGatewaySecretVolumes(t *testing.T) {
+	models := []langopv1alpha1.LanguageModel{
+		*gen.LanguageModel("openai", "c", gen.SetModelAPIKeySecretRef("shared", "openai-key")),
+		*gen.LanguageModel("gemini", "c", gen.SetModelAPIKeySecretRef("shared", "gemini-key")),
+		*gen.LanguageModel("default-key", "c", gen.SetModelAPIKeySecretRef("solo", "")),
+		*gen.LanguageModel("bedrock", "c", gen.SetModelCredentialsSecretRef("aws")),
+		// A Secret named by both kinds of reference is mounted whole.
+		*gen.LanguageModel("both-a", "c", gen.SetModelCredentialsSecretRef("mixed")),
+		*gen.LanguageModel("both-b", "c", gen.SetModelAPIKeySecretRef("mixed", "api-key")),
+	}
+	volumes, mounts := gatewaySecretVolumes(models)
+
+	byName := map[string]*corev1.SecretVolumeSource{}
+	for _, v := range volumes {
+		byName[v.Secret.SecretName] = v.Secret
+	}
+	require.Len(t, byName, 4, "one volume per Secret")
+	assert.Equal(t, []corev1.KeyToPath{{Key: "gemini-key", Path: "gemini-key"}, {Key: "openai-key", Path: "openai-key"}},
+		byName["shared"].Items, "both models' keys from a shared Secret must be mounted")
+	assert.Equal(t, []corev1.KeyToPath{{Key: "api-key", Path: "api-key"}}, byName["solo"].Items, "key defaults to api-key")
+	assert.Nil(t, byName["aws"].Items, "a credentials Secret is mounted whole")
+	assert.Nil(t, byName["mixed"].Items, "credentialsSecretRef wins: mounted whole")
+
+	paths := map[string]bool{}
+	for _, m := range mounts {
+		paths[m.MountPath] = true
+		assert.True(t, m.ReadOnly)
+	}
+	for _, name := range []string{"shared", "solo", "aws", "mixed"} {
+		assert.True(t, paths["/etc/secrets/"+name], "missing mount for %s", name)
+	}
+}
+
+// New LanguageModel fields reach the gateway through the ConfigMap, so changing
+// one must roll the gateway pods.
+func TestLanguageClusterController_GatewayRestartsOnModelParamsChange(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("params-cluster")
+	model := gen.LanguageModel("bedrock", cluster.Name, gen.SetModelProvider("bedrock"), gen.SetModelCredentialsSecretRef("aws"))
+	model.Spec.Region = "us-east-1"
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cluster, model).WithStatusSubresource(cluster).Build()
+	r := &LanguageClusterReconciler{Client: fakeClient, Scheme: scheme, Log: logr.Discard()}
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+
+	hash := func() string {
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		_, err = r.Reconcile(ctx, req)
+		require.NoError(t, err)
+		dep := &appsv1.Deployment{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: "gateway", Namespace: cluster.Name}, dep))
+		return dep.Spec.Template.Annotations[langoplabels.LabelKeyLangopConfigHash]
+	}
+	before := hash()
+	require.NotEmpty(t, before)
+
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: model.Name, Namespace: cluster.Name}, model))
+	model.Spec.Params = map[string]apiextensionsv1.JSON{"aws_bedrock_runtime_endpoint": {Raw: []byte(`"https://bedrock.example"`)}}
+	require.NoError(t, fakeClient.Update(ctx, model))
+
+	assert.NotEqual(t, before, hash(), "a params change must change the gateway config hash")
 }

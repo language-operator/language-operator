@@ -1,28 +1,72 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // LanguageModelSpec defines the desired state of LanguageModel
+// +kubebuilder:validation:XValidation:rule="has(self.provider) != has(self.litellmProvider)",message="set exactly one of provider or litellmProvider"
 type LanguageModelSpec struct {
-	// Provider specifies the LLM provider type
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Enum=openai;anthropic;openai-compatible;azure;bedrock;vertex;custom
-	Provider string `json:"provider"`
+	// Provider is one of the providers the operator documents and validates.
+	// For any other LiteLLM provider, set litellmProvider instead.
+	// "custom" is deprecated and behaves exactly like "openai-compatible".
+	// +kubebuilder:validation:Enum=openai;anthropic;gemini;openai-compatible;azure;bedrock;vertex;custom
+	// +optional
+	Provider string `json:"provider,omitempty"`
+
+	// LiteLLMProvider is a LiteLLM provider prefix (e.g. "deepseek", "dashscope",
+	// "hosted_vllm") for providers not covered by Provider. The gateway calls the
+	// model as "<litellmProvider>/<modelName>".
+	// +kubebuilder:validation:Pattern=`^[a-z0-9_]+$`
+	// +optional
+	LiteLLMProvider string `json:"litellmProvider,omitempty"`
 
 	// ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus")
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	ModelName string `json:"modelName"`
 
-	// Endpoint is the API endpoint URL (required for openai-compatible, azure, custom)
+	// Endpoint is the API endpoint URL (required for openai-compatible and azure)
 	// +optional
 	Endpoint string `json:"endpoint,omitempty"`
 
-	// APIKeySecretRef references a secret containing the API key
+	// APIKeySecretRef references a secret containing the API key. Shorthand for
+	// a single key; takes precedence over an API key in CredentialsSecretRef.
 	// +optional
 	APIKeySecretRef *SecretReference `json:"apiKeySecretRef,omitempty"`
+
+	// CredentialsSecretRef references a Secret whose keys are this model's
+	// credentials, for providers that need more than one value: AWS access keys
+	// or a Bedrock bearer token, a Vertex service-account JSON, Azure AD app
+	// credentials. Keys are matched by name (e.g. AWS_ACCESS_KEY_ID,
+	// AWS_BEARER_TOKEN_BEDROCK, VERTEX_CREDENTIALS, AZURE_CLIENT_SECRET) and
+	// applied to this model only.
+	// +optional
+	CredentialsSecretRef *CredentialsSecretReference `json:"credentialsSecretRef,omitempty"`
+
+	// Region is the cloud region (Bedrock: the AWS region).
+	// +optional
+	Region string `json:"region,omitempty"`
+
+	// Project is the cloud project (Vertex: the GCP project ID).
+	// +optional
+	Project string `json:"project,omitempty"`
+
+	// Location is the cloud location (Vertex: e.g. "us-central1").
+	// +optional
+	Location string `json:"location,omitempty"`
+
+	// APIVersion is the provider API version (Azure: e.g. "2025-01-01-preview").
+	// +optional
+	APIVersion string `json:"apiVersion,omitempty"`
+
+	// Params are passed through into this model's LiteLLM params, overriding the
+	// values derived from the fields above (e.g. aws_bedrock_runtime_endpoint,
+	// extra_headers, use_chat_completions_api). Credentials do not belong here:
+	// keys that name one are rejected; use credentialsSecretRef.
+	// +optional
+	Params map[string]apiextensionsv1.JSON `json:"params,omitempty"`
 
 	// RateLimits defines rate limiting configuration
 	// +optional
@@ -45,6 +89,22 @@ type SecretReference struct {
 	// +kubebuilder:default="api-key"
 	// +optional
 	Key string `json:"key,omitempty"`
+}
+
+// CredentialsSecretReference references a whole Secret.
+type CredentialsSecretReference struct {
+	// Name is the name of the secret
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+}
+
+// EffectiveProvider is the LiteLLM-facing provider: Provider, or LiteLLMProvider
+// when Provider is unset.
+func (s *LanguageModelSpec) EffectiveProvider() string {
+	if s.Provider != "" {
+		return s.Provider
+	}
+	return s.LiteLLMProvider
 }
 
 // RateLimitSpec defines rate limiting configuration

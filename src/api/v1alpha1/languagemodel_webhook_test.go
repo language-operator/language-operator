@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +34,7 @@ import (
 func testModel(name, modelName string) *LanguageModel {
 	return &LanguageModel{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "team"},
-		Spec:       LanguageModelSpec{Provider: "openai-compatible", ModelName: modelName},
+		Spec:       LanguageModelSpec{Provider: "openai-compatible", ModelName: modelName, Endpoint: "http://ollama:11434"},
 	}
 }
 
@@ -100,5 +102,51 @@ func TestLanguageModelWebhook_ListFailureAddsNoWarning(t *testing.T) {
 	warnings, err := h.ValidateCreate(context.Background(), testModel("ollama-b", "llama3.2"))
 	if err != nil || len(warnings) != 0 {
 		t.Fatalf("failed lookup must neither block nor warn: warnings=%q err=%v", warnings, err)
+	}
+}
+
+func TestLanguageModelWebhook_ProviderRequirements(t *testing.T) {
+	raw := func(s string) apiextensionsv1.JSON { return apiextensionsv1.JSON{Raw: []byte(s)} }
+	for _, tc := range []struct {
+		name    string
+		spec    LanguageModelSpec
+		wantErr string
+	}{
+		{"openai-compatible needs endpoint", LanguageModelSpec{Provider: "openai-compatible", ModelName: "m"}, "requires endpoint"},
+		{"azure needs endpoint and apiVersion", LanguageModelSpec{Provider: "azure", ModelName: "m"}, "requires apiVersion"},
+		{"azure via params is fine", LanguageModelSpec{Provider: "azure", ModelName: "m", Endpoint: "https://a",
+			Params: map[string]apiextensionsv1.JSON{"api_version": raw(`"2025-01-01-preview"`)}}, ""},
+		{"bedrock needs a region", LanguageModelSpec{Provider: "bedrock", ModelName: "m"}, "requires region"},
+		{"bedrock with region", LanguageModelSpec{Provider: "bedrock", ModelName: "m", Region: "us-east-1"}, ""},
+		{"vertex needs project and location", LanguageModelSpec{Provider: "vertex", ModelName: "m", Project: "p"}, "requires location"},
+		{"vertex complete", LanguageModelSpec{Provider: "vertex", ModelName: "m", Project: "p", Location: "us-central1"}, ""},
+		{"litellmProvider needs nothing else", LanguageModelSpec{LiteLLMProvider: "deepseek", ModelName: "deepseek-chat"}, ""},
+		{"credentials do not go in params", LanguageModelSpec{Provider: "gemini", ModelName: "m",
+			Params: map[string]apiextensionsv1.JSON{"api_key": raw(`"sk-oops"`)}}, `"api_key" is a credential`},
+		{"params keys are LiteLLM-style", LanguageModelSpec{Provider: "gemini", ModelName: "m",
+			Params: map[string]apiextensionsv1.JSON{"Extra-Headers": raw(`{}`)}}, "must match"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := &LanguageModel{ObjectMeta: metav1.ObjectMeta{Name: "x", Namespace: "team"}, Spec: tc.spec}
+			_, err := newModelWebhook(t, nil).ValidateCreate(context.Background(), m)
+			switch {
+			case tc.wantErr == "" && err != nil:
+				t.Fatalf("expected success, got %v", err)
+			case tc.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tc.wantErr)):
+				t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestLanguageModelWebhook_CustomProviderIsDeprecated(t *testing.T) {
+	m := testModel("legacy", "llama3.2")
+	m.Spec.Provider = "custom"
+	warnings, err := newModelWebhook(t, nil).ValidateCreate(context.Background(), m)
+	if err != nil {
+		t.Fatalf("custom must still be accepted, got %v", err)
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "deprecated") {
+		t.Fatalf("expected a deprecation warning, got %q", warnings)
 	}
 }

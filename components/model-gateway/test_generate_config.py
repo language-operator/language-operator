@@ -240,3 +240,123 @@ class TestCustomAuthHook:
         auth = self.call("Bearer " + custom_auth.agent_key("s3cret", "agent-a"))
         assert auth.user_id == "agent-a"
         assert auth.metadata == {"langop_agent_id": "agent-a"}
+
+
+class TestProviderMapping:
+    map_provider = staticmethod(generate_config.map_provider_to_litellm)
+
+    @pytest.mark.parametrize("provider,expected", [
+        ("openai", "m"),
+        ("anthropic", "anthropic/m"),
+        ("gemini", "gemini/m"),
+        ("azure", "azure/m"),
+        ("bedrock", "bedrock/m"),
+        ("vertex", "vertex_ai/m"),
+        ("openai-compatible", "openai/m"),
+        ("custom", "openai/m"),
+    ])
+    def test_provider_prefix(self, provider, expected):
+        assert self.map_provider(provider, "m") == expected
+
+    def test_litellm_provider_is_the_prefix(self):
+        assert self.map_provider(None, "deepseek-chat", "deepseek") == "deepseek/deepseek-chat"
+        assert self.map_provider("", "qwen-max", "dashscope") == "dashscope/qwen-max"
+
+    def test_an_already_prefixed_model_name_is_not_prefixed_twice(self):
+        assert self.map_provider("anthropic", "anthropic/claude-sonnet-4-5") == "anthropic/claude-sonnet-4-5"
+        assert self.map_provider("bedrock", "bedrock/converse/x") == "bedrock/converse/x"
+
+
+class TestCredentials:
+    def secret(self, tmp_path, name, **files):
+        d = tmp_path / name
+        d.mkdir()
+        for key, value in files.items():
+            (d / key).write_text(value + "\n")
+        # Kubernetes' own bookkeeping entries in a Secret volume
+        (d / "..data").mkdir()
+        return {"name": name}
+
+    def load(self, tmp_path, ref):
+        return generate_config.load_credentials(ref, secrets_dir=str(tmp_path))
+
+    def test_aws_keys_map_to_litellm_params(self, tmp_path):
+        ref = self.secret(tmp_path, "aws", AWS_ACCESS_KEY_ID="AKIA", AWS_SECRET_ACCESS_KEY="s3", AWS_SESSION_TOKEN="tok")
+        assert self.load(tmp_path, ref) == {
+            "aws_access_key_id": "AKIA", "aws_secret_access_key": "s3", "aws_session_token": "tok"}
+
+    def test_bedrock_bearer_token_is_the_api_key(self, tmp_path):
+        ref = self.secret(tmp_path, "bedrock", AWS_BEARER_TOKEN_BEDROCK="bearer")
+        assert self.load(tmp_path, ref) == {"api_key": "bearer"}
+
+    def test_azure_ad_app(self, tmp_path):
+        ref = self.secret(tmp_path, "azure", AZURE_TENANT_ID="t", AZURE_CLIENT_ID="c", AZURE_CLIENT_SECRET="cs")
+        assert self.load(tmp_path, ref) == {"tenant_id": "t", "client_id": "c", "client_secret": "cs"}
+
+    def test_vertex_service_account_is_passed_as_a_path(self, tmp_path):
+        ref = self.secret(tmp_path, "gcp", **{"service-account.json": '{"type": "service_account"}'})
+        creds = self.load(tmp_path, ref)
+        assert creds == {"vertex_credentials": str(tmp_path / "gcp" / "service-account.json")}
+
+    def test_litellm_param_names_pass_through(self, tmp_path):
+        ref = self.secret(tmp_path, "raw", aws_access_key_id="AKIA", api_key="k")
+        assert self.load(tmp_path, ref) == {"aws_access_key_id": "AKIA", "api_key": "k"}
+
+    def test_unknown_keys_are_skipped_by_name_without_their_value(self, tmp_path, capsys):
+        ref = self.secret(tmp_path, "mixed", GEMINI_API_KEY="g", SOMETHING_ELSE="do-not-print-me")
+        assert self.load(tmp_path, ref) == {"api_key": "g"}
+        err = capsys.readouterr().err
+        assert "SOMETHING_ELSE" in err
+        assert "do-not-print-me" not in err and "g\n" not in err
+
+    def test_missing_secret_mount_yields_nothing(self, tmp_path):
+        assert self.load(tmp_path, {"name": "absent"}) == {}
+
+
+class TestBuildParams:
+    build = staticmethod(generate_config.build_litellm_params)
+
+    def test_bedrock_with_keys_and_region(self):
+        params = self.build({"provider": "bedrock", "modelName": "anthropic.claude-sonnet-4-5", "region": "us-east-1"},
+                            None, {"aws_access_key_id": "AKIA", "aws_secret_access_key": "s3"})
+        assert params == {"model": "bedrock/anthropic.claude-sonnet-4-5", "aws_access_key_id": "AKIA",
+                          "aws_secret_access_key": "s3", "aws_region_name": "us-east-1"}
+
+    def test_vertex_and_azure_typed_fields(self):
+        vertex = self.build({"provider": "vertex", "modelName": "gemini-2.5-pro", "project": "p", "location": "us-central1"}, None)
+        assert vertex["vertex_project"] == "p" and vertex["vertex_location"] == "us-central1"
+        azure = self.build({"provider": "azure", "modelName": "gpt4o-deploy", "endpoint": "https://x.openai.azure.com",
+                            "apiVersion": "2025-01-01-preview"}, "k")
+        assert azure == {"model": "azure/gpt4o-deploy", "api_base": "https://x.openai.azure.com",
+                         "api_key": "k", "api_version": "2025-01-01-preview"}
+
+    def test_params_are_typed_and_win_over_derived_values(self):
+        params = self.build({"provider": "bedrock", "modelName": "m", "region": "us-east-1",
+                             "params": {"aws_region_name": "eu-west-1", "extra_headers": {"X-Team": "a"}}}, None)
+        assert params["aws_region_name"] == "eu-west-1"
+        assert params["extra_headers"] == {"X-Team": "a"}
+
+    def test_api_key_secret_ref_wins_over_a_credentials_api_key(self):
+        params = self.build({"provider": "gemini", "modelName": "m"}, "from-apiKeySecretRef", {"api_key": "from-credentials"})
+        assert params["api_key"] == "from-apiKeySecretRef"
+
+    def test_litellm_provider_with_endpoint(self):
+        params = self.build({"litellmProvider": "deepseek", "modelName": "deepseek-chat", "endpoint": "https://api.deepseek.com"}, "k")
+        assert params == {"model": "deepseek/deepseek-chat", "api_base": "https://api.deepseek.com", "api_key": "k"}
+
+    def test_openai_compatible_bridges_responses_and_custom_is_the_same(self):
+        spec = {"modelName": "llama3.2", "endpoint": "http://ollama:11434"}
+        compat = self.build(dict(spec, provider="openai-compatible"), None)
+        assert compat["use_chat_completions_api"] is True
+        assert compat == self.build(dict(spec, provider="custom"), None)
+        settings = generate_config.build_litellm_settings(["openai-compatible"])
+        assert settings["use_chat_completions_url_for_anthropic_messages"] is True
+        assert "use_chat_completions_url_for_anthropic_messages" not in generate_config.build_litellm_settings(["anthropic"])
+
+    @pytest.mark.parametrize("spec,api_key,expected", [
+        ({"provider": "openai", "modelName": "gpt-4o"}, "k", {"model": "gpt-4o", "api_key": "k"}),
+        ({"provider": "azure", "modelName": "d", "endpoint": "https://a"}, "k", {"model": "azure/d", "api_base": "https://a", "api_key": "k"}),
+        ({"provider": "openai", "modelName": "gpt-4o", "timeout": "30s"}, "k", {"model": "gpt-4o", "api_key": "k", "timeout": 30.0}),
+    ])
+    def test_existing_single_key_models_are_unchanged(self, spec, api_key, expected):
+        assert self.build(spec, api_key) == expected

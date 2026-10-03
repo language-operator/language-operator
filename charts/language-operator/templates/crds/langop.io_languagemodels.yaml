@@ -57,8 +57,9 @@ spec:
             description: LanguageModelSpec defines the desired state of LanguageModel
             properties:
               apiKeySecretRef:
-                description: APIKeySecretRef references a secret containing the API
-                  key
+                description: |-
+                  APIKeySecretRef references a secret containing the API key. Shorthand for
+                  a single key; takes precedence over an API key in CredentialsSecretRef.
                 properties:
                   key:
                     default: api-key
@@ -70,20 +71,66 @@ spec:
                 required:
                 - name
                 type: object
+              apiVersion:
+                description: 'APIVersion is the provider API version (Azure: e.g.
+                  "2025-01-01-preview").'
+                type: string
+              credentialsSecretRef:
+                description: |-
+                  CredentialsSecretRef references a Secret whose keys are this model's
+                  credentials, for providers that need more than one value: AWS access keys
+                  or a Bedrock bearer token, a Vertex service-account JSON, Azure AD app
+                  credentials. Keys are matched by name (e.g. AWS_ACCESS_KEY_ID,
+                  AWS_BEARER_TOKEN_BEDROCK, VERTEX_CREDENTIALS, AZURE_CLIENT_SECRET) and
+                  applied to this model only.
+                properties:
+                  name:
+                    description: Name is the name of the secret
+                    type: string
+                required:
+                - name
+                type: object
               endpoint:
-                description: Endpoint is the API endpoint URL (required for openai-compatible,
-                  azure, custom)
+                description: Endpoint is the API endpoint URL (required for openai-compatible
+                  and azure)
+                type: string
+              litellmProvider:
+                description: |-
+                  LiteLLMProvider is a LiteLLM provider prefix (e.g. "deepseek", "dashscope",
+                  "hosted_vllm") for providers not covered by Provider. The gateway calls the
+                  model as "<litellmProvider>/<modelName>".
+                pattern: ^[a-z0-9_]+$
+                type: string
+              location:
+                description: 'Location is the cloud location (Vertex: e.g. "us-central1").'
                 type: string
               modelName:
                 description: ModelName is the specific model identifier (e.g., "gpt-4",
                   "claude-3-opus")
                 minLength: 1
                 type: string
+              params:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Params are passed through into this model's LiteLLM params, overriding the
+                  values derived from the fields above (e.g. aws_bedrock_runtime_endpoint,
+                  extra_headers, use_chat_completions_api). Credentials do not belong here:
+                  keys that name one are rejected; use credentialsSecretRef.
+                type: object
+              project:
+                description: 'Project is the cloud project (Vertex: the GCP project
+                  ID).'
+                type: string
               provider:
-                description: Provider specifies the LLM provider type
+                description: |-
+                  Provider is one of the providers the operator documents and validates.
+                  For any other LiteLLM provider, set litellmProvider instead.
+                  "custom" is deprecated and behaves exactly like "openai-compatible".
                 enum:
                 - openai
                 - anthropic
+                - gemini
                 - openai-compatible
                 - azure
                 - bedrock
@@ -102,6 +149,9 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              region:
+                description: 'Region is the cloud region (Bedrock: the AWS region).'
+                type: string
               timeout:
                 default: 5m
                 description: Timeout specifies request timeout duration (e.g., "5m",
@@ -110,8 +160,10 @@ spec:
                 type: string
             required:
             - modelName
-            - provider
             type: object
+            x-kubernetes-validations:
+            - message: set exactly one of provider or litellmProvider
+              rule: has(self.provider) != has(self.litellmProvider)
           status:
             description: LanguageModelStatus defines the observed state of LanguageModel
             properties:

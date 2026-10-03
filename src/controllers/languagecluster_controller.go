@@ -1028,6 +1028,62 @@ func (r *LanguageClusterReconciler) validateDNS(ctx context.Context, cluster *la
 	}()
 }
 
+// gatewaySecretVolumes mounts each Secret the models reference once, at
+// /etc/secrets/<name>/, where generate-config.py reads it. A Secret named by a
+// credentialsSecretRef is mounted whole; otherwise only the keys the models'
+// apiKeySecretRefs name, all of them, so two models reading different keys of
+// one Secret each find theirs.
+func gatewaySecretVolumes(models []langopv1alpha1.LanguageModel) ([]corev1.Volume, []corev1.VolumeMount) {
+	whole := map[string]bool{}
+	keys := map[string]map[string]bool{}
+	for _, model := range models {
+		if ref := model.Spec.CredentialsSecretRef; ref != nil {
+			whole[ref.Name] = true
+		}
+		if ref := model.Spec.APIKeySecretRef; ref != nil {
+			key := ref.Key
+			if key == "" {
+				key = "api-key"
+			}
+			if keys[ref.Name] == nil {
+				keys[ref.Name] = map[string]bool{}
+			}
+			keys[ref.Name][key] = true
+		}
+	}
+
+	names := make([]string, 0, len(whole)+len(keys))
+	for name := range whole {
+		names = append(names, name)
+	}
+	for name := range keys {
+		if !whole[name] {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+
+	var volumes []corev1.Volume
+	var mounts []corev1.VolumeMount
+	for _, name := range names {
+		source := &corev1.SecretVolumeSource{SecretName: name}
+		if !whole[name] {
+			secretKeys := make([]string, 0, len(keys[name]))
+			for k := range keys[name] {
+				secretKeys = append(secretKeys, k)
+			}
+			sort.Strings(secretKeys)
+			for _, k := range secretKeys {
+				source.Items = append(source.Items, corev1.KeyToPath{Key: k, Path: k})
+			}
+		}
+		volName := "secret-" + strings.ReplaceAll(name, ".", "-")
+		volumes = append(volumes, corev1.Volume{Name: volName, VolumeSource: corev1.VolumeSource{Secret: source}})
+		mounts = append(mounts, corev1.VolumeMount{Name: volName, MountPath: "/etc/secrets/" + name, ReadOnly: true})
+	}
+	return volumes, mounts
+}
+
 // reconcileGateway creates/updates the shared LiteLLM gateway Deployment, Service, and ConfigMap.
 func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
@@ -1084,38 +1140,9 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	mounts := []corev1.VolumeMount{
 		{Name: "models-config", MountPath: "/etc/langop/models", ReadOnly: true},
 	}
-	mountedSecrets := map[string]bool{}
-	for _, model := range modelList.Items {
-		if model.Spec.APIKeySecretRef == nil {
-			continue
-		}
-		secretName := model.Spec.APIKeySecretRef.Name
-		if mountedSecrets[secretName] {
-			continue
-		}
-		mountedSecrets[secretName] = true
-		secretKey := model.Spec.APIKeySecretRef.Key
-		if secretKey == "" {
-			secretKey = "api-key"
-		}
-		volName := "secret-" + strings.ReplaceAll(secretName, ".", "-")
-		volumes = append(volumes, corev1.Volume{
-			Name: volName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretName,
-					Items: []corev1.KeyToPath{
-						{Key: secretKey, Path: secretKey},
-					},
-				},
-			},
-		})
-		mounts = append(mounts, corev1.VolumeMount{
-			Name:      volName,
-			MountPath: "/etc/secrets/" + secretName,
-			ReadOnly:  true,
-		})
-	}
+	secretVolumes, secretMounts := gatewaySecretVolumes(modelList.Items)
+	volumes = append(volumes, secretVolumes...)
+	mounts = append(mounts, secretMounts...)
 
 	// Extract the gateway DeploymentSpec once to avoid repeated nil checks below.
 	var gatewayDeploy langopv1alpha1.DeploymentSpec
