@@ -1795,40 +1795,107 @@ func TestLanguageAgentController_TaskRunStatusFromLatestRun(t *testing.T) {
 	r, fc := newModeReconciler(t, agent)
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
-	// Stand in for Argo: two runs the CronWorkflow fired, the newer one still going.
+	// Stand in for Argo with runs labelled the way it labels them:
+	//   - a run the CronWorkflow fired, already processed: agent labels + template label
+	//   - an `argo submit --from` run Argo has not processed yet: template label only
+	cronLabels := GetCommonLabels(agent.Name, "LanguageAgent")
+	cronLabels[labelWorkflowTemplate] = agent.Name
+	submitLabels := map[string]string{labelWorkflowTemplate: agent.Name}
+
 	older := metav1.NewTime(time.Now().Add(-2 * time.Hour))
 	newer := metav1.NewTime(time.Now().Add(-10 * time.Minute))
 	for _, run := range []struct {
 		name     string
+		labels   map[string]string
 		phase    wfv1.WorkflowPhase
 		started  metav1.Time
 		finished metav1.Time
 	}{
-		{"run-history-agent-aaa", wfv1.WorkflowSucceeded, older, metav1.NewTime(older.Add(time.Minute))},
-		{"run-history-agent-bbb", wfv1.WorkflowRunning, newer, metav1.Time{}},
+		{"run-history-agent-aaa", cronLabels, wfv1.WorkflowSucceeded, older, metav1.NewTime(older.Add(time.Minute))},
+		{"run-history-agent-bbb", submitLabels, wfv1.WorkflowRunning, newer, metav1.Time{}},
 	} {
-		wf := &wfv1.Workflow{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      run.name,
-				Namespace: agent.Namespace,
-				Labels:    GetCommonLabels(agent.Name, "LanguageAgent"),
-			},
-		}
-		wf.Status.Phase = run.phase
-		wf.Status.StartedAt = run.started
-		wf.Status.FinishedAt = run.finished
-		require.NoError(t, fc.Create(ctx, wf))
+		require.NoError(t, fc.Create(ctx, agentRun(agent, run.name, run.labels, run.phase, run.started, run.finished)))
 	}
 
 	reconcileTwice(t, r, agent.Name, agent.Namespace)
 
 	updated := &langopv1alpha1.LanguageAgent{}
 	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
-	assert.Equal(t, "run-history-agent-bbb", updated.Status.LastRunName, "the newest run wins")
+	assert.Equal(t, "run-history-agent-bbb", updated.Status.LastRunName, "a run submitted with `argo submit --from` must be tracked")
 	assert.Equal(t, string(wfv1.WorkflowRunning), updated.Status.LastRunPhase)
 	assert.Equal(t, events.PhaseStatusRunning, updated.Status.Phase)
 	assert.Nil(t, updated.Status.LastRunFinishedAt, "a running run has not finished")
 	assert.Empty(t, updated.Status.ActiveWorkflowName, "task mode has no long-lived Workflow")
+
+	// A run submitted just now has not started: no StartedAt, only a creation time.
+	// It is still the newest run.
+	pending := agentRun(agent, "run-history-agent-ccc", submitLabels, wfv1.WorkflowPending, metav1.Time{}, metav1.Time{})
+	pending.CreationTimestamp = metav1.NewTime(time.Now().Add(-time.Minute))
+	require.NoError(t, fc.Create(ctx, pending))
+
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	require.NoError(t, fc.Get(ctx, types.NamespacedName{Name: agent.Name, Namespace: agent.Namespace}, updated))
+	assert.Equal(t, "run-history-agent-ccc", updated.Status.LastRunName, "a Pending run is the latest run")
+	assert.Equal(t, string(wfv1.WorkflowPending), updated.Status.LastRunPhase)
+	assert.Equal(t, events.PhaseStatusPending, updated.Status.Phase)
+	assert.Nil(t, updated.Status.LastRunStartedAt)
+}
+
+// agentRun builds a Workflow run of the agent's template, as Argo would create it.
+func agentRun(agent *langopv1alpha1.LanguageAgent, name string, labels map[string]string, phase wfv1.WorkflowPhase, started, finished metav1.Time) *wfv1.Workflow {
+	wf := &wfv1.Workflow{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: agent.Namespace, Labels: labels},
+		Spec:       wfv1.WorkflowSpec{WorkflowTemplateRef: &wfv1.WorkflowTemplateRef{Name: agent.Name}},
+	}
+	wf.Status.Phase = phase
+	wf.Status.StartedAt = started
+	wf.Status.FinishedAt = finished
+	return wf
+}
+
+// Every run of the template carries the agent's labels, however it was started,
+// because the template's workflowMetadata is copied onto each run.
+func TestLanguageAgentController_WorkflowTemplateLabelsItsRuns(t *testing.T) {
+	agent := gen.LanguageAgent("labelled-runs-agent", "default")
+	agent.Spec.Execution = langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask}
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	tmpl := agentWorkflowTemplate(t, fc, agent.Name, agent.Namespace)
+	require.NotNil(t, tmpl.Spec.WorkflowMetadata)
+	labels := tmpl.Spec.WorkflowMetadata.Labels
+	assert.Equal(t, agent.Name, labels[langoplabels.LabelKeyK8sName])
+	assert.Equal(t, "LanguageAgent", labels[langoplabels.LabelKeyLangopKind])
+	assert.Equal(t, "agent", labels[langoplabels.LabelKeyLangopComponent])
+}
+
+func TestEnqueueAgentForWorkflow(t *testing.T) {
+	agentLabels := GetCommonLabels("triage", "LanguageAgent")
+	both := GetCommonLabels("triage", "LanguageAgent")
+	both[labelWorkflowTemplate] = "triage"
+
+	for _, tc := range []struct {
+		name   string
+		labels map[string]string
+		want   []string
+	}{
+		{"agent labels (service Workflow, processed run)", agentLabels, []string{"triage"}},
+		{"argo submit --from, not yet processed", map[string]string{labelWorkflowTemplate: "triage"}, []string{"triage"}},
+		{"both labels enqueue once", both, []string{"triage"}},
+		{"another kind's labels are not an agent", GetCommonLabels("triage", "LanguageTool"), nil},
+		{"unrelated Workflow", map[string]string{"app": "other"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			wf := &wfv1.Workflow{ObjectMeta: metav1.ObjectMeta{Name: "run", Namespace: "ns", Labels: tc.labels}}
+			var got []string
+			for _, req := range enqueueAgentForWorkflow(context.Background(), wf) {
+				assert.Equal(t, "ns", req.Namespace)
+				got = append(got, req.Name)
+			}
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestLanguageAgentController_AgentServiceAccountCanReportTaskResults(t *testing.T) {

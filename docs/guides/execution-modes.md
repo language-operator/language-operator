@@ -150,7 +150,7 @@ Both default to empty, so a run without them behaves as before. Your own `spec.d
 | `status.phase` | `Pending`, `Running`, `Succeeded`, `Failed`, `Suspended`, or `Degraded` |
 | `status.workflowTemplateName` | The template to submit against |
 | `status.activeWorkflowName` | The long-lived Workflow (service mode only) |
-| `status.lastRunName` / `lastRunPhase` | The most recent run and its Argo phase |
+| `status.lastRunName` / `lastRunPhase` | The most recent run and its Argo phase. Every run of the agent's template counts, however it was started (schedule, `argo submit --from`, another controller), including one still `Pending` |
 | `status.lastRunStartedAt` / `lastRunFinishedAt` | When it ran |
 | `status.lastScheduledTime` | When the CronWorkflow last fired (task mode) |
 

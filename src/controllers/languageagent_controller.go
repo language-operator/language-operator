@@ -27,6 +27,7 @@ import (
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
 	"github.com/language-operator/language-operator/pkg/cni"
 	"github.com/language-operator/language-operator/pkg/events"
+	langoplabels "github.com/language-operator/language-operator/pkg/labels"
 	"github.com/language-operator/language-operator/pkg/merge"
 	"github.com/language-operator/language-operator/pkg/reconciler"
 	"github.com/language-operator/language-operator/pkg/validation"
@@ -551,6 +552,25 @@ func (r *LanguageAgentReconciler) enqueueAgentsByRuntime() handler.MapFunc {
 	}
 }
 
+// enqueueAgentForWorkflow maps a Workflow to the agent it is a run of: by the
+// agent labels every run of an agent's template carries once Argo has processed
+// it, or by Argo's workflow-template label, which `argo submit --from` sets at
+// creation. Anything else is not an agent run and is ignored.
+func enqueueAgentForWorkflow(_ context.Context, obj client.Object) []reconcile.Request {
+	labels := obj.GetLabels()
+	name := ""
+	if labels[langoplabels.LabelKeyLangopKind] == "LanguageAgent" {
+		name = labels[langoplabels.LabelKeyK8sName]
+	}
+	if name == "" {
+		name = labels[labelWorkflowTemplate]
+	}
+	if name == "" {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: name, Namespace: obj.GetNamespace()}}}
+}
+
 // enqueueAgentsInNamespace returns a handler that lists all LanguageAgents in the
 // same namespace as the changed object and enqueues a reconcile request for each.
 func (r *LanguageAgentReconciler) enqueueAgentsInNamespace() handler.MapFunc {
@@ -578,7 +598,9 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&langopv1alpha1.LanguageAgent{}).
 		Owns(&wfv1.WorkflowTemplate{}).
-		Owns(&wfv1.Workflow{}).
+		// Not Owns: only the service Workflow is owned by the agent. Cron runs are
+		// owned by the CronWorkflow and on-demand runs by nobody, so map by label.
+		Watches(&wfv1.Workflow{}, handler.EnqueueRequestsFromMapFunc(enqueueAgentForWorkflow)).
 		Owns(&wfv1.CronWorkflow{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
