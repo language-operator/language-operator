@@ -1,0 +1,28 @@
+# One LanguageModel for a vendor's whole catalogue: modelName "*". Here OpenRouter,
+# reached through its OpenAI-compatible API.
+#   kubectl -n my-cluster create secret generic openrouter-credentials \
+#     --from-literal=api-key=sk-or-...
+#
+# Agents pick a model by the vendor's own name and call it as
+# "<this LanguageModel's name>/<model>", e.g. "openrouter/anthropic/claude-sonnet-4.5":
+#
+#   spec:
+#     models:
+#       - name: openrouter
+#         model: anthropic/claude-sonnet-4.5
+#
+# Rate limits and the timeout apply to all of the vendor's models together.
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: openrouter
+  namespace: my-cluster        # your LanguageCluster's namespace
+spec:
+  provider: openai-compatible
+  modelName: "*"
+  endpoint: https://openrouter.ai/api/v1
+  apiKeySecretRef:
+    name: openrouter-credentials
+    key: api-key
+  rateLimits:
+    requestsPerMinute: 60

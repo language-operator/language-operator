@@ -291,6 +291,13 @@ type ModelReference struct {
 	// The operator does not enforce priority; it is surfaced in the agent config (agent.json).
 	// +optional
 	Priority *int32 `json:"priority,omitempty"`
+
+	// Model picks a model from a wildcard LanguageModel (one whose modelName is "*"),
+	// by the vendor's own name, e.g. "anthropic/claude-sonnet-4.5" from OpenRouter.
+	// The agent then calls the gateway with "<LanguageModel name>/<model>".
+	// Required for a wildcard LanguageModel and not allowed for any other.
+	// +optional
+	Model string `json:"model,omitempty"`
 }
 
 // ToolReference references a LanguageTool in the agent's namespace or, when url is set,

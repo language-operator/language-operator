@@ -22,7 +22,9 @@ type LanguageModelSpec struct {
 	// +optional
 	LiteLLMProvider string `json:"litellmProvider,omitempty"`
 
-	// ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus")
+	// ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus"), or
+	// "*" for a wildcard model that stands for the provider's whole catalogue: agents
+	// then pick a model with spec.models[].model and call it as "<name>/<model>".
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	ModelName string `json:"modelName"`

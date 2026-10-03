@@ -150,3 +150,26 @@ func TestLanguageModelWebhook_CustomProviderIsDeprecated(t *testing.T) {
 		t.Fatalf("expected a deprecation warning, got %q", warnings)
 	}
 }
+
+func TestLanguageModelWebhook_Wildcards(t *testing.T) {
+	ctx := context.Background()
+	wildcard := func(name string) *LanguageModel {
+		m := testModel(name, "*")
+		m.Spec.Endpoint = "https://openrouter.ai/api/v1"
+		return m
+	}
+	h := newModelWebhook(t, nil, wildcard("openrouter"))
+
+	warnings, err := h.ValidateCreate(ctx, wildcard("together"))
+	if err != nil {
+		t.Fatalf(`modelName "*" must be accepted: %v`, err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("wildcards are addressed by their own name and never collide; got %q", warnings)
+	}
+
+	partial := testModel("gpt-family", "gpt-*")
+	if _, err := h.ValidateCreate(ctx, partial); err == nil || !strings.Contains(err.Error(), "only allowed on its own") {
+		t.Fatalf("a partial wildcard must be rejected, got %v", err)
+	}
+}

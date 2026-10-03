@@ -103,8 +103,10 @@ spec:
                 description: 'Location is the cloud location (Vertex: e.g. "us-central1").'
                 type: string
               modelName:
-                description: ModelName is the specific model identifier (e.g., "gpt-4",
-                  "claude-3-opus")
+                description: |-
+                  ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus"), or
+                  "*" for a wildcard model that stands for the provider's whole catalogue: agents
+                  then pick a model with spec.models[].model and call it as "<name>/<model>".
                 minLength: 1
                 type: string
               params:
