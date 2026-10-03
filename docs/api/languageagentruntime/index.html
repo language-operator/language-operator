@@ -587,6 +587,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../runtimes/kilo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kilo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../runtimes/openclaw/" class="md-nav__link">
         
   
@@ -1947,6 +1975,12 @@
 <td>8080</td>
 <td>Autonomous deep agent (HTTP live UI, optional A2A)</td>
 </tr>
+<tr>
+<td><code>kilo</code></td>
+<td><code>ghcr.io/language-operator/kilo-adapter</code></td>
+<td>8080</td>
+<td>AI coding assistant (HTTP/WebSocket terminal)</td>
+</tr>
 </tbody>
 </table>
 <p>Disable a bundled runtime in <code>values.yaml</code>:</p>
@@ -2027,6 +2061,8 @@
 <li><code>openclaw</code> declares <code>OPENCLAW_GATEWAY_TOKEN</code> (auto-generated).</li>
 <li><code>opencode</code> declares no credentials — access is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 <li><code>claude-code</code> declares no credentials — its authentication is interactive via <code>/login</code>.</li>
+<li><code>deepagents</code> declares no credentials — LLM traffic goes through the injected <code>MODEL_ENDPOINT</code> gateway.</li>
+<li><code>kilo</code> declares no credentials — Kilo reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 </ul>
 <p>Custom runtimes use the same mechanism:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
@@ -2043,7 +2079,7 @@
 </code></pre></div>
 <h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
 <p><code>spec.auth.enabled</code> (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> its runtime has <code>auth.enabled: true</code>. An agent with no runtime, or whose runtime does not enable auth, is never proxied.</p>
-<p>The four bundled runtimes (<code>openclaw</code>, <code>opencode</code>, <code>claude-code</code>, <code>deepagents</code>) all set <code>auth.enabled: true</code>, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the <code>LanguageCluster</code> — see <a href="../../components/clusters/#authentication">Clusters</a>.</p>
+<p>The five bundled runtimes (<code>openclaw</code>, <code>opencode</code>, <code>claude-code</code>, <code>deepagents</code>, <code>kilo</code>) all set <code>auth.enabled: true</code>, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the <code>LanguageCluster</code> — see <a href="../../components/clusters/#authentication">Clusters</a>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageAgentRuntime</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">metadata</span><span class="p">:</span>
@@ -2102,6 +2138,7 @@ that uses it:</p>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># opencode      5m</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># claude-code   5m</span>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># deepagents    5m</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># kilo          5m</span>
 </code></pre></div>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
 <ul>
