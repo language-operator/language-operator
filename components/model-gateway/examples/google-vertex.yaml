@@ -1,15 +1,22 @@
+# Google Vertex AI with a service account. The JSON key stays a mounted file;
+# the gateway reads it from there:
+#   kubectl -n my-cluster create secret generic vertex-sa \
+#     --from-file=service-account.json=./sa.json
+#
+# For the Gemini API with an AI Studio key instead, use provider: gemini and
+# apiKeySecretRef (see docs/api/languagemodel.md).
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: vertex-gemini
-  namespace: langop-system
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: vertex
-  modelName: gemini-1.5-pro
-  endpoint: https://generativelanguage.googleapis.com
-  apiKeySecretRef:
-    name: vertex-ai-credentials
-    key: service-account-key
+  modelName: gemini-2.5-pro
+  project: my-gcp-project
+  location: us-central1
+  credentialsSecretRef:
+    name: vertex-sa
   timeout: "8m"
   rateLimits:
     requestsPerMinute: 80

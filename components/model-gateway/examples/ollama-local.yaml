@@ -2,7 +2,7 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: ollama-llama3
-  namespace: langop-system
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: openai-compatible
   modelName: llama3.2

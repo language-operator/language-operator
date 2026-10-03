@@ -1,12 +1,19 @@
+# Azure OpenAI. modelName is your Azure *deployment* name.
+#   kubectl -n my-cluster create secret generic azure-openai-credentials \
+#     --from-literal=api-key=...
+#
+# With an Azure AD app instead of a key, put AZURE_TENANT_ID, AZURE_CLIENT_ID and
+# AZURE_CLIENT_SECRET in a Secret and reference it with credentialsSecretRef.
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: azure-gpt4
-  namespace: langop-system
+  name: azure-gpt4o
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: azure
-  modelName: gpt-4-deployment
-  endpoint: https://your-resource.openai.azure.com/
+  modelName: my-gpt4o-deployment
+  endpoint: https://your-resource.openai.azure.com
+  apiVersion: "2025-01-01-preview"
   apiKeySecretRef:
     name: azure-openai-credentials
     key: api-key
@@ -14,11 +21,3 @@ spec:
   rateLimits:
     requestsPerMinute: 120
     tokensPerMinute: 150000
-  # Network egress rules (required for Cilium/NetworkPolicy enforcement)
-  networkPolicies:
-  - description: "Allow Azure OpenAI API access"
-    to:
-      dns: ["*.openai.azure.com"]
-    ports:
-    - port: 443
-      protocol: TCP

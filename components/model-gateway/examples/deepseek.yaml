@@ -1,0 +1,16 @@
+# Any provider LiteLLM supports, by its LiteLLM prefix: here DeepSeek. The same
+# shape works for zai, moonshot, minimax, xai, mistral, groq, together_ai,
+# fireworks_ai, openrouter, dashscope, ... (see docs/components/models.md).
+#   kubectl -n my-cluster create secret generic deepseek-credentials \
+#     --from-literal=api-key=sk-...
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: deepseek-chat
+  namespace: my-cluster        # your LanguageCluster's namespace
+spec:
+  litellmProvider: deepseek
+  modelName: deepseek-chat
+  apiKeySecretRef:
+    name: deepseek-credentials
+    key: api-key

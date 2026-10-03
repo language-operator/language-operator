@@ -1,11 +1,14 @@
+# Anthropic (Claude).
+#   kubectl -n my-cluster create secret generic anthropic-credentials \
+#     --from-literal=api-key=sk-ant-...
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: claude-sonnet
-  namespace: langop-system
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: anthropic
-  modelName: claude-3-5-sonnet-20241022
+  modelName: claude-sonnet-4-5
   apiKeySecretRef:
     name: anthropic-credentials
     key: api-key

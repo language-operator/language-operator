@@ -1,15 +1,31 @@
+# Reaching providers through a corporate HTTP(S) proxy. A proxy is a property of
+# the gateway, not of a model: set the standard proxy variables on the
+# LanguageCluster's gateway, and every model the gateway serves goes through it.
+# Keep in-cluster traffic (e.g. an Ollama service) off the proxy with NO_PROXY.
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+metadata:
+  name: my-cluster
+spec:
+  gateway:
+    deployment:
+      env:
+        - name: HTTPS_PROXY
+          value: http://proxy.corp.example:8080
+        - name: HTTP_PROXY
+          value: http://proxy.corp.example:8080
+        - name: NO_PROXY
+          value: .svc,.cluster.local,10.0.0.0/8
+---
+# Any model then uses the proxy; nothing proxy-specific goes on the model.
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: openai-via-proxy
-  namespace: langop-system
+  name: gpt-4o-via-proxy
+  namespace: my-cluster
 spec:
   provider: openai
-  modelName: gpt-4
+  modelName: gpt-4o
   apiKeySecretRef:
     name: openai-credentials
     key: api-key
-  timeout: "8m"
-  rateLimits:
-    requestsPerMinute: 60
-    tokensPerMinute: 80000
