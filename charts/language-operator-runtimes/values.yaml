@@ -12,6 +12,7 @@
 #   - https://github.com/language-operator/kilo-adapter
 #   - https://github.com/language-operator/qwen-code-adapter
 #   - https://github.com/language-operator/cursor-adapter
+#   - https://github.com/language-operator/goose-adapter
 
 claude-code:
   # Install the claude-code LanguageAgentRuntime.
@@ -45,3 +46,7 @@ cursor:
   enabled: true
   # credentials:
   #   apiKeySecret: cursor-credentials
+
+goose:
+  # Install the goose LanguageAgentRuntime.
+  enabled: true
