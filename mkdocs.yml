@@ -67,6 +67,7 @@ nav:
     - Runtimes:
         - Claude Code: runtimes/claude-code.md
         - DeepAgents: runtimes/deepagents.md
+        - Kilo: runtimes/kilo.md
         - OpenClaw: runtimes/openclaw.md
         - OpenCode: runtimes/opencode.md
     - Components:

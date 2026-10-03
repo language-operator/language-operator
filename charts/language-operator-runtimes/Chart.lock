@@ -11,5 +11,8 @@ dependencies:
 - name: deepagents
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.5
-digest: sha256:e5cc69bc9172f306489dd758d48ca24afd6227acc173987dbae0b5c723d68722
-generated: "2026-10-02T23:49:29.076961055Z"
+- name: kilo
+  repository: oci://ghcr.io/language-operator/charts
+  version: 0.1.0
+digest: sha256:bf054fb6013cd3ec35cdaab44ef7ab25fcf0257f362035ea778c69fc63b76304
+generated: "2026-10-03T02:23:22.983823671Z"

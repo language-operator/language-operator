@@ -9,6 +9,7 @@
 #   - https://github.com/language-operator/openclaw-adapter
 #   - https://github.com/language-operator/opencode-adapter
 #   - https://github.com/language-operator/deepagents-adapter
+#   - https://github.com/language-operator/kilo-adapter
 
 claude-code:
   # Install the claude-code LanguageAgentRuntime.
@@ -24,4 +25,8 @@ opencode:
 
 deepagents:
   # Install the deepagents LanguageAgentRuntime.
+  enabled: true
+
+kilo:
+  # Install the kilo LanguageAgentRuntime.
   enabled: true
