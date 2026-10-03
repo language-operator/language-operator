@@ -8,6 +8,19 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.15 — 2026-10-03
+
+**Bug Fixes**
+- publish Helm charts only from release tags; keep every version in the index (#971)
+
+**Chores**
+- add the goose runtime (umbrella pin, docs, repo list, maintainer agent) (#970)
+- add the cursor runtime (umbrella pin, docs, repo list, maintainer agent) (#969)
+- add the qwen-code runtime (umbrella pin, docs, repo list, maintainer agent) (#968)
+- add the kilo runtime (umbrella pin, docs, repo list, maintainer agent) (#967)
+
+---
+
 ## v0.3.14 — 2026-10-03
 
 **Features**
