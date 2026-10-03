@@ -8,6 +8,16 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.14 — 2026-10-03
+
+**Features**
+- multi-field credentials, litellmProvider and params on LanguageModel (#963)
+
+**Chores**
+- upgrade LiteLLM to 1.103.2; warn on shared modelNames (#961)
+
+---
+
 ## v0.3.13 — 2026-10-03
 
 **Features**
