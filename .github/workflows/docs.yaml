@@ -20,6 +20,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Deploys share the gh-pages group with helm-release.yaml's publishing runs, so
+    # the two never push gh-pages at once. Other runs get their own group.
+    concurrency:
+      group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'gh-pages' || format('docs-{0}', github.ref) }}
+      cancel-in-progress: false
     permissions:
       contents: write
       pages: write

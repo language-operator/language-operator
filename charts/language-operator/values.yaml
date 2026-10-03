@@ -7,7 +7,8 @@ replicaCount: 1
 image:
   repository: ghcr.io/language-operator/language-operator
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
+  # Overrides the image tag whose default is the chart appVersion. Leave empty to
+  # stay pinned to this release; `latest` is the newest build of main, not a release.
   tag: ""
 
 imagePullSecrets: []
@@ -202,7 +203,9 @@ config:
 
   gateway:
     # Image for the shared LiteLLM gateway deployed per LanguageCluster.
-    # Defaults to ghcr.io/language-operator/model-gateway:latest when empty.
+    # Defaults to ghcr.io/language-operator/model-gateway:<chart appVersion> when
+    # empty, so the gateway is pinned to the release like the operator. Setting a
+    # `:latest` image tracks the newest build of main instead of a release.
     image: ""
     # ImagePullPolicy for the gateway (Always, IfNotPresent, Never).
     # Defaults to Kubernetes default (IfNotPresent, or Always for :latest).

@@ -78,9 +78,7 @@ spec:
         {{- if .Values.config.gateway.ingressClassName }}
         - --gateway-ingress-class-name={{ .Values.config.gateway.ingressClassName }}
         {{- end }}
-        {{- if .Values.config.gateway.image }}
-        - --gateway-image={{ .Values.config.gateway.image }}
-        {{- end }}
+        - --gateway-image={{ include "language-operator.gatewayImage" . }}
         {{- if .Values.config.gateway.imagePullPolicy }}
         - --gateway-image-pull-policy={{ .Values.config.gateway.imagePullPolicy }}
         {{- end }}

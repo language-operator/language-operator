@@ -1,23 +1,41 @@
 name: Release Helm Chart
 
+# Charts are published only from release tags. A chart version is immutable:
+# publishing from main would overwrite the last release's version (Chart.yaml
+# only changes at release time) with an unreleased build. Pushes to main and
+# pull requests touching the charts lint and package them, publishing nothing.
 on:
   push:
     branches:
       - main
     tags:
       - 'v*'
-  release:
-    types: [published]
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-release.yaml'
+  pull_request:
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-release.yaml'
   workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Publishing runs share the gh-pages group with docs.yaml's deploys, so the two
+    # never push gh-pages at once. Lint-only runs get a group of their own: a pending
+    # run in a shared group is cancelled by the next one, and a lint run must never
+    # displace a waiting release.
+    concurrency:
+      group: ${{ startsWith(github.ref, 'refs/tags/v') && 'gh-pages' || format('helm-lint-{0}', github.ref) }}
+      cancel-in-progress: false
     permissions:
       contents: write
       packages: write
       pages: write
       id-token: write
+    env:
+      PUBLISH: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,6 +66,12 @@ jobs:
             helm dependency build "$chart"
           done
 
+      - name: Lint Helm charts
+        run: |
+          for chart in charts/language-operator charts/language-operator-runtimes; do
+            helm lint "$chart"
+          done
+
       - name: Package Helm charts
         run: |
           mkdir -p .helm-packages
@@ -55,12 +79,27 @@ jobs:
             helm package "$chart" -d .helm-packages
           done
 
+      - name: Check out the published Helm repository
+        if: env.PUBLISH == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: .gh-pages
+
       - name: Generate Helm index
+        # Index every chart ever published plus the new ones, so older versions
+        # stay installable. Indexing only the new packages would replace the
+        # repository's index with one that lists just this release.
+        if: env.PUBLISH == 'true'
         run: |
-          helm repo index .helm-packages --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          mkdir -p .helm-repo
+          find .gh-pages -maxdepth 1 -name '*.tgz' -exec cp {} .helm-repo/ \;
+          cp .helm-packages/*.tgz .helm-repo/
+          helm repo index .helm-repo --url https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          echo "Indexed $(ls .helm-repo/*.tgz | wc -l) chart archives"
 
       - name: Create GitHub release for tag
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -72,23 +111,21 @@ jobs:
           fi
 
       - name: Upload Helm chart as release asset
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        if: env.PUBLISH == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           for chart in .helm-packages/*.tgz; do
-            if [ -f "$chart" ]; then
-              echo "Uploading $chart as release asset"
-              gh release upload ${{ github.ref_name }} "$chart" --clobber
-            fi
+            echo "Uploading $chart as release asset"
+            gh release upload ${{ github.ref_name }} "$chart" --clobber
           done
 
       - name: Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        if: env.PUBLISH == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .helm-packages
+          publish_dir: .helm-repo
           destination_dir: .
           keep_files: true
           commit_message: 'Deploy Helm repository for ${{ github.ref_name }}'
