@@ -20,5 +20,8 @@ dependencies:
 - name: cursor
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.1
-digest: sha256:beee2bfd0b978707c534bd1c4c5d5af1d54fbc2a33265fcc816c51dd363eabbe
-generated: "2026-10-03T02:44:29.4183597Z"
+- name: goose
+  repository: oci://ghcr.io/language-operator/charts
+  version: 0.1.1
+digest: sha256:2c2935cc37d4ff9806853eb53edf80973e9e4708c09b2a29ef324e34bdd60e7c
+generated: "2026-10-03T02:53:47.99828962Z"

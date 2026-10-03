@@ -26,6 +26,7 @@ The standard runtimes are installed by the `language-operator-runtimes` chart:
 | `kilo` | `ghcr.io/language-operator/kilo-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
 | `qwen-code` | `ghcr.io/language-operator/qwen-code-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
 | `cursor` | `ghcr.io/language-operator/cursor-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal); vendor key, bypasses the gateway |
+| `goose` | `ghcr.io/language-operator/goose-adapter` | 8080 | General-purpose AI agent (HTTP/WebSocket terminal) |
 
 Disable a bundled runtime in `values.yaml`:
 
@@ -86,6 +87,7 @@ Runtime-declared entries are merged ahead of any entries the agent adds in its o
 - `kilo` declares no credentials — Kilo reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `qwen-code` declares no credentials — Qwen Code reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `cursor` declares `CURSOR_API_KEY` only when the chart value `credentials.apiKeySecret` names a Secret; otherwise each agent sets it in `spec.credentials` or signs in interactively. Cursor talks to Cursor directly, not through the gateway.
+- `goose` declares no credentials — Goose reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
 
 Custom runtimes use the same mechanism:
 
@@ -107,7 +109,7 @@ spec:
 
 `spec.auth.enabled` (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied.
 
-The seven bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`, `kilo`, `qwen-code`, `cursor`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
+The eight bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`, `kilo`, `qwen-code`, `cursor`, `goose`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -158,6 +160,7 @@ kubectl get languageagentruntimes
 # kilo          5m
 # qwen-code     5m
 # cursor        5m
+# goose         5m
 ```
 
 ## Related

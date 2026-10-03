@@ -1,6 +1,6 @@
 apiVersion: v2
 name: language-operator-runtimes
-description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code, deepagents, kilo, qwen-code, cursor) as subcharts
+description: Umbrella chart bundling the Language Operator runtimes (openclaw, opencode, claude-code, deepagents, kilo, qwen-code, cursor, goose) as subcharts
 type: application
 version: 0.3.14
 appVersion: "0.3.14"
@@ -48,3 +48,7 @@ dependencies:
     version: "0.1.1"
     repository: oci://ghcr.io/language-operator/charts
     condition: cursor.enabled
+  - name: goose
+    version: "0.1.1"
+    repository: oci://ghcr.io/language-operator/charts
+    condition: goose.enabled

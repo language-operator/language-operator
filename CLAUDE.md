@@ -45,7 +45,7 @@ cd charts/language-operator-runtimes && helm template . --debug
 
 Two charts live under `charts/`:
 - `charts/language-operator/` — operator workload (CRDs, Deployment, RBAC, webhooks) **plus the `argo-workflows` subchart**, pulled from `oci://ghcr.io/argoproj/argo-helm` and enabled by default (`argo-workflows.enabled`). Agents run as Argo Workflows and the operator refuses to start without the `argoproj.io` CRDs. Run `helm dependency build charts/language-operator` before linting, templating, or installing from a checkout. Install this chart first.
-- `charts/language-operator-runtimes/` — umbrella chart that pulls the seven runtimes (openclaw, opencode, claude-code, deepagents, kilo, qwen-code, cursor) as subcharts from `oci://ghcr.io/language-operator/charts`. Requires the operator chart's CRDs to be present. Run `helm dependency build charts/language-operator-runtimes` before packaging/installing (CI and the `make` targets do this). `Chart.lock` is committed; pulled `charts/*.tgz` are gitignored.
+- `charts/language-operator-runtimes/` — umbrella chart that pulls the eight runtimes (openclaw, opencode, claude-code, deepagents, kilo, qwen-code, cursor, goose) as subcharts from `oci://ghcr.io/language-operator/charts`. Requires the operator chart's CRDs to be present. Run `helm dependency build charts/language-operator-runtimes` before packaging/installing (CI and the `make` targets do this). `Chart.lock` is committed; pulled `charts/*.tgz` are gitignored.
 
 Each runtime now lives in its **own repository** (image source **and** self-contained chart), not in this repo:
 - `language-operator/claude-code-adapter` — combined terminal image + `claude-code` runtime chart
@@ -55,8 +55,9 @@ Each runtime now lives in its **own repository** (image source **and** self-cont
 - `language-operator/kilo-adapter` — combined terminal image + `kilo` runtime chart
 - `language-operator/qwen-code-adapter` — combined terminal image + `qwen-code` runtime chart
 - `language-operator/cursor-adapter` — combined terminal image + `cursor` runtime chart (vendor key: talks to Cursor directly, bypassing the gateway)
+- `language-operator/goose-adapter` — combined terminal image + `goose` runtime chart
 
-`language-operator/coding-runtime` is the shared base image (config translation plus web terminal) that the claude-code, opencode, kilo, qwen-code and cursor adapter images build `FROM`.
+`language-operator/coding-runtime` is the shared base image (config translation plus web terminal) that the claude-code, opencode, kilo, qwen-code, cursor and goose adapter images build `FROM`.
 
 The umbrella's values are keyed by subchart name (e.g. `claude-code.enabled`, `claude-code.image.pullPolicy`), forwarded to each subchart.
 

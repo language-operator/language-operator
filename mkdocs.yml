@@ -68,6 +68,7 @@ nav:
         - Claude Code: runtimes/claude-code.md
         - Cursor: runtimes/cursor.md
         - DeepAgents: runtimes/deepagents.md
+        - Goose: runtimes/goose.md
         - Kilo: runtimes/kilo.md
         - OpenClaw: runtimes/openclaw.md
         - OpenCode: runtimes/opencode.md

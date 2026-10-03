@@ -12,3 +12,4 @@ resources:
   - languageagent.adapter-kilo.yaml
   - languageagent.adapter-qwen-code.yaml
   - languageagent.adapter-cursor.yaml
+  - languageagent.adapter-goose.yaml
