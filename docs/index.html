@@ -693,6 +693,34 @@
   
   
     <li class="md-nav__item">
+      <a href="runtimes/cursor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cursor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="runtimes/deepagents/" class="md-nav__link">
         
   
@@ -1924,7 +1952,7 @@
 
 <h1 id="language-operator">Language Operator<a class="headerlink" href="#language-operator" title="Permanent link">&para;</a></h1>
 <p><strong>Deploy natural-language workloads to Kubernetes.</strong></p>
-<p>Language Operator extends Kubernetes with purpose-built CRDs for AI agents. The workload is natural language — you describe what you want done, declare the models and tools the agent can use, and apply it like any other manifest. The operator runs it on a runtime you already know: <a href="https://github.com/anthropics/claude-code">Claude Code</a>, <a href="https://github.com/openclaw/openclaw">OpenClaw</a>, <a href="https://github.com/sst/opencode">OpenCode</a>, <a href="https://github.com/Kilo-Org/kilocode">Kilo</a>, <a href="https://github.com/QwenLM/qwen-code">Qwen Code</a> or <a href="https://github.com/langchain-ai/deepagents">DeepAgents</a>.</p>
+<p>Language Operator extends Kubernetes with purpose-built CRDs for AI agents. The workload is natural language — you describe what you want done, declare the models and tools the agent can use, and apply it like any other manifest. The operator runs it on a runtime you already know: <a href="https://github.com/anthropics/claude-code">Claude Code</a>, <a href="https://github.com/openclaw/openclaw">OpenClaw</a>, <a href="https://github.com/sst/opencode">OpenCode</a>, <a href="https://github.com/Kilo-Org/kilocode">Kilo</a>, <a href="https://github.com/QwenLM/qwen-code">Qwen Code</a>, <a href="https://cursor.com/cli">Cursor</a> or <a href="https://github.com/langchain-ai/deepagents">DeepAgents</a>.</p>
 <p>Each agent is an ordinary Argo Workflow — always-on or run on a schedule, scheduled by the control plane, observable with the tools you already run, and managed through the same GitOps workflows as the rest of your cluster. No new framework to adopt and no code generation: you write the intent, and the operator wires up models, tools, config, networking, and storage.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <p>Declare what you want in a manifest; the operator reconciles it into a WorkflowTemplate, the Workflow or CronWorkflow that runs it, a Service, and a NetworkPolicy, injects the model and tool endpoints, mounts the instruction and persona config, and keeps it that way as your cluster changes.</p>
