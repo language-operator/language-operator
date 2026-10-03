@@ -4923,7 +4923,7 @@ spec.selfConfigure allowlist before patching.</p>
 </tr>
 <tr>
 <td><code>modelName</code> <em>string</em></td>
-<td>ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus")</td>
+<td>ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus"), or<br />"*" for a wildcard model that stands for the provider's whole catalogue: agents<br />then pick a model with spec.models[].model and call it as "<name>/<model>".</td>
 <td></td>
 <td>MinLength: 1 <br />Required: {} <br /></td>
 </tr>
@@ -5403,6 +5403,12 @@ The combination of Group+Kind+Namespace+Name uniquely identifies the resource.</
 <tr>
 <td><code>priority</code> <em>integer</em></td>
 <td>Priority for model selection — a hint for the agent runtime (lower value = higher priority).<br />The operator does not enforce priority; it is surfaced in the agent config (agent.json).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>model</code> <em>string</em></td>
+<td>Model picks a model from a wildcard LanguageModel (one whose modelName is "*"),<br />by the vendor's own name, e.g. "anthropic/claude-sonnet-4.5" from OpenRouter.<br />The agent then calls the gateway with "<LanguageModel name>/<model>".<br />Required for a wildcard LanguageModel and not allowed for any other.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>

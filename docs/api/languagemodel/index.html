@@ -1532,6 +1532,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#wildcard-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wildcard models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-fields-and-params" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2036,6 +2047,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#wildcard-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wildcard models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-fields-and-params" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2305,6 +2327,8 @@
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek-credentials</span>
 </code></pre></div>
 <p>The admission webhook rejects a spec that is missing what its <code>provider</code> needs (the "Also needs" column).</p>
+<h3 id="wildcard-models">Wildcard models<a class="headerlink" href="#wildcard-models" title="Permanent link">&para;</a></h3>
+<p><code>modelName: "*"</code> makes the LanguageModel stand for the provider's whole catalogue. Agents choose a model with <code>spec.models[].model</code> and call it as <code>&lt;LanguageModel name&gt;/&lt;model&gt;</code>. See <a href="../../components/models/#wildcard-models-a-whole-vendor-catalogue">Wildcard models</a>.</p>
 <h3 id="typed-fields-and-params">Typed fields and <code>params</code><a class="headerlink" href="#typed-fields-and-params" title="Permanent link">&para;</a></h3>
 <table>
 <thead>

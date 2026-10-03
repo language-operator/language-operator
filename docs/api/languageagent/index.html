@@ -2436,6 +2436,12 @@ fields, suspension, and the ServiceAccount permission the Argo executor needs.</
 <td>—</td>
 <td>Optional selection priority hint; lower value = higher priority</td>
 </tr>
+<tr>
+<td><code>model</code></td>
+<td>string</td>
+<td>—</td>
+<td>The model to use from a <strong>wildcard</strong> LanguageModel (<code>modelName: "*"</code>), by the vendor's own name, e.g. <code>anthropic/claude-sonnet-4.5</code>. The agent then calls <code>&lt;LanguageModel name&gt;/&lt;model&gt;</code>. Required for a wildcard model; not allowed for any other. See <a href="../../components/models/#wildcard-models-a-whole-vendor-catalogue">Wildcard models</a></td>
+</tr>
 </tbody>
 </table>
 <p>The <code>role</code> and <code>priority</code> fields are surfaced in <code>/etc/agent/config.yaml</code> under each model entry. The operator does not enforce them — they are hints for the agent runtime's model selection logic.</p>
