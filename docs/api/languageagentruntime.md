@@ -24,6 +24,7 @@ The standard runtimes are installed by the `language-operator-runtimes` chart:
 | `claude-code` | `ghcr.io/language-operator/claude-code-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
 | `deepagents` | `ghcr.io/language-operator/deepagents-adapter` | 8080 | Autonomous deep agent (HTTP live UI, optional A2A) |
 | `kilo` | `ghcr.io/language-operator/kilo-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
+| `qwen-code` | `ghcr.io/language-operator/qwen-code-adapter` | 8080 | AI coding assistant (HTTP/WebSocket terminal) |
 
 Disable a bundled runtime in `values.yaml`:
 
@@ -82,6 +83,7 @@ Runtime-declared entries are merged ahead of any entries the agent adds in its o
 - `claude-code` declares no credentials — its authentication is interactive via `/login`.
 - `deepagents` declares no credentials — LLM traffic goes through the injected `MODEL_ENDPOINT` gateway.
 - `kilo` declares no credentials — Kilo reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
+- `qwen-code` declares no credentials — Qwen Code reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
 
 Custom runtimes use the same mechanism:
 
@@ -103,7 +105,7 @@ spec:
 
 `spec.auth.enabled` (bool) gates whether agents using this runtime are placed behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. An agent with no runtime, or whose runtime does not enable auth, is never proxied.
 
-The five bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`, `kilo`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
+The six bundled runtimes (`openclaw`, `opencode`, `claude-code`, `deepagents`, `kilo`, `qwen-code`) all set `auth.enabled: true`, since they serve web UIs. The cluster-wide switch and OIDC connection config live on the `LanguageCluster` — see [Clusters](../components/clusters.md#authentication).
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -152,6 +154,7 @@ kubectl get languageagentruntimes
 # claude-code   5m
 # deepagents    5m
 # kilo          5m
+# qwen-code     5m
 ```
 
 ## Related

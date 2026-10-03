@@ -70,6 +70,7 @@ nav:
         - Kilo: runtimes/kilo.md
         - OpenClaw: runtimes/openclaw.md
         - OpenCode: runtimes/opencode.md
+        - Qwen Code: runtimes/qwen-code.md
     - Components:
         - Clusters: components/clusters.md
         - Agents: components/agents.md

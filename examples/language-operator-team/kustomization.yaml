@@ -10,3 +10,4 @@ resources:
   - languageagent.adapter-opencode.yaml
   - languageagent.adapter-deepagents.yaml
   - languageagent.adapter-kilo.yaml
+  - languageagent.adapter-qwen-code.yaml
