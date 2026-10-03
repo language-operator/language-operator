@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"time"
 
+	"github.com/argoproj/argo-workflows/v4/pkg/apis/workflow"
 	wfv1 "github.com/argoproj/argo-workflows/v4/pkg/apis/workflow/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +28,13 @@ const (
 	// agentTemplateName is the name of the single Argo template in an agent's
 	// WorkflowTemplate, and the entrypoint every derived Workflow invokes.
 	agentTemplateName = "agent"
+
+	// labelWorkflowTemplate is the label Argo puts on every run of a
+	// WorkflowTemplate, set to the template's name: by `argo submit --from` when it
+	// creates the run, and by Argo's controller for any other workflowTemplateRef
+	// run. Mirrors common.LabelKeyWorkflowTemplate, whose package is too heavy to
+	// import for one string.
+	labelWorkflowTemplate = workflow.WorkflowFullName + "/workflow-template"
 
 	// workflowParamEvent and workflowParamTrigger are the WorkflowTemplate's
 	// per-run inputs (`argo submit -p event=... -p trigger=...`). The agent sees
@@ -245,6 +254,12 @@ func buildWorkflowSpec(build *agentPodBuild) (wfv1.WorkflowSpec, error) {
 		PodMetadata: &wfv1.Metadata{
 			Labels:      build.podLabels,
 			Annotations: build.podAnnotations,
+		},
+		// Every run of this template carries the agent's labels, however it was
+		// started (cron, `argo submit --from`, another controller). Argo copies
+		// them onto the Workflow on its first pass.
+		WorkflowMetadata: &wfv1.WorkflowMetadata{
+			Labels: maps.Clone(build.labels),
 		},
 		// Per-run inputs. Empty defaults keep a run submitted without them
 		// identical to one from before they existed.
@@ -579,21 +594,15 @@ func (r *LanguageAgentReconciler) syncTaskWorkflowStatus(
 ) (string, error) {
 	agent.Status.ActiveWorkflowName = ""
 
-	// A run may be created by the CronWorkflow or submitted by hand, so find it by
-	// label rather than by name.
-	runs := &wfv1.WorkflowList{}
-	if err := r.List(ctx, runs,
-		client.InNamespace(agent.Namespace),
-		client.MatchingLabels{langoplabels.LabelKeyK8sName: agent.Name},
-	); err != nil {
-		return "", fmt.Errorf("failed to list agent Workflow runs: %w", err)
+	runs, err := r.listAgentRuns(ctx, agent)
+	if err != nil {
+		return "", err
 	}
 
 	var latest *wfv1.Workflow
-	for i := range runs.Items {
-		run := &runs.Items[i]
-		if latest == nil || run.Status.StartedAt.After(latest.Status.StartedAt.Time) {
-			latest = run
+	for i := range runs {
+		if latest == nil || runNewer(&runs[i], latest) {
+			latest = &runs[i]
 		}
 	}
 
@@ -624,6 +633,52 @@ func (r *LanguageAgentReconciler) syncTaskWorkflowStatus(
 }
 
 // applyRunStatus copies a Workflow's run history onto the agent status.
+// listAgentRuns returns every run of the agent's WorkflowTemplate, however it was
+// started. A run carries the agent's labels once Argo has processed it (they come
+// from the template's workflowMetadata, or the CronWorkflow's), and Argo's
+// workflow-template label from creation when it came from `argo submit --from`.
+// Matching either tracks a run from the moment it exists.
+func (r *LanguageAgentReconciler) listAgentRuns(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]wfv1.Workflow, error) {
+	selectors := []client.MatchingLabels{
+		{langoplabels.LabelKeyK8sName: agent.Name, langoplabels.LabelKeyLangopKind: "LanguageAgent"},
+		{labelWorkflowTemplate: agent.Name},
+	}
+	seen := map[string]bool{}
+	var runs []wfv1.Workflow
+	for _, sel := range selectors {
+		list := &wfv1.WorkflowList{}
+		if err := r.List(ctx, list, client.InNamespace(agent.Namespace), sel); err != nil {
+			return nil, fmt.Errorf("failed to list agent Workflow runs: %w", err)
+		}
+		for _, run := range list.Items {
+			if !seen[run.Name] {
+				seen[run.Name] = true
+				runs = append(runs, run)
+			}
+		}
+	}
+	return runs, nil
+}
+
+// runNewer reports whether run a is more recent than run b. A run that has not
+// started yet (Pending) has no StartedAt, so it is placed by when it was created;
+// otherwise a just-submitted run would never count as the latest. Ties break on
+// name so the choice is stable across reconciles.
+func runNewer(a, b *wfv1.Workflow) bool {
+	ta, tb := runTime(a), runTime(b)
+	if ta.Equal(tb) {
+		return a.Name > b.Name
+	}
+	return ta.After(tb)
+}
+
+func runTime(run *wfv1.Workflow) time.Time {
+	if !run.Status.StartedAt.IsZero() {
+		return run.Status.StartedAt.Time
+	}
+	return run.CreationTimestamp.Time
+}
+
 func applyRunStatus(status *langopv1alpha1.LanguageAgentStatus, wf *wfv1.Workflow) {
 	status.LastRunName = wf.Name
 	status.LastRunPhase = string(wf.Status.Phase)
