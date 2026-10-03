@@ -2616,6 +2616,10 @@ for them.</p>
 <td>Shared LiteLLM gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>)</td>
 </tr>
 <tr>
+<td><code>MODEL_API_KEY</code></td>
+<td>This agent's gateway key; send it as the bearer key to <code>MODEL_ENDPOINT</code>. Always set; the gateway rejects requests without a valid key. See <a href="../../components/models/#gateway-authentication">Gateway authentication</a>.</td>
+</tr>
+<tr>
 <td><code>LLM_MODEL</code></td>
 <td>Comma-separated list of model names for all referenced models</td>
 </tr>
