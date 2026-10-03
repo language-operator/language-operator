@@ -1026,6 +1026,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#other-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#self-hosted-models-ollama-vllm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1060,6 +1071,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-extra-gateway-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced: Extra Gateway Configuration
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1967,6 +1989,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#other-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#self-hosted-models-ollama-vllm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2001,6 +2034,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-extra-gateway-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced: Extra Gateway Configuration
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2047,7 +2091,8 @@
 
 
 <h1 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h1>
-<p>A <code>LanguageModel</code> configures LLM access for a <code>LanguageCluster</code>. The operator reads all <code>LanguageModel</code> resources in the namespace and registers them with the cluster's shared LiteLLM gateway — agents never hold API credentials or connect to model providers directly.</p>
+<p>A <code>LanguageModel</code> configures LLM access for a <code>LanguageCluster</code>. The operator reads all <code>LanguageModel</code> resources in the namespace and registers them with the cluster's shared LiteLLM gateway. Agents on gateway-backed runtimes never hold provider credentials or connect to providers directly: they call the gateway with their own gateway key.</p>
+<p>The exception is <strong>vendor-key runtimes</strong> — <a href="../../runtimes/claude-code/">Claude Code</a> and <a href="../../runtimes/cursor/">Cursor</a> — which talk to their vendor directly with the vendor's own key and do not use the gateway or <code>LanguageModel</code>s at all.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>One LiteLLM proxy (<code>gateway</code>) runs per <code>LanguageCluster</code>. When you add or remove a <code>LanguageModel</code>, the gateway restarts with the updated model list — no agent redeploy required.</p>
 <h2 id="credential-management">Credential Management<a class="headerlink" href="#credential-management" title="Permanent link">&para;</a></h2>
@@ -2162,48 +2207,164 @@
 </tbody>
 </table>
 <p><code>custom</code> is deprecated and behaves exactly like <code>openai-compatible</code>. Providers that need more than one credential (Bedrock access keys, a Vertex service account, an Azure AD app) take a whole Secret through <code>credentialsSecretRef</code>, applied to that model only. See <a href="../../api/languagemodel/#providers">LanguageModel</a> for each provider's fields and examples.</p>
-<h3 id="self-hosted-models-ollama-vllm">Self-hosted models (Ollama, vLLM)<a class="headerlink" href="#self-hosted-models-ollama-vllm" title="Permanent link">&para;</a></h3>
+<h3 id="other-providers">Other providers<a class="headerlink" href="#other-providers" title="Permanent link">&para;</a></h3>
+<p>Anything LiteLLM supports is reachable with <code>litellmProvider</code>, its LiteLLM provider prefix, plus the provider's API key. LiteLLM knows each one's base URL, so <code>endpoint</code> is only needed to override it:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th><code>litellmProvider</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DeepSeek</td>
+<td><code>deepseek</code></td>
+</tr>
+<tr>
+<td>Z.ai (GLM)</td>
+<td><code>zai</code></td>
+</tr>
+<tr>
+<td>Moonshot (Kimi)</td>
+<td><code>moonshot</code></td>
+</tr>
+<tr>
+<td>MiniMax</td>
+<td><code>minimax</code></td>
+</tr>
+<tr>
+<td>xAI (Grok)</td>
+<td><code>xai</code></td>
+</tr>
+<tr>
+<td>Mistral</td>
+<td><code>mistral</code></td>
+</tr>
+<tr>
+<td>Groq</td>
+<td><code>groq</code></td>
+</tr>
+<tr>
+<td>Together AI</td>
+<td><code>together_ai</code></td>
+</tr>
+<tr>
+<td>Fireworks AI</td>
+<td><code>fireworks_ai</code></td>
+</tr>
+<tr>
+<td>OpenRouter</td>
+<td><code>openrouter</code></td>
+</tr>
+<tr>
+<td>Alibaba Qwen (DashScope)</td>
+<td><code>dashscope</code></td>
+</tr>
+<tr>
+<td>Cerebras</td>
+<td><code>cerebras</code></td>
+</tr>
+<tr>
+<td>Perplexity</td>
+<td><code>perplexity</code></td>
+</tr>
+</tbody>
+</table>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama.default.svc.cluster.local:11434/v1</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">litellmProvider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek-chat</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek-credentials</span>
 </code></pre></div>
-<p>No <code>apiKeySecretRef</code> needed for unauthenticated endpoints.</p>
+<p>See <a href="https://docs.litellm.ai/docs/providers">LiteLLM's provider list</a> for the rest. Every <a href="https://github.com/language-operator/language-operator/tree/main/components/model-gateway/examples">example</a> in the repository is a complete, CI-validated spec.</p>
+<h3 id="self-hosted-models-ollama-vllm">Self-hosted models (Ollama, vLLM)<a class="headerlink" href="#self-hosted-models-ollama-vllm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama.default.svc.cluster.local:11434/v1</span>
+</code></pre></div>
+<p>No <code>apiKeySecretRef</code> needed for unauthenticated endpoints. The same shape works for any server with an OpenAI-compatible API; their usual defaults:</p>
+<table>
+<thead>
+<tr>
+<th>Server</th>
+<th><code>endpoint</code> (default port)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ollama</td>
+<td><code>http://&lt;host&gt;:11434/v1</code></td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td><code>http://&lt;host&gt;:8000/v1</code></td>
+</tr>
+<tr>
+<td>llama.cpp (<code>llama-server</code>)</td>
+<td><code>http://&lt;host&gt;:8080/v1</code></td>
+</tr>
+<tr>
+<td>SGLang</td>
+<td><code>http://&lt;host&gt;:30000/v1</code></td>
+</tr>
+<tr>
+<td>LM Studio</td>
+<td><code>http://&lt;host&gt;:1234/v1</code></td>
+</tr>
+</tbody>
+</table>
 <p>The backend only needs <code>/v1/chat/completions</code>. Clients that speak the Responses API (<code>/v1/responses</code>, e.g. Codex) or the Anthropic Messages API (<code>/v1/messages</code>) still work: the gateway translates both to chat completions for these models.</p>
 <h3 id="multiple-models">Multiple models<a class="headerlink" href="#multiple-models" title="Permanent link">&para;</a></h3>
 <p>Agents can reference multiple models. Each model is registered with the same gateway; the agent chooses which to call at runtime:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># LanguageAgent</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">models</span><span class="p">:</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet</span><span class="w">   </span><span class="c1"># primary</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3</span><span class="w">          </span><span class="c1"># fallback / secondary</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># LanguageAgent</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">models</span><span class="p">:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude-sonnet</span><span class="w">   </span><span class="c1"># primary</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3</span><span class="w">          </span><span class="c1"># fallback / secondary</span>
 </code></pre></div>
 <h3 id="load-balancing-models-that-share-a-modelname">Load balancing: models that share a <code>modelName</code><a class="headerlink" href="#load-balancing-models-that-share-a-modelname" title="Permanent link">&para;</a></h3>
 <p>Agents call the gateway by <code>modelName</code>, not by the LanguageModel's own name. When several LanguageModels in a cluster have the same <code>modelName</code>, the gateway serves them as one model and spreads requests across all of them. Use this to run one model on several endpoints:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageModel</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama-gpu-a</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama-a.inference.svc.cluster.local:11434/v1</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nn">---</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageModel</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="nt">metadata</span><span class="p">:</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama-gpu-b</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama-b.inference.svc.cluster.local:11434/v1</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageModel</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama-gpu-a</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama-a.inference.svc.cluster.local:11434/v1</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="nn">---</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageModel</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama-gpu-b</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama-b.inference.svc.cluster.local:11434/v1</span>
 </code></pre></div>
 <p>Because the same thing happens by accident, for example two models with the same <code>modelName</code> but different providers or keys, creating or updating a LanguageModel whose <code>modelName</code> is already taken returns a warning naming the other models, and the gateway logs one on start. Give each model a distinct <code>modelName</code> if you want them addressed separately.</p>
+<h2 id="advanced-extra-gateway-configuration">Advanced: Extra Gateway Configuration<a class="headerlink" href="#advanced-extra-gateway-configuration" title="Permanent link">&para;</a></h2>
+<p>For LiteLLM settings with no <code>LanguageModel</code> field (retries, fallbacks, caching, spend callbacks, or a hand-written model entry) set <code>LANGOP_GATEWAY_EXTRA_CONFIG</code> on the gateway. It is a YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageCluster</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">gateway</span><span class="p">:</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">deployment</span><span class="p">:</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LANGOP_GATEWAY_EXTRA_CONFIG</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">            </span><span class="no">litellm_settings:</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">              </span><span class="no">num_retries: 2</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">              </span><span class="no">request_timeout: 600</span>
+</code></pre></div>
+<p>A list such as <code>model_list</code> replaces the generated one entirely, so prefer <code>LanguageModel</code>s for models. A value that is not a mapping stops the gateway from starting.</p>
 <h2 id="rate-limiting">Rate Limiting<a class="headerlink" href="#rate-limiting" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">rateLimits</span><span class="p">:</span>
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">requestsPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nt">tokensPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50000</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">rateLimits</span><span class="p">:</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">requestsPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">tokensPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50000</span>
 </code></pre></div>
 <p>Limits are enforced by the shared gateway across all agents. Per-agent limits are not currently supported.</p>
 <h2 id="related">Related<a class="headerlink" href="#related" title="Permanent link">&para;</a></h2>
