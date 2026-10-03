@@ -28,7 +28,7 @@ produces the same pod spec as if the agent had explicitly specified the OpenClaw
 
 ## Bundled Runtimes
 
-Six runtimes are shipped via the `language-operator-runtimes` umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from `oci://ghcr.io/language-operator/charts`:
+Seven runtimes are shipped via the `language-operator-runtimes` umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from `oci://ghcr.io/language-operator/charts`:
 
 | Name | Image | Port | Interface | Repository |
 |------|-------|------|-----------|------------|
@@ -38,8 +38,9 @@ Six runtimes are shipped via the `language-operator-runtimes` umbrella chart, in
 | `deepagents` | `ghcr.io/language-operator/deepagents-adapter` | 8080 | HTTP / A2A | [deepagents-adapter](https://github.com/language-operator/deepagents-adapter) |
 | `kilo` | `ghcr.io/language-operator/kilo-adapter` | 8080 | HTTP / WebSocket terminal | [kilo-adapter](https://github.com/language-operator/kilo-adapter) |
 | `qwen-code` | `ghcr.io/language-operator/qwen-code-adapter` | 8080 | HTTP / WebSocket terminal | [qwen-code-adapter](https://github.com/language-operator/qwen-code-adapter) |
+| `cursor` | `ghcr.io/language-operator/cursor-adapter` | 8080 | HTTP / WebSocket terminal (vendor key, bypasses the gateway) | [cursor-adapter](https://github.com/language-operator/cursor-adapter) |
 
-The `opencode`, `claude-code`, `kilo` and `qwen-code` images share the [coding-runtime](https://github.com/language-operator/coding-runtime) base image, which translates `/etc/agent/config.yaml` into the CLI's config and serves the browser terminal. Each runtime chart pins its own image tag.
+The `opencode`, `claude-code`, `kilo`, `qwen-code` and `cursor` images share the [coding-runtime](https://github.com/language-operator/coding-runtime) base image, which translates `/etc/agent/config.yaml` into the CLI's config and serves the browser terminal. Each runtime chart pins its own image tag.
 
 Install them all with the umbrella chart:
 
@@ -97,12 +98,13 @@ The bundled runtimes declare the credentials their images need:
 - `deepagents` declares no credentials — LLM traffic goes through the injected `MODEL_ENDPOINT` gateway.
 - `kilo` declares no credentials — Kilo reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
 - `qwen-code` declares no credentials — Qwen Code reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (`auth.enabled: true`).
+- `cursor` declares `CURSOR_API_KEY` only when the chart value `credentials.apiKeySecret` names a Secret; otherwise each agent sets it in `spec.credentials` or signs in interactively. Cursor talks to Cursor directly, not through the gateway.
 
 Runtime-declared entries merge first, then any entries the agent adds in its own `spec.credentials`; entries are deduplicated by `name`, with the agent's entry winning on a collision.
 
 ## Authentication
 
-Authentication is a runtime trait, not an agent setting. A runtime's `spec.auth.enabled: true` gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. The six bundled runtimes all enable auth since they serve web UIs. See [Clusters](clusters.md#authentication) for the cluster-side configuration.
+Authentication is a runtime trait, not an agent setting. A runtime's `spec.auth.enabled: true` gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied **only when both** the cluster has `auth.enabled: true` **and** its runtime has `auth.enabled: true`. The seven bundled runtimes all enable auth since they serve web UIs. See [Clusters](clusters.md#authentication) for the cluster-side configuration.
 
 ## Custom Runtimes
 
@@ -147,5 +149,6 @@ spec:
 - [OpenCode Guide](../runtimes/opencode.md)
 - [Qwen Code Guide](../runtimes/qwen-code.md)
 - [Claude Code Guide](../runtimes/claude-code.md)
+- [Cursor Guide](../runtimes/cursor.md)
 - [DeepAgents Guide](../runtimes/deepagents.md)
 - [Kilo Guide](../runtimes/kilo.md)

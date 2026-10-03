@@ -2,7 +2,7 @@
 
 Deploys the full Language Operator engineering team into an existing LanguageCluster: the
 [development-team](../development-team/) maintainer for the core repo **plus** one maintainer
-agent for each of the six sister adapter repositories.
+agent for each of the seven sister adapter repositories.
 
 Each agent declares its repo via `spec.repository`, so the operator clones it into the agent's
 workspace on init and starts the runtime inside the checkout (exposed as `$AGENT_REPO_DIR`) — no
@@ -17,6 +17,7 @@ adapter-opencode    (engineer persona)  → language-operator/opencode-adapter
 adapter-deepagents  (engineer persona)  → language-operator/deepagents-adapter
 adapter-kilo        (engineer persona)  → language-operator/kilo-adapter
 adapter-qwen-code   (engineer persona)  → language-operator/qwen-code-adapter
+adapter-cursor      (engineer persona)  → language-operator/cursor-adapter
 ```
 
 Every agent owns a single repo end to end and picks work the same way. It skips issues labelled
@@ -26,11 +27,11 @@ validates → implements → tests → opens a PR → merges → closes the issu
 run**, with the schedule supplying the next. A single agent per repo serializes naturally, so no
 triage queues are needed.
 
-All seven agents reference the [`context7`](../tools/context7/) `LanguageTool`, giving them
+All eight agents reference the [`context7`](../tools/context7/) `LanguageTool`, giving them
 up-to-date, version-specific library documentation over MCP so they stop coding against stale or
 hallucinated APIs.
 
-> The six `adapter-*` agents hardcode their `spec.repository.url` to the
+> The seven `adapter-*` agents hardcode their `spec.repository.url` to the
 > `language-operator/<name>-adapter` repos. Edit those URLs in
 > `languageagent.adapter-*.yaml` if you work against forks.
 
@@ -100,6 +101,7 @@ not all start at the same instant:
 |-------|----------|
 | `maintainer` | `5-59/15 * * * *` |
 | `adapter-claude-code` | `*/30 * * * *` |
+| `adapter-cursor` | `2-59/30 * * * *` |
 | `adapter-qwen-code` | `7-59/30 * * * *` |
 | `adapter-deepagents` | `10-59/30 * * * *` |
 | `adapter-kilo` | `15-59/30 * * * *` |
@@ -139,6 +141,7 @@ long-running pod to connect to between runs.
 - `LanguageAgent/adapter-deepagents` — owns `deepagents-adapter`; 10Gi workspace; uses `context7`
 - `LanguageAgent/adapter-kilo` — owns `kilo-adapter`; 10Gi workspace; uses `context7`
 - `LanguageAgent/adapter-qwen-code` — owns `qwen-code-adapter`; 10Gi workspace; uses `context7`
+- `LanguageAgent/adapter-cursor` — owns `cursor-adapter`; 10Gi workspace; uses `context7`
 
 Each `LanguageAgent` also produces a `WorkflowTemplate`, `CronWorkflow`, `NetworkPolicy`, `PersistentVolumeClaim`, `ConfigMap`, and a `ServiceAccount`/`Role`/`RoleBinding`. Because each agent sets `spec.repository`, the operator injects a `repository` init container that clones the repo into the workspace (authenticated with `github-credentials`) and points the runtime's working directory at the checkout via `$AGENT_REPO_DIR`.
 
