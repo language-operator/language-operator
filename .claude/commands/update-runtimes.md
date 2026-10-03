@@ -5,7 +5,7 @@ latest published versions.
 
 ## Context
 
-The umbrella chart `charts/language-operator-runtimes` pulls six runtime adapters as
+The umbrella chart `charts/language-operator-runtimes` pulls seven runtime adapters as
 OCI subcharts from `oci://ghcr.io/language-operator/charts`:
 
 | Subchart | Source repo | Published from |
@@ -16,6 +16,7 @@ OCI subcharts from `oci://ghcr.io/language-operator/charts`:
 | `deepagents`  | `language-operator/deepagents-adapter`  | its `chart/Chart.yaml` `version` |
 | `kilo`        | `language-operator/kilo-adapter`        | its `chart/Chart.yaml` `version` |
 | `qwen-code`   | `language-operator/qwen-code-adapter`   | its `chart/Chart.yaml` `version` |
+| `cursor`      | `language-operator/cursor-adapter`      | its `chart/Chart.yaml` `version` |
 
 Each adapter repo publishes its chart independently (via its own `release-chart.yaml`
 workflow: `helm package chart && helm push`), so the umbrella's pins drift behind the
@@ -54,7 +55,7 @@ Keep this "before" snapshot for the final report.
 Query the ghcr OCI registry for the highest published semver tag of each subchart:
 
 ```bash
-for chart in claude-code openclaw opencode deepagents kilo qwen-code; do
+for chart in claude-code openclaw opencode deepagents kilo qwen-code cursor; do
   token=$(curl -fsSL "https://ghcr.io/token?scope=repository:language-operator/charts/${chart}:pull" | jq -r .token)
   echo -n "${chart}: "
   curl -fsSL -H "Authorization: Bearer ${token}" \
@@ -148,6 +149,7 @@ Runtime pins updated.
   deepagents  : <before> → <after>
   kilo        : <before> → <after>
   qwen-code   : <before> → <after>
+  cursor      : <before> → <after>
 
 Run `make upgrade-runtimes` to redeploy the runtimes with the new versions.
 ```

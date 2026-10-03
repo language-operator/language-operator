@@ -13,7 +13,7 @@ Bring all packages, Docker base images, and adapter dependencies up to date.
 | Go build tools | `src/Makefile` vars | manual edit |
 | GitHub Actions | `.github/workflows/*.yaml` | manual edit |
 
-> Runtime adapters (claude-code, openclaw, opencode, deepagents, kilo, qwen-code) now live in their own
+> Runtime adapters (claude-code, openclaw, opencode, deepagents, kilo, qwen-code, cursor) now live in their own
 > repositories and manage their own dependencies — they are out of scope here.
 
 ---

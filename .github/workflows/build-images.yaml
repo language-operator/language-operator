@@ -210,7 +210,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Runtime adapter images (claude-code, openclaw, opencode, deepagents, kilo, qwen-code) now live in their
+  # Runtime adapter images (claude-code, openclaw, opencode, deepagents, kilo, qwen-code, cursor) now live in their
   # own repositories and are built by each repo's own CI:
   #   - https://github.com/language-operator/claude-code-adapter
   #   - https://github.com/language-operator/openclaw-adapter
@@ -218,3 +218,4 @@ jobs:
   #   - https://github.com/language-operator/deepagents-adapter
   #   - https://github.com/language-operator/kilo-adapter
   #   - https://github.com/language-operator/qwen-code-adapter
+  #   - https://github.com/language-operator/cursor-adapter

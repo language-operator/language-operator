@@ -11,6 +11,7 @@
 #   - https://github.com/language-operator/deepagents-adapter
 #   - https://github.com/language-operator/kilo-adapter
 #   - https://github.com/language-operator/qwen-code-adapter
+#   - https://github.com/language-operator/cursor-adapter
 
 claude-code:
   # Install the claude-code LanguageAgentRuntime.
@@ -35,3 +36,12 @@ kilo:
 qwen-code:
   # Install the qwen-code LanguageAgentRuntime.
   enabled: true
+
+cursor:
+  # Install the cursor LanguageAgentRuntime. Cursor authenticates to Cursor with
+  # CURSOR_API_KEY and bypasses the model gateway. To give every cursor agent the
+  # key, set credentials.apiKeySecret to a Secret (present in each agent namespace)
+  # holding a CURSOR_API_KEY key; otherwise set it per agent or sign in interactively.
+  enabled: true
+  # credentials:
+  #   apiKeySecret: cursor-credentials

@@ -17,5 +17,8 @@ dependencies:
 - name: qwen-code
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.1
-digest: sha256:122aed4344ddd2d0a886e58d4a009107ac6d62e76a8748858785deff1b892210
-generated: "2026-10-03T02:37:23.391185339Z"
+- name: cursor
+  repository: oci://ghcr.io/language-operator/charts
+  version: 0.1.1
+digest: sha256:beee2bfd0b978707c534bd1c4c5d5af1d54fbc2a33265fcc816c51dd363eabbe
+generated: "2026-10-03T02:44:29.4183597Z"
