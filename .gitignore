@@ -26,8 +26,8 @@ scripts.local/
 .claude/hooks/node_modules/
 .claude/hooks/package-lock.json
 .claude/scheduled_tasks.lock
-# Local Claude Code settings/permissions (machine-specific; keep out of this public repo)
-.claude/settings.json
+# Machine-specific Claude Code settings and permissions. The shared, committed
+# .claude/settings.json only enables the langop plugin; put anything local here.
 .claude/settings.local.json
 
 # Node.js

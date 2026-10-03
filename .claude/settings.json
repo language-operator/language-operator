@@ -1,0 +1,14 @@
+{
+  "enabledPlugins": {
+    "langop@language-operator": true
+  },
+  "extraKnownMarketplaces": {
+    "language-operator": {
+      "source": {
+        "source": "github",
+        "repo": "language-operator/skills",
+        "ref": "v0.1.0"
+      }
+    }
+  }
+}

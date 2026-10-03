@@ -70,6 +70,18 @@ make docs-build                  # build static site to site/ (uv run mkdocs bui
 
 Docs dependencies are managed with [uv](https://docs.astral.sh/uv/) via `pyproject.toml` + `uv.lock`. `uv run` provisions the environment automatically; run `uv sync` to materialize `.venv` explicitly.
 
+## Testing
+
+The `/iterate` skill (from the `langop` plugin) runs this section. Mirror the PR CI jobs (`.github/workflows/test.yaml`, `pr-checks.yaml`):
+
+- Lint and unit tests: `cd src && make test` (go fmt, go vet, all tests)
+- Integration tests: `cd src && make integration-test`
+- Model gateway touched: `pytest components/model-gateway/`. The `custom_auth` hook tests skip unless LiteLLM is installed at the Dockerfile's pin (`pip install "$(grep -o 'litellm\[proxy\]==[0-9.]*' components/model-gateway/Dockerfile)"`), which is what CI does
+- `src/api/v1alpha1/` touched: `cd src && make generate && make helm-crds`, and stage the generated output (`validate-manifests` fails on drift)
+- A chart touched: `helm dependency build charts/<chart> && helm lint charts/<chart>`
+- Docs touched: `make docs-build`
+- The PR title must be a conventional commit (`feat:`, `fix:`, `chore:`, `docs:`, `test:`); `clean:` is rejected
+
 ## Architecture
 
 ### Controllers (`src/controllers/`)
