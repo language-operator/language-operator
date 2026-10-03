@@ -149,18 +149,7 @@ Each run is one `goose run` of the instructions, and its result is the run's res
 
 ## Gateway Credentials
 
-By default Goose sends a placeholder key to the gateway, which is all a gateway without per-agent keys needs. If your gateway issues per-agent keys, give the agent its key as `MODEL_API_KEY`; the runtime passes it to Goose from the environment rather than writing it to disk:
-
-```yaml
-spec:
-  deployment:
-    env:
-      - name: MODEL_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: goose-gateway-key
-            key: api-key
-```
+The operator gives every agent its own gateway key as `MODEL_API_KEY`, and Goose sends it on every model call, so there is nothing to configure. The gateway rejects calls without a valid key and attributes each one to the agent. See [Gateway authentication](../components/models.md#gateway-authentication).
 
 ## What the Operator Created
 

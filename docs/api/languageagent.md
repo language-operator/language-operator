@@ -255,6 +255,7 @@ Environment variables injected into every agent container and all init container
 | `AGENT_EVENT` | The run's `event` parameter, verbatim; also written to `/etc/agent/event.json`. Empty unless the run was started with one. See [Execution Modes](../guides/execution-modes.md#per-run-inputs). |
 | `AGENT_TRIGGER` | The run's `trigger` parameter: what started it. `schedule` for scheduled runs; otherwise empty unless given. |
 | `MODEL_ENDPOINT` | Shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) |
+| `MODEL_API_KEY` | This agent's gateway key; send it as the bearer key to `MODEL_ENDPOINT`. Always set; the gateway rejects requests without a valid key. See [Gateway authentication](../components/models.md#gateway-authentication). |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated MCP tool server URLs (only injected when at least one tool is resolved) |
 | `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty |

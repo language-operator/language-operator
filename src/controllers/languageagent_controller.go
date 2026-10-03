@@ -17,11 +17,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	langopv1alpha1 "github.com/language-operator/language-operator/api/v1alpha1"
@@ -238,6 +240,19 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		agent.Status.Phase = events.PhaseStatusFailed
 		reconcileErr = err
 		return ctrl.Result{}, err
+	}
+
+	// Issue the agent's gateway key. Its hash joins the config hash, so a rotated
+	// HMAC secret replaces running Workflows, which then pick up the new key.
+	gatewayKeyHash, gatewayKeyPending, err := r.reconcileGatewayKey(ctx, workingAgent)
+	if err != nil {
+		log.Error(err, "Failed to reconcile gateway key")
+		span.RecordError(err)
+		reconcileErr = err
+		return ctrl.Result{}, err
+	}
+	if gatewayKeyHash != "" {
+		configHash = hashString(configHash + gatewayKeyHash)[:16]
 	}
 
 	// Reconcile PVC for workspace if enabled
@@ -501,6 +516,12 @@ func (r *LanguageAgentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconciliation successful
 	span.SetStatus(codes.Ok, "Reconciliation successful")
 
+	// The cluster's gateway auth secret did not exist yet, so the agent has no key:
+	// look again shortly (the Secret watch also wakes us when it appears).
+	if gatewayKeyPending {
+		return ctrl.Result{RequeueAfter: gatewayKeyRetryInterval}, nil
+	}
+
 	// No need for periodic requeues - owner-reference events from Deployment, Service, ConfigMap,
 	// and other owned resources drive re-reconciliation via SetupWithManager watches.
 	return ctrl.Result{}, nil
@@ -610,6 +631,13 @@ func (r *LanguageAgentReconciler) SetupWithManager(mgr ctrl.Manager, concurrency
 		Watches(&langopv1alpha1.LanguageTool{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguageModel{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
 		Watches(&langopv1alpha1.LanguagePersona{}, handler.EnqueueRequestsFromMapFunc(enqueue)).
+		// The cluster's gateway-auth Secret: its creation or rotation re-issues every
+		// agent's key. Not owned by agents, so watched by name.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(enqueue),
+			builder.WithPredicates(predicate.NewPredicateFuncs(func(o client.Object) bool {
+				return o.GetName() == GatewayAuthSecretName
+			}))).
+		Owns(&corev1.Secret{}).
 		Watches(&langopv1alpha1.LanguageAgentRuntime{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAgentsByRuntime())).
 		WithOptions(controller.Options{MaxConcurrentReconciles: concurrency}).
 		Complete(r)

@@ -709,6 +709,8 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 			Value: strings.Join(modelURLs, ","),
 		})
 	}
+	// The agent's own gateway key: the gateway rejects calls without one.
+	env = append(env, agentGatewayKeyEnv(agent))
 	if len(modelNames) > 0 {
 		env = append(env, corev1.EnvVar{
 			Name:  "LLM_MODEL",
