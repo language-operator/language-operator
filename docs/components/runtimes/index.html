@@ -621,6 +621,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../runtimes/goose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Goose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../runtimes/kilo/" class="md-nav__link">
         
   
@@ -1959,7 +1987,7 @@
 </code></pre></div>
 <p>produces the same pod spec as if the agent had explicitly specified the OpenClaw image, port, init containers, and probes — because the runtime supplies those defaults. Workspace storage is provisioned per-agent (always defaulted to <code>/workspace</code>), not by the runtime.</p>
 <h2 id="bundled-runtimes">Bundled Runtimes<a class="headerlink" href="#bundled-runtimes" title="Permanent link">&para;</a></h2>
-<p>Seven runtimes are shipped via the <code>language-operator-runtimes</code> umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from <code>oci://ghcr.io/language-operator/charts</code>:</p>
+<p>Eight runtimes are shipped via the <code>language-operator-runtimes</code> umbrella chart, installed independently after the operator. Each runtime lives in its own repository and is pulled in as a subchart from <code>oci://ghcr.io/language-operator/charts</code>:</p>
 <table>
 <thead>
 <tr>
@@ -2020,9 +2048,16 @@
 <td>HTTP / WebSocket terminal (vendor key, bypasses the gateway)</td>
 <td><a href="https://github.com/language-operator/cursor-adapter">cursor-adapter</a></td>
 </tr>
+<tr>
+<td><code>goose</code></td>
+<td><code>ghcr.io/language-operator/goose-adapter</code></td>
+<td>8080</td>
+<td>HTTP / WebSocket terminal</td>
+<td><a href="https://github.com/language-operator/goose-adapter">goose-adapter</a></td>
+</tr>
 </tbody>
 </table>
-<p>The <code>opencode</code>, <code>claude-code</code>, <code>kilo</code>, <code>qwen-code</code> and <code>cursor</code> images share the <a href="https://github.com/language-operator/coding-runtime">coding-runtime</a> base image, which translates <code>/etc/agent/config.yaml</code> into the CLI's config and serves the browser terminal. Each runtime chart pins its own image tag.</p>
+<p>The <code>opencode</code>, <code>claude-code</code>, <code>kilo</code>, <code>qwen-code</code>, <code>cursor</code> and <code>goose</code> images share the <a href="https://github.com/language-operator/coding-runtime">coding-runtime</a> base image, which translates <code>/etc/agent/config.yaml</code> into the CLI's config and serves the browser terminal. Each runtime chart pins its own image tag.</p>
 <p>Install them all with the umbrella chart:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator-runtimes<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>language-operator/language-operator-runtimes<span class="w"> </span><span class="se">\</span>
@@ -2085,10 +2120,11 @@ makes sense as a one-shot job can ship with <code>mode: task</code> without ever
 <li><code>kilo</code> declares no credentials — Kilo reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 <li><code>qwen-code</code> declares no credentials — Qwen Code reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 <li><code>cursor</code> declares <code>CURSOR_API_KEY</code> only when the chart value <code>credentials.apiKeySecret</code> names a Secret; otherwise each agent sets it in <code>spec.credentials</code> or signs in interactively. Cursor talks to Cursor directly, not through the gateway.</li>
+<li><code>goose</code> declares no credentials — Goose reaches models through the gateway; access to the terminal is gated by the cluster OIDC proxy (<code>auth.enabled: true</code>).</li>
 </ul>
 <p>Runtime-declared entries merge first, then any entries the agent adds in its own <code>spec.credentials</code>; entries are deduplicated by <code>name</code>, with the agent's entry winning on a collision.</p>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p>Authentication is a runtime trait, not an agent setting. A runtime's <code>spec.auth.enabled: true</code> gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> its runtime has <code>auth.enabled: true</code>. The seven bundled runtimes all enable auth since they serve web UIs. See <a href="../clusters/#authentication">Clusters</a> for the cluster-side configuration.</p>
+<p>Authentication is a runtime trait, not an agent setting. A runtime's <code>spec.auth.enabled: true</code> gates whether agents using it sit behind the cluster's OIDC proxy. An agent is proxied <strong>only when both</strong> the cluster has <code>auth.enabled: true</code> <strong>and</strong> its runtime has <code>auth.enabled: true</code>. The eight bundled runtimes all enable auth since they serve web UIs. See <a href="../clusters/#authentication">Clusters</a> for the cluster-side configuration.</p>
 <h2 id="custom-runtimes">Custom Runtimes<a class="headerlink" href="#custom-runtimes" title="Permanent link">&para;</a></h2>
 <p>Any container image can be packaged as a runtime:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
@@ -2129,6 +2165,7 @@ makes sense as a one-shot job can ship with <code>mode: task</code> without ever
 <li><a href="../../runtimes/claude-code/">Claude Code Guide</a></li>
 <li><a href="../../runtimes/cursor/">Cursor Guide</a></li>
 <li><a href="../../runtimes/deepagents/">DeepAgents Guide</a></li>
+<li><a href="../../runtimes/goose/">Goose Guide</a></li>
 <li><a href="../../runtimes/kilo/">Kilo Guide</a></li>
 </ul>
 
