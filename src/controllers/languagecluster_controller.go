@@ -1084,6 +1084,45 @@ func gatewaySecretVolumes(models []langopv1alpha1.LanguageModel) ([]corev1.Volum
 	return volumes, mounts
 }
 
+// ensureGatewayAuthSecret makes sure the cluster namespace has the Secret holding
+// the gateway's HMAC secret, and returns its value. A value already present is
+// kept, so a user can supply their own and rotate it by editing the Secret.
+func (r *LanguageClusterReconciler) ensureGatewayAuthSecret(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) (string, error) {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: GatewayAuthSecretName, Namespace: cluster.Name}}
+	var value string
+	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, secret, func() error {
+		value = string(secret.Data[GatewayAuthSecretKey])
+		if value == "" {
+			generated, err := generateGatewayHMACSecret()
+			if err != nil {
+				return fmt.Errorf("generating gateway HMAC secret: %w", err)
+			}
+			value = generated
+		}
+		if secret.Data == nil {
+			secret.Data = map[string][]byte{}
+		}
+		secret.Data[GatewayAuthSecretKey] = []byte(value)
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to reconcile gateway auth secret: %w", err)
+	}
+	return value, nil
+}
+
+// gatewayHMACSecretEnvVar turns on per-agent key enforcement in the gateway:
+// generate-config.py wires custom_auth whenever the variable is set.
+func gatewayHMACSecretEnvVar() corev1.EnvVar {
+	return corev1.EnvVar{
+		Name: gatewayHMACSecretEnv,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: GatewayAuthSecretName},
+			Key:                  GatewayAuthSecretKey,
+		}},
+	}
+}
+
 // reconcileGateway creates/updates the shared LiteLLM gateway Deployment, Service, and ConfigMap.
 func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluster *langopv1alpha1.LanguageCluster) error {
 	log := log.FromContext(ctx)
@@ -1105,8 +1144,16 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 		cmData["model__"+model.Name+".json"] = string(specJSON)
 	}
 
+	// The HMAC secret per-agent gateway keys are signed with. Part of the config
+	// hash below, so rotating it restarts the gateway along with the agents.
+	hmacSecret, err := r.ensureGatewayAuthSecret(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
 	// Compute a hash of the config for rolling-restart annotation
 	h := sha256.New()
+	h.Write([]byte(hmacSecret))
 	keys := make([]string, 0, len(cmData))
 	for k := range cmData {
 		keys = append(keys, k)
@@ -1216,7 +1263,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: GatewayResourceName, Namespace: namespace},
 	}
-	err := CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, deployment, func() error {
+	err = CreateOrUpdateOwned(ctx, r.Client, r.Scheme, cluster, deployment, func() error {
 		deployment.Labels = gatewayLabels
 		maxUnavailable := intstr.FromInt(0)
 		maxSurge := intstr.FromInt(1)
@@ -1245,7 +1292,7 @@ func (r *LanguageClusterReconciler) reconcileGateway(ctx context.Context, cluste
 							Args:            gatewayDeploy.Args,
 							ImagePullPolicy: r.gatewayImagePullPolicy(cluster),
 							Resources:       resources,
-							Env:             gatewayDeploy.Env,
+							Env:             append([]corev1.EnvVar{gatewayHMACSecretEnvVar()}, gatewayDeploy.Env...),
 							EnvFrom:         gatewayDeploy.EnvFrom,
 							VolumeMounts:    mounts,
 							Ports: []corev1.ContainerPort{
@@ -1476,6 +1523,7 @@ func (r *LanguageClusterReconciler) SetupWithManager(mgr ctrl.Manager, concurren
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Secret{}). // gateway-auth: a rotated HMAC secret restarts the gateway
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&networkingv1.Ingress{}).
 		Owns(&corev1.ResourceQuota{}).

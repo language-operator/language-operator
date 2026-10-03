@@ -112,6 +112,8 @@ Env vars injected: `AGENT_NAME`, `AGENT_NAMESPACE`, `AGENT_UUID`, `AGENT_CLUSTER
 
 `MODEL_ENDPOINT` is the shared gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`) — one URL regardless of how many models are referenced. `LLM_MODEL` is a comma-separated list of model names from all `models`. Both are injected into the main container and all init containers. `MCP_SERVERS` contains resolved MCP tool server URLs.
 
+`MODEL_API_KEY` is the agent's per-agent gateway key (`sk-langop-<agent UID>.<HMAC>`), from the operator-managed Secret `<agent>-gateway-key`, injected into every container next to `MODEL_ENDPOINT`. The gateway enforces it: the cluster controller keeps the HMAC secret in Secret `gateway-auth` (cluster namespace) and passes it to the gateway as `LANGOP_GATEWAY_HMAC_SECRET`, which turns on `custom_auth.py`. Rotating that secret restarts the gateway and, through the agents' config hash, their Workflows.
+
 NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach any other agent on the agent's ports (`spec.ports`, defaulting to one `http` port on 8080). The Service selector and NetworkPolicy podSelector match the operator-managed labels the Workflow stamps onto its pods via `podMetadata`, so user-supplied `spec.deployment.podLabels` cannot detach them.
 
 Agent pods additionally get `create`/`patch` on `argoproj.io/workflowtaskresults` in their Role — the Argo executor reports each node's outcome that way, and a run fails at completion without it.

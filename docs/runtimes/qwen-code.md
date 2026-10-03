@@ -146,18 +146,7 @@ Each run executes `qwen "<instructions>" --approval-mode yolo --output-format te
 
 ## Gateway Credentials
 
-By default Qwen Code sends a placeholder key to the gateway, which is all a gateway without per-agent keys needs. If your gateway issues per-agent keys, give the agent its key as `MODEL_API_KEY`; the runtime references it from the environment rather than writing it to disk:
-
-```yaml
-spec:
-  deployment:
-    env:
-      - name: MODEL_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: qwen-code-gateway-key
-            key: api-key
-```
+The operator gives every agent its own gateway key as `MODEL_API_KEY`, and Qwen Code sends it on every model call, so there is nothing to configure. The gateway rejects calls without a valid key and attributes each one to the agent. See [Gateway authentication](../components/models.md#gateway-authentication).
 
 ## What the Operator Created
 

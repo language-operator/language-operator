@@ -54,6 +54,32 @@ models:
 
 Agents call the gateway with the model name they want. The gateway routes to the correct upstream provider.
 
+## Gateway Authentication
+
+The gateway only serves requests carrying a valid key. Every agent gets its own:
+
+- The operator injects **`MODEL_API_KEY`** into each agent's containers, next to `MODEL_ENDPOINT`. Agents send it as the bearer key (`Authorization: Bearer $MODEL_API_KEY`); the bundled gateway-backed runtimes do this for you.
+- A key is `sk-langop-<agent UUID>.<signature>`, where the signature is an HMAC of the agent UUID under the cluster's secret. The gateway checks it without a key store, and records the agent UUID as the request's LiteLLM `user_id`, so usage can be attributed per agent.
+- A request without a valid key gets **401**. Custom agent images must send `MODEL_API_KEY`; one that sends a fixed placeholder is rejected.
+
+The HMAC secret lives in the Secret `gateway-auth` (key `hmac-secret`) in the cluster's namespace. The operator generates it on first reconcile; create it yourself beforehand to choose the value. **Rotating** it (edit the value, or delete the Secret to have a new one generated) restarts the gateway and replaces every agent's key, and running agents are restarted with their new key.
+
+For access outside an agent — an admin, a script, a client using the gateway's external ingress — set a master key on the gateway, which the gateway also accepts:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+spec:
+  gateway:
+    deployment:
+      env:
+        - name: LITELLM_MASTER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gateway-master-key
+              key: key
+```
+
 ## Supported Providers
 
 | Provider | Value |
