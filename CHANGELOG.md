@@ -8,6 +8,21 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.16 — 2026-10-03
+
+**Features**
+- issue and enforce per-agent gateway keys (#972)
+- wildcard LanguageModels for a whole vendor catalogue (#974)
+
+**Documentation**
+- fix the gateway examples and README; document other providers and extra config (#973)
+
+**Chores**
+- update runtime subchart pins: claude-code 0.1.10 (task mode), openclaw 0.1.3 (sends MODEL_API_KEY) (#976)
+- take /iterate from the langop plugin instead of a local copy (#975)
+
+---
+
 ## v0.3.15 — 2026-10-03
 
 **Bug Fixes**
