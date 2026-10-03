@@ -360,3 +360,39 @@ class TestBuildParams:
     ])
     def test_existing_single_key_models_are_unchanged(self, spec, api_key, expected):
         assert self.build(spec, api_key) == expected
+
+
+class TestWildcardModels:
+    def entry(self, spec):
+        return generate_config.build_model_list(spec, None)[0]
+
+    def test_openai_compatible_wildcard_is_registered_under_its_name(self):
+        e = self.entry({"_name": "openrouter", "provider": "openai-compatible", "modelName": "*",
+                        "endpoint": "https://openrouter.ai/api/v1", "rateLimits": {"requestsPerMinute": 60}})
+        assert e["model_name"] == "openrouter/*"
+        assert e["litellm_params"]["model"] == "openai/*"
+        assert e["litellm_params"]["api_base"] == "https://openrouter.ai/api/v1"
+        assert e["litellm_params"]["use_chat_completions_api"] is True
+        assert e["rpm"] == 60, "rate limits apply to the wildcard entry as a whole"
+
+    def test_openai_wildcard_gets_the_openai_prefix(self):
+        e = self.entry({"_name": "oai", "provider": "openai", "modelName": "*"})
+        assert (e["model_name"], e["litellm_params"]["model"]) == ("oai/*", "openai/*")
+
+    def test_litellm_provider_and_anthropic_wildcards(self):
+        assert self.entry({"_name": "ds", "litellmProvider": "deepseek", "modelName": "*"})["litellm_params"]["model"] == "deepseek/*"
+        assert self.entry({"_name": "claude", "provider": "anthropic", "modelName": "*"})["litellm_params"]["model"] == "anthropic/*"
+
+    def test_named_models_are_unchanged(self):
+        e = self.entry({"_name": "gpt", "provider": "openai", "modelName": "gpt-4o"})
+        assert (e["model_name"], e["litellm_params"]["model"]) == ("gpt-4o", "gpt-4o")
+
+    def test_resource_name_comes_from_the_configmap_file(self, tmp_path):
+        (tmp_path / "model__openrouter.json").write_text('{"provider": "openai-compatible", "modelName": "*", "endpoint": "https://x/v1"}')
+        specs = generate_config.load_model_specs(str(tmp_path))
+        assert specs[0]["_name"] == "openrouter"
+
+    def test_wildcards_are_not_reported_as_shared(self, capsys):
+        generate_config.warn_shared_model_names([
+            {"_name": "a", "modelName": "*"}, {"_name": "b", "modelName": "*"}])
+        assert capsys.readouterr().err == ""

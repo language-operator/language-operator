@@ -93,6 +93,10 @@ func validateModelSpec(s *LanguageModelSpec) error {
 		}
 	}
 
+	if strings.Contains(s.ModelName, "*") && s.ModelName != WildcardModelName {
+		errs = append(errs, fmt.Sprintf("modelName %q: \"*\" is only allowed on its own, for a wildcard model", s.ModelName))
+	}
+
 	switch s.Provider {
 	case "openai-compatible", "custom", "azure":
 		if s.Endpoint == "" {
@@ -125,13 +129,18 @@ func validateModelSpec(s *LanguageModelSpec) error {
 
 var paramKeyPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
 
+// WildcardModelName as a LanguageModel's modelName makes it stand for the
+// provider's whole catalogue. Agents address its models as "<name>/<model>".
+const WildcardModelName = "*"
+
 // sharedModelNameWarnings warns when another LanguageModel in the cluster has the
 // same modelName. Agents call the gateway by modelName, so the gateway serves them
 // as one model and load-balances across both. That is how to spread a model over
 // several endpoints, so it is allowed; but it also happens by accident, so say so.
 // A failed lookup adds no warning rather than blocking the request.
 func (h *LanguageModelWebhook) sharedModelNameWarnings(ctx context.Context, m *LanguageModel) admission.Warnings {
-	if m.Spec.ModelName == "" {
+	// Wildcards are addressed by their resource name, so they never collide.
+	if m.Spec.ModelName == "" || m.Spec.ModelName == WildcardModelName {
 		return nil
 	}
 	models := &LanguageModelList{}

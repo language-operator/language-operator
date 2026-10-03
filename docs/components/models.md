@@ -160,6 +160,42 @@ spec:
     - name: llama3          # fallback / secondary
 ```
 
+### Wildcard models: a whole vendor catalogue
+
+A LanguageModel with `modelName: "*"` stands for every model the provider offers, so one resource covers a vendor like OpenRouter:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: openrouter
+spec:
+  provider: openai-compatible
+  modelName: "*"
+  endpoint: https://openrouter.ai/api/v1
+  apiKeySecretRef:
+    name: openrouter-credentials
+```
+
+The gateway registers it as `openrouter/*`. An agent picks a model by the vendor's own name with `model`, and calls the gateway with `<LanguageModel name>/<model>`; the gateway strips the prefix before calling the provider:
+
+```yaml
+# LanguageAgent
+spec:
+  models:
+    - name: openrouter
+      model: anthropic/claude-sonnet-4.5   # the agent's LLM_MODEL is openrouter/anthropic/claude-sonnet-4.5
+```
+
+Each wildcard is addressed by its own resource name, so several vendors can coexist, and a name no LanguageModel serves is still rejected. Rate limits and the timeout apply to all of the vendor's models together. `*` is only valid on its own: partial patterns such as `gpt-*` are rejected.
+
+!!! note "Listing models"
+
+    For a wildcard, the gateway's `/v1/models` does not return the vendor's catalogue. It lists
+    LiteLLM's built-in table of known models for the provider type — for an OpenAI-compatible
+    vendor like OpenRouter, that is OpenAI's model names. To discover what a vendor offers, use
+    the vendor's own model list API.
+
 ### Load balancing: models that share a `modelName`
 
 Agents call the gateway by `modelName`, not by the LanguageModel's own name. When several LanguageModels in a cluster have the same `modelName`, the gateway serves them as one model and spreads requests across all of them. Use this to run one model on several endpoints:

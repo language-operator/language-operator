@@ -788,13 +788,34 @@ func (r *LanguageAgentReconciler) resolveModels(ctx context.Context, agent *lang
 			modelURLs = append(modelURLs, gatewayURL)
 		}
 
-		// Collect model name from spec
-		if model.Spec.ModelName != "" {
-			modelNames = append(modelNames, model.Spec.ModelName)
+		// The name the agent calls the gateway with.
+		name, err := gatewayModelName(model, modelRef)
+		if err != nil {
+			return nil, nil, err
+		}
+		if name != "" {
+			modelNames = append(modelNames, name)
 		}
 	}
 
 	return modelURLs, modelNames, nil
+}
+
+// gatewayModelName is the name an agent calls the gateway with for one of its
+// model references. For a wildcard LanguageModel (modelName "*") that is
+// "<LanguageModel name>/<ref.model>", which is how the gateway registers it;
+// otherwise the LanguageModel's own modelName.
+func gatewayModelName(model *langopv1alpha1.LanguageModel, ref langopv1alpha1.ModelReference) (string, error) {
+	if model.Spec.ModelName == langopv1alpha1.WildcardModelName {
+		if ref.Model == "" {
+			return "", fmt.Errorf("model %q is a wildcard: set spec.models[].model to the model to use from it", model.Name)
+		}
+		return model.Name + "/" + ref.Model, nil
+	}
+	if ref.Model != "" {
+		return "", fmt.Errorf("model %q is not a wildcard: spec.models[].model only applies to LanguageModels with modelName \"*\"", model.Name)
+	}
+	return model.Spec.ModelName, nil
 }
 
 func (r *LanguageAgentReconciler) resolveSidecarTools(ctx context.Context, agent *langopv1alpha1.LanguageAgent) ([]corev1.Container, []corev1.Volume, error) {

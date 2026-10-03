@@ -144,6 +144,7 @@ Each entry in `spec.models` is a `ModelReference` with the following fields:
 | `name` | string | required | Name of a `LanguageModel` resource |
 | `role` | string | `primary` | Hint for the agent runtime. Valid values: `primary`, `fallback`, `reasoning`, `tool-calling`, `summarization` |
 | `priority` | integer | — | Optional selection priority hint; lower value = higher priority |
+| `model` | string | — | The model to use from a **wildcard** LanguageModel (`modelName: "*"`), by the vendor's own name, e.g. `anthropic/claude-sonnet-4.5`. The agent then calls `<LanguageModel name>/<model>`. Required for a wildcard model; not allowed for any other. See [Wildcard models](../components/models.md#wildcard-models-a-whole-vendor-catalogue) |
 
 The `role` and `priority` fields are surfaced in `/etc/agent/config.yaml` under each model entry. The operator does not enforce them — they are hints for the agent runtime's model selection logic.
 

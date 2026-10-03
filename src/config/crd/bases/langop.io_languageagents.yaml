@@ -6417,6 +6417,13 @@ spec:
                 items:
                   description: ModelReference references a LanguageModel
                   properties:
+                    model:
+                      description: |-
+                        Model picks a model from a wildcard LanguageModel (one whose modelName is "*"),
+                        by the vendor's own name, e.g. "anthropic/claude-sonnet-4.5" from OpenRouter.
+                        The agent then calls the gateway with "<LanguageModel name>/<model>".
+                        Required for a wildcard LanguageModel and not allowed for any other.
+                      type: string
                     name:
                       description: Name is the name of the LanguageModel
                       maxLength: 63

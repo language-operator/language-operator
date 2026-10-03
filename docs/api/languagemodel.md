@@ -62,6 +62,10 @@ spec:
 
 The admission webhook rejects a spec that is missing what its `provider` needs (the "Also needs" column).
 
+### Wildcard models
+
+`modelName: "*"` makes the LanguageModel stand for the provider's whole catalogue. Agents choose a model with `spec.models[].model` and call it as `<LanguageModel name>/<model>`. See [Wildcard models](../components/models.md#wildcard-models-a-whole-vendor-catalogue).
+
 ### Typed fields and `params`
 
 | Field | LiteLLM param | Used by |

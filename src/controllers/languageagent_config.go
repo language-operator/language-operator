@@ -139,13 +139,19 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 			l.Error(err, "Failed to get model for config.yaml, skipping", "model", modelRef.Name)
 			continue
 		}
+		name, err := gatewayModelName(model, modelRef)
+		if err != nil {
+			// resolveModels fails the reconcile with the same error.
+			l.Error(err, "Skipping model in config.yaml", "model", modelRef.Name)
+			continue
+		}
 		if cfg.Models == nil {
 			cfg.Models = make(map[string]modelConfigYAML)
 		}
 		cfg.Models[modelRef.Name] = modelConfigYAML{
 			Role:     modelRef.Role,
 			Provider: model.Spec.EffectiveProvider(),
-			Model:    model.Spec.ModelName,
+			Model:    name,
 			Endpoint: gatewayURL,
 			Priority: modelRef.Priority,
 		}

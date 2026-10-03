@@ -20,6 +20,7 @@ These files are checked in CI: a unit test runs every `LanguageModel` here throu
 | `lm-studio.yaml` | LM Studio (OpenAI-compatible) | `endpoint` | none |
 | `multi-endpoint-loadbalanced.yaml` | Two models sharing a `modelName` | — | none |
 | `corporate-proxy.yaml` | Any, through an HTTP(S) proxy | proxy variables on the gateway | as for the model |
+| `openrouter-wildcard.yaml` | A vendor's whole catalogue (`modelName: "*"`) | `endpoint` | `api-key` |
 
 The full field reference, with every provider's options, is [docs/api/languagemodel.md](../../../docs/api/languagemodel.md).
 

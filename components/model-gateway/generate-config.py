@@ -34,7 +34,11 @@ def load_model_specs(models_dir: str = "/etc/langop/models",
         for p in paths:
             try:
                 with open(p) as f:
-                    specs.append(json.load(f))
+                    spec = json.load(f)
+                # The LanguageModel's own name, from model__<name>.json: wildcard
+                # models are addressed by it.
+                spec[NAME_KEY] = os.path.basename(p)[len("model__"):-len(".json")]
+                specs.append(spec)
                 print(f"✓ Loaded model spec from {p}", file=sys.stderr)
             except (json.JSONDecodeError, OSError) as e:
                 print(f"✗ Failed to load {p}: {e}", file=sys.stderr)
@@ -95,6 +99,14 @@ PROVIDER_PREFIX = {
     "openai-compatible": "openai",
     "custom": "openai",
 }
+
+# Where load_model_specs records a model's resource name. Not a spec field.
+NAME_KEY = "_name"
+
+# A LanguageModel whose modelName is "*" stands for the provider's whole
+# catalogue. It is registered as "<name>/*", and agents call "<name>/<model>";
+# LiteLLM strips "<name>/" and sends "<model>" to the provider.
+WILDCARD = "*"
 
 # Backends reached through the OpenAI chat-completions API that may not serve
 # the Responses API (Ollama, vLLM, LM Studio...).
@@ -207,6 +219,9 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str],
 
     # Set the model
     params["model"] = map_provider_to_litellm(provider, model_name, spec.get("litellmProvider"))
+    if model_name == WILDCARD and params["model"] == WILDCARD:
+        # openai is unprefixed for named models, but a wildcard needs the prefix.
+        params["model"] = "openai/*"
 
     # Set API base/endpoint
     if endpoint:
@@ -251,6 +266,8 @@ def build_model_list(spec: Dict[str, Any], api_key: Optional[str],
                      credentials: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """Build the model_list section for LiteLLM config."""
     model_name = spec.get("modelName")
+    if model_name == WILDCARD:
+        model_name = f"{spec.get(NAME_KEY) or 'wildcard'}/{WILDCARD}"
     litellm_params = build_litellm_params(spec, api_key, credentials)
 
     model_entry: Dict[str, Any] = {
@@ -307,7 +324,8 @@ def warn_shared_model_names(specs: List[Dict[str, Any]]) -> None:
     That is the way to spread a model over several endpoints, but it also
     happens by accident, so make it visible in the gateway log.
     """
-    counts = Counter(spec.get("modelName") for spec in specs)
+    # Wildcards are addressed by their resource name, so they never collide.
+    counts = Counter(spec.get("modelName") for spec in specs if spec.get("modelName") != WILDCARD)
     for name, count in sorted(counts.items(), key=lambda kv: str(kv[0])):
         if name and count > 1:
             print(f"⚠ {count} LanguageModels share modelName {name!r}: requests for it are load-balanced across them",
