@@ -2044,7 +2044,7 @@ cluster-scoped resources, and the imported dev images.</p>
 the first run (empty files are fine if you have no overrides).</p>
 <p>Because the image tag is the git SHA, <strong>commit your changes before <code>make dev</code></strong> so the tag changes
 and Docker cache is busted.</p>
-<p>For the model gateway image, <code>cd components/model-gateway &amp;&amp; make dev</code> builds and imports it into k3s.</p>
+<p>For the model gateway image, <code>cd components/model-gateway &amp;&amp; make dev</code> builds and imports it into k3s as <code>model-gateway:latest</code>. The root <code>make dev</code> points the operator at that tag; a chart install otherwise pins the gateway to the chart appVersion.</p>
 <p>Watch operator logs:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>language-operator<span class="w"> </span>--follow
 </code></pre></div>
