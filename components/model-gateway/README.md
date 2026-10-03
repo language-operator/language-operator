@@ -110,10 +110,9 @@ The proxy automatically generates LiteLLM configuration from the LanguageModel C
 | `spec.apiKeySecretRef` | `litellm_params.api_key` | API key from secret |
 | `spec.rateLimits.requestsPerMinute` | `rpm` | Request rate limit |
 | `spec.rateLimits.tokensPerMinute` | `tpm` | Token rate limit |
-| `spec.retryPolicy` | `litellm_settings.num_retries` | Retry configuration |
-| `spec.fallbacks` | `litellm_settings.fallbacks` | Fallback models |
-| `spec.loadBalancing` | `router_settings.routing_strategy` | Load balancing strategy |
-| `spec.caching` | `litellm_settings.cache` | Response caching |
+| `spec.timeout` | `litellm_params.timeout` | Request timeout (Go duration, e.g. `5m`) |
+
+LanguageModels that share a `spec.modelName` become one `model_name` group, which LiteLLM load-balances (see [below](#high-availability-with-load-balancing)).
 
 ## Operator-level settings (environment)
 
@@ -233,25 +232,29 @@ See [examples/azure-openai.yaml](examples/azure-openai.yaml)
 
 ### High-Availability with Load Balancing
 
+There are no load-balancing fields on a LanguageModel. Instead, create several LanguageModels with the **same `modelName`**: agents call the gateway by `modelName`, so LiteLLM treats the entries as one model group and spreads requests across them, skipping an endpoint that fails until its cooldown ends.
+
 ```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: llama-gpu-a
 spec:
-  provider: openai
-  modelName: gpt-4
-  loadBalancing:
-    strategy: latency-based
-    endpoints:
-      - url: https://api.openai.com/v1
-        region: us-east-1
-        priority: 1
-      - url: https://api.openai.com/v1
-        region: us-west-2
-        priority: 1
-    healthCheck:
-      enabled: true
-      interval: "30s"
-  fallbacks:
-    - modelRef: gpt-3.5-turbo
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-a.inference.svc.cluster.local:11434/v1
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: llama-gpu-b
+spec:
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-b.inference.svc.cluster.local:11434/v1
 ```
+
+Because this also happens by accident, the operator's admission webhook warns when a `modelName` is already taken, and `generate-config.py` logs a warning on start.
 
 See [examples/multi-endpoint-loadbalanced.yaml](examples/multi-endpoint-loadbalanced.yaml)
 

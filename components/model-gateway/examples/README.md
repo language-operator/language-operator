@@ -23,7 +23,7 @@ These examples demonstrate how to configure LanguageModel resources with appropr
 | Local Ollama | `ollama-local.yaml` | `192.168.1.0/24:11434` | Local network Ollama |
 | LM Studio | `lm-studio.yaml` | `192.168.1.0/24:1234` | Local LM Studio server |
 | Corporate Proxy | `corporate-proxy.yaml` | `10.0.0.0/8:8080` | Via corporate proxy |
-| Load Balanced | `multi-endpoint-loadbalanced.yaml` | Multiple endpoints | Multi-region setup |
+| Load Balanced | `multi-endpoint-loadbalanced.yaml` | Two LanguageModels sharing a `modelName` | One model on several endpoints |
 
 ## Network Egress Patterns
 

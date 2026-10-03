@@ -53,6 +53,7 @@ def _master_key_matches(api_key: Optional[str]) -> bool:
 
 async def user_api_key_auth(request, api_key: str):
     """LiteLLM custom auth hook (``general_settings.custom_auth``)."""
+    from fastapi import HTTPException, status
     from litellm.proxy._types import LitellmUserRoles, UserAPIKeyAuth
 
     secret = os.environ.get("LANGOP_GATEWAY_HMAC_SECRET", "")
@@ -63,7 +64,10 @@ async def user_api_key_auth(request, api_key: str):
 
     agent_id = verify(secret, key) if secret else None
     if agent_id is None:
-        raise Exception("invalid API key")
+        # An HTTPException keeps its status. Since LiteLLM 1.103 any other
+        # exception is first checked as a possible database error, which imports
+        # prisma (not installed here) and turns the rejection into a 500.
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid API key")
 
     return UserAPIKeyAuth(
         api_key=key,
