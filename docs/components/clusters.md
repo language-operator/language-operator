@@ -28,6 +28,8 @@ Credentials never leave the gateway pod. Agents send model names and prompts; th
 
 When the model list changes, the gateway restarts with the updated configuration. No agent redeploy is required.
 
+The gateway image is pinned to the operator release: the Helm chart runs `ghcr.io/language-operator/model-gateway:<chart appVersion>`, so the gateway's config generator always matches the `LanguageModel` CRD the operator validates against. Upgrading the operator chart rolls every cluster's gateway to the new tag without a manual restart. Setting `config.gateway.image` overrides the pin; a mutable tag such as `latest` gives up that guarantee, since running pods keep whatever they last pulled. The operator binary run without the chart falls back to `model-gateway:latest`.
+
 ## Network Isolation
 
 By default, agents in a cluster can communicate with each other and with the shared gateway, but not with arbitrary external hosts. Additional ingress and egress rules are configured on the cluster and applied as built-in rules to every agent's `NetworkPolicy`.

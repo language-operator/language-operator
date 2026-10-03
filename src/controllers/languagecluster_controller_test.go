@@ -1142,6 +1142,46 @@ func TestLanguageClusterController_GatewayDeploymentImage(t *testing.T) {
 	}
 }
 
+// An operator upgrade changes the release-pinned --gateway-image; the next reconcile must
+// rewrite the pod template so the existing gateway Deployment rolls to the new tag.
+func TestLanguageClusterController_GatewayImageChangeRollsDeployment(t *testing.T) {
+	scheme := testutil.SetupTestScheme(t)
+	cluster := gen.LanguageCluster("upgrade-cluster")
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(cluster).
+		WithStatusSubresource(cluster).
+		Build()
+
+	reconciler := &LanguageClusterReconciler{
+		Client:       fakeClient,
+		Scheme:       scheme,
+		Log:          logr.Discard(),
+		GatewayImage: "ghcr.io/language-operator/model-gateway:0.3.15",
+	}
+
+	ctx := context.Background()
+	req := clusterRequest(cluster.Name)
+	key := types.NamespacedName{Name: "gateway", Namespace: cluster.Name}
+
+	_, err := reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	deployment := &appsv1.Deployment{}
+	require.NoError(t, fakeClient.Get(ctx, key, deployment))
+	require.Equal(t, "ghcr.io/language-operator/model-gateway:0.3.15", deployment.Spec.Template.Spec.Containers[0].Image)
+
+	reconciler.GatewayImage = "ghcr.io/language-operator/model-gateway:0.3.16"
+	_, err = reconciler.Reconcile(ctx, req)
+	require.NoError(t, err)
+
+	require.NoError(t, fakeClient.Get(ctx, key, deployment))
+	assert.Equal(t, "ghcr.io/language-operator/model-gateway:0.3.16", deployment.Spec.Template.Spec.Containers[0].Image)
+}
+
 func TestLanguageClusterController_GatewayConfigMapContainsModel(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	cluster := gen.LanguageCluster("model-cluster")
