@@ -1763,6 +1763,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#credentialssecretreference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CredentialsSecretReference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deploymentspec" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2791,6 +2802,28 @@ Source priority: ValueFrom (existing Secret) &gt; Value (inline) &gt; auto-gener
 <td>ValueFrom references an existing Secret whose keys are injected via envFrom.<br />When set, the operator does not create or manage a Secret for this entry.<br />Mutually exclusive with Value.</td>
 <td></td>
 <td>Optional: {} <br /></td>
+</tr>
+</tbody>
+</table>
+<h4 id="credentialssecretreference">CredentialsSecretReference<a class="headerlink" href="#credentialssecretreference" title="Permanent link">&para;</a></h4>
+<p>CredentialsSecretReference references a whole Secret.</p>
+<p><em>Appears in:</em>
+- <a href="#languagemodelspec">LanguageModelSpec</a></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+<th>Default</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code> <em>string</em></td>
+<td>Name is the name of the secret</td>
+<td></td>
+<td>Required: {} <br /></td>
 </tr>
 </tbody>
 </table>
@@ -3961,9 +3994,15 @@ spec.selfConfigure allowlist before patching.</p>
 <tbody>
 <tr>
 <td><code>provider</code> <em>string</em></td>
-<td>Provider specifies the LLM provider type</td>
+<td>Provider is one of the providers the operator documents and validates.<br />For any other LiteLLM provider, set litellmProvider instead.<br />"custom" is deprecated and behaves exactly like "openai-compatible".</td>
 <td></td>
-<td>Enum: [openai anthropic openai-compatible azure bedrock vertex custom] <br />Required: {} <br /></td>
+<td>Enum: [openai anthropic gemini openai-compatible azure bedrock vertex custom] <br />Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>litellmProvider</code> <em>string</em></td>
+<td>LiteLLMProvider is a LiteLLM provider prefix (e.g. "deepseek", "dashscope",<br />"hosted_vllm") for providers not covered by Provider. The gateway calls the<br />model as "<litellmProvider>/<modelName>".</td>
+<td></td>
+<td>Pattern: <code>^[a-z0-9_]+$</code> <br />Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>modelName</code> <em>string</em></td>
@@ -3973,13 +4012,49 @@ spec.selfConfigure allowlist before patching.</p>
 </tr>
 <tr>
 <td><code>endpoint</code> <em>string</em></td>
-<td>Endpoint is the API endpoint URL (required for openai-compatible, azure, custom)</td>
+<td>Endpoint is the API endpoint URL (required for openai-compatible and azure)</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
 <tr>
 <td><code>apiKeySecretRef</code> <em><a href="#secretreference">SecretReference</a></em></td>
-<td>APIKeySecretRef references a secret containing the API key</td>
+<td>APIKeySecretRef references a secret containing the API key. Shorthand for<br />a single key; takes precedence over an API key in CredentialsSecretRef.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>credentialsSecretRef</code> <em><a href="#credentialssecretreference">CredentialsSecretReference</a></em></td>
+<td>CredentialsSecretRef references a Secret whose keys are this model's<br />credentials, for providers that need more than one value: AWS access keys<br />or a Bedrock bearer token, a Vertex service-account JSON, Azure AD app<br />credentials. Keys are matched by name (e.g. AWS_ACCESS_KEY_ID,<br />AWS_BEARER_TOKEN_BEDROCK, VERTEX_CREDENTIALS, AZURE_CLIENT_SECRET) and<br />applied to this model only.</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>region</code> <em>string</em></td>
+<td>Region is the cloud region (Bedrock: the AWS region).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>project</code> <em>string</em></td>
+<td>Project is the cloud project (Vertex: the GCP project ID).</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>location</code> <em>string</em></td>
+<td>Location is the cloud location (Vertex: e.g. "us-central1").</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>apiVersion</code> <em>string</em></td>
+<td>APIVersion is the provider API version (Azure: e.g. "2025-01-01-preview").</td>
+<td></td>
+<td>Optional: {} <br /></td>
+</tr>
+<tr>
+<td><code>params</code> <em>object (keys:string, values:<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#json-v1-apiextensions-k8s-io">JSON</a>)</em></td>
+<td>Params are passed through into this model's LiteLLM params, overriding the<br />values derived from the fields above (e.g. aws_bedrock_runtime_endpoint,<br />extra_headers, use_chat_completions_api). Credentials do not belong here:<br />keys that name one are rejected; use credentialsSecretRef.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>

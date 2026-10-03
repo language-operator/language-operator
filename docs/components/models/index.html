@@ -1974,34 +1974,39 @@
 <tbody>
 <tr>
 <td>Anthropic</td>
-<td><code>anthropic</code></td>
+<td><code>provider: anthropic</code></td>
 </tr>
 <tr>
 <td>OpenAI</td>
-<td><code>openai</code></td>
+<td><code>provider: openai</code></td>
+</tr>
+<tr>
+<td>Google AI Studio (Gemini API)</td>
+<td><code>provider: gemini</code></td>
 </tr>
 <tr>
 <td>Azure OpenAI</td>
-<td><code>azure</code></td>
+<td><code>provider: azure</code> (+ <code>endpoint</code>, <code>apiVersion</code>)</td>
 </tr>
 <tr>
 <td>AWS Bedrock</td>
-<td><code>bedrock</code></td>
+<td><code>provider: bedrock</code> (+ <code>region</code>)</td>
 </tr>
 <tr>
 <td>Google Vertex AI</td>
-<td><code>vertex</code></td>
+<td><code>provider: vertex</code> (+ <code>project</code>, <code>location</code>)</td>
 </tr>
 <tr>
-<td>Any OpenAI-compatible API</td>
-<td><code>openai-compatible</code></td>
+<td>Any OpenAI chat-completions API (Ollama, vLLM, LM Studio…)</td>
+<td><code>provider: openai-compatible</code> (+ <code>endpoint</code>)</td>
 </tr>
 <tr>
-<td>Custom LiteLLM config</td>
-<td><code>custom</code></td>
+<td>Any other LiteLLM provider (DeepSeek, Qwen, xAI, Mistral, Groq, OpenRouter…)</td>
+<td><code>litellmProvider: &lt;LiteLLM prefix&gt;</code></td>
 </tr>
 </tbody>
 </table>
+<p><code>custom</code> is deprecated and behaves exactly like <code>openai-compatible</code>. Providers that need more than one credential (Bedrock access keys, a Vertex service account, an Azure AD app) take a whole Secret through <code>credentialsSecretRef</code>, applied to that model only. See <a href="../../api/languagemodel/#providers">LanguageModel</a> for each provider's fields and examples.</p>
 <h3 id="self-hosted-models-ollama-vllm">Self-hosted models (Ollama, vLLM)<a class="headerlink" href="#self-hosted-models-ollama-vllm" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
@@ -2009,6 +2014,7 @@
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama.default.svc.cluster.local:11434/v1</span>
 </code></pre></div>
 <p>No <code>apiKeySecretRef</code> needed for unauthenticated endpoints.</p>
+<p>The backend only needs <code>/v1/chat/completions</code>. Clients that speak the Responses API (<code>/v1/responses</code>, e.g. Codex) or the Anthropic Messages API (<code>/v1/messages</code>) still work: the gateway translates both to chat completions for these models.</p>
 <h3 id="multiple-models">Multiple models<a class="headerlink" href="#multiple-models" title="Permanent link">&para;</a></h3>
 <p>Agents can reference multiple models. Each model is registered with the same gateway; the agent chooses which to call at runtime:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># LanguageAgent</span>

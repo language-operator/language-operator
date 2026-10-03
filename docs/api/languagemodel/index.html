@@ -1408,13 +1408,30 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-providers" class="md-nav__link">
+  <a href="#providers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported Providers
+        Providers
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#typed-fields-and-params" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typed fields and params
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1481,6 +1498,50 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#aws-bedrock-access-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock (access keys)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aws-bedrock-bearer-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock (bearer token)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#google-vertex-ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Vertex AI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gemini-google-ai-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemini (Google AI Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#azure-openai" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1492,10 +1553,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#self-hosted-ollama" class="md-nav__link">
+  <a href="#self-hosted-ollama-vllm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Self-Hosted (Ollama)
+        Self-Hosted (Ollama, vLLM)
       
     </span>
   </a>
@@ -1851,13 +1912,30 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-providers" class="md-nav__link">
+  <a href="#providers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported Providers
+        Providers
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Providers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#typed-fields-and-params" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Typed fields and params
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1924,6 +2002,50 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#aws-bedrock-access-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock (access keys)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aws-bedrock-bearer-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AWS Bedrock (bearer token)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#google-vertex-ai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Vertex AI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gemini-google-ai-studio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemini (Google AI Studio)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#azure-openai" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1935,10 +2057,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#self-hosted-ollama" class="md-nav__link">
+  <a href="#self-hosted-ollama-vllm" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Self-Hosted (Ollama)
+        Self-Hosted (Ollama, vLLM)
       
     </span>
   </a>
@@ -1987,8 +2109,9 @@
 <p>A LanguageModel defines:
 - Provider (Anthropic, OpenAI, Azure, etc.)
 - Model name and version
-- API credentials (via Secret reference)
-- Rate limits and retry policies</p>
+- API credentials (via Secret references)
+- Provider-specific settings (region, project, API version, extra LiteLLM params)
+- Rate limits and timeout</p>
 <h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">langop.io/v1alpha1</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LanguageModel</span>
@@ -2009,16 +2132,107 @@
 <li><strong>LanguageModelSpec</strong> - Specification fields</li>
 <li><strong>LanguageModelStatus</strong> - Status and endpoint information</li>
 </ul>
-<h2 id="supported-providers">Supported Providers<a class="headerlink" href="#supported-providers" title="Permanent link">&para;</a></h2>
-<ul>
-<li><code>anthropic</code> - Claude models</li>
-<li><code>openai</code> - GPT models</li>
-<li><code>azure</code> - Azure OpenAI Service</li>
-<li><code>bedrock</code> - AWS Bedrock</li>
-<li><code>vertex</code> - Google Vertex AI</li>
-<li><code>openai-compatible</code> - Any OpenAI-compatible API</li>
-<li><code>custom</code> - Custom LiteLLM configuration</li>
-</ul>
+<h2 id="providers">Providers<a class="headerlink" href="#providers" title="Permanent link">&para;</a></h2>
+<p>Set <strong>exactly one</strong> of <code>provider</code> or <code>litellmProvider</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>provider</code></th>
+<th>Reaches</th>
+<th>Also needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openai</code></td>
+<td>OpenAI</td>
+<td>API key</td>
+</tr>
+<tr>
+<td><code>anthropic</code></td>
+<td>Anthropic</td>
+<td>API key</td>
+</tr>
+<tr>
+<td><code>gemini</code></td>
+<td>Google AI Studio (Gemini API)</td>
+<td>API key</td>
+</tr>
+<tr>
+<td><code>azure</code></td>
+<td>Azure OpenAI; <code>modelName</code> is the <strong>deployment name</strong></td>
+<td><code>endpoint</code>, <code>apiVersion</code>, an API key or Azure AD app credentials</td>
+</tr>
+<tr>
+<td><code>bedrock</code></td>
+<td>AWS Bedrock</td>
+<td><code>region</code>, AWS access keys or a Bedrock bearer token</td>
+</tr>
+<tr>
+<td><code>vertex</code></td>
+<td>Google Vertex AI</td>
+<td><code>project</code>, <code>location</code>, a service-account JSON</td>
+</tr>
+<tr>
+<td><code>openai-compatible</code></td>
+<td>Any OpenAI chat-completions API: Ollama, vLLM, LM Studio…</td>
+<td><code>endpoint</code></td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td><em>Deprecated</em>, identical to <code>openai-compatible</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>For anything else LiteLLM supports, set <strong><code>litellmProvider</code></strong> to its LiteLLM prefix (e.g. <code>deepseek</code>, <code>dashscope</code>, <code>xai</code>, <code>mistral</code>, <code>groq</code>, <code>openrouter</code>, <code>hosted_vllm</code>). The gateway calls the model as <code>&lt;litellmProvider&gt;/&lt;modelName&gt;</code>, so a new vendor needs no operator change:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">litellmProvider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek-chat</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deepseek-credentials</span>
+</code></pre></div>
+<p>The admission webhook rejects a spec that is missing what its <code>provider</code> needs (the "Also needs" column).</p>
+<h3 id="typed-fields-and-params">Typed fields and <code>params</code><a class="headerlink" href="#typed-fields-and-params" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>LiteLLM param</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>region</code></td>
+<td><code>aws_region_name</code></td>
+<td><code>bedrock</code></td>
+</tr>
+<tr>
+<td><code>project</code></td>
+<td><code>vertex_project</code></td>
+<td><code>vertex</code></td>
+</tr>
+<tr>
+<td><code>location</code></td>
+<td><code>vertex_location</code></td>
+<td><code>vertex</code></td>
+</tr>
+<tr>
+<td><code>apiVersion</code></td>
+<td><code>api_version</code></td>
+<td><code>azure</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>params</code> passes anything else straight into the model's LiteLLM params, keeping JSON types, and overrides the fields above:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">params</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">aws_bedrock_runtime_endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://vpce-0123.bedrock-runtime.us-east-1.vpce.amazonaws.com</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">extra_headers</span><span class="p">:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="nt">X-Team</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">platform</span>
+</code></pre></div>
+<p>Credentials never go in <code>params</code>: keys such as <code>api_key</code>, <code>aws_secret_access_key</code> or <code>client_secret</code> are rejected. Use a Secret.</p>
 <h2 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">&para;</a></h2>
 <h3 id="shared-proxy-registration">Shared Proxy Registration<a class="headerlink" href="#shared-proxy-registration" title="Permanent link">&para;</a></h3>
 <p>When you create a LanguageModel:</p>
@@ -2030,44 +2244,114 @@
 </ol>
 <p>All agents immediately have access to the new model via <code>MODEL_ENDPOINT</code>.</p>
 <h3 id="credential-management">Credential Management<a class="headerlink" href="#credential-management" title="Permanent link">&para;</a></h3>
-<p>Store API keys in Secrets:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-key<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-...
+<p>Credentials live in Secrets and are read only by the gateway, never by agent pods.</p>
+<p><strong>One key:</strong> <code>apiKeySecretRef</code> names a Secret and a key (default <code>api-key</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>anthropic-key<span class="w"> </span>--from-literal<span class="o">=</span>api-key<span class="o">=</span>sk-ant-...
 </code></pre></div>
-<p>Reference in the model spec:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic-key</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api-key</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic-key</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api-key</span>
 </code></pre></div>
-<p>The operator injects credentials into the shared proxy, never into agent pods.</p>
+<p><strong>Several values:</strong> <code>credentialsSecretRef</code> names a whole Secret. Its keys are recognised by name and applied <strong>to this model only</strong>, so two models can use different credentials for the same provider:</p>
+<table>
+<thead>
+<tr>
+<th>Secret key</th>
+<th>Becomes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>AWS_SESSION_TOKEN</code></td>
+<td>Bedrock SigV4 credentials</td>
+</tr>
+<tr>
+<td><code>AWS_BEARER_TOKEN_BEDROCK</code></td>
+<td>Bedrock bearer token</td>
+</tr>
+<tr>
+<td><code>VERTEX_CREDENTIALS</code>, <code>GOOGLE_APPLICATION_CREDENTIALS</code>, <code>service-account.json</code>, <code>credentials.json</code></td>
+<td>Vertex service-account JSON (read from the mounted file)</td>
+</tr>
+<tr>
+<td><code>AZURE_API_KEY</code>, <code>GEMINI_API_KEY</code>, <code>api-key</code></td>
+<td>the API key</td>
+</tr>
+<tr>
+<td><code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, <code>AZURE_AD_TOKEN</code></td>
+<td>Azure AD credentials</td>
+</tr>
+</tbody>
+</table>
+<p>LiteLLM's own param names (<code>aws_access_key_id</code>, <code>api_key</code>, <code>tenant_id</code>…) also work as keys. Other keys are ignored and named in the gateway log. When both references supply an API key, <code>apiKeySecretRef</code> wins.</p>
 <h3 id="rate-limiting">Rate Limiting<a class="headerlink" href="#rate-limiting" title="Permanent link">&para;</a></h3>
 <p>Configure per-model rate limits:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">rateLimits</span><span class="p">:</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">requestsPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">tokensPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50000</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">rateLimits</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">requestsPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">tokensPerMinute</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50000</span>
 </code></pre></div>
 <p>The shared proxy enforces these limits across all agents.</p>
 <h2 id="provider-specific-examples">Provider-Specific Examples<a class="headerlink" href="#provider-specific-examples" title="Permanent link">&para;</a></h2>
+<h3 id="aws-bedrock-access-keys">AWS Bedrock (access keys)<a class="headerlink" href="#aws-bedrock-access-keys" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>aws-bedrock<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">AWS_ACCESS_KEY_ID</span><span class="o">=</span>AKIA...<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">AWS_SECRET_ACCESS_KEY</span><span class="o">=</span>...
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bedrock</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic.claude-sonnet-4-5-20250929-v1:0</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">us-east-1</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">credentialsSecretRef</span><span class="p">:</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws-bedrock</span>
+</code></pre></div>
+<h3 id="aws-bedrock-bearer-token">AWS Bedrock (bearer token)<a class="headerlink" href="#aws-bedrock-bearer-token" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>bedrock-token<span class="w"> </span>--from-literal<span class="o">=</span><span class="nv">AWS_BEARER_TOKEN_BEDROCK</span><span class="o">=</span>...
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bedrock</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">amazon.nova-pro-v1:0</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">us-west-2</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">credentialsSecretRef</span><span class="p">:</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bedrock-token</span>
+</code></pre></div>
+<h3 id="google-vertex-ai">Google Vertex AI<a class="headerlink" href="#google-vertex-ai" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>vertex-sa<span class="w"> </span>--from-file<span class="o">=</span>service-account.json<span class="o">=</span>./sa.json
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vertex</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini-2.5-pro</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">project</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-gcp-project</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">us-central1</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nt">credentialsSecretRef</span><span class="p">:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vertex-sa</span>
+</code></pre></div>
+<h3 id="gemini-google-ai-studio">Gemini (Google AI Studio)<a class="headerlink" href="#gemini-google-ai-studio" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini-2.5-flash</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini-key</span>
+</code></pre></div>
 <h3 id="azure-openai">Azure OpenAI<a class="headerlink" href="#azure-openai" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">azure</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gpt-4</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://my-resource.openai.azure.com</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">azure-credentials</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api-key</span>
+<p><code>modelName</code> is your Azure <strong>deployment</strong> name.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">azure</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-gpt4o-deployment</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://my-resource.openai.azure.com</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2025-01-01-preview&quot;</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="nt">apiKeySecretRef</span><span class="p">:</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">azure-credentials</span>
 </code></pre></div>
-<blockquote>
-<p>Azure-specific configuration (deployment name, API version) is passed via the LiteLLM proxy configuration in the <code>LanguageCluster</code> spec, not through CRD fields.</p>
-</blockquote>
-<h3 id="self-hosted-ollama">Self-Hosted (Ollama)<a class="headerlink" href="#self-hosted-ollama" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">spec</span><span class="p">:</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama.default.svc.cluster.local:11434/v1</span>
+<p>With an Azure AD app instead of a key, put <code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code> and <code>AZURE_CLIENT_SECRET</code> in a Secret and reference it with <code>credentialsSecretRef</code>.</p>
+<h3 id="self-hosted-ollama-vllm">Self-Hosted (Ollama, vLLM)<a class="headerlink" href="#self-hosted-ollama-vllm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai-compatible</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">modelName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llama3.2</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://ollama.default.svc.cluster.local:11434/v1</span>
 </code></pre></div>
+<p>The backend only needs <code>/v1/chat/completions</code>: the gateway also serves <code>/v1/responses</code> and <code>/v1/messages</code> for these models by translating to it.</p>
 <h2 id="related-resources">Related Resources<a class="headerlink" href="#related-resources" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../languageagent/">LanguageAgent</a> - Reference models in agents</li>
