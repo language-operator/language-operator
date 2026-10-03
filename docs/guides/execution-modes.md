@@ -84,6 +84,49 @@ It is the agent's mode, not the run's. `argo submit --from workflowtemplate/assi
 
 A task run that finishes its work but stays `Running` means the image ignores the variable. Check that your runtime version supports task mode, and set `activeDeadlineSeconds` as a backstop.
 
+## Per-run inputs
+
+A task agent's runs are otherwise identical: everything the pod sees comes from the agent spec. To hand one run an input, such as a PR to review or an alert that fired, pass the WorkflowTemplate's two optional parameters:
+
+```bash
+argo submit --from workflowtemplate/triage -n my-cluster \
+  -p event='{"pr":42,"repo":"acme/api"}' \
+  -p trigger=manual
+```
+
+or, from a controller or any other system that creates runs:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: triage-
+  namespace: my-cluster
+spec:
+  workflowTemplateRef:
+    name: triage
+  arguments:
+    parameters:
+      - name: event
+        value: '{"pr":42,"repo":"acme/api"}'
+      - name: trigger
+        value: webhook
+```
+
+Inside the pod:
+
+| Where | Value |
+|---|---|
+| `AGENT_EVENT` | The `event` value, verbatim (JSON by convention) |
+| `/etc/agent/event.json` | The same value as a file, for runtimes that prefer files and for large payloads |
+| `AGENT_TRIGGER` | The `trigger` value: a free-form name for what started the run. Scheduled runs pass `schedule` |
+
+Both default to empty, so a run without them behaves as before. Your own `spec.deployment.env`, `command` and `args` can reference `{{workflow.parameters.event}}` directly; instructions and persona text never can, because the operator keeps them out of the template.
+
+!!! warning "The event is data, not instructions"
+
+    Whoever can start a run controls its event. A runtime should hand it to the model as the input to work on, kept apart from the agent's instructions, and never let it change what the agent is told to do.
+
 ## Schedules
 
 `spec.execution.schedule` accepts a standard 5-field cron expression (`minute hour day-of-month month day-of-week`), textual month and day aliases (`0 0 1 JAN MON`), the `@yearly`/`@monthly`/`@weekly`/`@daily`/`@hourly` macros, and `@every <duration>` (e.g. `@every 90m`). Invalid expressions are rejected at admission rather than silently never firing.

@@ -128,12 +128,94 @@ func TestLanguageAgentController_ContractEnvVars(t *testing.T) {
 		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
 		require.NoError(t, err)
 
+		// The text lives in the agent ConfigMap and reaches the pod by reference, so
+		// Argo never sees it as part of the template.
 		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
-		envMap := make(map[string]string)
-		for _, e := range podSpec.Containers[0].Env {
-			envMap[e.Name] = e.Value
+		var instr *corev1.EnvVar
+		for i, e := range podSpec.Containers[0].Env {
+			if e.Name == "AGENT_INSTRUCTIONS" {
+				instr = &podSpec.Containers[0].Env[i]
+			}
 		}
-		assert.Equal(t, "do the thing", envMap["AGENT_INSTRUCTIONS"], "AGENT_INSTRUCTIONS must equal spec.instructions")
+		require.NotNil(t, instr, "AGENT_INSTRUCTIONS must be set when spec.instructions is")
+		assert.Empty(t, instr.Value, "instructions must not be inlined in the WorkflowTemplate")
+		require.NotNil(t, instr.ValueFrom)
+		require.NotNil(t, instr.ValueFrom.ConfigMapKeyRef)
+		assert.Equal(t, GenerateConfigMapName(agent.Name, "agent"), instr.ValueFrom.ConfigMapKeyRef.Name)
+		assert.Equal(t, agentConfigKeyInstructions, instr.ValueFrom.ConfigMapKeyRef.Key)
+
+		cm := &corev1.ConfigMap{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: GenerateConfigMapName(agent.Name, "agent"), Namespace: agent.Namespace}, cm))
+		assert.Equal(t, "do the thing", cm.Data[agentConfigKeyInstructions], "the referenced key must hold spec.instructions")
+	})
+
+	t.Run("AGENT_PERSONA sourced from the agent ConfigMap", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		persona := gen.LanguagePersona("helper", "default", gen.SetPersonaTone("calm"))
+		persona.Status.Phase = events.PhaseStatusReady
+		agent := gen.LanguageAgent("persona-agent", "default", gen.SetAgentPersona(persona.Name))
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), persona, agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		ctx := context.Background()
+		_, err := reconciler.Reconcile(ctx, agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+		var p *corev1.EnvVar
+		for i, e := range podSpec.Containers[0].Env {
+			if e.Name == "AGENT_PERSONA" {
+				p = &podSpec.Containers[0].Env[i]
+			}
+		}
+		require.NotNil(t, p, "AGENT_PERSONA must be set for a ready persona")
+		require.NotNil(t, p.ValueFrom)
+		require.NotNil(t, p.ValueFrom.ConfigMapKeyRef)
+		assert.Equal(t, agentConfigKeyPersona, p.ValueFrom.ConfigMapKeyRef.Key)
+
+		cm := &corev1.ConfigMap{}
+		require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: GenerateConfigMapName(agent.Name, "agent"), Namespace: agent.Namespace}, cm))
+		assert.Equal(t, formatPersona(persona), cm.Data[agentConfigKeyPersona])
+	})
+
+	t.Run("AGENT_EVENT and AGENT_TRIGGER read the run's parameters", func(t *testing.T) {
+		scheme := testutil.SetupTestScheme(t)
+		agent := gen.LanguageAgent("event-env-agent", "default")
+		agent.Spec.Deployment.InitContainers = []corev1.Container{{Name: "setup", Image: "busybox"}}
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(gen.ReadyCluster("default"), agent).
+			WithStatusSubresource(agent).
+			Build()
+		reconciler := &LanguageAgentReconciler{
+			Client:          fakeClient,
+			Scheme:          scheme,
+			Log:             logr.Discard(),
+			Recorder:        &record.FakeRecorder{},
+			RegistryManager: &mockRegistryManager{},
+		}
+		_, err := reconciler.Reconcile(context.Background(), agentRequest(agent.Name))
+		require.NoError(t, err)
+
+		podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+		// Like every contract variable, both reach init containers as well.
+		for _, c := range []corev1.Container{podSpec.Containers[0], podSpec.InitContainers[len(podSpec.InitContainers)-1]} {
+			envMap := make(map[string]string)
+			for _, e := range c.Env {
+				envMap[e.Name] = e.Value
+			}
+			assert.Equal(t, "{{workflow.parameters.event}}", envMap["AGENT_EVENT"], "container %s", c.Name)
+			assert.Equal(t, "{{workflow.parameters.trigger}}", envMap["AGENT_TRIGGER"], "container %s", c.Name)
+		}
 	})
 
 	t.Run("MODEL_ENDPOINT and LLM_MODEL set from spec.models", func(t *testing.T) {

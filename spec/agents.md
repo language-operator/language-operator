@@ -44,11 +44,12 @@ Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-nam
 
 ### Mounted Files
 
-The operator mounts exactly one file into every agent container:
+The operator mounts these files into every agent container:
 
 | Path | Content | Source |
 |------|---------|--------|
 | `/etc/agent/config.yaml` | Structured agent configuration (YAML) | Assembled by the operator from `spec.instructions`, personas, tools, models, and agent metadata |
+| `/etc/agent/event.json` | The run's `event` parameter, verbatim (JSON by convention). Empty when the run was started without one. | Written by Argo for each run; see [Per-run Inputs](#per-run-inputs) |
 
 Files are read-only. The operator reconciles them on every change to the LanguageAgent spec or referenced resources.
 
@@ -116,10 +117,12 @@ The operator injects the following environment variables into every agent contai
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `AGENT_EXECUTION_MODE` | `service` or `task` — the agent's resolved `spec.execution.mode`, after runtime defaults. Always set. See [Startup Behaviour](#startup-behaviour). |
+| `AGENT_EVENT` | The run's `event` parameter, verbatim (JSON by convention). Always set; empty when the run was started without one. Also written to `/etc/agent/event.json`. See [Per-run Inputs](#per-run-inputs). |
+| `AGENT_TRIGGER` | The run's `trigger` parameter: a free-form name for what started it. `schedule` for runs fired by `spec.execution.schedule`; empty when not given. |
 | `MODEL_ENDPOINT` | Single shared LiteLLM gateway URL (`http://gateway.<namespace>.svc.cluster.local:8000`). The same URL is used regardless of how many models are referenced. |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated full MCP tool URLs (each already includes the `/mcp` path) for all resolved tools — service-mode tools use `http://<name>.<ns>.svc.cluster.local:<port>/mcp`; sidecar-mode tools use `http://localhost:<port>/mcp`; external servers (`spec.tools[].url`) appear as given, but only when they need no headers. The runtime connects to each URL directly as a Streamable HTTP MCP server (stdio tools are bridged to Streamable HTTP by the operator). Only injected when at least one tool is resolved. Runtimes should prefer the `tools` section of `config.yaml`, which also carries headers. |
-| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. |
+| `AGENT_INSTRUCTIONS` | Content of `spec.instructions`; only set when instructions are non-empty. Identical to the `instructions` field in `/etc/agent/config.yaml`. Sourced from the agent ConfigMap, so the text is never subject to Argo templating. |
 | `AGENT_REPO_DIR` | Absolute path to the repository cloned from `spec.repository`. Only injected when a repository is configured. The operator also sets the agent container's working directory to this path, so a compliant runtime should operate inside it. See [Repository Cloning](#repository-cloning). |
 | `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n`, `GIT_SSH_COMMAND`, `GIT_TERMINAL_PROMPT` | Git identity and credentials for `spec.repository` (see [Repository Cloning](#repository-cloning)). Unlike the variables above, these go only to the agent container and the `repository` init container, never to user init containers or sidecars. |
 | `GH_TOKEN`, `GH_HOST`, `GITLAB_TOKEN`, `GITLAB_HOST` | The repository Secret's `token` for the vendor CLI, by `spec.repository.vendor`. Agent container only. |
@@ -185,6 +188,21 @@ On startup, every agent should read `/etc/agent/config.yaml` for its configurati
 The pod is identical in both modes and the Argo object wrapping it is not visible from inside, so the variable is the only signal a runtime gets. An image that supports both modes must branch on it. Treat an unset value as `service`: operators before this variable existed do not inject it, and a service agent that was already running when the operator was upgraded keeps its old environment until its next spec change.
 
 The value is the agent's mode, not the run's: a run submitted by hand against a service agent's WorkflowTemplate still sees `service`.
+
+### Per-run Inputs
+
+Every run can carry one input. The agent's WorkflowTemplate declares two optional parameters, both defaulting to `""`:
+
+- **`event`** — the payload: a PR to review, an alert that fired, a document to process. JSON by convention, but passed through verbatim. The agent container and every init container get it as `AGENT_EVENT`; the agent container also gets it as the file `/etc/agent/event.json`, the better choice for large payloads.
+- **`trigger`** — a free-form name for what started the run (`manual`, `webhook`, `ci`, ...). Runs fired by `spec.execution.schedule` pass `schedule`. The agent container and every init container get it as `AGENT_TRIGGER`.
+
+```bash
+argo submit --from workflowtemplate/<agent> -p event='{"pr":42}' -p trigger=manual
+```
+
+A run started without them sees empty values and an empty file, so a task runtime should fall back to its instructions alone. A service agent's long-lived Workflow passes neither, so it sees them empty.
+
+**The event is data, not instructions.** It comes from whoever started the run. A runtime should present it to the model as the input to work on, clearly separated from `instructions` and the persona, and never as text that can change what the agent is told to do.
 
 ## File Formats
 

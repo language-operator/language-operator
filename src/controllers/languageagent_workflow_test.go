@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
@@ -907,6 +908,8 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 			if vol.ConfigMap.Name != expectedConfigMapName {
 				t.Errorf("agent-config volume points to %q, want %q", vol.ConfigMap.Name, expectedConfigMapName)
 			}
+			// Only config.yaml is a file; the other keys back env vars.
+			assert.Equal(t, []corev1.KeyToPath{{Key: "config.yaml", Path: "config.yaml"}}, vol.ConfigMap.Items)
 			break
 		}
 	}
@@ -922,8 +925,10 @@ func TestLanguageAgentController_AgentConfigVolume(t *testing.T) {
 	for _, vm := range containers[0].VolumeMounts {
 		if vm.Name == "agent-config" {
 			foundMount = true
-			if vm.MountPath != "/etc/agent" {
-				t.Errorf("agent-config mount path is %q, want /etc/agent", vm.MountPath)
+			// A single-file mount, so /etc/agent is not inside a volume and Argo can
+			// bind-mount the run's event beside it.
+			if vm.MountPath != "/etc/agent/config.yaml" || vm.SubPath != "config.yaml" {
+				t.Errorf("agent-config mount is %q (subPath %q), want /etc/agent/config.yaml (subPath config.yaml)", vm.MountPath, vm.SubPath)
 			}
 			if !vm.ReadOnly {
 				t.Error("agent-config volume mount should be read-only")
@@ -986,6 +991,7 @@ func TestLanguageAgentController_AgentConfigMapKeys(t *testing.T) {
 	if _, ok := cm.Data["instructions.txt"]; ok {
 		t.Error("ConfigMap must not contain instructions.txt key")
 	}
+	assert.Equal(t, agent.Spec.Instructions, cm.Data["instructions"], "AGENT_INSTRUCTIONS is sourced from this key")
 
 	configYAML := cm.Data["config.yaml"]
 	if !strings.Contains(configYAML, agent.Name) {
@@ -1578,12 +1584,51 @@ func TestLanguageAgentController_TaskModeCreatesCronWorkflow(t *testing.T) {
 	require.NotNil(t, cron.Spec.WorkflowSpec.TTLStrategy.SecondsAfterCompletion)
 	assert.Equal(t, defaultTaskTTLSeconds, *cron.Spec.WorkflowSpec.TTLStrategy.SecondsAfterCompletion)
 
+	// Scheduled runs identify themselves through the trigger parameter.
+	require.Len(t, cron.Spec.WorkflowSpec.Arguments.Parameters, 1)
+	assert.Equal(t, "trigger", cron.Spec.WorkflowSpec.Arguments.Parameters[0].Name)
+	assert.Equal(t, "schedule", cron.Spec.WorkflowSpec.Arguments.Parameters[0].Value.String())
+
 	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &wfv1.Workflow{})),
 		"task mode must not create a long-lived Workflow")
 
 	// A task agent's pods come and go, so it gets no Service.
 	assert.True(t, errors.IsNotFound(fc.Get(ctx, key, &corev1.Service{})),
 		"task mode must not create a Service")
+}
+
+// A run's input reaches the pod through two WorkflowTemplate parameters, both
+// optional, and the event also lands as a file beside config.yaml.
+func TestLanguageAgentController_PerRunInputs(t *testing.T) {
+	agent := gen.LanguageAgent("run-input-agent", "default")
+	agent.Spec.Execution = langopv1alpha1.ExecutionSpec{Mode: langopv1alpha1.ExecutionModeTask}
+	// Instruction text that Argo would act on if it were part of the template.
+	agent.Spec.Instructions = "Echo {{workflow.parameters.event}} and {{=1+1}} verbatim."
+	r, fc := newModeReconciler(t, agent)
+	reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+	tmpl := agentWorkflowTemplate(t, fc, agent.Name, agent.Namespace)
+
+	params := map[string]string{}
+	for _, p := range tmpl.Spec.Arguments.Parameters {
+		require.NotNil(t, p.Value, "parameter %s needs a default so it is optional", p.Name)
+		params[p.Name] = p.Value.String()
+	}
+	assert.Equal(t, map[string]string{"event": "", "trigger": ""}, params,
+		"event and trigger must default to empty so a run without them behaves as before")
+
+	arts := tmpl.Spec.Templates[0].Inputs.Artifacts
+	require.Len(t, arts, 1)
+	assert.Equal(t, "event", arts[0].Name)
+	assert.Equal(t, "/etc/agent/event.json", arts[0].Path)
+	require.NotNil(t, arts[0].Raw)
+	assert.Equal(t, "{{workflow.parameters.event}}", arts[0].Raw.Data)
+
+	// Argo templates every literal in the WorkflowTemplate, so the instructions
+	// must not appear in it at all.
+	raw, err := json.Marshal(tmpl.Spec)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "verbatim", "instruction text leaked into the WorkflowTemplate")
 }
 
 func TestLanguageAgentController_UnscheduledTaskIsTemplateOnly(t *testing.T) {
